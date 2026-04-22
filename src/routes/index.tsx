@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { ArrowUpRight } from "lucide-react";
+import { RaceListItem } from "@/components/RaceListItem";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -29,6 +30,7 @@ interface EventRow {
   currency: string;
   race_types: string[];
   featured: boolean;
+  world_athletics_certified?: boolean;
 }
 
 function Index() {
@@ -97,9 +99,9 @@ function Index() {
 
       <section className="mt-16">
         <SectionHeader title="Upcoming races" hint="Soonest first" />
-        <ul className="mt-5 divide-y divide-hairline rounded-2xl border border-hairline bg-card">
+        <ul className="mt-5 divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-card">
           {upcoming.map((e) => (
-            <EventRowItem key={e.id} event={e} />
+            <RaceListItem key={e.id} event={e} />
           ))}
         </ul>
       </section>
@@ -195,26 +197,3 @@ function FeaturedCard({ event }: { event: EventRow }) {
   );
 }
 
-function EventRowItem({ event }: { event: EventRow }) {
-  return (
-    <li>
-      <Link
-        to="/events/$eventId"
-        params={{ eventId: event.id }}
-        className="grid grid-cols-12 items-center gap-3 px-5 py-4 transition hover:bg-secondary md:px-6"
-      >
-        <div className="col-span-12 md:col-span-5">
-          <div className="text-base text-ink">{event.title}</div>
-          <div className="text-xs text-muted-foreground">{event.organizer}</div>
-        </div>
-        <div className="col-span-6 md:col-span-3 mono text-xs uppercase tracking-widest text-muted-foreground">
-          {event.location}
-        </div>
-        <div className="col-span-3 md:col-span-2 num text-sm text-ink">{formatDate(event.starts_at)}</div>
-        <div className="col-span-3 md:col-span-2 text-right num text-sm text-ink">
-          {formatMoney(Number(event.signup_fee), event.currency)}
-        </div>
-      </Link>
-    </li>
-  );
-}
