@@ -191,41 +191,48 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
   if (!user) return <div className="mx-auto max-w-4xl px-6 py-16 text-muted-foreground">Loading…</div>;
 
-  return (
-    <div className="mx-auto max-w-4xl px-6 md:px-10">
-      <header className="flex flex-wrap items-end justify-between gap-4 pt-4">
-        <div>
-          <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            Organizer · {mode === "create" ? "New event" : "Edit event"}
-          </p>
-          <h1 className="mt-2 text-3xl text-ink md:text-4xl">{title || "Untitled event"}</h1>
-        </div>
-        <button
-          onClick={save}
-          disabled={busy || !canSave}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-        >
-          <Save className="h-4 w-4" />
-          {busy ? "Saving…" : mode === "create" ? "Create event" : "Save"}
-        </button>
-      </header>
+  const isMap = tab === "map";
 
-      {/* Tab strip — Excel-like, trustworthy */}
-      <nav className="mt-7 flex border-b border-hairline">
-        <TabBtn active={tab === "details"} onClick={() => setTab("details")} icon={<FileText className="h-3.5 w-3.5" />}>
-          Event details
-        </TabBtn>
-        <TabBtn active={tab === "classes"} onClick={() => setTab("classes")} icon={<Layers className="h-3.5 w-3.5" />}>
-          Classes
-        </TabBtn>
-        <TabBtn
-          active={tab === "subevents"}
-          onClick={() => setTab("subevents")}
-          icon={<ListTree className="h-3.5 w-3.5" />}
-        >
-          Subevents
-        </TabBtn>
-      </nav>
+  return (
+    <div className={isMap ? "flex min-h-[calc(100vh-2rem)] flex-col" : "mx-auto max-w-4xl px-6 md:px-10"}>
+      <div className={isMap ? "mx-auto w-full max-w-7xl px-6 md:px-10" : ""}>
+        <header className="flex flex-wrap items-end justify-between gap-4 pt-4">
+          <div>
+            <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Organizer · {mode === "create" ? "New event" : "Edit event"}
+            </p>
+            <h1 className="mt-2 text-3xl text-ink md:text-4xl">{title || "Untitled event"}</h1>
+          </div>
+          <button
+            onClick={save}
+            disabled={busy || !canSave}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+          >
+            <Save className="h-4 w-4" />
+            {busy ? "Saving…" : mode === "create" ? "Create event" : "Save"}
+          </button>
+        </header>
+
+        {/* Tab strip — Excel-like, trustworthy */}
+        <nav className="mt-7 flex border-b border-hairline">
+          <TabBtn active={tab === "details"} onClick={() => setTab("details")} icon={<FileText className="h-3.5 w-3.5" />}>
+            Event details
+          </TabBtn>
+          <TabBtn active={tab === "classes"} onClick={() => setTab("classes")} icon={<Layers className="h-3.5 w-3.5" />}>
+            Classes
+          </TabBtn>
+          <TabBtn
+            active={tab === "subevents"}
+            onClick={() => setTab("subevents")}
+            icon={<ListTree className="h-3.5 w-3.5" />}
+          >
+            Subevents
+          </TabBtn>
+          <TabBtn active={tab === "map"} onClick={() => setTab("map")} icon={<MapIcon className="h-3.5 w-3.5" />}>
+            Map
+          </TabBtn>
+        </nav>
+      </div>
 
       {tab === "details" && (
         <Panel>
