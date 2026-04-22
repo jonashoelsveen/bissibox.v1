@@ -509,21 +509,69 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                                   : "#7c3aed";
                               const kindLabel =
                                 p.kind.charAt(0).toUpperCase() + p.kind.slice(1);
+                              const isDragging = dragId === p.id;
+                              const isOver = dragOverId === p.id && dragId !== p.id;
                               return (
                                 <li
                                   key={p.id}
+                                  draggable
+                                  onDragStart={(e) => {
+                                    setDragId(p.id);
+                                    e.dataTransfer.effectAllowed = "move";
+                                    e.dataTransfer.setData("text/plain", p.id);
+                                  }}
+                                  onDragEnter={(e) => {
+                                    e.preventDefault();
+                                    if (dragId && dragId !== p.id) {
+                                      // Live reorder: move dragged item to this index
+                                      setSubevents((arr) =>
+                                        arr.map((x, ix) => {
+                                          if (ix !== i) return x;
+                                          const list = [...x.split_points];
+                                          const from = list.findIndex((sp) => sp.id === dragId);
+                                          const to = list.findIndex((sp) => sp.id === p.id);
+                                          if (from < 0 || to < 0 || from === to) return x;
+                                          const [moved] = list.splice(from, 1);
+                                          list.splice(to, 0, moved);
+                                          return { ...x, split_points: list };
+                                        })
+                                      );
+                                      setDragOverId(p.id);
+                                    }
+                                  }}
+                                  onDragOver={(e) => {
+                                    e.preventDefault();
+                                    e.dataTransfer.dropEffect = "move";
+                                  }}
+                                  onDragEnd={() => {
+                                    setDragId(null);
+                                    setDragOverId(null);
+                                  }}
+                                  onDrop={(e) => {
+                                    e.preventDefault();
+                                    setDragId(null);
+                                    setDragOverId(null);
+                                  }}
                                   onClick={() => setSelectedSplitId(p.id)}
-                                  className={`group relative flex items-center gap-3 overflow-hidden border bg-card pl-4 pr-3 py-3 shadow-sm transition cursor-pointer ${
+                                  className={`group relative flex items-center gap-2 overflow-hidden border bg-card pl-3 pr-3 py-3 shadow-sm transition cursor-pointer ${
                                     sel
                                       ? "border-primary shadow-md"
                                       : "border-hairline hover:border-muted-foreground/40 hover:shadow"
-                                  }`}
+                                  } ${isDragging ? "opacity-40" : ""} ${isOver ? "ring-2 ring-primary/40" : ""}`}
                                 >
                                   <span
                                     aria-hidden
                                     className="absolute left-0 top-0 h-full w-1"
                                     style={{ background: dot }}
                                   />
+                                  <span
+                                    className="ml-1 grid h-7 w-5 shrink-0 cursor-grab place-items-center text-muted-foreground hover:text-ink active:cursor-grabbing"
+                                    onClick={(e) => e.stopPropagation()}
+                                    title="Drag to reorder"
+                                    aria-label="Drag to reorder"
+                                  >
+                                    <GripVertical className="h-4 w-4" />
+                                  </span>
                                   <div className="flex min-w-0 flex-1 flex-col">
                                     <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                                       {kindLabel}
