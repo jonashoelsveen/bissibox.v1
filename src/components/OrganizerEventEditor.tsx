@@ -36,7 +36,8 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const nav = useNavigate();
 
   // Top-level
-  const [tab, setTab] = useState<"details" | "classes" | "subevents">("details");
+  const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map">("details");
+  const [activeMapSub, setActiveMapSub] = useState<number>(0);
 
   // Event details
   const [title, setTitle] = useState("");
@@ -108,6 +109,8 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             max_participants: s.max_participants != null ? String(s.max_participants) : "",
             class_codes: s.class_codes ?? [],
             sort_order: s.sort_order ?? i,
+            course_path: Array.isArray((s as any).course_path) ? ((s as any).course_path as LatLng[]) : [],
+            split_points: Array.isArray((s as any).split_points) ? ((s as any).split_points as SplitPoint[]) : [],
           }))
         );
     })();
@@ -171,6 +174,8 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             max_participants: s.max_participants ? Number(s.max_participants) : null,
             class_codes: s.class_codes,
             sort_order: i,
+            course_path: s.course_path,
+            split_points: s.split_points,
           })) as never
         );
 
@@ -340,6 +345,8 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                     max_participants: "",
                     class_codes: [...classes],
                     sort_order: arr.length,
+                    course_path: [],
+                    split_points: [],
                   },
                 ]);
                 setOpenSub(subevents.length);
