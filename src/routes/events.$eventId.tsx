@@ -118,48 +118,68 @@ function EventDetail() {
         <p className="mt-8 text-base leading-relaxed text-ink">{event.description}</p>
       )}
 
-      <section className="mt-10 rounded-2xl border border-hairline bg-card p-6">
-        <h2 className="text-xl text-ink">Sign up</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Choose your distance.</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {event.race_types.map((t) => {
-            const active = chosen === t;
-            return (
-              <button
-                key={t}
-                onClick={() => setChosen(t)}
-                disabled={registered}
-                className={`rounded-full border px-4 py-2 text-sm transition ${
-                  active
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-hairline bg-background text-ink hover:bg-secondary"
-                } ${registered ? "opacity-60" : ""}`}
-              >
-                {t}
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-6 flex items-center justify-between">
+      <section className="ticket mt-10 bg-card text-ink shadow-[0_1px_0_rgba(0,0,0,0.04),0_20px_40px_-24px_rgba(0,0,0,0.18)]">
+        <div className="ticket-stub">
           <div>
             <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Total
+              Entry ticket
             </div>
-            <div className="num text-2xl text-ink">
-              {formatMoney(Number(event.signup_fee), event.currency)}
+            <h2 className="mt-1 text-xl text-ink">Sign up</h2>
+          </div>
+          <div className="text-right">
+            <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              No.
+            </div>
+            <div className="num text-sm text-ink">
+              {event.id.slice(0, 6).toUpperCase()}
             </div>
           </div>
-          <button
-            onClick={handleSignup}
-            disabled={submitting || registered || !chosen}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-          >
-            {registered ? "Already signed up" : submitting ? "Signing up…" : "Sign up"}
-          </button>
         </div>
-        <p className="mt-4 mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          Payments by Vipps · coming soon
-        </p>
+
+        <div className="ticket-perf" aria-hidden />
+
+        <div className="ticket-body">
+          <p className="text-sm text-muted-foreground">Choose your distance.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {event.race_types.map((t) => {
+              const active = chosen === t;
+              return (
+                <button
+                  key={t}
+                  onClick={() => setChosen(t)}
+                  disabled={registered}
+                  className={`rounded-[6px] border px-4 py-2 text-sm transition ${
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-hairline bg-background text-ink hover:bg-secondary"
+                  } ${registered ? "opacity-60" : ""}`}
+                >
+                  {t}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-6 flex items-center justify-between">
+            <div>
+              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Total
+              </div>
+              <div className="num text-2xl text-ink">
+                {formatMoney(Number(event.signup_fee), event.currency)}
+              </div>
+            </div>
+            <button
+              onClick={handleSignup}
+              disabled={submitting || registered || !chosen}
+              className="inline-flex items-center gap-2 rounded-[8px] bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+            >
+              {registered ? "Already signed up" : submitting ? "Signing up…" : "Sign up"}
+            </button>
+          </div>
+          <p className="mt-4 mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            Payments by Vipps · coming soon
+          </p>
+        </div>
       </section>
     </div>
   );

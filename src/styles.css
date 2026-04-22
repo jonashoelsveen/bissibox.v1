@@ -138,4 +138,42 @@
     box-shadow: 0 1px 0 0 color-mix(in oklab, var(--ink) 6%, transparent),
                 0 8px 24px -16px color-mix(in oklab, var(--ink) 25%, transparent);
   }
+
+  /* Ticket: trustworthy with softly clipped corners + side notches + perforation */
+  .ticket {
+    --notch: 14px;
+    --corner: 12px;
+    position: relative;
+    background: var(--color-card);
+    -webkit-mask:
+      radial-gradient(circle var(--notch) at 0 var(--ticket-perf-y, 86px), transparent 98%, #000 100%),
+      radial-gradient(circle var(--notch) at 100% var(--ticket-perf-y, 86px), transparent 98%, #000 100%);
+    -webkit-mask-composite: source-in;
+            mask:
+      radial-gradient(circle var(--notch) at 0 var(--ticket-perf-y, 86px), transparent 98%, #000 100%),
+      radial-gradient(circle var(--notch) at 100% var(--ticket-perf-y, 86px), transparent 98%, #000 100%);
+            mask-composite: intersect;
+    border-radius: var(--corner);
+  }
+  .ticket-stub {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem 1rem;
+  }
+  .ticket-body {
+    padding: 1rem 1.5rem 1.5rem;
+  }
+  .ticket-perf {
+    position: relative;
+    height: 1px;
+    margin: 0 calc(var(--notch) + 6px);
+    background-image: linear-gradient(
+      to right,
+      color-mix(in oklab, var(--ink) 30%, transparent) 0 6px,
+      transparent 6px 12px
+    );
+    background-size: 12px 1px;
+    background-repeat: repeat-x;
+  }
 }
