@@ -141,20 +141,12 @@ function ProfilePage() {
               value={profile.birth_date ?? ""}
               onChange={(v) => update("birth_date", v || null)}
             />
-            <Field label="Club" value={profile.club ?? ""} onChange={(v) => update("club", v)} />
             <Field
               label="Company / Klubb"
               value={profile.company_club ?? ""}
               onChange={(v) => update("company_club", v)}
             />
             <Field label="Team" value={profile.team ?? ""} onChange={(v) => update("team", v)} />
-            <Field label="Group (Lag)" value={profile.team_group ?? ""} onChange={(v) => update("team_group", v)} />
-            <Field
-              label="Default class"
-              value={profile.default_class ?? ""}
-              onChange={(v) => update("default_class", v)}
-              placeholder="e.g. M30-34"
-            />
             <Field label="License" value={profile.license ?? ""} onChange={(v) => update("license", v)} />
           </Grid>
           <Anonymous value={profile.anonymous} onChange={(v) => update("anonymous", v)} />
