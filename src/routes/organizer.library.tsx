@@ -139,7 +139,7 @@ function LibraryPage() {
 
   return (
     <div className="px-4 md:px-6">
-      <header className="flex flex-wrap items-end justify-between gap-4 pt-6 pb-4">
+      <header className="flex flex-wrap items-center justify-between gap-4 pt-6 pb-4">
         <div>
           <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Organizer · Library</p>
           <h1 className="mt-2 text-3xl text-ink md:text-4xl">Your events</h1>
@@ -147,16 +147,8 @@ function LibraryPage() {
             Past and upcoming events. Duplicate to use as a template.
           </p>
         </div>
-        <Link
-          to="/organizer/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-        >
-          <Plus className="h-4 w-4" /> New event
-        </Link>
-      </header>
 
-      <div className="flex justify-center pb-4">
-        <div className="flex w-full max-w-md items-center gap-2">
+        <div className="flex flex-1 items-center justify-center gap-2 order-last md:order-none w-full md:w-auto md:max-w-md">
           <label className="flex flex-1 items-center gap-3 rounded-full border border-hairline bg-card px-5 py-2.5 ring-soft focus-within:border-primary">
             <SearchIcon className="h-4 w-4 text-muted-foreground" />
             <input
@@ -217,7 +209,14 @@ function LibraryPage() {
             )}
           </div>
         </div>
-      </div>
+
+        <Link
+          to="/organizer/new"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+        >
+          <Plus className="h-4 w-4" /> New event
+        </Link>
+      </header>
 
       <div className="border-b border-hairline" />
 

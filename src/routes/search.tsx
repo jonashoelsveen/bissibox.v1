@@ -101,7 +101,7 @@ function SearchPage() {
         </label>
       </header>
 
-      <div className="border-b border-hairline" />
+      
 
       <div className="mx-auto max-w-5xl pt-6">
         <div className="flex flex-wrap justify-center gap-2">
