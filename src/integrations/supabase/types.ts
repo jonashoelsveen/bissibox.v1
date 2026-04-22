@@ -34,6 +34,7 @@ export type Database = {
           starts_at: string
           title: string
           updated_at: string
+          world_athletics_certified: boolean
         }
         Insert: {
           category?: string | null
@@ -54,6 +55,7 @@ export type Database = {
           starts_at: string
           title: string
           updated_at?: string
+          world_athletics_certified?: boolean
         }
         Update: {
           category?: string | null
@@ -74,6 +76,7 @@ export type Database = {
           starts_at?: string
           title?: string
           updated_at?: string
+          world_athletics_certified?: boolean
         }
         Relationships: []
       }
