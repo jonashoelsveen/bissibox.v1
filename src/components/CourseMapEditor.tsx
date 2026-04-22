@@ -443,17 +443,20 @@ function ToolBtn({
   onClick,
   title,
   children,
+  disabled,
 }: {
   active?: boolean;
   onClick: () => void;
   title: string;
   children: React.ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       title={title}
-      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition ${
+      disabled={disabled}
+      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition disabled:opacity-40 disabled:cursor-not-allowed ${
         active ? "bg-primary text-primary-foreground" : "text-ink hover:bg-secondary"
       }`}
     >
