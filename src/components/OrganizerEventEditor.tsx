@@ -492,41 +492,59 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
       {tab === "map" && (
         <div className="mt-5 flex flex-1 overflow-hidden rounded-lg border border-hairline bg-card">
-          {/* Map area */}
-          <div className="relative min-h-[600px] flex-1">
-            {subevents.length === 0 ? (
-              <div className="flex h-full min-h-[600px] items-center justify-center p-10 text-center text-sm text-muted-foreground">
-                Add a race in the Subevents tab to draw its course map.
+          {/* Left: map + elevation profile stacked */}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <div className="relative min-h-[480px] flex-1">
+              {subevents.length === 0 ? (
+                <div className="flex h-full min-h-[480px] items-center justify-center p-10 text-center text-sm text-muted-foreground">
+                  Add a race in the Subevents tab to draw its course map.
+                </div>
+              ) : (
+                <CourseMapEditor
+                  key={activeMapSub}
+                  title={subevents[activeMapSub]?.name || `Race ${activeMapSub + 1}`}
+                  path={subevents[activeMapSub]?.course_path ?? []}
+                  splits={subevents[activeMapSub]?.split_points ?? []}
+                  selectedSplitId={selectedSplitId}
+                  hoverPosition={hoverPos}
+                  onSelectSplit={(id) => {
+                    setSelectedSplitId(id);
+                    if (id != null)
+                      setExpandedSubMap((m) => ({ ...m, [activeMapSub]: true }));
+                  }}
+                  onChange={({ path, splits }) =>
+                    setSubevents((arr) =>
+                      arr.map((x, i) =>
+                        i === activeMapSub ? { ...x, course_path: path, split_points: splits } : x
+                      )
+                    )
+                  }
+                  onSave={save}
+                  saving={busy}
+                  onDelete={() =>
+                    setSubevents((arr) =>
+                      arr.map((x, i) =>
+                        i === activeMapSub ? { ...x, course_path: [], split_points: [] } : x
+                      )
+                    )
+                  }
+                />
+              )}
+            </div>
+            {subevents.length > 0 && (
+              <div className="border-t border-hairline p-3">
+                <ElevationProfile
+                  path={subevents[activeMapSub]?.course_path ?? []}
+                  splits={subevents[activeMapSub]?.split_points ?? []}
+                  selectedSplitId={selectedSplitId}
+                  onSelectSplit={(id) => {
+                    setSelectedSplitId(id);
+                    if (id != null)
+                      setExpandedSubMap((m) => ({ ...m, [activeMapSub]: true }));
+                  }}
+                  onHover={setHoverPos}
+                />
               </div>
-            ) : (
-              <CourseMapEditor
-                key={activeMapSub}
-                title={subevents[activeMapSub]?.name || `Race ${activeMapSub + 1}`}
-                path={subevents[activeMapSub]?.course_path ?? []}
-                splits={subevents[activeMapSub]?.split_points ?? []}
-                selectedSplitId={selectedSplitId}
-                onSelectSplit={(id) => {
-                  setSelectedSplitId(id);
-                  if (id != null)
-                    setExpandedSubMap((m) => ({ ...m, [activeMapSub]: true }));
-                }}
-                onChange={({ path, splits }) =>
-                  setSubevents((arr) =>
-                    arr.map((x, i) =>
-                      i === activeMapSub ? { ...x, course_path: path, split_points: splits } : x
-                    )
-                  )
-                }
-                onSave={save}
-                saving={busy}
-                onDelete={() =>
-                  setSubevents((arr) =>
-                    arr.map((x, i) =>
-                      i === activeMapSub ? { ...x, course_path: [], split_points: [] } : x
-                    )
-                  )
-                }
-              />
             )}
           </div>
 
