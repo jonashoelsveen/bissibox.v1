@@ -39,13 +39,19 @@ interface RegistrationRow {
   events: { id: string; title: string; starts_at: string; location: string } | null;
 }
 
+interface LikedRow {
+  id: string;
+  events: { id: string; title: string; starts_at: string; location: string } | null;
+}
+
 function ProfilePage() {
   const { user, loading: authLoading, mode, setMode, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [regs, setRegs] = useState<RegistrationRow[]>([]);
+  const [liked, setLiked] = useState<LikedRow[]>([]);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<"general" | "address" | "races">("general");
+  const [tab, setTab] = useState<"general" | "address" | "races" | "liked">("general");
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -62,8 +68,20 @@ function ProfilePage() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setRegs((r as unknown as RegistrationRow[]) ?? []);
+      const { data: l } = await supabase
+        .from("event_likes")
+        .select("id, events(id, title, starts_at, location)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      setLiked((l as unknown as LikedRow[]) ?? []);
     })();
   }, [user]);
+
+  const unlike = async (likeId: string) => {
+    const { error } = await supabase.from("event_likes").delete().eq("id", likeId);
+    if (error) return toast.error(error.message);
+    setLiked((prev) => prev.filter((x) => x.id !== likeId));
+  };
 
   const update = (k: keyof Profile, v: string | boolean | null) =>
     setProfile((p) => (p ? { ...p, [k]: v } : p));
