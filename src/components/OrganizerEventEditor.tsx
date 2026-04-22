@@ -489,7 +489,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                     </div>
 
                     {expanded && active && (
-                      <div className="bg-card/50 px-3 pb-3">
+                      <div className="bg-card/50 px-3 pb-3 pt-4">
                         {points.length === 0 ? (
                           <p className="px-2 py-3 text-xs text-muted-foreground">
                             No splits or fuel points yet. Pick a tool and click the map.
@@ -560,7 +560,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                                     setDragHandleId(null);
                                   }}
                                   onClick={() => setSelectedSplitId(p.id)}
-                                  className={`group relative flex items-center gap-2 overflow-hidden border bg-card pl-3 pr-3 py-3 shadow-sm transition cursor-pointer ${
+                                  className={`group relative flex items-center gap-2 overflow-hidden rounded-md border bg-card pl-3 pr-3 py-3 shadow-sm transition cursor-pointer ${
                                     sel
                                       ? "border-primary shadow-md"
                                       : "border-hairline hover:border-muted-foreground/40 hover:shadow"

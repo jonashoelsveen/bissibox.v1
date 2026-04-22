@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil, MapPin, Droplet, Flag, Trash2, Save, X, Eraser, Hand, Timer } from "lucide-react";
+import { Pencil, Droplet, Flag, Trash2, Save, Eraser, Hand, Timer, Undo2, Redo2 } from "lucide-react";
 
 export type LatLng = [number, number];
 export type SplitKind = "split" | "fuel" | "start" | "finish" | "marker";
@@ -36,8 +36,9 @@ const KIND_META: Record<SplitKind, { color: string; label: string }> = {
   marker: { color: "#7c3aed", label: "Marker" },
 };
 
+// Pen cursor — angled fountain pen, hotspot at the nib tip (bottom-left)
 const PEN_CURSOR =
-  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='%238B8FE8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 19l7-7 3 3-7 7-3-3z'/><path d='M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z'/><path d='M2 2l7.586 7.586'/><circle cx='11' cy='11' r='2'/></svg>\") 2 26, crosshair";
+  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><defs><filter id='s' x='-20%25' y='-20%25' width='140%25' height='140%25'><feDropShadow dx='0.5' dy='1' stdDeviation='0.6' flood-opacity='0.45'/></filter></defs><g filter='url(%23s)'><path d='M22 4 L28 10 L13 25 L7 25 L7 19 Z' fill='%238B8FE8' stroke='white' stroke-width='1.2' stroke-linejoin='round'/><path d='M7 25 L4 28 L7 25 Z' fill='white' stroke='%231f2937' stroke-width='1' stroke-linejoin='round'/><circle cx='4' cy='28' r='1.2' fill='%231f2937'/><line x1='17' y1='9' x2='23' y2='15' stroke='white' stroke-width='1.2'/></g></svg>\") 4 28, crosshair";
 
 export function CourseMapEditor({
   path,
@@ -63,6 +64,53 @@ export function CourseMapEditor({
   const splitsRef = useRef<SplitPoint[]>(splits);
   const onChangeRef = useRef(onChange);
   const onSelectRef = useRef(onSelectSplit);
+
+  // Undo/redo history
+  type Snap = { path: LatLng[]; splits: SplitPoint[] };
+  const historyRef = useRef<Snap[]>([{ path, splits }]);
+  const historyIdxRef = useRef(0);
+  const skipNextHistoryRef = useRef(false);
+  const [, forceTick] = useState(0);
+
+  const pushHistory = (snap: Snap) => {
+    const cur = historyRef.current[historyIdxRef.current];
+    if (cur && JSON.stringify(cur) === JSON.stringify(snap)) return;
+    const trimmed = historyRef.current.slice(0, historyIdxRef.current + 1);
+    trimmed.push(snap);
+    if (trimmed.length > 100) trimmed.shift();
+    historyRef.current = trimmed;
+    historyIdxRef.current = trimmed.length - 1;
+    forceTick((n) => n + 1);
+  };
+
+  // Wrap onChange so external updates are tracked
+  const trackedChange = (next: Snap) => {
+    onChangeRef.current(next);
+    if (skipNextHistoryRef.current) {
+      skipNextHistoryRef.current = false;
+      return;
+    }
+    pushHistory(next);
+  };
+
+  const undo = () => {
+    if (historyIdxRef.current <= 0) return;
+    historyIdxRef.current -= 1;
+    const snap = historyRef.current[historyIdxRef.current];
+    skipNextHistoryRef.current = true;
+    onChangeRef.current(snap);
+    forceTick((n) => n + 1);
+  };
+  const redo = () => {
+    if (historyIdxRef.current >= historyRef.current.length - 1) return;
+    historyIdxRef.current += 1;
+    const snap = historyRef.current[historyIdxRef.current];
+    skipNextHistoryRef.current = true;
+    onChangeRef.current(snap);
+    forceTick((n) => n + 1);
+  };
+  const canUndo = historyIdxRef.current > 0;
+  const canRedo = historyIdxRef.current < historyRef.current.length - 1;
 
   useEffect(() => { toolRef.current = tool; }, [tool]);
   useEffect(() => { pathRef.current = path; }, [path]);
@@ -103,7 +151,7 @@ export function CourseMapEditor({
       const t = toolRef.current;
       const ll: LatLng = [e.latlng.lat, e.latlng.lng];
       if (t === "draw") {
-        onChangeRef.current({ path: [...pathRef.current, ll], splits: splitsRef.current });
+        trackedChange({ path: [...pathRef.current, ll], splits: splitsRef.current });
       } else if (t === "split" || t === "fuel" || t === "marker" || t === "start" || t === "finish") {
         const kind: SplitKind = t as SplitKind;
         // Start/Finish are unique — replace existing
@@ -115,7 +163,7 @@ export function CourseMapEditor({
             label: kind === "start" ? "Start" : "Finish",
             position: ll,
           };
-          onChangeRef.current({ path: pathRef.current, splits: [...filtered, sp] });
+          trackedChange({ path: pathRef.current, splits: [...filtered, sp] });
         } else {
           const same = splitsRef.current.filter((s) => s.kind === kind).length;
           const sp: SplitPoint = {
@@ -125,7 +173,7 @@ export function CourseMapEditor({
               kind === "split" ? `Split ${same + 1}` : kind === "fuel" ? `Fuel ${same + 1}` : `Marker ${same + 1}`,
             position: ll,
           };
-          onChangeRef.current({ path: pathRef.current, splits: [...splitsRef.current, sp] });
+          trackedChange({ path: pathRef.current, splits: [...splitsRef.current, sp] });
           onSelectRef.current?.(sp.id);
         }
       } else {
@@ -167,7 +215,7 @@ export function CourseMapEditor({
     midMarkersRef.current = [];
 
     if (path.length >= 2) {
-      const pl = L.polyline(path, { color: LINE_COLOR, weight: 5, opacity: 0.9, interactive: tool === "draw" }).addTo(map);
+      const pl = L.polyline(path, { color: LINE_COLOR, weight: 5, opacity: 0.65, interactive: tool === "draw" }).addTo(map);
       polylineRef.current = pl;
 
       // Click on the line itself in draw mode → insert vertex at click location (closest segment)
@@ -178,7 +226,7 @@ export function CourseMapEditor({
           const insertIdx = findInsertIndex(path, ll);
           const next = [...path];
           next.splice(insertIdx, 0, ll);
-          onChangeRef.current({ path: next, splits: splitsRef.current });
+          trackedChange({ path: next, splits: splitsRef.current });
         });
       }
     } else if (path.length === 1) {
@@ -205,13 +253,13 @@ export function CourseMapEditor({
           const ll = ev.target.getLatLng();
           const next = [...pathRef.current];
           next[idx] = [ll.lat, ll.lng];
-          onChangeRef.current({ path: next, splits: splitsRef.current });
+          trackedChange({ path: next, splits: splitsRef.current });
         });
         m.on("click", (ev: any) => {
           (L as any).DomEvent.stopPropagation(ev);
           // Click vertex in draw mode → delete it
           const next = pathRef.current.filter((_, i) => i !== idx);
-          onChangeRef.current({ path: next, splits: splitsRef.current });
+          trackedChange({ path: next, splits: splitsRef.current });
         });
         m.bindTooltip("Drag to move · click to delete", { direction: "top" });
         vertexMarkersRef.current.push(m);
@@ -233,7 +281,7 @@ export function CourseMapEditor({
             const next = [...pathRef.current];
             next.splice(i + 1, 0, [ll.lat, ll.lng]);
             // Update synchronously and rebuild handles after React re-render
-            onChangeRef.current({ path: next, splits: splitsRef.current });
+            trackedChange({ path: next, splits: splitsRef.current });
           });
           midMarkersRef.current.push(mm);
         }
@@ -285,7 +333,7 @@ export function CourseMapEditor({
         if (toolRef.current === "pan") {
           onSelectRef.current?.(s.id);
         } else {
-          onChangeRef.current({
+          trackedChange({
             path: pathRef.current,
             splits: splitsRef.current.filter((x) => x.id !== s.id),
           });
@@ -295,11 +343,7 @@ export function CourseMapEditor({
     });
   }, [L, splits, selectedSplitId]);
 
-  const undoLastPoint = () => {
-    if (!path.length) return;
-    onChange({ path: path.slice(0, -1), splits });
-  };
-  const clearAll = () => onChange({ path: [], splits: [] });
+  const clearAll = () => trackedChange({ path: [], splits: [] });
 
   return (
     <div className="relative h-full w-full">
@@ -332,20 +376,23 @@ export function CourseMapEditor({
             <Droplet className="h-4 w-4" style={{ color: KIND_META.fuel.color }} />
             <span className="text-sm">Fuel</span>
           </ToolBtn>
+          <span className="mx-1 h-5 w-px bg-hairline" />
+          <ToolBtn onClick={undo} title="Undo" disabled={!canUndo}>
+            <Undo2 className="h-4 w-4" />
+          </ToolBtn>
+          <ToolBtn onClick={redo} title="Redo" disabled={!canRedo}>
+            <Redo2 className="h-4 w-4" />
+          </ToolBtn>
+          <span className="mx-1 h-5 w-px bg-hairline" />
+          <ToolBtn
+            onClick={clearAll}
+            title="Clear"
+            disabled={path.length === 0 && splits.length === 0}
+          >
+            <Eraser className="h-4 w-4" />
+            <span className="text-sm">Clear</span>
+          </ToolBtn>
         </div>
-
-
-        {(path.length > 0 || splits.length > 0) && (
-          <div className="pointer-events-auto flex items-center gap-1 rounded-xl border border-hairline bg-card/95 p-1.5 shadow-md backdrop-blur">
-            <ToolBtn onClick={undoLastPoint} title="Undo last point">
-              <span className="text-sm">Undo</span>
-            </ToolBtn>
-            <ToolBtn onClick={clearAll} title="Clear">
-              <Eraser className="h-4 w-4" />
-              <span className="text-sm">Clear</span>
-            </ToolBtn>
-          </div>
-        )}
       </div>
 
       <div className="pointer-events-none absolute bottom-4 left-4 z-[400] rounded-md border border-hairline bg-card/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
@@ -396,17 +443,20 @@ function ToolBtn({
   onClick,
   title,
   children,
+  disabled,
 }: {
   active?: boolean;
   onClick: () => void;
   title: string;
   children: React.ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       title={title}
-      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition ${
+      disabled={disabled}
+      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition disabled:opacity-40 disabled:cursor-not-allowed ${
         active ? "bg-primary text-primary-foreground" : "text-ink hover:bg-secondary"
       }`}
     >
@@ -441,4 +491,4 @@ export function emptySplit(): SplitPoint {
   return { id: crypto.randomUUID(), kind: "marker", label: "Marker", position: [0, 0] };
 }
 
-export { X };
+
