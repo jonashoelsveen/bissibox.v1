@@ -441,4 +441,4 @@ export function emptySplit(): SplitPoint {
   return { id: crypto.randomUUID(), kind: "marker", label: "Marker", position: [0, 0] };
 }
 
-export { X };
+
