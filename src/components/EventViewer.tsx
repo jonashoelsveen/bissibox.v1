@@ -47,6 +47,7 @@ export function EventViewer({ eventId }: { eventId: string }) {
   const [activeMapSub, setActiveMapSub] = useState(0);
   const [expandedSubMap, setExpandedSubMap] = useState<Record<number, boolean>>({ 0: true });
   const [selectedSplitId, setSelectedSplitId] = useState<string | null>(null);
+  const [hoverPos, setHoverPos] = useState<LatLng | null>(null);
   const [registered, setRegistered] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [chosen, setChosen] = useState<string | null>(null);
