@@ -151,6 +151,7 @@ export type Database = {
           organizer: string
           owner_id: string | null
           popularity: number
+          published: boolean
           race_types: string[]
           region: string | null
           signup_deadline: string | null
@@ -173,6 +174,7 @@ export type Database = {
           organizer: string
           owner_id?: string | null
           popularity?: number
+          published?: boolean
           race_types?: string[]
           region?: string | null
           signup_deadline?: string | null
@@ -195,6 +197,7 @@ export type Database = {
           organizer?: string
           owner_id?: string | null
           popularity?: number
+          published?: boolean
           race_types?: string[]
           region?: string | null
           signup_deadline?: string | null

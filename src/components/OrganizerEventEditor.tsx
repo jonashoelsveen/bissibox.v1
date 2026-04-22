@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { DEFAULT_CLASSES } from "@/lib/classes";
-import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as MapIcon, GripVertical } from "lucide-react";
+import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as MapIcon, GripVertical, ArrowLeft, Globe } from "lucide-react";
 import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
 
 type Mode = "create" | "edit";
@@ -57,6 +57,8 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const [currency, setCurrency] = useState("NOK");
   const [raceTypes, setRaceTypes] = useState<string[]>([]);
   const [waCertified, setWaCertified] = useState(false);
+  const [published, setPublished] = useState(false);
+  const [publishBusy, setPublishBusy] = useState(false);
 
   // Classes
   const [classes, setClasses] = useState<string[]>([...DEFAULT_CLASSES]);
@@ -89,6 +91,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         setCurrency(e.currency ?? "NOK");
         setRaceTypes(e.race_types ?? []);
         setWaCertified(!!e.world_athletics_certified);
+        setPublished(!!(e as any).published);
       }
       const { data: cls } = await supabase
         .from("event_classes")
@@ -202,20 +205,58 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
     <div className={isMap ? "flex min-h-[calc(100vh-2rem)] flex-col px-4 md:px-6" : "px-4 md:px-6"}>
       <div>
         <header className="flex flex-wrap items-start justify-between gap-4 pt-4">
-          <div>
-            <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              Organizer · {mode === "create" ? "New event" : "Edit event"}
-            </p>
-            <h1 className="mt-2 text-3xl text-ink md:text-4xl">{title || "Untitled event"}</h1>
+          <div className="flex items-start gap-3">
+            <button
+              onClick={() => nav({ to: "/organizer/library" })}
+              aria-label="Back to your events"
+              title="Back to your events"
+              className="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-card text-muted-foreground transition hover:text-ink"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div>
+              <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                Organizer · {mode === "create" ? "New event" : "Edit event"}
+              </p>
+              <h1 className="mt-2 text-3xl text-ink md:text-4xl">{title || "Untitled event"}</h1>
+            </div>
           </div>
-          <button
-            onClick={save}
-            disabled={busy || !canSave}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-          >
-            <Save className="h-4 w-4" />
-            {busy ? "Saving…" : mode === "create" ? "Create event" : "Save"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={save}
+              disabled={busy || !canSave}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              {busy ? "Saving…" : mode === "create" ? "Create event" : "Save"}
+            </button>
+            {mode === "edit" && savedId && (
+              <button
+                onClick={async () => {
+                  if (!savedId) return;
+                  setPublishBusy(true);
+                  const next = !published;
+                  const { error } = await supabase
+                    .from("events")
+                    .update({ published: next } as never)
+                    .eq("id", savedId);
+                  setPublishBusy(false);
+                  if (error) return toast.error(error.message);
+                  setPublished(next);
+                  toast.success(next ? "Event published." : "Event unpublished.");
+                }}
+                disabled={publishBusy}
+                className={`inline-flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-medium transition disabled:opacity-50 ${
+                  published
+                    ? "border-hairline bg-card text-ink hover:bg-secondary"
+                    : "border-primary bg-card text-primary hover:bg-primary/5"
+                }`}
+              >
+                <Globe className="h-4 w-4" />
+                {publishBusy ? "…" : published ? "Unpublish" : "Publish"}
+              </button>
+            )}
+          </div>
         </header>
 
         {/* Tab strip — Excel-like, trustworthy */}

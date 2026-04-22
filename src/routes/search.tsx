@@ -45,6 +45,7 @@ function SearchPage() {
     supabase
       .from("events")
       .select("*")
+      .eq("published", true)
       .order("popularity", { ascending: false })
       .then(({ data }) => setAll((data as EventRow[]) ?? []));
   }, []);

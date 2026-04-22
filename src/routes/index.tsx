@@ -50,11 +50,13 @@ function Index() {
         .from("events")
         .select("*")
         .eq("featured", true)
+        .eq("published", true)
         .order("starts_at", { ascending: true })
         .limit(6);
       const { data: up } = await supabase
         .from("events")
         .select("*")
+        .eq("published", true)
         .order("starts_at", { ascending: true })
         .limit(8);
       setFeatured((feat as EventRow[]) ?? []);
