@@ -167,8 +167,14 @@ export function CourseMapEditor({
       const map = mapRef.current;
       const c = map?.getCenter?.();
       const contextCenter = c ? { lat: c.lat, lng: c.lng } : undefined;
+      // Pass any user-placed waypoints so the wizard routes THROUGH them in order.
+      const anchors = splitsRef.current.map((s) => ({
+        kind: s.kind,
+        label: s.label,
+        position: s.position,
+      }));
       const { data, error } = await supabase.functions.invoke("ai-draw-course", {
-        body: { prompt: text, contextCenter },
+        body: { prompt: text, contextCenter, anchors },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
@@ -701,10 +707,26 @@ export function CourseMapEditor({
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
+            {splits.length > 0 && (
+              <div className="mb-2 rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs text-indigo-900 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-200">
+                <Sparkles className="mr-1 inline h-3 w-3" />
+                Using {splits.length} placed point{splits.length === 1 ? "" : "s"} as anchors
+                {(() => {
+                  const counts = splits.reduce<Record<string, number>>((a, s) => ((a[s.kind] = (a[s.kind] ?? 0) + 1), a), {});
+                  const parts = Object.entries(counts).map(([k, n]) => `${n} ${KIND_META[k as SplitKind].label.toLowerCase()}`);
+                  return parts.length ? ` (${parts.join(", ")})` : "";
+                })()}
+                . The wizard will route through them in order.
+              </div>
+            )}
             <textarea
               value={wizardPrompt}
               onChange={(e) => setWizardPrompt(e.target.value.slice(0, MAX_PROMPT_CHARS))}
-              placeholder={"e.g. Sentrumsløpet course, start Karl Johan, up to the Royal Palace, through Vigelandsparken, finish at Rådhusplassen."}
+              placeholder={
+                splits.length > 0
+                  ? "Add details — terrain, loop vs out-and-back, landmarks between your points…"
+                  : "Tip: place Start/Finish/Splits on the map first, then describe the route. e.g. Sentrumsløpet, start Karl Johan, up to the Royal Palace, through Vigelandsparken, finish at Rådhusplassen."
+              }
               rows={4}
               disabled={wizardLoading}
               className="w-full resize-none rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none transition placeholder:text-muted-foreground focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 disabled:opacity-60"
