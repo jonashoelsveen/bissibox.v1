@@ -24,6 +24,7 @@ interface OrgEvent {
   title: string;
   organizer: string;
   starts_at: string;
+  updated_at: string;
   location: string | null;
   signup_fee: number;
   currency: string;
@@ -37,6 +38,10 @@ function LibraryPage() {
   const nav = useNavigate();
   const [events, setEvents] = useState<OrgEvent[]>([]);
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("updated_at");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortOpen, setSortOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) nav({ to: "/auth" });
