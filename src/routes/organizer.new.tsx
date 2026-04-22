@@ -11,7 +11,7 @@ function NewEvent() {
   return (
     <OrganizerEventEditor
       mode="create"
-      onSaved={(id) => nav({ to: "/organizer/$eventId/edit", params: { eventId: id } })}
+      onSaved={(id: string) => nav({ to: "/organizer/$eventId/edit", params: { eventId: id } })}
     />
   );
 }
