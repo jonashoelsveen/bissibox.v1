@@ -573,6 +573,12 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                                   />
                                   <span
                                     className="ml-1 grid h-7 w-5 shrink-0 cursor-grab place-items-center text-muted-foreground hover:text-ink active:cursor-grabbing"
+                                    onMouseDown={() => setDragHandleId(p.id)}
+                                    onMouseUp={() => setDragHandleId(null)}
+                                    onMouseLeave={() => {
+                                      // only clear if not currently dragging
+                                      if (!dragId) setDragHandleId(null);
+                                    }}
                                     onClick={(e) => e.stopPropagation()}
                                     title="Drag to reorder"
                                     aria-label="Drag to reorder"
