@@ -187,27 +187,6 @@ const TILE_COLORS: Record<string, { bg: string; fg: string }> = {
   _default: { bg: "#3a3a3a", fg: "#ffffff" },
 };
 
-function RunnerMark({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      style={{ color: "rgba(255,255,255,0.35)" }}
-      aria-hidden
-    >
-      <circle cx="17" cy="4" r="1.6" fill="currentColor" stroke="none" />
-      <path d="M13 21l1.5-4.5L11 14l1.5-4.5L9 11l-2 2" />
-      <path d="M14.5 16.5L18 19" />
-      <path d="M12.5 9.5L15 8l3 1 2-1.5" />
-    </svg>
-  );
-}
-
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <section className="mt-10">
