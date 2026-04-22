@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { Search as SearchIcon } from "lucide-react";
+import { RaceListItem } from "@/components/RaceListItem";
 
 export const Route = createFileRoute("/search")({
   component: SearchPage,
@@ -30,6 +31,7 @@ interface EventRow {
   category: string | null;
   featured: boolean;
   popularity: number;
+  world_athletics_certified?: boolean;
 }
 
 const TYPES = ["5K", "10K", "Half Marathon", "Marathon", "Trail", "Triathlon", "Relay"];
@@ -150,9 +152,9 @@ function SearchPage() {
           {results.length === 0 ? (
             <p className="text-sm text-muted-foreground">No races match that yet.</p>
           ) : (
-            <ul className="divide-y divide-hairline rounded-2xl border border-hairline bg-card">
+            <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-card">
               {results.map((e) => (
-                <ResultItem key={e.id} event={e} />
+                <RaceListItem key={e.id} event={e} />
               ))}
             </ul>
           )}
@@ -192,30 +194,3 @@ function TrendingItem({ index, event }: { index: number; event: EventRow }) {
   );
 }
 
-function ResultItem({ event }: { event: EventRow }) {
-  return (
-    <li>
-      <Link
-        to="/events/$eventId"
-        params={{ eventId: event.id }}
-        className="grid grid-cols-12 gap-3 px-5 py-4 transition hover:bg-secondary"
-      >
-        <div className="col-span-12 md:col-span-6">
-          <div className="text-ink">{event.title}</div>
-          <div className="text-xs text-muted-foreground">
-            {event.organizer} · {event.race_types.join(" · ")}
-          </div>
-        </div>
-        <div className="col-span-6 md:col-span-3 mono text-xs uppercase tracking-widest text-muted-foreground self-center">
-          {event.location}
-        </div>
-        <div className="col-span-3 md:col-span-2 num text-sm text-ink self-center">
-          {formatDate(event.starts_at)}
-        </div>
-        <div className="col-span-3 md:col-span-1 num text-right text-sm text-ink self-center">
-          {formatMoney(Number(event.signup_fee), event.currency)}
-        </div>
-      </Link>
-    </li>
-  );
-}
