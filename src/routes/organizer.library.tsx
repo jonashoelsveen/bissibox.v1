@@ -155,8 +155,8 @@ function LibraryPage() {
                       {e.organizer} · {e.location ?? "—"} · {e.race_types.join(", ")}
                     </div>
                   </div>
-                  <span className="num text-sm text-ink">{formatDate(e.starts_at)}</span>
-                  <div className="flex items-center gap-1">
+                  <span className="num w-28 shrink-0 text-right text-sm text-ink">{formatDate(e.starts_at)}</span>
+                  <div className="flex w-[230px] shrink-0 items-center justify-end gap-1">
                     <Link
                       to="/organizer/$eventId/edit"
                       params={{ eventId: e.id }}
@@ -178,7 +178,7 @@ function LibraryPage() {
                       disabled={busy}
                       aria-label={e.published ? "Unpublish" : "Publish"}
                       title={e.published ? "Unpublish" : "Publish"}
-                      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-2 text-xs transition disabled:opacity-50 ${
+                      className={`inline-flex w-[120px] items-center justify-center gap-1.5 rounded-md border px-2.5 py-2 text-xs transition disabled:opacity-50 ${
                         e.published
                           ? "border-hairline bg-background text-muted-foreground hover:text-ink"
                           : "border-primary bg-card text-primary hover:bg-primary/5"
