@@ -77,6 +77,60 @@ export function CourseMapEditor({
   const skipNextHistoryRef = useRef(false);
   const [, forceTick] = useState(0);
 
+  // Location search
+  type GeoResult = { display_name: string; lat: string; lon: string; boundingbox?: [string, string, string, string]; place_id: number };
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<GeoResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 3) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+    setSearchLoading(true);
+    const t = setTimeout(async () => {
+      searchAbortRef.current?.abort();
+      const ctrl = new AbortController();
+      searchAbortRef.current = ctrl;
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&limit=6&q=${encodeURIComponent(q)}`;
+        const res = await fetch(url, { signal: ctrl.signal, headers: { "Accept-Language": navigator.language || "en" } });
+        const data: GeoResult[] = await res.json();
+        setSearchResults(data);
+        setSearchOpen(true);
+      } catch (err: any) {
+        if (err?.name !== "AbortError") setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  const flyToResult = (r: GeoResult) => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (r.boundingbox && r.boundingbox.length === 4) {
+      const [s, n, w, e] = r.boundingbox;
+      map.flyToBounds(
+        [
+          [parseFloat(s), parseFloat(w)],
+          [parseFloat(n), parseFloat(e)],
+        ],
+        { duration: 0.8, maxZoom: 16 },
+      );
+    } else {
+      map.flyTo([parseFloat(r.lat), parseFloat(r.lon)], 14, { duration: 0.8 });
+    }
+    setSearchQuery(r.display_name.split(",")[0] ?? "");
+    setSearchOpen(false);
+  };
+
   const pushHistory = (snap: Snap) => {
     const cur = historyRef.current[historyIdxRef.current];
     if (cur && JSON.stringify(cur) === JSON.stringify(snap)) return;
