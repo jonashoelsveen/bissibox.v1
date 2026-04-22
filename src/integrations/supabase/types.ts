@@ -14,7 +14,197 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      events: {
+        Row: {
+          category: string | null
+          country: string | null
+          cover_image: string | null
+          created_at: string
+          currency: string
+          description: string | null
+          featured: boolean
+          id: string
+          location: string | null
+          organizer: string
+          popularity: number
+          race_types: string[]
+          region: string | null
+          signup_deadline: string | null
+          signup_fee: number
+          starts_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          country?: string | null
+          cover_image?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          location?: string | null
+          organizer: string
+          popularity?: number
+          race_types?: string[]
+          region?: string | null
+          signup_deadline?: string | null
+          signup_fee?: number
+          starts_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          country?: string | null
+          cover_image?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          featured?: boolean
+          id?: string
+          location?: string | null
+          organizer?: string
+          popularity?: number
+          race_types?: string[]
+          region?: string | null
+          signup_deadline?: string | null
+          signup_fee?: number
+          starts_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          address2: string | null
+          anonymous: boolean
+          birth_date: string | null
+          club: string | null
+          companion: string | null
+          company_club: string | null
+          country: string | null
+          created_at: string
+          default_class: string | null
+          email: string | null
+          emergency_contact: string | null
+          emergency_phone: string | null
+          first_name: string | null
+          gender: string | null
+          id: string
+          last_name: string | null
+          license: string | null
+          mobile: string | null
+          mode: string
+          nationality: string | null
+          postal_code: string | null
+          postal_place: string | null
+          team: string | null
+          team_group: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          address2?: string | null
+          anonymous?: boolean
+          birth_date?: string | null
+          club?: string | null
+          companion?: string | null
+          company_club?: string | null
+          country?: string | null
+          created_at?: string
+          default_class?: string | null
+          email?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          first_name?: string | null
+          gender?: string | null
+          id: string
+          last_name?: string | null
+          license?: string | null
+          mobile?: string | null
+          mode?: string
+          nationality?: string | null
+          postal_code?: string | null
+          postal_place?: string | null
+          team?: string | null
+          team_group?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          address2?: string | null
+          anonymous?: boolean
+          birth_date?: string | null
+          club?: string | null
+          companion?: string | null
+          company_club?: string | null
+          country?: string | null
+          created_at?: string
+          default_class?: string | null
+          email?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          first_name?: string | null
+          gender?: string | null
+          id?: string
+          last_name?: string | null
+          license?: string | null
+          mobile?: string | null
+          mode?: string
+          nationality?: string | null
+          postal_code?: string | null
+          postal_place?: string | null
+          team?: string | null
+          team_group?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      registrations: {
+        Row: {
+          bib_number: string | null
+          created_at: string
+          event_id: string
+          id: string
+          race_type: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bib_number?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          race_type: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bib_number?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          race_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
