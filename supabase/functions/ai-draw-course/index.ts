@@ -199,7 +199,7 @@ Rules:
     const waypointNames: string[] = (args.waypoints ?? []).map((w: any) => w.name).filter(Boolean);
     const splitDescs: { kind: "split" | "fuel"; label: string; near: string }[] = args.splits ?? [];
 
-    if (waypointNames.length < 2) {
+    if (waypointNames.length < 2 && orderedAnchors.length < 2) {
       return new Response(JSON.stringify({ error: "AI returned too few waypoints" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
