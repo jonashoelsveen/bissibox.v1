@@ -42,6 +42,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const [selectedSplitId, setSelectedSplitId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [dragHandleId, setDragHandleId] = useState<string | null>(null);
 
   // Event details
   const [title, setTitle] = useState("");
@@ -514,8 +515,12 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                               return (
                                 <li
                                   key={p.id}
-                                  draggable
+                                  draggable={dragHandleId === p.id}
                                   onDragStart={(e) => {
+                                    if (dragHandleId !== p.id) {
+                                      e.preventDefault();
+                                      return;
+                                    }
                                     setDragId(p.id);
                                     e.dataTransfer.effectAllowed = "move";
                                     e.dataTransfer.setData("text/plain", p.id);
@@ -546,11 +551,13 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                                   onDragEnd={() => {
                                     setDragId(null);
                                     setDragOverId(null);
+                                    setDragHandleId(null);
                                   }}
                                   onDrop={(e) => {
                                     e.preventDefault();
                                     setDragId(null);
                                     setDragOverId(null);
+                                    setDragHandleId(null);
                                   }}
                                   onClick={() => setSelectedSplitId(p.id)}
                                   className={`group relative flex items-center gap-2 overflow-hidden border bg-card pl-3 pr-3 py-3 shadow-sm transition cursor-pointer ${
@@ -566,6 +573,12 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                                   />
                                   <span
                                     className="ml-1 grid h-7 w-5 shrink-0 cursor-grab place-items-center text-muted-foreground hover:text-ink active:cursor-grabbing"
+                                    onMouseDown={() => setDragHandleId(p.id)}
+                                    onMouseUp={() => setDragHandleId(null)}
+                                    onMouseLeave={() => {
+                                      // only clear if not currently dragging
+                                      if (!dragId) setDragHandleId(null);
+                                    }}
                                     onClick={(e) => e.stopPropagation()}
                                     title="Drag to reorder"
                                     aria-label="Drag to reorder"
