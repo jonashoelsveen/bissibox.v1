@@ -72,8 +72,31 @@ export function ReadOnlyCourseMap({ path, splits, selectedSplitId }: Props) {
     splits.forEach((sp) => {
       const color = KIND_COLOR[sp.kind] ?? "#7c3aed";
       const isSel = sp.id === selectedSplitId;
-      const html = `<div style="background:${color};border:2px solid #fff;border-radius:9999px;width:${isSel ? 16 : 12}px;height:${isSel ? 16 : 12}px;box-shadow:0 1px 3px rgba(0,0,0,0.4);"></div>`;
-      const icon = L.divIcon({ html, className: "", iconSize: [isSel ? 16 : 12, isSel ? 16 : 12], iconAnchor: [isSel ? 8 : 6, isSel ? 8 : 6] });
+      let html: string;
+      let size: [number, number];
+      let anchor: [number, number];
+
+      if (sp.kind === "start" || sp.kind === "finish") {
+        const ringFilter = isSel
+          ? "filter:drop-shadow(0 0 4px rgba(139,143,232,0.9));"
+          : "filter:drop-shadow(0 1px 2px rgba(0,0,0,0.4));";
+        html = `<div style="position:relative;width:28px;height:34px;${ringFilter}">
+          <svg width="28" height="34" viewBox="0 0 28 34" xmlns="http://www.w3.org/2000/svg">
+            <line x1="6" y1="2" x2="6" y2="33" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+            <path d="M7 3 L24 6 L20 11 L24 16 L7 13 Z" fill="${color}" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>
+            <circle cx="6" cy="33" r="2" fill="#1f2937"/>
+          </svg>
+        </div>`;
+        size = [28, 34];
+        anchor = [6, 33];
+      } else {
+        const dim = isSel ? 16 : 12;
+        html = `<div style="background:${color};border:2px solid #fff;border-radius:9999px;width:${dim}px;height:${dim}px;box-shadow:0 1px 3px rgba(0,0,0,0.4);"></div>`;
+        size = [dim, dim];
+        anchor = [dim / 2, dim / 2];
+      }
+
+      const icon = L.divIcon({ html, className: "", iconSize: size, iconAnchor: anchor });
       const m = L.marker(sp.position, { icon }).addTo(map);
       m.bindTooltip(sp.label, { direction: "top", offset: [0, -8] });
       layerRef.current.push(m);
