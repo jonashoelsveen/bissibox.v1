@@ -100,8 +100,51 @@ export function EventViewer({ eventId }: { eventId: string }) {
         .eq("event_id", eventId)
         .maybeSingle();
       if (data) setRegistered(true);
+      const { data: like } = await supabase
+        .from("event_likes")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("event_id", eventId)
+        .maybeSingle();
+      setLiked(!!like);
     })();
   }, [user, event, eventId]);
+
+  const toggleLike = async () => {
+    if (!user) {
+      nav({ to: "/auth", search: { redirect: `/events/${eventId}` } });
+      return;
+    }
+    if (likeBusy) return;
+    setLikeBusy(true);
+    if (liked) {
+      await supabase.from("event_likes").delete().eq("user_id", user.id).eq("event_id", eventId);
+      setLiked(false);
+    } else {
+      const { error } = await supabase.from("event_likes").insert({ user_id: user.id, event_id: eventId } as never);
+      if (!error) setLiked(true);
+    }
+    setLikeBusy(false);
+  };
+
+  const shareInvite = async () => {
+    const url = `${window.location.origin}/events/${eventId}`;
+    const title = event?.title ?? "Race";
+    try {
+      if (typeof navigator !== "undefined" && (navigator as any).share) {
+        await (navigator as any).share({ title, text: `Join me at ${title}`, url });
+        return;
+      }
+    } catch {
+      // user cancelled — fall through to clipboard
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Invite link copied to clipboard.");
+    } catch {
+      toast.error("Could not copy link.");
+    }
+  };
 
   const openSignup = () => {
     if (!user) {
