@@ -515,7 +515,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                               return (
                                 <li
                                   key={p.id}
-                                  draggable
+                                  draggable={dragHandleId === p.id}
                                   onDragStart={(e) => {
                                     setDragId(p.id);
                                     e.dataTransfer.effectAllowed = "move";
