@@ -366,6 +366,8 @@ export function EventViewer({ eventId }: { eventId: string }) {
         </Panel>
       )}
 
+      {tab === "participants" && <PublicParticipantsPanel eventId={eventId} />}
+
       {tab === "map" && (
         <div className="mt-5 flex flex-1 overflow-hidden rounded-lg border border-hairline bg-card">
           <div className="flex min-w-0 flex-1 flex-col">
