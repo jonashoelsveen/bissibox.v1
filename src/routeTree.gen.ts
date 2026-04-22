@@ -13,7 +13,10 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OrganizerNewRouteImport } from './routes/organizer.new'
+import { Route as OrganizerLibraryRouteImport } from './routes/organizer.library'
 import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
+import { Route as OrganizerEventIdEditRouteImport } from './routes/organizer.$eventId.edit'
 
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
@@ -35,9 +38,24 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrganizerNewRoute = OrganizerNewRouteImport.update({
+  id: '/organizer/new',
+  path: '/organizer/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrganizerLibraryRoute = OrganizerLibraryRouteImport.update({
+  id: '/organizer/library',
+  path: '/organizer/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EventsEventIdRoute = EventsEventIdRouteImport.update({
   id: '/events/$eventId',
   path: '/events/$eventId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrganizerEventIdEditRoute = OrganizerEventIdEditRouteImport.update({
+  id: '/organizer/$eventId/edit',
+  path: '/organizer/$eventId/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -47,6 +65,9 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/events/$eventId': typeof EventsEventIdRoute
+  '/organizer/library': typeof OrganizerLibraryRoute
+  '/organizer/new': typeof OrganizerNewRoute
+  '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +75,9 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/events/$eventId': typeof EventsEventIdRoute
+  '/organizer/library': typeof OrganizerLibraryRoute
+  '/organizer/new': typeof OrganizerNewRoute
+  '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +86,41 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
   '/events/$eventId': typeof EventsEventIdRoute
+  '/organizer/library': typeof OrganizerLibraryRoute
+  '/organizer/new': typeof OrganizerNewRoute
+  '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/profile' | '/search' | '/events/$eventId'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/profile'
+    | '/search'
+    | '/events/$eventId'
+    | '/organizer/library'
+    | '/organizer/new'
+    | '/organizer/$eventId/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/profile' | '/search' | '/events/$eventId'
-  id: '__root__' | '/' | '/auth' | '/profile' | '/search' | '/events/$eventId'
+  to:
+    | '/'
+    | '/auth'
+    | '/profile'
+    | '/search'
+    | '/events/$eventId'
+    | '/organizer/library'
+    | '/organizer/new'
+    | '/organizer/$eventId/edit'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/profile'
+    | '/search'
+    | '/events/$eventId'
+    | '/organizer/library'
+    | '/organizer/new'
+    | '/organizer/$eventId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +129,9 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   SearchRoute: typeof SearchRoute
   EventsEventIdRoute: typeof EventsEventIdRoute
+  OrganizerLibraryRoute: typeof OrganizerLibraryRoute
+  OrganizerNewRoute: typeof OrganizerNewRoute
+  OrganizerEventIdEditRoute: typeof OrganizerEventIdEditRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -109,11 +164,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/organizer/new': {
+      id: '/organizer/new'
+      path: '/organizer/new'
+      fullPath: '/organizer/new'
+      preLoaderRoute: typeof OrganizerNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/organizer/library': {
+      id: '/organizer/library'
+      path: '/organizer/library'
+      fullPath: '/organizer/library'
+      preLoaderRoute: typeof OrganizerLibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events/$eventId': {
       id: '/events/$eventId'
       path: '/events/$eventId'
       fullPath: '/events/$eventId'
       preLoaderRoute: typeof EventsEventIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/organizer/$eventId/edit': {
+      id: '/organizer/$eventId/edit'
+      path: '/organizer/$eventId/edit'
+      fullPath: '/organizer/$eventId/edit'
+      preLoaderRoute: typeof OrganizerEventIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -125,6 +201,9 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   SearchRoute: SearchRoute,
   EventsEventIdRoute: EventsEventIdRoute,
+  OrganizerLibraryRoute: OrganizerLibraryRoute,
+  OrganizerNewRoute: OrganizerNewRoute,
+  OrganizerEventIdEditRoute: OrganizerEventIdEditRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
