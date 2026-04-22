@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDateLong, formatMoney, formatTime } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarDays, MapPin, Tag, Trophy } from "lucide-react";
+import { ArrowLeft, CalendarDays, Heart, MapPin, Tag, Trophy } from "lucide-react";
 
 export const Route = createFileRoute("/events/$eventId")({
   component: EventDetail,
@@ -35,6 +35,8 @@ function EventDetail() {
   const [chosen, setChosen] = useState<string | null>(null);
   const [registered, setRegistered] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [likeId, setLikeId] = useState<string | null>(null);
+  const [likeBusy, setLikeBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -51,9 +53,40 @@ function EventDetail() {
           .eq("event_id", eventId)
           .maybeSingle();
         if (reg) setRegistered(true);
+        const { data: lk } = await supabase
+          .from("event_likes")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("event_id", eventId)
+          .maybeSingle();
+        if (lk) setLikeId((lk as { id: string }).id);
       }
     })();
   }, [eventId, user]);
+
+  const toggleLike = async () => {
+    if (!user) {
+      navigate({ to: "/auth", search: { redirect: `/events/${eventId}` } });
+      return;
+    }
+    setLikeBusy(true);
+    if (likeId) {
+      const { error } = await supabase.from("event_likes").delete().eq("id", likeId);
+      setLikeBusy(false);
+      if (error) return toast.error(error.message);
+      setLikeId(null);
+    } else {
+      const { data, error } = await supabase
+        .from("event_likes")
+        .insert({ user_id: user.id, event_id: eventId })
+        .select("id")
+        .single();
+      setLikeBusy(false);
+      if (error) return toast.error(error.message);
+      setLikeId((data as { id: string }).id);
+      toast.success("Added to liked races.");
+    }
+  };
 
   const handleSignup = async () => {
     if (!user) {
@@ -93,7 +126,21 @@ function EventDetail() {
         {event.featured && (
           <span className="mono text-[10px] uppercase tracking-widest text-accent">Featured</span>
         )}
-        <h1 className="mt-2 text-4xl text-ink md:text-5xl">{event.title}</h1>
+        <div className="mt-2 flex items-start justify-between gap-4">
+          <h1 className="text-4xl text-ink md:text-5xl">{event.title}</h1>
+          <button
+            onClick={toggleLike}
+            disabled={likeBusy}
+            aria-label={likeId ? "Unlike" : "Like"}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition ${
+              likeId
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-hairline bg-card text-muted-foreground hover:text-ink"
+            }`}
+          >
+            <Heart className="h-5 w-5" fill={likeId ? "currentColor" : "none"} strokeWidth={2} />
+          </button>
+        </div>
         <p className="mt-2 text-base text-muted-foreground">by {event.organizer}</p>
       </header>
 
