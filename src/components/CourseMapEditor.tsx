@@ -370,6 +370,21 @@ export function CourseMapEditor({
     });
   }, [L, splits, selectedSplitId]);
 
+  // Hover marker — driven by elevation curve hover
+  useEffect(() => {
+    if (!L || !mapRef.current) return;
+    const map = mapRef.current;
+    if (hoverMarkerRef.current) {
+      map.removeLayer(hoverMarkerRef.current);
+      hoverMarkerRef.current = null;
+    }
+    if (hoverPosition) {
+      const html = `<div style="width:14px;height:14px;border-radius:9999px;background:#6366F1;border:2px solid #fff;box-shadow:0 0 0 3px rgba(99,102,241,0.35), 0 1px 4px rgba(0,0,0,0.3);"></div>`;
+      const icon = L.divIcon({ html, className: "", iconSize: [14, 14], iconAnchor: [7, 7] });
+      hoverMarkerRef.current = L.marker(hoverPosition, { icon, interactive: false, zIndexOffset: 2000 }).addTo(map);
+    }
+  }, [L, hoverPosition]);
+
   const clearAll = () => trackedChange({ path: [], splits: [] });
 
   return (
