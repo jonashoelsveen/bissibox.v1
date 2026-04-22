@@ -58,7 +58,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, contextCenter } = await req.json();
+    const { prompt, contextCenter, anchors } = await req.json();
     if (!prompt || typeof prompt !== "string") {
       return new Response(JSON.stringify({ error: "Missing prompt" }), {
         status: 400,
@@ -67,6 +67,33 @@ serve(async (req) => {
     }
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    // User-placed anchors that the route MUST pass through, in order.
+    type Anchor = { kind: "start" | "finish" | "split" | "fuel" | "marker"; label?: string; position: [number, number] };
+    const userAnchors: Anchor[] = Array.isArray(anchors)
+      ? anchors
+          .filter((a: any) => a && Array.isArray(a.position) && a.position.length === 2)
+          .map((a: any) => ({
+            kind: a.kind,
+            label: typeof a.label === "string" ? a.label : undefined,
+            position: [Number(a.position[0]), Number(a.position[1])] as [number, number],
+          }))
+      : [];
+
+    // Order anchors: start first, finish last, others in given order between.
+    const startAnchor = userAnchors.find((a) => a.kind === "start");
+    const finishAnchor = userAnchors.find((a) => a.kind === "finish");
+    const middleAnchors = userAnchors.filter((a) => a.kind !== "start" && a.kind !== "finish");
+    const orderedAnchors: Anchor[] = [
+      ...(startAnchor ? [startAnchor] : []),
+      ...middleAnchors,
+      ...(finishAnchor ? [finishAnchor] : []),
+    ];
+    const anchorBlock = orderedAnchors.length
+      ? `\n\nThe user has already placed ${orderedAnchors.length} fixed point(s) on the map. You MUST treat these as hard anchors — your route must pass through them in the exact order given, and the named extra waypoints you add should fall geographically BETWEEN consecutive anchors. Do not move, skip, or reorder anchors.\n\nAnchors (in order):\n${orderedAnchors
+          .map((a, i) => `  ${i + 1}. [${a.kind}${a.label ? ` "${a.label}"` : ""}] lat=${a.position[0].toFixed(6)}, lng=${a.position[1].toFixed(6)}`)
+          .join("\n")}`
+      : "";
 
     // 1. Use Lovable AI to extract a sequence of named waypoints + race metadata.
     const systemPrompt = `You are an expert race course designer with deep knowledge of running, cycling and triathlon courses across Norway and the world (including Sentrumsløpet, Holmenkollstafetten, Oslo Maraton, Birkebeinerrennet, Bergen City Marathon and similar). When given a description of a race course, output an ordered list of geographic waypoints (real, named places — streets, intersections, landmarks, parks, monuments) that an athlete would pass through in order, plus a Start point and a Finish point.
@@ -77,7 +104,8 @@ Rules:
 - Always include a city/country suffix (e.g. ", Oslo, Norway") on every waypoint to disambiguate.
 - The first waypoint is Start, the last is Finish. If the user says it's a loop, make Start ≈ Finish.
 - If the user mentions split points or fuel stations, include them as splits with the appropriate kind.
-- Be geographically realistic: don't jump across the country between consecutive waypoints.`;
+- Be geographically realistic: don't jump across the country between consecutive waypoints.
+- If the user has placed anchor points (see below), your generated waypoints must respect those anchors as fixed pass-through points in the given order. Insert named intermediate waypoints between consecutive anchors to shape the route.${anchorBlock}`;
 
     const tool = {
       type: "function",
