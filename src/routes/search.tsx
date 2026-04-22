@@ -135,14 +135,6 @@ function SearchPage() {
 
         {!showResults ? (
           <>
-            <Section label="Trending now">
-              <ul className="space-y-0.5">
-                {trending.map((e, i) => (
-                  <RaceListItem key={e.id} event={e} rank={i + 1} />
-                ))}
-              </ul>
-            </Section>
-
             <Section label="Browse by distance">
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 {TYPES.map((t) => {
@@ -167,6 +159,14 @@ function SearchPage() {
                   );
                 })}
               </div>
+            </Section>
+
+            <Section label="Trending now">
+              <ul className="space-y-0.5">
+                {trending.map((e, i) => (
+                  <RaceListItem key={e.id} event={e} rank={i + 1} />
+                ))}
+              </ul>
             </Section>
           </>
         ) : (
