@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDateLong, formatMoney, formatTime } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarDays, MapPin, Tag, Trophy } from "lucide-react";
+import { ArrowLeft, CalendarDays, Heart, MapPin, Tag, Trophy } from "lucide-react";
 
 export const Route = createFileRoute("/events/$eventId")({
   component: EventDetail,
@@ -35,6 +35,8 @@ function EventDetail() {
   const [chosen, setChosen] = useState<string | null>(null);
   const [registered, setRegistered] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [likeId, setLikeId] = useState<string | null>(null);
+  const [likeBusy, setLikeBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -51,9 +53,40 @@ function EventDetail() {
           .eq("event_id", eventId)
           .maybeSingle();
         if (reg) setRegistered(true);
+        const { data: lk } = await supabase
+          .from("event_likes")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("event_id", eventId)
+          .maybeSingle();
+        if (lk) setLikeId((lk as { id: string }).id);
       }
     })();
   }, [eventId, user]);
+
+  const toggleLike = async () => {
+    if (!user) {
+      navigate({ to: "/auth", search: { redirect: `/events/${eventId}` } });
+      return;
+    }
+    setLikeBusy(true);
+    if (likeId) {
+      const { error } = await supabase.from("event_likes").delete().eq("id", likeId);
+      setLikeBusy(false);
+      if (error) return toast.error(error.message);
+      setLikeId(null);
+    } else {
+      const { data, error } = await supabase
+        .from("event_likes")
+        .insert({ user_id: user.id, event_id: eventId })
+        .select("id")
+        .single();
+      setLikeBusy(false);
+      if (error) return toast.error(error.message);
+      setLikeId((data as { id: string }).id);
+      toast.success("Added to liked races.");
+    }
+  };
 
   const handleSignup = async () => {
     if (!user) {
