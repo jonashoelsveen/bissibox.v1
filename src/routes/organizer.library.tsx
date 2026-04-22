@@ -103,8 +103,8 @@ function LibraryPage() {
   if (!user) return <div className="mx-auto max-w-4xl px-6 py-16 text-muted-foreground">Loading…</div>;
 
   return (
-    <div className="mx-auto max-w-5xl px-6 md:px-10">
-      <header className="flex flex-wrap items-end justify-between gap-4 pt-4">
+    <div className="px-4 md:px-6">
+      <header className="flex flex-wrap items-end justify-between gap-4 pt-6 pb-4">
         <div>
           <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Organizer · Library</p>
           <h1 className="mt-2 text-3xl text-ink md:text-4xl">Your events</h1>
@@ -120,76 +120,80 @@ function LibraryPage() {
         </Link>
       </header>
 
-      <section className="mt-8">
-        {events.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-hairline bg-card/60 p-10 text-center">
-            <p className="text-sm text-muted-foreground">No events yet.</p>
-            <Link
-              to="/organizer/new"
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"
-            >
-              <Plus className="h-4 w-4" /> Create your first event
-            </Link>
-          </div>
-        ) : (
-          <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-card">
-            {events.map((e) => (
-              <li key={e.id} className="flex items-center gap-4 px-5 py-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-ink">{e.title}</span>
-                    <span
-                      className={`mono shrink-0 rounded-sm px-1.5 py-0.5 text-[9px] uppercase tracking-widest ${
+      <div className="border-b border-hairline" />
+
+      <div className="mx-auto max-w-5xl pt-8">
+        <section>
+          {events.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-hairline bg-card/60 p-10 text-center">
+              <p className="text-sm text-muted-foreground">No events yet.</p>
+              <Link
+                to="/organizer/new"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"
+              >
+                <Plus className="h-4 w-4" /> Create your first event
+              </Link>
+            </div>
+          ) : (
+            <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-card">
+              {events.map((e) => (
+                <li key={e.id} className="flex items-center gap-4 px-5 py-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-ink">{e.title}</span>
+                      <span
+                        className={`mono shrink-0 rounded-sm px-1.5 py-0.5 text-[9px] uppercase tracking-widest ${
+                          e.published
+                            ? "bg-primary/10 text-primary"
+                            : "bg-secondary text-muted-foreground"
+                        }`}
+                      >
+                        {e.published ? "Published" : "Draft"}
+                      </span>
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {e.organizer} · {e.location ?? "—"} · {e.race_types.join(", ")}
+                    </div>
+                  </div>
+                  <span className="num text-sm text-ink">{formatDate(e.starts_at)}</span>
+                  <div className="flex items-center gap-1">
+                    <Link
+                      to="/organizer/$eventId/edit"
+                      params={{ eventId: e.id }}
+                      aria-label="Edit"
+                      className="rounded-md border border-hairline bg-background p-2 text-muted-foreground transition hover:text-ink"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Link>
+                    <button
+                      onClick={() => duplicate(e.id)}
+                      disabled={busy}
+                      aria-label="Duplicate"
+                      className="rounded-md border border-hairline bg-background p-2 text-muted-foreground transition hover:text-ink disabled:opacity-50"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => togglePublish(e.id, !e.published)}
+                      disabled={busy}
+                      aria-label={e.published ? "Unpublish" : "Publish"}
+                      title={e.published ? "Unpublish" : "Publish"}
+                      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-2 text-xs transition disabled:opacity-50 ${
                         e.published
-                          ? "bg-primary/10 text-primary"
-                          : "bg-secondary text-muted-foreground"
+                          ? "border-hairline bg-background text-muted-foreground hover:text-ink"
+                          : "border-primary bg-card text-primary hover:bg-primary/5"
                       }`}
                     >
-                      {e.published ? "Published" : "Draft"}
-                    </span>
+                      <Globe className="h-4 w-4" />
+                      {e.published ? "Unpublish" : "Publish"}
+                    </button>
                   </div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {e.organizer} · {e.location ?? "—"} · {e.race_types.join(", ")}
-                  </div>
-                </div>
-                <span className="num text-sm text-ink">{formatDate(e.starts_at)}</span>
-                <div className="flex items-center gap-1">
-                  <Link
-                    to="/organizer/$eventId/edit"
-                    params={{ eventId: e.id }}
-                    aria-label="Edit"
-                    className="rounded-md border border-hairline bg-background p-2 text-muted-foreground transition hover:text-ink"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Link>
-                  <button
-                    onClick={() => duplicate(e.id)}
-                    disabled={busy}
-                    aria-label="Duplicate"
-                    className="rounded-md border border-hairline bg-background p-2 text-muted-foreground transition hover:text-ink disabled:opacity-50"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => togglePublish(e.id, !e.published)}
-                    disabled={busy}
-                    aria-label={e.published ? "Unpublish" : "Publish"}
-                    title={e.published ? "Unpublish" : "Publish"}
-                    className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-2 text-xs transition disabled:opacity-50 ${
-                      e.published
-                        ? "border-hairline bg-background text-muted-foreground hover:text-ink"
-                        : "border-primary bg-card text-primary hover:bg-primary/5"
-                    }`}
-                  >
-                    <Globe className="h-4 w-4" />
-                    {e.published ? "Unpublish" : "Publish"}
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
