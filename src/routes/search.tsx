@@ -1,7 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate } from "@/lib/format";
 import { Search as SearchIcon } from "lucide-react";
 import { RaceListItem } from "@/components/RaceListItem";
 
@@ -209,24 +208,4 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function TrendingItem({ index, event }: { index: number; event: EventRow }) {
-  return (
-    <li>
-      <Link
-        to="/events/$eventId"
-        params={{ eventId: event.id }}
-        className="flex items-center gap-4 px-5 py-4 transition hover:bg-secondary"
-      >
-        <span className="num w-8 text-right text-2xl text-muted-foreground">{index}</span>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-ink">{event.title}</div>
-          <div className="truncate text-xs text-muted-foreground">
-            {event.organizer} · {event.location}
-          </div>
-        </div>
-        <span className="mono text-xs text-muted-foreground">{formatDate(event.starts_at)}</span>
-      </Link>
-    </li>
-  );
-}
 
