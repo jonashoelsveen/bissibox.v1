@@ -126,25 +126,23 @@ function SearchPage() {
         {!showResults ? (
           <>
             <Section label="Browse by distance">
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                 {TYPES.map((t) => {
                   const c = TILE_COLORS[t] ?? TILE_COLORS._default;
                   return (
                     <button
                       key={t}
                       onClick={() => setFilter(t)}
-                      className="group relative flex aspect-[5/3] flex-col justify-between overflow-hidden rounded-lg p-5 text-left transition hover:translate-y-[-2px]"
+                      className="group relative flex aspect-[5/3] overflow-hidden rounded-md p-3 text-left transition hover:translate-y-[-2px]"
                       style={{ background: c.bg, color: c.fg }}
                     >
                       <span
-                        className="mono text-[10px] uppercase tracking-widest"
-                        style={{ color: c.fg, opacity: 0.75 }}
+                        className="relative z-10 text-base font-semibold leading-tight"
+                        style={{ color: c.fg }}
                       >
-                        Distance
-                      </span>
-                      <span className="text-2xl font-semibold" style={{ color: c.fg }}>
                         {t}
                       </span>
+                      <RunnerMark className="pointer-events-none absolute -bottom-2 -right-3 h-16 w-16 rotate-[20deg] opacity-90" />
                     </button>
                   );
                 })}
