@@ -80,6 +80,16 @@
   --chart-3: oklch(0.5 0.01 260);
   --chart-4: oklch(0.65 0.12 200);
   --chart-5: oklch(0.55 0.21 27);
+
+  /* Race category accents — minimalist, muted */
+  --cat-road: oklch(0.62 0.09 150);          /* sage green */
+  --cat-road-surface: oklch(0.96 0.03 150);
+  --cat-trail: oklch(0.72 0.12 85);          /* mustard yellow */
+  --cat-trail-surface: oklch(0.965 0.05 90);
+  --cat-tri: oklch(0.6 0.1 230);             /* calm blue */
+  --cat-tri-surface: oklch(0.96 0.03 230);
+  --cat-default: oklch(0.5 0.01 260);
+  --cat-default-surface: oklch(0.95 0.004 90);
 }
 
 .dark {
