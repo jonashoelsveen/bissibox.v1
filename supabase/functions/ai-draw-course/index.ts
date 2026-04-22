@@ -206,46 +206,106 @@ Rules:
       });
     }
 
-    // 2. Geocode every waypoint (sequentially, with small delay to respect Nominatim rate limits).
-    const waypointCoords: [number, number][] = [];
-    let bias = contextCenter && typeof contextCenter.lat === "number" ? contextCenter : undefined;
+    // 2. Geocode every AI waypoint (sequentially, respecting Nominatim rate limits).
+    const aiCoords: [number, number][] = [];
+    // If user placed anchors, bias initial geocoding to their centroid; else use map center.
+    const anchorCentroid: { lat: number; lng: number } | undefined = orderedAnchors.length
+      ? {
+          lat: orderedAnchors.reduce((s, a) => s + a.position[0], 0) / orderedAnchors.length,
+          lng: orderedAnchors.reduce((s, a) => s + a.position[1], 0) / orderedAnchors.length,
+        }
+      : undefined;
+    let bias =
+      anchorCentroid ?? (contextCenter && typeof contextCenter.lat === "number" ? contextCenter : undefined);
     for (const name of waypointNames) {
       const c = await geocode(name, bias);
       if (c) {
-        waypointCoords.push(c);
-        // Bias subsequent lookups toward the area of the previous successful hit.
+        aiCoords.push(c);
         bias = { lat: c[0], lng: c[1] };
       }
       await new Promise((res) => setTimeout(res, 250));
     }
 
-    if (waypointCoords.length < 2) {
-      return new Response(JSON.stringify({ error: "Could not geocode enough waypoints. Try a more specific description." }), {
+    // 3. Build the routing chain. If user anchors exist, they are FIXED and ordered.
+    // Insert AI waypoints into the segment whose endpoints they fall geographically between.
+    const dist2 = (a: [number, number], b: [number, number]) => {
+      const dx = a[0] - b[0];
+      const dy = a[1] - b[1];
+      return dx * dx + dy * dy;
+    };
+    let routingChain: [number, number][];
+    if (orderedAnchors.length >= 2) {
+      const anchorPts = orderedAnchors.map((a) => a.position);
+      // For each AI coord, pick the segment [i, i+1] minimizing midpoint distance.
+      const buckets: [number, number][][] = anchorPts.slice(0, -1).map(() => []);
+      for (const c of aiCoords) {
+        let bestI = 0;
+        let bestD = Infinity;
+        for (let i = 0; i < anchorPts.length - 1; i++) {
+          const mid: [number, number] = [
+            (anchorPts[i][0] + anchorPts[i + 1][0]) / 2,
+            (anchorPts[i][1] + anchorPts[i + 1][1]) / 2,
+          ];
+          const d = dist2(c, mid);
+          if (d < bestD) {
+            bestD = d;
+            bestI = i;
+          }
+        }
+        buckets[bestI].push(c);
+      }
+      // Sort each bucket so coords progress from anchor[i] toward anchor[i+1].
+      buckets.forEach((bucket, i) => {
+        bucket.sort((a, b) => dist2(a, anchorPts[i]) - dist2(b, anchorPts[i]));
+      });
+      routingChain = [];
+      for (let i = 0; i < anchorPts.length - 1; i++) {
+        routingChain.push(anchorPts[i]);
+        for (const c of buckets[i]) routingChain.push(c);
+      }
+      routingChain.push(anchorPts[anchorPts.length - 1]);
+    } else if (orderedAnchors.length === 1) {
+      // Single anchor: prepend it and route through AI coords.
+      routingChain = [orderedAnchors[0].position, ...aiCoords];
+    } else {
+      routingChain = aiCoords;
+    }
+
+    if (routingChain.length < 2) {
+      return new Response(JSON.stringify({ error: "Could not geocode enough waypoints. Try a more specific description or place anchor points." }), {
         status: 422,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 3. Snap waypoint chain to roads/paths via OSRM.
-    const snapped = (await snapToRoads(waypointCoords, "foot")) ?? waypointCoords;
+    // 4. Snap chain to roads/paths via OSRM.
+    const snapped = (await snapToRoads(routingChain, "foot")) ?? routingChain;
 
-    // 4. Geocode split markers near the chain (also biased to the route center).
-    const center = waypointCoords[Math.floor(waypointCoords.length / 2)];
+    // 5. Geocode AI-suggested split markers (skip if user already supplied splits/fuel anchors).
+    const userHasSplits = orderedAnchors.some((a) => a.kind === "split" || a.kind === "fuel");
+    const center = routingChain[Math.floor(routingChain.length / 2)];
     const splitsOut: { kind: "split" | "fuel"; label: string; position: [number, number] }[] = [];
-    for (const s of splitDescs) {
-      const c = await geocode(s.near, { lat: center[0], lng: center[1] });
-      if (c) splitsOut.push({ kind: s.kind, label: s.label, position: c });
-      await new Promise((res) => setTimeout(res, 250));
+    if (!userHasSplits) {
+      for (const s of splitDescs) {
+        const c = await geocode(s.near, { lat: center[0], lng: center[1] });
+        if (c) splitsOut.push({ kind: s.kind, label: s.label, position: c });
+        await new Promise((res) => setTimeout(res, 250));
+      }
     }
+
+    // Start/finish: prefer user-placed anchors when present.
+    const startPosition = startAnchor?.position ?? routingChain[0];
+    const finishPosition = finishAnchor?.position ?? routingChain[routingChain.length - 1];
 
     return new Response(
       JSON.stringify({
         path: snapped,
-        startPosition: waypointCoords[0],
-        finishPosition: waypointCoords[waypointCoords.length - 1],
+        startPosition,
+        finishPosition,
         splits: splitsOut,
         notes: args.notes ?? "",
-        waypointCount: waypointCoords.length,
+        waypointCount: routingChain.length,
+        usedAnchors: orderedAnchors.length,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
