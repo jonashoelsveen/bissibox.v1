@@ -70,7 +70,7 @@ function LibraryPage() {
 
       const [{ data: classes }, { data: subs }] = await Promise.all([
         supabase.from("event_classes").select("code,label,sort_order").eq("event_id", sourceId),
-        supabase.from("event_subevents").select("name,starts_at,distance_km,bib_from,bib_to,max_participants,class_codes,sort_order").eq("event_id", sourceId),
+        supabase.from("event_subevents").select("name,starts_at,distance_km,bib_from,bib_to,max_participants,class_codes,sort_order,course_path,split_points").eq("event_id", sourceId),
       ]);
       if (classes?.length)
         await supabase.from("event_classes").insert(
