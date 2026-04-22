@@ -169,11 +169,6 @@ function ProfilePage() {
                   value={profile.birth_date ?? ""}
                   onChange={(v) => update("birth_date", v || null)}
                 />
-                <Field
-                  label="Company / Klubb"
-                  value={profile.company_club ?? ""}
-                  onChange={(v) => update("company_club", v)}
-                />
                 <Field label="Team" value={profile.team ?? ""} onChange={(v) => update("team", v)} />
                 <Field label="License" value={profile.license ?? ""} onChange={(v) => update("license", v)} />
               </Grid>
