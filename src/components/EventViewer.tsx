@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ChevronDown, FileText, Layers, ListTree, Map as MapIcon } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileText, Layers, ListTree, Map as MapIcon } from "lucide-react";
 import { ReadOnlyCourseMap } from "@/components/ReadOnlyCourseMap";
 import type { LatLng, SplitPoint } from "@/components/CourseMapEditor";
 import { formatDateLong, formatMoney, formatTime } from "@/lib/format";
@@ -124,7 +124,14 @@ export function EventViewer({ eventId }: { eventId: string }) {
   return (
     <div className={isMap ? "flex min-h-[calc(100vh-2rem)] flex-col px-4 md:px-6" : "px-4 md:px-6"}>
       <div>
-        <header className="flex flex-wrap items-start justify-between gap-4 pt-4">
+        <button
+          onClick={() => nav({ to: "/search" })}
+          className="mt-3 -ml-2 inline-flex items-center justify-center p-2 text-muted-foreground transition hover:text-ink"
+          aria-label="Back"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <header className="flex flex-wrap items-start justify-between gap-4 pt-2">
           <div>
             <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
               Race · {event.organizer}
