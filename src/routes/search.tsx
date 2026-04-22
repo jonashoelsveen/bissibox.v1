@@ -126,25 +126,23 @@ function SearchPage() {
         {!showResults ? (
           <>
             <Section label="Browse by distance">
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                 {TYPES.map((t) => {
                   const c = TILE_COLORS[t] ?? TILE_COLORS._default;
                   return (
                     <button
                       key={t}
                       onClick={() => setFilter(t)}
-                      className="group relative flex aspect-[5/3] flex-col justify-between overflow-hidden rounded-lg p-5 text-left transition hover:translate-y-[-2px]"
+                      className="group relative flex aspect-[5/3] overflow-hidden rounded-md p-3 text-left transition hover:translate-y-[-2px]"
                       style={{ background: c.bg, color: c.fg }}
                     >
                       <span
-                        className="mono text-[10px] uppercase tracking-widest"
-                        style={{ color: c.fg, opacity: 0.75 }}
+                        className="relative z-10 text-base font-semibold leading-tight"
+                        style={{ color: c.fg }}
                       >
-                        Distance
-                      </span>
-                      <span className="text-2xl font-semibold" style={{ color: c.fg }}>
                         {t}
                       </span>
+                      <RunnerMark className="pointer-events-none absolute -bottom-2 -right-3 h-16 w-16 rotate-[20deg] opacity-90" />
                     </button>
                   );
                 })}
@@ -188,6 +186,27 @@ const TILE_COLORS: Record<string, { bg: string; fg: string }> = {
   "Relay": { bg: "#6b4a7a", fg: "#ffffff" },        // muted plum
   _default: { bg: "#3a3a3a", fg: "#ffffff" },
 };
+
+function RunnerMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      style={{ color: "rgba(255,255,255,0.35)" }}
+      aria-hidden
+    >
+      <circle cx="17" cy="4" r="1.6" fill="currentColor" stroke="none" />
+      <path d="M13 21l1.5-4.5L11 14l1.5-4.5L9 11l-2 2" />
+      <path d="M14.5 16.5L18 19" />
+      <path d="M12.5 9.5L15 8l3 1 2-1.5" />
+    </svg>
+  );
+}
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
