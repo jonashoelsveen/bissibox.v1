@@ -199,9 +199,9 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const isMap = tab === "map";
 
   return (
-    <div className={isMap ? "flex min-h-[calc(100vh-2rem)] flex-col" : "mx-auto max-w-4xl px-6 md:px-10"}>
-      <div className={isMap ? "mx-auto w-full max-w-7xl px-6 md:px-10" : ""}>
-        <header className="flex flex-wrap items-end justify-between gap-4 pt-4">
+    <div className={isMap ? "flex min-h-[calc(100vh-2rem)] flex-col px-4 md:px-6" : "px-4 md:px-6"}>
+      <div>
+        <header className="flex flex-wrap items-start justify-between gap-4 pt-4">
           <div>
             <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
               Organizer · {mode === "create" ? "New event" : "Edit event"}
