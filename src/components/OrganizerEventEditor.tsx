@@ -517,6 +517,10 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                                   key={p.id}
                                   draggable={dragHandleId === p.id}
                                   onDragStart={(e) => {
+                                    if (dragHandleId !== p.id) {
+                                      e.preventDefault();
+                                      return;
+                                    }
                                     setDragId(p.id);
                                     e.dataTransfer.effectAllowed = "move";
                                     e.dataTransfer.setData("text/plain", p.id);
