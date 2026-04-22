@@ -87,6 +87,118 @@ export function CourseMapEditor({
   const [searchOpen, setSearchOpen] = useState(false);
   const searchAbortRef = useRef<AbortController | null>(null);
 
+  // AI wizard
+  const MAX_PROMPT_CHARS = 300;
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardPrompt, setWizardPrompt] = useState("");
+  const [wizardLoading, setWizardLoading] = useState(false);
+  const [hasUsedWizard, setHasUsedWizard] = useState(false);
+  const [aiDrawing, setAiDrawing] = useState(false);
+  const aiAnimLayersRef = useRef<any[]>([]);
+
+  const clearAiAnim = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    aiAnimLayersRef.current.forEach((l) => map.removeLayer(l));
+    aiAnimLayersRef.current = [];
+  };
+
+  const animateDraw = (full: LatLng[], finalSplits: SplitPoint[]) => {
+    const map = mapRef.current;
+    if (!map || full.length < 2) {
+      trackedChange({ path: full, splits: finalSplits });
+      setAiDrawing(false);
+      return;
+    }
+    clearAiAnim();
+    // Fit map to the route first
+    try {
+      map.flyToBounds(full as any, { duration: 0.9, padding: [40, 40], maxZoom: 16 });
+    } catch {
+      // ignore
+    }
+    // Hide existing path during animation
+    trackedChange({ path: [], splits: [] });
+
+    setTimeout(() => {
+      const casing = (L as any).polyline([full[0]], {
+        color: LINE_CASING_COLOR, weight: 9, opacity: 0.95, lineCap: "round", lineJoin: "round", interactive: false,
+      }).addTo(map);
+      const line = (L as any).polyline([full[0]], {
+        color: LINE_COLOR, weight: 5, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false,
+      }).addTo(map);
+      // Glowing leading dot
+      const head = (L as any).circleMarker(full[0], {
+        radius: 7, color: "#fff", weight: 2, fillColor: LINE_COLOR, fillOpacity: 1,
+      }).addTo(map);
+      aiAnimLayersRef.current.push(casing, line, head);
+
+      const totalMs = Math.min(2400, Math.max(900, full.length * 28));
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / totalMs);
+        const ease = 1 - Math.pow(1 - t, 3);
+        const cutIdx = Math.max(1, Math.floor(ease * (full.length - 1)));
+        const slice = full.slice(0, cutIdx + 1);
+        casing.setLatLngs(slice);
+        line.setLatLngs(slice);
+        head.setLatLng(full[cutIdx]);
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else {
+          clearAiAnim();
+          trackedChange({ path: full, splits: finalSplits });
+          setAiDrawing(false);
+          toast.success("Course drawn — feel free to refine it.");
+        }
+      };
+      requestAnimationFrame(step);
+    }, 950);
+  };
+
+  const runWizard = async () => {
+    const text = wizardPrompt.trim();
+    if (!text) {
+      toast.error("Describe the course you want the wizard to draw.");
+      return;
+    }
+    setWizardLoading(true);
+    try {
+      const map = mapRef.current;
+      const c = map?.getCenter?.();
+      const contextCenter = c ? { lat: c.lat, lng: c.lng } : undefined;
+      const { data, error } = await supabase.functions.invoke("ai-draw-course", {
+        body: { prompt: text, contextCenter },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const path: LatLng[] = ((data as any).path ?? []).map((p: number[]) => [p[0], p[1]]);
+      if (path.length < 2) throw new Error("The wizard could not build a route from that description.");
+      const startPos: LatLng | undefined = (data as any).startPosition;
+      const finishPos: LatLng | undefined = (data as any).finishPosition;
+      const aiSplits: { kind: "split" | "fuel"; label: string; position: LatLng }[] = (data as any).splits ?? [];
+      const newSplits: SplitPoint[] = [];
+      if (startPos) newSplits.push({ id: crypto.randomUUID(), kind: "start", label: "Start", position: startPos });
+      if (finishPos) newSplits.push({ id: crypto.randomUUID(), kind: "finish", label: "Finish", position: finishPos });
+      aiSplits.forEach((s, i) => newSplits.push({
+        id: crypto.randomUUID(),
+        kind: s.kind,
+        label: s.label || (s.kind === "split" ? `Split ${i + 1}` : `Fuel ${i + 1}`),
+        position: s.position,
+      }));
+      setWizardOpen(false);
+      setHasUsedWizard(true);
+      setAiDrawing(true);
+      animateDraw(path, newSplits);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "The wizard ran into a problem. Try a more specific description.");
+    } finally {
+      setWizardLoading(false);
+    }
+  };
+
+
   useEffect(() => {
     const q = searchQuery.trim();
     if (q.length < 3) {
