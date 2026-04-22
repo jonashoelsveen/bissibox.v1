@@ -21,6 +21,7 @@ interface Props {
   title?: string;
   selectedSplitId?: string | null;
   onSelectSplit?: (id: string | null) => void;
+  hoverPosition?: LatLng | null;
 }
 
 type Tool = "pan" | "draw" | "split" | "fuel" | "marker" | "start" | "finish";
