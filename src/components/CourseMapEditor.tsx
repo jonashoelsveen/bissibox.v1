@@ -561,6 +561,25 @@ export function CourseMapEditor({
 
       <div className="pointer-events-none absolute left-4 top-4 z-[400] flex flex-col gap-2">
         <div className="pointer-events-auto flex flex-wrap items-center gap-1 rounded-xl border border-hairline bg-card/95 p-1.5 shadow-md backdrop-blur">
+          <button
+            onClick={() => setWizardOpen((o) => !o)}
+            title={hasUsedWizard ? "Edit AI course prompt" : "Draw course with AI wizard"}
+            className={`relative inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 transition ${
+              wizardOpen
+                ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-sm"
+                : "text-ink hover:bg-secondary"
+            }`}
+          >
+            <span className="relative inline-flex">
+              <Wand2 className={`h-4 w-4 ${wizardOpen ? "" : "text-indigo-500"}`} />
+              {hasUsedWizard && !wizardOpen && (
+                <span className="absolute -bottom-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+                  <PencilEdit className="h-2 w-2" />
+                </span>
+              )}
+            </span>
+          </button>
+          <span className="mx-1 h-5 w-px bg-hairline" />
           <ToolBtn active={tool === "pan"} onClick={() => setTool("pan")} title="Pan & select">
             <Hand className="h-4 w-4" />
             <span className="text-sm">Pan</span>
