@@ -36,42 +36,62 @@ function formatBornDigits(iso: string | null | undefined): string {
   return /^\d{8}$/.test(d) ? d : "";
 }
 
-export function PublicParticipantsPanel({ eventId }: { eventId: string }) {
-  const [subevents, setSubevents] = useState<Subevent[]>([]);
-  const [classes, setClasses] = useState<string[]>([]);
+export function PublicParticipantsPanel({
+  eventId,
+  subevents: subevProp,
+  eventClasses: classesProp,
+}: {
+  eventId: string;
+  subevents?: Subevent[];
+  eventClasses?: string[];
+}) {
+  const [subevents, setSubevents] = useState<Subevent[]>(subevProp ?? []);
+  const [classes, setClasses] = useState<string[]>(classesProp ?? []);
   const [regs, setRegs] = useState<Registration[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [filterSub, setFilterSub] = useState<string>("all");
   const [filterClass, setFilterClass] = useState<string>("all");
   const [search, setSearch] = useState("");
 
+  // Sync from parent props when provided
+  useEffect(() => {
+    if (subevProp) setSubevents(subevProp);
+  }, [subevProp]);
+  useEffect(() => {
+    if (classesProp) setClasses(classesProp);
+  }, [classesProp]);
+
   useEffect(() => {
     if (!eventId) return;
     void (async () => {
-      const [{ data: subs }, { data: cls }, { data: rs }] = await Promise.all([
-        supabase
-          .from("event_subevents")
-          .select("id,name,sort_order")
-          .eq("event_id", eventId)
-          .order("sort_order"),
-        supabase
-          .from("event_classes")
-          .select("code,sort_order")
-          .eq("event_id", eventId)
-          .order("sort_order"),
+      const fetchSubs = !subevProp;
+      const fetchCls = !classesProp;
+      const [subsRes, clsRes, { data: rs }] = await Promise.all([
+        fetchSubs
+          ? supabase
+              .from("event_subevents")
+              .select("id,name,sort_order,class_codes")
+              .eq("event_id", eventId)
+              .order("sort_order")
+          : Promise.resolve({ data: null } as any),
+        fetchCls
+          ? supabase
+              .from("event_classes")
+              .select("code,sort_order")
+              .eq("event_id", eventId)
+              .order("sort_order")
+          : Promise.resolve({ data: null } as any),
         supabase
           .from("registrations")
           .select("id,user_id,subevent_id,class_code,race_type,status,bib_number,consent_share_data,created_at")
           .eq("event_id", eventId)
           .order("created_at", { ascending: true }),
       ]);
-      setSubevents((subs ?? []) as Subevent[]);
-      setClasses((cls ?? []).map((c) => c.code));
+      if (fetchSubs && subsRes.data) setSubevents(subsRes.data as Subevent[]);
+      if (fetchCls && clsRes.data) setClasses((clsRes.data as { code: string }[]).map((c) => c.code));
       const regsArr = (rs ?? []) as Registration[];
       setRegs(regsArr);
 
-      // Public viewers can only see profiles for participants who consented to share data.
-      // RLS will silently filter rows the viewer isn't allowed to see.
       const consentingIds = Array.from(
         new Set(regsArr.filter((r) => r.consent_share_data).map((r) => r.user_id)),
       );
@@ -87,7 +107,7 @@ export function PublicParticipantsPanel({ eventId }: { eventId: string }) {
         setProfiles({});
       }
     })();
-  }, [eventId]);
+  }, [eventId, subevProp, classesProp]);
 
   const subevById = useMemo(() => {
     const m: Record<string, Subevent> = {};
