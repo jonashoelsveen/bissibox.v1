@@ -168,7 +168,7 @@ export function CourseMapEditor({
     midMarkersRef.current = [];
 
     if (path.length >= 2) {
-      const pl = L.polyline(path, { color: LINE_COLOR, weight: 5, opacity: 0.9, interactive: tool === "draw" }).addTo(map);
+      const pl = L.polyline(path, { color: LINE_COLOR, weight: 5, opacity: 0.65, interactive: tool === "draw" }).addTo(map);
       polylineRef.current = pl;
 
       // Click on the line itself in draw mode → insert vertex at click location (closest segment)
