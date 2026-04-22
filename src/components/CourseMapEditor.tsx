@@ -52,6 +52,7 @@ export function CourseMapEditor({
   title,
   selectedSplitId,
   onSelectSplit,
+  hoverPosition,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
