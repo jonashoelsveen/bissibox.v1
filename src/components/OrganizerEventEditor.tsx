@@ -777,6 +777,10 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
           </aside>
         </div>
       )}
+
+      {tab === "participants" && savedId && (
+        <ParticipantsPanel eventId={savedId} />
+      )}
     </div>
   );
 }
