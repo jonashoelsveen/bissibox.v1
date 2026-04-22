@@ -1,7 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate } from "@/lib/format";
 import { Search as SearchIcon } from "lucide-react";
 import { RaceListItem } from "@/components/RaceListItem";
 
@@ -80,39 +79,42 @@ function SearchPage() {
 
   return (
     <div className="px-4 md:px-6">
-      <header className="pt-4">
-        <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Search
-        </p>
-        <h1 className="mt-2 text-3xl text-ink md:text-4xl">Find a race</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Search by name, organizer, distance or region.
-        </p>
+      <header className="relative grid grid-cols-3 items-end pt-4 pb-4">
+        <div className="col-span-1">
+          <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Search
+          </p>
+          <h1 className="mt-2 text-3xl text-ink md:text-4xl">Find a race</h1>
+        </div>
+
+        <div className="col-span-1 flex justify-center">
+          <label className="flex w-full max-w-md items-center gap-3 rounded-full border border-hairline bg-card px-5 py-2.5 ring-soft focus-within:border-primary">
+            <SearchIcon className="h-4 w-4 text-muted-foreground" />
+            <input
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Race, organizer, distance, region…"
+              className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground"
+            />
+            {q && (
+              <button
+                onClick={() => setQ("")}
+                className="mono text-xs uppercase tracking-widest text-muted-foreground hover:text-ink"
+              >
+                clear
+              </button>
+            )}
+          </label>
+        </div>
+
+        <div className="col-span-1" />
       </header>
 
-      <div className="mt-6 border-b border-hairline" />
+      <div className="border-b border-hairline" />
 
-      <div className="mx-auto max-w-3xl pt-6">
-        <label className="mx-auto flex max-w-2xl items-center gap-3 rounded-full border border-hairline bg-card px-5 py-3 ring-soft focus-within:border-primary">
-          <SearchIcon className="h-4 w-4 text-muted-foreground" />
-          <input
-            autoFocus
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Race, organizer, distance, region…"
-            className="flex-1 bg-transparent text-base text-ink outline-none placeholder:text-muted-foreground"
-          />
-          {q && (
-            <button
-              onClick={() => setQ("")}
-              className="mono text-xs uppercase tracking-widest text-muted-foreground hover:text-ink"
-            >
-              clear
-            </button>
-          )}
-        </label>
-
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
+      <div className="mx-auto max-w-5xl pt-6">
+        <div className="flex flex-wrap justify-center gap-2">
           {[...TYPES, ...REGIONS].map((t) => {
             const active = filter === t;
             return (
@@ -134,9 +136,9 @@ function SearchPage() {
         {!showResults ? (
           <>
             <Section label="Trending now">
-              <ul className="divide-y divide-hairline rounded-2xl border border-hairline bg-card">
+              <ul className="space-y-0.5">
                 {trending.map((e, i) => (
-                  <TrendingItem key={e.id} index={i + 1} event={e} />
+                  <RaceListItem key={e.id} event={e} rank={i + 1} />
                 ))}
               </ul>
             </Section>
@@ -172,7 +174,7 @@ function SearchPage() {
             {results.length === 0 ? (
               <p className="text-sm text-muted-foreground">No races match that yet.</p>
             ) : (
-              <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-card">
+              <ul className="space-y-0.5">
                 {results.map((e) => (
                   <RaceListItem key={e.id} event={e} />
                 ))}
@@ -206,24 +208,4 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function TrendingItem({ index, event }: { index: number; event: EventRow }) {
-  return (
-    <li>
-      <Link
-        to="/events/$eventId"
-        params={{ eventId: event.id }}
-        className="flex items-center gap-4 px-5 py-4 transition hover:bg-secondary"
-      >
-        <span className="num w-8 text-right text-2xl text-muted-foreground">{index}</span>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-ink">{event.title}</div>
-          <div className="truncate text-xs text-muted-foreground">
-            {event.organizer} · {event.location}
-          </div>
-        </div>
-        <span className="mono text-xs text-muted-foreground">{formatDate(event.starts_at)}</span>
-      </Link>
-    </li>
-  );
-}
 
