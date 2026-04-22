@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { DEFAULT_CLASSES } from "@/lib/classes";
 import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as MapIcon, GripVertical, ArrowLeft, Globe } from "lucide-react";
 import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
+import { ElevationProfile } from "@/components/ElevationProfile";
 
 type Mode = "create" | "edit";
 
