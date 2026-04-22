@@ -1,9 +1,9 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { BadgeCheck, MoreVertical } from "lucide-react";
+import { BadgeCheck, MoreVertical, Heart, Send } from "lucide-react";
 
 export interface RaceListEvent {
   id: string;
