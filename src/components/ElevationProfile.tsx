@@ -511,7 +511,7 @@ export function ElevationProfile({
                   strokeWidth={1}
                   opacity={0.6}
                 />
-                {y != null && (
+                {y != null && hoverElev != null && (
                   <>
                     <circle cx={x} cy={y} r={5} fill="#6366F1" stroke="#fff" strokeWidth={2} />
                     <g transform={`translate(${Math.min(svgW - 110, Math.max(0, x + 8))}, ${PADDING.top + 4})`}>
