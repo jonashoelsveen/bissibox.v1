@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ArrowLeft, ChevronDown, FileText, Heart, Layers, ListTree, Map as MapIcon, Share2, Users, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileText, Heart, Map as MapIcon, Share2, Users, X } from "lucide-react";
 import { ReadOnlyCourseMap } from "@/components/ReadOnlyCourseMap";
 import { ElevationProfile } from "@/components/ElevationProfile";
 import { PublicParticipantsPanel } from "@/components/PublicParticipantsPanel";
@@ -40,7 +40,7 @@ interface SubeventRow {
 export function EventViewer({ eventId }: { eventId: string }) {
   const { user } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map" | "participants">("details");
+  const [tab, setTab] = useState<"details" | "map" | "participants">("details");
   const [liked, setLiked] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
   const [event, setEvent] = useState<EventRow | null>(null);

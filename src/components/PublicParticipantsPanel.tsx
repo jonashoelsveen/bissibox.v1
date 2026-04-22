@@ -7,6 +7,7 @@ interface Subevent {
   id: string;
   name: string;
   sort_order: number;
+  class_codes?: string[];
 }
 
 interface Registration {
