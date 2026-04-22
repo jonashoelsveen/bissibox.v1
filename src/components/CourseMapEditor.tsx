@@ -151,7 +151,7 @@ export function CourseMapEditor({
       const t = toolRef.current;
       const ll: LatLng = [e.latlng.lat, e.latlng.lng];
       if (t === "draw") {
-        onChangeRef.current({ path: [...pathRef.current, ll], splits: splitsRef.current });
+        trackedChange({ path: [...pathRef.current, ll], splits: splitsRef.current });
       } else if (t === "split" || t === "fuel" || t === "marker" || t === "start" || t === "finish") {
         const kind: SplitKind = t as SplitKind;
         // Start/Finish are unique — replace existing
@@ -163,7 +163,7 @@ export function CourseMapEditor({
             label: kind === "start" ? "Start" : "Finish",
             position: ll,
           };
-          onChangeRef.current({ path: pathRef.current, splits: [...filtered, sp] });
+          trackedChange({ path: pathRef.current, splits: [...filtered, sp] });
         } else {
           const same = splitsRef.current.filter((s) => s.kind === kind).length;
           const sp: SplitPoint = {
@@ -173,7 +173,7 @@ export function CourseMapEditor({
               kind === "split" ? `Split ${same + 1}` : kind === "fuel" ? `Fuel ${same + 1}` : `Marker ${same + 1}`,
             position: ll,
           };
-          onChangeRef.current({ path: pathRef.current, splits: [...splitsRef.current, sp] });
+          trackedChange({ path: pathRef.current, splits: [...splitsRef.current, sp] });
           onSelectRef.current?.(sp.id);
         }
       } else {
@@ -226,7 +226,7 @@ export function CourseMapEditor({
           const insertIdx = findInsertIndex(path, ll);
           const next = [...path];
           next.splice(insertIdx, 0, ll);
-          onChangeRef.current({ path: next, splits: splitsRef.current });
+          trackedChange({ path: next, splits: splitsRef.current });
         });
       }
     } else if (path.length === 1) {
@@ -253,13 +253,13 @@ export function CourseMapEditor({
           const ll = ev.target.getLatLng();
           const next = [...pathRef.current];
           next[idx] = [ll.lat, ll.lng];
-          onChangeRef.current({ path: next, splits: splitsRef.current });
+          trackedChange({ path: next, splits: splitsRef.current });
         });
         m.on("click", (ev: any) => {
           (L as any).DomEvent.stopPropagation(ev);
           // Click vertex in draw mode → delete it
           const next = pathRef.current.filter((_, i) => i !== idx);
-          onChangeRef.current({ path: next, splits: splitsRef.current });
+          trackedChange({ path: next, splits: splitsRef.current });
         });
         m.bindTooltip("Drag to move · click to delete", { direction: "top" });
         vertexMarkersRef.current.push(m);
@@ -281,7 +281,7 @@ export function CourseMapEditor({
             const next = [...pathRef.current];
             next.splice(i + 1, 0, [ll.lat, ll.lng]);
             // Update synchronously and rebuild handles after React re-render
-            onChangeRef.current({ path: next, splits: splitsRef.current });
+            trackedChange({ path: next, splits: splitsRef.current });
           });
           midMarkersRef.current.push(mm);
         }
@@ -333,7 +333,7 @@ export function CourseMapEditor({
         if (toolRef.current === "pan") {
           onSelectRef.current?.(s.id);
         } else {
-          onChangeRef.current({
+          trackedChange({
             path: pathRef.current,
             splits: splitsRef.current.filter((x) => x.id !== s.id),
           });
