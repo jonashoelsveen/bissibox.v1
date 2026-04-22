@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil, Droplet, Flag, Trash2, Save, Eraser, Hand, Timer, Undo2, Redo2 } from "lucide-react";
+import { Pencil, Droplet, Flag, Trash2, Save, Eraser, Hand, Timer, Undo2, Redo2, Search, Loader2, X } from "lucide-react";
 
 export type LatLng = [number, number];
 export type SplitKind = "split" | "fuel" | "start" | "finish" | "marker";
@@ -76,6 +76,60 @@ export function CourseMapEditor({
   const historyIdxRef = useRef(0);
   const skipNextHistoryRef = useRef(false);
   const [, forceTick] = useState(0);
+
+  // Location search
+  type GeoResult = { display_name: string; lat: string; lon: string; boundingbox?: [string, string, string, string]; place_id: number };
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<GeoResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 3) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+    setSearchLoading(true);
+    const t = setTimeout(async () => {
+      searchAbortRef.current?.abort();
+      const ctrl = new AbortController();
+      searchAbortRef.current = ctrl;
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&limit=6&q=${encodeURIComponent(q)}`;
+        const res = await fetch(url, { signal: ctrl.signal, headers: { "Accept-Language": navigator.language || "en" } });
+        const data: GeoResult[] = await res.json();
+        setSearchResults(data);
+        setSearchOpen(true);
+      } catch (err: any) {
+        if (err?.name !== "AbortError") setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  const flyToResult = (r: GeoResult) => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (r.boundingbox && r.boundingbox.length === 4) {
+      const [s, n, w, e] = r.boundingbox;
+      map.flyToBounds(
+        [
+          [parseFloat(s), parseFloat(w)],
+          [parseFloat(n), parseFloat(e)],
+        ],
+        { duration: 0.8, maxZoom: 16 },
+      );
+    } else {
+      map.flyTo([parseFloat(r.lat), parseFloat(r.lon)], 14, { duration: 0.8 });
+    }
+    setSearchQuery(r.display_name.split(",")[0] ?? "");
+    setSearchOpen(false);
+  };
 
   const pushHistory = (snap: Snap) => {
     const cur = historyRef.current[historyIdxRef.current];
@@ -434,6 +488,69 @@ export function CourseMapEditor({
             <Eraser className="h-4 w-4" />
             <span className="text-sm">Clear</span>
           </ToolBtn>
+        </div>
+
+        <div className="pointer-events-auto relative w-[320px] max-w-[calc(100vw-2rem)]">
+          <div className="flex h-[42px] items-center gap-2 rounded-xl border border-hairline bg-card/95 px-3 shadow-md backdrop-blur">
+            {searchLoading ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+            ) : (
+              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
+              onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && searchResults[0]) {
+                  e.preventDefault();
+                  flyToResult(searchResults[0]);
+                } else if (e.key === "Escape") {
+                  setSearchOpen(false);
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              placeholder="Search location, city, address…"
+              className="h-full flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSearchResults([]);
+                  setSearchOpen(false);
+                }}
+                className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-ink"
+                title="Clear"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          {searchOpen && searchResults.length > 0 && (
+            <div className="absolute left-0 right-0 top-[calc(100%+4px)] max-h-[280px] overflow-y-auto rounded-xl border border-hairline bg-card shadow-lg backdrop-blur">
+              {searchResults.map((r) => (
+                <button
+                  key={r.place_id}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    flyToResult(r);
+                  }}
+                  className="flex w-full items-start gap-2 border-b border-hairline px-3 py-2 text-left text-sm last:border-b-0 hover:bg-secondary"
+                >
+                  <Search className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="line-clamp-2 text-ink">{r.display_name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {searchOpen && !searchLoading && searchQuery.trim().length >= 3 && searchResults.length === 0 && (
+            <div className="absolute left-0 right-0 top-[calc(100%+4px)] rounded-xl border border-hairline bg-card px-3 py-2 text-sm text-muted-foreground shadow-lg">
+              No locations found
+            </div>
+          )}
         </div>
       </div>
 
