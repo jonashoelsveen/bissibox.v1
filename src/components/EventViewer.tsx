@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ArrowLeft, ChevronDown, FileText, Layers, ListTree, Map as MapIcon } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileText, Layers, ListTree, Map as MapIcon, X } from "lucide-react";
 import { ReadOnlyCourseMap } from "@/components/ReadOnlyCourseMap";
 import { ElevationProfile } from "@/components/ElevationProfile";
 import type { LatLng, SplitPoint } from "@/components/CourseMapEditor";
@@ -50,14 +50,16 @@ export function EventViewer({ eventId }: { eventId: string }) {
   const [hoverPos, setHoverPos] = useState<LatLng | null>(null);
   const [registered, setRegistered] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [chosen, setChosen] = useState<string | null>(null);
+  const [signupOpen, setSignupOpen] = useState(false);
+  const [chosenSubId, setChosenSubId] = useState<string | null>(null);
+  const [chosenClass, setChosenClass] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
 
   useEffect(() => {
     void (async () => {
       const { data: e } = await supabase.from("events").select("*").eq("id", eventId).maybeSingle();
       if (e) {
         setEvent(e as EventRow);
-        setChosen((e.race_types ?? [])[0] ?? null);
       }
       const { data: cls } = await supabase
         .from("event_classes")
@@ -98,22 +100,35 @@ export function EventViewer({ eventId }: { eventId: string }) {
     })();
   }, [user, event, eventId]);
 
-  const handleSignup = async () => {
+  const openSignup = () => {
     if (!user) {
       nav({ to: "/auth", search: { redirect: `/events/${eventId}` } });
       return;
     }
-    if (!chosen) return;
+    setChosenSubId(subevents[0]?.id ?? null);
+    setChosenClass(null);
+    setConsent(false);
+    setSignupOpen(true);
+  };
+
+  const submitSignup = async () => {
+    if (!user || !chosenSubId) return;
+    const sub = subevents.find((s) => s.id === chosenSubId);
+    if (!sub) return;
     setSubmitting(true);
     const { error } = await supabase.from("registrations").insert({
       user_id: user.id,
       event_id: eventId,
-      race_type: chosen,
+      subevent_id: chosenSubId,
+      class_code: chosenClass,
+      race_type: sub.name,
+      consent_share_data: consent,
       status: "pending",
-    });
+    } as never);
     setSubmitting(false);
     if (error) return toast.error(error.message);
     setRegistered(true);
+    setSignupOpen(false);
     toast.success("You're signed up.");
   };
 
@@ -122,6 +137,8 @@ export function EventViewer({ eventId }: { eventId: string }) {
   }
 
   const isMap = tab === "map";
+  const subevForSignup = subevents.find((s) => s.id === chosenSubId);
+  const classOptions = subevForSignup?.class_codes?.length ? subevForSignup.class_codes : classes;
 
   return (
     <div className={isMap ? "flex min-h-[calc(100vh-2rem)] flex-col px-4 md:px-6" : "px-4 md:px-6"}>
@@ -143,11 +160,11 @@ export function EventViewer({ eventId }: { eventId: string }) {
             </div>
           </div>
           <button
-            onClick={handleSignup}
-            disabled={submitting || registered || !chosen}
+            onClick={openSignup}
+            disabled={submitting || registered}
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
           >
-            {registered ? "Signed up" : submitting ? "Signing up…" : "Sign up"}
+            {registered ? "Signed up" : "Sign up"}
           </button>
         </header>
 
@@ -401,6 +418,94 @@ export function EventViewer({ eventId }: { eventId: string }) {
               )}
             </div>
           </aside>
+        </div>
+      )}
+
+      {signupOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={() => setSignupOpen(false)} />
+          <div className="relative z-10 w-full max-w-md overflow-hidden rounded-xl border border-hairline bg-card shadow-2xl">
+            <header className="flex items-center justify-between border-b border-hairline px-5 py-3.5">
+              <div>
+                <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Sign up</p>
+                <h2 className="mt-0.5 text-lg text-ink">{event.title}</h2>
+              </div>
+              <button
+                onClick={() => setSignupOpen(false)}
+                aria-label="Close"
+                className="rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </header>
+            <div className="space-y-5 px-5 py-5">
+              <div>
+                <label className="mono mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Subevent
+                </label>
+                <select
+                  value={chosenSubId ?? ""}
+                  onChange={(e) => {
+                    setChosenSubId(e.target.value);
+                    setChosenClass(null);
+                  }}
+                  className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                >
+                  {subevents.length === 0 && <option value="">No subevents available</option>}
+                  {subevents.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                      {s.distance_km ? ` · ${s.distance_km} km` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mono mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Class
+                </label>
+                <select
+                  value={chosenClass ?? ""}
+                  onChange={(e) => setChosenClass(e.target.value || null)}
+                  className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                >
+                  <option value="">Select class…</option>
+                  {classOptions.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              <label className="flex items-start gap-3 rounded-md border border-hairline bg-background/60 px-3 py-3 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                />
+                <span>
+                  I agree to share my profile information (name, date of birth, contact details, club)
+                  with the event organizer for the purpose of running this race.
+                </span>
+              </label>
+            </div>
+            <footer className="flex items-center justify-end gap-2 border-t border-hairline bg-background/60 px-5 py-3">
+              <button
+                onClick={() => setSignupOpen(false)}
+                className="rounded-md border border-hairline bg-card px-4 py-1.5 text-sm text-ink transition hover:bg-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitSignup}
+                disabled={submitting || !chosenSubId || !chosenClass || !consent}
+                className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+              >
+                {submitting ? "Signing up…" : "Confirm signup"}
+              </button>
+            </footer>
+          </div>
         </div>
       )}
     </div>

@@ -299,31 +299,40 @@ export type Database = {
       registrations: {
         Row: {
           bib_number: string | null
+          class_code: string | null
+          consent_share_data: boolean
           created_at: string
           event_id: string
           id: string
           race_type: string
           status: string
+          subevent_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           bib_number?: string | null
+          class_code?: string | null
+          consent_share_data?: boolean
           created_at?: string
           event_id: string
           id?: string
           race_type: string
           status?: string
+          subevent_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           bib_number?: string | null
+          class_code?: string | null
+          consent_share_data?: boolean
           created_at?: string
           event_id?: string
           id?: string
           race_type?: string
           status?: string
+          subevent_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -333,6 +342,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registrations_subevent_id_fkey"
+            columns: ["subevent_id"]
+            isOneToOne: false
+            referencedRelation: "event_subevents"
             referencedColumns: ["id"]
           },
         ]
