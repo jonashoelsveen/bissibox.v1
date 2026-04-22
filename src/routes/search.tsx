@@ -142,7 +142,7 @@ function SearchPage() {
                       >
                         {t}
                       </span>
-                      <RunnerMark className="pointer-events-none absolute -bottom-2 -right-3 h-16 w-16 rotate-[20deg] opacity-90" />
+                      
                     </button>
                   );
                 })}
