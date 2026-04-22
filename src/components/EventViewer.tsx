@@ -50,7 +50,10 @@ export function EventViewer({ eventId }: { eventId: string }) {
   const [hoverPos, setHoverPos] = useState<LatLng | null>(null);
   const [registered, setRegistered] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [chosen, setChosen] = useState<string | null>(null);
+  const [signupOpen, setSignupOpen] = useState(false);
+  const [chosenSubId, setChosenSubId] = useState<string | null>(null);
+  const [chosenClass, setChosenClass] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
 
   useEffect(() => {
     void (async () => {
