@@ -369,28 +369,80 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             </button>
           </div>
 
-          <div className="mt-5 overflow-hidden rounded-md border border-hairline">
+          <div className="mt-5 space-y-2">
             {subevents.length === 0 && (
-              <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+              <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
                 No races yet. Add a 5K, 10K, Half Marathon…
               </div>
             )}
-            {subevents.map((s, idx) => (
-              <SubeventRow
-                key={idx}
-                sub={s}
-                open={openSub === idx}
-                onToggle={() => setOpenSub((o) => (o === idx ? null : idx))}
-                allClasses={classes}
-                onChange={(patch) =>
-                  setSubevents((arr) => arr.map((x, i) => (i === idx ? { ...x, ...patch } : x)))
-                }
-                onDelete={() => {
-                  setSubevents((arr) => arr.filter((_, i) => i !== idx));
-                  setOpenSub(null);
-                }}
-              />
-            ))}
+            {subevents.map((s, idx) => {
+              const dragKey = `sub-${idx}`;
+              const isOver = dragOverId === dragKey && dragId !== null && dragId !== dragKey;
+              return (
+                <div
+                  key={idx}
+                  draggable={dragHandleId === dragKey}
+                  onDragStart={(e) => {
+                    if (dragHandleId !== dragKey) {
+                      e.preventDefault();
+                      return;
+                    }
+                    setDragId(dragKey);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragOver={(e) => {
+                    if (!dragId || !dragId.startsWith("sub-")) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    setDragOverId(dragKey);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverId === dragKey) setDragOverId(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (!dragId || !dragId.startsWith("sub-")) return;
+                    const fromIdx = Number(dragId.replace("sub-", ""));
+                    const toIdx = idx;
+                    if (fromIdx === toIdx) return;
+                    setSubevents((arr) => {
+                      const next = [...arr];
+                      const [moved] = next.splice(fromIdx, 1);
+                      next.splice(toIdx, 0, moved);
+                      return next.map((x, i) => ({ ...x, sort_order: i }));
+                    });
+                    setOpenSub(toIdx);
+                    setDragId(null);
+                    setDragOverId(null);
+                    setDragHandleId(null);
+                  }}
+                  onDragEnd={() => {
+                    setDragId(null);
+                    setDragOverId(null);
+                    setDragHandleId(null);
+                  }}
+                  className={`overflow-hidden rounded-lg border transition ${
+                    isOver ? "border-primary bg-primary/5" : "border-hairline bg-card"
+                  }`}
+                >
+                  <SubeventRow
+                    sub={s}
+                    open={openSub === idx}
+                    onToggle={() => setOpenSub((o) => (o === idx ? null : idx))}
+                    allClasses={classes}
+                    onChange={(patch) =>
+                      setSubevents((arr) => arr.map((x, i) => (i === idx ? { ...x, ...patch } : x)))
+                    }
+                    onDelete={() => {
+                      setSubevents((arr) => arr.filter((_, i) => i !== idx));
+                      setOpenSub(null);
+                    }}
+                    onHandleDown={() => setDragHandleId(dragKey)}
+                    onHandleUp={() => setDragHandleId(null)}
+                  />
+                </div>
+              );
+            })}
           </div>
         </Panel>
       )}
