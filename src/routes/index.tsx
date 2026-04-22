@@ -63,20 +63,20 @@ function Index() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-5xl px-6 md:px-10">
-      <section className="pt-10 md:pt-16">
+    <div className="px-4 md:px-6">
+      <header className="pt-4">
         <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
           Raceline · Norway
         </p>
-        <h1 className="mt-3 text-4xl leading-[1.05] text-ink md:text-6xl">
+        <h1 className="mt-2 text-3xl leading-[1.05] text-ink md:text-5xl">
           Find your next race.
           <br />
           <span className="text-muted-foreground">Sign up in seconds.</span>
         </h1>
-        <p className="mt-5 max-w-xl text-base text-muted-foreground md:text-lg">
+        <p className="mt-4 max-w-xl text-base text-muted-foreground">
           One quiet place for every race in Norway. Search like Spotify. Trust like BankID.
         </p>
-        <div className="mt-7 flex flex-wrap gap-3">
+        <div className="mt-6 flex flex-wrap gap-3">
           <Link
             to="/search"
             className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90"
@@ -91,7 +91,8 @@ function Index() {
             Create profile
           </Link>
         </div>
-      </section>
+        <div className="mt-7 border-b border-hairline" />
+      </header>
 
       {featured.length > 0 && (
         <section className="mt-16">

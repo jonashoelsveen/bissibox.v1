@@ -100,7 +100,7 @@ function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 md:px-10">
+    <div className="px-4 md:px-6">
       <header className="flex flex-wrap items-end justify-between gap-4 pt-4">
         <div>
           <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Profile</p>
@@ -122,6 +122,8 @@ function ProfilePage() {
           </button>
         </div>
       </header>
+
+      <div className="mt-6 border-b border-hairline" />
 
       <div className="mt-8 grid gap-10 md:grid-cols-[180px_1fr]">
         <nav className="-ml-2 flex flex-row gap-1 md:flex-col md:gap-0.5">

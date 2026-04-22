@@ -79,8 +79,20 @@ function SearchPage() {
   const showResults = q.trim().length > 0 || filter !== null;
 
   return (
-    <div className="mx-auto max-w-3xl px-6 md:px-10">
-      <div className="pt-6">
+    <div className="px-4 md:px-6">
+      <header className="pt-4">
+        <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          Search
+        </p>
+        <h1 className="mt-2 text-3xl text-ink md:text-4xl">Find a race</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Search by name, organizer, distance or region.
+        </p>
+      </header>
+
+      <div className="mt-6 border-b border-hairline" />
+
+      <div className="mx-auto max-w-3xl pt-6">
         <label className="mx-auto flex max-w-2xl items-center gap-3 rounded-full border border-hairline bg-card px-5 py-3 ring-soft focus-within:border-primary">
           <SearchIcon className="h-4 w-4 text-muted-foreground" />
           <input
@@ -100,7 +112,7 @@ function SearchPage() {
           )}
         </label>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
           {[...TYPES, ...REGIONS].map((t) => {
             const active = filter === t;
             return (
@@ -118,51 +130,72 @@ function SearchPage() {
             );
           })}
         </div>
+
+        {!showResults ? (
+          <>
+            <Section label="Trending now">
+              <ul className="divide-y divide-hairline rounded-2xl border border-hairline bg-card">
+                {trending.map((e, i) => (
+                  <TrendingItem key={e.id} index={i + 1} event={e} />
+                ))}
+              </ul>
+            </Section>
+
+            <Section label="Browse by distance">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                {TYPES.map((t) => {
+                  const c = TILE_COLORS[t] ?? TILE_COLORS._default;
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => setFilter(t)}
+                      className="group relative flex aspect-[5/3] flex-col justify-between overflow-hidden rounded-lg p-5 text-left transition hover:translate-y-[-2px]"
+                      style={{ background: c.bg, color: c.fg }}
+                    >
+                      <span
+                        className="mono text-[10px] uppercase tracking-widest"
+                        style={{ color: c.fg, opacity: 0.75 }}
+                      >
+                        Distance
+                      </span>
+                      <span className="text-2xl font-semibold" style={{ color: c.fg }}>
+                        {t}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </Section>
+          </>
+        ) : (
+          <Section label={`${results.length} result${results.length === 1 ? "" : "s"}`}>
+            {results.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No races match that yet.</p>
+            ) : (
+              <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-card">
+                {results.map((e) => (
+                  <RaceListItem key={e.id} event={e} />
+                ))}
+              </ul>
+            )}
+          </Section>
+        )}
       </div>
-
-      {!showResults ? (
-        <>
-          <Section label="Trending now">
-            <ul className="divide-y divide-hairline rounded-2xl border border-hairline bg-card">
-              {trending.map((e, i) => (
-                <TrendingItem key={e.id} index={i + 1} event={e} />
-              ))}
-            </ul>
-          </Section>
-
-          <Section label="Browse by distance">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-              {TYPES.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setFilter(t)}
-                  className="flex aspect-[5/3] flex-col justify-between rounded-2xl border border-hairline bg-card p-5 text-left transition hover:bg-secondary"
-                >
-                  <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                    Distance
-                  </span>
-                  <span className="text-xl text-ink">{t}</span>
-                </button>
-              ))}
-            </div>
-          </Section>
-        </>
-      ) : (
-        <Section label={`${results.length} result${results.length === 1 ? "" : "s"}`}>
-          {results.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No races match that yet.</p>
-          ) : (
-            <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-card">
-              {results.map((e) => (
-                <RaceListItem key={e.id} event={e} />
-              ))}
-            </ul>
-          )}
-        </Section>
-      )}
     </div>
   );
 }
+
+// Spotify-like flat category tiles (Porsche/minimalist palette — solid, no gradients)
+const TILE_COLORS: Record<string, { bg: string; fg: string }> = {
+  "5K": { bg: "#1f3a5f", fg: "#ffffff" },           // deep navy
+  "10K": { bg: "#7a4b2a", fg: "#ffffff" },          // burnt sienna
+  "Half Marathon": { bg: "#2f5d4f", fg: "#ffffff" },// forest
+  "Marathon": { bg: "#9b1c1c", fg: "#ffffff" },     // crimson
+  "Trail": { bg: "#5a4a2f", fg: "#ffffff" },        // moss/khaki
+  "Triathlon": { bg: "#2a4d6e", fg: "#ffffff" },    // ocean
+  "Relay": { bg: "#6b4a7a", fg: "#ffffff" },        // muted plum
+  _default: { bg: "#3a3a3a", fg: "#ffffff" },
+};
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
