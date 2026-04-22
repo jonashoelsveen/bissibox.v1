@@ -11,7 +11,7 @@ export function TopChrome() {
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen p-5 md:p-6">
-      <div className="flex h-full flex-col items-center gap-1 rounded-full border border-hairline bg-card/85 p-1.5 backdrop-blur ring-soft">
+      <div className="flex h-full flex-col items-center gap-2 pt-2">
         <NavBtn to="/search" label="Search" active={path.startsWith("/search")}>
           <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
         </NavBtn>
