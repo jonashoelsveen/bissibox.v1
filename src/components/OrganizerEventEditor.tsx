@@ -4,7 +4,8 @@ import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { DEFAULT_CLASSES } from "@/lib/classes";
-import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree } from "lucide-react";
+import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as MapIcon } from "lucide-react";
+import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
 
 type Mode = "create" | "edit";
 
@@ -18,6 +19,8 @@ interface SubeventDraft {
   max_participants: string;
   class_codes: string[];
   sort_order: number;
+  course_path: LatLng[];
+  split_points: SplitPoint[];
 }
 
 interface Props {
