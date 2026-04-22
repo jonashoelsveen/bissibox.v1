@@ -433,7 +433,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
           </div>
 
           {/* Right sidebar — subevent headers with collapsible points */}
-          <aside className="w-80 shrink-0 overflow-y-auto border-l border-hairline bg-background">
+          <aside className="w-96 shrink-0 overflow-y-auto border-l border-hairline bg-background">
             <div className="border-b border-hairline px-4 py-3">
               <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Races</p>
               <p className="mt-0.5 text-sm text-ink">Select a race to draw</p>
@@ -492,7 +492,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                             No splits or fuel points yet. Pick a tool and click the map.
                           </p>
                         ) : (
-                          <ul className="space-y-1">
+                          <ul className="space-y-2">
                             {points.map((p) => {
                               const sel = p.id === selectedSplitId;
                               const dot =
@@ -505,40 +505,48 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                                   : p.kind === "finish"
                                   ? "#dc2626"
                                   : "#7c3aed";
+                              const kindLabel =
+                                p.kind.charAt(0).toUpperCase() + p.kind.slice(1);
                               return (
                                 <li
                                   key={p.id}
                                   onClick={() => setSelectedSplitId(p.id)}
-                                  className={`flex items-center gap-2 border px-2.5 py-2 text-xs transition ${
+                                  className={`group relative flex items-center gap-3 overflow-hidden border bg-card pl-4 pr-3 py-3 shadow-sm transition cursor-pointer ${
                                     sel
-                                      ? "border-primary bg-primary/10"
-                                      : "border-hairline bg-background hover:bg-secondary"
+                                      ? "border-primary shadow-md"
+                                      : "border-hairline hover:border-muted-foreground/40 hover:shadow"
                                   }`}
                                 >
-                                  <span className="h-2.5 w-2.5 shrink-0" style={{ background: dot }} />
-                                  <input
-                                    value={p.label}
-                                    onChange={(e) => {
-                                      const v = e.target.value;
-                                      setSubevents((arr) =>
-                                        arr.map((x, ix) =>
-                                          ix === i
-                                            ? {
-                                                ...x,
-                                                split_points: x.split_points.map((sp) =>
-                                                  sp.id === p.id ? { ...sp, label: v } : sp
-                                                ),
-                                              }
-                                            : x
-                                        )
-                                      );
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="min-w-0 flex-1 bg-transparent text-xs text-ink outline-none"
+                                  <span
+                                    aria-hidden
+                                    className="absolute left-0 top-0 h-full w-1"
+                                    style={{ background: dot }}
                                   />
-                                  <span className="mono text-[10px] uppercase text-muted-foreground">
-                                    {p.kind}
-                                  </span>
+                                  <div className="flex min-w-0 flex-1 flex-col">
+                                    <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                                      {kindLabel}
+                                    </span>
+                                    <input
+                                      value={p.label}
+                                      onChange={(e) => {
+                                        const v = e.target.value;
+                                        setSubevents((arr) =>
+                                          arr.map((x, ix) =>
+                                            ix === i
+                                              ? {
+                                                  ...x,
+                                                  split_points: x.split_points.map((sp) =>
+                                                    sp.id === p.id ? { ...sp, label: v } : sp
+                                                  ),
+                                                }
+                                              : x
+                                          )
+                                        );
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="mt-0.5 w-full bg-transparent text-sm font-medium text-ink outline-none"
+                                    />
+                                  </div>
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -556,10 +564,10 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                                       );
                                       if (sel) setSelectedSplitId(null);
                                     }}
-                                    className="text-muted-foreground hover:text-destructive"
+                                    className="opacity-0 group-hover:opacity-100 text-muted-foreground transition hover:text-destructive"
                                     aria-label="Remove"
                                   >
-                                    <Trash2 className="h-3 w-3" />
+                                    <Trash2 className="h-3.5 w-3.5" />
                                   </button>
                                 </li>
                               );
