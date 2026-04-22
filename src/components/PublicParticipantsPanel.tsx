@@ -156,7 +156,10 @@ export function PublicParticipantsPanel({
         <Selector
           label="Subevent"
           value={filterSub}
-          onChange={setFilterSub}
+          onChange={(v) => {
+            setFilterSub(v);
+            setFilterClass("all");
+          }}
           options={[
             { value: "all", label: "All subevents" },
             ...subevents.map((s) => ({ value: s.id, label: s.name })),
@@ -168,7 +171,10 @@ export function PublicParticipantsPanel({
           onChange={setFilterClass}
           options={[
             { value: "all", label: "All classes" },
-            ...classes.map((c) => ({ value: c, label: c })),
+            ...(filterSub !== "all"
+              ? (subevents.find((s) => s.id === filterSub)?.class_codes ?? [])
+              : classes
+            ).map((c) => ({ value: c, label: c })),
           ]}
         />
         <span className="ml-auto mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
