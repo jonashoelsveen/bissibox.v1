@@ -123,15 +123,65 @@ function SectionHeader({ title, hint }: { title: string; hint?: string }) {
   );
 }
 
+function categoryStyle(types: string[]): { label: string; color: string; surface: string; border: string } {
+  const t = (types ?? []).map((s) => s.toLowerCase()).join(" ");
+  if (t.includes("trail")) {
+    return {
+      label: "Trail",
+      color: "var(--cat-trail)",
+      surface: "var(--cat-trail-surface)",
+      border: "color-mix(in oklab, var(--cat-trail) 30%, transparent)",
+    };
+  }
+  if (t.includes("tri") || t.includes("swim") || t.includes("bike")) {
+    return {
+      label: "Triathlon",
+      color: "var(--cat-tri)",
+      surface: "var(--cat-tri-surface)",
+      border: "color-mix(in oklab, var(--cat-tri) 30%, transparent)",
+    };
+  }
+  if (t.includes("road") || t.includes("marathon") || t.includes("half") || t.includes("10k") || t.includes("5k")) {
+    return {
+      label: "Road",
+      color: "var(--cat-road)",
+      surface: "var(--cat-road-surface)",
+      border: "color-mix(in oklab, var(--cat-road) 30%, transparent)",
+    };
+  }
+  return {
+    label: types?.[0] ?? "Race",
+    color: "var(--cat-default)",
+    surface: "var(--cat-default-surface)",
+    border: "var(--color-hairline)",
+  };
+}
+
 function FeaturedCard({ event }: { event: EventRow }) {
+  const cat = categoryStyle(event.race_types);
   return (
     <Link
       to="/events/$eventId"
       params={{ eventId: event.id }}
-      className="group flex flex-col justify-between rounded-2xl border border-hairline bg-card p-6 transition hover:bg-secondary"
+      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 transition hover:translate-y-[-1px]"
+      style={{
+        borderColor: cat.border,
+        background: `linear-gradient(180deg, ${cat.surface} 0%, var(--color-card) 60%)`,
+      }}
     >
+      <span
+        aria-hidden
+        className="absolute left-0 top-0 h-full w-1"
+        style={{ background: cat.color }}
+      />
       <div>
-        <span className="mono text-[10px] uppercase tracking-widest text-accent">Featured</span>
+        <span
+          className="mono inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest"
+          style={{ color: cat.color }}
+        >
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: cat.color }} />
+          {cat.label} · Featured
+        </span>
         <h3 className="mt-3 text-xl text-ink">{event.title}</h3>
         <p className="mt-1 text-sm text-muted-foreground">{event.organizer}</p>
       </div>
