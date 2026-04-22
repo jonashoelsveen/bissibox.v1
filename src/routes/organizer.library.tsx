@@ -1,10 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
-import { Plus, Copy, Pencil, Globe } from "lucide-react";
+import { Plus, Copy, Pencil, Globe, Search as SearchIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
+
+type SortKey = "updated_at" | "starts_at" | "title";
+type SortDir = "asc" | "desc";
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "updated_at", label: "Last edited" },
+  { key: "starts_at", label: "Event date" },
+  { key: "title", label: "Title" },
+];
 
 export const Route = createFileRoute("/organizer/library")({
   component: LibraryPage,
