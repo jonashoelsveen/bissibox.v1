@@ -26,7 +26,8 @@ interface Props {
 type Tool = "pan" | "draw" | "split" | "fuel" | "marker" | "start" | "finish";
 
 // Periwinkle purple for the drawing line
-const LINE_COLOR = "#8B8FE8";
+const LINE_COLOR = "#6366F1";
+const LINE_CASING_COLOR = "#FFFFFF";
 
 const KIND_META: Record<SplitKind, { color: string; label: string }> = {
   start: { color: "#16a34a", label: "Start" },
