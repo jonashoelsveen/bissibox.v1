@@ -61,6 +61,7 @@ export function CourseMapEditor({
   const splitMarkersRef = useRef<Record<string, any>>({});
   const vertexMarkersRef = useRef<any[]>([]);
   const midMarkersRef = useRef<any[]>([]);
+  const hoverMarkerRef = useRef<any>(null);
   const [L, setL] = useState<any>(null);
   const [tool, setTool] = useState<Tool>("pan");
   const toolRef = useRef<Tool>("pan");
