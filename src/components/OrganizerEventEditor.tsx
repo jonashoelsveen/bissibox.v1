@@ -567,7 +567,10 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                     }`}
                   >
                     <div
-                      className={`flex w-full items-center gap-2 px-3 py-3 text-left transition ${
+                      onDoubleClick={() =>
+                        setExpandedSubMap((m) => ({ ...m, [i]: !m[i] }))
+                      }
+                      className={`flex w-full items-center gap-2 px-3 py-3 text-left transition select-none ${
                         active ? "" : "hover:bg-secondary"
                       }`}
                     >
