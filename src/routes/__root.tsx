@@ -71,7 +71,7 @@ function RootComponent() {
   return (
     <AuthProvider>
       <TopChrome />
-      <main className="min-h-screen pb-16 pt-24">
+      <main className="min-h-screen pb-16 pt-8 pl-20 md:pl-24">
         <Outlet />
       </main>
       <Toaster />

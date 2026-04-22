@@ -81,7 +81,7 @@ function SearchPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 md:px-10">
       <div className="pt-6">
-        <label className="flex items-center gap-3 rounded-full border border-hairline bg-card px-5 py-3 ring-soft focus-within:border-primary">
+        <label className="mx-auto flex max-w-2xl items-center gap-3 rounded-full border border-hairline bg-card px-5 py-3 ring-soft focus-within:border-primary">
           <SearchIcon className="h-4 w-4 text-muted-foreground" />
           <input
             autoFocus

@@ -82,7 +82,7 @@ function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-6 md:px-10">
+    <div className="mx-auto max-w-6xl px-6 md:px-10">
       <header className="flex flex-wrap items-end justify-between gap-4 pt-4">
         <div>
           <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Profile</p>
@@ -105,129 +105,135 @@ function ProfilePage() {
         </div>
       </header>
 
-      <nav className="mt-8 flex gap-1 rounded-full border border-hairline bg-card p-1 w-fit">
-        {(["general", "address", "races"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`rounded-full px-4 py-2 text-xs uppercase tracking-widest transition ${
-              tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-ink"
-            }`}
-          >
-            {t === "general" ? "General" : t === "address" ? "Address & contact" : "My races"}
-          </button>
-        ))}
-      </nav>
+      <div className="mt-8 grid gap-6 md:grid-cols-[200px_1fr]">
+        <nav className="flex flex-row gap-1 rounded-2xl border border-hairline bg-card p-2 md:flex-col md:p-3">
+          {(["general", "address", "races"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`rounded-xl px-3 py-2 text-left text-sm transition ${
+                tab === t
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-secondary hover:text-ink"
+              }`}
+            >
+              {t === "general" ? "General" : t === "address" ? "Contact & address" : "My races"}
+            </button>
+          ))}
+        </nav>
 
-      {tab === "general" && (
-        <Card>
-          <Grid>
-            <Field label="First name" value={profile.first_name ?? ""} onChange={(v) => update("first_name", v)} />
-            <Field label="Last name" value={profile.last_name ?? ""} onChange={(v) => update("last_name", v)} />
-            <Select
-              label="Gender"
-              value={profile.gender ?? ""}
-              onChange={(v) => update("gender", v || null)}
-              options={[
-                { value: "", label: "—" },
-                { value: "male", label: "Male" },
-                { value: "female", label: "Female" },
-                { value: "other", label: "Other" },
-              ]}
-            />
-            <Field
-              label="Birth date"
-              type="date"
-              value={profile.birth_date ?? ""}
-              onChange={(v) => update("birth_date", v || null)}
-            />
-            <Field
-              label="Company / Klubb"
-              value={profile.company_club ?? ""}
-              onChange={(v) => update("company_club", v)}
-            />
-            <Field label="Team" value={profile.team ?? ""} onChange={(v) => update("team", v)} />
-            <Field label="License" value={profile.license ?? ""} onChange={(v) => update("license", v)} />
-          </Grid>
-          <Anonymous value={profile.anonymous} onChange={(v) => update("anonymous", v)} />
-          <SaveBar saving={saving} onSave={save} />
-        </Card>
-      )}
-
-      {tab === "address" && (
-        <Card>
-          <Grid>
-            <Field label="Address" value={profile.address ?? ""} onChange={(v) => update("address", v)} />
-            <Field label="Postal code" value={profile.postal_code ?? ""} onChange={(v) => update("postal_code", v)} />
-            <Field label="Postal place" value={profile.postal_place ?? ""} onChange={(v) => update("postal_place", v)} />
-            <Field label="Country" value={profile.country ?? ""} onChange={(v) => update("country", v)} />
-            <Field label="Nationality" value={profile.nationality ?? ""} onChange={(v) => update("nationality", v)} />
-            <Field label="Mobile" value={profile.mobile ?? ""} onChange={(v) => update("mobile", v)} />
-            <Field
-              label="Emergency contact"
-              value={profile.emergency_contact ?? ""}
-              onChange={(v) => update("emergency_contact", v)}
-            />
-            <Field
-              label="Emergency phone"
-              value={profile.emergency_phone ?? ""}
-              onChange={(v) => update("emergency_phone", v)}
-            />
-          </Grid>
-          <SaveBar saving={saving} onSave={save} />
-        </Card>
-      )}
-
-      {tab === "races" && (
-        <Card>
-          {regs.length === 0 ? (
-            <div className="py-10 text-center">
-              <p className="text-muted-foreground">No races yet.</p>
-              <Link
-                to="/search"
-                className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground"
-              >
-                Find a race
-              </Link>
-            </div>
-          ) : (
-            <ul className="divide-y divide-hairline">
-              {regs.map((r) => (
-                <li key={r.id} className="flex items-center justify-between gap-3 py-4">
-                  <div className="min-w-0">
-                    <Link
-                      to="/events/$eventId"
-                      params={{ eventId: r.events?.id ?? "" }}
-                      className="block truncate text-ink hover:underline"
-                    >
-                      {r.events?.title ?? "Race"}
-                    </Link>
-                    <div className="text-xs text-muted-foreground">
-                      {r.race_type} · {r.events?.location}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="num text-sm text-ink">
-                      {r.events ? formatDate(r.events.starts_at) : ""}
-                    </span>
-                    <span
-                      className={`mono text-[10px] uppercase tracking-widest ${
-                        r.status === "confirmed"
-                          ? "text-ink"
-                          : r.status === "cancelled"
-                            ? "text-destructive"
-                            : "text-accent"
-                      }`}
-                    >
-                      {r.status}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+        <div>
+          {tab === "general" && (
+            <Card>
+              <Grid>
+                <Field label="First name" value={profile.first_name ?? ""} onChange={(v) => update("first_name", v)} />
+                <Field label="Last name" value={profile.last_name ?? ""} onChange={(v) => update("last_name", v)} />
+                <Select
+                  label="Gender"
+                  value={profile.gender ?? ""}
+                  onChange={(v) => update("gender", v || null)}
+                  options={[
+                    { value: "", label: "—" },
+                    { value: "male", label: "Male" },
+                    { value: "female", label: "Female" },
+                    { value: "other", label: "Other" },
+                  ]}
+                />
+                <Field
+                  label="Birth date"
+                  type="date"
+                  value={profile.birth_date ?? ""}
+                  onChange={(v) => update("birth_date", v || null)}
+                />
+                <Field
+                  label="Company / Klubb"
+                  value={profile.company_club ?? ""}
+                  onChange={(v) => update("company_club", v)}
+                />
+                <Field label="Team" value={profile.team ?? ""} onChange={(v) => update("team", v)} />
+                <Field label="License" value={profile.license ?? ""} onChange={(v) => update("license", v)} />
+              </Grid>
+              <Anonymous value={profile.anonymous} onChange={(v) => update("anonymous", v)} />
+              <SaveBar saving={saving} onSave={save} />
+            </Card>
           )}
-        </Card>
-      )}
+
+          {tab === "address" && (
+            <Card>
+              <Grid>
+                <Field label="Address" value={profile.address ?? ""} onChange={(v) => update("address", v)} />
+                <Field label="Postal code" value={profile.postal_code ?? ""} onChange={(v) => update("postal_code", v)} />
+                <Field label="Postal place" value={profile.postal_place ?? ""} onChange={(v) => update("postal_place", v)} />
+                <Field label="Country" value={profile.country ?? ""} onChange={(v) => update("country", v)} />
+                <Field label="Nationality" value={profile.nationality ?? ""} onChange={(v) => update("nationality", v)} />
+                <Field label="Mobile" value={profile.mobile ?? ""} onChange={(v) => update("mobile", v)} />
+                <Field
+                  label="Emergency contact"
+                  value={profile.emergency_contact ?? ""}
+                  onChange={(v) => update("emergency_contact", v)}
+                />
+                <Field
+                  label="Emergency phone"
+                  value={profile.emergency_phone ?? ""}
+                  onChange={(v) => update("emergency_phone", v)}
+                />
+              </Grid>
+              <SaveBar saving={saving} onSave={save} />
+            </Card>
+          )}
+
+          {tab === "races" && (
+            <Card>
+              {regs.length === 0 ? (
+                <div className="py-10 text-center">
+                  <p className="text-muted-foreground">No races yet.</p>
+                  <Link
+                    to="/search"
+                    className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground"
+                  >
+                    Find a race
+                  </Link>
+                </div>
+              ) : (
+                <ul className="divide-y divide-hairline">
+                  {regs.map((r) => (
+                    <li key={r.id} className="flex items-center justify-between gap-3 py-4">
+                      <div className="min-w-0">
+                        <Link
+                          to="/events/$eventId"
+                          params={{ eventId: r.events?.id ?? "" }}
+                          className="block truncate text-ink hover:underline"
+                        >
+                          {r.events?.title ?? "Race"}
+                        </Link>
+                        <div className="text-xs text-muted-foreground">
+                          {r.race_type} · {r.events?.location}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="num text-sm text-ink">
+                          {r.events ? formatDate(r.events.starts_at) : ""}
+                        </span>
+                        <span
+                          className={`mono text-[10px] uppercase tracking-widest ${
+                            r.status === "confirmed"
+                              ? "text-ink"
+                              : r.status === "cancelled"
+                                ? "text-destructive"
+                                : "text-accent"
+                          }`}
+                        >
+                          {r.status}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
