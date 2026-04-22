@@ -112,6 +112,28 @@ function LibraryPage() {
     setEvents((arr) => arr.map((x) => (x.id === id ? { ...x, published: next } : x)));
     toast.success(next ? "Event published." : "Event unpublished.");
   };
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    let arr = events;
+    if (term) {
+      arr = arr.filter(
+        (e) =>
+          e.title.toLowerCase().includes(term) ||
+          e.organizer.toLowerCase().includes(term) ||
+          (e.location ?? "").toLowerCase().includes(term) ||
+          e.race_types.some((t) => t.toLowerCase().includes(term))
+      );
+    }
+    const sorted = [...arr].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "title") cmp = a.title.localeCompare(b.title);
+      else cmp = new Date(a[sortKey]).getTime() - new Date(b[sortKey]).getTime();
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [events, q, sortKey, sortDir]);
+
+  const currentSortLabel = SORT_OPTIONS.find((s) => s.key === sortKey)?.label ?? "Sort";
 
   if (!user) return <div className="mx-auto max-w-4xl px-6 py-16 text-muted-foreground">Loading…</div>;
 
@@ -133,6 +155,70 @@ function LibraryPage() {
         </Link>
       </header>
 
+      <div className="flex justify-center pb-4">
+        <div className="flex w-full max-w-md items-center gap-2">
+          <label className="flex flex-1 items-center gap-3 rounded-full border border-hairline bg-card px-5 py-2.5 ring-soft focus-within:border-primary">
+            <SearchIcon className="h-4 w-4 text-muted-foreground" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search your events…"
+              className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground"
+            />
+            {q && (
+              <button
+                onClick={() => setQ("")}
+                className="mono text-xs uppercase tracking-widest text-muted-foreground hover:text-ink"
+              >
+                clear
+              </button>
+            )}
+          </label>
+          <div className="relative">
+            <button
+              onClick={() => setSortOpen((o) => !o)}
+              aria-label="Sort"
+              title={`Sort: ${currentSortLabel} (${sortDir})`}
+              className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-3 py-2.5 text-xs text-muted-foreground transition hover:text-ink"
+            >
+              <ArrowUpDown className="h-4 w-4" />
+              <span className="hidden sm:inline">{currentSortLabel}</span>
+              {sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+            </button>
+            {sortOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setSortOpen(false)} />
+                <div className="absolute right-0 top-full z-20 mt-1 w-52 overflow-hidden rounded-lg border border-hairline bg-card shadow-lg">
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => {
+                        setSortKey(opt.key);
+                        setSortOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition hover:bg-secondary ${
+                        sortKey === opt.key ? "text-ink" : "text-muted-foreground"
+                      }`}
+                    >
+                      {opt.label}
+                      {sortKey === opt.key && <span className="mono text-[9px] uppercase">active</span>}
+                    </button>
+                  ))}
+                  <div className="border-t border-hairline" />
+                  <button
+                    onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-muted-foreground transition hover:bg-secondary"
+                  >
+                    Direction
+                    <span className="mono text-[10px] uppercase">{sortDir}</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="border-b border-hairline" />
 
       <div className="mx-auto max-w-5xl pt-8">
@@ -147,9 +233,11 @@ function LibraryPage() {
                 <Plus className="h-4 w-4" /> Create your first event
               </Link>
             </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground">No events match that search.</p>
           ) : (
             <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-card">
-              {events.map((e) => (
+              {filtered.map((e) => (
                 <li key={e.id} className="flex items-center gap-4 px-5 py-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
