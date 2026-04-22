@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
-import { Plus, Copy, Pencil } from "lucide-react";
+import { Plus, Copy, Pencil, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/organizer/library")({
@@ -21,6 +21,7 @@ interface OrgEvent {
   currency: string;
   race_types: string[];
   featured: boolean;
+  published: boolean;
 }
 
 function LibraryPage() {
@@ -90,6 +91,15 @@ function LibraryPage() {
     }
   };
 
+  const togglePublish = async (id: string, next: boolean) => {
+    setBusy(true);
+    const { error } = await supabase.from("events").update({ published: next } as never).eq("id", id);
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    setEvents((arr) => arr.map((x) => (x.id === id ? { ...x, published: next } : x)));
+    toast.success(next ? "Event published." : "Event unpublished.");
+  };
+
   if (!user) return <div className="mx-auto max-w-4xl px-6 py-16 text-muted-foreground">Loading…</div>;
 
   return (
@@ -126,21 +136,24 @@ function LibraryPage() {
             {events.map((e) => (
               <li key={e.id} className="flex items-center gap-4 px-5 py-4">
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-ink">{e.title}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-ink">{e.title}</span>
+                    <span
+                      className={`mono shrink-0 rounded-sm px-1.5 py-0.5 text-[9px] uppercase tracking-widest ${
+                        e.published
+                          ? "bg-primary/10 text-primary"
+                          : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      {e.published ? "Published" : "Draft"}
+                    </span>
+                  </div>
                   <div className="truncate text-xs text-muted-foreground">
                     {e.organizer} · {e.location ?? "—"} · {e.race_types.join(", ")}
                   </div>
                 </div>
                 <span className="num text-sm text-ink">{formatDate(e.starts_at)}</span>
                 <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => duplicate(e.id)}
-                    disabled={busy}
-                    aria-label="Duplicate"
-                    className="rounded-md border border-hairline bg-background p-2 text-muted-foreground transition hover:text-ink disabled:opacity-50"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </button>
                   <Link
                     to="/organizer/$eventId/edit"
                     params={{ eventId: e.id }}
@@ -149,6 +162,28 @@ function LibraryPage() {
                   >
                     <Pencil className="h-4 w-4" />
                   </Link>
+                  <button
+                    onClick={() => duplicate(e.id)}
+                    disabled={busy}
+                    aria-label="Duplicate"
+                    className="rounded-md border border-hairline bg-background p-2 text-muted-foreground transition hover:text-ink disabled:opacity-50"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => togglePublish(e.id, !e.published)}
+                    disabled={busy}
+                    aria-label={e.published ? "Unpublish" : "Publish"}
+                    title={e.published ? "Unpublish" : "Publish"}
+                    className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-2 text-xs transition disabled:opacity-50 ${
+                      e.published
+                        ? "border-hairline bg-background text-muted-foreground hover:text-ink"
+                        : "border-primary bg-card text-primary hover:bg-primary/5"
+                    }`}
+                  >
+                    <Globe className="h-4 w-4" />
+                    {e.published ? "Unpublish" : "Publish"}
+                  </button>
                 </div>
               </li>
             ))}
