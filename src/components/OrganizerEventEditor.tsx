@@ -928,41 +928,61 @@ function DateTimeField({
   value: string;
   onChange: (v: string) => void;
 }) {
-  const [datePart, timePart] = value ? value.split("T") : ["", ""];
-  const setDate = (d: string) => {
-    if (!d) {
-      onChange("");
-      return;
-    }
-    onChange(`${d}T${timePart || "09:00"}`);
+  // Display: DD.MM.YYYY HH:MM ; storage: YYYY-MM-DDTHH:MM
+  const toDisplay = (v: string): string => {
+    if (!v) return "";
+    const [d, t] = v.split("T");
+    const [y, mo, da] = (d ?? "").split("-");
+    if (!y || !mo || !da) return "";
+    return `${da}.${mo}.${y}${t ? ` ${t.slice(0, 5)}` : ""}`;
   };
-  const setTime = (t: string) => {
-    const d = datePart || new Date().toISOString().slice(0, 10);
-    onChange(`${d}T${t}`);
+  const fromDigits = (digits: string): string | null => {
+    if (digits.length < 8) return null;
+    const da = digits.slice(0, 2);
+    const mo = digits.slice(2, 4);
+    const y = digits.slice(4, 8);
+    const hh = digits.slice(8, 10).padEnd(2, "0");
+    const mi = digits.slice(10, 12).padEnd(2, "0");
+    if (Number(mo) < 1 || Number(mo) > 12) return null;
+    if (Number(da) < 1 || Number(da) > 31) return null;
+    return `${y}-${mo}-${da}T${hh}:${mi}`;
   };
+  const formatLive = (raw: string): string => {
+    const d = raw.replace(/\D/g, "").slice(0, 12);
+    let out = "";
+    if (d.length > 0) out += d.slice(0, Math.min(2, d.length));
+    if (d.length >= 3) out += "." + d.slice(2, Math.min(4, d.length));
+    if (d.length >= 5) out += "." + d.slice(4, Math.min(8, d.length));
+    if (d.length >= 9) out += " " + d.slice(8, Math.min(10, d.length));
+    if (d.length >= 11) out += ":" + d.slice(10, Math.min(12, d.length));
+    return out;
+  };
+  const [draft, setDraft] = useState<string | null>(null);
+  const display = draft ?? toDisplay(value);
   return (
-    <div className="inline-flex items-stretch overflow-hidden rounded-xl border border-hairline bg-background shadow-sm">
-      <label className="group flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-ink transition hover:bg-primary/5">
-        <span className="text-primary">📅</span>
-        <input
-          type="date"
-          value={datePart}
-          onChange={(e) => setDate(e.target.value)}
-          className="cursor-pointer bg-transparent text-sm text-ink outline-none"
-        />
-      </label>
-      <div className="w-px bg-hairline" />
-      <label className="group flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-ink transition hover:bg-primary/5">
-        <span className="text-primary">⏰</span>
-        <input
-          type="time"
-          value={timePart}
-          step={60}
-          onChange={(e) => setTime(e.target.value)}
-          className="cursor-pointer bg-transparent text-sm text-ink outline-none"
-        />
-      </label>
-    </div>
+    <input
+      type="text"
+      inputMode="numeric"
+      placeholder="DD.MM.YYYY HH:MM"
+      value={display}
+      onChange={(e) => {
+        const formatted = formatLive(e.target.value);
+        const digits = formatted.replace(/\D/g, "");
+        const parsed = fromDigits(digits);
+        if (parsed && digits.length >= 12) {
+          setDraft(null);
+          onChange(parsed);
+        } else if (formatted === "") {
+          setDraft(null);
+          onChange("");
+        } else {
+          setDraft(formatted);
+          if (parsed) onChange(parsed);
+        }
+      }}
+      onBlur={() => setDraft(null)}
+      className="w-full rounded-xl border border-hairline bg-background px-3 py-2 text-sm text-ink shadow-sm outline-none transition focus:border-primary"
+    />
   );
 }
 
