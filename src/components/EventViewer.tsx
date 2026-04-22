@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ArrowLeft, ChevronDown, FileText, Layers, ListTree, Map as MapIcon, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileText, Heart, Layers, ListTree, Map as MapIcon, Share2, Users, X } from "lucide-react";
 import { ReadOnlyCourseMap } from "@/components/ReadOnlyCourseMap";
 import { ElevationProfile } from "@/components/ElevationProfile";
+import { PublicParticipantsPanel } from "@/components/PublicParticipantsPanel";
 import type { LatLng, SplitPoint } from "@/components/CourseMapEditor";
 import { formatDateLong, formatMoney, formatTime } from "@/lib/format";
 
@@ -39,7 +40,9 @@ interface SubeventRow {
 export function EventViewer({ eventId }: { eventId: string }) {
   const { user } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map">("details");
+  const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map" | "participants">("details");
+  const [liked, setLiked] = useState(false);
+  const [likeBusy, setLikeBusy] = useState(false);
   const [event, setEvent] = useState<EventRow | null>(null);
   const [classes, setClasses] = useState<string[]>([]);
   const [subevents, setSubevents] = useState<SubeventRow[]>([]);
@@ -97,8 +100,51 @@ export function EventViewer({ eventId }: { eventId: string }) {
         .eq("event_id", eventId)
         .maybeSingle();
       if (data) setRegistered(true);
+      const { data: like } = await supabase
+        .from("event_likes")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("event_id", eventId)
+        .maybeSingle();
+      setLiked(!!like);
     })();
   }, [user, event, eventId]);
+
+  const toggleLike = async () => {
+    if (!user) {
+      nav({ to: "/auth", search: { redirect: `/events/${eventId}` } });
+      return;
+    }
+    if (likeBusy) return;
+    setLikeBusy(true);
+    if (liked) {
+      await supabase.from("event_likes").delete().eq("user_id", user.id).eq("event_id", eventId);
+      setLiked(false);
+    } else {
+      const { error } = await supabase.from("event_likes").insert({ user_id: user.id, event_id: eventId } as never);
+      if (!error) setLiked(true);
+    }
+    setLikeBusy(false);
+  };
+
+  const shareInvite = async () => {
+    const url = `${window.location.origin}/events/${eventId}`;
+    const title = event?.title ?? "Race";
+    try {
+      if (typeof navigator !== "undefined" && (navigator as any).share) {
+        await (navigator as any).share({ title, text: `Join me at ${title}`, url });
+        return;
+      }
+    } catch {
+      // user cancelled — fall through to clipboard
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Invite link copied to clipboard.");
+    } catch {
+      toast.error("Could not copy link.");
+    }
+  };
 
   const openSignup = () => {
     if (!user) {
@@ -159,13 +205,36 @@ export function EventViewer({ eventId }: { eventId: string }) {
               <h1 className="mt-2 text-3xl text-ink md:text-4xl">{event.title}</h1>
             </div>
           </div>
-          <button
-            onClick={openSignup}
-            disabled={submitting || registered}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-          >
-            {registered ? "Signed up" : "Sign up"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={shareInvite}
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-hairline bg-card text-muted-foreground transition hover:border-muted-foreground/40 hover:text-ink"
+              aria-label="Invite a friend"
+              title="Invite a friend"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={toggleLike}
+              disabled={likeBusy}
+              className={`inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border transition disabled:opacity-50 ${
+                liked
+                  ? "border-rose-500/40 bg-rose-500/10 text-rose-500 hover:bg-rose-500/15"
+                  : "border-hairline bg-card text-muted-foreground hover:border-muted-foreground/40 hover:text-ink"
+              }`}
+              aria-label={liked ? "Unlike" : "Like"}
+              title={liked ? "Liked" : "Like"}
+            >
+              <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+            </button>
+            <button
+              onClick={openSignup}
+              disabled={submitting || registered}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+            >
+              {registered ? "Signed up" : "Sign up"}
+            </button>
+          </div>
         </header>
 
         <nav className="mt-7 flex border-b border-hairline">
@@ -180,6 +249,9 @@ export function EventViewer({ eventId }: { eventId: string }) {
           </TabBtn>
           <TabBtn active={tab === "map"} onClick={() => setTab("map")} icon={<MapIcon className="h-3.5 w-3.5" />}>
             Map
+          </TabBtn>
+          <TabBtn active={tab === "participants"} onClick={() => setTab("participants")} icon={<Users className="h-3.5 w-3.5" />}>
+            Participants
           </TabBtn>
         </nav>
       </div>
@@ -293,6 +365,8 @@ export function EventViewer({ eventId }: { eventId: string }) {
           </div>
         </Panel>
       )}
+
+      {tab === "participants" && <PublicParticipantsPanel eventId={eventId} />}
 
       {tab === "map" && (
         <div className="mt-5 flex flex-1 overflow-hidden rounded-lg border border-hairline bg-card">
