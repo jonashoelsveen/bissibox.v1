@@ -125,7 +125,7 @@ function ProfilePage() {
 
       <div className="mt-8 grid gap-10 md:grid-cols-[180px_1fr]">
         <nav className="-ml-2 flex flex-row gap-1 md:flex-col md:gap-0.5">
-          {(["general", "address", "races"] as const).map((t) => (
+          {(["general", "address", "races", "liked"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -135,7 +135,13 @@ function ProfilePage() {
                   : "text-muted-foreground hover:text-ink"
               }`}
             >
-              {t === "general" ? "General" : t === "address" ? "Contact & address" : "My races"}
+              {t === "general"
+                ? "General"
+                : t === "address"
+                  ? "Contact & address"
+                  : t === "races"
+                    ? "My races"
+                    : "Liked races"}
             </button>
           ))}
         </nav>
@@ -243,6 +249,52 @@ function ProfilePage() {
                         >
                           {r.status}
                         </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
+
+          {tab === "liked" && (
+            <Card>
+              {liked.length === 0 ? (
+                <div className="py-10 text-center">
+                  <p className="text-muted-foreground">No liked races yet.</p>
+                  <Link
+                    to="/search"
+                    className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground"
+                  >
+                    Discover races
+                  </Link>
+                </div>
+              ) : (
+                <ul className="divide-y divide-hairline">
+                  {liked.map((l) => (
+                    <li key={l.id} className="flex items-center justify-between gap-3 py-4">
+                      <div className="min-w-0">
+                        <Link
+                          to="/events/$eventId"
+                          params={{ eventId: l.events?.id ?? "" }}
+                          className="block truncate text-ink hover:underline"
+                        >
+                          {l.events?.title ?? "Race"}
+                        </Link>
+                        <div className="text-xs text-muted-foreground">
+                          {l.events?.location}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="num text-sm text-ink">
+                          {l.events ? formatDate(l.events.starts_at) : ""}
+                        </span>
+                        <button
+                          onClick={() => unlike(l.id)}
+                          className="mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-destructive"
+                        >
+                          Remove
+                        </button>
                       </div>
                     </li>
                   ))}
