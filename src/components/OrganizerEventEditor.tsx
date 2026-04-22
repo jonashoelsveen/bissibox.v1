@@ -5,9 +5,10 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { DEFAULT_CLASSES } from "@/lib/classes";
 import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as MapIcon, GripVertical, ArrowLeft, Globe, Users } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+
 import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
 import { ElevationProfile } from "@/components/ElevationProfile";
+import { ParticipantsPanel } from "@/components/ParticipantsPanel";
 
 type Mode = "create" | "edit";
 
@@ -38,7 +39,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const nav = useNavigate();
 
   // Top-level
-  const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map">("details");
+  const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map" | "participants">("details");
   const [activeMapSub, setActiveMapSub] = useState<number>(0);
   const [expandedSubMap, setExpandedSubMap] = useState<Record<number, boolean>>({ 0: true });
   const [selectedSplitId, setSelectedSplitId] = useState<string | null>(null);
@@ -281,14 +282,13 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             Map
           </TabBtn>
           {mode === "edit" && savedId && (
-            <Link
-              to="/organizer/$eventId/participants"
-              params={{ eventId: savedId }}
-              className="-mb-px inline-flex items-center gap-1.5 border-b-2 border-transparent px-4 py-2.5 text-sm text-muted-foreground transition hover:text-ink"
+            <TabBtn
+              active={tab === "participants"}
+              onClick={() => setTab("participants")}
+              icon={<Users className="h-3.5 w-3.5" />}
             >
-              <Users className="h-3.5 w-3.5" />
               Participants
-            </Link>
+            </TabBtn>
           )}
         </nav>
       </div>
@@ -776,6 +776,10 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             </div>
           </aside>
         </div>
+      )}
+
+      {tab === "participants" && savedId && (
+        <ParticipantsPanel eventId={savedId} />
       )}
     </div>
   );
