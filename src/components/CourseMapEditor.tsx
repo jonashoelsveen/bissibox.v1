@@ -249,17 +249,35 @@ export function CourseMapEditor({
     splits.forEach((s) => {
       const meta = KIND_META[s.kind];
       const isSelected = s.id === selectedSplitId;
-      const ring = isSelected
-        ? "box-shadow:0 0 0 4px rgba(139,143,232,0.55), 0 1px 4px rgba(0,0,0,0.3);"
-        : "box-shadow:0 1px 4px rgba(0,0,0,0.3);";
-      const inner =
-        s.kind === "start"
-          ? "S"
-          : s.kind === "finish"
-          ? "F"
-          : s.label.match(/\d+/)?.[0] ?? "•";
-      const html = `<div style="background:${meta.color};color:#fff;border:2px solid #fff;border-radius:9999px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;${ring}">${inner}</div>`;
-      const icon = L.divIcon({ html, className: "", iconSize: [24, 24], iconAnchor: [12, 12] });
+      let html: string;
+      let size: [number, number];
+      let anchor: [number, number];
+
+      if (s.kind === "start" || s.kind === "finish") {
+        // Flag-pin: pole + waving flag
+        const ringFilter = isSelected
+          ? "filter:drop-shadow(0 0 4px rgba(139,143,232,0.9));"
+          : "filter:drop-shadow(0 1px 2px rgba(0,0,0,0.4));";
+        html = `<div style="position:relative;width:28px;height:34px;${ringFilter}">
+          <svg width="28" height="34" viewBox="0 0 28 34" xmlns="http://www.w3.org/2000/svg">
+            <line x1="6" y1="2" x2="6" y2="33" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+            <path d="M7 3 L24 6 L20 11 L24 16 L7 13 Z" fill="${meta.color}" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>
+            <circle cx="6" cy="33" r="2" fill="#1f2937"/>
+          </svg>
+        </div>`;
+        size = [28, 34];
+        anchor = [6, 33];
+      } else {
+        const ring = isSelected
+          ? "box-shadow:0 0 0 4px rgba(139,143,232,0.55), 0 1px 4px rgba(0,0,0,0.3);"
+          : "box-shadow:0 1px 4px rgba(0,0,0,0.3);";
+        const inner = s.label.match(/\d+/)?.[0] ?? "•";
+        html = `<div style="background:${meta.color};color:#fff;border:2px solid #fff;border-radius:9999px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;${ring}">${inner}</div>`;
+        size = [24, 24];
+        anchor = [12, 12];
+      }
+
+      const icon = L.divIcon({ html, className: "", iconSize: size, iconAnchor: anchor });
       const marker = L.marker(s.position, { icon }).addTo(mapRef.current);
       marker.bindTooltip(`${meta.label} · ${s.label}`, { direction: "top" });
       marker.on("click", (ev: any) => {
