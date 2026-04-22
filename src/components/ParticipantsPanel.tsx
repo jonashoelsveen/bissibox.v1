@@ -147,14 +147,14 @@ export function ParticipantsPanel({ eventId }: { eventId: string }) {
   return (
     <div>
       {/* Filters bar */}
-      <div className="mt-5 flex flex-wrap items-center gap-2 rounded-lg border border-hairline bg-card px-3 py-2.5">
+      <div className="mt-5 flex flex-wrap items-center gap-2">
         <div className="relative min-w-[220px] flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name, bib, class…"
-            className="w-full rounded-md border border-hairline bg-background py-1.5 pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
+            className="h-10 w-full rounded-lg border border-hairline bg-card pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
           />
         </div>
         <Selector
