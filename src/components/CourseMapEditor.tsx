@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil, Droplet, Flag, Trash2, Save, Eraser, Hand, Timer, Undo2, Redo2, Search, Loader2, X } from "lucide-react";
+import { Pencil, Droplet, Flag, Trash2, Save, Eraser, Hand, Timer, Undo2, Redo2, Search, Loader2, X, Wand2, Sparkles, Pencil as PencilEdit } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export type LatLng = [number, number];
 export type SplitKind = "split" | "fuel" | "start" | "finish" | "marker";
