@@ -567,17 +567,18 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                     }`}
                   >
                     <div
-                      onDoubleClick={() =>
-                        setExpandedSubMap((m) => ({ ...m, [i]: !m[i] }))
-                      }
                       className={`flex w-full items-center gap-2 px-3 py-3 text-left transition select-none ${
                         active ? "" : "hover:bg-secondary"
                       }`}
                     >
                       <button
                         onClick={() => {
-                          setActiveMapSub(i);
-                          setSelectedSplitId(null);
+                          if (active) {
+                            setExpandedSubMap((m) => ({ ...m, [i]: !m[i] }));
+                          } else {
+                            setActiveMapSub(i);
+                            setSelectedSplitId(null);
+                          }
                         }}
                         className="flex min-w-0 flex-1 items-center"
                       >
