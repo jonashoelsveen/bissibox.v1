@@ -4,7 +4,8 @@ import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { DEFAULT_CLASSES } from "@/lib/classes";
-import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree } from "lucide-react";
+import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as MapIcon } from "lucide-react";
+import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
 
 type Mode = "create" | "edit";
 
@@ -18,6 +19,8 @@ interface SubeventDraft {
   max_participants: string;
   class_codes: string[];
   sort_order: number;
+  course_path: LatLng[];
+  split_points: SplitPoint[];
 }
 
 interface Props {
@@ -33,7 +36,8 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const nav = useNavigate();
 
   // Top-level
-  const [tab, setTab] = useState<"details" | "classes" | "subevents">("details");
+  const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map">("details");
+  const [activeMapSub, setActiveMapSub] = useState<number>(0);
 
   // Event details
   const [title, setTitle] = useState("");
@@ -105,6 +109,8 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             max_participants: s.max_participants != null ? String(s.max_participants) : "",
             class_codes: s.class_codes ?? [],
             sort_order: s.sort_order ?? i,
+            course_path: Array.isArray((s as any).course_path) ? ((s as any).course_path as LatLng[]) : [],
+            split_points: Array.isArray((s as any).split_points) ? ((s as any).split_points as SplitPoint[]) : [],
           }))
         );
     })();
@@ -168,6 +174,8 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             max_participants: s.max_participants ? Number(s.max_participants) : null,
             class_codes: s.class_codes,
             sort_order: i,
+            course_path: s.course_path,
+            split_points: s.split_points,
           })) as never
         );
 
@@ -183,41 +191,48 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
   if (!user) return <div className="mx-auto max-w-4xl px-6 py-16 text-muted-foreground">Loading…</div>;
 
-  return (
-    <div className="mx-auto max-w-4xl px-6 md:px-10">
-      <header className="flex flex-wrap items-end justify-between gap-4 pt-4">
-        <div>
-          <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            Organizer · {mode === "create" ? "New event" : "Edit event"}
-          </p>
-          <h1 className="mt-2 text-3xl text-ink md:text-4xl">{title || "Untitled event"}</h1>
-        </div>
-        <button
-          onClick={save}
-          disabled={busy || !canSave}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-        >
-          <Save className="h-4 w-4" />
-          {busy ? "Saving…" : mode === "create" ? "Create event" : "Save"}
-        </button>
-      </header>
+  const isMap = tab === "map";
 
-      {/* Tab strip — Excel-like, trustworthy */}
-      <nav className="mt-7 flex border-b border-hairline">
-        <TabBtn active={tab === "details"} onClick={() => setTab("details")} icon={<FileText className="h-3.5 w-3.5" />}>
-          Event details
-        </TabBtn>
-        <TabBtn active={tab === "classes"} onClick={() => setTab("classes")} icon={<Layers className="h-3.5 w-3.5" />}>
-          Classes
-        </TabBtn>
-        <TabBtn
-          active={tab === "subevents"}
-          onClick={() => setTab("subevents")}
-          icon={<ListTree className="h-3.5 w-3.5" />}
-        >
-          Subevents
-        </TabBtn>
-      </nav>
+  return (
+    <div className={isMap ? "flex min-h-[calc(100vh-2rem)] flex-col" : "mx-auto max-w-4xl px-6 md:px-10"}>
+      <div className={isMap ? "mx-auto w-full max-w-7xl px-6 md:px-10" : ""}>
+        <header className="flex flex-wrap items-end justify-between gap-4 pt-4">
+          <div>
+            <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Organizer · {mode === "create" ? "New event" : "Edit event"}
+            </p>
+            <h1 className="mt-2 text-3xl text-ink md:text-4xl">{title || "Untitled event"}</h1>
+          </div>
+          <button
+            onClick={save}
+            disabled={busy || !canSave}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+          >
+            <Save className="h-4 w-4" />
+            {busy ? "Saving…" : mode === "create" ? "Create event" : "Save"}
+          </button>
+        </header>
+
+        {/* Tab strip — Excel-like, trustworthy */}
+        <nav className="mt-7 flex border-b border-hairline">
+          <TabBtn active={tab === "details"} onClick={() => setTab("details")} icon={<FileText className="h-3.5 w-3.5" />}>
+            Event details
+          </TabBtn>
+          <TabBtn active={tab === "classes"} onClick={() => setTab("classes")} icon={<Layers className="h-3.5 w-3.5" />}>
+            Classes
+          </TabBtn>
+          <TabBtn
+            active={tab === "subevents"}
+            onClick={() => setTab("subevents")}
+            icon={<ListTree className="h-3.5 w-3.5" />}
+          >
+            Subevents
+          </TabBtn>
+          <TabBtn active={tab === "map"} onClick={() => setTab("map")} icon={<MapIcon className="h-3.5 w-3.5" />}>
+            Map
+          </TabBtn>
+        </nav>
+      </div>
 
       {tab === "details" && (
         <Panel>
@@ -337,6 +352,8 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                     max_participants: "",
                     class_codes: [...classes],
                     sort_order: arr.length,
+                    course_path: [],
+                    split_points: [],
                   },
                 ]);
                 setOpenSub(subevents.length);
@@ -371,6 +388,82 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             ))}
           </div>
         </Panel>
+      )}
+
+      {tab === "map" && (
+        <div className="mt-5 flex flex-1 overflow-hidden rounded-lg border border-hairline bg-card">
+          {/* Map area */}
+          <div className="relative min-h-[600px] flex-1">
+            {subevents.length === 0 ? (
+              <div className="flex h-full min-h-[600px] items-center justify-center p-10 text-center text-sm text-muted-foreground">
+                Add a race in the Subevents tab to draw its course map.
+              </div>
+            ) : (
+              <CourseMapEditor
+                key={activeMapSub}
+                title={subevents[activeMapSub]?.name || `Race ${activeMapSub + 1}`}
+                path={subevents[activeMapSub]?.course_path ?? []}
+                splits={subevents[activeMapSub]?.split_points ?? []}
+                onChange={({ path, splits }) =>
+                  setSubevents((arr) =>
+                    arr.map((x, i) =>
+                      i === activeMapSub ? { ...x, course_path: path, split_points: splits } : x
+                    )
+                  )
+                }
+                onSave={save}
+                saving={busy}
+                onDelete={() =>
+                  setSubevents((arr) =>
+                    arr.map((x, i) =>
+                      i === activeMapSub ? { ...x, course_path: [], split_points: [] } : x
+                    )
+                  )
+                }
+              />
+            )}
+          </div>
+
+          {/* Right sidebar — subevent headers */}
+          <aside className="w-72 shrink-0 border-l border-hairline bg-background">
+            <div className="border-b border-hairline px-4 py-3">
+              <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Races</p>
+              <p className="mt-0.5 text-sm text-ink">Select a race to draw</p>
+            </div>
+            <div className="divide-y divide-hairline">
+              {subevents.map((s, i) => {
+                const active = i === activeMapSub;
+                const drawn = (s.course_path?.length ?? 0) > 1;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setActiveMapSub(i)}
+                    className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition ${
+                      active ? "bg-primary/10 border-l-2 border-primary" : "border-l-2 border-transparent hover:bg-secondary"
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className={`truncate text-sm ${active ? "text-ink font-medium" : "text-ink"}`}>
+                        {s.name || `Race ${i + 1}`}
+                      </p>
+                      <p className="mono mt-0.5 text-[10px] text-muted-foreground">
+                        {s.distance_km ? `${s.distance_km} km · ` : ""}
+                        {s.course_path?.length ?? 0} pts · {s.split_points?.length ?? 0} markers
+                      </p>
+                    </div>
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${drawn ? "bg-primary" : "bg-muted-foreground/30"}`}
+                      title={drawn ? "Course drawn" : "No course"}
+                    />
+                  </button>
+                );
+              })}
+              {subevents.length === 0 && (
+                <p className="px-4 py-6 text-xs text-muted-foreground">No races yet.</p>
+              )}
+            </div>
+          </aside>
+        </div>
       )}
     </div>
   );

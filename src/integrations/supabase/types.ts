@@ -54,6 +54,7 @@ export type Database = {
           bib_from: number | null
           bib_to: number | null
           class_codes: string[]
+          course_path: Json
           created_at: string
           distance_km: number | null
           event_id: string
@@ -61,6 +62,7 @@ export type Database = {
           max_participants: number | null
           name: string
           sort_order: number
+          split_points: Json
           starts_at: string | null
           updated_at: string
         }
@@ -68,6 +70,7 @@ export type Database = {
           bib_from?: number | null
           bib_to?: number | null
           class_codes?: string[]
+          course_path?: Json
           created_at?: string
           distance_km?: number | null
           event_id: string
@@ -75,6 +78,7 @@ export type Database = {
           max_participants?: number | null
           name: string
           sort_order?: number
+          split_points?: Json
           starts_at?: string | null
           updated_at?: string
         }
@@ -82,6 +86,7 @@ export type Database = {
           bib_from?: number | null
           bib_to?: number | null
           class_codes?: string[]
+          course_path?: Json
           created_at?: string
           distance_km?: number | null
           event_id?: string
@@ -89,6 +94,7 @@ export type Database = {
           max_participants?: number | null
           name?: string
           sort_order?: number
+          split_points?: Json
           starts_at?: string | null
           updated_at?: string
         }
