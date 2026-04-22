@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ArrowLeft, ChevronDown, FileText, Heart, Layers, ListTree, Map as MapIcon, Share2, Users, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileText, Heart, Map as MapIcon, Share2, Users, X } from "lucide-react";
 import { ReadOnlyCourseMap } from "@/components/ReadOnlyCourseMap";
 import { ElevationProfile } from "@/components/ElevationProfile";
 import { PublicParticipantsPanel } from "@/components/PublicParticipantsPanel";
@@ -40,7 +40,7 @@ interface SubeventRow {
 export function EventViewer({ eventId }: { eventId: string }) {
   const { user } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map" | "participants">("details");
+  const [tab, setTab] = useState<"details" | "map" | "participants">("details");
   const [liked, setLiked] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
   const [event, setEvent] = useState<EventRow | null>(null);
@@ -241,12 +241,6 @@ export function EventViewer({ eventId }: { eventId: string }) {
           <TabBtn active={tab === "details"} onClick={() => setTab("details")} icon={<FileText className="h-3.5 w-3.5" />}>
             Event details
           </TabBtn>
-          <TabBtn active={tab === "classes"} onClick={() => setTab("classes")} icon={<Layers className="h-3.5 w-3.5" />}>
-            Classes
-          </TabBtn>
-          <TabBtn active={tab === "subevents"} onClick={() => setTab("subevents")} icon={<ListTree className="h-3.5 w-3.5" />}>
-            Subevents
-          </TabBtn>
           <TabBtn active={tab === "map"} onClick={() => setTab("map")} icon={<MapIcon className="h-3.5 w-3.5" />}>
             Map
           </TabBtn>
@@ -296,77 +290,7 @@ export function EventViewer({ eventId }: { eventId: string }) {
         </Panel>
       )}
 
-      {tab === "classes" && (
-        <Panel>
-          <p className="text-sm text-muted-foreground">Classes available for this event.</p>
-          {classes.length === 0 ? (
-            <p className="mt-5 text-sm text-muted-foreground">No classes defined.</p>
-          ) : (
-            <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3">
-              {classes.map((code) => (
-                <div key={code} className="num text-base text-ink">{code}</div>
-              ))}
-            </div>
-          )}
-        </Panel>
-      )}
-
-      {tab === "subevents" && (
-        <Panel>
-          <p className="text-sm text-muted-foreground">Races within this event.</p>
-          <div className="mt-5 space-y-2">
-            {subevents.length === 0 && (
-              <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
-                No races yet.
-              </div>
-            )}
-            {subevents.map((s, idx) => {
-              const open = openSub === idx;
-              return (
-                <div key={s.id} className="overflow-hidden rounded-lg border border-hairline bg-card">
-                  <button
-                    onClick={() => setOpenSub((o) => (o === idx ? null : idx))}
-                    className="flex w-full items-center gap-3 bg-secondary/40 px-4 py-3 text-left transition hover:bg-secondary"
-                  >
-                    <ChevronDown className={`h-4 w-4 text-muted-foreground transition ${open ? "rotate-0" : "-rotate-90"}`} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-base text-ink">{s.name || `Race ${idx + 1}`}</p>
-                      <p className="mono mt-0.5 text-[10px] text-muted-foreground">
-                        {s.distance_km ? `${s.distance_km} km` : "—"}
-                        {s.starts_at ? ` · ${formatTime(s.starts_at)}` : ""}
-                      </p>
-                    </div>
-                  </button>
-                  {open && (
-                    <div className="grid grid-cols-1 gap-x-8 gap-y-3 px-5 py-5 md:grid-cols-2">
-                      <Field label="Name">{s.name || `Race ${idx + 1}`}</Field>
-                      <Field label="Start">
-                        {s.starts_at ? (
-                          <span className="num">{formatDateLong(s.starts_at)} · {formatTime(s.starts_at)}</span>
-                        ) : "—"}
-                      </Field>
-                      <Field label="Distance">{s.distance_km ? `${s.distance_km} km` : "—"}</Field>
-                      <Field label="Classes" full>
-                        {s.class_codes.length === 0 ? "—" : (
-                          <div className="flex flex-wrap gap-1.5">
-                            {s.class_codes.map((c) => (
-                              <span key={c} className="num rounded border border-hairline bg-background px-2 py-0.5 text-xs text-ink">
-                                {c}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </Field>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </Panel>
-      )}
-
-      {tab === "participants" && <PublicParticipantsPanel eventId={eventId} />}
+      {tab === "participants" && <PublicParticipantsPanel eventId={eventId} subevents={subevents.map((s) => ({ id: s.id, name: s.name, sort_order: s.sort_order, class_codes: s.class_codes }))} eventClasses={classes} />}
 
       {tab === "map" && (
         <div className="mt-5 flex flex-1 overflow-hidden rounded-lg border border-hairline bg-card">
