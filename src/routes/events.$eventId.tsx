@@ -126,7 +126,21 @@ function EventDetail() {
         {event.featured && (
           <span className="mono text-[10px] uppercase tracking-widest text-accent">Featured</span>
         )}
-        <h1 className="mt-2 text-4xl text-ink md:text-5xl">{event.title}</h1>
+        <div className="mt-2 flex items-start justify-between gap-4">
+          <h1 className="text-4xl text-ink md:text-5xl">{event.title}</h1>
+          <button
+            onClick={toggleLike}
+            disabled={likeBusy}
+            aria-label={likeId ? "Unlike" : "Like"}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition ${
+              likeId
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-hairline bg-card text-muted-foreground hover:text-ink"
+            }`}
+          >
+            <Heart className="h-5 w-5" fill={likeId ? "currentColor" : "none"} strokeWidth={2} />
+          </button>
+        </div>
         <p className="mt-2 text-base text-muted-foreground">by {event.organizer}</p>
       </header>
 
