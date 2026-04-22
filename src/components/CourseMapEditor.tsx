@@ -334,9 +334,6 @@ export function CourseMapEditor({
           </ToolBtn>
         </div>
 
-        {/* removed marker tool */}
-        {false && <></>}
-
 
         {(path.length > 0 || splits.length > 0) && (
           <div className="pointer-events-auto flex items-center gap-1 rounded-xl border border-hairline bg-card/95 p-1.5 shadow-md backdrop-blur">
