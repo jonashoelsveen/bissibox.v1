@@ -65,6 +65,53 @@ export function CourseMapEditor({
   const onChangeRef = useRef(onChange);
   const onSelectRef = useRef(onSelectSplit);
 
+  // Undo/redo history
+  type Snap = { path: LatLng[]; splits: SplitPoint[] };
+  const historyRef = useRef<Snap[]>([{ path, splits }]);
+  const historyIdxRef = useRef(0);
+  const skipNextHistoryRef = useRef(false);
+  const [, forceTick] = useState(0);
+
+  const pushHistory = (snap: Snap) => {
+    const cur = historyRef.current[historyIdxRef.current];
+    if (cur && JSON.stringify(cur) === JSON.stringify(snap)) return;
+    const trimmed = historyRef.current.slice(0, historyIdxRef.current + 1);
+    trimmed.push(snap);
+    if (trimmed.length > 100) trimmed.shift();
+    historyRef.current = trimmed;
+    historyIdxRef.current = trimmed.length - 1;
+    forceTick((n) => n + 1);
+  };
+
+  // Wrap onChange so external updates are tracked
+  const trackedChange = (next: Snap) => {
+    onChangeRef.current(next);
+    if (skipNextHistoryRef.current) {
+      skipNextHistoryRef.current = false;
+      return;
+    }
+    pushHistory(next);
+  };
+
+  const undo = () => {
+    if (historyIdxRef.current <= 0) return;
+    historyIdxRef.current -= 1;
+    const snap = historyRef.current[historyIdxRef.current];
+    skipNextHistoryRef.current = true;
+    onChangeRef.current(snap);
+    forceTick((n) => n + 1);
+  };
+  const redo = () => {
+    if (historyIdxRef.current >= historyRef.current.length - 1) return;
+    historyIdxRef.current += 1;
+    const snap = historyRef.current[historyIdxRef.current];
+    skipNextHistoryRef.current = true;
+    onChangeRef.current(snap);
+    forceTick((n) => n + 1);
+  };
+  const canUndo = historyIdxRef.current > 0;
+  const canRedo = historyIdxRef.current < historyRef.current.length - 1;
+
   useEffect(() => { toolRef.current = tool; }, [tool]);
   useEffect(() => { pathRef.current = path; }, [path]);
   useEffect(() => { splitsRef.current = splits; }, [splits]);
