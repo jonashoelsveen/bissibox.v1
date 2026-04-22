@@ -1,1 +1,4 @@
 project_id = "amakxzegfryagorwoxbx"
+
+[functions.ai-draw-course]
+verify_jwt = false

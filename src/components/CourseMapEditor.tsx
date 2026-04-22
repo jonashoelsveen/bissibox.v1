@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil, Droplet, Flag, Trash2, Save, Eraser, Hand, Timer, Undo2, Redo2, Search, Loader2, X } from "lucide-react";
+import { Pencil, Droplet, Flag, Trash2, Save, Eraser, Hand, Timer, Undo2, Redo2, Search, Loader2, X, Wand2, Sparkles, Pencil as PencilEdit } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export type LatLng = [number, number];
 export type SplitKind = "split" | "fuel" | "start" | "finish" | "marker";
@@ -84,6 +86,118 @@ export function CourseMapEditor({
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const searchAbortRef = useRef<AbortController | null>(null);
+
+  // AI wizard
+  const MAX_PROMPT_CHARS = 300;
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardPrompt, setWizardPrompt] = useState("");
+  const [wizardLoading, setWizardLoading] = useState(false);
+  const [hasUsedWizard, setHasUsedWizard] = useState(false);
+  const [aiDrawing, setAiDrawing] = useState(false);
+  const aiAnimLayersRef = useRef<any[]>([]);
+
+  const clearAiAnim = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    aiAnimLayersRef.current.forEach((l) => map.removeLayer(l));
+    aiAnimLayersRef.current = [];
+  };
+
+  const animateDraw = (full: LatLng[], finalSplits: SplitPoint[]) => {
+    const map = mapRef.current;
+    if (!map || full.length < 2) {
+      trackedChange({ path: full, splits: finalSplits });
+      setAiDrawing(false);
+      return;
+    }
+    clearAiAnim();
+    // Fit map to the route first
+    try {
+      map.flyToBounds(full as any, { duration: 0.9, padding: [40, 40], maxZoom: 16 });
+    } catch {
+      // ignore
+    }
+    // Hide existing path during animation
+    trackedChange({ path: [], splits: [] });
+
+    setTimeout(() => {
+      const casing = (L as any).polyline([full[0]], {
+        color: LINE_CASING_COLOR, weight: 9, opacity: 0.95, lineCap: "round", lineJoin: "round", interactive: false,
+      }).addTo(map);
+      const line = (L as any).polyline([full[0]], {
+        color: LINE_COLOR, weight: 5, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false,
+      }).addTo(map);
+      // Glowing leading dot
+      const head = (L as any).circleMarker(full[0], {
+        radius: 7, color: "#fff", weight: 2, fillColor: LINE_COLOR, fillOpacity: 1,
+      }).addTo(map);
+      aiAnimLayersRef.current.push(casing, line, head);
+
+      const totalMs = Math.min(2400, Math.max(900, full.length * 28));
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / totalMs);
+        const ease = 1 - Math.pow(1 - t, 3);
+        const cutIdx = Math.max(1, Math.floor(ease * (full.length - 1)));
+        const slice = full.slice(0, cutIdx + 1);
+        casing.setLatLngs(slice);
+        line.setLatLngs(slice);
+        head.setLatLng(full[cutIdx]);
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else {
+          clearAiAnim();
+          trackedChange({ path: full, splits: finalSplits });
+          setAiDrawing(false);
+          toast.success("Course drawn — feel free to refine it.");
+        }
+      };
+      requestAnimationFrame(step);
+    }, 950);
+  };
+
+  const runWizard = async () => {
+    const text = wizardPrompt.trim();
+    if (!text) {
+      toast.error("Describe the course you want the wizard to draw.");
+      return;
+    }
+    setWizardLoading(true);
+    try {
+      const map = mapRef.current;
+      const c = map?.getCenter?.();
+      const contextCenter = c ? { lat: c.lat, lng: c.lng } : undefined;
+      const { data, error } = await supabase.functions.invoke("ai-draw-course", {
+        body: { prompt: text, contextCenter },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const path: LatLng[] = ((data as any).path ?? []).map((p: number[]) => [p[0], p[1]]);
+      if (path.length < 2) throw new Error("The wizard could not build a route from that description.");
+      const startPos: LatLng | undefined = (data as any).startPosition;
+      const finishPos: LatLng | undefined = (data as any).finishPosition;
+      const aiSplits: { kind: "split" | "fuel"; label: string; position: LatLng }[] = (data as any).splits ?? [];
+      const newSplits: SplitPoint[] = [];
+      if (startPos) newSplits.push({ id: crypto.randomUUID(), kind: "start", label: "Start", position: startPos });
+      if (finishPos) newSplits.push({ id: crypto.randomUUID(), kind: "finish", label: "Finish", position: finishPos });
+      aiSplits.forEach((s, i) => newSplits.push({
+        id: crypto.randomUUID(),
+        kind: s.kind,
+        label: s.label || (s.kind === "split" ? `Split ${i + 1}` : `Fuel ${i + 1}`),
+        position: s.position,
+      }));
+      setWizardOpen(false);
+      setHasUsedWizard(true);
+      setAiDrawing(true);
+      animateDraw(path, newSplits);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "The wizard ran into a problem. Try a more specific description.");
+    } finally {
+      setWizardLoading(false);
+    }
+  };
+
 
   useEffect(() => {
     const q = searchQuery.trim();
@@ -447,6 +561,25 @@ export function CourseMapEditor({
 
       <div className="pointer-events-none absolute left-4 top-4 z-[400] flex flex-col gap-2">
         <div className="pointer-events-auto flex flex-wrap items-center gap-1 rounded-xl border border-hairline bg-card/95 p-1.5 shadow-md backdrop-blur">
+          <button
+            onClick={() => setWizardOpen((o) => !o)}
+            title={hasUsedWizard ? "Edit AI course prompt" : "Draw course with AI wizard"}
+            className={`relative inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 transition ${
+              wizardOpen
+                ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-sm"
+                : "text-ink hover:bg-secondary"
+            }`}
+          >
+            <span className="relative inline-flex">
+              <Wand2 className={`h-4 w-4 ${wizardOpen ? "" : "text-indigo-500"}`} />
+              {hasUsedWizard && !wizardOpen && (
+                <span className="absolute -bottom-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+                  <PencilEdit className="h-2 w-2" />
+                </span>
+              )}
+            </span>
+          </button>
+          <span className="mx-1 h-5 w-px bg-hairline" />
           <ToolBtn active={tool === "pan"} onClick={() => setTool("pan")} title="Pan & select">
             <Hand className="h-4 w-4" />
             <span className="text-sm">Pan</span>
@@ -552,7 +685,70 @@ export function CourseMapEditor({
             </div>
           )}
         </div>
+
+        {wizardOpen && (
+          <div className="pointer-events-auto w-[420px] max-w-[calc(100vw-2rem)] rounded-xl border border-hairline bg-card/95 p-3 shadow-lg backdrop-blur animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                <Wand2 className="h-3.5 w-3.5" />
+              </span>
+              <div className="text-sm font-medium text-ink">AI course wizard</div>
+              <button
+                onClick={() => setWizardOpen(false)}
+                className="ml-auto rounded p-1 text-muted-foreground hover:bg-secondary hover:text-ink"
+                title="Close"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <textarea
+              value={wizardPrompt}
+              onChange={(e) => setWizardPrompt(e.target.value.slice(0, MAX_PROMPT_CHARS))}
+              placeholder={"e.g. Sentrumsløpet course, start Karl Johan, up to the Royal Palace, through Vigelandsparken, finish at Rådhusplassen."}
+              rows={4}
+              disabled={wizardLoading}
+              className="w-full resize-none rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none transition placeholder:text-muted-foreground focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 disabled:opacity-60"
+            />
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <span
+                className={`text-xs tabular-nums ${
+                  wizardPrompt.length >= MAX_PROMPT_CHARS
+                    ? "text-destructive"
+                    : wizardPrompt.length > MAX_PROMPT_CHARS * 0.85
+                      ? "text-amber-600"
+                      : "text-muted-foreground"
+                }`}
+              >
+                {wizardPrompt.length}/{MAX_PROMPT_CHARS}
+              </span>
+              <button
+                onClick={runWizard}
+                disabled={wizardLoading || wizardPrompt.trim().length === 0}
+                className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:opacity-90 disabled:opacity-50"
+              >
+                {wizardLoading ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Drawing…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" /> Draw course
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {aiDrawing && (
+        <div className="pointer-events-none absolute left-1/2 top-4 z-[450] -translate-x-1/2 rounded-full border border-hairline bg-card/95 px-4 py-1.5 text-xs text-ink shadow-md backdrop-blur animate-in fade-in slide-in-from-top-2">
+          <span className="inline-flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 animate-pulse text-indigo-500" />
+            The wizard is drawing your course…
+          </span>
+        </div>
+      )}
 
       <div className="pointer-events-none absolute bottom-4 left-4 z-[400] rounded-md border border-hairline bg-card/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
         {title && <span className="text-ink">{title} · </span>}
