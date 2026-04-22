@@ -205,14 +205,14 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
     <div className={isMap ? "flex min-h-[calc(100vh-2rem)] flex-col px-4 md:px-6" : "px-4 md:px-6"}>
       <div>
         <header className="flex flex-wrap items-start justify-between gap-4 pt-4">
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-5">
             <button
               onClick={() => nav({ to: "/organizer/library" })}
               aria-label="Back to your events"
               title="Back to your events"
-              className="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-card text-muted-foreground transition hover:text-ink"
+              className="mt-3 -ml-2 inline-flex items-center justify-center p-2 text-muted-foreground transition hover:text-ink"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
               <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
