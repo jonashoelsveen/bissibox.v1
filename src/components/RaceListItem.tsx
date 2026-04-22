@@ -118,14 +118,24 @@ export function RaceListItem({ event, rank }: { event: RaceListEvent; rank?: num
           {event.location}
         </div>
 
-        {/* Sign up button */}
-        <div className="col-span-1 flex justify-end opacity-0 transition group-hover:opacity-100">
+        {/* Sign up button + more */}
+        <div className="col-span-1 flex items-center justify-end gap-1">
           <button
             onClick={handleSignup}
             disabled={submitting || done}
-            className="mono inline-flex items-center justify-center rounded-full border border-hairline px-3 py-1 text-[10px] uppercase tracking-widest text-ink transition hover:border-ink disabled:opacity-50"
+            className="mono inline-flex items-center justify-center rounded-full border border-hairline px-3 py-1 text-[10px] uppercase tracking-widest text-ink opacity-0 transition group-hover:opacity-100 hover:border-ink disabled:opacity-50"
           >
             {done ? "Signed" : submitting ? "…" : "Sign up"}
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            aria-label="More options"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-foreground/[0.06] hover:text-ink"
+          >
+            <MoreVertical className="h-4 w-4" />
           </button>
         </div>
       </Link>
