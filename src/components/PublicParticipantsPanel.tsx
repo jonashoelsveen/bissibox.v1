@@ -170,17 +170,17 @@ export function PublicParticipantsPanel({
             ]}
           />
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-hairline bg-card px-3 py-2">
+        <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search athlete, club, bib, class…"
-              className="h-10 w-full rounded-md border border-hairline bg-background pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
+              className="h-10 w-full rounded-lg border border-hairline bg-card pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
             />
           </div>
-          <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          <span className="mono shrink-0 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
             {filtered.length} / {regs.length}
           </span>
         </div>
