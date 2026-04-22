@@ -433,7 +433,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
           </div>
 
           {/* Right sidebar — subevent headers with collapsible points */}
-          <aside className="w-80 shrink-0 overflow-y-auto border-l border-hairline bg-background">
+          <aside className="w-96 shrink-0 overflow-y-auto border-l border-hairline bg-background">
             <div className="border-b border-hairline px-4 py-3">
               <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Races</p>
               <p className="mt-0.5 text-sm text-ink">Select a race to draw</p>
