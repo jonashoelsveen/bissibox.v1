@@ -36,8 +36,9 @@ const KIND_META: Record<SplitKind, { color: string; label: string }> = {
   marker: { color: "#7c3aed", label: "Marker" },
 };
 
+// Pen cursor — angled fountain pen, hotspot at the nib tip (bottom-left)
 const PEN_CURSOR =
-  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='%238B8FE8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 19l7-7 3 3-7 7-3-3z'/><path d='M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z'/><path d='M2 2l7.586 7.586'/><circle cx='11' cy='11' r='2'/></svg>\") 2 26, crosshair";
+  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><defs><filter id='s' x='-20%25' y='-20%25' width='140%25' height='140%25'><feDropShadow dx='0.5' dy='1' stdDeviation='0.6' flood-opacity='0.45'/></filter></defs><g filter='url(%23s)'><path d='M22 4 L28 10 L13 25 L7 25 L7 19 Z' fill='%238B8FE8' stroke='white' stroke-width='1.2' stroke-linejoin='round'/><path d='M7 25 L4 28 L7 25 Z' fill='white' stroke='%231f2937' stroke-width='1' stroke-linejoin='round'/><circle cx='4' cy='28' r='1.2' fill='%231f2937'/><line x1='17' y1='9' x2='23' y2='15' stroke='white' stroke-width='1.2'/></g></svg>\") 4 28, crosshair";
 
 export function CourseMapEditor({
   path,
