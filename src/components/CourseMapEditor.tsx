@@ -332,11 +332,11 @@ export function CourseMapEditor({
             <Droplet className="h-4 w-4" style={{ color: KIND_META.fuel.color }} />
             <span className="text-sm">Fuel</span>
           </ToolBtn>
-          <ToolBtn active={tool === "marker"} onClick={() => setTool("marker")} title="Add marker">
-            <MapPin className="h-4 w-4" style={{ color: KIND_META.marker.color }} />
-            <span className="text-sm">Marker</span>
-          </ToolBtn>
         </div>
+
+        {/* removed marker tool */}
+        {false && <></>}
+
 
         {(path.length > 0 || splits.length > 0) && (
           <div className="pointer-events-auto flex items-center gap-1 rounded-xl border border-hairline bg-card/95 p-1.5 shadow-md backdrop-blur">
