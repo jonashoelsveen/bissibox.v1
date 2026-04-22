@@ -4,7 +4,8 @@ import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { DEFAULT_CLASSES } from "@/lib/classes";
-import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as MapIcon, GripVertical, ArrowLeft, Globe } from "lucide-react";
+import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as MapIcon, GripVertical, ArrowLeft, Globe, Users } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
 import { ElevationProfile } from "@/components/ElevationProfile";
 
@@ -279,6 +280,16 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
           <TabBtn active={tab === "map"} onClick={() => setTab("map")} icon={<MapIcon className="h-3.5 w-3.5" />}>
             Map
           </TabBtn>
+          {mode === "edit" && savedId && (
+            <Link
+              to="/organizer/$eventId/participants"
+              params={{ eventId: savedId }}
+              className="-mb-px inline-flex items-center gap-1.5 border-b-2 border-transparent px-4 py-2.5 text-sm text-muted-foreground transition hover:text-ink"
+            >
+              <Users className="h-3.5 w-3.5" />
+              Participants
+            </Link>
+          )}
         </nav>
       </div>
 
