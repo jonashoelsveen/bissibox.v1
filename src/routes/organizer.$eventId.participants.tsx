@@ -51,6 +51,13 @@ interface Profile {
   companion: string | null;
 }
 
+// Born → digits only, e.g. 19850427
+function formatBornDigits(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = iso.slice(0, 10).replace(/-/g, "");
+  return /^\d{8}$/.test(d) ? d : "—";
+}
+
 function ParticipantsPage() {
   const { eventId } = Route.useParams();
   const { user, loading } = useAuth();
@@ -85,7 +92,6 @@ function ParticipantsPage() {
       const regsArr = (rs ?? []) as Registration[];
       setRegs(regsArr);
 
-      // Fetch profiles for consenting users
       const consentingIds = Array.from(
         new Set(regsArr.filter((r) => r.consent_share_data).map((r) => r.user_id))
       );
@@ -143,7 +149,7 @@ function ParticipantsPage() {
           <button
             onClick={() => nav({ to: "/organizer/library" })}
             aria-label="Back"
-            className="-ml-2 inline-flex items-center justify-center p-2 text-muted-foreground transition hover:text-ink"
+            className="-ml-2 inline-flex cursor-pointer items-center justify-center p-2 text-muted-foreground transition hover:text-ink"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -157,7 +163,7 @@ function ParticipantsPage() {
         <Link
           to="/organizer/$eventId/edit"
           params={{ eventId }}
-          className="inline-flex items-center gap-2 rounded-lg border border-hairline bg-card px-4 py-2.5 text-sm text-ink transition hover:bg-secondary"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-hairline bg-card px-4 py-2.5 text-sm text-ink transition hover:bg-secondary"
         >
           Edit event
         </Link>
@@ -165,13 +171,13 @@ function ParticipantsPage() {
 
       {/* Filters bar */}
       <div className="mt-7 flex flex-wrap items-center gap-2 rounded-lg border border-hairline bg-card px-3 py-2.5">
-        <div className="relative flex-1 min-w-[220px]">
+        <div className="relative min-w-[220px] flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name, bib, class…"
-            className="w-full rounded-md border border-hairline bg-background pl-8 pr-3 py-1.5 text-sm text-ink outline-none focus:border-primary"
+            className="w-full rounded-md border border-hairline bg-background py-1.5 pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
           />
         </div>
         <Selector
@@ -194,7 +200,7 @@ function ParticipantsPage() {
       {/* Table */}
       <section className="mt-3 overflow-hidden rounded-lg border border-hairline bg-card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-hairline bg-secondary/50 text-left">
                 <Th className="w-10"></Th>
@@ -219,41 +225,38 @@ function ParticipantsPage() {
               {filtered.map((r, i) => {
                 const p = profiles[r.user_id];
                 const consented = r.consent_share_data;
-                const first = consented ? p?.first_name : "—";
-                const last = consented ? p?.last_name : "—";
-                const born = consented && p?.birth_date ? formatDate(p.birth_date) : "—";
+                const first = consented ? p?.first_name : null;
+                const last = consented ? p?.last_name : null;
+                const born = consented ? formatBornDigits(p?.birth_date) : "—";
                 return (
                   <tr
                     key={r.id}
-                    onClick={() => setSelectedId(r.id)}
-                    className={`cursor-pointer border-b border-hairline last:border-b-0 transition hover:bg-secondary/40 ${
+                    className={`group border-b border-hairline transition last:border-b-0 hover:bg-secondary/40 ${
                       i % 2 === 0 ? "bg-card" : "bg-background/40"
                     }`}
                   >
-                    <td className="px-3 py-2.5">
+                    <td className="w-10 px-2 py-1">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedId(r.id);
-                        }}
-                        className="rounded p-1 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+                        onClick={() => setSelectedId(r.id)}
+                        className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
                         aria-label="Edit participant"
+                        title="Edit participant"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
                     </td>
-                    <td className="px-3 py-2.5 text-ink">{first || (consented ? "—" : <Anon />)}</td>
-                    <td className="px-3 py-2.5 text-ink">{last || (consented ? "—" : "")}</td>
-                    <td className="px-3 py-2.5 num text-ink">{born}</td>
-                    <td className="px-3 py-2.5 text-ink">
+                    <td className="px-3 py-1 text-ink">{first ?? (consented ? "—" : <Anon />)}</td>
+                    <td className="px-3 py-1 text-ink">{last ?? (consented ? "—" : "")}</td>
+                    <td className="px-3 py-1 num text-ink">{born}</td>
+                    <td className="px-3 py-1 text-ink">
                       {subevById[r.subevent_id ?? ""]?.name ?? r.race_type ?? "—"}
                     </td>
-                    <td className="px-3 py-2.5 num text-ink">{r.class_code ?? "—"}</td>
-                    <td className="px-3 py-2.5 num text-muted-foreground">{r.bib_number ?? "—"}</td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-3 py-1 num text-ink">{r.class_code ?? "—"}</td>
+                    <td className="px-3 py-1 num text-muted-foreground">{r.bib_number ?? "—"}</td>
+                    <td className="px-3 py-1">
                       <StatusPill status={r.status} />
                     </td>
-                    <td className="px-3 py-2.5 num text-muted-foreground">{formatDate(r.created_at)}</td>
+                    <td className="px-3 py-1 num text-muted-foreground">{formatDate(r.created_at)}</td>
                   </tr>
                 );
               })}
@@ -277,7 +280,7 @@ function ParticipantsPage() {
 function Th({ children, className }: { children?: React.ReactNode; className?: string }) {
   return (
     <th
-      className={`mono px-3 py-2 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground ${className ?? ""}`}
+      className={`mono px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground ${className ?? ""}`}
     >
       {children}
     </th>
@@ -296,7 +299,7 @@ function StatusPill({ status }: { status: string }) {
   };
   const cls = map[status] ?? "bg-secondary text-muted-foreground border-hairline";
   return (
-    <span className={`mono inline-flex items-center rounded px-1.5 py-0.5 text-[10px] uppercase tracking-widest border ${cls}`}>
+    <span className={`mono inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-widest ${cls}`}>
       {status}
     </span>
   );
@@ -319,7 +322,7 @@ function Selector({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-hairline bg-background px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
+        className="cursor-pointer rounded-md border border-hairline bg-background px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -357,6 +360,9 @@ function ParticipantDrawer({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const v = (val: string | null | undefined) => (consented ? val ?? "" : "");
+  const bornDigits = consented ? formatBornDigits(profile?.birth_date) : "";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
@@ -372,7 +378,7 @@ function ParticipantDrawer({
           <button
             onClick={onClose}
             aria-label="Close"
-            className="rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+            className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
           >
             <X className="h-4 w-4" />
           </button>
@@ -399,50 +405,38 @@ function ParticipantDrawer({
 
           {tab === "general" && (
             <FormGrid>
-              <Row label="First name">{consented ? profile?.first_name ?? "—" : "—"}</Row>
-              <Row label="Surname">{consented ? profile?.last_name ?? "—" : "—"}</Row>
-              <Row label="Gender">{consented ? profile?.gender ?? "—" : "—"}</Row>
-              <Row label="Date of birth">
-                <span className="num">{consented && profile?.birth_date ? formatDate(profile.birth_date) : "—"}</span>
-              </Row>
-              <Row label="Club">{consented ? profile?.club ?? "—" : "—"}</Row>
-              <Row label="Team">{consented ? profile?.team ?? "—" : "—"}</Row>
-              <Row label="License">{consented ? profile?.license ?? "—" : "—"}</Row>
-              <Row label="Class">
-                <span className="num">{registration.class_code ?? "—"}</span>
-              </Row>
-              <Row label="Subevent">{subevent?.name ?? registration.race_type ?? "—"}</Row>
-              <Row label="Bib number">
-                <span className="num">{registration.bib_number ?? "—"}</span>
-              </Row>
-              <Row label="Status">
-                <StatusPill status={registration.status} />
-              </Row>
-              <Row label="Registered">
-                <span className="num">{formatDate(registration.created_at)}</span>
-              </Row>
+              <Field label="First name" value={v(profile?.first_name)} />
+              <Field label="Surname" value={v(profile?.last_name)} />
+              <Field label="Gender" value={v(profile?.gender)} />
+              <Field label="Date of birth" value={bornDigits} mono placeholder="YYYYMMDD" inputMode="numeric" />
+              <Field label="Club" value={v(profile?.club)} />
+              <Field label="Team" value={v(profile?.team)} />
+              <Field label="License" value={v(profile?.license)} />
+              <Field label="Class" value={registration.class_code ?? ""} mono />
+              <Field label="Subevent" value={subevent?.name ?? registration.race_type ?? ""} />
+              <Field label="Bib number" value={registration.bib_number ?? ""} mono inputMode="numeric" />
+              <FieldShell label="Status">
+                <div className="flex h-9 items-center px-3">
+                  <StatusPill status={registration.status} />
+                </div>
+              </FieldShell>
+              <Field label="Registered" value={formatDate(registration.created_at)} mono />
             </FormGrid>
           )}
 
           {tab === "contact" && (
             <FormGrid>
-              <Row label="Address">{consented ? profile?.address ?? "—" : "—"}</Row>
-              <Row label="Address 2">{consented ? profile?.address2 ?? "—" : "—"}</Row>
-              <Row label="Postal code">
-                <span className="num">{consented ? profile?.postal_code ?? "—" : "—"}</span>
-              </Row>
-              <Row label="Postal place">{consented ? profile?.postal_place ?? "—" : "—"}</Row>
-              <Row label="Country">{consented ? profile?.country ?? "—" : "—"}</Row>
-              <Row label="Nationality">{consented ? profile?.nationality ?? "—" : "—"}</Row>
-              <Row label="Mobile">
-                <span className="num">{consented ? profile?.mobile ?? "—" : "—"}</span>
-              </Row>
-              <Row label="Email">{consented ? profile?.email ?? "—" : "—"}</Row>
-              <Row label="Emergency contact">{consented ? profile?.emergency_contact ?? "—" : "—"}</Row>
-              <Row label="Emergency phone">
-                <span className="num">{consented ? profile?.emergency_phone ?? "—" : "—"}</span>
-              </Row>
-              <Row label="Companion">{consented ? profile?.companion ?? "—" : "—"}</Row>
+              <Field label="Address" value={v(profile?.address)} full />
+              <Field label="Address 2" value={v(profile?.address2)} full />
+              <Field label="Postal code" value={v(profile?.postal_code)} mono inputMode="numeric" />
+              <Field label="Postal place" value={v(profile?.postal_place)} />
+              <Field label="Country" value={v(profile?.country)} />
+              <Field label="Nationality" value={v(profile?.nationality)} />
+              <Field label="Mobile" value={v(profile?.mobile)} mono inputMode="tel" />
+              <Field label="Email" value={v(profile?.email)} inputMode="email" />
+              <Field label="Emergency contact" value={v(profile?.emergency_contact)} />
+              <Field label="Emergency phone" value={v(profile?.emergency_phone)} mono inputMode="tel" />
+              <Field label="Companion" value={v(profile?.companion)} full />
             </FormGrid>
           )}
         </div>
@@ -450,7 +444,7 @@ function ParticipantDrawer({
         <footer className="flex items-center justify-end gap-2 border-t border-hairline bg-background/60 px-5 py-3">
           <button
             onClick={onClose}
-            className="rounded-md border border-hairline bg-card px-4 py-1.5 text-sm text-ink transition hover:bg-secondary"
+            className="cursor-pointer rounded-md border border-hairline bg-card px-4 py-1.5 text-sm text-ink transition hover:bg-secondary"
           >
             Close
           </button>
@@ -474,7 +468,7 @@ function DrawerTab({
   return (
     <button
       onClick={onClick}
-      className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm transition ${
+      className={`-mb-px inline-flex cursor-pointer items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm transition ${
         active ? "border-primary text-ink" : "border-transparent text-muted-foreground hover:text-ink"
       }`}
     >
@@ -485,14 +479,54 @@ function DrawerTab({
 }
 
 function FormGrid({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">{children}</div>;
+  return <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">{children}</div>;
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function FieldShell({
+  label,
+  children,
+  full,
+}: {
+  label: string;
+  children: React.ReactNode;
+  full?: boolean;
+}) {
   return (
-    <div className="flex items-start gap-4">
-      <span className="mt-0.5 w-32 shrink-0 text-right text-sm text-muted-foreground">{label}</span>
-      <div className="min-w-0 flex-1 text-sm text-ink">{children}</div>
+    <div className={full ? "md:col-span-2" : ""}>
+      <label className="mono mb-1 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </label>
+      <div className="rounded-md border border-hairline bg-background">{children}</div>
     </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  mono,
+  full,
+  placeholder,
+  inputMode,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  full?: boolean;
+  placeholder?: string;
+  inputMode?: "numeric" | "tel" | "email";
+}) {
+  return (
+    <FieldShell label={label} full={full}>
+      <input
+        readOnly
+        value={value}
+        placeholder={placeholder ?? "—"}
+        inputMode={inputMode}
+        className={`h-9 w-full cursor-default border-0 bg-transparent px-3 text-sm text-ink outline-none placeholder:text-muted-foreground/60 focus:outline-none ${
+          mono ? "num" : ""
+        }`}
+      />
+    </FieldShell>
   );
 }
