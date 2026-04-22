@@ -1,9 +1,9 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { BadgeCheck, MoreVertical } from "lucide-react";
+import { BadgeCheck, MoreVertical, Heart, Send } from "lucide-react";
 
 export interface RaceListEvent {
   id: string;
@@ -35,6 +35,68 @@ export function RaceListItem({ event, rank }: { event: RaceListEvent; rank?: num
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [liked, setLiked] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancel = false;
+    supabase
+      .from("event_likes")
+      .select("id")
+      .eq("event_id", event.id)
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancel) setLiked(!!data);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [user, event.id]);
+
+  const toggleLike = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenuOpen(false);
+    if (!user) {
+      navigate({ to: "/auth", search: { redirect: `/events/${event.id}` } });
+      return;
+    }
+    if (liked) {
+      const { error } = await supabase
+        .from("event_likes")
+        .delete()
+        .eq("event_id", event.id)
+        .eq("user_id", user.id);
+      if (error) return toast.error(error.message);
+      setLiked(false);
+    } else {
+      const { error } = await supabase
+        .from("event_likes")
+        .insert({ event_id: event.id, user_id: user.id });
+      if (error) return toast.error(error.message);
+      setLiked(true);
+      toast.success("Added to your likes");
+    }
+  };
+
+  const invite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenuOpen(false);
+    const url = `${window.location.origin}/events/${event.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: event.title, text: `Check out ${event.title}`, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Event link copied");
+      }
+    } catch {
+      // user cancelled
+    }
+  };
 
   const today = isToday(event.starts_at);
   const d = new Date(event.starts_at);
@@ -127,16 +189,47 @@ export function RaceListItem({ event, rank }: { event: RaceListEvent; rank?: num
           >
             {done ? "Signed" : submitting ? "…" : "Sign up"}
           </button>
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            aria-label="More options"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-foreground/[0.06] hover:text-ink"
-          >
-            <MoreVertical className="h-4 w-4" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMenuOpen((o) => !o);
+              }}
+              aria-label="More options"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-foreground/[0.06] hover:text-ink"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+            {menuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                  }}
+                />
+                <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-lg border border-hairline bg-card shadow-lg">
+                  <button
+                    onClick={toggleLike}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
+                  >
+                    <Heart className={`h-4 w-4 ${liked ? "fill-current text-primary" : ""}`} />
+                    {liked ? "Unlike" : "Like"}
+                  </button>
+                  <button
+                    onClick={invite}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
+                  >
+                    <Send className="h-4 w-4" />
+                    Invite
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </Link>
     </li>
