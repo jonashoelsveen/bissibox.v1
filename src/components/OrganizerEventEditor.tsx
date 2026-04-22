@@ -42,6 +42,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const [selectedSplitId, setSelectedSplitId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [dragHandleId, setDragHandleId] = useState<string | null>(null);
 
   // Event details
   const [title, setTitle] = useState("");
