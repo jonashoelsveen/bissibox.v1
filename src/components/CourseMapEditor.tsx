@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil, Droplet, Flag, Trash2, Save, Eraser, Hand, Timer, Undo2, Redo2 } from "lucide-react";
+import { Pencil, Droplet, Flag, Trash2, Save, Eraser, Hand, Timer, Undo2, Redo2, Search, Loader2, X } from "lucide-react";
 
 export type LatLng = [number, number];
 export type SplitKind = "split" | "fuel" | "start" | "finish" | "marker";
