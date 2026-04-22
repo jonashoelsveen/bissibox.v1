@@ -14,6 +14,94 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_classes: {
+        Row: {
+          code: string
+          created_at: string
+          event_id: string
+          id: string
+          label: string | null
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          event_id: string
+          id?: string
+          label?: string | null
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          label?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_classes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_subevents: {
+        Row: {
+          bib_from: number | null
+          bib_to: number | null
+          class_codes: string[]
+          created_at: string
+          distance_km: number | null
+          event_id: string
+          id: string
+          max_participants: number | null
+          name: string
+          sort_order: number
+          starts_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          bib_from?: number | null
+          bib_to?: number | null
+          class_codes?: string[]
+          created_at?: string
+          distance_km?: number | null
+          event_id: string
+          id?: string
+          max_participants?: number | null
+          name: string
+          sort_order?: number
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bib_from?: number | null
+          bib_to?: number | null
+          class_codes?: string[]
+          created_at?: string
+          distance_km?: number | null
+          event_id?: string
+          id?: string
+          max_participants?: number | null
+          name?: string
+          sort_order?: number
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_subevents_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           category: string | null
@@ -26,6 +114,7 @@ export type Database = {
           id: string
           location: string | null
           organizer: string
+          owner_id: string | null
           popularity: number
           race_types: string[]
           region: string | null
@@ -47,6 +136,7 @@ export type Database = {
           id?: string
           location?: string | null
           organizer: string
+          owner_id?: string | null
           popularity?: number
           race_types?: string[]
           region?: string | null
@@ -68,6 +158,7 @@ export type Database = {
           id?: string
           location?: string | null
           organizer?: string
+          owner_id?: string | null
           popularity?: number
           race_types?: string[]
           region?: string | null
