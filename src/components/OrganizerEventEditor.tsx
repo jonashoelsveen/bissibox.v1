@@ -313,18 +313,18 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
           <p className="text-sm text-muted-foreground">
             Classes available for this event. Subevents will pick from this list.
           </p>
-          <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2 md:grid-cols-3">
+          <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3">
             {[...new Set([...DEFAULT_CLASSES, ...classes])].map((code) => {
               const on = classes.includes(code);
               return (
-                <label key={code} className="flex items-center gap-2 text-sm text-ink">
+                <label key={code} className="flex items-center gap-3 text-base text-ink">
                   <input
                     type="checkbox"
                     checked={on}
                     onChange={() =>
                       setClasses((arr) => (on ? arr.filter((c) => c !== code) : [...arr, code]))
                     }
-                    className="h-4 w-4 accent-primary"
+                    className="h-5 w-5 accent-primary"
                   />
                   <span className="num">{code}</span>
                 </label>
