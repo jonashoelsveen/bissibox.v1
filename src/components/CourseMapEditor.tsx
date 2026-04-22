@@ -685,9 +685,71 @@ export function CourseMapEditor({
             </div>
           )}
         </div>
+
+        {wizardOpen && (
+          <div className="pointer-events-auto w-[420px] max-w-[calc(100vw-2rem)] rounded-xl border border-hairline bg-card/95 p-3 shadow-lg backdrop-blur animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                <Wand2 className="h-3.5 w-3.5" />
+              </span>
+              <div className="text-sm font-medium text-ink">AI course wizard</div>
+              <button
+                onClick={() => setWizardOpen(false)}
+                className="ml-auto rounded p-1 text-muted-foreground hover:bg-secondary hover:text-ink"
+                title="Close"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <textarea
+              value={wizardPrompt}
+              onChange={(e) => setWizardPrompt(e.target.value.slice(0, MAX_PROMPT_CHARS))}
+              placeholder={"e.g. Sentrumsløpet course, start Karl Johan, up to the Royal Palace, through Vigelandsparken, finish at Rådhusplassen."}
+              rows={4}
+              disabled={wizardLoading}
+              className="w-full resize-none rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none transition placeholder:text-muted-foreground focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 disabled:opacity-60"
+            />
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <span
+                className={`text-xs tabular-nums ${
+                  wizardPrompt.length >= MAX_PROMPT_CHARS
+                    ? "text-destructive"
+                    : wizardPrompt.length > MAX_PROMPT_CHARS * 0.85
+                      ? "text-amber-600"
+                      : "text-muted-foreground"
+                }`}
+              >
+                {wizardPrompt.length}/{MAX_PROMPT_CHARS}
+              </span>
+              <button
+                onClick={runWizard}
+                disabled={wizardLoading || wizardPrompt.trim().length === 0}
+                className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:opacity-90 disabled:opacity-50"
+              >
+                {wizardLoading ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Drawing…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" /> Draw course
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="pointer-events-none absolute bottom-4 left-4 z-[400] rounded-md border border-hairline bg-card/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
+      {aiDrawing && (
+        <div className="pointer-events-none absolute left-1/2 top-4 z-[450] -translate-x-1/2 rounded-full border border-hairline bg-card/95 px-4 py-1.5 text-xs text-ink shadow-md backdrop-blur animate-in fade-in slide-in-from-top-2">
+          <span className="inline-flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 animate-pulse text-indigo-500" />
+            The wizard is drawing your course…
+          </span>
+        </div>
+      )}
+
         {title && <span className="text-ink">{title} · </span>}
         <span className="num">{path.length}</span> pts ·{" "}
         <span className="num">{splits.length}</span> markers
