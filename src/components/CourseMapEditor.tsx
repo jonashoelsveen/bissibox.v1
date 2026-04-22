@@ -207,6 +207,10 @@ export function CourseMapEditor({
     const map = mapRef.current;
 
     // Clear previous
+    if (polylineCasingRef.current) {
+      map.removeLayer(polylineCasingRef.current);
+      polylineCasingRef.current = null;
+    }
     if (polylineRef.current) {
       map.removeLayer(polylineRef.current);
       polylineRef.current = null;
@@ -217,7 +221,25 @@ export function CourseMapEditor({
     midMarkersRef.current = [];
 
     if (path.length >= 2) {
-      const pl = L.polyline(path, { color: LINE_COLOR, weight: 5, opacity: 0.65, interactive: tool === "draw" }).addTo(map);
+      // White casing underneath for legibility on any basemap
+      const casing = L.polyline(path, {
+        color: LINE_CASING_COLOR,
+        weight: 9,
+        opacity: 0.95,
+        lineCap: "round",
+        lineJoin: "round",
+        interactive: false,
+      }).addTo(map);
+      polylineCasingRef.current = casing;
+
+      const pl = L.polyline(path, {
+        color: LINE_COLOR,
+        weight: 5,
+        opacity: 1,
+        lineCap: "round",
+        lineJoin: "round",
+        interactive: tool === "draw",
+      }).addTo(map);
       polylineRef.current = pl;
 
       // Click on the line itself in draw mode → insert vertex at click location (closest segment)
