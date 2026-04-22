@@ -60,7 +60,6 @@ export function EventViewer({ eventId }: { eventId: string }) {
       const { data: e } = await supabase.from("events").select("*").eq("id", eventId).maybeSingle();
       if (e) {
         setEvent(e as EventRow);
-        setChosen((e.race_types ?? [])[0] ?? null);
       }
       const { data: cls } = await supabase
         .from("event_classes")
@@ -101,22 +100,35 @@ export function EventViewer({ eventId }: { eventId: string }) {
     })();
   }, [user, event, eventId]);
 
-  const handleSignup = async () => {
+  const openSignup = () => {
     if (!user) {
       nav({ to: "/auth", search: { redirect: `/events/${eventId}` } });
       return;
     }
-    if (!chosen) return;
+    setChosenSubId(subevents[0]?.id ?? null);
+    setChosenClass(null);
+    setConsent(false);
+    setSignupOpen(true);
+  };
+
+  const submitSignup = async () => {
+    if (!user || !chosenSubId) return;
+    const sub = subevents.find((s) => s.id === chosenSubId);
+    if (!sub) return;
     setSubmitting(true);
     const { error } = await supabase.from("registrations").insert({
       user_id: user.id,
       event_id: eventId,
-      race_type: chosen,
+      subevent_id: chosenSubId,
+      class_code: chosenClass,
+      race_type: sub.name,
+      consent_share_data: consent,
       status: "pending",
-    });
+    } as never);
     setSubmitting(false);
     if (error) return toast.error(error.message);
     setRegistered(true);
+    setSignupOpen(false);
     toast.success("You're signed up.");
   };
 
@@ -125,6 +137,8 @@ export function EventViewer({ eventId }: { eventId: string }) {
   }
 
   const isMap = tab === "map";
+  const subevForSignup = subevents.find((s) => s.id === chosenSubId);
+  const classOptions = subevForSignup?.class_codes?.length ? subevForSignup.class_codes : classes;
 
   return (
     <div className={isMap ? "flex min-h-[calc(100vh-2rem)] flex-col px-4 md:px-6" : "px-4 md:px-6"}>
@@ -146,11 +160,11 @@ export function EventViewer({ eventId }: { eventId: string }) {
             </div>
           </div>
           <button
-            onClick={handleSignup}
-            disabled={submitting || registered || !chosen}
+            onClick={openSignup}
+            disabled={submitting || registered}
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
           >
-            {registered ? "Signed up" : submitting ? "Signing up…" : "Sign up"}
+            {registered ? "Signed up" : "Sign up"}
           </button>
         </header>
 
