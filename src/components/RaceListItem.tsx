@@ -189,16 +189,47 @@ export function RaceListItem({ event, rank }: { event: RaceListEvent; rank?: num
           >
             {done ? "Signed" : submitting ? "…" : "Sign up"}
           </button>
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            aria-label="More options"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-foreground/[0.06] hover:text-ink"
-          >
-            <MoreVertical className="h-4 w-4" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMenuOpen((o) => !o);
+              }}
+              aria-label="More options"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-foreground/[0.06] hover:text-ink"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+            {menuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                  }}
+                />
+                <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-lg border border-hairline bg-card shadow-lg">
+                  <button
+                    onClick={toggleLike}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
+                  >
+                    <Heart className={`h-4 w-4 ${liked ? "fill-current text-primary" : ""}`} />
+                    {liked ? "Unlike" : "Like"}
+                  </button>
+                  <button
+                    onClick={invite}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
+                  >
+                    <Send className="h-4 w-4" />
+                    Invite
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </Link>
     </li>
