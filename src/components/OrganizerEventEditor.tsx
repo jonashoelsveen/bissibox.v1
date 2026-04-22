@@ -282,14 +282,13 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             Map
           </TabBtn>
           {mode === "edit" && savedId && (
-            <Link
-              to="/organizer/$eventId/participants"
-              params={{ eventId: savedId }}
-              className="-mb-px inline-flex items-center gap-1.5 border-b-2 border-transparent px-4 py-2.5 text-sm text-muted-foreground transition hover:text-ink"
+            <TabBtn
+              active={tab === "participants"}
+              onClick={() => setTab("participants")}
+              icon={<Users className="h-3.5 w-3.5" />}
             >
-              <Users className="h-3.5 w-3.5" />
               Participants
-            </Link>
+            </TabBtn>
           )}
         </nav>
       </div>
