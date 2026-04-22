@@ -1,7 +1,7 @@
 import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/react-router";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
-import { TopChrome, BottomChrome } from "@/components/Chrome";
+import { TopChrome } from "@/components/Chrome";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -71,10 +71,9 @@ function RootComponent() {
   return (
     <AuthProvider>
       <TopChrome />
-      <main className="min-h-screen pb-28 pt-20">
+      <main className="min-h-screen pb-16 pt-24">
         <Outlet />
       </main>
-      <BottomChrome />
       <Toaster />
     </AuthProvider>
   );

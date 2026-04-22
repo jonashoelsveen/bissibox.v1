@@ -1,9 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/format";
 import { ArrowUpRight } from "lucide-react";
 import { RaceListItem } from "@/components/RaceListItem";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -34,8 +35,14 @@ interface EventRow {
 }
 
 function Index() {
+  const { user, mode } = useAuth();
+  const nav = useNavigate();
   const [featured, setFeatured] = useState<EventRow[]>([]);
   const [upcoming, setUpcoming] = useState<EventRow[]>([]);
+
+  useEffect(() => {
+    if (mode === "organizer" && user) nav({ to: "/organizer/library" });
+  }, [mode, user, nav]);
 
   useEffect(() => {
     (async () => {
