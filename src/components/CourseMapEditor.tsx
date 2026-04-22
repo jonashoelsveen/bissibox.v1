@@ -167,8 +167,14 @@ export function CourseMapEditor({
       const map = mapRef.current;
       const c = map?.getCenter?.();
       const contextCenter = c ? { lat: c.lat, lng: c.lng } : undefined;
+      // Pass any user-placed waypoints so the wizard routes THROUGH them in order.
+      const anchors = splitsRef.current.map((s) => ({
+        kind: s.kind,
+        label: s.label,
+        position: s.position,
+      }));
       const { data, error } = await supabase.functions.invoke("ai-draw-course", {
-        body: { prompt: text, contextCenter },
+        body: { prompt: text, contextCenter, anchors },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
