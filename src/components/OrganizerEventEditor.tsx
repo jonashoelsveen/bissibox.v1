@@ -389,6 +389,82 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
           </div>
         </Panel>
       )}
+
+      {tab === "map" && (
+        <div className="mt-5 flex flex-1 overflow-hidden rounded-lg border border-hairline bg-card">
+          {/* Map area */}
+          <div className="relative min-h-[600px] flex-1">
+            {subevents.length === 0 ? (
+              <div className="flex h-full min-h-[600px] items-center justify-center p-10 text-center text-sm text-muted-foreground">
+                Add a race in the Subevents tab to draw its course map.
+              </div>
+            ) : (
+              <CourseMapEditor
+                key={activeMapSub}
+                title={subevents[activeMapSub]?.name || `Race ${activeMapSub + 1}`}
+                path={subevents[activeMapSub]?.course_path ?? []}
+                splits={subevents[activeMapSub]?.split_points ?? []}
+                onChange={({ path, splits }) =>
+                  setSubevents((arr) =>
+                    arr.map((x, i) =>
+                      i === activeMapSub ? { ...x, course_path: path, split_points: splits } : x
+                    )
+                  )
+                }
+                onSave={save}
+                saving={busy}
+                onDelete={() =>
+                  setSubevents((arr) =>
+                    arr.map((x, i) =>
+                      i === activeMapSub ? { ...x, course_path: [], split_points: [] } : x
+                    )
+                  )
+                }
+              />
+            )}
+          </div>
+
+          {/* Right sidebar — subevent headers */}
+          <aside className="w-72 shrink-0 border-l border-hairline bg-background">
+            <div className="border-b border-hairline px-4 py-3">
+              <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Races</p>
+              <p className="mt-0.5 text-sm text-ink">Select a race to draw</p>
+            </div>
+            <div className="divide-y divide-hairline">
+              {subevents.map((s, i) => {
+                const active = i === activeMapSub;
+                const drawn = (s.course_path?.length ?? 0) > 1;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setActiveMapSub(i)}
+                    className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition ${
+                      active ? "bg-primary/10 border-l-2 border-primary" : "border-l-2 border-transparent hover:bg-secondary"
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className={`truncate text-sm ${active ? "text-ink font-medium" : "text-ink"}`}>
+                        {s.name || `Race ${i + 1}`}
+                      </p>
+                      <p className="mono mt-0.5 text-[10px] text-muted-foreground">
+                        {s.distance_km ? `${s.distance_km} km · ` : ""}
+                        {s.course_path?.length ?? 0} pts · {s.split_points?.length ?? 0} markers
+                      </p>
+                    </div>
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${drawn ? "bg-primary" : "bg-muted-foreground/30"}`}
+                      title={drawn ? "Course drawn" : "No course"}
+                    />
+                  </button>
+                );
+              })}
+              {subevents.length === 0 && (
+                <p className="px-4 py-6 text-xs text-muted-foreground">No races yet.</p>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
     </div>
   );
 }
