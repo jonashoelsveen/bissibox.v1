@@ -492,110 +492,75 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                             No splits or fuel points yet. Pick a tool and click the map.
                           </p>
                         ) : (
-                          <ul className="space-y-1.5">
+                          <ul className="space-y-1">
                             {points.map((p) => {
                               const sel = p.id === selectedSplitId;
+                              const dot =
+                                p.kind === "split"
+                                  ? "#2563eb"
+                                  : p.kind === "fuel"
+                                  ? "#f59e0b"
+                                  : p.kind === "start"
+                                  ? "#16a34a"
+                                  : p.kind === "finish"
+                                  ? "#dc2626"
+                                  : "#7c3aed";
                               return (
-                                <li key={p.id}>
+                                <li
+                                  key={p.id}
+                                  onClick={() => setSelectedSplitId(p.id)}
+                                  className={`flex items-center gap-2 border px-2.5 py-2 text-xs transition ${
+                                    sel
+                                      ? "border-primary bg-primary/10"
+                                      : "border-hairline bg-background hover:bg-secondary"
+                                  }`}
+                                >
+                                  <span className="h-2.5 w-2.5 shrink-0" style={{ background: dot }} />
+                                  <input
+                                    value={p.label}
+                                    onChange={(e) => {
+                                      const v = e.target.value;
+                                      setSubevents((arr) =>
+                                        arr.map((x, ix) =>
+                                          ix === i
+                                            ? {
+                                                ...x,
+                                                split_points: x.split_points.map((sp) =>
+                                                  sp.id === p.id ? { ...sp, label: v } : sp
+                                                ),
+                                              }
+                                            : x
+                                        )
+                                      );
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="min-w-0 flex-1 bg-transparent text-xs text-ink outline-none"
+                                  />
+                                  <span className="mono text-[10px] uppercase text-muted-foreground">
+                                    {p.kind}
+                                  </span>
                                   <button
-                                    onClick={() => setSelectedSplitId(p.id)}
-                                    className={`flex w-full items-center gap-2 rounded-md border px-2.5 py-2 text-left text-xs transition ${
-                                      sel
-                                        ? "border-primary bg-primary/10 text-ink"
-                                        : "border-hairline bg-background text-ink hover:bg-secondary"
-                                    }`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSubevents((arr) =>
+                                        arr.map((x, ix) =>
+                                          ix === i
+                                            ? {
+                                                ...x,
+                                                split_points: x.split_points.filter(
+                                                  (sp) => sp.id !== p.id
+                                                ),
+                                              }
+                                            : x
+                                        )
+                                      );
+                                      if (sel) setSelectedSplitId(null);
+                                    }}
+                                    className="text-muted-foreground hover:text-destructive"
+                                    aria-label="Remove"
                                   >
-                                    <span
-                                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                      style={{
-                                        background:
-                                          p.kind === "split"
-                                            ? "#2563eb"
-                                            : p.kind === "fuel"
-                                            ? "#f59e0b"
-                                            : "#7c3aed",
-                                      }}
-                                    />
-                                    <span className="flex-1 truncate">{p.label}</span>
-                                    <span className="mono text-[10px] uppercase text-muted-foreground">
-                                      {p.kind}
-                                    </span>
+                                    <Trash2 className="h-3 w-3" />
                                   </button>
-
-                                  {sel && (
-                                    <div className="mt-2 space-y-2 rounded-md border border-hairline bg-background p-2.5">
-                                      <input
-                                        value={p.label}
-                                        onChange={(e) => {
-                                          const v = e.target.value;
-                                          setSubevents((arr) =>
-                                            arr.map((x, ix) =>
-                                              ix === i
-                                                ? {
-                                                    ...x,
-                                                    split_points: x.split_points.map((sp) =>
-                                                      sp.id === p.id ? { ...sp, label: v } : sp
-                                                    ),
-                                                  }
-                                                : x
-                                            )
-                                          );
-                                        }}
-                                        placeholder="Header"
-                                        className="w-full rounded border border-hairline bg-background px-2 py-1 text-xs text-ink outline-none focus:border-primary"
-                                      />
-                                      <textarea
-                                        value={p.note ?? ""}
-                                        onChange={(e) => {
-                                          const v = e.target.value;
-                                          setSubevents((arr) =>
-                                            arr.map((x, ix) =>
-                                              ix === i
-                                                ? {
-                                                    ...x,
-                                                    split_points: x.split_points.map((sp) =>
-                                                      sp.id === p.id ? { ...sp, note: v } : sp
-                                                    ),
-                                                  }
-                                                : x
-                                            )
-                                          );
-                                        }}
-                                        rows={2}
-                                        placeholder="Notes…"
-                                        className="w-full resize-none rounded border border-hairline bg-background px-2 py-1 text-xs text-ink outline-none focus:border-primary"
-                                      />
-                                      <div className="flex items-center justify-between">
-                                        <button
-                                          onClick={() => {
-                                            setSubevents((arr) =>
-                                              arr.map((x, ix) =>
-                                                ix === i
-                                                  ? {
-                                                      ...x,
-                                                      split_points: x.split_points.filter(
-                                                        (sp) => sp.id !== p.id
-                                                      ),
-                                                    }
-                                                  : x
-                                              )
-                                            );
-                                            setSelectedSplitId(null);
-                                          }}
-                                          className="text-[11px] text-muted-foreground hover:text-destructive"
-                                        >
-                                          Remove
-                                        </button>
-                                        <button
-                                          onClick={save}
-                                          disabled={busy}
-                                          className="rounded bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                                        >
-                                          {busy ? "Saving…" : "Save"}
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
                                 </li>
                               );
                             })}
