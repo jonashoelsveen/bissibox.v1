@@ -5,6 +5,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { ArrowLeft, ChevronDown, FileText, Layers, ListTree, Map as MapIcon } from "lucide-react";
 import { ReadOnlyCourseMap } from "@/components/ReadOnlyCourseMap";
+import { ElevationProfile } from "@/components/ElevationProfile";
 import type { LatLng, SplitPoint } from "@/components/CourseMapEditor";
 import { formatDateLong, formatMoney, formatTime } from "@/lib/format";
 
