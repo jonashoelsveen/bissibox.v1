@@ -55,6 +55,7 @@ export function CourseMapEditor({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const polylineRef = useRef<any>(null);
+  const polylineCasingRef = useRef<any>(null);
   const splitMarkersRef = useRef<Record<string, any>>({});
   const vertexMarkersRef = useRef<any[]>([]);
   const midMarkersRef = useRef<any[]>([]);
