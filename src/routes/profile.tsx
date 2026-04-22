@@ -105,16 +105,16 @@ function ProfilePage() {
         </div>
       </header>
 
-      <div className="mt-8 grid gap-6 md:grid-cols-[200px_1fr]">
-        <nav className="flex flex-row gap-1 rounded-2xl border border-hairline bg-card p-2 md:flex-col md:p-3">
+      <div className="mt-8 grid gap-10 md:grid-cols-[180px_1fr]">
+        <nav className="-ml-2 flex flex-row gap-1 md:flex-col md:gap-0.5">
           {(["general", "address", "races"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`rounded-xl px-3 py-2 text-left text-sm transition ${
+              className={`rounded-md px-3 py-2 text-left text-sm transition ${
                 tab === t
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-secondary hover:text-ink"
+                  ? "bg-secondary font-medium text-ink"
+                  : "text-muted-foreground hover:text-ink"
               }`}
             >
               {t === "general" ? "General" : t === "address" ? "Contact & address" : "My races"}
