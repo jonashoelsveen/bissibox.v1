@@ -489,7 +489,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                     </div>
 
                     {expanded && active && (
-                      <div className="bg-card/50 px-3 pb-3">
+                      <div className="bg-card/50 px-3 pb-3 pt-4">
                         {points.length === 0 ? (
                           <p className="px-2 py-3 text-xs text-muted-foreground">
                             No splits or fuel points yet. Pick a tool and click the map.
