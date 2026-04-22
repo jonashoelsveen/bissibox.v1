@@ -326,12 +326,16 @@ export function EventViewer({ eventId }: { eventId: string }) {
                     key={s.id}
                     className={`overflow-hidden rounded-md border ${active ? "border-primary bg-primary/5" : "border-hairline bg-card"}`}
                   >
-                    <div
-                      onDoubleClick={() => setExpandedSubMap((m) => ({ ...m, [i]: !m[i] }))}
-                      className="flex w-full items-center gap-2 px-3 py-3 text-left select-none"
-                    >
+                    <div className="flex w-full items-center gap-2 px-3 py-3 text-left select-none">
                       <button
-                        onClick={() => { setActiveMapSub(i); setSelectedSplitId(null); }}
+                        onClick={() => {
+                          if (active) {
+                            setExpandedSubMap((m) => ({ ...m, [i]: !m[i] }));
+                          } else {
+                            setActiveMapSub(i);
+                            setSelectedSplitId(null);
+                          }
+                        }}
                         className="flex min-w-0 flex-1 items-center"
                       >
                         <div className="min-w-0 flex-1 text-left">
