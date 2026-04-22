@@ -79,36 +79,25 @@ function SearchPage() {
 
   return (
     <div className="px-4 md:px-6">
-      <header className="relative grid grid-cols-3 items-end pt-4 pb-4">
-        <div className="col-span-1">
-          <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            Search
-          </p>
-          <h1 className="mt-2 text-3xl text-ink md:text-4xl">Find a race</h1>
-        </div>
-
-        <div className="col-span-1 flex justify-center">
-          <label className="flex w-full max-w-md items-center gap-3 rounded-full border border-hairline bg-card px-5 py-2.5 ring-soft focus-within:border-primary">
-            <SearchIcon className="h-4 w-4 text-muted-foreground" />
-            <input
-              autoFocus
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Race, organizer, distance, region…"
-              className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground"
-            />
-            {q && (
-              <button
-                onClick={() => setQ("")}
-                className="mono text-xs uppercase tracking-widest text-muted-foreground hover:text-ink"
-              >
-                clear
-              </button>
-            )}
-          </label>
-        </div>
-
-        <div className="col-span-1" />
+      <header className="flex justify-center pt-6 pb-4">
+        <label className="flex w-full max-w-md items-center gap-3 rounded-full border border-hairline bg-card px-5 py-2.5 ring-soft focus-within:border-primary">
+          <SearchIcon className="h-4 w-4 text-muted-foreground" />
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Race, organizer, distance, region…"
+            className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground"
+          />
+          {q && (
+            <button
+              onClick={() => setQ("")}
+              className="mono text-xs uppercase tracking-widest text-muted-foreground hover:text-ink"
+            >
+              clear
+            </button>
+          )}
+        </label>
       </header>
 
       <div className="border-b border-hairline" />
