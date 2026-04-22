@@ -143,43 +143,47 @@ export function PublicParticipantsPanel({
   return (
     <div>
       {/* Filters */}
-      <div className="mt-5 flex flex-wrap items-center gap-2 rounded-lg border border-hairline bg-card px-3 py-2.5">
-        <div className="relative min-w-[220px] flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search athlete, club, bib, class…"
-            className="w-full rounded-md border border-hairline bg-background py-1.5 pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
+      <div className="mt-5 space-y-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Selector
+            label="Subevent / Distance"
+            value={filterSub}
+            onChange={(v) => {
+              setFilterSub(v);
+              setFilterClass("all");
+            }}
+            options={[
+              { value: "all", label: "All subevents" },
+              ...subevents.map((s) => ({ value: s.id, label: s.name })),
+            ]}
+          />
+          <Selector
+            label="Class"
+            value={filterClass}
+            onChange={setFilterClass}
+            options={[
+              { value: "all", label: "All classes" },
+              ...(filterSub !== "all"
+                ? (subevents.find((s) => s.id === filterSub)?.class_codes ?? [])
+                : classes
+              ).map((c) => ({ value: c, label: c })),
+            ]}
           />
         </div>
-        <Selector
-          label="Subevent"
-          value={filterSub}
-          onChange={(v) => {
-            setFilterSub(v);
-            setFilterClass("all");
-          }}
-          options={[
-            { value: "all", label: "All subevents" },
-            ...subevents.map((s) => ({ value: s.id, label: s.name })),
-          ]}
-        />
-        <Selector
-          label="Class"
-          value={filterClass}
-          onChange={setFilterClass}
-          options={[
-            { value: "all", label: "All classes" },
-            ...(filterSub !== "all"
-              ? (subevents.find((s) => s.id === filterSub)?.class_codes ?? [])
-              : classes
-            ).map((c) => ({ value: c, label: c })),
-          ]}
-        />
-        <span className="ml-auto mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          {filtered.length} / {regs.length}
-        </span>
+        <div className="flex items-center gap-2 rounded-lg border border-hairline bg-card px-3 py-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search athlete, club, bib, class…"
+              className="h-10 w-full rounded-md border border-hairline bg-background pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
+            />
+          </div>
+          <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            {filtered.length} / {regs.length}
+          </span>
+        </div>
       </div>
 
       <section className="mt-3 overflow-hidden rounded-lg border border-hairline bg-card">
@@ -268,12 +272,14 @@ function Selector({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="flex items-center gap-2 text-xs">
-      <span className="mono uppercase tracking-[0.16em] text-muted-foreground">{label}</span>
+    <label className="block">
+      <span className="mono mb-1 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="cursor-pointer rounded-md border border-hairline bg-background px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
+        className="h-10 w-full cursor-pointer rounded-lg border border-hairline bg-card px-3 text-sm text-ink outline-none focus:border-primary"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
