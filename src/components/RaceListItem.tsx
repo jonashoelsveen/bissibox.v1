@@ -180,7 +180,7 @@ export function RaceListItem({ event, rank }: { event: RaceListEvent; rank?: num
           {event.location}
         </div>
 
-        {/* Sign up button + more */}
+        {/* Sign up button + like + more */}
         <div className="col-span-1 flex items-center justify-end gap-1">
           <button
             onClick={handleSignup}
@@ -188,6 +188,16 @@ export function RaceListItem({ event, rank }: { event: RaceListEvent; rank?: num
             className="mono inline-flex items-center justify-center rounded-full border border-hairline px-3 py-1 text-[10px] uppercase tracking-widest text-ink opacity-0 transition group-hover:opacity-100 hover:border-ink disabled:opacity-50"
           >
             {done ? "Signed" : submitting ? "…" : "Sign up"}
+          </button>
+          <button
+            onClick={toggleLike}
+            aria-label={liked ? "Unlike" : "Like"}
+            title={liked ? "Unlike" : "Like"}
+            className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-foreground/[0.06] ${
+              liked ? "text-primary" : "text-muted-foreground hover:text-ink"
+            }`}
+          >
+            <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
           </button>
           <div className="relative">
             <button
@@ -212,13 +222,6 @@ export function RaceListItem({ event, rank }: { event: RaceListEvent; rank?: num
                   }}
                 />
                 <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-lg border border-hairline bg-card shadow-lg">
-                  <button
-                    onClick={toggleLike}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
-                  >
-                    <Heart className={`h-4 w-4 ${liked ? "fill-current text-primary" : ""}`} />
-                    {liked ? "Unlike" : "Like"}
-                  </button>
                   <button
                     onClick={invite}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
