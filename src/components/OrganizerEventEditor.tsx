@@ -551,11 +551,13 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                                   onDragEnd={() => {
                                     setDragId(null);
                                     setDragOverId(null);
+                                    setDragHandleId(null);
                                   }}
                                   onDrop={(e) => {
                                     e.preventDefault();
                                     setDragId(null);
                                     setDragOverId(null);
+                                    setDragHandleId(null);
                                   }}
                                   onClick={() => setSelectedSplitId(p.id)}
                                   className={`group relative flex items-center gap-2 overflow-hidden border bg-card pl-3 pr-3 py-3 shadow-sm transition cursor-pointer ${
