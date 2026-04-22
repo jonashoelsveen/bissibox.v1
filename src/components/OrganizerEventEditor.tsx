@@ -436,44 +436,37 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
           </div>
 
           {/* Right sidebar — subevent headers with collapsible points */}
-          <aside className="w-96 shrink-0 overflow-y-auto border-l border-hairline bg-background">
-            <div className="border-b border-hairline px-4 py-3">
+          <aside className="w-96 shrink-0 overflow-y-auto border-l border-hairline bg-background px-3 py-3">
+            <div className="border-b border-hairline px-1 pb-3">
               <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Races</p>
               <p className="mt-0.5 text-sm text-ink">Select a race to draw</p>
             </div>
-            <div className="divide-y divide-hairline">
+            <div className="flex flex-col gap-2 pt-3">
               {subevents.map((s, i) => {
                 const active = i === activeMapSub;
-                const drawn = (s.course_path?.length ?? 0) > 1;
                 const expanded = !!expandedSubMap[i];
                 const points = s.split_points ?? [];
                 return (
-                  <div key={i} className={active ? "bg-primary/5" : ""}>
+                  <div
+                    key={i}
+                    className={`overflow-hidden rounded-md border ${
+                      active ? "border-primary bg-primary/5" : "border-hairline bg-card"
+                    }`}
+                  >
                     <div
-                      className={`flex w-full items-center gap-2 border-l-2 px-3 py-3 text-left transition ${
-                        active ? "border-primary" : "border-transparent hover:bg-secondary"
+                      className={`flex w-full items-center gap-2 px-3 py-3 text-left transition ${
+                        active ? "" : "hover:bg-secondary"
                       }`}
                     >
-                      <button
-                        onClick={() =>
-                          setExpandedSubMap((m) => ({ ...m, [i]: !m[i] }))
-                        }
-                        className="rounded p-0.5 text-muted-foreground hover:text-ink"
-                        aria-label={expanded ? "Collapse" : "Expand"}
-                      >
-                        <ChevronDown
-                          className={`h-4 w-4 transition ${expanded ? "rotate-0" : "-rotate-90"}`}
-                        />
-                      </button>
                       <button
                         onClick={() => {
                           setActiveMapSub(i);
                           setSelectedSplitId(null);
                         }}
-                        className="flex min-w-0 flex-1 items-center justify-between gap-2"
+                        className="flex min-w-0 flex-1 items-center"
                       >
-                        <div className="min-w-0">
-                          <p className={`truncate text-sm ${active ? "text-ink font-medium" : "text-ink"}`}>
+                        <div className="min-w-0 flex-1 text-left">
+                          <p className={`truncate text-base ${active ? "text-ink font-semibold" : "text-ink font-medium"}`}>
                             {s.name || `Race ${i + 1}`}
                           </p>
                           <p className="mono mt-0.5 text-[10px] text-muted-foreground">
@@ -481,9 +474,16 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                             {s.course_path?.length ?? 0} pts · {points.length} markers
                           </p>
                         </div>
-                        <span
-                          className={`h-2 w-2 shrink-0 rounded-full ${drawn ? "bg-primary" : "bg-muted-foreground/30"}`}
-                          title={drawn ? "Course drawn" : "No course"}
+                      </button>
+                      <button
+                        onClick={() =>
+                          setExpandedSubMap((m) => ({ ...m, [i]: !m[i] }))
+                        }
+                        className="rounded p-1 text-muted-foreground hover:text-ink"
+                        aria-label={expanded ? "Collapse" : "Expand"}
+                      >
+                        <ChevronDown
+                          className={`h-4 w-4 transition ${expanded ? "rotate-0" : "-rotate-90"}`}
                         />
                       </button>
                     </div>
