@@ -21,12 +21,14 @@ interface Props {
   title?: string;
   selectedSplitId?: string | null;
   onSelectSplit?: (id: string | null) => void;
+  hoverPosition?: LatLng | null;
 }
 
 type Tool = "pan" | "draw" | "split" | "fuel" | "marker" | "start" | "finish";
 
 // Periwinkle purple for the drawing line
-const LINE_COLOR = "#8B8FE8";
+const LINE_COLOR = "#6366F1";
+const LINE_CASING_COLOR = "#FFFFFF";
 
 const KIND_META: Record<SplitKind, { color: string; label: string }> = {
   start: { color: "#16a34a", label: "Start" },
@@ -50,13 +52,16 @@ export function CourseMapEditor({
   title,
   selectedSplitId,
   onSelectSplit,
+  hoverPosition,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const polylineRef = useRef<any>(null);
+  const polylineCasingRef = useRef<any>(null);
   const splitMarkersRef = useRef<Record<string, any>>({});
   const vertexMarkersRef = useRef<any[]>([]);
   const midMarkersRef = useRef<any[]>([]);
+  const hoverMarkerRef = useRef<any>(null);
   const [L, setL] = useState<any>(null);
   const [tool, setTool] = useState<Tool>("pan");
   const toolRef = useRef<Tool>("pan");
@@ -205,6 +210,10 @@ export function CourseMapEditor({
     const map = mapRef.current;
 
     // Clear previous
+    if (polylineCasingRef.current) {
+      map.removeLayer(polylineCasingRef.current);
+      polylineCasingRef.current = null;
+    }
     if (polylineRef.current) {
       map.removeLayer(polylineRef.current);
       polylineRef.current = null;
@@ -215,7 +224,25 @@ export function CourseMapEditor({
     midMarkersRef.current = [];
 
     if (path.length >= 2) {
-      const pl = L.polyline(path, { color: LINE_COLOR, weight: 5, opacity: 0.65, interactive: tool === "draw" }).addTo(map);
+      // White casing underneath for legibility on any basemap
+      const casing = L.polyline(path, {
+        color: LINE_CASING_COLOR,
+        weight: 9,
+        opacity: 0.95,
+        lineCap: "round",
+        lineJoin: "round",
+        interactive: false,
+      }).addTo(map);
+      polylineCasingRef.current = casing;
+
+      const pl = L.polyline(path, {
+        color: LINE_COLOR,
+        weight: 5,
+        opacity: 1,
+        lineCap: "round",
+        lineJoin: "round",
+        interactive: tool === "draw",
+      }).addTo(map);
       polylineRef.current = pl;
 
       // Click on the line itself in draw mode → insert vertex at click location (closest segment)
@@ -342,6 +369,21 @@ export function CourseMapEditor({
       splitMarkersRef.current[s.id] = marker;
     });
   }, [L, splits, selectedSplitId]);
+
+  // Hover marker — driven by elevation curve hover
+  useEffect(() => {
+    if (!L || !mapRef.current) return;
+    const map = mapRef.current;
+    if (hoverMarkerRef.current) {
+      map.removeLayer(hoverMarkerRef.current);
+      hoverMarkerRef.current = null;
+    }
+    if (hoverPosition) {
+      const html = `<div style="width:14px;height:14px;border-radius:9999px;background:#6366F1;border:2px solid #fff;box-shadow:0 0 0 3px rgba(99,102,241,0.35), 0 1px 4px rgba(0,0,0,0.3);"></div>`;
+      const icon = L.divIcon({ html, className: "", iconSize: [14, 14], iconAnchor: [7, 7] });
+      hoverMarkerRef.current = L.marker(hoverPosition, { icon, interactive: false, zIndexOffset: 2000 }).addTo(map);
+    }
+  }, [L, hoverPosition]);
 
   const clearAll = () => trackedChange({ path: [], splits: [] });
 

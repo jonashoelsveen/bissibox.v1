@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { LatLng, SplitPoint, SplitKind } from "@/components/CourseMapEditor";
 
-const LINE_COLOR = "#8B8FE8";
+const LINE_COLOR = "#6366F1";
+const LINE_CASING_COLOR = "#FFFFFF";
 
 const KIND_COLOR: Record<SplitKind, string> = {
   start: "#16a34a",
@@ -15,12 +16,14 @@ interface Props {
   path: LatLng[];
   splits: SplitPoint[];
   selectedSplitId?: string | null;
+  hoverPosition?: LatLng | null;
 }
 
-export function ReadOnlyCourseMap({ path, splits, selectedSplitId }: Props) {
+export function ReadOnlyCourseMap({ path, splits, selectedSplitId, hoverPosition }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const layerRef = useRef<any[]>([]);
+  const hoverMarkerRef = useRef<any>(null);
   const [L, setL] = useState<any>(null);
 
   useEffect(() => {
@@ -54,6 +57,7 @@ export function ReadOnlyCourseMap({ path, splits, selectedSplitId }: Props) {
       map.remove();
       mapRef.current = null;
       layerRef.current = [];
+      hoverMarkerRef.current = null;
     };
   }, [L]);
 
@@ -64,7 +68,23 @@ export function ReadOnlyCourseMap({ path, splits, selectedSplitId }: Props) {
     layerRef.current = [];
 
     if (path.length >= 2) {
-      const pl = L.polyline(path, { color: LINE_COLOR, weight: 5, opacity: 0.65 }).addTo(map);
+      const casing = L.polyline(path, {
+        color: LINE_CASING_COLOR,
+        weight: 9,
+        opacity: 0.95,
+        lineCap: "round",
+        lineJoin: "round",
+        interactive: false,
+      }).addTo(map);
+      layerRef.current.push(casing);
+
+      const pl = L.polyline(path, {
+        color: LINE_COLOR,
+        weight: 5,
+        opacity: 1,
+        lineCap: "round",
+        lineJoin: "round",
+      }).addTo(map);
       layerRef.current.push(pl);
       try { map.fitBounds(pl.getBounds(), { padding: [30, 30] }); } catch {}
     }
@@ -78,7 +98,7 @@ export function ReadOnlyCourseMap({ path, splits, selectedSplitId }: Props) {
 
       if (sp.kind === "start" || sp.kind === "finish") {
         const ringFilter = isSel
-          ? "filter:drop-shadow(0 0 4px rgba(139,143,232,0.9));"
+          ? "filter:drop-shadow(0 0 4px rgba(99,102,241,0.9));"
           : "filter:drop-shadow(0 1px 2px rgba(0,0,0,0.4));";
         html = `<div style="position:relative;width:28px;height:34px;${ringFilter}">
           <svg width="28" height="34" viewBox="0 0 28 34" xmlns="http://www.w3.org/2000/svg">
@@ -102,6 +122,21 @@ export function ReadOnlyCourseMap({ path, splits, selectedSplitId }: Props) {
       layerRef.current.push(m);
     });
   }, [L, path, splits, selectedSplitId]);
+
+  // Hover marker — synced from elevation curve
+  useEffect(() => {
+    if (!L || !mapRef.current) return;
+    const map = mapRef.current;
+    if (hoverMarkerRef.current) {
+      map.removeLayer(hoverMarkerRef.current);
+      hoverMarkerRef.current = null;
+    }
+    if (hoverPosition) {
+      const html = `<div style="width:14px;height:14px;border-radius:9999px;background:#6366F1;border:2px solid #fff;box-shadow:0 0 0 3px rgba(99,102,241,0.35), 0 1px 4px rgba(0,0,0,0.3);"></div>`;
+      const icon = L.divIcon({ html, className: "", iconSize: [14, 14], iconAnchor: [7, 7] });
+      hoverMarkerRef.current = L.marker(hoverPosition, { icon, interactive: false, zIndexOffset: 2000 }).addTo(map);
+    }
+  }, [L, hoverPosition]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }
