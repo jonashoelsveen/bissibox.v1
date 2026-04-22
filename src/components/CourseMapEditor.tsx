@@ -489,6 +489,69 @@ export function CourseMapEditor({
             <span className="text-sm">Clear</span>
           </ToolBtn>
         </div>
+
+        <div className="pointer-events-auto relative w-[320px] max-w-[calc(100vw-2rem)]">
+          <div className="flex h-[42px] items-center gap-2 rounded-xl border border-hairline bg-card/95 px-3 shadow-md backdrop-blur">
+            {searchLoading ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+            ) : (
+              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            )}
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
+              onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && searchResults[0]) {
+                  e.preventDefault();
+                  flyToResult(searchResults[0]);
+                } else if (e.key === "Escape") {
+                  setSearchOpen(false);
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              placeholder="Search location, city, address…"
+              className="h-full flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSearchResults([]);
+                  setSearchOpen(false);
+                }}
+                className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-ink"
+                title="Clear"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          {searchOpen && searchResults.length > 0 && (
+            <div className="absolute left-0 right-0 top-[calc(100%+4px)] max-h-[280px] overflow-y-auto rounded-xl border border-hairline bg-card shadow-lg backdrop-blur">
+              {searchResults.map((r) => (
+                <button
+                  key={r.place_id}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    flyToResult(r);
+                  }}
+                  className="flex w-full items-start gap-2 border-b border-hairline px-3 py-2 text-left text-sm last:border-b-0 hover:bg-secondary"
+                >
+                  <Search className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="line-clamp-2 text-ink">{r.display_name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {searchOpen && !searchLoading && searchQuery.trim().length >= 3 && searchResults.length === 0 && (
+            <div className="absolute left-0 right-0 top-[calc(100%+4px)] rounded-xl border border-hairline bg-card px-3 py-2 text-sm text-muted-foreground shadow-lg">
+              No locations found
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="pointer-events-none absolute bottom-4 left-4 z-[400] rounded-md border border-hairline bg-card/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
