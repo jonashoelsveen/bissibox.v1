@@ -35,6 +35,68 @@ export function RaceListItem({ event, rank }: { event: RaceListEvent; rank?: num
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [liked, setLiked] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancel = false;
+    supabase
+      .from("event_likes")
+      .select("id")
+      .eq("event_id", event.id)
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancel) setLiked(!!data);
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [user, event.id]);
+
+  const toggleLike = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenuOpen(false);
+    if (!user) {
+      navigate({ to: "/auth", search: { redirect: `/events/${event.id}` } });
+      return;
+    }
+    if (liked) {
+      const { error } = await supabase
+        .from("event_likes")
+        .delete()
+        .eq("event_id", event.id)
+        .eq("user_id", user.id);
+      if (error) return toast.error(error.message);
+      setLiked(false);
+    } else {
+      const { error } = await supabase
+        .from("event_likes")
+        .insert({ event_id: event.id, user_id: user.id });
+      if (error) return toast.error(error.message);
+      setLiked(true);
+      toast.success("Added to your likes");
+    }
+  };
+
+  const invite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenuOpen(false);
+    const url = `${window.location.origin}/events/${event.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: event.title, text: `Check out ${event.title}`, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Event link copied");
+      }
+    } catch {
+      // user cancelled
+    }
+  };
 
   const today = isToday(event.starts_at);
   const d = new Date(event.starts_at);
