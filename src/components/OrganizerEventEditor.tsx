@@ -369,28 +369,80 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             </button>
           </div>
 
-          <div className="mt-5 overflow-hidden rounded-md border border-hairline">
+          <div className="mt-5 space-y-2">
             {subevents.length === 0 && (
-              <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+              <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
                 No races yet. Add a 5K, 10K, Half Marathon…
               </div>
             )}
-            {subevents.map((s, idx) => (
-              <SubeventRow
-                key={idx}
-                sub={s}
-                open={openSub === idx}
-                onToggle={() => setOpenSub((o) => (o === idx ? null : idx))}
-                allClasses={classes}
-                onChange={(patch) =>
-                  setSubevents((arr) => arr.map((x, i) => (i === idx ? { ...x, ...patch } : x)))
-                }
-                onDelete={() => {
-                  setSubevents((arr) => arr.filter((_, i) => i !== idx));
-                  setOpenSub(null);
-                }}
-              />
-            ))}
+            {subevents.map((s, idx) => {
+              const dragKey = `sub-${idx}`;
+              const isOver = dragOverId === dragKey && dragId !== null && dragId !== dragKey;
+              return (
+                <div
+                  key={idx}
+                  draggable={dragHandleId === dragKey}
+                  onDragStart={(e) => {
+                    if (dragHandleId !== dragKey) {
+                      e.preventDefault();
+                      return;
+                    }
+                    setDragId(dragKey);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragOver={(e) => {
+                    if (!dragId || !dragId.startsWith("sub-")) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    setDragOverId(dragKey);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverId === dragKey) setDragOverId(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (!dragId || !dragId.startsWith("sub-")) return;
+                    const fromIdx = Number(dragId.replace("sub-", ""));
+                    const toIdx = idx;
+                    if (fromIdx === toIdx) return;
+                    setSubevents((arr) => {
+                      const next = [...arr];
+                      const [moved] = next.splice(fromIdx, 1);
+                      next.splice(toIdx, 0, moved);
+                      return next.map((x, i) => ({ ...x, sort_order: i }));
+                    });
+                    setOpenSub(toIdx);
+                    setDragId(null);
+                    setDragOverId(null);
+                    setDragHandleId(null);
+                  }}
+                  onDragEnd={() => {
+                    setDragId(null);
+                    setDragOverId(null);
+                    setDragHandleId(null);
+                  }}
+                  className={`overflow-hidden rounded-lg border transition ${
+                    isOver ? "border-primary bg-primary/5" : "border-hairline bg-card"
+                  }`}
+                >
+                  <SubeventRow
+                    sub={s}
+                    open={openSub === idx}
+                    onToggle={() => setOpenSub((o) => (o === idx ? null : idx))}
+                    allClasses={classes}
+                    onChange={(patch) =>
+                      setSubevents((arr) => arr.map((x, i) => (i === idx ? { ...x, ...patch } : x)))
+                    }
+                    onDelete={() => {
+                      setSubevents((arr) => arr.filter((_, i) => i !== idx));
+                      setOpenSub(null);
+                    }}
+                    onHandleDown={() => setDragHandleId(dragKey)}
+                    onHandleUp={() => setDragHandleId(null)}
+                  />
+                </div>
+              );
+            })}
           </div>
         </Panel>
       )}
@@ -751,6 +803,8 @@ function SubeventRow({
   onChange,
   onDelete,
   allClasses,
+  onHandleDown,
+  onHandleUp,
 }: {
   sub: SubeventDraft;
   open: boolean;
@@ -758,27 +812,38 @@ function SubeventRow({
   onChange: (patch: Partial<SubeventDraft>) => void;
   onDelete: () => void;
   allClasses: string[];
+  onHandleDown?: () => void;
+  onHandleUp?: () => void;
 }) {
   return (
-    <div className="border-b border-hairline last:border-b-0">
-      <button
-        onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 bg-secondary/40 px-5 py-3 text-left transition hover:bg-secondary"
-      >
-        <div className="flex items-center gap-3">
+    <div>
+      <div className="flex w-full items-center gap-2 bg-secondary/40 px-3 py-3 transition hover:bg-secondary">
+        <span
+          onMouseDown={onHandleDown}
+          onMouseUp={onHandleUp}
+          onMouseLeave={onHandleUp}
+          className="flex h-7 w-7 cursor-grab items-center justify-center rounded-md border border-hairline bg-background text-muted-foreground hover:text-ink active:cursor-grabbing"
+          aria-label="Drag to reorder"
+          title="Drag to reorder"
+        >
+          <GripVertical className="h-4 w-4" />
+        </span>
+        <button
+          onClick={onToggle}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
           <ChevronDown
-            className={`h-4 w-4 text-muted-foreground transition ${open ? "rotate-0" : "-rotate-90"}`}
+            className={`h-4 w-4 shrink-0 text-muted-foreground transition ${open ? "rotate-0" : "-rotate-90"}`}
           />
-          <span className="text-sm font-medium text-ink">{sub.name || "Untitled race"}</span>
+          <span className="truncate text-sm font-medium text-ink">{sub.name || "Untitled race"}</span>
           {sub.distance_km && (
             <span className="mono text-xs text-muted-foreground">· {sub.distance_km} km</span>
           )}
           <span className="mono text-xs text-muted-foreground">
             · {sub.class_codes.length} classes
           </span>
-        </div>
-        <span
-          role="button"
+        </button>
+        <button
           aria-label="Delete"
           onClick={(e) => {
             e.stopPropagation();
@@ -787,8 +852,8 @@ function SubeventRow({
           className="rounded p-1 text-muted-foreground hover:text-destructive"
         >
           <Trash2 className="h-4 w-4" />
-        </span>
-      </button>
+        </button>
+      </div>
       {open && (
         <div className="px-5 py-5">
           <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
@@ -796,20 +861,10 @@ function SubeventRow({
               <Text value={sub.name} onChange={(v) => onChange({ name: v })} placeholder="Marathon" />
             </Row>
             <Row label="Start time">
-              <Text type="datetime-local" value={sub.starts_at} onChange={(v) => onChange({ starts_at: v })} />
+              <DateTimeField value={sub.starts_at} onChange={(v) => onChange({ starts_at: v })} />
             </Row>
             <Row label="Distance (km)">
               <Text type="number" value={sub.distance_km} onChange={(v) => onChange({ distance_km: v })} />
-            </Row>
-            <Row label="Max participants">
-              <Text type="number" value={sub.max_participants} onChange={(v) => onChange({ max_participants: v })} />
-            </Row>
-            <Row label="Bib numbers">
-              <div className="flex items-center gap-2">
-                <Text type="number" value={sub.bib_from} onChange={(v) => onChange({ bib_from: v })} placeholder="from" />
-                <span className="text-muted-foreground">–</span>
-                <Text type="number" value={sub.bib_to} onChange={(v) => onChange({ bib_to: v })} placeholder="to" />
-              </div>
             </Row>
           </div>
 
@@ -862,6 +917,51 @@ function SubeventRow({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DateTimeField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [datePart, timePart] = value ? value.split("T") : ["", ""];
+  const setDate = (d: string) => {
+    if (!d) {
+      onChange("");
+      return;
+    }
+    onChange(`${d}T${timePart || "09:00"}`);
+  };
+  const setTime = (t: string) => {
+    const d = datePart || new Date().toISOString().slice(0, 10);
+    onChange(`${d}T${t}`);
+  };
+  return (
+    <div className="inline-flex items-stretch overflow-hidden rounded-xl border border-hairline bg-background shadow-sm">
+      <label className="group flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-ink transition hover:bg-primary/5">
+        <span className="text-primary">📅</span>
+        <input
+          type="date"
+          value={datePart}
+          onChange={(e) => setDate(e.target.value)}
+          className="cursor-pointer bg-transparent text-sm text-ink outline-none"
+        />
+      </label>
+      <div className="w-px bg-hairline" />
+      <label className="group flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-ink transition hover:bg-primary/5">
+        <span className="text-primary">⏰</span>
+        <input
+          type="time"
+          value={timePart}
+          step={60}
+          onChange={(e) => setTime(e.target.value)}
+          className="cursor-pointer bg-transparent text-sm text-ink outline-none"
+        />
+      </label>
     </div>
   );
 }
