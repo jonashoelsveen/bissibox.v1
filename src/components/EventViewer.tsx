@@ -205,13 +205,36 @@ export function EventViewer({ eventId }: { eventId: string }) {
               <h1 className="mt-2 text-3xl text-ink md:text-4xl">{event.title}</h1>
             </div>
           </div>
-          <button
-            onClick={openSignup}
-            disabled={submitting || registered}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-          >
-            {registered ? "Signed up" : "Sign up"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={shareInvite}
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-hairline bg-card text-muted-foreground transition hover:border-muted-foreground/40 hover:text-ink"
+              aria-label="Invite a friend"
+              title="Invite a friend"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={toggleLike}
+              disabled={likeBusy}
+              className={`inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border transition disabled:opacity-50 ${
+                liked
+                  ? "border-rose-500/40 bg-rose-500/10 text-rose-500 hover:bg-rose-500/15"
+                  : "border-hairline bg-card text-muted-foreground hover:border-muted-foreground/40 hover:text-ink"
+              }`}
+              aria-label={liked ? "Unlike" : "Like"}
+              title={liked ? "Liked" : "Like"}
+            >
+              <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+            </button>
+            <button
+              onClick={openSignup}
+              disabled={submitting || registered}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+            >
+              {registered ? "Signed up" : "Sign up"}
+            </button>
+          </div>
         </header>
 
         <nav className="mt-7 flex border-b border-hairline">
@@ -226,6 +249,9 @@ export function EventViewer({ eventId }: { eventId: string }) {
           </TabBtn>
           <TabBtn active={tab === "map"} onClick={() => setTab("map")} icon={<MapIcon className="h-3.5 w-3.5" />}>
             Map
+          </TabBtn>
+          <TabBtn active={tab === "participants"} onClick={() => setTab("participants")} icon={<Users className="h-3.5 w-3.5" />}>
+            Participants
           </TabBtn>
         </nav>
       </div>
