@@ -343,11 +343,7 @@ export function CourseMapEditor({
     });
   }, [L, splits, selectedSplitId]);
 
-  const undoLastPoint = () => {
-    if (!path.length) return;
-    onChange({ path: path.slice(0, -1), splits });
-  };
-  const clearAll = () => onChange({ path: [], splits: [] });
+  const clearAll = () => trackedChange({ path: [], splits: [] });
 
   return (
     <div className="relative h-full w-full">
@@ -380,20 +376,23 @@ export function CourseMapEditor({
             <Droplet className="h-4 w-4" style={{ color: KIND_META.fuel.color }} />
             <span className="text-sm">Fuel</span>
           </ToolBtn>
+          <span className="mx-1 h-5 w-px bg-hairline" />
+          <ToolBtn onClick={undo} title="Undo" disabled={!canUndo}>
+            <Undo2 className="h-4 w-4" />
+          </ToolBtn>
+          <ToolBtn onClick={redo} title="Redo" disabled={!canRedo}>
+            <Redo2 className="h-4 w-4" />
+          </ToolBtn>
+          <span className="mx-1 h-5 w-px bg-hairline" />
+          <ToolBtn
+            onClick={clearAll}
+            title="Clear"
+            disabled={path.length === 0 && splits.length === 0}
+          >
+            <Eraser className="h-4 w-4" />
+            <span className="text-sm">Clear</span>
+          </ToolBtn>
         </div>
-
-
-        {(path.length > 0 || splits.length > 0) && (
-          <div className="pointer-events-auto flex items-center gap-1 rounded-xl border border-hairline bg-card/95 p-1.5 shadow-md backdrop-blur">
-            <ToolBtn onClick={undoLastPoint} title="Undo last point">
-              <span className="text-sm">Undo</span>
-            </ToolBtn>
-            <ToolBtn onClick={clearAll} title="Clear">
-              <Eraser className="h-4 w-4" />
-              <span className="text-sm">Clear</span>
-            </ToolBtn>
-          </div>
-        )}
       </div>
 
       <div className="pointer-events-none absolute bottom-4 left-4 z-[400] rounded-md border border-hairline bg-card/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
