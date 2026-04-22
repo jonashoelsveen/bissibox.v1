@@ -750,6 +750,7 @@ export function CourseMapEditor({
         </div>
       )}
 
+      <div className="pointer-events-none absolute bottom-4 left-4 z-[400] rounded-md border border-hairline bg-card/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
         {title && <span className="text-ink">{title} · </span>}
         <span className="num">{path.length}</span> pts ·{" "}
         <span className="num">{splits.length}</span> markers
