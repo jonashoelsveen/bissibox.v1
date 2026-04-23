@@ -732,6 +732,7 @@ function MediaPage() {
           onConfirm={() => void deleteAlbum(confirmDelete)}
         />
       )}
+      {openItems && (
         <Lightbox
           items={openItems}
           urls={urls}
