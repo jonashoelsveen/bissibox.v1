@@ -8,6 +8,7 @@ export function TopChrome() {
   const { user, mode } = useAuth();
 
   const isOrganizer = (mode === "organizer" || mode === "team") && !!user;
+  const isIndividual = !isOrganizer;
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen p-5 md:p-6">
@@ -34,9 +35,25 @@ export function TopChrome() {
             </NavBtn>
           </>
         ) : (
-          <NavBtn to="/" label="Search" active={path === "/"}>
-            <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
-          </NavBtn>
+          <>
+            <NavBtn to="/" label="Search races" active={path === "/"}>
+              <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
+            </NavBtn>
+            {isIndividual && user && (
+              <NavBtn
+                to="/discover"
+                label="Search people"
+                active={path.startsWith("/discover")}
+              >
+                <span className="relative inline-flex">
+                  <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
+                  <span className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">
+                    2
+                  </span>
+                </span>
+              </NavBtn>
+            )}
+          </>
         )}
 
         {user && (
