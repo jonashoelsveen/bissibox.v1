@@ -83,6 +83,46 @@ function MediaPage() {
   const [attended, setAttended] = useState<AttendedEvent[]>([]);
   const [userName, setUserName] = useState<string>("");
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+
+  const setAsCover = async (
+    mediaId: string,
+    target: "athlete" | "photographer" | "team" | "company",
+  ) => {
+    if (!user) return;
+    if (target === "athlete") {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ athlete_cover_media_id: mediaId })
+        .eq("id", user.id);
+      if (error) toast.error(error.message);
+      else toast.success("Set as athlete profile image");
+    } else if (target === "photographer") {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ photographer_cover_media_id: mediaId })
+        .eq("id", user.id);
+      if (error) toast.error(error.message);
+      else toast.success("Set as photographer profile image");
+    } else if (target === "team") {
+      const { data: team } = await supabase
+        .from("teams")
+        .select("id")
+        .eq("owner_id", user.id)
+        .maybeSingle();
+      if (!team) {
+        toast.error("No team found");
+        return;
+      }
+      const { error } = await supabase
+        .from("teams")
+        .update({ cover_media_id: mediaId })
+        .eq("id", team.id);
+      if (error) toast.error(error.message);
+      else toast.success("Set as team profile image");
+    }
+    setMenuFor(null);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
