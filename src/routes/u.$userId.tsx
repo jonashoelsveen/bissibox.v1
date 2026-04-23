@@ -97,7 +97,10 @@ function UserProfilePage() {
         .order("achieved_on", { ascending: false });
       setPbs((pbData ?? []) as PB[]);
 
-      // Public profile shows content from the user's "Profile" album
+      // Public profile shows the user's "Profile" album, scoped to the
+      // viewing context: athlete view -> items uploaded in participant mode;
+      // photographer view -> items uploaded in participant mode as well
+      // (photographer content lives under the same individual profile).
       const { data: profileAlbum } = await supabase
         .from("media_albums")
         .select("id")
@@ -115,8 +118,9 @@ function UserProfilePage() {
         if (ids.length > 0) {
           const { data: mediaData } = await supabase
             .from("media_items")
-            .select("id, storage_path, media_type")
+            .select("id, storage_path, media_type, uploaded_in_mode")
             .in("id", ids)
+            .eq("uploaded_in_mode", "participant")
             .order("created_at", { ascending: false })
             .limit(120);
           setMedia((mediaData ?? []) as MediaItem[]);
