@@ -488,8 +488,7 @@ function InfoLine({
     <div onClick={(e) => e.stopPropagation()}>
       <span className="mono text-[9px] uppercase tracking-widest text-white/60">{label}: </span>
       {linkable ? (
-        // @ts-expect-error - typed by branching at call site
-        <Link to={to} params={params} className="text-white underline-offset-2 hover:underline">
+        <Link to={to} params={params as never} className="text-white underline-offset-2 hover:underline">
           {text}
         </Link>
       ) : (
