@@ -366,6 +366,42 @@ export type Database = {
         }
         Relationships: []
       }
+      media_item_albums: {
+        Row: {
+          album_id: string
+          created_at: string
+          id: string
+          media_item_id: string
+        }
+        Insert: {
+          album_id: string
+          created_at?: string
+          id?: string
+          media_item_id: string
+        }
+        Update: {
+          album_id?: string
+          created_at?: string
+          id?: string
+          media_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_item_albums_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "media_albums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_item_albums_media_item_id_fkey"
+            columns: ["media_item_id"]
+            isOneToOne: false
+            referencedRelation: "media_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_items: {
         Row: {
           album_id: string | null
