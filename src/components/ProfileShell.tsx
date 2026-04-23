@@ -26,6 +26,7 @@ export function ProfileShell({
   tabs,
   activeTab,
   onTabChange,
+  website,
   children,
 }: {
   coverPath: string | null;
@@ -37,6 +38,7 @@ export function ProfileShell({
   tabs: Tab[];
   activeTab: string;
   onTabChange: (k: string) => void;
+  website?: WebsiteConfig;
   children: ReactNode;
 }) {
   const router = useRouter();
