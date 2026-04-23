@@ -94,14 +94,25 @@ function UserProfilePage() {
         .order("achieved_on", { ascending: false });
       setPbs((pbData ?? []) as PB[]);
 
-      const { data: mediaData } = await supabase
-        .from("media_items")
-        .select("id, storage_path, media_type")
+      // Public profile shows content from the user's "Profile" album
+      const { data: profileAlbum } = await supabase
+        .from("media_albums")
+        .select("id")
         .eq("user_id", userId)
-        .eq("visible_world", true)
-        .order("created_at", { ascending: false })
-        .limit(60);
-      setMedia((mediaData ?? []) as MediaItem[]);
+        .eq("name", "Profile")
+        .maybeSingle();
+      if (profileAlbum) {
+        const { data: mediaData } = await supabase
+          .from("media_items")
+          .select("id, storage_path, media_type")
+          .eq("user_id", userId)
+          .eq("album_id", profileAlbum.id)
+          .order("created_at", { ascending: false })
+          .limit(120);
+        setMedia((mediaData ?? []) as MediaItem[]);
+      } else {
+        setMedia([]);
+      }
 
       const { count } = await supabase
         .from("user_follows")
