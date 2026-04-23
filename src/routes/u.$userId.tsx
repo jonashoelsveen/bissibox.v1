@@ -102,13 +102,20 @@ function UserProfilePage() {
         .eq("name", "Profile")
         .maybeSingle();
       if (profileAlbum) {
-        const { data: mediaData } = await supabase
-          .from("media_items")
-          .select("id, storage_path, media_type")
-          .eq("user_id", userId)
-          .eq("album_id", profileAlbum.id)
-          .order("created_at", { ascending: false })
-          .limit(120);
+        const { data: links } = await supabase
+          .from("media_item_albums")
+          .select("media_item_id")
+          .eq("album_id", profileAlbum.id);
+        const ids = ((links as { media_item_id: string }[] | null) ?? []).map(
+          (l) => l.media_item_id,
+        );
+        if (ids.length > 0) {
+          const { data: mediaData } = await supabase
+            .from("media_items")
+            .select("id, storage_path, media_type")
+            .in("id", ids)
+            .order("created_at", { ascending: false })
+            .limit(120);
         setMedia((mediaData ?? []) as MediaItem[]);
       } else {
         setMedia([]);
