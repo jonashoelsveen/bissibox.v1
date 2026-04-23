@@ -39,7 +39,7 @@ export function TopChrome() {
           </NavBtn>
         )}
 
-        {user && !isOrganizer && (
+        {user && (
           <NavBtn to="/media" label="Media" active={path.startsWith("/media")}>
             <Image className="h-[18px] w-[18px]" strokeWidth={2.25} />
           </NavBtn>

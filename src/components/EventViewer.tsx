@@ -3,11 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ArrowLeft, ChevronDown, FileText, Heart, Map as MapIcon, Share2, Users, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileText, Heart, Image as ImageIcon, Map as MapIcon, Share2, Users, X } from "lucide-react";
 import { ReadOnlyCourseMap } from "@/components/ReadOnlyCourseMap";
 import { MapLocationLabel } from "@/components/MapLocationLabel";
 import { ElevationProfile } from "@/components/ElevationProfile";
 import { PublicParticipantsPanel } from "@/components/PublicParticipantsPanel";
+import { EventMediaTab } from "@/components/EventMediaTab";
 import type { LatLng, SplitPoint } from "@/components/CourseMapEditor";
 import { formatDateLong, formatMoney, formatTime } from "@/lib/format";
 
@@ -41,7 +42,7 @@ interface SubeventRow {
 export function EventViewer({ eventId }: { eventId: string }) {
   const { user } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"details" | "map" | "participants">("details");
+  const [tab, setTab] = useState<"details" | "map" | "participants" | "media">("details");
   const [liked, setLiked] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
   const [event, setEvent] = useState<EventRow | null>(null);
@@ -248,8 +249,20 @@ export function EventViewer({ eventId }: { eventId: string }) {
           <TabBtn active={tab === "participants"} onClick={() => setTab("participants")} icon={<Users className="h-3.5 w-3.5" />}>
             Participants
           </TabBtn>
+          <TabBtn active={tab === "media"} onClick={() => setTab("media")} icon={<ImageIcon className="h-3.5 w-3.5" />}>
+            Media
+          </TabBtn>
         </nav>
       </div>
+
+      {tab === "media" && (
+        <EventMediaTab
+          eventId={eventId}
+          ownerUserId=""
+          currentUserId={user?.id ?? ""}
+          organizerMode={false}
+        />
+      )}
 
       {tab === "details" && (
         <Panel>
