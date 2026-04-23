@@ -86,6 +86,7 @@ function MediaPage() {
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [itemAlbums, setItemAlbums] = useState<Record<string, string[]>>({});
+  const [teamId, setTeamId] = useState<string | null>(null);
 
   const setAsCover = async (
     mediaId: string,
