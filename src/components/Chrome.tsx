@@ -1,18 +1,76 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Search, Library, Plus, Image, Settings } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Search, Library, Plus, Image, Settings, LogIn } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 
 export function TopChrome() {
   const router = useRouterState();
   const path = router.location.pathname;
   const { user, mode } = useAuth();
+  const [letter, setLetter] = useState<string>("");
 
   const isOrganizer = (mode === "organizer" || mode === "team") && !!user;
   const isIndividual = !isOrganizer;
 
+  useEffect(() => {
+    let cancel = false;
+    if (!user) {
+      setLetter("");
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("first_name,last_name,email")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancel) return;
+      const src =
+        (data?.first_name && data.first_name.trim()) ||
+        (data?.last_name && data.last_name.trim()) ||
+        data?.email ||
+        user.email ||
+        "?";
+      setLetter(src.charAt(0).toUpperCase());
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [user]);
+
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen p-5 md:p-6">
       <div className="flex h-full flex-col items-center gap-2 pt-2">
+        {/* Profile / Sign-in at the top */}
+        {user ? (
+          <Link
+            to="/profile"
+            aria-label="Profile"
+            className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium shadow-sm transition ${
+              path.startsWith("/profile")
+                ? "bg-primary text-primary-foreground"
+                : "bg-primary/90 text-primary-foreground hover:opacity-90"
+            }`}
+          >
+            {letter}
+          </Link>
+        ) : (
+          <Link
+            to="/auth"
+            aria-label="Sign in"
+            className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
+              path.startsWith("/auth")
+                ? "bg-primary text-primary-foreground"
+                : "text-ink hover:bg-secondary"
+            }`}
+          >
+            <LogIn className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </Link>
+        )}
+
+        <div className="my-1 h-px w-6 bg-hairline" />
+
         {isOrganizer ? (
           <>
             <NavBtn

@@ -1266,12 +1266,12 @@ function AccessPanel({ items, onSaved }: { items: MediaItem[]; onSaved: () => vo
         </p>
       )}
       <AccessGroup
-        title="World"
+        title="Followers"
         checked={world}
         onChange={setWorld}
-        searchPlaceholder="Search registered users…"
+        searchPlaceholder="Search followers…"
         items={[]}
-        emptyHint="When checked, anyone on the platform can view."
+        emptyHint="When checked, your followers can view."
       />
       <AccessGroup
         title="Media"
@@ -1287,12 +1287,12 @@ function AccessPanel({ items, onSaved }: { items: MediaItem[]; onSaved: () => vo
         }
       />
       <AccessGroup
-        title="Friends"
+        title="Subscribers"
         checked={friends}
         onChange={setFriends}
-        searchPlaceholder="Search friends…"
+        searchPlaceholder="Search subscribers…"
         items={[]}
-        emptyHint="Friends list will appear here once you add friends."
+        emptyHint="Your team or membership subscribers will appear here."
       />
       <button
         onClick={save}
