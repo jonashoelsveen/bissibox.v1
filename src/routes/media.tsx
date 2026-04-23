@@ -544,6 +544,7 @@ function MediaPage() {
           attended={attended}
           userId={user.id}
           userName={userName}
+          mode={mode}
           onClose={() => setUploadOpen(false)}
           onUploaded={() => {
             setUploadOpen(false);
