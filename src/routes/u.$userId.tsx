@@ -97,14 +97,14 @@ function UserProfilePage() {
         .order("achieved_on", { ascending: false });
       setPbs((pbData ?? []) as PB[]);
 
-      // Public profile shows the user's "Profile" album, scoped to the
-      // viewing context: athlete view -> items uploaded in participant mode;
-      // photographer view -> items uploaded in participant mode as well
-      // (photographer content lives under the same individual profile).
+      // Public profile mirrors the individual "Profile" album exactly —
+      // same single source of truth as teams. Scope to the individual
+      // workspace (team_id IS NULL) so team content never leaks here.
       const { data: profileAlbum } = await supabase
         .from("media_albums")
         .select("id")
         .eq("user_id", userId)
+        .is("team_id", null)
         .eq("name", "Profile")
         .maybeSingle();
       if (profileAlbum) {
@@ -118,9 +118,9 @@ function UserProfilePage() {
         if (ids.length > 0) {
           const { data: mediaData } = await supabase
             .from("media_items")
-            .select("id, storage_path, media_type, uploaded_in_mode")
+            .select("id, storage_path, media_type")
             .in("id", ids)
-            .eq("uploaded_in_mode", "participant")
+            .is("team_id", null)
             .order("created_at", { ascending: false })
             .limit(120);
           setMedia((mediaData ?? []) as MediaItem[]);
