@@ -207,6 +207,17 @@ function UserProfilePage() {
       tabs={tabs}
       activeTab={tab}
       onTabChange={(k) => setTab(k as "bests" | "media")}
+      website={{
+        url: profile.website,
+        canEdit: !!user && user.id === userId,
+        onSave: async (url) => {
+          const { error } = await supabase
+            .from("profiles")
+            .update({ website: url })
+            .eq("id", userId);
+          if (!error) setProfile({ ...profile, website: url });
+        },
+      }}
     >
       {tab === "bests" && !showPhotographer && (
         <div className="rounded-2xl border border-hairline bg-card overflow-hidden">
