@@ -172,6 +172,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         race_types: raceTypes,
         world_athletics_certified: waCertified,
         owner_id: user.id,
+        timing_company_id: timingCompanyId,
       };
 
       let id = savedId;
