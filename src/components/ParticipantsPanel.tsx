@@ -8,6 +8,7 @@ interface Subevent {
   id: string;
   name: string;
   sort_order: number;
+  class_codes?: string[];
 }
 
 interface Registration {
@@ -78,7 +79,7 @@ export function ParticipantsPanel({ eventId }: { eventId: string }) {
       const [{ data: subs }, { data: cls }, { data: rs }] = await Promise.all([
         supabase
           .from("event_subevents")
-          .select("id,name,sort_order")
+          .select("id,name,sort_order,class_codes")
           .eq("event_id", eventId)
           .order("sort_order"),
         supabase
@@ -160,7 +161,10 @@ export function ParticipantsPanel({ eventId }: { eventId: string }) {
         <Selector
           label="Subevent"
           value={filterSub}
-          onChange={setFilterSub}
+          onChange={(v) => {
+            setFilterSub(v);
+            setFilterClass("all");
+          }}
           options={[
             { value: "all", label: "All subevents" },
             ...subevents.map((s) => ({ value: s.id, label: s.name })),
@@ -172,7 +176,10 @@ export function ParticipantsPanel({ eventId }: { eventId: string }) {
           onChange={setFilterClass}
           options={[
             { value: "all", label: "All classes" },
-            ...classes.map((c) => ({ value: c, label: c })),
+            ...(filterSub !== "all"
+              ? (subevents.find((s) => s.id === filterSub)?.class_codes ?? [])
+              : classes
+            ).map((c) => ({ value: c, label: c })),
           ]}
         />
         <span className="ml-auto mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
