@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
-import { Plus, Copy, Pencil, Globe, Search as SearchIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Copy, Pencil, Globe, Search as SearchIcon, ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 type SortKey = "updated_at" | "starts_at" | "title";
