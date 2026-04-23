@@ -816,10 +816,16 @@ function UploadDialog({
         </button>
         <button
           onClick={upload}
-          disabled={busy || !file}
+          disabled={busy || files.length === 0}
           className="rounded-full bg-primary px-5 py-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
-          {busy ? "Uploading…" : "Save"}
+          {busy
+            ? progress
+              ? `Uploading ${progress.done}/${progress.total}…`
+              : "Uploading…"
+            : files.length > 1
+              ? `Save ${files.length} files`
+              : "Save"}
         </button>
       </div>
     </Modal>
