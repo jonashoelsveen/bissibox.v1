@@ -136,19 +136,12 @@ function TeamPage() {
 
   useEffect(() => {
     (async () => {
-      // Team profile media = team owner's "Profile" album, scoped to items
-      // uploaded while in team or organizer mode. Personal content from the
-      // same user (uploaded in participant mode) does not show on the team page.
-      const { data: teamRow } = await supabase
-        .from("teams")
-        .select("owner_id")
-        .eq("id", teamId)
-        .maybeSingle();
-      if (!teamRow?.owner_id) return;
+      // Team profile media = items linked to THIS team's "Profile" album
+      // (separate from the owner's personal Profile album).
       const { data: profileAlbum } = await supabase
         .from("media_albums")
         .select("id")
-        .eq("user_id", teamRow.owner_id)
+        .eq("team_id", teamId)
         .eq("name", "Profile")
         .maybeSingle();
       if (!profileAlbum) {
@@ -168,9 +161,8 @@ function TeamPage() {
       }
       const { data: m } = await supabase
         .from("media_items")
-        .select("id, storage_path, media_type, uploaded_in_mode")
+        .select("id, storage_path, media_type")
         .in("id", ids)
-        .in("uploaded_in_mode", ["team", "organizer"])
         .order("created_at", { ascending: false })
         .limit(120);
       setMedia((m ?? []) as { id: string; storage_path: string; media_type: string }[]);

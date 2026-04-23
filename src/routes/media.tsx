@@ -86,6 +86,7 @@ function MediaPage() {
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [itemAlbums, setItemAlbums] = useState<Record<string, string[]>>({});
+  const [teamId, setTeamId] = useState<string | null>(null);
 
   const setAsCover = async (
     mediaId: string,
@@ -132,15 +133,13 @@ function MediaPage() {
 
   const load = useCallback(async () => {
     if (!user) return;
-    const [{ data: a }, { data: r }, { data: p }] = await Promise.all([
-      supabase.from("media_albums").select("id,name").order("created_at", { ascending: false }),
+    const [{ data: r }, { data: p }] = await Promise.all([
       supabase
         .from("registrations")
         .select("event_id, events(id,title,organizer,starts_at)")
         .eq("user_id", user.id),
       supabase.from("profiles").select("first_name,last_name,email").eq("id", user.id).maybeSingle(),
     ]);
-    setAlbums(a ?? []);
     const name =
       [p?.first_name, p?.last_name].filter(Boolean).join(" ").trim() ||
       p?.email ||
@@ -155,10 +154,21 @@ function MediaPage() {
         .eq("owner_id", user.id)
         .maybeSingle();
       if (!team) {
+        setTeamId(null);
+        setAlbums([]);
         setItems([]);
         setAttended([]);
         return;
       }
+      setTeamId(team.id);
+      // Team-scoped albums only
+      const { data: a } = await supabase
+        .from("media_albums")
+        .select("id,name")
+        .eq("team_id", team.id)
+        .order("created_at", { ascending: false });
+      setAlbums(a ?? []);
+
       const { data: members } = await supabase
         .from("team_members")
         .select("user_id")
@@ -188,6 +198,16 @@ function MediaPage() {
       setItems(teamItems);
       setAttended((orgEvents as AttendedEvent[]) ?? []);
     } else {
+      setTeamId(null);
+      // Personal albums only (no team_id)
+      const { data: a } = await supabase
+        .from("media_albums")
+        .select("id,name")
+        .is("team_id", null)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      setAlbums(a ?? []);
+
       const { data: m } = await supabase
         .from("media_items")
         .select("*")
@@ -536,6 +556,7 @@ function MediaPage() {
             void load();
           }}
           userId={user.id}
+          teamId={isTeamMode ? teamId : null}
         />
       )}
       {uploadOpen && (
@@ -625,10 +646,12 @@ function CreateAlbumDialog({
   onClose,
   onCreated,
   userId,
+  teamId,
 }: {
   onClose: () => void;
   onCreated: () => void;
   userId: string;
+  teamId: string | null;
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -639,7 +662,12 @@ function CreateAlbumDialog({
     setBusy(true);
     const { error } = await supabase
       .from("media_albums")
-      .insert({ user_id: userId, name: name.trim(), description: description.trim() || null });
+      .insert({
+        user_id: userId,
+        team_id: teamId,
+        name: name.trim(),
+        description: description.trim() || null,
+      });
     setBusy(false);
     if (error) {
       toast.error(error.message);
