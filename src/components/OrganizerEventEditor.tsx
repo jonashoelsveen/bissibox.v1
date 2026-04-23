@@ -9,6 +9,7 @@ import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as Map
 import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
 import { ElevationProfile } from "@/components/ElevationProfile";
 import { ParticipantsPanel } from "@/components/ParticipantsPanel";
+import { CoOrganizersManager } from "@/components/CoOrganizersManager";
 
 type Mode = "create" | "edit";
 
@@ -360,6 +361,13 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                 />
                 World Athletics certified course
               </label>
+            </Row>
+            <Row label="Co-organizers" full>
+              <CoOrganizersManager
+                eventId={savedId}
+                ownerId={user.id}
+                currentUserId={user.id}
+              />
             </Row>
           </FormGrid>
         </Panel>
