@@ -860,15 +860,6 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         <ParticipantsPanel eventId={savedId} />
       )}
 
-      {tab === "media" && savedId && (
-        <EventMediaTab
-          eventId={savedId}
-          ownerUserId={ownerId ?? user.id}
-          currentUserId={user.id}
-          organizerMode={true}
-        />
-      )}
-
       {mode === "edit" && savedId && (
         <button
           onClick={async () => {
