@@ -26,6 +26,9 @@ import {
   Camera,
   Users as UsersIcon,
   Building2,
+  GripVertical,
+  Pin,
+  PinOff,
 } from "lucide-react";
 
 export const Route = createFileRoute("/media")({
