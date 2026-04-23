@@ -568,3 +568,39 @@ function SaveBar({ saving, onSave }: { saving: boolean; onSave: () => void }) {
     </div>
   );
 }
+
+function ToggleRow({
+  title,
+  description,
+  checked,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-hairline bg-background px-4 py-3">
+      <div className="min-w-0">
+        <div className="text-sm text-ink">{title}</div>
+        <div className="mt-0.5 text-xs text-muted-foreground">{description}</div>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative h-5 w-9 shrink-0 rounded-full transition ${
+          checked ? "bg-primary" : "bg-secondary"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition ${
+            checked ? "left-[18px]" : "left-0.5"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
