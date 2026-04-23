@@ -1077,17 +1077,18 @@ function AboutPanel({
   albums,
   attended,
   userName,
+  itemAlbums,
   onSaved,
 }: {
   items: MediaItem[];
   albums: Album[];
   attended: AttendedEvent[];
   userName: string;
+  itemAlbums: Record<string, string[]>;
   onSaved: () => void;
 }) {
   const isMulti = items.length > 1;
   const single = items[0];
-  const allSameAlbum = items.every((i) => i.album_id === items[0].album_id);
 
   // Single-edit state
   const [eventId, setEventId] = useState<string | null>(single.event_id);
@@ -1096,10 +1097,20 @@ function AboutPanel({
   );
   const [organizer, setOrganizer] = useState(single.organizer ?? "");
   const [subject, setSubject] = useState(single.subject ?? "");
-  const [albumId, setAlbumId] = useState<string>(single.album_id ?? "");
+  const initialAlbums = useMemo(() => {
+    const fromMap = itemAlbums[single.id] ?? [];
+    if (fromMap.length > 0) return fromMap;
+    return single.album_id ? [single.album_id] : [];
+  }, [itemAlbums, single]);
+  const [albumIds, setAlbumIds] = useState<string[]>(initialAlbums);
 
-  // Multi-edit state
-  const [moveAlbumId, setMoveAlbumId] = useState<string>(allSameAlbum ? (single.album_id ?? "") : "");
+  // Multi-edit state — show albums shared by ALL selected
+  const sharedAlbums = useMemo(() => {
+    if (items.length === 0) return [] as string[];
+    const sets = items.map((i) => new Set(itemAlbums[i.id] ?? (i.album_id ? [i.album_id] : [])));
+    return [...sets[0]].filter((id) => sets.every((s) => s.has(id)));
+  }, [items, itemAlbums]);
+  const [moveAlbumIds, setMoveAlbumIds] = useState<string[]>(sharedAlbums);
 
   const [busy, setBusy] = useState(false);
   const photographer = userName || "You";
@@ -1112,10 +1123,13 @@ function AboutPanel({
         event_id: eventId,
         organizer: organizer || null,
         subject: subject || null,
-        album_id: albumId || null,
+        album_id: albumIds[0] ?? null,
         photographer,
       })
       .eq("id", single.id);
+    if (!error) {
+      await syncMediaAlbums([single.id], albumIds, "replace");
+    }
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("Saved");
@@ -1127,11 +1141,14 @@ function AboutPanel({
     const ids = items.map((i) => i.id);
     const { error } = await supabase
       .from("media_items")
-      .update({ album_id: moveAlbumId || null })
+      .update({ album_id: moveAlbumIds[0] ?? null })
       .in("id", ids);
+    if (!error) {
+      await syncMediaAlbums(ids, moveAlbumIds, "replace");
+    }
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success(`Moved ${items.length} items`);
+    toast.success(`Updated ${items.length} items`);
     onSaved();
   };
 
@@ -1139,34 +1156,28 @@ function AboutPanel({
     return (
       <div className="space-y-4">
         <p className="rounded-lg border border-hairline bg-secondary/40 px-3 py-2 text-[11px] text-muted-foreground">
-          {items.length} items selected. Only "Move all to album" is available for bulk.
+          {items.length} items selected. Choose one or more albums to assign them all to.
         </p>
-        {!allSameAlbum && (
-          <p className="text-[11px] text-accent">
-            Selected items are in different folders — moving will unify them.
-          </p>
-        )}
         <div>
-          <Label>Move all to album</Label>
-          <select
-            value={moveAlbumId}
-            onChange={(e) => setMoveAlbumId(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
-          >
-            <option value="">No album (Unsorted)</option>
-            {albums.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
+          <Label>Move to albums</Label>
+          <div className="mt-1">
+            <AlbumMultiSelect
+              albums={albums}
+              value={moveAlbumIds}
+              onChange={setMoveAlbumIds}
+              placeholder="No album (Unsorted)"
+            />
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Selected albums will replace each item's existing album set.
+          </p>
         </div>
         <button
           onClick={saveMove}
           disabled={busy}
           className="w-full rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
-          {busy ? "Saving…" : "Move all"}
+          {busy ? "Saving…" : "Save"}
         </button>
       </div>
     );
@@ -1196,25 +1207,18 @@ function AboutPanel({
       </div>
       <SubjectPicker eventId={eventId} subject={subject} onChange={setSubject} />
       <div>
-        <Label>Current album</Label>
-        <p className="mt-1 text-sm text-ink">
-          {albums.find((a) => a.id === single.album_id)?.name ?? "No album"}
+        <Label>Albums</Label>
+        <div className="mt-1">
+          <AlbumMultiSelect
+            albums={albums}
+            value={albumIds}
+            onChange={setAlbumIds}
+            placeholder="No album"
+          />
+        </div>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          This content can live in more than one album.
         </p>
-      </div>
-      <div>
-        <Label>Move to album</Label>
-        <select
-          value={albumId}
-          onChange={(e) => setAlbumId(e.target.value)}
-          className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
-        >
-          <option value="">No album</option>
-          {albums.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
       </div>
       <button
         onClick={saveSingle}
