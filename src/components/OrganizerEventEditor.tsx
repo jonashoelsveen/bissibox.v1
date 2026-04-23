@@ -407,6 +407,39 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
               />
             </Row>
           </FormGrid>
+          )}
+
+          {detailsSection === "timing" && (
+            <FormGrid>
+              <Row label="Timing company" full>
+                <select
+                  value={timingCompanyId ?? ""}
+                  onChange={(e) => setTimingCompanyId(e.target.value || null)}
+                  className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                >
+                  <option value="">— Select a timing company —</option>
+                  {timingCompanies.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Choose which timing company will run this race. Visible to organizers and the chosen timing company only.
+                </p>
+              </Row>
+            </FormGrid>
+          )}
+
+          {detailsSection === "media" && (
+            <div>
+              {savedId ? (
+                <EventMediaTab eventId={savedId} />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Save the event first to manage media.
+                </p>
+              )}
+            </div>
+          )}
         </Panel>
       )}
 
