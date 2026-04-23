@@ -35,13 +35,22 @@ export function UserAvatar() {
 
   return (
     <div className="fixed right-5 top-5 z-50 md:right-6 md:top-6">
-      <Link
-        to={user ? "/profile" : "/auth"}
-        aria-label="Profile"
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground shadow-sm transition hover:opacity-90"
-      >
-        {user ? letter : "?"}
-      </Link>
+      {user ? (
+        <Link
+          to="/profile"
+          aria-label="Profile"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground shadow-sm transition hover:opacity-90"
+        >
+          {letter}
+        </Link>
+      ) : (
+        <Link
+          to="/auth"
+          className="inline-flex h-9 items-center rounded-full bg-primary px-4 text-xs font-medium text-primary-foreground shadow-sm transition hover:opacity-90"
+        >
+          Sign in
+        </Link>
+      )}
     </div>
   );
 }

@@ -84,6 +84,7 @@ function MediaPage() {
   const [userName, setUserName] = useState<string>("");
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [itemAlbums, setItemAlbums] = useState<Record<string, string[]>>({});
 
   const setAsCover = async (
     mediaId: string,
@@ -203,6 +204,19 @@ function MediaPage() {
       }
       setAttended(ev);
     }
+
+    // Load many-to-many album links for the visible items
+    const itemIds = (isTeamMode ? [] : []).concat(); // placeholder, refilled below
+    // We re-derive after setItems; query separately using user.id-owned items + linked items
+    const { data: links } = await supabase
+      .from("media_item_albums")
+      .select("media_item_id,album_id");
+    const map: Record<string, string[]> = {};
+    for (const row of (links as { media_item_id: string; album_id: string }[] | null) ?? []) {
+      (map[row.media_item_id] ??= []).push(row.album_id);
+    }
+    setItemAlbums(map);
+    void itemIds;
   }, [user, isTeamMode]);
 
   useEffect(() => {
@@ -233,8 +247,14 @@ function MediaPage() {
 
   const filtered = useMemo(() => {
     if (view.type === "all") return items;
-    return items.filter((i) => i.album_id === view.id);
-  }, [items, view]);
+    if (view.id === null) {
+      // Unsorted = items with zero album links
+      return items.filter((i) => (itemAlbums[i.id]?.length ?? 0) === 0 && !i.album_id);
+    }
+    return items.filter(
+      (i) => itemAlbums[i.id]?.includes(view.id as string) || i.album_id === view.id,
+    );
+  }, [items, view, itemAlbums]);
 
   const toggleSel = (id: string) => {
     setSelected((s) => {
@@ -526,6 +546,7 @@ function MediaPage() {
           albums={albums}
           attended={attended}
           userName={userName}
+          itemAlbums={itemAlbums}
           onClose={() => {
             setOpenItems(null);
             exitSelect();
@@ -655,7 +676,7 @@ function UploadDialog({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [albumId, setAlbumId] = useState<string>("");
+  const [albumIds, setAlbumIds] = useState<string[]>([]);
   const [eventId, setEventId] = useState<string | null>(null);
   const [eventName, setEventName] = useState("");
   const [organizer, setOrganizer] = useState("");
@@ -676,19 +697,26 @@ function UploadDialog({
       });
       if (upErr) throw upErr;
       const isVideo = file.type.startsWith("video");
-      const { error: insErr } = await supabase.from("media_items").insert({
-        user_id: userId,
-        storage_path: path,
-        media_type: isVideo ? "video" : "photo",
-        mime_type: file.type,
-        file_size: file.size,
-        album_id: albumId || null,
-        event_id: eventId,
-        organizer: organizer || null,
-        photographer,
-        subject: subject || null,
-      });
+      const { data: inserted, error: insErr } = await supabase
+        .from("media_items")
+        .insert({
+          user_id: userId,
+          storage_path: path,
+          media_type: isVideo ? "video" : "photo",
+          mime_type: file.type,
+          file_size: file.size,
+          album_id: albumIds[0] ?? null,
+          event_id: eventId,
+          organizer: organizer || null,
+          photographer,
+          subject: subject || null,
+        })
+        .select("id")
+        .single();
       if (insErr) throw insErr;
+      if (inserted && albumIds.length > 0) {
+        await syncMediaAlbums([inserted.id], albumIds, "replace");
+      }
       toast.success("Uploaded");
       onUploaded();
     } catch (e) {
@@ -717,19 +745,18 @@ function UploadDialog({
         />
       </div>
       <div className="mt-4">
-        <Label>Album</Label>
-        <select
-          value={albumId}
-          onChange={(e) => setAlbumId(e.target.value)}
-          className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
-        >
-          <option value="">No album</option>
-          {albums.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
+        <Label>Albums</Label>
+        <div className="mt-1">
+          <AlbumMultiSelect
+            albums={albums}
+            value={albumIds}
+            onChange={setAlbumIds}
+            placeholder="No album"
+          />
+        </div>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Add this content to one or more albums.
+        </p>
       </div>
 
       <p className="mt-6 mono text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -948,6 +975,7 @@ function Lightbox({
   albums,
   attended,
   userName,
+  itemAlbums,
   onClose,
   onChanged,
 }: {
@@ -956,6 +984,7 @@ function Lightbox({
   albums: Album[];
   attended: AttendedEvent[];
   userName: string;
+  itemAlbums: Record<string, string[]>;
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -1028,6 +1057,7 @@ function Lightbox({
                 albums={albums}
                 attended={attended}
                 userName={userName}
+                itemAlbums={itemAlbums}
                 onSaved={onChanged}
               />
             )}
@@ -1047,17 +1077,18 @@ function AboutPanel({
   albums,
   attended,
   userName,
+  itemAlbums,
   onSaved,
 }: {
   items: MediaItem[];
   albums: Album[];
   attended: AttendedEvent[];
   userName: string;
+  itemAlbums: Record<string, string[]>;
   onSaved: () => void;
 }) {
   const isMulti = items.length > 1;
   const single = items[0];
-  const allSameAlbum = items.every((i) => i.album_id === items[0].album_id);
 
   // Single-edit state
   const [eventId, setEventId] = useState<string | null>(single.event_id);
@@ -1066,10 +1097,20 @@ function AboutPanel({
   );
   const [organizer, setOrganizer] = useState(single.organizer ?? "");
   const [subject, setSubject] = useState(single.subject ?? "");
-  const [albumId, setAlbumId] = useState<string>(single.album_id ?? "");
+  const initialAlbums = useMemo(() => {
+    const fromMap = itemAlbums[single.id] ?? [];
+    if (fromMap.length > 0) return fromMap;
+    return single.album_id ? [single.album_id] : [];
+  }, [itemAlbums, single]);
+  const [albumIds, setAlbumIds] = useState<string[]>(initialAlbums);
 
-  // Multi-edit state
-  const [moveAlbumId, setMoveAlbumId] = useState<string>(allSameAlbum ? (single.album_id ?? "") : "");
+  // Multi-edit state — show albums shared by ALL selected
+  const sharedAlbums = useMemo(() => {
+    if (items.length === 0) return [] as string[];
+    const sets = items.map((i) => new Set(itemAlbums[i.id] ?? (i.album_id ? [i.album_id] : [])));
+    return [...sets[0]].filter((id) => sets.every((s) => s.has(id)));
+  }, [items, itemAlbums]);
+  const [moveAlbumIds, setMoveAlbumIds] = useState<string[]>(sharedAlbums);
 
   const [busy, setBusy] = useState(false);
   const photographer = userName || "You";
@@ -1082,10 +1123,13 @@ function AboutPanel({
         event_id: eventId,
         organizer: organizer || null,
         subject: subject || null,
-        album_id: albumId || null,
+        album_id: albumIds[0] ?? null,
         photographer,
       })
       .eq("id", single.id);
+    if (!error) {
+      await syncMediaAlbums([single.id], albumIds, "replace");
+    }
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("Saved");
@@ -1097,11 +1141,14 @@ function AboutPanel({
     const ids = items.map((i) => i.id);
     const { error } = await supabase
       .from("media_items")
-      .update({ album_id: moveAlbumId || null })
+      .update({ album_id: moveAlbumIds[0] ?? null })
       .in("id", ids);
+    if (!error) {
+      await syncMediaAlbums(ids, moveAlbumIds, "replace");
+    }
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success(`Moved ${items.length} items`);
+    toast.success(`Updated ${items.length} items`);
     onSaved();
   };
 
@@ -1109,34 +1156,28 @@ function AboutPanel({
     return (
       <div className="space-y-4">
         <p className="rounded-lg border border-hairline bg-secondary/40 px-3 py-2 text-[11px] text-muted-foreground">
-          {items.length} items selected. Only "Move all to album" is available for bulk.
+          {items.length} items selected. Choose one or more albums to assign them all to.
         </p>
-        {!allSameAlbum && (
-          <p className="text-[11px] text-accent">
-            Selected items are in different folders — moving will unify them.
-          </p>
-        )}
         <div>
-          <Label>Move all to album</Label>
-          <select
-            value={moveAlbumId}
-            onChange={(e) => setMoveAlbumId(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
-          >
-            <option value="">No album (Unsorted)</option>
-            {albums.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
+          <Label>Move to albums</Label>
+          <div className="mt-1">
+            <AlbumMultiSelect
+              albums={albums}
+              value={moveAlbumIds}
+              onChange={setMoveAlbumIds}
+              placeholder="No album (Unsorted)"
+            />
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Selected albums will replace each item's existing album set.
+          </p>
         </div>
         <button
           onClick={saveMove}
           disabled={busy}
           className="w-full rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
-          {busy ? "Saving…" : "Move all"}
+          {busy ? "Saving…" : "Save"}
         </button>
       </div>
     );
@@ -1166,25 +1207,18 @@ function AboutPanel({
       </div>
       <SubjectPicker eventId={eventId} subject={subject} onChange={setSubject} />
       <div>
-        <Label>Current album</Label>
-        <p className="mt-1 text-sm text-ink">
-          {albums.find((a) => a.id === single.album_id)?.name ?? "No album"}
+        <Label>Albums</Label>
+        <div className="mt-1">
+          <AlbumMultiSelect
+            albums={albums}
+            value={albumIds}
+            onChange={setAlbumIds}
+            placeholder="No album"
+          />
+        </div>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          This content can live in more than one album.
         </p>
-      </div>
-      <div>
-        <Label>Move to album</Label>
-        <select
-          value={albumId}
-          onChange={(e) => setAlbumId(e.target.value)}
-          className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
-        >
-          <option value="">No album</option>
-          {albums.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
       </div>
       <button
         onClick={saveSingle}
@@ -1506,3 +1540,108 @@ function Label({ children }: { children: React.ReactNode }) {
     </span>
   );
 }
+
+export function AlbumMultiSelect({
+  albums,
+  value,
+  onChange,
+  placeholder = "Select albums…",
+}: {
+  albums: Album[];
+  value: string[];
+  onChange: (next: string[]) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const filtered = useMemo(() => {
+    const n = q.trim().toLowerCase();
+    if (!n) return albums;
+    return albums.filter((a) => a.name.toLowerCase().includes(n));
+  }, [albums, q]);
+
+  const toggle = (id: string) => {
+    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+  };
+
+  const summary =
+    value.length === 0
+      ? placeholder
+      : value.length === 1
+        ? (albums.find((a) => a.id === value[0])?.name ?? "1 album")
+        : `${value.length} albums`;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="flex w-full items-center justify-between rounded-xl border border-hairline bg-background px-4 py-2.5 text-left text-sm text-ink outline-none focus:border-primary"
+      >
+        <span className={value.length === 0 ? "text-muted-foreground" : ""}>{summary}</span>
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-30 mt-1 rounded-xl border border-hairline bg-popover p-2 shadow-lg">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onMouseDown={(e) => e.stopPropagation()}
+              placeholder="Search albums…"
+              className="w-full rounded-lg border border-hairline bg-background pl-9 pr-3 py-2 text-xs text-ink outline-none focus:border-primary"
+            />
+          </div>
+          <ul className="mt-2 max-h-56 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <li className="px-2 py-2 text-[11px] text-muted-foreground">No albums.</li>
+            ) : (
+              filtered.map((a) => {
+                const on = value.includes(a.id);
+                return (
+                  <li key={a.id}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        toggle(a.id);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition ${
+                        on ? "bg-primary/10 text-ink" : "text-muted-foreground hover:bg-secondary hover:text-ink"
+                      }`}
+                    >
+                      <span>{a.name}</span>
+                      {on ? (
+                        <CheckSquare className="h-3.5 w-3.5 text-primary" />
+                      ) : (
+                        <Square className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+async function syncMediaAlbums(mediaItemIds: string[], albumIds: string[], mode: "replace" | "add") {
+  if (mediaItemIds.length === 0) return;
+  if (mode === "replace") {
+    await supabase.from("media_item_albums").delete().in("media_item_id", mediaItemIds);
+  }
+  if (albumIds.length === 0) return;
+  const rows = mediaItemIds.flatMap((mid) =>
+    albumIds.map((aid) => ({ media_item_id: mid, album_id: aid })),
+  );
+  await supabase.from("media_item_albums").upsert(rows, {
+    onConflict: "media_item_id,album_id",
+    ignoreDuplicates: true,
+  });
+}
+
