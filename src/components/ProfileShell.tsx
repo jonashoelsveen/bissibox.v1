@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Link as LinkIcon, Pencil, Check, X } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -8,6 +8,12 @@ interface Tab {
   key: string;
   label: string;
   icon?: ReactNode;
+}
+
+export interface WebsiteConfig {
+  url: string | null;
+  canEdit: boolean;
+  onSave?: (url: string | null) => Promise<void> | void;
 }
 
 export function ProfileShell({
