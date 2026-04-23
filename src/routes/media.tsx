@@ -26,6 +26,9 @@ import {
   Camera,
   Users as UsersIcon,
   Building2,
+  GripVertical,
+  Pin,
+  PinOff,
 } from "lucide-react";
 
 export const Route = createFileRoute("/media")({
@@ -36,6 +39,8 @@ export const Route = createFileRoute("/media")({
 interface Album {
   id: string;
   name: string;
+  pinned: boolean;
+  sort_order: number;
 }
 
 interface MediaItem {
@@ -88,6 +93,41 @@ function MediaPage() {
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [itemAlbums, setItemAlbums] = useState<Record<string, string[]>>({});
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [albumMenuFor, setAlbumMenuFor] = useState<string | null>(null);
+  const [albumDragId, setAlbumDragId] = useState<string | null>(null);
+  const [albumDragHandle, setAlbumDragHandle] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Album | null>(null);
+
+  const persistAlbumOrder = useCallback(async (next: Album[]) => {
+    // Write sort_order based on current array index (pinned first already handled by sort)
+    await Promise.all(
+      next.map((a, idx) =>
+        supabase.from("media_albums").update({ sort_order: idx }).eq("id", a.id),
+      ),
+    );
+  }, []);
+
+  const togglePin = async (album: Album) => {
+    setAlbumMenuFor(null);
+    const { error } = await supabase
+      .from("media_albums")
+      .update({ pinned: !album.pinned })
+      .eq("id", album.id);
+    if (error) toast.error(error.message);
+    else void load();
+  };
+
+  const deleteAlbum = async (album: Album) => {
+    setConfirmDelete(null);
+    const { error } = await supabase.from("media_albums").delete().eq("id", album.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Deleted "${album.name}"`);
+    if (view.type === "album" && view.id === album.id) setView({ type: "all" });
+    void load();
+  };
 
   const setAsCover = async (
     mediaId: string,
@@ -165,10 +205,12 @@ function MediaPage() {
       // Team-scoped albums only
       const { data: a } = await supabase
         .from("media_albums")
-        .select("id,name")
+        .select("id,name,pinned,sort_order")
         .eq("team_id", team.id)
+        .order("pinned", { ascending: false })
+        .order("sort_order", { ascending: true })
         .order("created_at", { ascending: false });
-      setAlbums(a ?? []);
+      setAlbums((a ?? []) as Album[]);
 
       const { data: orgEvents } = await supabase
         .from("events")
@@ -187,11 +229,13 @@ function MediaPage() {
       // Personal albums only (no team_id)
       const { data: a } = await supabase
         .from("media_albums")
-        .select("id,name")
+        .select("id,name,pinned,sort_order")
         .is("team_id", null)
         .eq("user_id", user.id)
+        .order("pinned", { ascending: false })
+        .order("sort_order", { ascending: true })
         .order("created_at", { ascending: false });
-      setAlbums(a ?? []);
+      setAlbums((a ?? []) as Album[]);
 
       // Individual library = items the user owns that are NOT linked to a team,
       // plus items where they are the subject (shot by an organizer/photographer).
@@ -380,16 +424,129 @@ function MediaPage() {
               >
                 Unsorted
               </NavBtn>
-              {albums.map((a) => (
-                <NavBtn
-                  key={a.id}
-                  small
-                  active={view.type === "album" && view.id === a.id}
-                  onClick={() => setView({ type: "album", id: a.id })}
-                >
-                  {a.name}
-                </NavBtn>
-              ))}
+              {albums.map((a) => {
+                const active = view.type === "album" && view.id === a.id;
+                const isDragging = albumDragId === a.id;
+                return (
+                  <div
+                    key={a.id}
+                    draggable={albumDragHandle === a.id}
+                    onDragStart={(e) => {
+                      if (albumDragHandle !== a.id) {
+                        e.preventDefault();
+                        return;
+                      }
+                      setAlbumDragId(a.id);
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", a.id);
+                    }}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      if (albumDragId && albumDragId !== a.id) {
+                        setAlbums((arr) => {
+                          const from = arr.findIndex((x) => x.id === albumDragId);
+                          const to = arr.findIndex((x) => x.id === a.id);
+                          if (from < 0 || to < 0 || from === to) return arr;
+                          // Only reorder within same pinned group
+                          if (arr[from].pinned !== arr[to].pinned) return arr;
+                          const next = [...arr];
+                          const [moved] = next.splice(from, 1);
+                          next.splice(to, 0, moved);
+                          return next;
+                        });
+                      }
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                    }}
+                    onDragEnd={() => {
+                      const final = albums;
+                      setAlbumDragId(null);
+                      setAlbumDragHandle(null);
+                      void persistAlbumOrder(final);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                    }}
+                    className={`group relative flex items-center gap-1 rounded-md transition ${
+                      active ? "bg-secondary" : "hover:bg-secondary/60"
+                    } ${isDragging ? "opacity-40" : ""}`}
+                  >
+                    <span
+                      className="grid h-7 w-4 shrink-0 cursor-grab place-items-center text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-ink active:cursor-grabbing"
+                      onMouseDown={() => setAlbumDragHandle(a.id)}
+                      onMouseUp={() => setAlbumDragHandle(null)}
+                      onMouseLeave={() => {
+                        if (!albumDragId) setAlbumDragHandle(null);
+                      }}
+                      title="Drag to reorder"
+                      aria-label="Drag to reorder"
+                    >
+                      <GripVertical className="h-3 w-3" />
+                    </span>
+                    <button
+                      onClick={() => setView({ type: "album", id: a.id })}
+                      className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-md py-1.5 pr-1 text-left text-xs transition ${
+                        active ? "font-medium text-ink" : "text-muted-foreground hover:text-ink"
+                      }`}
+                    >
+                      {a.pinned && (
+                        <Pin className="h-2.5 w-2.5 shrink-0 fill-current text-ink/70" />
+                      )}
+                      <span className="truncate">{a.name}</span>
+                    </button>
+                    <div className="relative shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAlbumMenuFor(albumMenuFor === a.id ? null : a.id);
+                        }}
+                        className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground/60 opacity-0 transition hover:bg-card hover:text-ink group-hover:opacity-100 data-[open=true]:opacity-100"
+                        data-open={albumMenuFor === a.id}
+                        aria-label="Album actions"
+                      >
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </button>
+                      {albumMenuFor === a.id && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setAlbumMenuFor(null)}
+                          />
+                          <div className="absolute right-0 top-8 z-50 w-40 overflow-hidden rounded-md border border-hairline bg-card shadow-lg">
+                            <button
+                              onClick={() => togglePin(a)}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-ink hover:bg-secondary"
+                            >
+                              {a.pinned ? (
+                                <>
+                                  <PinOff className="h-3.5 w-3.5" /> Unpin
+                                </>
+                              ) : (
+                                <>
+                                  <Pin className="h-3.5 w-3.5" /> Pin to top
+                                </>
+                              )}
+                            </button>
+                            {a.name !== "Profile" && (
+                              <button
+                                onClick={() => {
+                                  setAlbumMenuFor(null);
+                                  setConfirmDelete(a);
+                                }}
+                                className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2 text-left text-xs text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" /> Delete
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
               {albums.length === 0 && (
                 <span className="px-3 py-1.5 text-xs text-muted-foreground">No albums yet</span>
               )}
@@ -557,6 +714,22 @@ function MediaPage() {
             setUploadOpen(false);
             void load();
           }}
+        />
+      )}
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Delete album?"
+          message={
+            <>
+              <span className="font-medium text-ink">"{confirmDelete.name}"</span> will be permanently
+              removed. The photos and videos inside will not be deleted — they will simply move to{" "}
+              <span className="font-medium text-ink">Unsorted</span>.
+            </>
+          }
+          confirmLabel="Delete album"
+          destructive
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={() => void deleteAlbum(confirmDelete)}
         />
       )}
       {openItems && (
@@ -1696,5 +1869,52 @@ async function syncMediaAlbums(mediaItemIds: string[], albumIds: string[], mode:
     onConflict: "media_item_id,album_id",
     ignoreDuplicates: true,
   });
+}
+
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  destructive = false,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  message: React.ReactNode;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  destructive?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-hairline bg-card shadow-2xl">
+        <div className="px-6 pt-6">
+          <h3 className="text-base font-medium text-ink">{title}</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{message}</p>
+        </div>
+        <div className="mt-6 flex justify-end gap-2 border-t border-hairline bg-background/40 px-4 py-3">
+          <button
+            onClick={onCancel}
+            className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            onClick={onConfirm}
+            className={`rounded-full px-5 py-2 text-xs hover:opacity-90 ${
+              destructive
+                ? "bg-destructive text-destructive-foreground"
+                : "bg-primary text-primary-foreground"
+            }`}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
