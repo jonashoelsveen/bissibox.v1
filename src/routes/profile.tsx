@@ -76,8 +76,18 @@ function ProfilePage() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setLiked((l as unknown as LikedRow[]) ?? []);
+      const { count } = await supabase
+        .from("teams")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_id", user.id);
+      setHasTeam((count ?? 0) > 0);
     })();
   }, [user]);
+
+  // If user loses team status while in team mode, drop back to participant
+  useEffect(() => {
+    if (!hasTeam && mode === "team") setMode("participant");
+  }, [hasTeam, mode, setMode]);
 
   const unlike = async (likeId: string) => {
     const { error } = await supabase.from("event_likes").delete().eq("id", likeId);
