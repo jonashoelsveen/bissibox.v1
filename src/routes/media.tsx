@@ -21,6 +21,11 @@ import {
   Activity,
   Ghost,
   ArrowUp,
+  MoreVertical,
+  User as UserIcon,
+  Camera,
+  Users as UsersIcon,
+  Building2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/media")({
@@ -78,6 +83,46 @@ function MediaPage() {
   const [attended, setAttended] = useState<AttendedEvent[]>([]);
   const [userName, setUserName] = useState<string>("");
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+
+  const setAsCover = async (
+    mediaId: string,
+    target: "athlete" | "photographer" | "team" | "company",
+  ) => {
+    if (!user) return;
+    if (target === "athlete") {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ athlete_cover_media_id: mediaId })
+        .eq("id", user.id);
+      if (error) toast.error(error.message);
+      else toast.success("Set as athlete profile image");
+    } else if (target === "photographer") {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ photographer_cover_media_id: mediaId })
+        .eq("id", user.id);
+      if (error) toast.error(error.message);
+      else toast.success("Set as photographer profile image");
+    } else if (target === "team") {
+      const { data: team } = await supabase
+        .from("teams")
+        .select("id")
+        .eq("owner_id", user.id)
+        .maybeSingle();
+      if (!team) {
+        toast.error("No team found");
+        return;
+      }
+      const { error } = await supabase
+        .from("teams")
+        .update({ cover_media_id: mediaId })
+        .eq("id", team.id);
+      if (error) toast.error(error.message);
+      else toast.success("Set as team profile image");
+    }
+    setMenuFor(null);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -399,6 +444,50 @@ function MediaPage() {
                     >
                       <ArrowUp className="h-3.5 w-3.5" />
                     </button>
+
+                    {it.user_id === user.id && (
+                      <div className="absolute right-2 top-2 z-10">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMenuFor((c) => (c === it.id ? null : it.id));
+                          }}
+                          className="rounded-full bg-black/50 p-1.5 text-white transition hover:bg-black/70"
+                          aria-label="More"
+                        >
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </button>
+                        {menuFor === it.id && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute right-0 top-9 z-20 w-56 overflow-hidden rounded-lg border border-hairline bg-card text-xs shadow-xl"
+                          >
+                            <p className="mono px-3 pt-2 pb-1 text-[9px] uppercase tracking-widest text-muted-foreground">
+                              Use as profile image
+                            </p>
+                            <button
+                              onClick={() => void setAsCover(it.id, "athlete")}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-ink hover:bg-secondary"
+                            >
+                              <UserIcon className="h-3.5 w-3.5" /> Athlete
+                            </button>
+                            <button
+                              onClick={() => void setAsCover(it.id, "photographer")}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-ink hover:bg-secondary"
+                            >
+                              <Camera className="h-3.5 w-3.5" /> Photographer
+                            </button>
+                            <button
+                              onClick={() => void setAsCover(it.id, "team")}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-ink hover:bg-secondary"
+                            >
+                              <UsersIcon className="h-3.5 w-3.5" /> Team
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}

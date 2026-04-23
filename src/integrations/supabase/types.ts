@@ -16,7 +16,9 @@ export type Database = {
     Tables: {
       companies: {
         Row: {
+          cover_media_id: string | null
           created_at: string
+          description: string | null
           id: string
           kind: Database["public"]["Enums"]["company_kind"]
           logo_url: string | null
@@ -24,7 +26,9 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          cover_media_id?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           kind: Database["public"]["Enums"]["company_kind"]
           logo_url?: string | null
@@ -32,7 +36,9 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          cover_media_id?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           kind?: Database["public"]["Enums"]["company_kind"]
           logo_url?: string | null
@@ -40,6 +46,35 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      company_follows: {
+        Row: {
+          company_id: string
+          created_at: string
+          follower_id: string
+          id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          follower_id: string
+          id?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          follower_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_follows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_classes: {
         Row: {
@@ -409,6 +444,48 @@ export type Database = {
           },
         ]
       }
+      personal_bests: {
+        Row: {
+          achieved_on: string | null
+          competition: string | null
+          created_at: string
+          discipline: string
+          id: string
+          performance: string
+          source: string
+          team: string | null
+          updated_at: string
+          user_id: string
+          venue: string | null
+        }
+        Insert: {
+          achieved_on?: string | null
+          competition?: string | null
+          created_at?: string
+          discipline: string
+          id?: string
+          performance: string
+          source?: string
+          team?: string | null
+          updated_at?: string
+          user_id: string
+          venue?: string | null
+        }
+        Update: {
+          achieved_on?: string | null
+          competition?: string | null
+          created_at?: string
+          discipline?: string
+          id?: string
+          performance?: string
+          source?: string
+          team?: string | null
+          updated_at?: string
+          user_id?: string
+          venue?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"]
@@ -416,6 +493,7 @@ export type Database = {
           address2: string | null
           anonymous: boolean
           athlete_active: boolean
+          athlete_cover_media_id: string | null
           birth_date: string | null
           club: string | null
           companion: string | null
@@ -437,6 +515,7 @@ export type Database = {
           nationality: string | null
           photographer_active: boolean
           photographer_bio: string | null
+          photographer_cover_media_id: string | null
           postal_code: string | null
           postal_place: string | null
           team: string | null
@@ -449,6 +528,7 @@ export type Database = {
           address2?: string | null
           anonymous?: boolean
           athlete_active?: boolean
+          athlete_cover_media_id?: string | null
           birth_date?: string | null
           club?: string | null
           companion?: string | null
@@ -470,6 +550,7 @@ export type Database = {
           nationality?: string | null
           photographer_active?: boolean
           photographer_bio?: string | null
+          photographer_cover_media_id?: string | null
           postal_code?: string | null
           postal_place?: string | null
           team?: string | null
@@ -482,6 +563,7 @@ export type Database = {
           address2?: string | null
           anonymous?: boolean
           athlete_active?: boolean
+          athlete_cover_media_id?: string | null
           birth_date?: string | null
           club?: string | null
           companion?: string | null
@@ -503,6 +585,7 @@ export type Database = {
           nationality?: string | null
           photographer_active?: boolean
           photographer_bio?: string | null
+          photographer_cover_media_id?: string | null
           postal_code?: string | null
           postal_place?: string | null
           team?: string | null
@@ -568,6 +651,35 @@ export type Database = {
           },
         ]
       }
+      team_follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          id: string
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          id?: string
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_follows_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           accepted: boolean
@@ -600,14 +712,102 @@ export type Database = {
           },
         ]
       }
+      team_membership_tiers: {
+        Row: {
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          name: string
+          price: number
+          sort_order: number
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          name: string
+          price?: number
+          sort_order?: number
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          name?: string
+          price?: number
+          sort_order?: number
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_membership_tiers_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_memberships: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          team_id: string
+          tier_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          team_id: string
+          tier_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          team_id?: string
+          tier_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_memberships_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "team_membership_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           address: string | null
           contact_email: string | null
           contact_phone: string | null
           country: string | null
+          cover_media_id: string | null
           created_at: string
           description: string | null
+          description_long: string | null
           id: string
           name: string
           nif_id: string | null
@@ -622,8 +822,10 @@ export type Database = {
           contact_email?: string | null
           contact_phone?: string | null
           country?: string | null
+          cover_media_id?: string | null
           created_at?: string
           description?: string | null
+          description_long?: string | null
           id?: string
           name: string
           nif_id?: string | null
@@ -638,8 +840,10 @@ export type Database = {
           contact_email?: string | null
           contact_phone?: string | null
           country?: string | null
+          cover_media_id?: string | null
           created_at?: string
           description?: string | null
+          description_long?: string | null
           id?: string
           name?: string
           nif_id?: string | null
@@ -648,6 +852,30 @@ export type Database = {
           postal_place?: string | null
           updated_at?: string
           website?: string | null
+        }
+        Relationships: []
+      }
+      user_follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          id: string
+          target_role: string
+          target_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          id?: string
+          target_role: string
+          target_user_id: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          id?: string
+          target_role?: string
+          target_user_id?: string
         }
         Relationships: []
       }
