@@ -136,6 +136,18 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
     })();
   }, [mode, eventId]);
 
+  // Load timing companies (kind = 'timing') for the picker
+  useEffect(() => {
+    void (async () => {
+      const { data } = await supabase
+        .from("companies")
+        .select("id,name")
+        .eq("kind", "timing")
+        .order("name", { ascending: true });
+      setTimingCompanies((data ?? []) as { id: string; name: string }[]);
+    })();
+  }, []);
+
   const canSave = useMemo(() => title.trim() && organizer.trim() && startsAt, [title, organizer, startsAt]);
 
   const save = async () => {
