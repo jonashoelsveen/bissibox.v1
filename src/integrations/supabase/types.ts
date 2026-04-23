@@ -986,6 +986,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_media_in_team_profile_album: {
+        Args: { _media_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       account_type: "individual" | "team"
