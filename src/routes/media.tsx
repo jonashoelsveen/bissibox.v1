@@ -326,9 +326,6 @@ function MediaPage() {
                 const isSel = selected.has(it.id);
                 const isRevealed = revealed.has(it.id);
                 const eventTitle = attended.find((e) => e.id === it.event_id)?.title;
-                const photographerLabel = it.organizer
-                  ? `${it.photographer ?? "—"} (${it.organizer})`
-                  : it.photographer ?? "—";
                 return (
                   <div
                     key={it.id}
@@ -364,13 +361,27 @@ function MediaPage() {
                       }`}
                     />
                     <div
-                      className={`pointer-events-none absolute inset-x-0 top-0 p-3 text-[11px] leading-tight text-white transition-all duration-300 ${
-                        isRevealed ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0"
+                      className={`absolute inset-x-0 top-0 space-y-1 p-3 text-[11px] leading-tight text-white transition-all duration-300 ${
+                        isRevealed ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-1 opacity-0"
                       }`}
                     >
-                      <div className="font-medium">{it.subject || "Unknown subject"}</div>
-                      <div className="mt-0.5 text-white/80">{eventTitle || "No event"}</div>
-                      <div className="mt-0.5 text-white/70">{photographerLabel}</div>
+                      <InfoLine label="Subject" value={it.subject} />
+                      <InfoLine
+                        label="Event"
+                        value={eventTitle ?? null}
+                        to={it.event_id ? "/events/$eventId" : undefined}
+                        params={it.event_id ? { eventId: it.event_id } : undefined}
+                      />
+                      <InfoLine
+                        label="Photograph"
+                        value={
+                          it.organizer
+                            ? `${it.photographer ?? "—"} (${it.organizer})`
+                            : it.photographer
+                        }
+                        to={it.user_id ? "/u/$userId" : undefined}
+                        params={it.user_id ? { userId: it.user_id } : undefined}
+                      />
                     </div>
                     <button
                       type="button"
