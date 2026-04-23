@@ -919,6 +919,32 @@ function TabBtn({
   );
 }
 
+function SubTabBtn({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs transition ${
+        active
+          ? "border-primary bg-primary/5 text-ink"
+          : "border-hairline bg-background text-muted-foreground hover:text-ink"
+      }`}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
 function Panel({ children }: { children: React.ReactNode }) {
   return <section className="mt-5 rounded-lg border border-hairline bg-card p-6 md:p-8">{children}</section>;
 }
