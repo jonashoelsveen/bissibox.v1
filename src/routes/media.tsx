@@ -153,10 +153,19 @@ function MediaPage() {
         .eq("owner_id", user.id)
         .maybeSingle();
       if (!team) {
+        setAlbums([]);
         setItems([]);
         setAttended([]);
         return;
       }
+      // Team-scoped albums only
+      const { data: a } = await supabase
+        .from("media_albums")
+        .select("id,name")
+        .eq("team_id", team.id)
+        .order("created_at", { ascending: false });
+      setAlbums(a ?? []);
+
       const { data: members } = await supabase
         .from("team_members")
         .select("user_id")
@@ -186,6 +195,15 @@ function MediaPage() {
       setItems(teamItems);
       setAttended((orgEvents as AttendedEvent[]) ?? []);
     } else {
+      // Personal albums only (no team_id)
+      const { data: a } = await supabase
+        .from("media_albums")
+        .select("id,name")
+        .is("team_id", null)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      setAlbums(a ?? []);
+
       const { data: m } = await supabase
         .from("media_items")
         .select("*")
