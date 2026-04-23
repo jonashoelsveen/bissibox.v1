@@ -432,7 +432,12 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
           {detailsSection === "media" && (
             <div>
               {savedId ? (
-                <EventMediaTab eventId={savedId} />
+                <EventMediaTab
+                  eventId={savedId}
+                  ownerUserId={ownerId ?? user.id}
+                  currentUserId={user.id}
+                  organizerMode={true}
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Save the event first to manage media.
