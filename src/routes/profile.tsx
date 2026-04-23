@@ -33,6 +33,20 @@ interface Profile {
   emergency_phone: string | null;
 }
 
+interface Team {
+  id: string;
+  name: string;
+  nif_id: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  website: string | null;
+  description: string | null;
+  address: string | null;
+  postal_code: string | null;
+  postal_place: string | null;
+  country: string | null;
+}
+
 interface RegistrationRow {
   id: string;
   race_type: string;
@@ -45,15 +59,20 @@ interface LikedRow {
   events: { id: string; title: string; starts_at: string; location: string } | null;
 }
 
+type Tab = "general" | "address" | "races" | "liked" | "roles";
+
 function ProfilePage() {
   const { user, loading: authLoading, mode, setMode, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [team, setTeam] = useState<Team | null>(null);
   const [regs, setRegs] = useState<RegistrationRow[]>([]);
   const [liked, setLiked] = useState<LikedRow[]>([]);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<"general" | "address" | "races" | "liked" | "roles">("general");
+  const [tab, setTab] = useState<Tab>("general");
   const [hasTeam, setHasTeam] = useState(false);
+
+  const isTeamMode = mode === "team" || mode === "organizer";
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -76,18 +95,25 @@ function ProfilePage() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setLiked((l as unknown as LikedRow[]) ?? []);
-      const { count } = await supabase
+      const { data: t } = await supabase
         .from("teams")
-        .select("id", { count: "exact", head: true })
-        .eq("owner_id", user.id);
-      setHasTeam((count ?? 0) > 0);
+        .select("id, name, nif_id, contact_email, contact_phone, website, description, address, postal_code, postal_place, country")
+        .eq("owner_id", user.id)
+        .maybeSingle();
+      if (t) setTeam(t as Team);
+      setHasTeam(!!t);
     })();
   }, [user]);
 
   // If user loses team status while in team mode, drop back to participant
   useEffect(() => {
-    if (!hasTeam && mode === "team") setMode("participant");
+    if (!hasTeam && (mode === "team" || mode === "organizer")) setMode("participant");
   }, [hasTeam, mode, setMode]);
+
+  // Switch off team-only / individual-only tabs when mode changes
+  useEffect(() => {
+    if (isTeamMode && (tab === "races" || tab === "liked")) setTab("general");
+  }, [isTeamMode, tab]);
 
   const unlike = async (likeId: string) => {
     const { error } = await supabase.from("event_likes").delete().eq("id", likeId);
@@ -95,21 +121,38 @@ function ProfilePage() {
     setLiked((prev) => prev.filter((x) => x.id !== likeId));
   };
 
-  const update = (k: keyof Profile, v: string | boolean | null) =>
+  const updateProfile = (k: keyof Profile, v: string | boolean | null) =>
     setProfile((p) => (p ? { ...p, [k]: v } : p));
 
+  const updateTeam = (k: keyof Team, v: string | null) =>
+    setTeam((t) => (t ? { ...t, [k]: v } : t));
+
   const save = async () => {
-    if (!user || !profile) return;
+    if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("profiles").update(profile).eq("id", user.id);
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Profile saved.");
+    if (isTeamMode && team) {
+      const { id, ...rest } = team;
+      const { error } = await supabase.from("teams").update(rest).eq("id", id);
+      setSaving(false);
+      if (error) return toast.error(error.message);
+      toast.success("Team saved.");
+    } else if (profile) {
+      const { error } = await supabase.from("profiles").update(profile).eq("id", user.id);
+      setSaving(false);
+      if (error) return toast.error(error.message);
+      toast.success("Profile saved.");
+    } else {
+      setSaving(false);
+    }
   };
 
   if (!user || !profile) {
     return <div className="mx-auto max-w-3xl px-6 py-20 text-muted-foreground">Loading…</div>;
   }
+
+  const tabs: Tab[] = isTeamMode
+    ? ["general", "address", "roles"]
+    : ["general", "address", "roles", "races", "liked"];
 
   return (
     <div className="px-4 md:px-6">
@@ -128,7 +171,7 @@ function ProfilePage() {
 
       <div className="mt-8 grid gap-10 md:grid-cols-[180px_1fr]">
         <nav className="-ml-2 flex flex-row gap-1 md:flex-col md:gap-0.5">
-          {(["general", "address", "roles", "races", "liked"] as const).map((t) => (
+          {tabs.map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -152,15 +195,37 @@ function ProfilePage() {
         </nav>
 
         <div>
-          {tab === "general" && (
+          {tab === "general" && isTeamMode && team && (
             <Card>
               <Grid>
-                <Field label="First name" value={profile.first_name ?? ""} onChange={(v) => update("first_name", v)} />
-                <Field label="Last name" value={profile.last_name ?? ""} onChange={(v) => update("last_name", v)} />
+                <Field label="Team name" value={team.name ?? ""} onChange={(v) => updateTeam("name", v)} />
+                <Field label="NIF ID" value={team.nif_id ?? ""} onChange={(v) => updateTeam("nif_id", v || null)} />
+                <Field label="Website" value={team.website ?? ""} onChange={(v) => updateTeam("website", v || null)} />
+              </Grid>
+              <div className="mt-4">
+                <label className="block">
+                  <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Description</span>
+                  <textarea
+                    value={team.description ?? ""}
+                    onChange={(e) => updateTeam("description", e.target.value || null)}
+                    rows={3}
+                    className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none transition focus:border-primary"
+                  />
+                </label>
+              </div>
+              <SaveBar saving={saving} onSave={save} />
+            </Card>
+          )}
+
+          {tab === "general" && !isTeamMode && (
+            <Card>
+              <Grid>
+                <Field label="First name" value={profile.first_name ?? ""} onChange={(v) => updateProfile("first_name", v)} />
+                <Field label="Last name" value={profile.last_name ?? ""} onChange={(v) => updateProfile("last_name", v)} />
                 <Select
                   label="Gender"
                   value={profile.gender ?? ""}
-                  onChange={(v) => update("gender", v || null)}
+                  onChange={(v) => updateProfile("gender", v || null)}
                   options={[
                     { value: "", label: "—" },
                     { value: "male", label: "Male" },
@@ -172,43 +237,57 @@ function ProfilePage() {
                   label="Birth date"
                   type="date"
                   value={profile.birth_date ?? ""}
-                  onChange={(v) => update("birth_date", v || null)}
+                  onChange={(v) => updateProfile("birth_date", v || null)}
                 />
-                <Field label="Team" value={profile.team ?? ""} onChange={(v) => update("team", v)} />
-                <Field label="License" value={profile.license ?? ""} onChange={(v) => update("license", v)} />
+                <Field label="Team" value={profile.team ?? ""} onChange={(v) => updateProfile("team", v)} />
+                <Field label="License" value={profile.license ?? ""} onChange={(v) => updateProfile("license", v)} />
               </Grid>
-              <Anonymous value={profile.anonymous} onChange={(v) => update("anonymous", v)} />
+              <Anonymous value={profile.anonymous} onChange={(v) => updateProfile("anonymous", v)} />
               <SaveBar saving={saving} onSave={save} />
             </Card>
           )}
 
-          {tab === "address" && (
+          {tab === "address" && isTeamMode && team && (
             <Card>
               <Grid>
-                <Field label="Address" value={profile.address ?? ""} onChange={(v) => update("address", v)} />
-                <Field label="Postal code" value={profile.postal_code ?? ""} onChange={(v) => update("postal_code", v)} />
-                <Field label="Postal place" value={profile.postal_place ?? ""} onChange={(v) => update("postal_place", v)} />
-                <Field label="Country" value={profile.country ?? ""} onChange={(v) => update("country", v)} />
-                <Field label="Nationality" value={profile.nationality ?? ""} onChange={(v) => update("nationality", v)} />
-                <Field label="Mobile" value={profile.mobile ?? ""} onChange={(v) => update("mobile", v)} />
+                <Field label="Address" value={team.address ?? ""} onChange={(v) => updateTeam("address", v || null)} />
+                <Field label="Postal code" value={team.postal_code ?? ""} onChange={(v) => updateTeam("postal_code", v || null)} />
+                <Field label="Postal place" value={team.postal_place ?? ""} onChange={(v) => updateTeam("postal_place", v || null)} />
+                <Field label="Country" value={team.country ?? ""} onChange={(v) => updateTeam("country", v || null)} />
+                <Field label="Contact email" value={team.contact_email ?? ""} onChange={(v) => updateTeam("contact_email", v || null)} />
+                <Field label="Contact phone" value={team.contact_phone ?? ""} onChange={(v) => updateTeam("contact_phone", v || null)} />
+              </Grid>
+              <SaveBar saving={saving} onSave={save} />
+            </Card>
+          )}
+
+          {tab === "address" && !isTeamMode && (
+            <Card>
+              <Grid>
+                <Field label="Address" value={profile.address ?? ""} onChange={(v) => updateProfile("address", v)} />
+                <Field label="Postal code" value={profile.postal_code ?? ""} onChange={(v) => updateProfile("postal_code", v)} />
+                <Field label="Postal place" value={profile.postal_place ?? ""} onChange={(v) => updateProfile("postal_place", v)} />
+                <Field label="Country" value={profile.country ?? ""} onChange={(v) => updateProfile("country", v)} />
+                <Field label="Nationality" value={profile.nationality ?? ""} onChange={(v) => updateProfile("nationality", v)} />
+                <Field label="Mobile" value={profile.mobile ?? ""} onChange={(v) => updateProfile("mobile", v)} />
                 <Field
                   label="Emergency contact"
                   value={profile.emergency_contact ?? ""}
-                  onChange={(v) => update("emergency_contact", v)}
+                  onChange={(v) => updateProfile("emergency_contact", v)}
                 />
                 <Field
                   label="Emergency phone"
                   value={profile.emergency_phone ?? ""}
-                  onChange={(v) => update("emergency_phone", v)}
+                  onChange={(v) => updateProfile("emergency_phone", v)}
                 />
               </Grid>
               <SaveBar saving={saving} onSave={save} />
             </Card>
           )}
 
-          {tab === "roles" && <RolesPanel userId={user.id} />}
+          {tab === "roles" && <RolesPanel userId={user.id} viewMode={isTeamMode ? "team" : "individual"} />}
 
-          {tab === "races" && (
+          {tab === "races" && !isTeamMode && (
             <Card>
               {regs.length === 0 ? (
                 <div className="py-10 text-center">
@@ -259,7 +338,7 @@ function ProfilePage() {
             </Card>
           )}
 
-          {tab === "liked" && (
+          {tab === "liked" && !isTeamMode && (
             <Card>
               {liked.length === 0 ? (
                 <div className="py-10 text-center">
@@ -324,6 +403,7 @@ function ModeToggle({
   // Without a team, the user is just a participant — no toggle needed.
   if (!hasTeam) return null;
   const options: ModeT[] = ["participant", "team"];
+  const current: ModeT = mode === "organizer" ? "team" : mode;
   return (
     <div className="flex rounded-full border border-hairline bg-card p-1">
       {options.map((m) => (
@@ -331,7 +411,7 @@ function ModeToggle({
           key={m}
           onClick={() => setMode(m)}
           className={`rounded-full px-3 py-1.5 text-[10px] uppercase tracking-widest transition ${
-            mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-ink"
+            current === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-ink"
           }`}
         >
           {m}
