@@ -1871,3 +1871,50 @@ async function syncMediaAlbums(mediaItemIds: string[], albumIds: string[], mode:
   });
 }
 
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  destructive = false,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  message: React.ReactNode;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  destructive?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-hairline bg-card shadow-2xl">
+        <div className="px-6 pt-6">
+          <h3 className="text-base font-medium text-ink">{title}</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{message}</p>
+        </div>
+        <div className="mt-6 flex justify-end gap-2 border-t border-hairline bg-background/40 px-4 py-3">
+          <button
+            onClick={onCancel}
+            className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            onClick={onConfirm}
+            className={`rounded-full px-5 py-2 text-xs hover:opacity-90 ${
+              destructive
+                ? "bg-destructive text-destructive-foreground"
+                : "bg-primary text-primary-foreground"
+            }`}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
