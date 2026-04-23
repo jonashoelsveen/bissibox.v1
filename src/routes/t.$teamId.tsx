@@ -136,8 +136,8 @@ function TeamPage() {
 
   useEffect(() => {
     (async () => {
-      // Team profile media = items linked to THIS team's "Profile" album
-      // (separate from the owner's personal Profile album).
+      // Team profile media = items belonging to THIS team, linked to the
+      // team's "Profile" album. Fully isolated from any individual content.
       const { data: profileAlbum } = await supabase
         .from("media_albums")
         .select("id")
@@ -163,6 +163,7 @@ function TeamPage() {
         .from("media_items")
         .select("id, storage_path, media_type")
         .in("id", ids)
+        .eq("team_id", teamId)
         .order("created_at", { ascending: false })
         .limit(120);
       setMedia((m ?? []) as { id: string; storage_path: string; media_type: string }[]);

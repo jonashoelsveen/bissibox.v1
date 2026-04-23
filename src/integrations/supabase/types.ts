@@ -428,6 +428,7 @@ export type Database = {
           photographer: string | null
           storage_path: string
           subject: string | null
+          team_id: string | null
           updated_at: string
           uploaded_in_mode: string
           user_id: string
@@ -449,6 +450,7 @@ export type Database = {
           photographer?: string | null
           storage_path: string
           subject?: string | null
+          team_id?: string | null
           updated_at?: string
           uploaded_in_mode?: string
           user_id: string
@@ -470,6 +472,7 @@ export type Database = {
           photographer?: string | null
           storage_path?: string
           subject?: string | null
+          team_id?: string | null
           updated_at?: string
           uploaded_in_mode?: string
           user_id?: string
@@ -490,6 +493,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_items_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
