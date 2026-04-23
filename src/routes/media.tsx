@@ -716,7 +716,22 @@ function MediaPage() {
           }}
         />
       )}
-      {openItems && (
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Delete album?"
+          message={
+            <>
+              <span className="font-medium text-ink">"{confirmDelete.name}"</span> will be permanently
+              removed. The photos and videos inside will not be deleted — they will simply move to{" "}
+              <span className="font-medium text-ink">Unsorted</span>.
+            </>
+          }
+          confirmLabel="Delete album"
+          destructive
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={() => void deleteAlbum(confirmDelete)}
+        />
+      )}
         <Lightbox
           items={openItems}
           urls={urls}
