@@ -281,7 +281,7 @@ function LibraryPage() {
                     </div>
                   </div>
                   <span className="num w-28 shrink-0 text-right text-sm text-ink">{formatDate(e.starts_at)}</span>
-                  <div className="flex w-[230px] shrink-0 items-center justify-end gap-1">
+                  <div className="flex w-[280px] shrink-0 items-center justify-end gap-1">
                     <Link
                       to="/organizer/$eventId/edit"
                       params={{ eventId: e.id }}
@@ -311,6 +311,15 @@ function LibraryPage() {
                     >
                       <Globe className="h-4 w-4" />
                       {e.published ? "Unpublish" : "Publish"}
+                    </button>
+                    <button
+                      onClick={() => removeEvent(e.id, e.title)}
+                      disabled={busy}
+                      aria-label="Delete"
+                      title="Delete"
+                      className="rounded-md border border-hairline bg-background p-2 text-muted-foreground transition hover:border-destructive/50 hover:text-destructive disabled:opacity-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </li>
