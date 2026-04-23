@@ -20,6 +20,8 @@ interface PublicTeam {
   description_long: string | null;
   country: string | null;
   cover_media_id: string | null;
+  website: string | null;
+  owner_id: string;
 }
 
 interface Tier {
