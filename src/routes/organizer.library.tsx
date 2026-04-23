@@ -54,12 +54,26 @@ function LibraryPage() {
 
   const load = async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from("events")
-      .select("*")
-      .eq("owner_id", user.id)
-      .order("starts_at", { ascending: false });
-    setEvents((data as OrgEvent[]) ?? []);
+    // Events the user owns
+    const ownedReq = supabase.from("events").select("*").eq("owner_id", user.id);
+    // Events where the user is a co-organizer
+    const coReq = supabase
+      .from("event_co_organizers")
+      .select("event_id")
+      .eq("user_id", user.id);
+    const [{ data: owned }, { data: co }] = await Promise.all([ownedReq, coReq]);
+    let coEvents: OrgEvent[] = [];
+    const coIds = (co ?? []).map((r) => r.event_id);
+    if (coIds.length) {
+      const { data } = await supabase.from("events").select("*").in("id", coIds);
+      coEvents = (data as OrgEvent[]) ?? [];
+    }
+    const merged = new Map<string, OrgEvent>();
+    [...((owned as OrgEvent[]) ?? []), ...coEvents].forEach((e) => merged.set(e.id, e));
+    const list = Array.from(merged.values()).sort(
+      (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime(),
+    );
+    setEvents(list);
   };
 
   const duplicate = async (sourceId: string) => {

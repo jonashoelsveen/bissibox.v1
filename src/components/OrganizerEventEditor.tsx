@@ -9,6 +9,7 @@ import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as Map
 import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
 import { ElevationProfile } from "@/components/ElevationProfile";
 import { ParticipantsPanel } from "@/components/ParticipantsPanel";
+import { CoOrganizersManager } from "@/components/CoOrganizersManager";
 
 type Mode = "create" | "edit";
 
@@ -72,6 +73,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const [openSub, setOpenSub] = useState<number | null>(0);
 
   const [savedId, setSavedId] = useState<string | undefined>(eventId);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -96,6 +98,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         setRaceTypes(e.race_types ?? []);
         setWaCertified(!!e.world_athletics_certified);
         setPublished(!!(e as any).published);
+        setOwnerId((e as any).owner_id ?? null);
       }
       const { data: cls } = await supabase
         .from("event_classes")
@@ -360,6 +363,13 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                 />
                 World Athletics certified course
               </label>
+            </Row>
+            <Row label="Co-organizers" full>
+              <CoOrganizersManager
+                eventId={savedId}
+                ownerId={ownerId ?? user.id}
+                currentUserId={user.id}
+              />
             </Row>
           </FormGrid>
         </Panel>

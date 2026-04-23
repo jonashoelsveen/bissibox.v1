@@ -17,7 +17,11 @@ export function TopChrome() {
             <NavBtn
               to="/organizer/library"
               label="Library"
-              active={path.startsWith("/organizer/library") || path === "/"}
+              active={
+                path.startsWith("/organizer/library") ||
+                (path.startsWith("/organizer/") && !path.startsWith("/organizer/new")) ||
+                path === "/"
+              }
             >
               <Library className="h-[18px] w-[18px]" strokeWidth={2.25} />
             </NavBtn>

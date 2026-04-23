@@ -5,6 +5,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { ArrowLeft, ChevronDown, FileText, Heart, Map as MapIcon, Share2, Users, X } from "lucide-react";
 import { ReadOnlyCourseMap } from "@/components/ReadOnlyCourseMap";
+import { MapLocationLabel } from "@/components/MapLocationLabel";
 import { ElevationProfile } from "@/components/ElevationProfile";
 import { PublicParticipantsPanel } from "@/components/PublicParticipantsPanel";
 import type { LatLng, SplitPoint } from "@/components/CourseMapEditor";
@@ -301,13 +302,22 @@ export function EventViewer({ eventId }: { eventId: string }) {
                   No course map available.
                 </div>
               ) : (
-                <ReadOnlyCourseMap
-                  key={activeMapSub}
-                  path={subevents[activeMapSub]?.course_path ?? []}
-                  splits={subevents[activeMapSub]?.split_points ?? []}
-                  selectedSplitId={selectedSplitId}
-                  hoverPosition={hoverPos}
-                />
+                <>
+                  <ReadOnlyCourseMap
+                    key={activeMapSub}
+                    path={subevents[activeMapSub]?.course_path ?? []}
+                    splits={subevents[activeMapSub]?.split_points ?? []}
+                    selectedSplitId={selectedSplitId}
+                    hoverPosition={hoverPos}
+                  />
+                  <MapLocationLabel
+                    point={
+                      subevents[activeMapSub]?.course_path?.[0] ??
+                      subevents[activeMapSub]?.split_points?.[0]?.position ??
+                      null
+                    }
+                  />
+                </>
               )}
             </div>
             {subevents.length > 0 && (subevents[activeMapSub]?.course_path?.length ?? 0) > 0 && (
