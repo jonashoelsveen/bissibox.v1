@@ -9,7 +9,7 @@ export const Route = createFileRoute("/discover")({
   head: () => ({ meta: [{ title: "Discover · Raceline" }] }),
 });
 
-type Tab = "top" | "users" | "photographers" | "teams" | "companies";
+type Tab = "top" | "users" | "photographers" | "teams" | "timers";
 
 interface ProfileResult {
   id: string;
@@ -65,7 +65,11 @@ function DiscoverPage() {
       const { data: t } = await tq;
       setTeams((t as TeamResult[]) ?? []);
 
-      let cq = supabase.from("companies").select("id, name, kind").limit(20);
+      let cq = supabase
+        .from("companies")
+        .select("id, name, kind")
+        .eq("kind", "timing")
+        .limit(20);
       if (term) cq = cq.ilike("name", `%${term}%`);
       const { data: c } = await cq;
       setCompanies((c as CompanyResult[]) ?? []);
@@ -85,7 +89,7 @@ function DiscoverPage() {
     { key: "users", label: "Users" },
     { key: "photographers", label: "Photographers" },
     { key: "teams", label: "Teams" },
-    { key: "companies", label: "Companies" },
+    { key: "timers", label: "Timers" },
   ];
 
   return (
@@ -155,7 +159,7 @@ function DiscoverPage() {
               {teams.length === 0 && <Empty />}
             </>
           )}
-          {tab === "companies" && (
+          {tab === "timers" && (
             <>
               {companies.map((c) => <CompanyRow key={c.id} c={c} />)}
               {companies.length === 0 && <Empty />}

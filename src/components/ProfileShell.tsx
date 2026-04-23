@@ -84,28 +84,26 @@ export function ProfileShell({
       </div>
 
       <div className="px-6 md:px-10">
-        <div className="mx-auto max-w-5xl">
-          {actions && <div className="mt-4 flex items-center gap-2">{actions}</div>}
+        {actions && <div className="mt-4 flex items-center gap-2">{actions}</div>}
 
-          <nav className="mt-5 flex border-b border-hairline">
-            {tabs.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => onTabChange(t.key)}
-                className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm transition ${
-                  activeTab === t.key
-                    ? "border-primary text-ink"
-                    : "border-transparent text-muted-foreground hover:text-ink"
-                }`}
-              >
-                {t.icon}
-                {t.label}
-              </button>
-            ))}
-          </nav>
+        <nav className="mt-5 flex border-b border-hairline">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => onTabChange(t.key)}
+              className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm transition ${
+                activeTab === t.key
+                  ? "border-primary text-ink"
+                  : "border-transparent text-muted-foreground hover:text-ink"
+              }`}
+            >
+              {t.icon}
+              {t.label}
+            </button>
+          ))}
+        </nav>
 
-          <div className="py-6">{children}</div>
-        </div>
+        <div className="py-6">{children}</div>
       </div>
     </div>
   );
