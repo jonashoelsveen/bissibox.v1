@@ -975,6 +975,7 @@ function Lightbox({
   albums,
   attended,
   userName,
+  itemAlbums,
   onClose,
   onChanged,
 }: {
@@ -983,6 +984,7 @@ function Lightbox({
   albums: Album[];
   attended: AttendedEvent[];
   userName: string;
+  itemAlbums: Record<string, string[]>;
   onClose: () => void;
   onChanged: () => void;
 }) {
