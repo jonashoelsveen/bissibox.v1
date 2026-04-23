@@ -303,28 +303,36 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             Map
           </TabBtn>
           {mode === "edit" && savedId && (
-            <>
-              <TabBtn
-                active={tab === "participants"}
-                onClick={() => setTab("participants")}
-                icon={<Users className="h-3.5 w-3.5" />}
-              >
-                Participants
-              </TabBtn>
-              <TabBtn
-                active={tab === "media"}
-                onClick={() => setTab("media")}
-                icon={<ImageIcon className="h-3.5 w-3.5" />}
-              >
-                Media
-              </TabBtn>
-            </>
+            <TabBtn
+              active={tab === "participants"}
+              onClick={() => setTab("participants")}
+              icon={<Users className="h-3.5 w-3.5" />}
+            >
+              Participants
+            </TabBtn>
           )}
         </nav>
       </div>
 
       {tab === "details" && (
         <Panel>
+          {/* Sub-sections inside Details */}
+          <div className="mb-5 flex flex-wrap gap-1.5">
+            <SubTabBtn active={detailsSection === "about"} onClick={() => setDetailsSection("about")} icon={<Info className="h-3.5 w-3.5" />}>
+              About
+              <span className="ml-1.5 text-[10px] text-muted-foreground">Public</span>
+            </SubTabBtn>
+            <SubTabBtn active={detailsSection === "timing"} onClick={() => setDetailsSection("timing")} icon={<Timer className="h-3.5 w-3.5" />}>
+              Timing
+              <span className="ml-1.5 text-[10px] text-muted-foreground">Organizer only</span>
+            </SubTabBtn>
+            <SubTabBtn active={detailsSection === "media"} onClick={() => setDetailsSection("media")} icon={<ImageIcon className="h-3.5 w-3.5" />}>
+              Media
+              <span className="ml-1.5 text-[10px] text-muted-foreground">Organizer only</span>
+            </SubTabBtn>
+          </div>
+
+          {detailsSection === "about" && (
           <FormGrid>
             <Row label="Name">
               <Text value={title} onChange={setTitle} placeholder="Perseløpet #7 - 2026" />
