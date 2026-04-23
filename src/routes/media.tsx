@@ -546,6 +546,7 @@ function MediaPage() {
           albums={albums}
           attended={attended}
           userName={userName}
+          itemAlbums={itemAlbums}
           onClose={() => {
             setOpenItems(null);
             exitSelect();
