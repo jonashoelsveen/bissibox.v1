@@ -31,6 +31,7 @@ interface PublicProfile {
   photographer_bio: string | null;
   athlete_cover_media_id: string | null;
   photographer_cover_media_id: string | null;
+  website: string | null;
 }
 
 interface PB {
