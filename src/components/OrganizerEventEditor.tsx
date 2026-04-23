@@ -103,6 +103,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         setWaCertified(!!e.world_athletics_certified);
         setPublished(!!(e as any).published);
         setOwnerId((e as any).owner_id ?? null);
+        setTimingCompanyId(((e as any).timing_company_id as string | null) ?? null);
       }
       const { data: cls } = await supabase
         .from("event_classes")
