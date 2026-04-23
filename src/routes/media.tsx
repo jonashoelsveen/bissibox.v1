@@ -556,6 +556,7 @@ function MediaPage() {
             void load();
           }}
           userId={user.id}
+          teamId={isTeamMode ? teamId : null}
         />
       )}
       {uploadOpen && (
