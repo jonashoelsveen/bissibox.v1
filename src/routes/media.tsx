@@ -20,7 +20,7 @@ import {
   Link2,
   Activity,
   Ghost,
-  Info,
+  ArrowUp,
 } from "lucide-react";
 
 export const Route = createFileRoute("/media")({
