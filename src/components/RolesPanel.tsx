@@ -21,7 +21,13 @@ interface Team {
   owner_id: string;
 }
 
-export function RolesPanel({ userId }: { userId: string }) {
+export function RolesPanel({
+  userId,
+  viewMode = "individual",
+}: {
+  userId: string;
+  viewMode?: "individual" | "team";
+}) {
   const [accountType, setAccountType] = useState<"individual" | "team">("individual");
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
