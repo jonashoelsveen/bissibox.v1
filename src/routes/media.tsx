@@ -52,6 +52,7 @@ interface MediaItem {
   visible_media: boolean;
   visible_friends: boolean;
   allowed_media_houses: string[];
+  uploaded_in_mode: string;
   created_at: string;
 }
 
@@ -171,14 +172,20 @@ function MediaPage() {
         .select("id,title,organizer,starts_at")
         .eq("organizer", team.name);
       const orgEventIds = (orgEvents ?? []).map((e) => e.id);
-      const orFilter: string[] = [`user_id.in.(${memberIds.join(",")})`];
-      if (orgEventIds.length > 0) orFilter.push(`event_id.in.(${orgEventIds.join(",")})`);
       const { data: m } = await supabase
         .from("media_items")
         .select("*")
-        .or(orFilter.join(","))
         .order("created_at", { ascending: false });
-      setItems((m as MediaItem[]) ?? []);
+      const all = (m as MediaItem[]) ?? [];
+      // Team mode: items uploaded *in team/organizer mode* by team members,
+      // plus any items linked to events the team organizes.
+      const teamItems = all.filter(
+        (it) =>
+          (memberIds.includes(it.user_id) &&
+            (it.uploaded_in_mode === "team" || it.uploaded_in_mode === "organizer")) ||
+          (it.event_id && orgEventIds.includes(it.event_id)),
+      );
+      setItems(teamItems);
       setAttended((orgEvents as AttendedEvent[]) ?? []);
     } else {
       const { data: m } = await supabase
@@ -186,10 +193,15 @@ function MediaPage() {
         .select("*")
         .order("created_at", { ascending: false });
       const subjectName = name.toLowerCase();
-      const filteredItems = ((m as MediaItem[]) ?? []).filter(
+      const all = (m as MediaItem[]) ?? [];
+      // Individual mode: items the user uploaded *in participant mode*,
+      // plus items where they are the named subject (e.g. shot by an organizer).
+      const filteredItems = all.filter(
         (it) =>
-          it.user_id === user.id ||
-          (subjectName && (it.subject ?? "").toLowerCase().includes(subjectName)),
+          (it.user_id === user.id && it.uploaded_in_mode === "participant") ||
+          (subjectName &&
+            it.user_id !== user.id &&
+            (it.subject ?? "").toLowerCase().includes(subjectName)),
       );
       setItems(filteredItems);
       const ev: AttendedEvent[] = [];
@@ -532,6 +544,7 @@ function MediaPage() {
           attended={attended}
           userId={user.id}
           userName={userName}
+          mode={mode}
           onClose={() => setUploadOpen(false)}
           onUploaded={() => {
             setUploadOpen(false);
@@ -664,6 +677,7 @@ function UploadDialog({
   attended,
   userId,
   userName,
+  mode,
   onClose,
   onUploaded,
 }: {
@@ -671,6 +685,7 @@ function UploadDialog({
   attended: AttendedEvent[];
   userId: string;
   userName: string;
+  mode: "participant" | "organizer" | "team";
   onClose: () => void;
   onUploaded: () => void;
 }) {
@@ -715,6 +730,7 @@ function UploadDialog({
             organizer: organizer || null,
             photographer,
             subject: subject || null,
+            uploaded_in_mode: mode,
           })
           .select("id")
           .single();

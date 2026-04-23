@@ -418,6 +418,7 @@ export type Database = {
           storage_path: string
           subject: string | null
           updated_at: string
+          uploaded_in_mode: string
           user_id: string
           visible_friends: boolean
           visible_media: boolean
@@ -438,6 +439,7 @@ export type Database = {
           storage_path: string
           subject?: string | null
           updated_at?: string
+          uploaded_in_mode?: string
           user_id: string
           visible_friends?: boolean
           visible_media?: boolean
@@ -458,6 +460,7 @@ export type Database = {
           storage_path?: string
           subject?: string | null
           updated_at?: string
+          uploaded_in_mode?: string
           user_id?: string
           visible_friends?: boolean
           visible_media?: boolean
