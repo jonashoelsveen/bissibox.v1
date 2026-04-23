@@ -901,7 +901,7 @@ function AboutPanel({
           {items.length} items selected. Only "Move all to album" is available for bulk.
         </p>
         {!allSameAlbum && (
-          <p className="text-[11px] text-amber-500">
+          <p className="text-[11px] text-accent">
             Selected items are in different folders — moving will unify them.
           </p>
         )}
