@@ -367,7 +367,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             <Row label="Co-organizers" full>
               <CoOrganizersManager
                 eventId={savedId}
-                ownerId={user.id}
+                ownerId={ownerId ?? user.id}
                 currentUserId={user.id}
               />
             </Row>
