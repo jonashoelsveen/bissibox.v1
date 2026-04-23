@@ -692,6 +692,7 @@ function UploadDialog({
   userId,
   userName,
   mode,
+  teamId,
   onClose,
   onUploaded,
 }: {
@@ -700,6 +701,7 @@ function UploadDialog({
   userId: string;
   userName: string;
   mode: "participant" | "organizer" | "team";
+  teamId: string | null;
   onClose: () => void;
   onUploaded: () => void;
 }) {
