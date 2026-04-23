@@ -209,6 +209,21 @@ function TeamPage() {
       ]}
       activeTab={tab}
       onTabChange={(k) => setTab(k as typeof tab)}
+      website={{
+        url: team.website,
+        canEdit: !!user && user.id === team.owner_id,
+        onSave: async (url) => {
+          const { error } = await supabase
+            .from("teams")
+            .update({ website: url })
+            .eq("id", teamId);
+          if (error) {
+            toast.error(error.message);
+          } else {
+            setTeam({ ...team, website: url });
+          }
+        },
+      }}
     >
       {tab === "memberships" && (
         <div className="space-y-2">
