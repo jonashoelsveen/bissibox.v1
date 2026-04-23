@@ -590,28 +590,52 @@ export type Database = {
       }
       teams: {
         Row: {
+          address: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          country: string | null
           created_at: string
+          description: string | null
           id: string
           name: string
           nif_id: string | null
           owner_id: string
+          postal_code: string | null
+          postal_place: string | null
           updated_at: string
+          website: string | null
         }
         Insert: {
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          country?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           name: string
           nif_id?: string | null
           owner_id: string
+          postal_code?: string | null
+          postal_place?: string | null
           updated_at?: string
+          website?: string | null
         }
         Update: {
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          country?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
           nif_id?: string | null
           owner_id?: string
+          postal_code?: string | null
+          postal_place?: string | null
           updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }
