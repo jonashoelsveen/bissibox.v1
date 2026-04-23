@@ -154,11 +154,13 @@ function MediaPage() {
         .eq("owner_id", user.id)
         .maybeSingle();
       if (!team) {
+        setTeamId(null);
         setAlbums([]);
         setItems([]);
         setAttended([]);
         return;
       }
+      setTeamId(team.id);
       // Team-scoped albums only
       const { data: a } = await supabase
         .from("media_albums")
