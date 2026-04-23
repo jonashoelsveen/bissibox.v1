@@ -51,7 +51,7 @@ function ProfilePage() {
   const [regs, setRegs] = useState<RegistrationRow[]>([]);
   const [liked, setLiked] = useState<LikedRow[]>([]);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<"general" | "address" | "races" | "liked">("general");
+  const [tab, setTab] = useState<"general" | "address" | "races" | "liked" | "roles">("general");
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
