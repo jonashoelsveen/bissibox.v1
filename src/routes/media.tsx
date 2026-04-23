@@ -41,6 +41,7 @@ interface Album {
 interface MediaItem {
   id: string;
   user_id: string;
+  team_id: string | null;
   storage_path: string;
   media_type: "photo" | "video";
   album_id: string | null;
