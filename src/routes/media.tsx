@@ -1526,3 +1526,108 @@ function Label({ children }: { children: React.ReactNode }) {
     </span>
   );
 }
+
+export function AlbumMultiSelect({
+  albums,
+  value,
+  onChange,
+  placeholder = "Select albums…",
+}: {
+  albums: Album[];
+  value: string[];
+  onChange: (next: string[]) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const filtered = useMemo(() => {
+    const n = q.trim().toLowerCase();
+    if (!n) return albums;
+    return albums.filter((a) => a.name.toLowerCase().includes(n));
+  }, [albums, q]);
+
+  const toggle = (id: string) => {
+    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+  };
+
+  const summary =
+    value.length === 0
+      ? placeholder
+      : value.length === 1
+        ? (albums.find((a) => a.id === value[0])?.name ?? "1 album")
+        : `${value.length} albums`;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="flex w-full items-center justify-between rounded-xl border border-hairline bg-background px-4 py-2.5 text-left text-sm text-ink outline-none focus:border-primary"
+      >
+        <span className={value.length === 0 ? "text-muted-foreground" : ""}>{summary}</span>
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-30 mt-1 rounded-xl border border-hairline bg-popover p-2 shadow-lg">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onMouseDown={(e) => e.stopPropagation()}
+              placeholder="Search albums…"
+              className="w-full rounded-lg border border-hairline bg-background pl-9 pr-3 py-2 text-xs text-ink outline-none focus:border-primary"
+            />
+          </div>
+          <ul className="mt-2 max-h-56 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <li className="px-2 py-2 text-[11px] text-muted-foreground">No albums.</li>
+            ) : (
+              filtered.map((a) => {
+                const on = value.includes(a.id);
+                return (
+                  <li key={a.id}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        toggle(a.id);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition ${
+                        on ? "bg-primary/10 text-ink" : "text-muted-foreground hover:bg-secondary hover:text-ink"
+                      }`}
+                    >
+                      <span>{a.name}</span>
+                      {on ? (
+                        <CheckSquare className="h-3.5 w-3.5 text-primary" />
+                      ) : (
+                        <Square className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+async function syncMediaAlbums(mediaItemIds: string[], albumIds: string[], mode: "replace" | "add") {
+  if (mediaItemIds.length === 0) return;
+  if (mode === "replace") {
+    await supabase.from("media_item_albums").delete().in("media_item_id", mediaItemIds);
+  }
+  if (albumIds.length === 0) return;
+  const rows = mediaItemIds.flatMap((mid) =>
+    albumIds.map((aid) => ({ media_item_id: mid, album_id: aid })),
+  );
+  await supabase.from("media_item_albums").upsert(rows, {
+    onConflict: "media_item_id,album_id",
+    ignoreDuplicates: true,
+  });
+}
+
