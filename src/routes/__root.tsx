@@ -2,7 +2,6 @@ import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/r
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TopChrome } from "@/components/Chrome";
-import { UserAvatar } from "@/components/UserAvatar";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
