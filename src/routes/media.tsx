@@ -132,15 +132,13 @@ function MediaPage() {
 
   const load = useCallback(async () => {
     if (!user) return;
-    const [{ data: a }, { data: r }, { data: p }] = await Promise.all([
-      supabase.from("media_albums").select("id,name").order("created_at", { ascending: false }),
+    const [{ data: r }, { data: p }] = await Promise.all([
       supabase
         .from("registrations")
         .select("event_id, events(id,title,organizer,starts_at)")
         .eq("user_id", user.id),
       supabase.from("profiles").select("first_name,last_name,email").eq("id", user.id).maybeSingle(),
     ]);
-    setAlbums(a ?? []);
     const name =
       [p?.first_name, p?.last_name].filter(Boolean).join(" ").trim() ||
       p?.email ||
