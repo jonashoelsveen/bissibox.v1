@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -468,6 +468,34 @@ function NavBtn({
     >
       {children}
     </button>
+  );
+}
+
+function InfoLine({
+  label,
+  value,
+  to,
+  params,
+}: {
+  label: string;
+  value: string | null | undefined;
+  to?: "/events/$eventId" | "/u/$userId";
+  params?: { eventId: string } | { userId: string };
+}) {
+  const text = value && value.trim() ? value : "—";
+  const linkable = !!to && !!params && text !== "—";
+  return (
+    <div onClick={(e) => e.stopPropagation()}>
+      <span className="mono text-[9px] uppercase tracking-widest text-white/60">{label}: </span>
+      {linkable ? (
+        // @ts-expect-error - typed by branching at call site
+        <Link to={to} params={params} className="text-white underline-offset-2 hover:underline">
+          {text}
+        </Link>
+      ) : (
+        <span className="text-white/90">{text}</span>
+      )}
+    </div>
   );
 }
 
