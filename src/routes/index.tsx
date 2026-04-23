@@ -1,8 +1,7 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDate } from "@/lib/format";
-import { ArrowUpRight } from "lucide-react";
+import { Search as SearchIcon } from "lucide-react";
 import { RaceListItem } from "@/components/RaceListItem";
 import { useAuth } from "@/lib/auth";
 
@@ -13,8 +12,7 @@ export const Route = createFileRoute("/")({
       { title: "Raceline" },
       {
         name: "description",
-        content:
-          "Find your next race. Browse, search and sign up for running and triathlon events across Norway.",
+        content: "Search races by name, organizer, distance or region.",
       },
     ],
   }),
@@ -30,180 +28,173 @@ interface EventRow {
   signup_fee: number;
   currency: string;
   race_types: string[];
+  category: string | null;
   featured: boolean;
+  popularity: number;
   world_athletics_certified?: boolean;
 }
+
+const TYPES = ["5K", "10K", "Half Marathon", "Marathon", "Trail", "Triathlon", "Relay"];
+const REGIONS = ["Oslo", "Vestland", "Trøndelag", "Rogaland", "Troms", "Innlandet"];
 
 function Index() {
   const { user, mode } = useAuth();
   const nav = useNavigate();
-  const [featured, setFeatured] = useState<EventRow[]>([]);
-  const [upcoming, setUpcoming] = useState<EventRow[]>([]);
+  const [q, setQ] = useState("");
+  const [filter, setFilter] = useState<string | null>(null);
+  const [all, setAll] = useState<EventRow[]>([]);
 
   useEffect(() => {
     if (mode === "organizer" && user) nav({ to: "/organizer/library" });
   }, [mode, user, nav]);
 
   useEffect(() => {
-    (async () => {
-      const { data: feat } = await supabase
-        .from("events")
-        .select("*")
-        .eq("featured", true)
-        .eq("published", true)
-        .order("starts_at", { ascending: true })
-        .limit(6);
-      const { data: up } = await supabase
-        .from("events")
-        .select("*")
-        .eq("published", true)
-        .order("starts_at", { ascending: true })
-        .limit(8);
-      setFeatured((feat as EventRow[]) ?? []);
-      setUpcoming((up as EventRow[]) ?? []);
-    })();
+    supabase
+      .from("events")
+      .select("*")
+      .eq("published", true)
+      .order("popularity", { ascending: false })
+      .then(({ data }) => setAll((data as EventRow[]) ?? []));
   }, []);
+
+  const trending = useMemo(
+    () => [...all].sort((a, b) => b.popularity - a.popularity).slice(0, 6),
+    [all]
+  );
+
+  const results = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return all.filter((e) => {
+      if (filter) {
+        const matches =
+          e.race_types.some((t) => t.toLowerCase().includes(filter.toLowerCase())) ||
+          (e.category ?? "").toLowerCase() === filter.toLowerCase() ||
+          e.region.toLowerCase() === filter.toLowerCase();
+        if (!matches) return false;
+      }
+      if (!term) return true;
+      return (
+        e.title.toLowerCase().includes(term) ||
+        e.organizer.toLowerCase().includes(term) ||
+        e.location.toLowerCase().includes(term) ||
+        e.region.toLowerCase().includes(term) ||
+        e.race_types.some((t) => t.toLowerCase().includes(term))
+      );
+    });
+  }, [q, filter, all]);
+
+  const showResults = q.trim().length > 0 || filter !== null;
 
   return (
     <div className="px-4 md:px-6">
-      <header className="pt-4">
-        <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Raceline · Norway
-        </p>
-        <h1 className="mt-2 text-3xl leading-[1.05] text-ink md:text-5xl">
-          Find your next race.
-          <br />
-          <span className="text-muted-foreground">Sign up in seconds.</span>
-        </h1>
-        <p className="mt-4 max-w-xl text-base text-muted-foreground">
-          One quiet place for every race in Norway. Search like Spotify. Trust like BankID.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            to="/search"
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-          >
-            Browse races
-            <ArrowUpRight className="h-4 w-4" />
-          </Link>
-          <Link
-            to="/auth"
-            className="inline-flex items-center gap-2 rounded-full border border-hairline bg-card px-5 py-3 text-sm font-medium text-ink transition hover:bg-secondary"
-          >
-            Create profile
-          </Link>
-        </div>
-        <div className="mt-7 border-b border-hairline" />
+      <header className="flex justify-center pt-6 pb-4">
+        <label className="flex w-full max-w-md items-center gap-3 rounded-full border border-hairline bg-card px-5 py-2.5 ring-soft focus-within:border-primary">
+          <SearchIcon className="h-4 w-4 text-muted-foreground" />
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Race, organizer, distance, region…"
+            className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground"
+          />
+          {q && (
+            <button
+              onClick={() => setQ("")}
+              className="mono text-xs uppercase tracking-widest text-muted-foreground hover:text-ink"
+            >
+              clear
+            </button>
+          )}
+        </label>
       </header>
 
-      {featured.length > 0 && (
-        <section className="mt-16">
-          <SectionHeader title="Featured" hint="Promoted by organizers" />
-          <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {featured.map((e) => (
-              <FeaturedCard key={e.id} event={e} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="mt-16">
-        <SectionHeader title="Upcoming races" hint="Soonest first" />
-        <ul className="mt-5 divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-card">
-          {upcoming.map((e) => (
-            <RaceListItem key={e.id} event={e} />
-          ))}
-        </ul>
-      </section>
-
-      <footer className="mt-20 border-t border-hairline pt-8 pb-6 text-xs text-muted-foreground">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="mono">© Raceline</span>
-          <span>Norway · Built calmly</span>
+      <div className="mx-auto max-w-5xl pt-6">
+        <div className="flex flex-wrap justify-center gap-2">
+          {[...TYPES, ...REGIONS].map((t) => {
+            const active = filter === t;
+            return (
+              <button
+                key={t}
+                onClick={() => setFilter(active ? null : t)}
+                className={`rounded-full border px-3 py-1.5 text-xs transition ${
+                  active
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-hairline bg-card text-muted-foreground hover:text-ink"
+                }`}
+              >
+                {t}
+              </button>
+            );
+          })}
         </div>
-      </footer>
+
+        {!showResults ? (
+          <>
+            <Section label="Browse by distance">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                {TYPES.map((t) => {
+                  const c = TILE_COLORS[t] ?? TILE_COLORS._default;
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => setFilter(t)}
+                      className="group relative flex aspect-[5/3] overflow-hidden rounded-md p-3 text-left transition hover:translate-y-[-2px]"
+                      style={{ background: c.bg, color: c.fg }}
+                    >
+                      <span
+                        className="relative z-10 text-base font-semibold leading-tight"
+                        style={{ color: c.fg }}
+                      >
+                        {t}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </Section>
+
+            <Section label="Trending now">
+              <ul className="space-y-0.5">
+                {trending.map((e, i) => (
+                  <RaceListItem key={e.id} event={e} rank={i + 1} />
+                ))}
+              </ul>
+            </Section>
+          </>
+        ) : (
+          <Section label={`${results.length} result${results.length === 1 ? "" : "s"}`}>
+            {results.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No races match that yet.</p>
+            ) : (
+              <ul className="space-y-0.5">
+                {results.map((e) => (
+                  <RaceListItem key={e.id} event={e} />
+                ))}
+              </ul>
+            )}
+          </Section>
+        )}
+      </div>
     </div>
   );
 }
 
-function SectionHeader({ title, hint }: { title: string; hint?: string }) {
+const TILE_COLORS: Record<string, { bg: string; fg: string }> = {
+  "5K": { bg: "#1f3a5f", fg: "#ffffff" },
+  "10K": { bg: "#7a4b2a", fg: "#ffffff" },
+  "Half Marathon": { bg: "#2f5d4f", fg: "#ffffff" },
+  "Marathon": { bg: "#9b1c1c", fg: "#ffffff" },
+  "Trail": { bg: "#5a4a2f", fg: "#ffffff" },
+  "Triathlon": { bg: "#2a4d6e", fg: "#ffffff" },
+  "Relay": { bg: "#6b4a7a", fg: "#ffffff" },
+  _default: { bg: "#3a3a3a", fg: "#ffffff" },
+};
+
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-end justify-between">
-      <h2 className="text-2xl text-ink md:text-3xl">{title}</h2>
-      {hint && <span className="mono text-xs uppercase tracking-widest text-muted-foreground">{hint}</span>}
-    </div>
+    <section className="mt-10">
+      <h2 className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">{label}</h2>
+      <div className="mt-4">{children}</div>
+    </section>
   );
 }
-
-function categoryStyle(types: string[]): { label: string; color: string; surface: string; border: string } {
-  const t = (types ?? []).map((s) => s.toLowerCase()).join(" ");
-  if (t.includes("trail")) {
-    return {
-      label: "Trail",
-      color: "var(--cat-trail)",
-      surface: "var(--cat-trail-surface)",
-      border: "color-mix(in oklab, var(--cat-trail) 30%, transparent)",
-    };
-  }
-  if (t.includes("tri") || t.includes("swim") || t.includes("bike")) {
-    return {
-      label: "Triathlon",
-      color: "var(--cat-tri)",
-      surface: "var(--cat-tri-surface)",
-      border: "color-mix(in oklab, var(--cat-tri) 30%, transparent)",
-    };
-  }
-  if (t.includes("road") || t.includes("marathon") || t.includes("half") || t.includes("10k") || t.includes("5k")) {
-    return {
-      label: "Road",
-      color: "var(--cat-road)",
-      surface: "var(--cat-road-surface)",
-      border: "color-mix(in oklab, var(--cat-road) 30%, transparent)",
-    };
-  }
-  return {
-    label: types?.[0] ?? "Race",
-    color: "var(--cat-default)",
-    surface: "var(--cat-default-surface)",
-    border: "var(--color-hairline)",
-  };
-}
-
-function FeaturedCard({ event }: { event: EventRow }) {
-  const cat = categoryStyle(event.race_types);
-  return (
-    <Link
-      to="/events/$eventId"
-      params={{ eventId: event.id }}
-      className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 transition hover:translate-y-[-1px]"
-      style={{
-        borderColor: cat.border,
-        background: `linear-gradient(180deg, ${cat.surface} 0%, var(--color-card) 60%)`,
-      }}
-    >
-      <span
-        aria-hidden
-        className="absolute left-0 top-0 h-full w-1"
-        style={{ background: cat.color }}
-      />
-      <div>
-        <span
-          className="mono inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest"
-          style={{ color: cat.color }}
-        >
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: cat.color }} />
-          {cat.label} · Featured
-        </span>
-        <h3 className="mt-3 text-xl text-ink">{event.title}</h3>
-        <p className="mt-1 text-sm text-muted-foreground">{event.organizer}</p>
-      </div>
-      <div className="mt-6 flex items-end justify-between">
-        <div className="mono text-xs uppercase tracking-widest text-muted-foreground">
-          {event.location}
-        </div>
-        <div className="num text-sm text-ink">{formatDate(event.starts_at)}</div>
-      </div>
-    </Link>
-  );
-}
-
