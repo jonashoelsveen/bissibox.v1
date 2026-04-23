@@ -696,19 +696,26 @@ function UploadDialog({
       });
       if (upErr) throw upErr;
       const isVideo = file.type.startsWith("video");
-      const { error: insErr } = await supabase.from("media_items").insert({
-        user_id: userId,
-        storage_path: path,
-        media_type: isVideo ? "video" : "photo",
-        mime_type: file.type,
-        file_size: file.size,
-        album_id: albumId || null,
-        event_id: eventId,
-        organizer: organizer || null,
-        photographer,
-        subject: subject || null,
-      });
+      const { data: inserted, error: insErr } = await supabase
+        .from("media_items")
+        .insert({
+          user_id: userId,
+          storage_path: path,
+          media_type: isVideo ? "video" : "photo",
+          mime_type: file.type,
+          file_size: file.size,
+          album_id: albumIds[0] ?? null,
+          event_id: eventId,
+          organizer: organizer || null,
+          photographer,
+          subject: subject || null,
+        })
+        .select("id")
+        .single();
       if (insErr) throw insErr;
+      if (inserted && albumIds.length > 0) {
+        await syncMediaAlbums([inserted.id], albumIds, "replace");
+      }
       toast.success("Uploaded");
       onUploaded();
     } catch (e) {
