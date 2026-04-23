@@ -69,7 +69,7 @@ function UserProfilePage() {
       const { data } = await supabase
         .from("profiles")
         .select(
-          "id, first_name, last_name, club, team, country, athlete_active, is_photographer, photographer_active, photographer_bio, athlete_cover_media_id, photographer_cover_media_id",
+          "id, first_name, last_name, club, team, country, athlete_active, is_photographer, photographer_active, photographer_bio, athlete_cover_media_id, photographer_cover_media_id, website",
         )
         .eq("id", userId)
         .maybeSingle();
