@@ -7,7 +7,7 @@ export function TopChrome() {
   const path = router.location.pathname;
   const { user, mode } = useAuth();
 
-  const isOrganizer = mode === "organizer" && !!user;
+  const isOrganizer = (mode === "organizer" || mode === "team") && !!user;
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen p-5 md:p-6">

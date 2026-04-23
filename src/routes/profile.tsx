@@ -53,6 +53,7 @@ function ProfilePage() {
   const [liked, setLiked] = useState<LikedRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<"general" | "address" | "races" | "liked" | "roles">("general");
+  const [hasTeam, setHasTeam] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -75,8 +76,18 @@ function ProfilePage() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setLiked((l as unknown as LikedRow[]) ?? []);
+      const { count } = await supabase
+        .from("teams")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_id", user.id);
+      setHasTeam((count ?? 0) > 0);
     })();
   }, [user]);
+
+  // If user loses team status while in team mode, drop back to participant
+  useEffect(() => {
+    if (!hasTeam && mode === "team") setMode("participant");
+  }, [hasTeam, mode, setMode]);
 
   const unlike = async (likeId: string) => {
     const { error } = await supabase.from("event_likes").delete().eq("id", likeId);
@@ -103,7 +114,7 @@ function ProfilePage() {
   return (
     <div className="px-4 md:px-6">
       <div className="flex justify-end gap-2 pt-4 pr-14">
-        <ModeToggle mode={mode} setMode={setMode} />
+        <ModeToggle mode={mode} setMode={setMode} hasTeam={hasTeam} />
         <button
           onClick={async () => {
             await signOut();
@@ -299,16 +310,23 @@ function ProfilePage() {
   );
 }
 
+type ModeT = "participant" | "organizer" | "team";
+
 function ModeToggle({
   mode,
   setMode,
+  hasTeam,
 }: {
-  mode: "participant" | "organizer";
-  setMode: (m: "participant" | "organizer") => void;
+  mode: ModeT;
+  setMode: (m: ModeT) => void;
+  hasTeam: boolean;
 }) {
+  // Without a team, the user is just a participant — no toggle needed.
+  if (!hasTeam) return null;
+  const options: ModeT[] = ["participant", "team"];
   return (
     <div className="flex rounded-full border border-hairline bg-card p-1">
-      {(["participant", "organizer"] as const).map((m) => (
+      {options.map((m) => (
         <button
           key={m}
           onClick={() => setMode(m)}

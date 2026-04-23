@@ -75,7 +75,7 @@ function Index() {
   const sortRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (mode === "organizer" && user) nav({ to: "/organizer/library" });
+    if ((mode === "organizer" || mode === "team") && user) nav({ to: "/organizer/library" });
   }, [mode, user, nav]);
 
   // pull default country from profile
