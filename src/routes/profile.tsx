@@ -31,6 +31,10 @@ interface Profile {
   mobile: string | null;
   emergency_contact: string | null;
   emergency_phone: string | null;
+  athlete_active: boolean;
+  is_photographer: boolean;
+  photographer_active: boolean;
+  photographer_bio: string | null;
 }
 
 interface Team {
