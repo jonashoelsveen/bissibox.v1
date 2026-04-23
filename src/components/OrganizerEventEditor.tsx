@@ -42,6 +42,9 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
   // Top-level
   const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map" | "participants" | "media">("details");
+  const [detailsSection, setDetailsSection] = useState<"about" | "timing" | "media">("about");
+  const [timingCompanyId, setTimingCompanyId] = useState<string | null>(null);
+  const [timingCompanies, setTimingCompanies] = useState<{ id: string; name: string }[]>([]);
   const [activeMapSub, setActiveMapSub] = useState<number>(0);
   const [expandedSubMap, setExpandedSubMap] = useState<Record<number, boolean>>({ 0: true });
   const [selectedSplitId, setSelectedSplitId] = useState<string | null>(null);
