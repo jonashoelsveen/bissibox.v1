@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SearchRouteImport } from './routes/search'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
@@ -19,11 +18,6 @@ import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
 import { Route as OrganizerEventIdParticipantsRouteImport } from './routes/organizer.$eventId.participants'
 import { Route as OrganizerEventIdEditRouteImport } from './routes/organizer.$eventId.edit'
 
-const SearchRoute = SearchRouteImport.update({
-  id: '/search',
-  path: '/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -70,7 +64,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/profile': typeof ProfileRoute
-  '/search': typeof SearchRoute
   '/events/$eventId': typeof EventsEventIdRoute
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
@@ -81,7 +74,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/profile': typeof ProfileRoute
-  '/search': typeof SearchRoute
   '/events/$eventId': typeof EventsEventIdRoute
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
@@ -93,7 +85,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/profile': typeof ProfileRoute
-  '/search': typeof SearchRoute
   '/events/$eventId': typeof EventsEventIdRoute
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
@@ -106,7 +97,6 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/profile'
-    | '/search'
     | '/events/$eventId'
     | '/organizer/library'
     | '/organizer/new'
@@ -117,7 +107,6 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/profile'
-    | '/search'
     | '/events/$eventId'
     | '/organizer/library'
     | '/organizer/new'
@@ -128,7 +117,6 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/profile'
-    | '/search'
     | '/events/$eventId'
     | '/organizer/library'
     | '/organizer/new'
@@ -140,7 +128,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   ProfileRoute: typeof ProfileRoute
-  SearchRoute: typeof SearchRoute
   EventsEventIdRoute: typeof EventsEventIdRoute
   OrganizerLibraryRoute: typeof OrganizerLibraryRoute
   OrganizerNewRoute: typeof OrganizerNewRoute
@@ -150,13 +137,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/search': {
-      id: '/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof SearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/profile': {
       id: '/profile'
       path: '/profile'
@@ -220,7 +200,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   ProfileRoute: ProfileRoute,
-  SearchRoute: SearchRoute,
   EventsEventIdRoute: EventsEventIdRoute,
   OrganizerLibraryRoute: OrganizerLibraryRoute,
   OrganizerNewRoute: OrganizerNewRoute,
