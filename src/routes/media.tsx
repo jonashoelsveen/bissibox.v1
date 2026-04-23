@@ -551,6 +551,7 @@ function MediaPage() {
           userId={user.id}
           userName={userName}
           mode={mode}
+          teamId={isTeamMode ? teamId : null}
           onClose={() => setUploadOpen(false)}
           onUploaded={() => {
             setUploadOpen(false);
