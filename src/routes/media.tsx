@@ -93,6 +93,41 @@ function MediaPage() {
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [itemAlbums, setItemAlbums] = useState<Record<string, string[]>>({});
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [albumMenuFor, setAlbumMenuFor] = useState<string | null>(null);
+  const [albumDragId, setAlbumDragId] = useState<string | null>(null);
+  const [albumDragHandle, setAlbumDragHandle] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Album | null>(null);
+
+  const persistAlbumOrder = useCallback(async (next: Album[]) => {
+    // Write sort_order based on current array index (pinned first already handled by sort)
+    await Promise.all(
+      next.map((a, idx) =>
+        supabase.from("media_albums").update({ sort_order: idx }).eq("id", a.id),
+      ),
+    );
+  }, []);
+
+  const togglePin = async (album: Album) => {
+    setAlbumMenuFor(null);
+    const { error } = await supabase
+      .from("media_albums")
+      .update({ pinned: !album.pinned })
+      .eq("id", album.id);
+    if (error) toast.error(error.message);
+    else void load();
+  };
+
+  const deleteAlbum = async (album: Album) => {
+    setConfirmDelete(null);
+    const { error } = await supabase.from("media_albums").delete().eq("id", album.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Deleted "${album.name}"`);
+    if (view.type === "album" && view.id === album.id) setView({ type: "all" });
+    void load();
+  };
 
   const setAsCover = async (
     mediaId: string,
