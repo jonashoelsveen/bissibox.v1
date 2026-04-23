@@ -126,6 +126,17 @@ function LibraryPage() {
     setEvents((arr) => arr.map((x) => (x.id === id ? { ...x, published: next } : x)));
     toast.success(next ? "Event published." : "Event unpublished.");
   };
+
+  const removeEvent = async (id: string, title: string) => {
+    const ok = window.confirm(`Delete event "${title}"? This cannot be undone.`);
+    if (!ok) return;
+    setBusy(true);
+    const { error } = await supabase.from("events").delete().eq("id", id);
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    setEvents((arr) => arr.filter((x) => x.id !== id));
+    toast.success("Event deleted.");
+  };
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     let arr = events;
