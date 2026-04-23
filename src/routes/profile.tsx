@@ -209,7 +209,7 @@ function ProfilePage() {
                 <div className="py-10 text-center">
                   <p className="text-muted-foreground">No races yet.</p>
                   <Link
-                    to="/"
+                    to="/search"
                     className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground"
                   >
                     Find a race
@@ -260,7 +260,7 @@ function ProfilePage() {
                 <div className="py-10 text-center">
                   <p className="text-muted-foreground">No liked races yet.</p>
                   <Link
-                    to="/"
+                    to="/search"
                     className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground"
                   >
                     Discover races

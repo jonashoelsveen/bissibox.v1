@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Search, User2, Library, Plus } from "lucide-react";
+import { Search, User2, Home, Library, Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 export function TopChrome() {
@@ -12,6 +12,10 @@ export function TopChrome() {
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen p-5 md:p-6">
       <div className="flex h-full flex-col items-center gap-2 pt-2">
+        <NavBtn to="/search" label="Search" active={path.startsWith("/search")}>
+          <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
+        </NavBtn>
+
         {isOrganizer ? (
           <>
             <NavBtn
@@ -30,8 +34,8 @@ export function TopChrome() {
             </NavBtn>
           </>
         ) : (
-          <NavBtn to="/" label="Search" active={path === "/"}>
-            <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          <NavBtn to="/" label="Home" active={path === "/"}>
+            <Home className="h-[18px] w-[18px]" strokeWidth={2.25} />
           </NavBtn>
         )}
 

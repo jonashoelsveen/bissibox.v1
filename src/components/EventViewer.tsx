@@ -192,7 +192,7 @@ export function EventViewer({ eventId }: { eventId: string }) {
         <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
           <div className="flex items-start gap-3">
             <button
-              onClick={() => nav({ to: "/" })}
+              onClick={() => nav({ to: "/search" })}
               className="-ml-2 inline-flex items-center justify-center p-2 text-muted-foreground transition hover:text-ink"
               aria-label="Back"
             >
