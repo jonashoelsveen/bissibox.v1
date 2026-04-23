@@ -744,19 +744,18 @@ function UploadDialog({
         />
       </div>
       <div className="mt-4">
-        <Label>Album</Label>
-        <select
-          value={albumId}
-          onChange={(e) => setAlbumId(e.target.value)}
-          className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
-        >
-          <option value="">No album</option>
-          {albums.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
+        <Label>Albums</Label>
+        <div className="mt-1">
+          <AlbumMultiSelect
+            albums={albums}
+            value={albumIds}
+            onChange={setAlbumIds}
+            placeholder="No album"
+          />
+        </div>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Add this content to one or more albums.
+        </p>
       </div>
 
       <p className="mt-6 mono text-[10px] uppercase tracking-widest text-muted-foreground">
