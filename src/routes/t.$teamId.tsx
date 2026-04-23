@@ -136,20 +136,43 @@ function TeamPage() {
 
   useEffect(() => {
     (async () => {
-      // load media via event_media of team-owned events would be complex; show world-visible from team owner
+      // Team profile media = team owner's "Profile" album, scoped to items
+      // uploaded while in team or organizer mode. Personal content from the
+      // same user (uploaded in participant mode) does not show on the team page.
       const { data: teamRow } = await supabase
         .from("teams")
         .select("owner_id")
         .eq("id", teamId)
         .maybeSingle();
       if (!teamRow?.owner_id) return;
+      const { data: profileAlbum } = await supabase
+        .from("media_albums")
+        .select("id")
+        .eq("user_id", teamRow.owner_id)
+        .eq("name", "Profile")
+        .maybeSingle();
+      if (!profileAlbum) {
+        setMedia([]);
+        return;
+      }
+      const { data: links } = await supabase
+        .from("media_item_albums")
+        .select("media_item_id")
+        .eq("album_id", profileAlbum.id);
+      const ids = ((links as { media_item_id: string }[] | null) ?? []).map(
+        (l) => l.media_item_id,
+      );
+      if (ids.length === 0) {
+        setMedia([]);
+        return;
+      }
       const { data: m } = await supabase
         .from("media_items")
-        .select("id, storage_path, media_type")
-        .eq("user_id", teamRow.owner_id)
-        .eq("visible_world", true)
+        .select("id, storage_path, media_type, uploaded_in_mode")
+        .in("id", ids)
+        .in("uploaded_in_mode", ["team", "organizer"])
         .order("created_at", { ascending: false })
-        .limit(60);
+        .limit(120);
       setMedia((m ?? []) as { id: string; storage_path: string; media_type: string }[]);
     })();
   }, [teamId]);
