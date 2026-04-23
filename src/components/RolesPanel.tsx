@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import raceResultLogo from "@/assets/race-result-logo.png";
+import eqTimingLogo from "@/assets/eq-timing-logo.png";
 
 type Role = "organizer" | "photographer" | "timekeeper";
 type CompanyKind = "timing" | "production";
@@ -21,6 +24,17 @@ interface Team {
   owner_id: string;
 }
 
+const COMPANY_LOGOS: Record<string, string> = {
+  "race result": raceResultLogo,
+  "raceresult": raceResultLogo,
+  "eq timing": eqTimingLogo,
+  "eqtiming": eqTimingLogo,
+};
+
+function getCompanyLogo(name: string): string | null {
+  return COMPANY_LOGOS[name.toLowerCase().trim()] ?? null;
+}
+
 export function RolesPanel({
   userId,
   viewMode = "individual",
@@ -33,6 +47,14 @@ export function RolesPanel({
   const [companies, setCompanies] = useState<Company[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [open, setOpen] = useState<null | "team" | "photographer" | "timekeeper">(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (key: string) =>
+    setExpanded((s) => {
+      const n = new Set(s);
+      n.has(key) ? n.delete(key) : n.add(key);
+      return n;
+    });
 
   const load = async () => {
     const [{ data: prof }, { data: r }, { data: c }, { data: t }] = await Promise.all([
@@ -52,6 +74,11 @@ export function RolesPanel({
   }, [userId]);
 
   const hasRole = (r: Role) => roles.some((x) => x.role === r);
+  const roleCompany = (r: Role): Company | null => {
+    const ur = roles.find((x) => x.role === r);
+    if (!ur?.company_id) return null;
+    return companies.find((c) => c.id === ur.company_id) ?? null;
+  };
 
   return (
     <section className="mt-6 space-y-4">
@@ -81,7 +108,7 @@ export function RolesPanel({
                 {teams[0].name}
               </span>
             ) : (
-              <Btn onClick={() => setOpen("team")}>Create team</Btn>
+              <BecomeBtn onClick={() => setOpen("team")}>Create team</BecomeBtn>
             )
           }
         />
@@ -89,66 +116,106 @@ export function RolesPanel({
 
       {viewMode === "individual" && (
         <>
-          <Box
-            title="Become a photographer"
-            body={
-              <p className="text-sm text-muted-foreground">
-                Join a production company to upload media to the platform.
-              </p>
+          <RoleCard
+            title="Photographer"
+            tagline="Join a production company to upload media to the platform."
+            expanded={expanded.has("photographer")}
+            onToggle={() => toggleExpanded("photographer")}
+            details={
+              <>
+                <p>
+                  As a photographer on the platform, you'll be able to upload event media,
+                  tag athletes as subjects, and have your work discovered by participants
+                  and organizers.
+                </p>
+                <ul className="ml-4 list-disc space-y-1">
+                  <li>Upload high-resolution images and video to events you cover.</li>
+                  <li>Get credited on every media item — your name appears with the production company in parentheses.</li>
+                  <li>Build a portfolio that organizers can browse when hiring.</li>
+                  <li>Participants can purchase or download photos where they are the subject.</li>
+                </ul>
+                <p className="mt-2">
+                  <strong>Guidelines:</strong> Only professional photographers affiliated with a
+                  registered production company are accepted. The company will verify your
+                  affiliation. Respect athlete privacy — do not publish media flagged as private.
+                </p>
+              </>
             }
-            action={
-              hasRole("photographer") ? (
-                <ActiveBadge />
-              ) : (
-                <Btn onClick={() => setOpen("photographer")}>Become photographer</Btn>
-              )
-            }
+            active={hasRole("photographer")}
+            activeCompany={roleCompany("photographer")}
+            onBecome={() => setOpen("photographer")}
+            becomeLabel="Become photographer"
           />
 
-          <Box
-            title="Become a timekeeper"
-            body={
-              <p className="text-sm text-muted-foreground">
-                Join a registered timing company (e.g. EQ Timing, Race Result) to time events.
-              </p>
+          <RoleCard
+            title="Timekeeper"
+            tagline="Join a registered timing company to time events on the platform."
+            expanded={expanded.has("timekeeper")}
+            onToggle={() => toggleExpanded("timekeeper")}
+            details={
+              <>
+                <p>
+                  As a timekeeper, you operate the official timing for races on behalf of a
+                  registered timing company such as EQ Timing or Race Result.
+                </p>
+                <ul className="ml-4 list-disc space-y-1">
+                  <li>Push live results and split times directly to event pages.</li>
+                  <li>Manage bib assignments and class brackets together with organizers.</li>
+                  <li>Get credited on every result with your timing company logo and name.</li>
+                  <li>Access timing dashboards across every event your company services.</li>
+                </ul>
+                <p className="mt-2">
+                  <strong>Guidelines:</strong> Only operators affiliated with a registered timing
+                  company can become timekeepers. Your company must accept your request before
+                  you can publish results.
+                </p>
+              </>
             }
-            action={
-              hasRole("timekeeper") ? (
-                <ActiveBadge />
-              ) : (
-                <Btn onClick={() => setOpen("timekeeper")}>Become timekeeper</Btn>
-              )
-            }
+            active={hasRole("timekeeper")}
+            activeCompany={roleCompany("timekeeper")}
+            onBecome={() => setOpen("timekeeper")}
+            becomeLabel="Become timekeeper"
           />
         </>
       )}
 
       {viewMode === "team" && (
-        <Box
-          title="Become an organizer"
-          body={
-            <p className="text-sm text-muted-foreground">
-              Unlock event creation for your team.
-            </p>
+        <RoleCard
+          title="Organizer"
+          tagline="Unlock event creation and full participant management for your team."
+          expanded={expanded.has("organizer")}
+          onToggle={() => toggleExpanded("organizer")}
+          details={
+            <>
+              <p>
+                Becoming an organizer unlocks the full event toolkit for your team. Run anything
+                from a casual training session to a certified competition.
+              </p>
+                <ul className="ml-4 list-disc space-y-1">
+                  <li><strong>Create events</strong> — trainings, competitions, multi-stage races.</li>
+                  <li><strong>Draw course maps</strong> with our editor, complete with elevation profiles and split points.</li>
+                  <li><strong>Manage participants</strong> — accept signups, assign bibs, set classes and start times.</li>
+                  <li><strong>Add co-organizers</strong> to share the workload across your team members.</li>
+                  <li><strong>Hire photographers and timekeepers</strong> directly from registered companies.</li>
+                  <li><strong>Publish</strong> when ready — your event appears in the public feed and on athlete dashboards.</li>
+                </ul>
+              <p className="mt-2">
+                <strong>Note:</strong> Until payments are integrated, organizer access is granted
+                automatically to every team.
+              </p>
+            </>
           }
-          action={
-            hasRole("organizer") ? (
-              <ActiveBadge />
-            ) : (
-              <Btn
-                onClick={async () => {
-                  const { error } = await supabase
-                    .from("user_roles")
-                    .insert({ user_id: userId, role: "organizer" });
-                  if (error) return toast.error(error.message);
-                  toast.success("You can now create events.");
-                  load();
-                }}
-              >
-                Unlock organizer
-              </Btn>
-            )
-          }
+          active={hasRole("organizer")}
+          activeCompany={null}
+          onBecome={async () => {
+            const { error } = await supabase
+              .from("user_roles")
+              .insert({ user_id: userId, role: "organizer" });
+            if (error) return toast.error(error.message);
+            toast.success("You can now create events.");
+            load();
+          }}
+          becomeLabel="Become organizer"
         />
       )}
 
@@ -205,6 +272,78 @@ export function RolesPanel({
   );
 }
 
+function RoleCard({
+  title,
+  tagline,
+  expanded,
+  onToggle,
+  details,
+  active,
+  activeCompany,
+  onBecome,
+  becomeLabel,
+}: {
+  title: string;
+  tagline: string;
+  expanded: boolean;
+  onToggle: () => void;
+  details: React.ReactNode;
+  active: boolean;
+  activeCompany: Company | null;
+  onBecome: () => void;
+  becomeLabel: string;
+}) {
+  const logo = activeCompany ? getCompanyLogo(activeCompany.name) : null;
+
+  return (
+    <div className="rounded-2xl border border-hairline bg-card p-5 md:p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg font-bold text-ink">{title}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{tagline}</p>
+          <button
+            onClick={onToggle}
+            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-ink hover:opacity-80"
+          >
+            {expanded ? "Hide details" : "Read more"}
+            {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          </button>
+        </div>
+        <div className="shrink-0">
+          {active ? (
+            <div className="flex flex-col items-end gap-2">
+              <span className="mono rounded-full border border-hairline px-3 py-1 text-[10px] uppercase tracking-widest text-ink">
+                Active
+              </span>
+              {activeCompany && (
+                <div className="flex items-center gap-2">
+                  {logo ? (
+                    <img
+                      src={logo}
+                      alt={activeCompany.name}
+                      className="h-8 w-auto max-w-[120px] object-contain"
+                    />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">{activeCompany.name}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <BecomeBtn onClick={onBecome}>{becomeLabel}</BecomeBtn>
+          )}
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="mt-4 space-y-2 rounded-xl border border-hairline bg-background p-4 text-sm text-muted-foreground">
+          {details}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Box({
   title,
   body,
@@ -227,22 +366,14 @@ function Box({
   );
 }
 
-function Btn({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+function BecomeBtn({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:opacity-90"
+      className="rounded-full border border-hairline bg-white px-4 py-2 text-xs font-medium text-black hover:bg-neutral-100"
     >
       {children}
     </button>
-  );
-}
-
-function ActiveBadge() {
-  return (
-    <span className="mono rounded-full border border-hairline px-3 py-1 text-[10px] uppercase tracking-widest text-ink">
-      Active
-    </span>
   );
 }
 
