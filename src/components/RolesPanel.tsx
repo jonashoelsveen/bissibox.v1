@@ -59,13 +59,15 @@ export function RolesPanel({
         title="Account type"
         body={
           <p className="text-sm text-muted-foreground">
-            You are an <span className="text-ink">{accountType}</span> account.
-            {accountType === "team" && " Teams can become organizers and create events."}
+            You are viewing roles as a <span className="text-ink">{viewMode}</span>.
+            {viewMode === "team" && " Teams can become organizers and create events."}
+            {viewMode === "individual" &&
+              " Individuals can create a team, become a photographer, or become a timekeeper."}
           </p>
         }
       />
 
-      {accountType === "individual" && (
+      {viewMode === "individual" && accountType === "individual" && (
         <Box
           title="Create a team"
           body={
@@ -85,39 +87,43 @@ export function RolesPanel({
         />
       )}
 
-      <Box
-        title="Become a photographer"
-        body={
-          <p className="text-sm text-muted-foreground">
-            Join a production company to upload media to the platform.
-          </p>
-        }
-        action={
-          hasRole("photographer") ? (
-            <ActiveBadge />
-          ) : (
-            <Btn onClick={() => setOpen("photographer")}>Become photographer</Btn>
-          )
-        }
-      />
+      {viewMode === "individual" && (
+        <>
+          <Box
+            title="Become a photographer"
+            body={
+              <p className="text-sm text-muted-foreground">
+                Join a production company to upload media to the platform.
+              </p>
+            }
+            action={
+              hasRole("photographer") ? (
+                <ActiveBadge />
+              ) : (
+                <Btn onClick={() => setOpen("photographer")}>Become photographer</Btn>
+              )
+            }
+          />
 
-      <Box
-        title="Become a timekeeper"
-        body={
-          <p className="text-sm text-muted-foreground">
-            Join a registered timing company (e.g. EQ Timing, Race Result) to time events.
-          </p>
-        }
-        action={
-          hasRole("timekeeper") ? (
-            <ActiveBadge />
-          ) : (
-            <Btn onClick={() => setOpen("timekeeper")}>Become timekeeper</Btn>
-          )
-        }
-      />
+          <Box
+            title="Become a timekeeper"
+            body={
+              <p className="text-sm text-muted-foreground">
+                Join a registered timing company (e.g. EQ Timing, Race Result) to time events.
+              </p>
+            }
+            action={
+              hasRole("timekeeper") ? (
+                <ActiveBadge />
+              ) : (
+                <Btn onClick={() => setOpen("timekeeper")}>Become timekeeper</Btn>
+              )
+            }
+          />
+        </>
+      )}
 
-      {accountType === "team" && (
+      {viewMode === "team" && (
         <Box
           title="Become an organizer"
           body={
