@@ -345,6 +345,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          team_id: string | null
           updated_at: string
           user_id: string
         }
@@ -353,6 +354,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          team_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -361,10 +363,19 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          team_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "media_albums_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       media_item_albums: {
         Row: {
