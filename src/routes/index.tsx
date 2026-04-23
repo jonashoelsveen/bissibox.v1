@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/format";
 import { Search } from "lucide-react";
@@ -34,11 +34,16 @@ interface EventRow {
   world_athletics_certified?: boolean;
 }
 
+const TYPES = ["5K", "10K", "Half Marathon", "Marathon", "Trail", "Triathlon", "Relay"];
+const REGIONS = ["Oslo", "Vestland", "Trøndelag", "Rogaland", "Troms", "Innlandet"];
+
 function Index() {
   const { user, mode } = useAuth();
   const nav = useNavigate();
   const [featured, setFeatured] = useState<EventRow[]>([]);
   const [upcoming, setUpcoming] = useState<EventRow[]>([]);
+  const [q, setQ] = useState("");
+  const [filter, setFilter] = useState<string | null>(null);
 
   useEffect(() => {
     if (mode === "organizer" && user) nav({ to: "/organizer/library" });
@@ -58,11 +63,32 @@ function Index() {
         .select("*")
         .eq("published", true)
         .order("starts_at", { ascending: true })
-        .limit(8);
+        .limit(20);
       setFeatured((feat as EventRow[]) ?? []);
       setUpcoming((up as EventRow[]) ?? []);
     })();
   }, []);
+
+  const filteredUpcoming = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return upcoming.filter((e) => {
+      if (filter) {
+        const f = filter.toLowerCase();
+        const matches =
+          e.race_types.some((t) => t.toLowerCase().includes(f)) ||
+          (e.region ?? "").toLowerCase() === f;
+        if (!matches) return false;
+      }
+      if (!term) return true;
+      return (
+        e.title.toLowerCase().includes(term) ||
+        e.organizer.toLowerCase().includes(term) ||
+        e.location.toLowerCase().includes(term) ||
+        (e.region ?? "").toLowerCase().includes(term) ||
+        e.race_types.some((t) => t.toLowerCase().includes(term))
+      );
+    });
+  }, [q, filter, upcoming]);
 
   return (
     <div className="px-4 md:px-6">
@@ -78,25 +104,51 @@ function Index() {
         <p className="mt-4 max-w-xl text-base text-muted-foreground">
           One quiet place for every race in Norway. Search like Spotify. Trust like BankID.
         </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-          >
-            <Search className="h-4 w-4" />
-            Browse races
-          </Link>
-          <Link
-            to="/auth"
-            className="inline-flex items-center gap-2 rounded-full border border-hairline bg-card px-5 py-3 text-sm font-medium text-ink transition hover:bg-secondary"
-          >
-            Create profile
-          </Link>
-        </div>
         <div className="mt-7 border-b border-hairline" />
       </header>
 
-      {featured.length > 0 && (
+      <div className="mt-8 flex justify-center">
+        <label className="flex w-full max-w-md items-center gap-3 rounded-full border border-hairline bg-card px-5 py-2.5 ring-soft focus-within:border-primary">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Race, organizer, distance, region…"
+            className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground"
+          />
+          {q && (
+            <button
+              onClick={() => setQ("")}
+              className="mono text-xs uppercase tracking-widest text-muted-foreground hover:text-ink"
+            >
+              clear
+            </button>
+          )}
+        </label>
+      </div>
+
+      <div className="mx-auto mt-5 max-w-5xl">
+        <div className="flex flex-wrap justify-center gap-2">
+          {[...TYPES, ...REGIONS].map((t) => {
+            const active = filter === t;
+            return (
+              <button
+                key={t}
+                onClick={() => setFilter(active ? null : t)}
+                className={`rounded-full border px-3 py-1.5 text-xs transition ${
+                  active
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-hairline bg-card text-muted-foreground hover:text-ink"
+                }`}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {featured.length > 0 && !q && !filter && (
         <section className="mt-16">
           <SectionHeader title="Featured" hint="Promoted by organizers" />
           <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -108,12 +160,19 @@ function Index() {
       )}
 
       <section className="mt-16">
-        <SectionHeader title="Upcoming races" hint="Soonest first" />
-        <ul className="mt-5 divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-card">
-          {upcoming.map((e) => (
-            <RaceListItem key={e.id} event={e} />
-          ))}
-        </ul>
+        <SectionHeader
+          title={q || filter ? `${filteredUpcoming.length} result${filteredUpcoming.length === 1 ? "" : "s"}` : "Upcoming races"}
+          hint={q || filter ? undefined : "Soonest first"}
+        />
+        {filteredUpcoming.length === 0 ? (
+          <p className="mt-5 text-sm text-muted-foreground">No races match that yet.</p>
+        ) : (
+          <ul className="mt-5 divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-card">
+            {filteredUpcoming.map((e) => (
+              <RaceListItem key={e.id} event={e} />
+            ))}
+          </ul>
+        )}
       </section>
 
       <footer className="mt-20 border-t border-hairline pt-8 pb-6 text-xs text-muted-foreground">
