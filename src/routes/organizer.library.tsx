@@ -148,7 +148,18 @@ function LibraryPage() {
           </p>
         </div>
 
-        <div className="flex flex-1 items-center justify-center gap-2 order-last md:order-none w-full md:w-auto md:max-w-md">
+        <Link
+          to="/organizer/new"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+        >
+          <Plus className="h-4 w-4" /> New event
+        </Link>
+      </header>
+
+      <div className="border-b border-hairline" />
+
+      <div className="mx-auto max-w-5xl pt-6">
+        <div className="flex items-center gap-2">
           <label className="flex flex-1 items-center gap-3 rounded-full border border-hairline bg-card px-5 py-2.5 ring-soft focus-within:border-primary">
             <SearchIcon className="h-4 w-4 text-muted-foreground" />
             <input
@@ -210,18 +221,7 @@ function LibraryPage() {
           </div>
         </div>
 
-        <Link
-          to="/organizer/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-        >
-          <Plus className="h-4 w-4" /> New event
-        </Link>
-      </header>
-
-      <div className="border-b border-hairline" />
-
-      <div className="mx-auto max-w-5xl pt-8">
-        <section>
+        <section className="pt-6">
           {events.length === 0 ? (
             <div className="rounded-xl border border-dashed border-hairline bg-card/60 p-10 text-center">
               <p className="text-sm text-muted-foreground">No events yet.</p>
