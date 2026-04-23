@@ -59,8 +59,9 @@ interface AttendedEvent {
 const MEDIA_HOUSES = ["VG", "NRK", "TV2", "Dagbladet", "Aftenposten"];
 
 function MediaPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, mode, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const isTeamMode = mode === "team" || mode === "organizer";
   const [albums, setAlbums] = useState<Album[]>([]);
   const [items, setItems] = useState<MediaItem[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
@@ -75,6 +76,7 @@ function MediaPage() {
   const [openItems, setOpenItems] = useState<MediaItem[] | null>(null);
   const [attended, setAttended] = useState<AttendedEvent[]>([]);
   const [userName, setUserName] = useState<string>("");
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -82,9 +84,8 @@ function MediaPage() {
 
   const load = useCallback(async () => {
     if (!user) return;
-    const [{ data: a }, { data: m }, { data: r }, { data: p }] = await Promise.all([
+    const [{ data: a }, { data: r }, { data: p }] = await Promise.all([
       supabase.from("media_albums").select("id,name").order("created_at", { ascending: false }),
-      supabase.from("media_items").select("*").order("created_at", { ascending: false }),
       supabase
         .from("registrations")
         .select("event_id, events(id,title,organizer,starts_at)")
@@ -92,25 +93,71 @@ function MediaPage() {
       supabase.from("profiles").select("first_name,last_name,email").eq("id", user.id).maybeSingle(),
     ]);
     setAlbums(a ?? []);
-    setItems((m as MediaItem[]) ?? []);
-    const ev: AttendedEvent[] = [];
-    const seen = new Set<string>();
-    type Reg = { events: AttendedEvent | null };
-    for (const row of (r as unknown as Reg[]) ?? []) {
-      const e = row.events;
-      if (e && !seen.has(e.id)) {
-        seen.add(e.id);
-        ev.push(e);
-      }
-    }
-    setAttended(ev);
     const name =
       [p?.first_name, p?.last_name].filter(Boolean).join(" ").trim() ||
       p?.email ||
       user.email ||
       "";
     setUserName(name);
-  }, [user]);
+
+    if (isTeamMode) {
+      const { data: team } = await supabase
+        .from("teams")
+        .select("id,name")
+        .eq("owner_id", user.id)
+        .maybeSingle();
+      if (!team) {
+        setItems([]);
+        setAttended([]);
+        return;
+      }
+      const { data: members } = await supabase
+        .from("team_members")
+        .select("user_id")
+        .eq("team_id", team.id)
+        .eq("accepted", true);
+      const memberIds = Array.from(
+        new Set([user.id, ...((members ?? []).map((m) => m.user_id))]),
+      );
+      const { data: orgEvents } = await supabase
+        .from("events")
+        .select("id,title,organizer,starts_at")
+        .eq("organizer", team.name);
+      const orgEventIds = (orgEvents ?? []).map((e) => e.id);
+      const orFilter: string[] = [`user_id.in.(${memberIds.join(",")})`];
+      if (orgEventIds.length > 0) orFilter.push(`event_id.in.(${orgEventIds.join(",")})`);
+      const { data: m } = await supabase
+        .from("media_items")
+        .select("*")
+        .or(orFilter.join(","))
+        .order("created_at", { ascending: false });
+      setItems((m as MediaItem[]) ?? []);
+      setAttended((orgEvents as AttendedEvent[]) ?? []);
+    } else {
+      const { data: m } = await supabase
+        .from("media_items")
+        .select("*")
+        .order("created_at", { ascending: false });
+      const subjectName = name.toLowerCase();
+      const filteredItems = ((m as MediaItem[]) ?? []).filter(
+        (it) =>
+          it.user_id === user.id ||
+          (subjectName && (it.subject ?? "").toLowerCase().includes(subjectName)),
+      );
+      setItems(filteredItems);
+      const ev: AttendedEvent[] = [];
+      const seen = new Set<string>();
+      type Reg = { events: AttendedEvent | null };
+      for (const row of (r as unknown as Reg[]) ?? []) {
+        const e = row.events;
+        if (e && !seen.has(e.id)) {
+          seen.add(e.id);
+          ev.push(e);
+        }
+      }
+      setAttended(ev);
+    }
+  }, [user, isTeamMode]);
 
   useEffect(() => {
     void load();
