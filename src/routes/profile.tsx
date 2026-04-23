@@ -53,6 +53,7 @@ function ProfilePage() {
   const [liked, setLiked] = useState<LikedRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<"general" | "address" | "races" | "liked" | "roles">("general");
+  const [hasTeam, setHasTeam] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
