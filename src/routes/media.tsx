@@ -336,7 +336,7 @@ function MediaPage() {
                       if (selectMode) toggleSel(it.id);
                       else setOpenItems([it]);
                     }}
-                    className="group relative aspect-square cursor-pointer overflow-hidden rounded-sm bg-secondary"
+                    className="group relative aspect-square cursor-default overflow-hidden rounded-sm bg-secondary"
                   >
                     {it.media_type === "photo" ? (
                       urls[it.id] && (
