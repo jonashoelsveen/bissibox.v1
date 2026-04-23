@@ -92,29 +92,14 @@ function Index() {
 
   return (
     <div className="px-4 md:px-6">
-      <header className="pt-4">
-        <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Raceline · Norway
-        </p>
-        <h1 className="mt-2 text-3xl leading-[1.05] text-ink md:text-5xl">
-          Find your next race.
-          <br />
-          <span className="text-muted-foreground">Sign up in seconds.</span>
-        </h1>
-        <p className="mt-4 max-w-xl text-base text-muted-foreground">
-          One quiet place for every race in Norway. Search like Spotify. Trust like BankID.
-        </p>
-        <div className="mt-7 border-b border-hairline" />
-      </header>
-
-      <div className="mt-8 flex justify-center">
-        <label className="flex w-full max-w-md items-center gap-3 rounded-full border border-hairline bg-card px-5 py-2.5 ring-soft focus-within:border-primary">
-          <Search className="h-4 w-4 text-muted-foreground" />
+      <header className="flex justify-center pt-8">
+        <label className="flex w-full max-w-2xl items-center gap-3 rounded-full border border-hairline bg-card px-6 py-4 ring-soft focus-within:border-primary">
+          <Search className="h-5 w-5 text-muted-foreground" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Race, organizer, distance, region…"
-            className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground"
+            className="flex-1 bg-transparent text-base text-ink outline-none placeholder:text-muted-foreground"
           />
           {q && (
             <button
@@ -125,7 +110,7 @@ function Index() {
             </button>
           )}
         </label>
-      </div>
+      </header>
 
       <div className="mx-auto mt-5 max-w-5xl">
         <div className="flex flex-wrap justify-center gap-2">
