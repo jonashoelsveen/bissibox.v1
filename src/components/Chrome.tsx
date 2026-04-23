@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { User2, Home, Library, Plus } from "lucide-react";
+import { User2, Search, Library, Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 export function TopChrome() {
@@ -30,8 +30,8 @@ export function TopChrome() {
             </NavBtn>
           </>
         ) : (
-          <NavBtn to="/" label="Home" active={path === "/"}>
-            <Home className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          <NavBtn to="/" label="Search" active={path === "/"}>
+            <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
           </NavBtn>
         )}
 
