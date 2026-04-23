@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
+import { RolesPanel } from "@/components/RolesPanel";
 
 export const Route = createFileRoute("/profile")({
   component: ProfilePage,
@@ -51,7 +52,7 @@ function ProfilePage() {
   const [regs, setRegs] = useState<RegistrationRow[]>([]);
   const [liked, setLiked] = useState<LikedRow[]>([]);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<"general" | "address" | "races" | "liked">("general");
+  const [tab, setTab] = useState<"general" | "address" | "races" | "liked" | "roles">("general");
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -116,7 +117,7 @@ function ProfilePage() {
 
       <div className="mt-8 grid gap-10 md:grid-cols-[180px_1fr]">
         <nav className="-ml-2 flex flex-row gap-1 md:flex-col md:gap-0.5">
-          {(["general", "address", "races", "liked"] as const).map((t) => (
+          {(["general", "address", "roles", "races", "liked"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -130,9 +131,11 @@ function ProfilePage() {
                 ? "General"
                 : t === "address"
                   ? "Contact & address"
-                  : t === "races"
-                    ? "My races"
-                    : "Liked races"}
+                  : t === "roles"
+                    ? "Roles"
+                    : t === "races"
+                      ? "My races"
+                      : "Liked races"}
             </button>
           ))}
         </nav>
@@ -191,6 +194,8 @@ function ProfilePage() {
               <SaveBar saving={saving} onSave={save} />
             </Card>
           )}
+
+          {tab === "roles" && <RolesPanel userId={user.id} />}
 
           {tab === "races" && (
             <Card>
