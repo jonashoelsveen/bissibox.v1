@@ -73,6 +73,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const [openSub, setOpenSub] = useState<number | null>(0);
 
   const [savedId, setSavedId] = useState<string | undefined>(eventId);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -97,6 +98,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         setRaceTypes(e.race_types ?? []);
         setWaCertified(!!e.world_athletics_certified);
         setPublished(!!(e as any).published);
+        setOwnerId((e as any).owner_id ?? null);
       }
       const { data: cls } = await supabase
         .from("event_classes")
