@@ -415,6 +415,7 @@ export type Database = {
           address: string | null
           address2: string | null
           anonymous: boolean
+          athlete_active: boolean
           birth_date: string | null
           club: string | null
           companion: string | null
@@ -428,11 +429,14 @@ export type Database = {
           first_name: string | null
           gender: string | null
           id: string
+          is_photographer: boolean
           last_name: string | null
           license: string | null
           mobile: string | null
           mode: string
           nationality: string | null
+          photographer_active: boolean
+          photographer_bio: string | null
           postal_code: string | null
           postal_place: string | null
           team: string | null
@@ -444,6 +448,7 @@ export type Database = {
           address?: string | null
           address2?: string | null
           anonymous?: boolean
+          athlete_active?: boolean
           birth_date?: string | null
           club?: string | null
           companion?: string | null
@@ -457,11 +462,14 @@ export type Database = {
           first_name?: string | null
           gender?: string | null
           id: string
+          is_photographer?: boolean
           last_name?: string | null
           license?: string | null
           mobile?: string | null
           mode?: string
           nationality?: string | null
+          photographer_active?: boolean
+          photographer_bio?: string | null
           postal_code?: string | null
           postal_place?: string | null
           team?: string | null
@@ -473,6 +481,7 @@ export type Database = {
           address?: string | null
           address2?: string | null
           anonymous?: boolean
+          athlete_active?: boolean
           birth_date?: string | null
           club?: string | null
           companion?: string | null
@@ -486,11 +495,14 @@ export type Database = {
           first_name?: string | null
           gender?: string | null
           id?: string
+          is_photographer?: boolean
           last_name?: string | null
           license?: string | null
           mobile?: string | null
           mode?: string
           nationality?: string | null
+          photographer_active?: boolean
+          photographer_bio?: string | null
           postal_code?: string | null
           postal_place?: string | null
           team?: string | null

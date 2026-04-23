@@ -31,6 +31,10 @@ interface Profile {
   mobile: string | null;
   emergency_contact: string | null;
   emergency_phone: string | null;
+  athlete_active: boolean;
+  is_photographer: boolean;
+  photographer_active: boolean;
+  photographer_bio: string | null;
 }
 
 interface Team {
@@ -282,6 +286,56 @@ function ProfilePage() {
                 />
               </Grid>
               <SaveBar saving={saving} onSave={save} />
+
+              <div className="mt-8 border-t border-hairline pt-6">
+                <h3 className="text-sm font-semibold text-ink">Profile</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Control whether your profiles are searchable by other users.
+                </p>
+
+                <div className="mt-4 space-y-3">
+                  <ToggleRow
+                    title="Athlete profile active"
+                    description="Required to register for races and to appear in search."
+                    checked={profile.athlete_active}
+                    onChange={(v) => updateProfile("athlete_active", v)}
+                  />
+
+                  <ToggleRow
+                    title="I am a photographer"
+                    description="Enables a separate photographer profile."
+                    checked={profile.is_photographer}
+                    onChange={(v) => {
+                      updateProfile("is_photographer", v);
+                      if (!v) updateProfile("photographer_active", false);
+                    }}
+                  />
+
+                  {profile.is_photographer && (
+                    <>
+                      <ToggleRow
+                        title="Photographer profile active"
+                        description="Required to upload media for assignments and to appear in search."
+                        checked={profile.photographer_active}
+                        onChange={(v) => updateProfile("photographer_active", v)}
+                      />
+                      <label className="block">
+                        <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                          Photographer bio
+                        </span>
+                        <textarea
+                          value={profile.photographer_bio ?? ""}
+                          onChange={(e) => updateProfile("photographer_bio", e.target.value || null)}
+                          rows={3}
+                          placeholder="Tell people about your work."
+                          className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none transition focus:border-primary"
+                        />
+                      </label>
+                    </>
+                  )}
+                </div>
+                <SaveBar saving={saving} onSave={save} />
+              </div>
             </Card>
           )}
 
@@ -510,6 +564,42 @@ function SaveBar({ saving, onSave }: { saving: boolean; onSave: () => void }) {
         className="rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
       >
         {saving ? "Saving…" : "Save"}
+      </button>
+    </div>
+  );
+}
+
+function ToggleRow({
+  title,
+  description,
+  checked,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-hairline bg-background px-4 py-3">
+      <div className="min-w-0">
+        <div className="text-sm text-ink">{title}</div>
+        <div className="mt-0.5 text-xs text-muted-foreground">{description}</div>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative h-5 w-9 shrink-0 rounded-full transition ${
+          checked ? "bg-primary" : "bg-secondary"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition ${
+            checked ? "left-[18px]" : "left-0.5"
+          }`}
+        />
       </button>
     </div>
   );
