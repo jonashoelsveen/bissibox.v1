@@ -743,14 +743,19 @@ function UploadDialog({
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-hairline bg-background px-4 py-8 text-sm text-muted-foreground hover:text-ink"
         >
           <Upload className="h-4 w-4" />
-          {file ? file.name : "Choose a photo or video"}
+          {files.length === 0
+            ? "Choose photos or videos"
+            : files.length === 1
+              ? files[0].name
+              : `${files.length} files selected`}
         </button>
         <input
           ref={inputRef}
           type="file"
           accept="image/*,video/*"
+          multiple
           className="hidden"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : [])}
         />
       </div>
       <div className="mt-4">
