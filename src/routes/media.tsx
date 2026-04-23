@@ -1057,6 +1057,7 @@ function Lightbox({
                 albums={albums}
                 attended={attended}
                 userName={userName}
+                itemAlbums={itemAlbums}
                 onSaved={onChanged}
               />
             )}
