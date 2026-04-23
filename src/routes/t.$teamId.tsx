@@ -63,7 +63,7 @@ function TeamPage() {
     (async () => {
       const { data } = await supabase
         .from("teams")
-        .select("id, name, description, description_long, country, cover_media_id")
+        .select("id, name, description, description_long, country, cover_media_id, website, owner_id")
         .eq("id", teamId)
         .maybeSingle();
       if (!data) {
