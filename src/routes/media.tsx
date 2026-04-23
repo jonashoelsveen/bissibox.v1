@@ -324,14 +324,19 @@ function MediaPage() {
             <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {filtered.map((it) => {
                 const isSel = selected.has(it.id);
+                const isRevealed = revealed.has(it.id);
+                const eventTitle = attended.find((e) => e.id === it.event_id)?.title;
+                const photographerLabel = it.organizer
+                  ? `${it.photographer ?? "—"} (${it.organizer})`
+                  : it.photographer ?? "—";
                 return (
-                  <button
+                  <div
                     key={it.id}
                     onClick={() => {
                       if (selectMode) toggleSel(it.id);
                       else setOpenItems([it]);
                     }}
-                    className="group relative aspect-square overflow-hidden rounded-sm bg-secondary"
+                    className="group relative aspect-square cursor-pointer overflow-hidden rounded-sm bg-secondary"
                   >
                     {it.media_type === "photo" ? (
                       urls[it.id] && (
@@ -353,7 +358,37 @@ function MediaPage() {
                         )}
                       </div>
                     )}
-                  </button>
+                    <div
+                      className={`pointer-events-none absolute inset-0 bg-black/55 transition-opacity duration-300 ${
+                        isRevealed ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
+                    <div
+                      className={`pointer-events-none absolute inset-x-0 top-0 p-3 text-[11px] leading-tight text-white transition-all duration-300 ${
+                        isRevealed ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0"
+                      }`}
+                    >
+                      <div className="font-medium">{it.subject || "Unknown subject"}</div>
+                      <div className="mt-0.5 text-white/80">{eventTitle || "No event"}</div>
+                      <div className="mt-0.5 text-white/70">{photographerLabel}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRevealed((s) => {
+                          const n = new Set(s);
+                          if (n.has(it.id)) n.delete(it.id);
+                          else n.add(it.id);
+                          return n;
+                        });
+                      }}
+                      className="absolute bottom-2 left-2 z-10 rounded-full bg-background/80 p-1.5 text-muted-foreground transition hover:text-ink"
+                      aria-label="Show details"
+                    >
+                      <Info className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 );
               })}
             </div>
