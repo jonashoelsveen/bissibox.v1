@@ -39,6 +39,8 @@ export const Route = createFileRoute("/media")({
 interface Album {
   id: string;
   name: string;
+  pinned: boolean;
+  sort_order: number;
 }
 
 interface MediaItem {
@@ -168,10 +170,12 @@ function MediaPage() {
       // Team-scoped albums only
       const { data: a } = await supabase
         .from("media_albums")
-        .select("id,name")
+        .select("id,name,pinned,sort_order")
         .eq("team_id", team.id)
+        .order("pinned", { ascending: false })
+        .order("sort_order", { ascending: true })
         .order("created_at", { ascending: false });
-      setAlbums(a ?? []);
+      setAlbums((a ?? []) as Album[]);
 
       const { data: orgEvents } = await supabase
         .from("events")
@@ -190,11 +194,13 @@ function MediaPage() {
       // Personal albums only (no team_id)
       const { data: a } = await supabase
         .from("media_albums")
-        .select("id,name")
+        .select("id,name,pinned,sort_order")
         .is("team_id", null)
         .eq("user_id", user.id)
+        .order("pinned", { ascending: false })
+        .order("sort_order", { ascending: true })
         .order("created_at", { ascending: false });
-      setAlbums(a ?? []);
+      setAlbums((a ?? []) as Album[]);
 
       // Individual library = items the user owns that are NOT linked to a team,
       // plus items where they are the subject (shot by an organizer/photographer).
