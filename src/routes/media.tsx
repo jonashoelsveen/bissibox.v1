@@ -675,8 +675,9 @@ function UploadDialog({
   onUploaded: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [albumIds, setAlbumIds] = useState<string[]>([]);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [eventId, setEventId] = useState<string | null>(null);
   const [eventName, setEventName] = useState("");
   const [organizer, setOrganizer] = useState("");
@@ -687,42 +688,50 @@ function UploadDialog({
   const photographer = userName || "You";
 
   const upload = async () => {
-    if (!file) return;
+    if (files.length === 0) return;
     setBusy(true);
+    setProgress({ done: 0, total: files.length });
     try {
-      const ext = file.name.split(".").pop();
-      const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("media").upload(path, file, {
-        contentType: file.type,
-      });
-      if (upErr) throw upErr;
-      const isVideo = file.type.startsWith("video");
-      const { data: inserted, error: insErr } = await supabase
-        .from("media_items")
-        .insert({
-          user_id: userId,
-          storage_path: path,
-          media_type: isVideo ? "video" : "photo",
-          mime_type: file.type,
-          file_size: file.size,
-          album_id: albumIds[0] ?? null,
-          event_id: eventId,
-          organizer: organizer || null,
-          photographer,
-          subject: subject || null,
-        })
-        .select("id")
-        .single();
-      if (insErr) throw insErr;
-      if (inserted && albumIds.length > 0) {
-        await syncMediaAlbums([inserted.id], albumIds, "replace");
+      const insertedIds: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const ext = file.name.split(".").pop();
+        const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("media").upload(path, file, {
+          contentType: file.type,
+        });
+        if (upErr) throw upErr;
+        const isVideo = file.type.startsWith("video");
+        const { data: inserted, error: insErr } = await supabase
+          .from("media_items")
+          .insert({
+            user_id: userId,
+            storage_path: path,
+            media_type: isVideo ? "video" : "photo",
+            mime_type: file.type,
+            file_size: file.size,
+            album_id: albumIds[0] ?? null,
+            event_id: eventId,
+            organizer: organizer || null,
+            photographer,
+            subject: subject || null,
+          })
+          .select("id")
+          .single();
+        if (insErr) throw insErr;
+        if (inserted) insertedIds.push(inserted.id);
+        setProgress({ done: i + 1, total: files.length });
       }
-      toast.success("Uploaded");
+      if (insertedIds.length > 0 && albumIds.length > 0) {
+        await syncMediaAlbums(insertedIds, albumIds, "replace");
+      }
+      toast.success(files.length > 1 ? `Uploaded ${files.length} files` : "Uploaded");
       onUploaded();
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   };
 
@@ -734,14 +743,19 @@ function UploadDialog({
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-hairline bg-background px-4 py-8 text-sm text-muted-foreground hover:text-ink"
         >
           <Upload className="h-4 w-4" />
-          {file ? file.name : "Choose a photo or video"}
+          {files.length === 0
+            ? "Choose photos or videos"
+            : files.length === 1
+              ? files[0].name
+              : `${files.length} files selected`}
         </button>
         <input
           ref={inputRef}
           type="file"
           accept="image/*,video/*"
+          multiple
           className="hidden"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : [])}
         />
       </div>
       <div className="mt-4">
@@ -802,10 +816,16 @@ function UploadDialog({
         </button>
         <button
           onClick={upload}
-          disabled={busy || !file}
+          disabled={busy || files.length === 0}
           className="rounded-full bg-primary px-5 py-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
-          {busy ? "Uploading…" : "Save"}
+          {busy
+            ? progress
+              ? `Uploading ${progress.done}/${progress.total}…`
+              : "Uploading…"
+            : files.length > 1
+              ? `Save ${files.length} files`
+              : "Save"}
         </button>
       </div>
     </Modal>
