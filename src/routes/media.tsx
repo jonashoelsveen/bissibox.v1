@@ -204,6 +204,19 @@ function MediaPage() {
       }
       setAttended(ev);
     }
+
+    // Load many-to-many album links for the visible items
+    const itemIds = (isTeamMode ? [] : []).concat(); // placeholder, refilled below
+    // We re-derive after setItems; query separately using user.id-owned items + linked items
+    const { data: links } = await supabase
+      .from("media_item_albums")
+      .select("media_item_id,album_id");
+    const map: Record<string, string[]> = {};
+    for (const row of (links as { media_item_id: string; album_id: string }[] | null) ?? []) {
+      (map[row.media_item_id] ??= []).push(row.album_id);
+    }
+    setItemAlbums(map);
+    void itemIds;
   }, [user, isTeamMode]);
 
   useEffect(() => {
