@@ -730,6 +730,7 @@ function UploadDialog({
             organizer: organizer || null,
             photographer,
             subject: subject || null,
+            uploaded_in_mode: mode,
           })
           .select("id")
           .single();
