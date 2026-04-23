@@ -63,7 +63,7 @@ interface LikedRow {
   events: { id: string; title: string; starts_at: string; location: string } | null;
 }
 
-type Tab = "general" | "address" | "races" | "liked" | "roles";
+type Tab = "general" | "address" | "races" | "liked" | "roles" | "profiles";
 
 function ProfilePage() {
   const { user, loading: authLoading, mode, setMode, signOut } = useAuth();
@@ -116,8 +116,18 @@ function ProfilePage() {
 
   // Switch off team-only / individual-only tabs when mode changes
   useEffect(() => {
-    if (isTeamMode && (tab === "races" || tab === "liked")) setTab("general");
+    if (isTeamMode && (tab === "races" || tab === "liked" || tab === "profiles")) setTab("general");
   }, [isTeamMode, tab]);
+
+  const [userRoles, setUserRoles] = useState<{ role: "organizer" | "photographer" | "timekeeper" }[]>([]);
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .then(({ data }) => setUserRoles((data ?? []) as { role: "organizer" | "photographer" | "timekeeper" }[]));
+  }, [user, tab]);
 
   const unlike = async (likeId: string) => {
     const { error } = await supabase.from("event_likes").delete().eq("id", likeId);
@@ -156,7 +166,7 @@ function ProfilePage() {
 
   const tabs: Tab[] = isTeamMode
     ? ["general", "address", "roles"]
-    : ["general", "address", "roles", "races", "liked"];
+    : ["general", "address", "roles", "profiles", "races", "liked"];
 
   return (
     <div className="px-4 md:px-6">
@@ -191,9 +201,11 @@ function ProfilePage() {
                   ? "Contact & address"
                   : t === "roles"
                     ? "Roles"
-                    : t === "races"
-                      ? "My races"
-                      : "Liked races"}
+                    : t === "profiles"
+                      ? "Profile"
+                      : t === "races"
+                        ? "My races"
+                        : "Liked races"}
             </button>
           ))}
         </nav>
@@ -286,57 +298,18 @@ function ProfilePage() {
                 />
               </Grid>
               <SaveBar saving={saving} onSave={save} />
-
-              <div className="mt-8 border-t border-hairline pt-6">
-                <h3 className="text-sm font-semibold text-ink">Profile</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Control whether your profiles are searchable by other users.
-                </p>
-
-                <div className="mt-4 space-y-3">
-                  <ToggleRow
-                    title="Athlete profile active"
-                    description="Required to register for races and to appear in search."
-                    checked={profile.athlete_active}
-                    onChange={(v) => updateProfile("athlete_active", v)}
-                  />
-
-                  <ToggleRow
-                    title="I am a photographer"
-                    description="Enables a separate photographer profile."
-                    checked={profile.is_photographer}
-                    onChange={(v) => {
-                      updateProfile("is_photographer", v);
-                      if (!v) updateProfile("photographer_active", false);
-                    }}
-                  />
-
-                  {profile.is_photographer && (
-                    <>
-                      <ToggleRow
-                        title="Photographer profile active"
-                        description="Required to upload media for assignments and to appear in search."
-                        checked={profile.photographer_active}
-                        onChange={(v) => updateProfile("photographer_active", v)}
-                      />
-                      <label className="block">
-                        <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                          Photographer bio
-                        </span>
-                        <textarea
-                          value={profile.photographer_bio ?? ""}
-                          onChange={(e) => updateProfile("photographer_bio", e.target.value || null)}
-                          rows={3}
-                          placeholder="Tell people about your work."
-                          className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none transition focus:border-primary"
-                        />
-                      </label>
-                    </>
-                  )}
-                </div>
-                <SaveBar saving={saving} onSave={save} />
-              </div>
             </Card>
+          )}
+
+          {tab === "profiles" && !isTeamMode && (
+            <ProfilesPanel
+              profile={profile}
+              userRoles={userRoles}
+              updateProfile={updateProfile}
+              saving={saving}
+              onSave={save}
+              goToRoles={() => setTab("roles")}
+            />
           )}
 
           {tab === "roles" && <RolesPanel userId={user.id} viewMode={isTeamMode ? "team" : "individual"} />}
@@ -602,5 +575,176 @@ function ToggleRow({
         />
       </button>
     </div>
+  );
+}
+
+function ProfilesPanel({
+  profile,
+  userRoles,
+  updateProfile,
+  saving,
+  onSave,
+  goToRoles,
+}: {
+  profile: Profile;
+  userRoles: { role: "organizer" | "photographer" | "timekeeper" }[];
+  updateProfile: (k: keyof Profile, v: string | boolean | null) => void;
+  saving: boolean;
+  onSave: () => void;
+  goToRoles: () => void;
+}) {
+  const [editing, setEditing] = useState<null | "athlete" | "photographer">(null);
+  const hasRole = (r: "organizer" | "photographer" | "timekeeper") =>
+    userRoles.some((x) => x.role === r);
+
+  const cards: {
+    key: "athlete" | "photographer" | "timekeeper" | "organizer";
+    label: string;
+    active: boolean;
+    onToggle?: (v: boolean) => void;
+    editable: boolean;
+  }[] = [
+    {
+      key: "athlete",
+      label: "Athlete",
+      active: profile.athlete_active,
+      onToggle: (v) => updateProfile("athlete_active", v),
+      editable: true,
+    },
+  ];
+  if (hasRole("photographer") || profile.is_photographer) {
+    cards.push({
+      key: "photographer",
+      label: "Photographer",
+      active: profile.photographer_active,
+      onToggle: (v) => updateProfile("photographer_active", v),
+      editable: true,
+    });
+  }
+  if (hasRole("timekeeper")) {
+    cards.push({ key: "timekeeper", label: "Timekeeper", active: true, editable: false });
+  }
+  if (hasRole("organizer")) {
+    cards.push({ key: "organizer", label: "Organizer", active: true, editable: false });
+  }
+
+  return (
+    <Card>
+      <p className="text-xs text-muted-foreground">
+        One profile per role. Toggle <span className="text-ink">Active</span> to control whether
+        you appear in search and can perform that role's actions.
+      </p>
+
+      <div className="mt-4 space-y-3">
+        {cards.map((c) => (
+          <div
+            key={c.key}
+            className="flex items-center justify-between gap-4 rounded-xl border border-hairline bg-background px-4 py-3"
+          >
+            <div className="min-w-0 flex items-center gap-3">
+              <span className="mono rounded-full border border-hairline px-3 py-1 text-[10px] uppercase tracking-widest text-ink">
+                {c.label}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              {c.editable && (
+                <button
+                  onClick={() => setEditing(c.key as "athlete" | "photographer")}
+                  className="rounded-full border border-hairline bg-card px-3 py-1.5 text-xs text-ink hover:bg-secondary"
+                >
+                  Edit profile
+                </button>
+              )}
+              {c.onToggle ? (
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={c.active}
+                  onClick={() => c.onToggle!(!c.active)}
+                  className={`relative h-5 w-9 shrink-0 rounded-full transition ${
+                    c.active ? "bg-primary" : "bg-secondary"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition ${
+                      c.active ? "left-[18px]" : "left-0.5"
+                    }`}
+                  />
+                </button>
+              ) : (
+                <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                  via company
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 text-xs text-muted-foreground">
+        Want another role? <button onClick={goToRoles} className="text-ink underline">Visit Roles</button>.
+      </div>
+
+      {editing === "athlete" && (
+        <div className="mt-6 rounded-xl border border-hairline bg-background p-4">
+          <h4 className="text-sm font-semibold text-ink">Athlete profile</h4>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Required to register for races and to appear in search.
+          </p>
+          <div className="mt-3">
+            <ToggleRow
+              title="Athlete profile active"
+              description="Visible in user search and able to register."
+              checked={profile.athlete_active}
+              onChange={(v) => updateProfile("athlete_active", v)}
+            />
+          </div>
+        </div>
+      )}
+
+      {editing === "photographer" && (
+        <div className="mt-6 rounded-xl border border-hairline bg-background p-4">
+          <h4 className="text-sm font-semibold text-ink">Photographer profile</h4>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Required to upload media and to appear in photographer search.
+          </p>
+          <div className="mt-3 space-y-3">
+            <ToggleRow
+              title="I am a photographer"
+              description="Enables a separate photographer profile."
+              checked={profile.is_photographer}
+              onChange={(v) => {
+                updateProfile("is_photographer", v);
+                if (!v) updateProfile("photographer_active", false);
+              }}
+            />
+            {profile.is_photographer && (
+              <>
+                <ToggleRow
+                  title="Photographer profile active"
+                  description="Visible in photographer search."
+                  checked={profile.photographer_active}
+                  onChange={(v) => updateProfile("photographer_active", v)}
+                />
+                <label className="block">
+                  <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                    Photographer bio
+                  </span>
+                  <textarea
+                    value={profile.photographer_bio ?? ""}
+                    onChange={(e) => updateProfile("photographer_bio", e.target.value || null)}
+                    rows={3}
+                    placeholder="Tell people about your work."
+                    className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none transition focus:border-primary"
+                  />
+                </label>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <SaveBar saving={saving} onSave={onSave} />
+    </Card>
   );
 }
