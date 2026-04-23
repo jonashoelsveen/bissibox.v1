@@ -424,16 +424,129 @@ function MediaPage() {
               >
                 Unsorted
               </NavBtn>
-              {albums.map((a) => (
-                <NavBtn
-                  key={a.id}
-                  small
-                  active={view.type === "album" && view.id === a.id}
-                  onClick={() => setView({ type: "album", id: a.id })}
-                >
-                  {a.name}
-                </NavBtn>
-              ))}
+              {albums.map((a) => {
+                const active = view.type === "album" && view.id === a.id;
+                const isDragging = albumDragId === a.id;
+                return (
+                  <div
+                    key={a.id}
+                    draggable={albumDragHandle === a.id}
+                    onDragStart={(e) => {
+                      if (albumDragHandle !== a.id) {
+                        e.preventDefault();
+                        return;
+                      }
+                      setAlbumDragId(a.id);
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", a.id);
+                    }}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      if (albumDragId && albumDragId !== a.id) {
+                        setAlbums((arr) => {
+                          const from = arr.findIndex((x) => x.id === albumDragId);
+                          const to = arr.findIndex((x) => x.id === a.id);
+                          if (from < 0 || to < 0 || from === to) return arr;
+                          // Only reorder within same pinned group
+                          if (arr[from].pinned !== arr[to].pinned) return arr;
+                          const next = [...arr];
+                          const [moved] = next.splice(from, 1);
+                          next.splice(to, 0, moved);
+                          return next;
+                        });
+                      }
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                    }}
+                    onDragEnd={() => {
+                      const final = albums;
+                      setAlbumDragId(null);
+                      setAlbumDragHandle(null);
+                      void persistAlbumOrder(final);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                    }}
+                    className={`group relative flex items-center gap-1 rounded-md transition ${
+                      active ? "bg-secondary" : "hover:bg-secondary/60"
+                    } ${isDragging ? "opacity-40" : ""}`}
+                  >
+                    <span
+                      className="grid h-7 w-4 shrink-0 cursor-grab place-items-center text-muted-foreground/50 opacity-0 transition group-hover:opacity-100 hover:text-ink active:cursor-grabbing"
+                      onMouseDown={() => setAlbumDragHandle(a.id)}
+                      onMouseUp={() => setAlbumDragHandle(null)}
+                      onMouseLeave={() => {
+                        if (!albumDragId) setAlbumDragHandle(null);
+                      }}
+                      title="Drag to reorder"
+                      aria-label="Drag to reorder"
+                    >
+                      <GripVertical className="h-3 w-3" />
+                    </span>
+                    <button
+                      onClick={() => setView({ type: "album", id: a.id })}
+                      className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-md py-1.5 pr-1 text-left text-xs transition ${
+                        active ? "font-medium text-ink" : "text-muted-foreground hover:text-ink"
+                      }`}
+                    >
+                      {a.pinned && (
+                        <Pin className="h-2.5 w-2.5 shrink-0 fill-current text-ink/70" />
+                      )}
+                      <span className="truncate">{a.name}</span>
+                    </button>
+                    <div className="relative shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAlbumMenuFor(albumMenuFor === a.id ? null : a.id);
+                        }}
+                        className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground/60 opacity-0 transition hover:bg-card hover:text-ink group-hover:opacity-100 data-[open=true]:opacity-100"
+                        data-open={albumMenuFor === a.id}
+                        aria-label="Album actions"
+                      >
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </button>
+                      {albumMenuFor === a.id && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setAlbumMenuFor(null)}
+                          />
+                          <div className="absolute right-0 top-8 z-50 w-40 overflow-hidden rounded-md border border-hairline bg-card shadow-lg">
+                            <button
+                              onClick={() => togglePin(a)}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-ink hover:bg-secondary"
+                            >
+                              {a.pinned ? (
+                                <>
+                                  <PinOff className="h-3.5 w-3.5" /> Unpin
+                                </>
+                              ) : (
+                                <>
+                                  <Pin className="h-3.5 w-3.5" /> Pin to top
+                                </>
+                              )}
+                            </button>
+                            {a.name !== "Profile" && (
+                              <button
+                                onClick={() => {
+                                  setAlbumMenuFor(null);
+                                  setConfirmDelete(a);
+                                }}
+                                className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2 text-left text-xs text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" /> Delete
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
               {albums.length === 0 && (
                 <span className="px-3 py-1.5 text-xs text-muted-foreground">No albums yet</span>
               )}
