@@ -646,10 +646,12 @@ function CreateAlbumDialog({
   onClose,
   onCreated,
   userId,
+  teamId,
 }: {
   onClose: () => void;
   onCreated: () => void;
   userId: string;
+  teamId: string | null;
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -660,7 +662,12 @@ function CreateAlbumDialog({
     setBusy(true);
     const { error } = await supabase
       .from("media_albums")
-      .insert({ user_id: userId, name: name.trim(), description: description.trim() || null });
+      .insert({
+        user_id: userId,
+        team_id: teamId,
+        name: name.trim(),
+        description: description.trim() || null,
+      });
     setBusy(false);
     if (error) {
       toast.error(error.message);
