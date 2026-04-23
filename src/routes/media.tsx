@@ -169,33 +169,17 @@ function MediaPage() {
         .order("created_at", { ascending: false });
       setAlbums(a ?? []);
 
-      const { data: members } = await supabase
-        .from("team_members")
-        .select("user_id")
-        .eq("team_id", team.id)
-        .eq("accepted", true);
-      const memberIds = Array.from(
-        new Set([user.id, ...((members ?? []).map((m) => m.user_id))]),
-      );
       const { data: orgEvents } = await supabase
         .from("events")
         .select("id,title,organizer,starts_at")
         .eq("organizer", team.name);
-      const orgEventIds = (orgEvents ?? []).map((e) => e.id);
+      // Team library = items tagged with this team_id. Fully isolated from personal.
       const { data: m } = await supabase
         .from("media_items")
         .select("*")
+        .eq("team_id", team.id)
         .order("created_at", { ascending: false });
-      const all = (m as MediaItem[]) ?? [];
-      // Team mode: items uploaded *in team/organizer mode* by team members,
-      // plus any items linked to events the team organizes.
-      const teamItems = all.filter(
-        (it) =>
-          (memberIds.includes(it.user_id) &&
-            (it.uploaded_in_mode === "team" || it.uploaded_in_mode === "organizer")) ||
-          (it.event_id && orgEventIds.includes(it.event_id)),
-      );
-      setItems(teamItems);
+      setItems((m as MediaItem[]) ?? []);
       setAttended((orgEvents as AttendedEvent[]) ?? []);
     } else {
       setTeamId(null);
@@ -208,17 +192,17 @@ function MediaPage() {
         .order("created_at", { ascending: false });
       setAlbums(a ?? []);
 
+      // Individual library = items the user owns that are NOT linked to a team,
+      // plus items where they are the subject (shot by an organizer/photographer).
+      const subjectName = name.toLowerCase();
       const { data: m } = await supabase
         .from("media_items")
         .select("*")
         .order("created_at", { ascending: false });
-      const subjectName = name.toLowerCase();
       const all = (m as MediaItem[]) ?? [];
-      // Individual mode: items the user uploaded *in participant mode*,
-      // plus items where they are the named subject (e.g. shot by an organizer).
       const filteredItems = all.filter(
         (it) =>
-          (it.user_id === user.id && it.uploaded_in_mode === "participant") ||
+          (it.user_id === user.id && !it.team_id) ||
           (subjectName &&
             it.user_id !== user.id &&
             (it.subject ?? "").toLowerCase().includes(subjectName)),
