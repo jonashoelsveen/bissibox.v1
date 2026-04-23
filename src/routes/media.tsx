@@ -52,6 +52,7 @@ interface MediaItem {
   visible_media: boolean;
   visible_friends: boolean;
   allowed_media_houses: string[];
+  uploaded_in_mode: string;
   created_at: string;
 }
 
