@@ -737,6 +737,7 @@ function UploadDialog({
           .from("media_items")
           .insert({
             user_id: userId,
+            team_id: teamId,
             storage_path: path,
             media_type: isVideo ? "video" : "photo",
             mime_type: file.type,
