@@ -53,6 +53,7 @@ interface MediaItem {
 function UserProfilePage() {
   const { userId } = Route.useParams();
   const { as } = Route.useSearch();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [tab, setTab] = useState<"bests" | "media">(as === "photographer" ? "media" : "bests");
