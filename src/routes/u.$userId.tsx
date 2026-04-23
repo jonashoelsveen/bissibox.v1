@@ -4,6 +4,7 @@ import { Trophy, Image as ImageIcon, Camera, User as UserIcon } from "lucide-rea
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileShell, MediaGrid } from "@/components/ProfileShell";
 import { FollowButton } from "@/components/FollowButton";
+import { useAuth } from "@/lib/auth";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 
