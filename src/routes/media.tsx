@@ -20,7 +20,7 @@ import {
   Link2,
   Activity,
   Ghost,
-  Info,
+  ArrowUp,
 } from "lucide-react";
 
 export const Route = createFileRoute("/media")({
@@ -336,7 +336,7 @@ function MediaPage() {
                       if (selectMode) toggleSel(it.id);
                       else setOpenItems([it]);
                     }}
-                    className="group relative aspect-square cursor-pointer overflow-hidden rounded-sm bg-secondary"
+                    className="group relative aspect-square cursor-default overflow-hidden rounded-sm bg-secondary"
                   >
                     {it.media_type === "photo" ? (
                       urls[it.id] && (
@@ -383,10 +383,10 @@ function MediaPage() {
                           return n;
                         });
                       }}
-                      className="absolute bottom-2 left-2 z-10 rounded-full bg-background/80 p-1.5 text-muted-foreground transition hover:text-ink"
+                      className="absolute bottom-2 left-2 z-10 cursor-pointer rounded-full bg-black/50 p-1.5 text-white transition hover:bg-black/70"
                       aria-label="Show details"
                     >
-                      <Info className="h-3.5 w-3.5" />
+                      <ArrowUp className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 );
