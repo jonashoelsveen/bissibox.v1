@@ -101,7 +101,7 @@ function ProfilePage() {
 
   return (
     <div className="px-4 md:px-6">
-      <div className="flex justify-end gap-2 pt-4">
+      <div className="flex justify-end gap-2 pt-4 pr-14">
         <ModeToggle mode={mode} setMode={setMode} />
         <button
           onClick={async () => {
