@@ -688,42 +688,50 @@ function UploadDialog({
   const photographer = userName || "You";
 
   const upload = async () => {
-    if (!file) return;
+    if (files.length === 0) return;
     setBusy(true);
+    setProgress({ done: 0, total: files.length });
     try {
-      const ext = file.name.split(".").pop();
-      const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("media").upload(path, file, {
-        contentType: file.type,
-      });
-      if (upErr) throw upErr;
-      const isVideo = file.type.startsWith("video");
-      const { data: inserted, error: insErr } = await supabase
-        .from("media_items")
-        .insert({
-          user_id: userId,
-          storage_path: path,
-          media_type: isVideo ? "video" : "photo",
-          mime_type: file.type,
-          file_size: file.size,
-          album_id: albumIds[0] ?? null,
-          event_id: eventId,
-          organizer: organizer || null,
-          photographer,
-          subject: subject || null,
-        })
-        .select("id")
-        .single();
-      if (insErr) throw insErr;
-      if (inserted && albumIds.length > 0) {
-        await syncMediaAlbums([inserted.id], albumIds, "replace");
+      const insertedIds: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const ext = file.name.split(".").pop();
+        const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("media").upload(path, file, {
+          contentType: file.type,
+        });
+        if (upErr) throw upErr;
+        const isVideo = file.type.startsWith("video");
+        const { data: inserted, error: insErr } = await supabase
+          .from("media_items")
+          .insert({
+            user_id: userId,
+            storage_path: path,
+            media_type: isVideo ? "video" : "photo",
+            mime_type: file.type,
+            file_size: file.size,
+            album_id: albumIds[0] ?? null,
+            event_id: eventId,
+            organizer: organizer || null,
+            photographer,
+            subject: subject || null,
+          })
+          .select("id")
+          .single();
+        if (insErr) throw insErr;
+        if (inserted) insertedIds.push(inserted.id);
+        setProgress({ done: i + 1, total: files.length });
       }
-      toast.success("Uploaded");
+      if (insertedIds.length > 0 && albumIds.length > 0) {
+        await syncMediaAlbums(insertedIds, albumIds, "replace");
+      }
+      toast.success(files.length > 1 ? `Uploaded ${files.length} files` : "Uploaded");
       onUploaded();
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   };
 
