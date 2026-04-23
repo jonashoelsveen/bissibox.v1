@@ -120,7 +120,8 @@ export function TopChrome() {
           </NavBtn>
         )}
 
-        <div className="mt-auto pb-2">
+        <div className="mt-auto flex flex-col items-center gap-2 pb-2">
+          {user && <ModeSwitch />}
           <NavBtn
             to={user ? "/settings" : "/auth"}
             label="Settings"
