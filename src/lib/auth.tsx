@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const stored = typeof window !== "undefined" ? localStorage.getItem("rl_mode") : null;
-    if (stored === "organizer" || stored === "participant") setModeState(stored);
+    if (stored === "organizer" || stored === "participant" || stored === "team") setModeState(stored);
 
     return () => sub.subscription.unsubscribe();
   }, []);
