@@ -198,6 +198,7 @@ function MediaPage() {
       setItems(teamItems);
       setAttended((orgEvents as AttendedEvent[]) ?? []);
     } else {
+      setTeamId(null);
       // Personal albums only (no team_id)
       const { data: a } = await supabase
         .from("media_albums")
