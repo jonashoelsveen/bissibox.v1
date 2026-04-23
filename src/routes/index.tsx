@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/format";
-import { ArrowUpRight } from "lucide-react";
+import { Search } from "lucide-react";
 import { RaceListItem } from "@/components/RaceListItem";
 import { useAuth } from "@/lib/auth";
 
@@ -80,11 +80,11 @@ function Index() {
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
-            to="/search"
+            to="/"
             className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90"
           >
+            <Search className="h-4 w-4" />
             Browse races
-            <ArrowUpRight className="h-4 w-4" />
           </Link>
           <Link
             to="/auth"
