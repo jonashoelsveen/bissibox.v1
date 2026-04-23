@@ -4,12 +4,13 @@ import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { DEFAULT_CLASSES } from "@/lib/classes";
-import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as MapIcon, GripVertical, ArrowLeft, Globe, Users } from "lucide-react";
+import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as MapIcon, GripVertical, ArrowLeft, Globe, Users, Image as ImageIcon } from "lucide-react";
 
 import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
 import { ElevationProfile } from "@/components/ElevationProfile";
 import { ParticipantsPanel } from "@/components/ParticipantsPanel";
 import { CoOrganizersManager } from "@/components/CoOrganizersManager";
+import { EventMediaTab } from "@/components/EventMediaTab";
 
 type Mode = "create" | "edit";
 
@@ -40,7 +41,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const nav = useNavigate();
 
   // Top-level
-  const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map" | "participants">("details");
+  const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map" | "participants" | "media">("details");
   const [activeMapSub, setActiveMapSub] = useState<number>(0);
   const [expandedSubMap, setExpandedSubMap] = useState<Record<number, boolean>>({ 0: true });
   const [selectedSplitId, setSelectedSplitId] = useState<string | null>(null);
@@ -285,13 +286,22 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             Map
           </TabBtn>
           {mode === "edit" && savedId && (
-            <TabBtn
-              active={tab === "participants"}
-              onClick={() => setTab("participants")}
-              icon={<Users className="h-3.5 w-3.5" />}
-            >
-              Participants
-            </TabBtn>
+            <>
+              <TabBtn
+                active={tab === "participants"}
+                onClick={() => setTab("participants")}
+                icon={<Users className="h-3.5 w-3.5" />}
+              >
+                Participants
+              </TabBtn>
+              <TabBtn
+                active={tab === "media"}
+                onClick={() => setTab("media")}
+                icon={<ImageIcon className="h-3.5 w-3.5" />}
+              >
+                Media
+              </TabBtn>
+            </>
           )}
         </nav>
       </div>
@@ -790,6 +800,15 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
       {tab === "participants" && savedId && (
         <ParticipantsPanel eventId={savedId} />
+      )}
+
+      {tab === "media" && savedId && (
+        <EventMediaTab
+          eventId={savedId}
+          ownerUserId={ownerId ?? user.id}
+          currentUserId={user.id}
+          organizerMode={true}
+        />
       )}
     </div>
   );
