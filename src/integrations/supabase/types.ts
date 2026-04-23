@@ -209,6 +209,111 @@ export type Database = {
         }
         Relationships: []
       }
+      media_albums: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      media_items: {
+        Row: {
+          album_id: string | null
+          allowed_media_houses: string[]
+          captured_at: string | null
+          created_at: string
+          event_id: string | null
+          file_size: number | null
+          id: string
+          media_type: string
+          mime_type: string | null
+          organizer: string | null
+          photographer: string | null
+          storage_path: string
+          subject: string | null
+          updated_at: string
+          user_id: string
+          visible_friends: boolean
+          visible_media: boolean
+          visible_world: boolean
+        }
+        Insert: {
+          album_id?: string | null
+          allowed_media_houses?: string[]
+          captured_at?: string | null
+          created_at?: string
+          event_id?: string | null
+          file_size?: number | null
+          id?: string
+          media_type: string
+          mime_type?: string | null
+          organizer?: string | null
+          photographer?: string | null
+          storage_path: string
+          subject?: string | null
+          updated_at?: string
+          user_id: string
+          visible_friends?: boolean
+          visible_media?: boolean
+          visible_world?: boolean
+        }
+        Update: {
+          album_id?: string | null
+          allowed_media_houses?: string[]
+          captured_at?: string | null
+          created_at?: string
+          event_id?: string | null
+          file_size?: number | null
+          id?: string
+          media_type?: string
+          mime_type?: string | null
+          organizer?: string | null
+          photographer?: string | null
+          storage_path?: string
+          subject?: string | null
+          updated_at?: string
+          user_id?: string
+          visible_friends?: boolean
+          visible_media?: boolean
+          visible_world?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_items_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "media_albums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_items_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
