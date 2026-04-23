@@ -107,6 +107,45 @@ export type Database = {
           },
         ]
       }
+      event_media: {
+        Row: {
+          added_by: string
+          created_at: string
+          event_id: string
+          id: string
+          media_item_id: string
+        }
+        Insert: {
+          added_by: string
+          created_at?: string
+          event_id: string
+          id?: string
+          media_item_id: string
+        }
+        Update: {
+          added_by?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          media_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_media_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_media_media_item_id_fkey"
+            columns: ["media_item_id"]
+            isOneToOne: false
+            referencedRelation: "media_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_subevents: {
         Row: {
           bib_from: number | null
