@@ -675,7 +675,7 @@ function UploadDialog({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [albumId, setAlbumId] = useState<string>("");
+  const [albumIds, setAlbumIds] = useState<string[]>([]);
   const [eventId, setEventId] = useState<string | null>(null);
   const [eventName, setEventName] = useState("");
   const [organizer, setOrganizer] = useState("");
