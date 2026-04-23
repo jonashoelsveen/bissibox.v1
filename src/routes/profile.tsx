@@ -194,6 +194,8 @@ function ProfilePage() {
             </Card>
           )}
 
+          {tab === "roles" && <RolesPanel userId={user.id} />}
+
           {tab === "races" && (
             <Card>
               {regs.length === 0 ? (
