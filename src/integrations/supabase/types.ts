@@ -287,6 +287,7 @@ export type Database = {
           signup_deadline: string | null
           signup_fee: number
           starts_at: string
+          timing_company_id: string | null
           title: string
           updated_at: string
           world_athletics_certified: boolean
@@ -310,6 +311,7 @@ export type Database = {
           signup_deadline?: string | null
           signup_fee?: number
           starts_at: string
+          timing_company_id?: string | null
           title: string
           updated_at?: string
           world_athletics_certified?: boolean
@@ -333,11 +335,20 @@ export type Database = {
           signup_deadline?: string | null
           signup_fee?: number
           starts_at?: string
+          timing_company_id?: string | null
           title?: string
           updated_at?: string
           world_athletics_certified?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_timing_company_id_fkey"
+            columns: ["timing_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       media_albums: {
         Row: {

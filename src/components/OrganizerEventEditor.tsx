@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { DEFAULT_CLASSES } from "@/lib/classes";
-import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as MapIcon, GripVertical, ArrowLeft, Globe, Users, Image as ImageIcon } from "lucide-react";
+import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as MapIcon, GripVertical, ArrowLeft, Globe, Users, Image as ImageIcon, Timer, Info } from "lucide-react";
 
 import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
 import { ElevationProfile } from "@/components/ElevationProfile";
@@ -42,6 +42,9 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
   // Top-level
   const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map" | "participants" | "media">("details");
+  const [detailsSection, setDetailsSection] = useState<"about" | "timing" | "media">("about");
+  const [timingCompanyId, setTimingCompanyId] = useState<string | null>(null);
+  const [timingCompanies, setTimingCompanies] = useState<{ id: string; name: string }[]>([]);
   const [activeMapSub, setActiveMapSub] = useState<number>(0);
   const [expandedSubMap, setExpandedSubMap] = useState<Record<number, boolean>>({ 0: true });
   const [selectedSplitId, setSelectedSplitId] = useState<string | null>(null);
@@ -100,6 +103,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         setWaCertified(!!e.world_athletics_certified);
         setPublished(!!(e as any).published);
         setOwnerId((e as any).owner_id ?? null);
+        setTimingCompanyId(((e as any).timing_company_id as string | null) ?? null);
       }
       const { data: cls } = await supabase
         .from("event_classes")
@@ -132,6 +136,18 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
     })();
   }, [mode, eventId]);
 
+  // Load timing companies (kind = 'timing') for the picker
+  useEffect(() => {
+    void (async () => {
+      const { data } = await supabase
+        .from("companies")
+        .select("id,name")
+        .eq("kind", "timing")
+        .order("name", { ascending: true });
+      setTimingCompanies((data ?? []) as { id: string; name: string }[]);
+    })();
+  }, []);
+
   const canSave = useMemo(() => title.trim() && organizer.trim() && startsAt, [title, organizer, startsAt]);
 
   const save = async () => {
@@ -156,6 +172,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         race_types: raceTypes,
         world_athletics_certified: waCertified,
         owner_id: user.id,
+        timing_company_id: timingCompanyId,
       };
 
       let id = savedId;
@@ -286,28 +303,36 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             Map
           </TabBtn>
           {mode === "edit" && savedId && (
-            <>
-              <TabBtn
-                active={tab === "participants"}
-                onClick={() => setTab("participants")}
-                icon={<Users className="h-3.5 w-3.5" />}
-              >
-                Participants
-              </TabBtn>
-              <TabBtn
-                active={tab === "media"}
-                onClick={() => setTab("media")}
-                icon={<ImageIcon className="h-3.5 w-3.5" />}
-              >
-                Media
-              </TabBtn>
-            </>
+            <TabBtn
+              active={tab === "participants"}
+              onClick={() => setTab("participants")}
+              icon={<Users className="h-3.5 w-3.5" />}
+            >
+              Participants
+            </TabBtn>
           )}
         </nav>
       </div>
 
       {tab === "details" && (
         <Panel>
+          {/* Sub-sections inside Details */}
+          <div className="mb-5 flex flex-wrap gap-1.5">
+            <SubTabBtn active={detailsSection === "about"} onClick={() => setDetailsSection("about")} icon={<Info className="h-3.5 w-3.5" />}>
+              About
+              <span className="ml-1.5 text-[10px] text-muted-foreground">Public</span>
+            </SubTabBtn>
+            <SubTabBtn active={detailsSection === "timing"} onClick={() => setDetailsSection("timing")} icon={<Timer className="h-3.5 w-3.5" />}>
+              Timing
+              <span className="ml-1.5 text-[10px] text-muted-foreground">Organizer only</span>
+            </SubTabBtn>
+            <SubTabBtn active={detailsSection === "media"} onClick={() => setDetailsSection("media")} icon={<ImageIcon className="h-3.5 w-3.5" />}>
+              Media
+              <span className="ml-1.5 text-[10px] text-muted-foreground">Organizer only</span>
+            </SubTabBtn>
+          </div>
+
+          {detailsSection === "about" && (
           <FormGrid>
             <Row label="Name">
               <Text value={title} onChange={setTitle} placeholder="Perseløpet #7 - 2026" />
@@ -382,6 +407,44 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
               />
             </Row>
           </FormGrid>
+          )}
+
+          {detailsSection === "timing" && (
+            <FormGrid>
+              <Row label="Timing company" full>
+                <select
+                  value={timingCompanyId ?? ""}
+                  onChange={(e) => setTimingCompanyId(e.target.value || null)}
+                  className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                >
+                  <option value="">— Select a timing company —</option>
+                  {timingCompanies.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Choose which timing company will run this race. Visible to organizers and the chosen timing company only.
+                </p>
+              </Row>
+            </FormGrid>
+          )}
+
+          {detailsSection === "media" && (
+            <div>
+              {savedId ? (
+                <EventMediaTab
+                  eventId={savedId}
+                  ownerUserId={ownerId ?? user.id}
+                  currentUserId={user.id}
+                  organizerMode={true}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Save the event first to manage media.
+                </p>
+              )}
+            </div>
+          )}
         </Panel>
       )}
 
@@ -802,15 +865,6 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         <ParticipantsPanel eventId={savedId} />
       )}
 
-      {tab === "media" && savedId && (
-        <EventMediaTab
-          eventId={savedId}
-          ownerUserId={ownerId ?? user.id}
-          currentUserId={user.id}
-          organizerMode={true}
-        />
-      )}
-
       {mode === "edit" && savedId && (
         <button
           onClick={async () => {
@@ -857,6 +911,32 @@ function TabBtn({
         active
           ? "border-primary text-ink"
           : "border-transparent text-muted-foreground hover:text-ink"
+      }`}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+function SubTabBtn({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs transition ${
+        active
+          ? "border-primary bg-primary/5 text-ink"
+          : "border-hairline bg-background text-muted-foreground hover:text-ink"
       }`}
     >
       {icon}
