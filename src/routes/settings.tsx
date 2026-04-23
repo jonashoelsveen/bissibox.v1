@@ -448,7 +448,7 @@ function ModeToggle({
             current === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-ink"
           }`}
         >
-          {m}
+          {m === "participant" ? "Individual" : m}
         </button>
       ))}
     </div>
