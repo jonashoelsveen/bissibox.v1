@@ -247,8 +247,14 @@ function MediaPage() {
 
   const filtered = useMemo(() => {
     if (view.type === "all") return items;
-    return items.filter((i) => i.album_id === view.id);
-  }, [items, view]);
+    if (view.id === null) {
+      // Unsorted = items with zero album links
+      return items.filter((i) => (itemAlbums[i.id]?.length ?? 0) === 0 && !i.album_id);
+    }
+    return items.filter(
+      (i) => itemAlbums[i.id]?.includes(view.id as string) || i.album_id === view.id,
+    );
+  }, [items, view, itemAlbums]);
 
   const toggleSel = (id: string) => {
     setSelected((s) => {
