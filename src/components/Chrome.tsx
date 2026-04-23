@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { User2, Search, Library, Plus } from "lucide-react";
+import { User2, Search, Library, Plus, Image, Settings } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 export function TopChrome() {
@@ -42,6 +42,22 @@ export function TopChrome() {
         >
           <User2 className="h-[18px] w-[18px]" strokeWidth={2.25} />
         </NavBtn>
+
+        {user && !isOrganizer && (
+          <NavBtn to="/media" label="Media" active={path.startsWith("/media")}>
+            <Image className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </NavBtn>
+        )}
+
+        <div className="mt-auto pb-2">
+          <NavBtn
+            to={user ? "/settings" : "/auth"}
+            label="Settings"
+            active={path.startsWith("/settings")}
+          >
+            <Settings className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </NavBtn>
+        </div>
       </div>
     </aside>
   );

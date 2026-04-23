@@ -9,7 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as MediaRouteImport } from './routes/media'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrganizerNewRouteImport } from './routes/organizer.new'
@@ -18,9 +20,19 @@ import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
 import { Route as OrganizerEventIdParticipantsRouteImport } from './routes/organizer.$eventId.participants'
 import { Route as OrganizerEventIdEditRouteImport } from './routes/organizer.$eventId.edit'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MediaRoute = MediaRouteImport.update({
+  id: '/media',
+  path: '/media',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -63,7 +75,9 @@ const OrganizerEventIdEditRoute = OrganizerEventIdEditRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
+  '/settings': typeof SettingsRoute
   '/events/$eventId': typeof EventsEventIdRoute
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
@@ -73,7 +87,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
+  '/settings': typeof SettingsRoute
   '/events/$eventId': typeof EventsEventIdRoute
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
@@ -84,7 +100,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
+  '/settings': typeof SettingsRoute
   '/events/$eventId': typeof EventsEventIdRoute
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
@@ -96,7 +114,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/media'
     | '/profile'
+    | '/settings'
     | '/events/$eventId'
     | '/organizer/library'
     | '/organizer/new'
@@ -106,7 +126,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/media'
     | '/profile'
+    | '/settings'
     | '/events/$eventId'
     | '/organizer/library'
     | '/organizer/new'
@@ -116,7 +138,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/auth'
+    | '/media'
     | '/profile'
+    | '/settings'
     | '/events/$eventId'
     | '/organizer/library'
     | '/organizer/new'
@@ -127,7 +151,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  MediaRoute: typeof MediaRoute
   ProfileRoute: typeof ProfileRoute
+  SettingsRoute: typeof SettingsRoute
   EventsEventIdRoute: typeof EventsEventIdRoute
   OrganizerLibraryRoute: typeof OrganizerLibraryRoute
   OrganizerNewRoute: typeof OrganizerNewRoute
@@ -137,11 +163,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile': {
       id: '/profile'
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/media': {
+      id: '/media'
+      path: '/media'
+      fullPath: '/media'
+      preLoaderRoute: typeof MediaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -199,7 +239,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  MediaRoute: MediaRoute,
   ProfileRoute: ProfileRoute,
+  SettingsRoute: SettingsRoute,
   EventsEventIdRoute: EventsEventIdRoute,
   OrganizerLibraryRoute: OrganizerLibraryRoute,
   OrganizerNewRoute: OrganizerNewRoute,

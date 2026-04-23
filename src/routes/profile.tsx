@@ -101,29 +101,18 @@ function ProfilePage() {
 
   return (
     <div className="px-4 md:px-6">
-      <header className="flex flex-wrap items-end justify-between gap-4 pt-4">
-        <div>
-          <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Profile</p>
-          <h1 className="mt-2 text-3xl text-ink md:text-4xl">
-            {profile.first_name || "Athlete"} {profile.last_name ?? ""}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">{user.email}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <ModeToggle mode={mode} setMode={setMode} />
-          <button
-            onClick={async () => {
-              await signOut();
-              navigate({ to: "/" });
-            }}
-            className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
-          >
-            Sign out
-          </button>
-        </div>
-      </header>
-
-      <div className="mt-6 border-b border-hairline" />
+      <div className="flex justify-end gap-2 pt-4">
+        <ModeToggle mode={mode} setMode={setMode} />
+        <button
+          onClick={async () => {
+            await signOut();
+            navigate({ to: "/" });
+          }}
+          className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+        >
+          Sign out
+        </button>
+      </div>
 
       <div className="mt-8 grid gap-10 md:grid-cols-[180px_1fr]">
         <nav className="-ml-2 flex flex-row gap-1 md:flex-col md:gap-0.5">
