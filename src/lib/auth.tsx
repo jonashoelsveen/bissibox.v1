@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-type Mode = "participant" | "organizer";
+type Mode = "participant" | "organizer" | "team";
 
 interface AuthContextValue {
   user: User | null;
