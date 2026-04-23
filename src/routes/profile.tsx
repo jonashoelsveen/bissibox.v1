@@ -63,7 +63,7 @@ interface LikedRow {
   events: { id: string; title: string; starts_at: string; location: string } | null;
 }
 
-type Tab = "general" | "address" | "races" | "liked" | "roles";
+type Tab = "general" | "address" | "races" | "liked" | "roles" | "profiles";
 
 function ProfilePage() {
   const { user, loading: authLoading, mode, setMode, signOut } = useAuth();
@@ -116,8 +116,18 @@ function ProfilePage() {
 
   // Switch off team-only / individual-only tabs when mode changes
   useEffect(() => {
-    if (isTeamMode && (tab === "races" || tab === "liked")) setTab("general");
+    if (isTeamMode && (tab === "races" || tab === "liked" || tab === "profiles")) setTab("general");
   }, [isTeamMode, tab]);
+
+  const [userRoles, setUserRoles] = useState<{ role: "organizer" | "photographer" | "timekeeper" }[]>([]);
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .then(({ data }) => setUserRoles((data ?? []) as { role: "organizer" | "photographer" | "timekeeper" }[]));
+  }, [user, tab]);
 
   const unlike = async (likeId: string) => {
     const { error } = await supabase.from("event_likes").delete().eq("id", likeId);
@@ -156,7 +166,7 @@ function ProfilePage() {
 
   const tabs: Tab[] = isTeamMode
     ? ["general", "address", "roles"]
-    : ["general", "address", "roles", "races", "liked"];
+    : ["general", "address", "roles", "profiles", "races", "liked"];
 
   return (
     <div className="px-4 md:px-6">
@@ -191,9 +201,11 @@ function ProfilePage() {
                   ? "Contact & address"
                   : t === "roles"
                     ? "Roles"
-                    : t === "races"
-                      ? "My races"
-                      : "Liked races"}
+                    : t === "profiles"
+                      ? "Profile"
+                      : t === "races"
+                        ? "My races"
+                        : "Liked races"}
             </button>
           ))}
         </nav>
