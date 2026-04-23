@@ -2,6 +2,7 @@ import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/r
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TopChrome } from "@/components/Chrome";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -71,6 +72,7 @@ function RootComponent() {
   return (
     <AuthProvider>
       <TopChrome />
+      <UserAvatar />
       <main className="min-h-screen pb-16 pt-8 pl-20 md:pl-24">
         <Outlet />
       </main>
