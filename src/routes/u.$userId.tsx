@@ -116,7 +116,10 @@ function UserProfilePage() {
             .in("id", ids)
             .order("created_at", { ascending: false })
             .limit(120);
-        setMedia((mediaData ?? []) as MediaItem[]);
+          setMedia((mediaData ?? []) as MediaItem[]);
+        } else {
+          setMedia([]);
+        }
       } else {
         setMedia([]);
       }
