@@ -116,7 +116,7 @@ function ProfilePage() {
 
       <div className="mt-8 grid gap-10 md:grid-cols-[180px_1fr]">
         <nav className="-ml-2 flex flex-row gap-1 md:flex-col md:gap-0.5">
-          {(["general", "address", "races", "liked"] as const).map((t) => (
+          {(["general", "address", "roles", "races", "liked"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -130,9 +130,11 @@ function ProfilePage() {
                 ? "General"
                 : t === "address"
                   ? "Contact & address"
-                  : t === "races"
-                    ? "My races"
-                    : "Liked races"}
+                  : t === "roles"
+                    ? "Roles"
+                    : t === "races"
+                      ? "My races"
+                      : "Liked races"}
             </button>
           ))}
         </nav>
