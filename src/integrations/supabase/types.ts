@@ -557,6 +557,7 @@ export type Database = {
           team: string | null
           team_group: string | null
           updated_at: string
+          website: string | null
         }
         Insert: {
           account_type?: Database["public"]["Enums"]["account_type"]
@@ -592,6 +593,7 @@ export type Database = {
           team?: string | null
           team_group?: string | null
           updated_at?: string
+          website?: string | null
         }
         Update: {
           account_type?: Database["public"]["Enums"]["account_type"]
@@ -627,6 +629,7 @@ export type Database = {
           team?: string | null
           team_group?: string | null
           updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }

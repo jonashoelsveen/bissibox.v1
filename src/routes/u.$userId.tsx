@@ -4,6 +4,7 @@ import { Trophy, Image as ImageIcon, Camera, User as UserIcon } from "lucide-rea
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileShell, MediaGrid } from "@/components/ProfileShell";
 import { FollowButton } from "@/components/FollowButton";
+import { useAuth } from "@/lib/auth";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 
@@ -30,6 +31,7 @@ interface PublicProfile {
   photographer_bio: string | null;
   athlete_cover_media_id: string | null;
   photographer_cover_media_id: string | null;
+  website: string | null;
 }
 
 interface PB {
@@ -51,6 +53,7 @@ interface MediaItem {
 function UserProfilePage() {
   const { userId } = Route.useParams();
   const { as } = Route.useSearch();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [tab, setTab] = useState<"bests" | "media">(as === "photographer" ? "media" : "bests");
@@ -66,7 +69,7 @@ function UserProfilePage() {
       const { data } = await supabase
         .from("profiles")
         .select(
-          "id, first_name, last_name, club, team, country, athlete_active, is_photographer, photographer_active, photographer_bio, athlete_cover_media_id, photographer_cover_media_id",
+          "id, first_name, last_name, club, team, country, athlete_active, is_photographer, photographer_active, photographer_bio, athlete_cover_media_id, photographer_cover_media_id, website",
         )
         .eq("id", userId)
         .maybeSingle();
@@ -204,6 +207,17 @@ function UserProfilePage() {
       tabs={tabs}
       activeTab={tab}
       onTabChange={(k) => setTab(k as "bests" | "media")}
+      website={{
+        url: profile.website,
+        canEdit: !!user && user.id === userId,
+        onSave: async (url) => {
+          const { error } = await supabase
+            .from("profiles")
+            .update({ website: url })
+            .eq("id", userId);
+          if (!error) setProfile({ ...profile, website: url });
+        },
+      }}
     >
       {tab === "bests" && !showPhotographer && (
         <div className="rounded-2xl border border-hairline bg-card overflow-hidden">

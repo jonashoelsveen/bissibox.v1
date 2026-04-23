@@ -20,6 +20,8 @@ interface PublicTeam {
   description_long: string | null;
   country: string | null;
   cover_media_id: string | null;
+  website: string | null;
+  owner_id: string;
 }
 
 interface Tier {
@@ -61,7 +63,7 @@ function TeamPage() {
     (async () => {
       const { data } = await supabase
         .from("teams")
-        .select("id, name, description, description_long, country, cover_media_id")
+        .select("id, name, description, description_long, country, cover_media_id, website, owner_id")
         .eq("id", teamId)
         .maybeSingle();
       if (!data) {
@@ -207,6 +209,21 @@ function TeamPage() {
       ]}
       activeTab={tab}
       onTabChange={(k) => setTab(k as typeof tab)}
+      website={{
+        url: team.website,
+        canEdit: !!user && user.id === team.owner_id,
+        onSave: async (url) => {
+          const { error } = await supabase
+            .from("teams")
+            .update({ website: url })
+            .eq("id", teamId);
+          if (error) {
+            toast.error(error.message);
+          } else {
+            setTeam({ ...team, website: url });
+          }
+        },
+      }}
     >
       {tab === "memberships" && (
         <div className="space-y-2">
