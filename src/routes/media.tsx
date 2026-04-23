@@ -21,6 +21,11 @@ import {
   Activity,
   Ghost,
   ArrowUp,
+  MoreVertical,
+  User as UserIcon,
+  Camera,
+  Users as UsersIcon,
+  Building2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/media")({
