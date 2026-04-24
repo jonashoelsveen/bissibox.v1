@@ -335,10 +335,16 @@ function TeamBoardPage() {
     setBusy(true);
     try {
       for (const file of Array.from(files)) {
-        const path = `${teamId}/${ongoing.id}/${Date.now()}-${file.name}`;
+        const safeName = file.name
+          .normalize("NFKD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-zA-Z0-9._-]+/g, "_")
+          .replace(/_+/g, "_")
+          .replace(/^_+|_+$/g, "");
+        const path = `${teamId}/${ongoing.id}/${Date.now()}-${safeName || "file"}`;
         const { error: upErr } = await supabase.storage
           .from("board-attachments")
-          .upload(path, file, { contentType: file.type });
+          .upload(path, file, { contentType: file.type || "application/octet-stream" });
         if (upErr) throw upErr;
         const { error: insErr } = await supabase.from("team_board_meeting_attachments").insert({
           meeting_id: ongoing.id,
