@@ -634,22 +634,33 @@ function TeamBoardPage() {
                 </div>
               )}
               {filteredMeetings.map((m) => (
-                <button
+                <div
                   key={m.id}
-                  onClick={() => openMeeting(m)}
-                  className="flex w-full items-center gap-3 rounded-lg border border-hairline bg-card p-4 text-left transition hover:bg-secondary/40"
+                  className="flex w-full items-center gap-3 rounded-lg border border-hairline bg-card p-4 transition hover:bg-secondary/40"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
-                    <Briefcase className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="truncate text-sm font-medium text-ink">{m.title}</div>
-                    <div className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                      {m.meeting_date ?? new Date(m.created_at).toLocaleDateString()}
-                      {m.folder && ` · ${m.folder}`}
+                  <button
+                    onClick={() => openMeeting(m)}
+                    className="flex flex-1 min-w-0 items-center gap-3 text-left"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+                      <Briefcase className="h-5 w-5 text-muted-foreground" />
                     </div>
-                  </div>
-                </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate text-sm font-medium text-ink">{m.title}</div>
+                      <div className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                        {m.meeting_date ?? new Date(m.created_at).toLocaleDateString()}
+                        {m.folder && ` · ${m.folder}`}
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => deleteMeeting(m)}
+                    className="rounded p-1.5 text-muted-foreground hover:text-destructive"
+                    aria-label="Delete board meeting"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               ))}
             </div>
           </Panel>
