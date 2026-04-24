@@ -760,6 +760,86 @@ export type Database = {
           },
         ]
       }
+      team_group_members: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "team_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_group_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_groups: {
+        Row: {
+          age_from: number | null
+          age_to: number | null
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          age_from?: number | null
+          age_to?: number | null
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          age_from?: number | null
+          age_to?: number | null
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_groups_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           accepted: boolean
