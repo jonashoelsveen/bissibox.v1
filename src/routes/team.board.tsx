@@ -72,8 +72,11 @@ function TeamBoardPage() {
   // Ongoing meeting
   const [ongoing, setOngoing] = useState<MeetingRow | null>(null);
   const [ongoingText, setOngoingText] = useState("");
+  const [savedText, setSavedText] = useState("");
+  const [saving, setSaving] = useState(false);
   const [attachments, setAttachments] = useState<AttachmentRow[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isDirty = ongoingText !== savedText;
 
   useEffect(() => {
     if (!authLoading && !user) nav({ to: "/auth" });
