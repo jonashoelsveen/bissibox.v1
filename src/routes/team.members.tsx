@@ -1,0 +1,621 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
+import {
+  ChevronDown,
+  GripVertical,
+  Plus,
+  Save,
+  Search,
+  Trash2,
+  Users as UsersIcon,
+  Layers,
+} from "lucide-react";
+
+export const Route = createFileRoute("/team/members")({
+  component: TeamMembersPage,
+  head: () => ({ meta: [{ title: "Members · Raceline" }] }),
+});
+
+interface GroupDraft {
+  id?: string;
+  name: string;
+  age_from: string;
+  age_to: string;
+  sort_order: number;
+  member_count: number;
+}
+
+interface MemberRow {
+  team_member_id: string;
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  birth_date: string | null;
+  email: string | null;
+  group_ids: string[];
+}
+
+function TeamMembersPage() {
+  const { user, loading: authLoading, mode } = useAuth();
+  const nav = useNavigate();
+  const [tab, setTab] = useState<"groups" | "members">("groups");
+  const [teamId, setTeamId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  // Groups state
+  const [groups, setGroups] = useState<GroupDraft[]>([]);
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [dragHandleIdx, setDragHandleIdx] = useState<number | null>(null);
+
+  // Members state
+  const [members, setMembers] = useState<MemberRow[]>([]);
+  const [search, setSearch] = useState("");
+  // group assignments map: user_id -> group_id ("" = none)
+  const [assignments, setAssignments] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!authLoading && !user) nav({ to: "/auth" });
+  }, [authLoading, user, nav]);
+
+  useEffect(() => {
+    if (!user) return;
+    void (async () => {
+      const { data: team } = await supabase
+        .from("teams")
+        .select("id")
+        .eq("owner_id", user.id)
+        .maybeSingle();
+      const tid = team?.id ?? null;
+      setTeamId(tid);
+      if (!tid) {
+        setLoaded(true);
+        return;
+      }
+
+      const [{ data: gs }, { data: tms }, { data: tgms }] = await Promise.all([
+        supabase
+          .from("team_groups")
+          .select("id,name,age_from,age_to,sort_order")
+          .eq("team_id", tid)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("team_members")
+          .select("id,user_id,accepted")
+          .eq("team_id", tid),
+        supabase
+          .from("team_group_members")
+          .select("group_id,user_id")
+          .eq("team_id", tid),
+      ]);
+
+      const tgmsArr = (tgms ?? []) as { group_id: string; user_id: string }[];
+      const countByGroup: Record<string, number> = {};
+      for (const x of tgmsArr) countByGroup[x.group_id] = (countByGroup[x.group_id] ?? 0) + 1;
+
+      setGroups(
+        (gs ?? []).map((g, i) => ({
+          id: g.id,
+          name: g.name ?? "",
+          age_from: g.age_from != null ? String(g.age_from) : "",
+          age_to: g.age_to != null ? String(g.age_to) : "",
+          sort_order: g.sort_order ?? i,
+          member_count: countByGroup[g.id] ?? 0,
+        }))
+      );
+
+      const userIds = (tms ?? []).map((t) => t.user_id);
+      let profMap: Record<string, { first_name: string | null; last_name: string | null; birth_date: string | null; email: string | null }> = {};
+      if (userIds.length) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id,first_name,last_name,birth_date,email")
+          .in("id", userIds);
+        for (const p of (profs ?? []) as { id: string; first_name: string | null; last_name: string | null; birth_date: string | null; email: string | null }[]) {
+          profMap[p.id] = p;
+        }
+      }
+
+      const groupsByUser: Record<string, string[]> = {};
+      for (const x of tgmsArr) {
+        (groupsByUser[x.user_id] = groupsByUser[x.user_id] ?? []).push(x.group_id);
+      }
+
+      const memRows: MemberRow[] = (tms ?? []).map((t) => {
+        const p = profMap[t.user_id];
+        return {
+          team_member_id: t.id,
+          user_id: t.user_id,
+          first_name: p?.first_name ?? null,
+          last_name: p?.last_name ?? null,
+          birth_date: p?.birth_date ?? null,
+          email: p?.email ?? null,
+          group_ids: groupsByUser[t.user_id] ?? [],
+        };
+      });
+      setMembers(memRows);
+
+      const initAssign: Record<string, string> = {};
+      for (const m of memRows) initAssign[m.user_id] = m.group_ids[0] ?? "";
+      setAssignments(initAssign);
+
+      setLoaded(true);
+    })();
+  }, [user]);
+
+  const currentYear = new Date().getFullYear();
+
+  const filteredMembers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((m) => {
+      return [m.first_name, m.last_name, m.email].filter(Boolean).join(" ").toLowerCase().includes(q);
+    });
+  }, [members, search]);
+
+  const save = async () => {
+    if (!teamId) {
+      toast.error("Create a team first in Settings.");
+      return;
+    }
+    setBusy(true);
+    try {
+      // Replace groups: delete removed, upsert kept/added.
+      const existingIds = groups.filter((g) => g.id).map((g) => g.id!) as string[];
+      // Delete groups in DB that are not in current list
+      const { data: dbGroups } = await supabase
+        .from("team_groups")
+        .select("id")
+        .eq("team_id", teamId);
+      const dbIds = (dbGroups ?? []).map((d) => d.id as string);
+      const toDelete = dbIds.filter((id) => !existingIds.includes(id));
+      if (toDelete.length) {
+        await supabase.from("team_groups").delete().in("id", toDelete);
+      }
+
+      // Upsert / insert
+      const idMap: Record<number, string> = {};
+      for (let i = 0; i < groups.length; i++) {
+        const g = groups[i];
+        const payload = {
+          team_id: teamId,
+          name: g.name.trim() || `Group ${i + 1}`,
+          age_from: g.age_from ? Number(g.age_from) : null,
+          age_to: g.age_to ? Number(g.age_to) : null,
+          sort_order: i,
+        };
+        if (g.id) {
+          const { error } = await supabase
+            .from("team_groups")
+            .update(payload as never)
+            .eq("id", g.id);
+          if (error) throw error;
+          idMap[i] = g.id;
+        } else {
+          const { data, error } = await supabase
+            .from("team_groups")
+            .insert(payload as never)
+            .select("id")
+            .single();
+          if (error) throw error;
+          idMap[i] = data!.id as string;
+        }
+      }
+
+      // Replace member assignments based on `assignments` map
+      // (Single-group selection per user from the Members tab)
+      await supabase.from("team_group_members").delete().eq("team_id", teamId);
+      const inserts: { team_id: string; group_id: string; user_id: string }[] = [];
+      for (const [uid, gid] of Object.entries(assignments)) {
+        if (!gid) continue;
+        // Translate index-based fresh ids if user assigned to a brand-new group? assignments use real ids from DB.
+        inserts.push({ team_id: teamId, group_id: gid, user_id: uid });
+      }
+      if (inserts.length) {
+        const { error } = await supabase.from("team_group_members").insert(inserts as never);
+        if (error) throw error;
+      }
+
+      // Reload group ids back into the local groups list (replace temp)
+      setGroups((arr) => arr.map((g, i) => ({ ...g, id: idMap[i] })));
+
+      toast.success("Members saved.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (authLoading || !loaded) {
+    return <div className="mx-auto max-w-5xl px-6 py-16 text-muted-foreground">Loading…</div>;
+  }
+
+  if (mode !== "team") {
+    return (
+      <div className="mx-auto max-w-3xl px-6 py-16">
+        <h1 className="text-2xl text-ink">Switch to Team mode</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The Members page is only available in Team mode. Use the I/T toggle in the left rail.
+        </p>
+      </div>
+    );
+  }
+
+  if (!teamId) {
+    return (
+      <div className="mx-auto max-w-3xl px-6 py-16">
+        <h1 className="text-2xl text-ink">No team yet</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Create your team in Settings to manage members.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 md:px-6">
+      <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
+        <div>
+          <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Team</p>
+          <h1 className="mt-2 text-3xl text-ink md:text-4xl">Members</h1>
+        </div>
+        <button
+          onClick={save}
+          disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+        >
+          <Save className="h-4 w-4" />
+          {busy ? "Saving…" : "Save"}
+        </button>
+      </header>
+
+      <nav className="mt-7 flex border-b border-hairline">
+        <TabBtn active={tab === "groups"} onClick={() => setTab("groups")} icon={<Layers className="h-3.5 w-3.5" />}>
+          Groups
+        </TabBtn>
+        <TabBtn active={tab === "members"} onClick={() => setTab("members")} icon={<UsersIcon className="h-3.5 w-3.5" />}>
+          Members
+        </TabBtn>
+      </nav>
+
+      {tab === "groups" && (
+        <Panel>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Group your team members by age. Drag to reorder, click to expand.
+            </p>
+            <button
+              onClick={() => {
+                setGroups((arr) => [
+                  ...arr,
+                  { name: "", age_from: "", age_to: "", sort_order: arr.length, member_count: 0 },
+                ]);
+                setOpenIdx(groups.length);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-md border border-hairline bg-background px-3 py-1.5 text-xs text-ink hover:bg-secondary"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add group
+            </button>
+          </div>
+
+          <div className="mt-5 space-y-2">
+            {groups.length === 0 && (
+              <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
+                No groups yet. Add one to get started.
+              </div>
+            )}
+            {groups.map((g, idx) => {
+              const isOver = dragOverIdx === idx && dragIdx !== null && dragIdx !== idx;
+              return (
+                <div
+                  key={g.id ?? `new-${idx}`}
+                  draggable={dragHandleIdx === idx}
+                  onDragStart={(e) => {
+                    if (dragHandleIdx !== idx) {
+                      e.preventDefault();
+                      return;
+                    }
+                    setDragIdx(idx);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragOver={(e) => {
+                    if (dragIdx === null) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    setDragOverIdx(idx);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverIdx === idx) setDragOverIdx(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragIdx === null) return;
+                    const from = dragIdx;
+                    const to = idx;
+                    if (from !== to) {
+                      setGroups((arr) => {
+                        const next = [...arr];
+                        const [moved] = next.splice(from, 1);
+                        next.splice(to, 0, moved);
+                        return next.map((x, i) => ({ ...x, sort_order: i }));
+                      });
+                    }
+                    setDragIdx(null);
+                    setDragOverIdx(null);
+                    setDragHandleIdx(null);
+                  }}
+                  onDragEnd={() => {
+                    setDragIdx(null);
+                    setDragOverIdx(null);
+                    setDragHandleIdx(null);
+                  }}
+                  className={`overflow-hidden rounded-lg border transition ${
+                    isOver ? "border-primary bg-primary/5" : "border-hairline bg-card"
+                  }`}
+                >
+                  <GroupRow
+                    group={g}
+                    open={openIdx === idx}
+                    onToggle={() => setOpenIdx((o) => (o === idx ? null : idx))}
+                    currentYear={currentYear}
+                    onChange={(patch) =>
+                      setGroups((arr) => arr.map((x, i) => (i === idx ? { ...x, ...patch } : x)))
+                    }
+                    onDelete={() => {
+                      if (!confirm(`Delete group "${g.name || `Group ${idx + 1}`}"? This cannot be undone.`)) return;
+                      setGroups((arr) => arr.filter((_, i) => i !== idx));
+                      setOpenIdx(null);
+                    }}
+                    onHandleDown={() => setDragHandleIdx(idx)}
+                    onHandleUp={() => setDragHandleIdx(null)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </Panel>
+      )}
+
+      {tab === "members" && (
+        <Panel>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[220px] flex-1">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search name, email…"
+                className="h-10 w-full rounded-lg border border-hairline bg-card pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
+              />
+            </div>
+            <select
+              value=""
+              onChange={() => { /* placeholder global selector — unused */ }}
+              className="hidden"
+            >
+              <option value="">—</option>
+            </select>
+            <span className="ml-auto mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              {filteredMembers.length} / {members.length}
+            </span>
+          </div>
+
+          <section className="mt-3 overflow-hidden rounded-lg border border-hairline bg-card">
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-hairline bg-secondary/50 text-left">
+                    <Th>First name</Th>
+                    <Th>Surname</Th>
+                    <Th className="w-24">Born</Th>
+                    <Th>Email</Th>
+                    <Th className="w-56">Group</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMembers.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                        No members yet.
+                      </td>
+                    </tr>
+                  )}
+                  {filteredMembers.map((m, i) => {
+                    const born = m.birth_date ? m.birth_date.slice(0, 10).replace(/-/g, "") : "—";
+                    return (
+                      <tr
+                        key={m.user_id}
+                        className={`border-b border-hairline transition last:border-b-0 hover:bg-secondary/40 ${
+                          i % 2 === 0 ? "bg-card" : "bg-background/40"
+                        }`}
+                      >
+                        <td className="px-3 py-1 text-ink">{m.first_name ?? "—"}</td>
+                        <td className="px-3 py-1 text-ink">{m.last_name ?? ""}</td>
+                        <td className="px-3 py-1 num text-ink">{born}</td>
+                        <td className="px-3 py-1 text-muted-foreground">{m.email ?? "—"}</td>
+                        <td className="px-3 py-1">
+                          <select
+                            value={assignments[m.user_id] ?? ""}
+                            onChange={(e) =>
+                              setAssignments((a) => ({ ...a, [m.user_id]: e.target.value }))
+                            }
+                            className="w-full cursor-pointer rounded-md border border-hairline bg-background px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
+                          >
+                            <option value="">— No group —</option>
+                            {groups
+                              .filter((g) => g.id)
+                              .map((g, gi) => (
+                                <option key={g.id} value={g.id}>
+                                  {g.name || `Group ${gi + 1}`}
+                                </option>
+                              ))}
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+          {groups.some((g) => !g.id) && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              New groups appear in the dropdown after you save.
+            </p>
+          )}
+        </Panel>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function GroupRow({
+  group,
+  open,
+  onToggle,
+  onChange,
+  onDelete,
+  currentYear,
+  onHandleDown,
+  onHandleUp,
+}: {
+  group: GroupDraft;
+  open: boolean;
+  onToggle: () => void;
+  onChange: (patch: Partial<GroupDraft>) => void;
+  onDelete: () => void;
+  currentYear: number;
+  onHandleDown?: () => void;
+  onHandleUp?: () => void;
+}) {
+  const yearFrom = group.age_from ? currentYear - Number(group.age_from) : null;
+  const yearTo = group.age_to ? currentYear - Number(group.age_to) : null;
+  return (
+    <div>
+      <div className="flex w-full items-center gap-2 bg-secondary/40 px-3 py-3 transition hover:bg-secondary">
+        <span
+          onMouseDown={onHandleDown}
+          onMouseUp={onHandleUp}
+          onMouseLeave={onHandleUp}
+          className="flex h-7 w-7 cursor-grab items-center justify-center rounded-md border border-hairline bg-background text-muted-foreground hover:text-ink active:cursor-grabbing"
+          aria-label="Drag to reorder"
+          title="Drag to reorder"
+        >
+          <GripVertical className="h-4 w-4" />
+        </span>
+        <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-muted-foreground transition ${open ? "rotate-0" : "-rotate-90"}`}
+          />
+          <span className="truncate text-sm font-medium text-ink">
+            {group.name || "Untitled group"}
+          </span>
+          <span className="mono text-xs text-muted-foreground">
+            · {group.member_count} total members
+          </span>
+        </button>
+        <button
+          aria-label="Delete"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="rounded p-1 text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+      {open && (
+        <div className="px-5 py-5">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Name</span>
+              <input
+                value={group.name}
+                onChange={(e) => onChange({ name: e.target.value })}
+                placeholder="U10, Senior, Masters…"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Age from</span>
+              <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                {yearFrom ?? "—"}
+              </span>
+              <input
+                type="number"
+                min={0}
+                value={group.age_from}
+                onChange={(e) => onChange({ age_from: e.target.value })}
+                placeholder="6"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Age to</span>
+              <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                {yearTo ?? "—"}
+              </span>
+              <input
+                type="number"
+                min={0}
+                value={group.age_to}
+                onChange={(e) => onChange({ age_to: e.target.value })}
+                placeholder="10"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TabBtn({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm transition ${
+        active
+          ? "border-primary text-ink"
+          : "border-transparent text-muted-foreground hover:text-ink"
+      }`}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+function Panel({ children }: { children: React.ReactNode }) {
+  return <section className="mt-5 rounded-lg border border-hairline bg-card p-6 md:p-8">{children}</section>;
+}
+
+function Th({ children, className }: { children?: React.ReactNode; className?: string }) {
+  return (
+    <th
+      className={`mono px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground ${className ?? ""}`}
+    >
+      {children}
+    </th>
+  );
+}
