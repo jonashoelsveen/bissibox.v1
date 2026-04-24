@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Search, Library, Plus, Image, Settings, LogIn, Users } from "lucide-react";
+import { Search, Library, Plus, Image, Settings, LogIn, Users, Briefcase } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -72,9 +72,14 @@ export function TopChrome() {
         <div className="my-1 h-px w-6 bg-hairline" />
 
         {user && mode === "team" && (
-          <NavBtn to="/team/members" label="Members" active={path.startsWith("/team/members")}>
-            <Users className="h-[18px] w-[18px]" strokeWidth={2.25} />
-          </NavBtn>
+          <>
+            <NavBtn to="/team/members" label="Members" active={path.startsWith("/team/members")}>
+              <Users className="h-[18px] w-[18px]" strokeWidth={2.25} />
+            </NavBtn>
+            <NavBtn to="/team/board" label="Board" active={path.startsWith("/team/board")}>
+              <Briefcase className="h-[18px] w-[18px]" strokeWidth={2.25} />
+            </NavBtn>
+          </>
         )}
 
         {user && (
