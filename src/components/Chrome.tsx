@@ -47,10 +47,10 @@ export function TopChrome() {
           <Link
             to="/profile"
             aria-label="Profile"
-            className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium shadow-sm transition ${
+            className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-all ${
               path.startsWith("/profile")
                 ? "bg-primary text-primary-foreground"
-                : "bg-primary/90 text-primary-foreground hover:opacity-90"
+                : "text-ink hover:bg-secondary"
             }`}
           >
             {letter}
