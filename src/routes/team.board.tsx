@@ -5,9 +5,10 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import {
   Briefcase,
+  CalendarClock,
   ChevronDown,
-  Folder,
-  LayoutGrid,
+  ChevronRight,
+  FileText,
   Mail,
   Paperclip,
   Plus,
@@ -16,9 +17,8 @@ import {
   Trash2,
   Upload,
   User as UserIcon,
+  Users as UsersIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/team/board")({
   component: TeamBoardPage,
@@ -44,12 +44,17 @@ interface MeetingRow {
   created_at: string;
 }
 
-type MeetingTab = { kind: "meeting"; id: string; title: string };
+interface AttachmentRow {
+  id: string;
+  file_name: string;
+  storage_path: string;
+  file_size: number | null;
+}
 
 function TeamBoardPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, mode } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"members" | "meetings" | string>("members");
+  const [tab, setTab] = useState<"members" | "meetings" | "ongoing">("members");
   const [teamId, setTeamId] = useState<string | null>(null);
   const [teamName, setTeamName] = useState<string>("");
   const [loaded, setLoaded] = useState(false);
@@ -60,17 +65,16 @@ function TeamBoardPage() {
 
   // Meetings
   const [meetings, setMeetings] = useState<MeetingRow[]>([]);
+  const [foldersOpen, setFoldersOpen] = useState(true);
   const [folderFilter, setFolderFilter] = useState<string>("all");
   const [meetingSearch, setMeetingSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  // Ongoing meeting tab
-  const [ongoing, setOngoing] = useState<MeetingTab | null>(null);
+  // Ongoing meeting
+  const [ongoing, setOngoing] = useState<MeetingRow | null>(null);
   const [ongoingTab, setOngoingTab] = useState<"text" | "attachments">("attachments");
-  const [attachments, setAttachments] = useState<
-    { id: string; file_name: string; storage_path: string; file_size: number | null }[]
-  >([]);
+  const [attachments, setAttachments] = useState<AttachmentRow[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -126,7 +130,7 @@ function TeamBoardPage() {
     setMeetings(data ?? []);
   }
 
-  // ------- Members tab -------
+  // ── Members ────────────────────────────────────────────────────────────────
   function addMember() {
     setMembers((prev) => [
       ...prev,
@@ -157,7 +161,7 @@ function TeamBoardPage() {
     setMembers((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  async function saveMembers() {
+  async function save() {
     if (!teamId) return;
     setBusy(true);
     try {
@@ -166,12 +170,7 @@ function TeamBoardPage() {
         if (m.id) {
           await supabase
             .from("team_board_members")
-            .update({
-              name: m.name,
-              role: m.role,
-              email: m.email,
-              sort_order: i,
-            })
+            .update({ name: m.name, role: m.role, email: m.email, sort_order: i })
             .eq("id", m.id);
         } else {
           const { data, error } = await supabase
@@ -205,9 +204,7 @@ function TeamBoardPage() {
       toast.error("Enter a valid email first");
       return;
     }
-    if (!m.id) {
-      await saveMembers();
-    }
+    if (!m.id) await save();
     const updated = members[idx];
     if (!updated.id) return;
     const { error } = await supabase
@@ -222,7 +219,7 @@ function TeamBoardPage() {
     if (teamId) await loadMembers(teamId);
   }
 
-  // ------- Meetings tab -------
+  // ── Meetings ───────────────────────────────────────────────────────────────
   const folders = useMemo(() => {
     const set = new Set<string>();
     meetings.forEach((m) => m.folder && set.add(m.folder));
@@ -260,15 +257,15 @@ function TeamBoardPage() {
       return;
     }
     setMeetings((prev) => [data, ...prev]);
-    setOngoing({ kind: "meeting", id: data.id, title: data.title });
-    setTab(`meeting:${data.id}`);
+    setOngoing(data);
+    setTab("ongoing");
     setOngoingTab("attachments");
     setAttachments([]);
   }
 
   function openMeeting(m: MeetingRow) {
-    setOngoing({ kind: "meeting", id: m.id, title: m.title });
-    setTab(`meeting:${m.id}`);
+    setOngoing(m);
+    setTab("ongoing");
     setOngoingTab("attachments");
     void loadAttachments(m.id);
   }
@@ -335,63 +332,90 @@ function TeamBoardPage() {
     if (ongoing) await loadAttachments(ongoing.id);
   }
 
+  // ── Render guards ──────────────────────────────────────────────────────────
   if (authLoading || !loaded) {
     return <div className="p-12 text-sm text-muted-foreground">Loading…</div>;
   }
 
-  if (!teamId) {
+  if (mode !== "team" && mode !== "organizer") {
     return (
-      <div className="mx-auto max-w-3xl p-12">
-        <h1 className="text-2xl font-semibold">Board</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          You don't have a team yet. Create one in your team profile to manage a board.
+      <div className="mx-auto max-w-3xl px-6 py-16">
+        <h1 className="text-2xl text-ink">Switch to Team mode</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The Board page is only available in Team mode. Use the I/T toggle in the left rail.
         </p>
       </div>
     );
   }
 
-  const showingMeeting = tab.startsWith("meeting:") && ongoing;
+  if (!teamId) {
+    return (
+      <div className="mx-auto max-w-3xl px-6 py-16">
+        <h1 className="text-2xl text-ink">No team yet</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Create your team in Settings to manage your board.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 pt-10 pb-24">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-semibold tracking-tight">Board</h1>
+    <div className="px-4 md:px-6">
+      <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
+        <div>
+          <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Team</p>
+          <h1 className="mt-2 text-3xl text-ink md:text-4xl">Board</h1>
+        </div>
         <div className="flex items-center gap-2">
-          {tab === "members" && (
-            <Button onClick={saveMembers} disabled={busy} size="sm">
-              <Save className="mr-1.5 h-4 w-4" />
-              Save
-            </Button>
-          )}
           {tab === "meetings" && (
-            <Button onClick={startNewMeeting} disabled={busy} size="sm">
-              <Plus className="mr-1.5 h-4 w-4" />
-              New board meeting
-            </Button>
+            <button
+              onClick={startNewMeeting}
+              disabled={busy}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" /> New board meeting
+            </button>
+          )}
+          {tab === "members" && (
+            <button
+              onClick={save}
+              disabled={busy}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              {busy ? "Saving…" : "Save"}
+            </button>
           )}
         </div>
-      </div>
+      </header>
 
-      {/* Tab bar */}
-      <div className="mb-6 inline-flex items-center gap-1 rounded-full border border-hairline bg-card p-1">
-        <TabBtn active={tab === "members"} onClick={() => setTab("members")}>
+      <nav className="mt-7 flex border-b border-hairline">
+        <TabBtn
+          active={tab === "members"}
+          onClick={() => setTab("members")}
+          icon={<UsersIcon className="h-3.5 w-3.5" />}
+        >
           Members of the board
         </TabBtn>
-        <TabBtn active={tab === "meetings"} onClick={() => setTab("meetings")}>
+        <TabBtn
+          active={tab === "meetings"}
+          onClick={() => setTab("meetings")}
+          icon={<CalendarClock className="h-3.5 w-3.5" />}
+        >
           Board meetings
         </TabBtn>
         {ongoing && (
           <button
-            type="button"
-            onClick={() => setTab(`meeting:${ongoing.id}`)}
-            className={`group inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition ${
-              showingMeeting
-                ? "bg-emerald-500 text-white shadow-sm"
-                : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-300"
+            onClick={() => setTab("ongoing")}
+            className={`group -mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm transition ${
+              tab === "ongoing"
+                ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
+                : "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
             }`}
+            title={ongoing.title}
           >
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-300 ring-2 ring-emerald-300/40" />
-            {ongoing.title}
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="max-w-[200px] truncate">{ongoing.title}</span>
             <span
               role="button"
               tabIndex={0}
@@ -399,50 +423,265 @@ function TeamBoardPage() {
                 e.stopPropagation();
                 closeOngoing();
               }}
-              className="ml-1 rounded-full px-1 text-xs opacity-70 hover:opacity-100"
+              className="ml-1 rounded px-1 text-xs opacity-60 hover:opacity-100"
             >
               ✕
             </span>
           </button>
         )}
-      </div>
+      </nav>
 
       {tab === "members" && (
-        <MembersTab
-          members={members}
-          onAdd={addMember}
-          onUpdate={updateMember}
-          onRemove={removeMember}
-          onInvite={inviteMember}
-          teamName={teamName}
-        />
+        <Panel>
+          <div className="space-y-3">
+            {members.length === 0 && (
+              <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
+                No board members yet. Add one to get started.
+              </div>
+            )}
+            {members.map((m, i) => (
+              <div
+                key={m.id ?? `new-${i}`}
+                className="flex items-center gap-4 rounded-lg border border-hairline bg-card p-4"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                  <UserIcon className="h-6 w-6" />
+                </div>
+                <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-3">
+                  <input
+                    placeholder="Name"
+                    value={m.name}
+                    onChange={(e) => updateMember(i, { name: e.target.value })}
+                    className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                  />
+                  <input
+                    placeholder="Role (e.g. Chair, Treasurer)"
+                    value={m.role}
+                    onChange={(e) => updateMember(i, { role: e.target.value })}
+                    className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Mail className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <input
+                        type="email"
+                        placeholder="Email"
+                        value={m.email}
+                        onChange={(e) => updateMember(i, { email: e.target.value })}
+                        className="w-full rounded-md border border-hairline bg-background py-2 pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
+                      />
+                    </div>
+                    <button
+                      onClick={() => inviteMember(i)}
+                      title={
+                        m.status === "active"
+                          ? "Active board member"
+                          : m.invited_at
+                            ? "Invitation pending"
+                            : `Invite to ${teamName || "team"} board`
+                      }
+                      className={`shrink-0 rounded-md px-3 py-2 text-xs font-medium transition ${
+                        m.status === "active"
+                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                          : m.invited_at
+                            ? "border border-hairline bg-card text-muted-foreground hover:text-ink"
+                            : "bg-primary text-primary-foreground hover:opacity-90"
+                      }`}
+                    >
+                      {m.status === "active" ? "Active" : m.invited_at ? "Pending" : "Invite"}
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={() => removeMember(i)}
+                  className="rounded p-1 text-muted-foreground hover:text-destructive"
+                  aria-label="Remove board member"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={addMember}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-hairline bg-background px-3 py-1.5 text-xs text-ink hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add board member
+          </button>
+        </Panel>
       )}
 
       {tab === "meetings" && (
-        <MeetingsTab
-          meetings={filteredMeetings}
-          folders={folders}
-          folderFilter={folderFilter}
-          setFolderFilter={setFolderFilter}
-          search={meetingSearch}
-          setSearch={setMeetingSearch}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          setDateFrom={setDateFrom}
-          setDateTo={setDateTo}
-          onOpen={openMeeting}
-        />
+        <div className="mt-8 grid gap-8 md:grid-cols-[200px_1fr]">
+          <nav className="-ml-2 flex flex-col gap-0.5">
+            <SideNavBtn active={folderFilter === "all"} onClick={() => setFolderFilter("all")}>
+              All
+            </SideNavBtn>
+            <button
+              onClick={() => setFoldersOpen((o) => !o)}
+              className="flex items-center justify-between rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition hover:text-ink"
+            >
+              <span>Folders</span>
+              {foldersOpen ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )}
+            </button>
+            {foldersOpen && (
+              <div className="ml-3 flex flex-col gap-0.5 border-l border-hairline pl-2">
+                {folders.length === 0 && (
+                  <span className="px-3 py-1.5 text-xs text-muted-foreground">No folders yet</span>
+                )}
+                {folders.map((f) => (
+                  <SideNavBtn
+                    key={f}
+                    small
+                    active={folderFilter === f}
+                    onClick={() => setFolderFilter(f)}
+                  >
+                    {f}
+                  </SideNavBtn>
+                ))}
+              </div>
+            )}
+          </nav>
+
+          <Panel>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[220px] flex-1">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={meetingSearch}
+                  onChange={(e) => setMeetingSearch(e.target.value)}
+                  placeholder="Search meetings…"
+                  className="h-10 w-full rounded-lg border border-hairline bg-card pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
+                />
+              </div>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="h-10 rounded-lg border border-hairline bg-card px-3 text-sm text-ink outline-none focus:border-primary"
+              />
+              <span className="text-xs text-muted-foreground">→</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="h-10 rounded-lg border border-hairline bg-card px-3 text-sm text-ink outline-none focus:border-primary"
+              />
+              <span className="ml-auto mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                {filteredMeetings.length} / {meetings.length}
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-2">
+              {filteredMeetings.length === 0 && (
+                <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
+                  No board meetings yet.
+                </div>
+              )}
+              {filteredMeetings.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => openMeeting(m)}
+                  className="flex w-full items-center gap-3 rounded-lg border border-hairline bg-card p-4 text-left transition hover:bg-secondary/40"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+                    <Briefcase className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate text-sm font-medium text-ink">{m.title}</div>
+                    <div className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                      {m.meeting_date ?? new Date(m.created_at).toLocaleDateString()}
+                      {m.folder && ` · ${m.folder}`}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </Panel>
+        </div>
       )}
 
-      {showingMeeting && (
-        <OngoingMeetingTab
-          tab={ongoingTab}
-          setTab={setOngoingTab}
-          attachments={attachments}
-          onUploadClick={() => fileInputRef.current?.click()}
-          onDownload={downloadAttachment}
-          onRemove={removeAttachment}
-        />
+      {tab === "ongoing" && ongoing && (
+        <div className="mt-8 grid gap-8 md:grid-cols-[200px_1fr]">
+          <nav className="-ml-2 flex flex-col gap-0.5">
+            <SideNavBtn active={ongoingTab === "text"} onClick={() => setOngoingTab("text")}>
+              <span className="inline-flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5" /> Text
+              </span>
+            </SideNavBtn>
+            <SideNavBtn
+              active={ongoingTab === "attachments"}
+              onClick={() => setOngoingTab("attachments")}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <Paperclip className="h-3.5 w-3.5" /> Attachments
+              </span>
+            </SideNavBtn>
+          </nav>
+
+          <Panel>
+            {ongoingTab === "text" && (
+              <div className="rounded-lg border border-dashed border-hairline px-5 py-12 text-center text-sm text-muted-foreground">
+                Coming soon
+              </div>
+            )}
+            {ongoingTab === "attachments" && (
+              <div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Upload documents, e.g. the meeting report written elsewhere.
+                  </p>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
+                  >
+                    <Upload className="h-3.5 w-3.5" /> Upload document
+                  </button>
+                </div>
+
+                <div className="mt-5 space-y-2">
+                  {attachments.length === 0 && (
+                    <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
+                      No attachments yet.
+                    </div>
+                  )}
+                  {attachments.map((a) => (
+                    <div
+                      key={a.id}
+                      className="flex items-center gap-3 rounded-lg border border-hairline bg-card p-3"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary">
+                        <Paperclip className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <button
+                        onClick={() => downloadAttachment(a.storage_path, a.file_name)}
+                        className="min-w-0 flex-1 truncate text-left text-sm font-medium text-ink hover:underline"
+                      >
+                        {a.file_name}
+                      </button>
+                      {a.file_size != null && (
+                        <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                          {(a.file_size / 1024).toFixed(0)} KB
+                        </span>
+                      )}
+                      <button
+                        onClick={() => removeAttachment(a.id, a.storage_path)}
+                        className="rounded p-1 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Panel>
+        </div>
       )}
 
       <input
@@ -462,331 +701,56 @@ function TeamBoardPage() {
 function TabBtn({
   active,
   onClick,
+  icon,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  icon: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <button
-      type="button"
       onClick={onClick}
-      className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
-        active ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-ink"
+      className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm transition ${
+        active
+          ? "border-primary text-ink"
+          : "border-transparent text-muted-foreground hover:text-ink"
       }`}
     >
+      {icon}
       {children}
     </button>
   );
 }
 
-// ------- Members tab UI -------
-function MembersTab({
-  members,
-  onAdd,
-  onUpdate,
-  onRemove,
-  onInvite,
-  teamName,
-}: {
-  members: BoardMemberDraft[];
-  onAdd: () => void;
-  onUpdate: (idx: number, patch: Partial<BoardMemberDraft>) => void;
-  onRemove: (idx: number) => void;
-  onInvite: (idx: number) => void;
-  teamName: string;
-}) {
+function Panel({ children }: { children: React.ReactNode }) {
   return (
-    <div>
-      <div className="space-y-3">
-        {members.map((m, i) => (
-          <div
-            key={m.id ?? i}
-            className="flex items-center gap-4 rounded-xl border border-hairline bg-card p-4 shadow-sm"
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-              <UserIcon className="h-6 w-6" />
-            </div>
-            <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-3">
-              <Input
-                placeholder="Name"
-                value={m.name}
-                onChange={(e) => onUpdate(i, { name: e.target.value })}
-              />
-              <Input
-                placeholder="Role (e.g. Chair, Treasurer)"
-                value={m.role}
-                onChange={(e) => onUpdate(i, { role: e.target.value })}
-              />
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Mail className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    placeholder="Email"
-                    className="pl-8"
-                    value={m.email}
-                    onChange={(e) => onUpdate(i, { email: e.target.value })}
-                  />
-                </div>
-                <Button
-                  size="sm"
-                  variant={m.status === "active" ? "secondary" : m.invited_at ? "outline" : "default"}
-                  onClick={() => onInvite(i)}
-                  title={
-                    m.status === "active"
-                      ? "Active board member"
-                      : m.invited_at
-                        ? "Invitation pending"
-                        : `Invite to ${teamName || "team"} board`
-                  }
-                >
-                  {m.status === "active" ? "Active" : m.invited_at ? "Pending" : "Invite"}
-                </Button>
-              </div>
-            </div>
-            <button
-              onClick={() => onRemove(i)}
-              className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-destructive"
-              aria-label="Remove board member"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        onClick={onAdd}
-        className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-dashed border-hairline px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-ink"
-      >
-        <Plus className="h-4 w-4" />
-        Add board member
-      </button>
-    </div>
+    <section className="mt-5 rounded-lg border border-hairline bg-card p-6 md:p-8">
+      {children}
+    </section>
   );
 }
 
-// ------- Meetings tab UI -------
-function MeetingsTab({
-  meetings,
-  folders,
-  folderFilter,
-  setFolderFilter,
-  search,
-  setSearch,
-  dateFrom,
-  dateTo,
-  setDateFrom,
-  setDateTo,
-  onOpen,
+function SideNavBtn({
+  active,
+  onClick,
+  children,
+  small,
 }: {
-  meetings: MeetingRow[];
-  folders: string[];
-  folderFilter: string;
-  setFolderFilter: (s: string) => void;
-  search: string;
-  setSearch: (s: string) => void;
-  dateFrom: string;
-  dateTo: string;
-  setDateFrom: (s: string) => void;
-  setDateTo: (s: string) => void;
-  onOpen: (m: MeetingRow) => void;
-}) {
-  const [folderOpen, setFolderOpen] = useState(true);
-  return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-[220px,1fr]">
-      <aside className="space-y-1">
-        <button
-          onClick={() => setFolderFilter("all")}
-          className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm transition ${
-            folderFilter === "all" ? "bg-secondary font-medium text-ink" : "text-muted-foreground hover:bg-secondary/60"
-          }`}
-        >
-          <LayoutGrid className="h-4 w-4" /> All
-        </button>
-        <button
-          onClick={() => setFolderOpen((v) => !v)}
-          className="mt-2 flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-ink hover:bg-secondary/60"
-        >
-          <Folder className="h-4 w-4" />
-          Folder
-          <ChevronDown
-            className={`ml-auto h-4 w-4 transition ${folderOpen ? "" : "-rotate-90"}`}
-          />
-        </button>
-        {folderOpen && (
-          <div className="ml-4 space-y-0.5">
-            {folders.length === 0 && (
-              <div className="px-2.5 py-1.5 text-xs text-muted-foreground">No folders yet</div>
-            )}
-            {folders.map((f) => (
-              <button
-                key={f}
-                onClick={() => setFolderFilter(f)}
-                className={`block w-full truncate rounded-md px-2.5 py-1.5 text-left text-sm transition ${
-                  folderFilter === f
-                    ? "bg-secondary font-medium text-ink"
-                    : "text-muted-foreground hover:bg-secondary/60"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        )}
-      </aside>
-
-      <div>
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search meetings…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
-            />
-          </div>
-          <Input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="w-[150px]"
-          />
-          <span className="text-xs text-muted-foreground">→</span>
-          <Input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="w-[150px]"
-          />
-        </div>
-
-        <div className="space-y-2">
-          {meetings.length === 0 && (
-            <div className="rounded-xl border border-dashed border-hairline p-8 text-center text-sm text-muted-foreground">
-              No board meetings yet
-            </div>
-          )}
-          {meetings.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => onOpen(m)}
-              className="flex w-full items-center gap-3 rounded-xl border border-hairline bg-card p-4 text-left transition hover:bg-secondary/40"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
-                <Briefcase className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <div className="font-medium text-ink">{m.title}</div>
-                <div className="text-xs text-muted-foreground">
-                  {m.meeting_date ?? new Date(m.created_at).toLocaleDateString()}
-                  {m.folder && ` · ${m.folder}`}
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ------- Ongoing meeting tab UI -------
-function OngoingMeetingTab({
-  tab,
-  setTab,
-  attachments,
-  onUploadClick,
-  onDownload,
-  onRemove,
-}: {
-  tab: "text" | "attachments";
-  setTab: (t: "text" | "attachments") => void;
-  attachments: { id: string; file_name: string; storage_path: string; file_size: number | null }[];
-  onUploadClick: () => void;
-  onDownload: (path: string, name: string) => void;
-  onRemove: (id: string, path: string) => void;
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  small?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-[220px,1fr]">
-      <aside className="space-y-1">
-        <button
-          onClick={() => setTab("text")}
-          className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm transition ${
-            tab === "text" ? "bg-secondary font-medium text-ink" : "text-muted-foreground hover:bg-secondary/60"
-          }`}
-        >
-          Text
-        </button>
-        <button
-          onClick={() => setTab("attachments")}
-          className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm transition ${
-            tab === "attachments"
-              ? "bg-secondary font-medium text-ink"
-              : "text-muted-foreground hover:bg-secondary/60"
-          }`}
-        >
-          <Paperclip className="h-4 w-4" /> Attachments
-        </button>
-      </aside>
-
-      <div>
-        {tab === "text" && (
-          <div className="rounded-xl border border-dashed border-hairline p-12 text-center text-sm text-muted-foreground">
-            Coming soon
-          </div>
-        )}
-
-        {tab === "attachments" && (
-          <div>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-medium">Attachments</h2>
-              <Button onClick={onUploadClick} size="sm">
-                <Upload className="mr-1.5 h-4 w-4" /> Upload document
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              {attachments.length === 0 && (
-                <div className="rounded-xl border border-dashed border-hairline p-8 text-center text-sm text-muted-foreground">
-                  No attachments yet
-                </div>
-              )}
-              {attachments.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center gap-3 rounded-xl border border-hairline bg-card p-3"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-secondary">
-                    <Paperclip className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <button
-                    onClick={() => onDownload(a.storage_path, a.file_name)}
-                    className="flex-1 truncate text-left text-sm font-medium text-ink hover:underline"
-                  >
-                    {a.file_name}
-                  </button>
-                  {a.file_size != null && (
-                    <span className="text-xs text-muted-foreground">
-                      {(a.file_size / 1024).toFixed(0)} KB
-                    </span>
-                  )}
-                  <button
-                    onClick={() => onRemove(a.id, a.storage_path)}
-                    className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+    <button
+      onClick={onClick}
+      className={`rounded-md px-3 ${small ? "py-1.5 text-xs" : "py-2 text-sm"} text-left transition ${
+        active ? "bg-secondary font-medium text-ink" : "text-muted-foreground hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
