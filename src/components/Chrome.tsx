@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Search, Library, Plus, Image, Settings, LogIn } from "lucide-react";
+import { Search, Library, Plus, Image, Settings, LogIn, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 
