@@ -69,19 +69,25 @@ export function TopChrome() {
           </Link>
         )}
 
+        <div className="my-1 h-px w-6 bg-hairline" />
+
         {user && mode === "team" && (
           <NavBtn to="/team/members" label="Members" active={path.startsWith("/team/members")}>
             <Users className="h-[18px] w-[18px]" strokeWidth={2.25} />
           </NavBtn>
         )}
 
-        <div className="my-1 h-px w-6 bg-hairline" />
+        {user && (
+          <NavBtn to="/media" label="Content" active={path.startsWith("/media")}>
+            <Image className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </NavBtn>
+        )}
 
         {isOrganizer ? (
           <>
             <NavBtn
               to="/organizer/library"
-              label="Library"
+              label="My events"
               active={
                 path.startsWith("/organizer/library") ||
                 (path.startsWith("/organizer/") && !path.startsWith("/organizer/new")) ||
@@ -118,12 +124,6 @@ export function TopChrome() {
               </NavBtn>
             )}
           </>
-        )}
-
-        {user && (
-          <NavBtn to="/media" label="Media" active={path.startsWith("/media")}>
-            <Image className="h-[18px] w-[18px]" strokeWidth={2.25} />
-          </NavBtn>
         )}
 
         <div className="mt-auto flex flex-col items-center gap-2 pb-2">
