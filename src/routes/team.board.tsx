@@ -332,25 +332,27 @@ function TeamBoardPage() {
     setAttachments(data ?? []);
   }
 
-  async function uploadAttachment(file: File) {
+  async function uploadAttachments(files: FileList | File[]) {
     if (!teamId || !ongoing || !user) return;
     setBusy(true);
     try {
-      const path = `${teamId}/${ongoing.id}/${Date.now()}-${file.name}`;
-      const { error: upErr } = await supabase.storage
-        .from("board-attachments")
-        .upload(path, file, { contentType: file.type });
-      if (upErr) throw upErr;
-      const { error: insErr } = await supabase.from("team_board_meeting_attachments").insert({
-        meeting_id: ongoing.id,
-        team_id: teamId,
-        file_name: file.name,
-        storage_path: path,
-        mime_type: file.type,
-        file_size: file.size,
-        uploaded_by: user.id,
-      });
-      if (insErr) throw insErr;
+      for (const file of Array.from(files)) {
+        const path = `${teamId}/${ongoing.id}/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage
+          .from("board-attachments")
+          .upload(path, file, { contentType: file.type });
+        if (upErr) throw upErr;
+        const { error: insErr } = await supabase.from("team_board_meeting_attachments").insert({
+          meeting_id: ongoing.id,
+          team_id: teamId,
+          file_name: file.name,
+          storage_path: path,
+          mime_type: file.type,
+          file_size: file.size,
+          uploaded_by: user.id,
+        });
+        if (insErr) throw insErr;
+      }
       toast.success("Uploaded");
       await loadAttachments(ongoing.id);
     } catch (e) {
