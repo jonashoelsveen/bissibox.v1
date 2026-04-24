@@ -695,13 +695,15 @@ function TeamBoardPage() {
 
           {/* Document body — single blank page */}
           <div className="mx-auto my-6 flex min-h-[700px] w-full max-w-3xl flex-col rounded-md border border-hairline bg-background p-10 shadow-inner">
-            {/* If no text, attachments float near the top */}
-            {ongoingText.trim() === "" && attachments.length > 0 && (
-              <AttachmentList
-                attachments={attachments}
-                onDownload={downloadAttachment}
-                onRemove={removeAttachment}
-              />
+            {/* Attachments always show at top of the document */}
+            {attachments.length > 0 && (
+              <div className="mb-6 border-b border-hairline pb-4">
+                <AttachmentList
+                  attachments={attachments}
+                  onDownload={downloadAttachment}
+                  onRemove={removeAttachment}
+                />
+              </div>
             )}
 
             <textarea
@@ -712,16 +714,6 @@ function TeamBoardPage() {
               className="flex-1 resize-none border-0 bg-transparent text-base leading-relaxed text-ink outline-none placeholder:text-muted-foreground/60"
             />
 
-            {/* If text exists, attachments sit at the bottom */}
-            {ongoingText.trim() !== "" && attachments.length > 0 && (
-              <div className="mt-6 border-t border-hairline pt-4">
-                <AttachmentList
-                  attachments={attachments}
-                  onDownload={downloadAttachment}
-                  onRemove={removeAttachment}
-                />
-              </div>
-            )}
           </div>
         </section>
       )}
