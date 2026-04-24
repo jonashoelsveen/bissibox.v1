@@ -319,11 +319,19 @@ function TeamBoardPage() {
 
   async function saveOngoingText() {
     if (!ongoing) return;
+    if (ongoingText === savedText) return;
+    setSaving(true);
     const { error } = await supabase
       .from("team_board_meetings")
       .update({ notes: ongoingText })
       .eq("id", ongoing.id);
-    if (error) toast.error(error.message);
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setSavedText(ongoingText);
+    toast.success("Saved");
   }
 
   async function loadAttachments(meetingId: string) {
