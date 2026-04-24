@@ -668,93 +668,113 @@ function TeamBoardPage() {
       )}
 
       {tab === "ongoing" && ongoing && (
-        <div className="mt-8 grid gap-8 md:grid-cols-[200px_1fr]">
-          <nav className="-ml-2 flex flex-col gap-0.5">
-            <SideNavBtn active={ongoingTab === "text"} onClick={() => setOngoingTab("text")}>
-              <span className="inline-flex items-center gap-1.5">
-                <FileText className="h-3.5 w-3.5" /> Text
-              </span>
-            </SideNavBtn>
-            <SideNavBtn
-              active={ongoingTab === "attachments"}
-              onClick={() => setOngoingTab("attachments")}
+        <section className="mt-5 rounded-lg border border-hairline bg-card shadow-sm">
+          {/* Document toolbar */}
+          <div className="flex items-center gap-2 border-b border-hairline px-4 py-2">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach documents"
+              className="rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-ink"
             >
-              <span className="inline-flex items-center gap-1.5">
-                <Paperclip className="h-3.5 w-3.5" /> Attachments
-              </span>
-            </SideNavBtn>
-          </nav>
+              <Paperclip className="h-4 w-4" />
+            </button>
+            <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              {ongoing.title}
+            </span>
+            <button
+              onClick={saveOngoingText}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:text-ink"
+            >
+              <Save className="h-3.5 w-3.5" /> Save
+            </button>
+          </div>
 
-          <Panel>
-            {ongoingTab === "text" && (
-              <div className="rounded-lg border border-dashed border-hairline px-5 py-12 text-center text-sm text-muted-foreground">
-                Coming soon
+          {/* Document body — single blank page */}
+          <div className="mx-auto my-6 flex min-h-[700px] w-full max-w-3xl flex-col rounded-md border border-hairline bg-background p-10 shadow-inner">
+            {/* If no text, attachments float near the top */}
+            {ongoingText.trim() === "" && attachments.length > 0 && (
+              <AttachmentList
+                attachments={attachments}
+                onDownload={downloadAttachment}
+                onRemove={removeAttachment}
+              />
+            )}
+
+            <textarea
+              value={ongoingText}
+              onChange={(e) => setOngoingText(e.target.value)}
+              onBlur={saveOngoingText}
+              placeholder="Write meeting notes here…"
+              className="flex-1 resize-none border-0 bg-transparent text-base leading-relaxed text-ink outline-none placeholder:text-muted-foreground/60"
+            />
+
+            {/* If text exists, attachments sit at the bottom */}
+            {ongoingText.trim() !== "" && attachments.length > 0 && (
+              <div className="mt-6 border-t border-hairline pt-4">
+                <AttachmentList
+                  attachments={attachments}
+                  onDownload={downloadAttachment}
+                  onRemove={removeAttachment}
+                />
               </div>
             )}
-            {ongoingTab === "attachments" && (
-              <div>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Upload documents, e.g. the meeting report written elsewhere.
-                  </p>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
-                  >
-                    <Upload className="h-3.5 w-3.5" /> Upload document
-                  </button>
-                </div>
-
-                <div className="mt-5 space-y-2">
-                  {attachments.length === 0 && (
-                    <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
-                      No attachments yet.
-                    </div>
-                  )}
-                  {attachments.map((a) => (
-                    <div
-                      key={a.id}
-                      className="flex items-center gap-3 rounded-lg border border-hairline bg-card p-3"
-                    >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary">
-                        <Paperclip className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <button
-                        onClick={() => downloadAttachment(a.storage_path, a.file_name)}
-                        className="min-w-0 flex-1 truncate text-left text-sm font-medium text-ink hover:underline"
-                      >
-                        {a.file_name}
-                      </button>
-                      {a.file_size != null && (
-                        <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                          {(a.file_size / 1024).toFixed(0)} KB
-                        </span>
-                      )}
-                      <button
-                        onClick={() => removeAttachment(a.id, a.storage_path)}
-                        className="rounded p-1 text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </Panel>
-        </div>
+          </div>
+        </section>
       )}
 
       <input
         ref={fileInputRef}
         type="file"
+        multiple
         className="hidden"
         onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) void uploadAttachment(f);
+          const fs = e.target.files;
+          if (fs && fs.length) void uploadAttachments(fs);
           e.target.value = "";
         }}
       />
+    </div>
+  );
+}
+
+function AttachmentList({
+  attachments,
+  onDownload,
+  onRemove,
+}: {
+  attachments: AttachmentRow[];
+  onDownload: (path: string, name: string) => void;
+  onRemove: (id: string, path: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {attachments.map((a) => (
+        <div
+          key={a.id}
+          className="flex items-center gap-3 rounded-md border border-hairline bg-card p-2.5"
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-secondary">
+            <Paperclip className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <button
+            onClick={() => onDownload(a.storage_path, a.file_name)}
+            className="min-w-0 flex-1 truncate text-left text-sm font-medium text-ink hover:underline"
+          >
+            {a.file_name}
+          </button>
+          {a.file_size != null && (
+            <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              {(a.file_size / 1024).toFixed(0)} KB
+            </span>
+          )}
+          <button
+            onClick={() => onRemove(a.id, a.storage_path)}
+            className="rounded p-1 text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
