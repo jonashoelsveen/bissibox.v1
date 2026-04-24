@@ -258,21 +258,69 @@ function TeamBoardPage() {
     }
     setMeetings((prev) => [data, ...prev]);
     setOngoing(data);
-    setTab("ongoing");
-    setOngoingTab("attachments");
+    setOngoingText(data.notes ?? "");
     setAttachments([]);
+    setTab("ongoing");
   }
 
   function openMeeting(m: MeetingRow) {
     setOngoing(m);
+    setOngoingText(m.notes ?? "");
     setTab("ongoing");
-    setOngoingTab("attachments");
     void loadAttachments(m.id);
   }
 
-  function closeOngoing() {
+  async function closeOngoing() {
+    if (!ongoing) return;
+    if (!confirm("Do you want to delete board meeting?")) return;
+    // delete attachments storage
+    if (attachments.length) {
+      await supabase.storage
+        .from("board-attachments")
+        .remove(attachments.map((a) => a.storage_path));
+    }
+    await supabase.from("team_board_meeting_attachments").delete().eq("meeting_id", ongoing.id);
+    const { error } = await supabase.from("team_board_meetings").delete().eq("id", ongoing.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setMeetings((prev) => prev.filter((m) => m.id !== ongoing.id));
     setOngoing(null);
+    setAttachments([]);
     setTab("meetings");
+  }
+
+  async function deleteMeeting(m: MeetingRow) {
+    if (!confirm("Do you want to delete board meeting?")) return;
+    const { data: atts } = await supabase
+      .from("team_board_meeting_attachments")
+      .select("storage_path")
+      .eq("meeting_id", m.id);
+    if (atts && atts.length) {
+      await supabase.storage.from("board-attachments").remove(atts.map((a) => a.storage_path));
+    }
+    await supabase.from("team_board_meeting_attachments").delete().eq("meeting_id", m.id);
+    const { error } = await supabase.from("team_board_meetings").delete().eq("id", m.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setMeetings((prev) => prev.filter((x) => x.id !== m.id));
+    if (ongoing?.id === m.id) {
+      setOngoing(null);
+      setAttachments([]);
+      setTab("meetings");
+    }
+  }
+
+  async function saveOngoingText() {
+    if (!ongoing) return;
+    const { error } = await supabase
+      .from("team_board_meetings")
+      .update({ notes: ongoingText })
+      .eq("id", ongoing.id);
+    if (error) toast.error(error.message);
   }
 
   async function loadAttachments(meetingId: string) {
