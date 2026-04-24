@@ -618,15 +618,6 @@ export function CourseMapEditor({
           <ToolBtn onClick={redo} title="Redo" disabled={!canRedo}>
             <Redo2 className="h-4 w-4" />
           </ToolBtn>
-          <span className="mx-1 h-5 w-px bg-hairline" />
-          <ToolBtn
-            onClick={clearAll}
-            title="Clear"
-            disabled={path.length === 0 && splits.length === 0}
-          >
-            <Eraser className="h-4 w-4" />
-            <span className="text-sm">Clear</span>
-          </ToolBtn>
         </div>
 
         <div className="pointer-events-auto relative w-[320px] max-w-[calc(100vw-2rem)]">
