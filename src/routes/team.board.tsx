@@ -72,8 +72,11 @@ function TeamBoardPage() {
   // Ongoing meeting
   const [ongoing, setOngoing] = useState<MeetingRow | null>(null);
   const [ongoingText, setOngoingText] = useState("");
+  const [savedText, setSavedText] = useState("");
+  const [saving, setSaving] = useState(false);
   const [attachments, setAttachments] = useState<AttachmentRow[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isDirty = ongoingText !== savedText;
 
   useEffect(() => {
     if (!authLoading && !user) nav({ to: "/auth" });
@@ -257,6 +260,7 @@ function TeamBoardPage() {
     setMeetings((prev) => [data, ...prev]);
     setOngoing(data);
     setOngoingText(data.notes ?? "");
+    setSavedText(data.notes ?? "");
     setAttachments([]);
     setTab("ongoing");
   }
@@ -264,6 +268,7 @@ function TeamBoardPage() {
   function openMeeting(m: MeetingRow) {
     setOngoing(m);
     setOngoingText(m.notes ?? "");
+    setSavedText(m.notes ?? "");
     setTab("ongoing");
     void loadAttachments(m.id);
   }
@@ -314,11 +319,19 @@ function TeamBoardPage() {
 
   async function saveOngoingText() {
     if (!ongoing) return;
+    if (ongoingText === savedText) return;
+    setSaving(true);
     const { error } = await supabase
       .from("team_board_meetings")
       .update({ notes: ongoingText })
       .eq("id", ongoing.id);
-    if (error) toast.error(error.message);
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setSavedText(ongoingText);
+    toast.success("Saved");
   }
 
   async function loadAttachments(meetingId: string) {
@@ -687,9 +700,15 @@ function TeamBoardPage() {
             </span>
             <button
               onClick={saveOngoingText}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:text-ink"
+              disabled={!isDirty || saving}
+              className={`ml-auto inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition ${
+                isDirty && !saving
+                  ? "text-ink hover:bg-secondary"
+                  : "cursor-default text-muted-foreground/50"
+              }`}
             >
-              <Save className="h-3.5 w-3.5" /> Save
+              <Save className="h-3.5 w-3.5" />
+              {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
             </button>
           </div>
 
