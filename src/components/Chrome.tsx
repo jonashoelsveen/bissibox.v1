@@ -69,6 +69,12 @@ export function TopChrome() {
           </Link>
         )}
 
+        {user && mode === "team" && (
+          <NavBtn to="/team/members" label="Members" active={path.startsWith("/team/members")}>
+            <Users className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </NavBtn>
+        )}
+
         <div className="my-1 h-px w-6 bg-hairline" />
 
         {isOrganizer ? (
