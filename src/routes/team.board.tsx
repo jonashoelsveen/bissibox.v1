@@ -700,9 +700,15 @@ function TeamBoardPage() {
             </span>
             <button
               onClick={saveOngoingText}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:text-ink"
+              disabled={!isDirty || saving}
+              className={`ml-auto inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition ${
+                isDirty && !saving
+                  ? "text-ink hover:bg-secondary"
+                  : "cursor-default text-muted-foreground/50"
+              }`}
             >
-              <Save className="h-3.5 w-3.5" /> Save
+              <Save className="h-3.5 w-3.5" />
+              {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
             </button>
           </div>
 
