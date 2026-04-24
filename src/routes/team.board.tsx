@@ -73,7 +73,7 @@ function TeamBoardPage() {
 
   // Ongoing meeting
   const [ongoing, setOngoing] = useState<MeetingRow | null>(null);
-  const [ongoingTab, setOngoingTab] = useState<"text" | "attachments">("attachments");
+  const [ongoingText, setOngoingText] = useState("");
   const [attachments, setAttachments] = useState<AttachmentRow[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
