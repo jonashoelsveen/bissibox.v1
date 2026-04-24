@@ -260,6 +260,7 @@ function TeamBoardPage() {
     setMeetings((prev) => [data, ...prev]);
     setOngoing(data);
     setOngoingText(data.notes ?? "");
+    setSavedText(data.notes ?? "");
     setAttachments([]);
     setTab("ongoing");
   }
@@ -267,6 +268,7 @@ function TeamBoardPage() {
   function openMeeting(m: MeetingRow) {
     setOngoing(m);
     setOngoingText(m.notes ?? "");
+    setSavedText(m.notes ?? "");
     setTab("ongoing");
     void loadAttachments(m.id);
   }
