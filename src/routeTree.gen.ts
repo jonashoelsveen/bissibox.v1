@@ -17,6 +17,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUserIdRouteImport } from './routes/u.$userId'
 import { Route as TeamMembersRouteImport } from './routes/team.members'
+import { Route as TeamBoardRouteImport } from './routes/team.board'
 import { Route as TTeamIdRouteImport } from './routes/t.$teamId'
 import { Route as OrganizerNewRouteImport } from './routes/organizer.new'
 import { Route as OrganizerLibraryRouteImport } from './routes/organizer.library'
@@ -63,6 +64,11 @@ const UUserIdRoute = UUserIdRouteImport.update({
 const TeamMembersRoute = TeamMembersRouteImport.update({
   id: '/team/members',
   path: '/team/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamBoardRoute = TeamBoardRouteImport.update({
+  id: '/team/board',
+  path: '/team/board',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TTeamIdRoute = TTeamIdRouteImport.update({
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
   '/t/$teamId': typeof TTeamIdRoute
+  '/team/board': typeof TeamBoardRoute
   '/team/members': typeof TeamMembersRoute
   '/u/$userId': typeof UUserIdRoute
   '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
   '/t/$teamId': typeof TTeamIdRoute
+  '/team/board': typeof TeamBoardRoute
   '/team/members': typeof TeamMembersRoute
   '/u/$userId': typeof UUserIdRoute
   '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
   '/t/$teamId': typeof TTeamIdRoute
+  '/team/board': typeof TeamBoardRoute
   '/team/members': typeof TeamMembersRoute
   '/u/$userId': typeof UUserIdRoute
   '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/organizer/library'
     | '/organizer/new'
     | '/t/$teamId'
+    | '/team/board'
     | '/team/members'
     | '/u/$userId'
     | '/organizer/$eventId/edit'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/organizer/library'
     | '/organizer/new'
     | '/t/$teamId'
+    | '/team/board'
     | '/team/members'
     | '/u/$userId'
     | '/organizer/$eventId/edit'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/organizer/library'
     | '/organizer/new'
     | '/t/$teamId'
+    | '/team/board'
     | '/team/members'
     | '/u/$userId'
     | '/organizer/$eventId/edit'
@@ -220,6 +232,7 @@ export interface RootRouteChildren {
   OrganizerLibraryRoute: typeof OrganizerLibraryRoute
   OrganizerNewRoute: typeof OrganizerNewRoute
   TTeamIdRoute: typeof TTeamIdRoute
+  TeamBoardRoute: typeof TeamBoardRoute
   TeamMembersRoute: typeof TeamMembersRoute
   UUserIdRoute: typeof UUserIdRoute
   OrganizerEventIdEditRoute: typeof OrganizerEventIdEditRoute
@@ -282,6 +295,13 @@ declare module '@tanstack/react-router' {
       path: '/team/members'
       fullPath: '/team/members'
       preLoaderRoute: typeof TeamMembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/team/board': {
+      id: '/team/board'
+      path: '/team/board'
+      fullPath: '/team/board'
+      preLoaderRoute: typeof TeamBoardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/t/$teamId': {
@@ -348,6 +368,7 @@ const rootRouteChildren: RootRouteChildren = {
   OrganizerLibraryRoute: OrganizerLibraryRoute,
   OrganizerNewRoute: OrganizerNewRoute,
   TTeamIdRoute: TTeamIdRoute,
+  TeamBoardRoute: TeamBoardRoute,
   TeamMembersRoute: TeamMembersRoute,
   UUserIdRoute: UUserIdRoute,
   OrganizerEventIdEditRoute: OrganizerEventIdEditRoute,
