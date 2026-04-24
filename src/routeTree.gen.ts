@@ -16,6 +16,7 @@ import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUserIdRouteImport } from './routes/u.$userId'
+import { Route as TeamMembersRouteImport } from './routes/team.members'
 import { Route as TTeamIdRouteImport } from './routes/t.$teamId'
 import { Route as OrganizerNewRouteImport } from './routes/organizer.new'
 import { Route as OrganizerLibraryRouteImport } from './routes/organizer.library'
@@ -57,6 +58,11 @@ const IndexRoute = IndexRouteImport.update({
 const UUserIdRoute = UUserIdRouteImport.update({
   id: '/u/$userId',
   path: '/u/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamMembersRoute = TeamMembersRouteImport.update({
+  id: '/team/members',
+  path: '/team/members',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TTeamIdRoute = TTeamIdRouteImport.update({
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
   '/t/$teamId': typeof TTeamIdRoute
+  '/team/members': typeof TeamMembersRoute
   '/u/$userId': typeof UUserIdRoute
   '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
   '/organizer/$eventId/participants': typeof OrganizerEventIdParticipantsRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
   '/t/$teamId': typeof TTeamIdRoute
+  '/team/members': typeof TeamMembersRoute
   '/u/$userId': typeof UUserIdRoute
   '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
   '/organizer/$eventId/participants': typeof OrganizerEventIdParticipantsRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
   '/t/$teamId': typeof TTeamIdRoute
+  '/team/members': typeof TeamMembersRoute
   '/u/$userId': typeof UUserIdRoute
   '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
   '/organizer/$eventId/participants': typeof OrganizerEventIdParticipantsRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/organizer/library'
     | '/organizer/new'
     | '/t/$teamId'
+    | '/team/members'
     | '/u/$userId'
     | '/organizer/$eventId/edit'
     | '/organizer/$eventId/participants'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/organizer/library'
     | '/organizer/new'
     | '/t/$teamId'
+    | '/team/members'
     | '/u/$userId'
     | '/organizer/$eventId/edit'
     | '/organizer/$eventId/participants'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/organizer/library'
     | '/organizer/new'
     | '/t/$teamId'
+    | '/team/members'
     | '/u/$userId'
     | '/organizer/$eventId/edit'
     | '/organizer/$eventId/participants'
@@ -208,6 +220,7 @@ export interface RootRouteChildren {
   OrganizerLibraryRoute: typeof OrganizerLibraryRoute
   OrganizerNewRoute: typeof OrganizerNewRoute
   TTeamIdRoute: typeof TTeamIdRoute
+  TeamMembersRoute: typeof TeamMembersRoute
   UUserIdRoute: typeof UUserIdRoute
   OrganizerEventIdEditRoute: typeof OrganizerEventIdEditRoute
   OrganizerEventIdParticipantsRoute: typeof OrganizerEventIdParticipantsRoute
@@ -262,6 +275,13 @@ declare module '@tanstack/react-router' {
       path: '/u/$userId'
       fullPath: '/u/$userId'
       preLoaderRoute: typeof UUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/team/members': {
+      id: '/team/members'
+      path: '/team/members'
+      fullPath: '/team/members'
+      preLoaderRoute: typeof TeamMembersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/t/$teamId': {
@@ -328,6 +348,7 @@ const rootRouteChildren: RootRouteChildren = {
   OrganizerLibraryRoute: OrganizerLibraryRoute,
   OrganizerNewRoute: OrganizerNewRoute,
   TTeamIdRoute: TTeamIdRoute,
+  TeamMembersRoute: TeamMembersRoute,
   UUserIdRoute: UUserIdRoute,
   OrganizerEventIdEditRoute: OrganizerEventIdEditRoute,
   OrganizerEventIdParticipantsRoute: OrganizerEventIdParticipantsRoute,
