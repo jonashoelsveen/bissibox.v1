@@ -777,41 +777,54 @@ function TeamBoardPage() {
         </div>
       </header>
 
-      <nav className="mt-7 flex border-b border-hairline">
+      <nav className="mt-7 flex border-b border-hairline overflow-hidden">
         <TabBtn
-          active={tab === "meetings"}
-          onClick={() => setTab("meetings")}
+          active={activeTab === "meetings"}
+          onClick={() => setActiveTab("meetings")}
           icon={<CalendarClock className="h-3.5 w-3.5" />}
         >
           Meetings
         </TabBtn>
-        {ongoing && (
-          <button
-            onClick={() => setTab("ongoing")}
-            className={`group -mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm transition ${
-              tab === "ongoing"
-                ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
-                : "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
-            }`}
-            title={ongoing.title}
-          >
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            <span className="max-w-[240px] truncate">
-              {ongoing.folder ? `${ongoing.folder} · ${ongoing.title}` : ongoing.title}
-            </span>
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                closeOngoing();
-              }}
-              className="ml-1 rounded px-1 text-xs opacity-60 hover:opacity-100"
+        {openTabs.map((t) => {
+          const isActive = activeTab === t.meeting.id;
+          const isNew = t.kind === "new";
+          // Tabs share remaining space: each gets flex-1 with min basis equal to "Meetings" tab,
+          // so they shrink uniformly when more are added.
+          const colorActive = isNew
+            ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
+            : "border-muted-foreground text-ink";
+          const colorIdle = isNew
+            ? "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
+            : "border-transparent text-muted-foreground hover:text-ink";
+          const dotColor = isNew ? "bg-emerald-500" : "bg-muted-foreground/60";
+          return (
+            <button
+              key={t.meeting.id}
+              onClick={() => setActiveTab(t.meeting.id)}
+              style={{ flex: "1 1 0", minWidth: 0, maxWidth: 240 }}
+              className={`group -mb-px inline-flex min-w-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm transition ${
+                isActive ? colorActive : colorIdle
+              }`}
+              title={t.meeting.title}
             >
-              ✕
-            </span>
-          </button>
-        )}
+              <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
+              <span className="min-w-0 flex-1 truncate text-left">
+                {t.meeting.folder ? `${t.meeting.folder} · ${t.meeting.title}` : t.meeting.title}
+              </span>
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void closeTab(t.meeting.id);
+                }}
+                className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+              >
+                ✕
+              </span>
+            </button>
+          );
+        })}
       </nav>
 
 
