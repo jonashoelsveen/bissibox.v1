@@ -231,7 +231,14 @@ function TeamPage() {
       }
       actions={
         <button
-          onClick={() => setTab("memberships")}
+          onClick={() => {
+            setTab("memberships");
+            requestAnimationFrame(() => {
+              document
+                .getElementById("team-membership-picker")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+          }}
           className="rounded-full bg-ink px-5 py-1.5 text-xs font-medium text-background hover:opacity-90"
         >
           Become a member
@@ -262,7 +269,7 @@ function TeamPage() {
       }}
     >
       {tab === "memberships" && (
-        <div className="space-y-2">
+        <div id="team-membership-picker" className="space-y-2 scroll-mt-24">
           {tiers.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 px-6 py-12 text-center">
               <div className="text-sm text-muted-foreground">
