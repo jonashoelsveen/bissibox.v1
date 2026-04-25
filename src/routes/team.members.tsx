@@ -122,7 +122,7 @@ function TeamMembersPage() {
         return;
       }
 
-      const [{ data: gs }, { data: tms }, { data: tgms }, { data: tiers }, { data: bms }] = await Promise.all([
+      const [{ data: gs }, { data: tms }, { data: tmemberships }, { data: tgms }, { data: tiers }, { data: bms }] = await Promise.all([
         supabase
           .from("team_groups")
           .select("id,name,age_from,age_to,sort_order,description,leader_name,leader_email,leader_phone,is_default")
@@ -131,6 +131,10 @@ function TeamMembersPage() {
         supabase
           .from("team_members")
           .select("id,user_id,accepted")
+          .eq("team_id", tid),
+        supabase
+          .from("team_memberships")
+          .select("id,user_id,group_id")
           .eq("team_id", tid),
         supabase
           .from("team_group_members")
