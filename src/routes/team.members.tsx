@@ -832,6 +832,7 @@ function MembershipRow({
   onDelete: () => void;
   onHandleDown?: () => void;
   onHandleUp?: () => void;
+  hasGroups: boolean;
 }) {
   return (
     <div>
