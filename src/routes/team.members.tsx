@@ -63,6 +63,12 @@ function TeamMembersPage() {
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [dragHandleIdx, setDragHandleIdx] = useState<number | null>(null);
 
+  // Memberships state
+  const [memberships, setMemberships] = useState<MembershipDraft[]>([]);
+  const [openMemIdx, setOpenMemIdx] = useState<number | null>(null);
+  const [dragMemIdx, setDragMemIdx] = useState<number | null>(null);
+  const [dragMemHandleIdx, setDragMemHandleIdx] = useState<number | null>(null);
+
   // Members state
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [search, setSearch] = useState("");
