@@ -53,12 +53,15 @@ type FocusTarget =
 export function OrgChart({ board, groups, teamName }: OrgChartProps) {
   const [focus, setFocus] = useState<FocusTarget>(null);
   const [contactPerson, setContactPerson] = useState<OrgPerson | null>(null);
+  const [groupColors, setGroupColors] = useState<Record<string, string>>({});
 
   const focusedGroup =
     focus?.kind === "group" ? groups.find((g) => g.id === focus.id) ?? null : null;
   const isBoardFocused = focus?.kind === "board";
 
   const close = () => setFocus(null);
+  const setColor = (id: string, color: string) =>
+    setGroupColors((prev) => ({ ...prev, [id]: color }));
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden rounded-lg border border-hairline bg-card">
