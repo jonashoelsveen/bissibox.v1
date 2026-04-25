@@ -99,9 +99,29 @@ Deno.serve(async (req) => {
           user_id: user.id,
           team_id: teamId,
           tier_id: tierId,
-          status: "pending",
+          status: "active",
         });
         if (error) throw error;
+      }
+      // Also ensure the user appears in the team's member roster
+      const { data: existingMember } = await admin
+        .from("team_members")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("team_id", teamId)
+        .maybeSingle();
+      if (!existingMember) {
+        const { error: tmErr } = await admin.from("team_members").insert({
+          user_id: user.id,
+          team_id: teamId,
+          accepted: true,
+        });
+        if (tmErr) throw tmErr;
+      } else {
+        await admin
+          .from("team_members")
+          .update({ accepted: true })
+          .eq("id", (existingMember as { id: string }).id);
       }
       return new Response(JSON.stringify({ ok: true, kind: "team_membership" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
