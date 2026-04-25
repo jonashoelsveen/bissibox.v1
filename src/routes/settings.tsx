@@ -66,53 +66,83 @@ interface LikedRow {
 
 type Tab = "general" | "address" | "races" | "liked" | "roles" | "profiles";
 
+interface EntityRow {
+  id: string;
+  name: string;
+  entity_type: "team" | "company" | "cooperation";
+}
+
 function SettingsPage() {
-  const { user, loading: authLoading, mode, setMode, signOut } = useAuth();
+  const { user, loading: authLoading, mode, setMode, activeEntityId, setActiveEntity, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
+  const [entities, setEntities] = useState<EntityRow[]>([]);
   const [regs, setRegs] = useState<RegistrationRow[]>([]);
   const [liked, setLiked] = useState<LikedRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<Tab>("general");
-  const [hasTeam, setHasTeam] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
-  const isTeamMode = mode === "team" || mode === "organizer";
+  // Active selection: null = individual profile, otherwise the entity id.
+  const isTeamMode = !!activeEntityId;
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [authLoading, user, navigate]);
 
+  // Load profile + entity list on mount
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-      if (data) setProfile(data as Profile);
+      const { data: p } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+      if (p) setProfile(p as Profile);
+
       const { data: r } = await supabase
         .from("registrations")
         .select("id, race_type, status, events(id, title, starts_at, location)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setRegs((r as unknown as RegistrationRow[]) ?? []);
+
       const { data: l } = await supabase
         .from("event_likes")
         .select("id, events(id, title, starts_at, location)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setLiked((l as unknown as LikedRow[]) ?? []);
-      const { data: t } = await supabase
+
+      const { data: ts } = await supabase
         .from("teams")
-        .select("id, name, nif_id, contact_email, contact_phone, website, description, address, postal_code, postal_place, country")
+        .select("id, name, entity_type")
         .eq("owner_id", user.id)
-        .maybeSingle();
-      if (t) setTeam(t as Team);
-      setHasTeam(!!t);
+        .order("created_at", { ascending: true });
+      const list = (ts ?? []) as EntityRow[];
+      setEntities(list);
+
+      // If the stored active entity no longer exists, fall back to individual.
+      if (activeEntityId && !list.some((e) => e.id === activeEntityId)) {
+        setActiveEntity(null);
+      }
     })();
   }, [user]);
 
+  // Load the currently-selected entity's editable fields
   useEffect(() => {
-    if (!hasTeam && (mode === "team" || mode === "organizer")) setMode("participant");
-  }, [hasTeam, mode, setMode]);
+    if (!user) return;
+    if (!activeEntityId) {
+      setTeam(null);
+      return;
+    }
+    (async () => {
+      const { data: t } = await supabase
+        .from("teams")
+        .select("id, name, nif_id, contact_email, contact_phone, website, description, address, postal_code, postal_place, country")
+        .eq("id", activeEntityId)
+        .maybeSingle();
+      if (t) setTeam(t as Team);
+    })();
+  }, [user, activeEntityId]);
 
   useEffect(() => {
     if (isTeamMode && (tab === "races" || tab === "liked" || tab === "profiles")) setTab("general");
@@ -148,7 +178,9 @@ function SettingsPage() {
       const { error } = await supabase.from("teams").update(rest).eq("id", id);
       setSaving(false);
       if (error) return toast.error(error.message);
-      toast.success("Team saved.");
+      toast.success("Saved.");
+      // Refresh entity name in dropdown list
+      setEntities((prev) => prev.map((e) => (e.id === id ? { ...e, name: team.name } : e)));
     } else if (profile) {
       const { error } = await supabase.from("profiles").update(profile).eq("id", user.id);
       setSaving(false);
@@ -159,6 +191,13 @@ function SettingsPage() {
     }
   };
 
+  const onEntityCreated = (row: EntityRow) => {
+    setEntities((prev) => [...prev, row]);
+    setActiveEntity(row.id);
+    setCreateOpen(false);
+    setTab("general");
+  };
+
   if (!user || !profile) {
     return <div className="mx-auto max-w-3xl px-6 py-20 text-muted-foreground">Loading…</div>;
   }
@@ -167,28 +206,38 @@ function SettingsPage() {
     ? ["general", "address", "roles"]
     : ["general", "address", "roles", "profiles", "races", "liked"];
 
+  const activeEntity = entities.find((e) => e.id === activeEntityId) ?? null;
+
   return (
     <div className="px-4 md:px-6">
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-2 pt-4">
-          <div>
-            <p className="mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-              Settings
-            </p>
-            <h1 className="mt-1 text-2xl text-ink md:text-3xl">Account & preferences</h1>
-          </div>
-          <div className="flex gap-2">
-            <ModeToggle mode={mode} setMode={setMode} hasTeam={hasTeam} />
-            <button
-              onClick={async () => {
-                await signOut();
-                navigate({ to: "/" });
+          <div className="flex items-center gap-3">
+            <ProfileSelector
+              entities={entities}
+              activeEntity={activeEntity}
+              onSelect={(id) => {
+                setActiveEntity(id);
+                setTab("general");
               }}
-              className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+            />
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-card px-3.5 py-2 text-xs text-ink transition hover:bg-secondary"
             >
-              Sign out
+              <Plus className="h-3.5 w-3.5" />
+              Create new entity
             </button>
           </div>
+          <button
+            onClick={async () => {
+              await signOut();
+              navigate({ to: "/" });
+            }}
+            className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+          >
+            Sign out
+          </button>
         </div>
 
         <div className="mt-8 grid gap-10 md:grid-cols-[180px_1fr]">
