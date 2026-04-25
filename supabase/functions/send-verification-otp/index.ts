@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
     }
 
     const code = generateCode();
-    const codeHash = await bcrypt.hash(code);
+    const codeHash = await hashCode(code);
     const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
 
     const { data: insertData, error: insertErr } = await admin
