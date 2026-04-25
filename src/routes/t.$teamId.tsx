@@ -222,7 +222,14 @@ function TeamPage() {
           {team.country && <> · {team.country}</>}
         </span>
       }
-      actions={<FollowButton target={{ kind: "team", teamId }} />}
+      actions={
+        <button
+          onClick={() => setTab("memberships")}
+          className="rounded-full bg-ink px-5 py-1.5 text-xs font-medium text-background hover:opacity-90"
+        >
+          Become a member
+        </button>
+      }
       tabs={[
         { key: "memberships", label: "Memberships", icon: <CreditCard className="h-3.5 w-3.5" /> },
         { key: "members", label: "Members", icon: <UsersIcon className="h-3.5 w-3.5" /> },
@@ -272,7 +279,7 @@ function TeamPage() {
                       {formatMoney(tier.price, tier.currency)}
                     </span>
                     <button
-                      onClick={() => join(tier.id)}
+                      onClick={() => startJoin(tier.id)}
                       disabled={joined}
                       className="rounded-full bg-ink px-4 py-1.5 text-xs text-background hover:opacity-90 disabled:opacity-50"
                     >
