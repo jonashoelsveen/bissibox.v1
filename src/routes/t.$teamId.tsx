@@ -24,6 +24,7 @@ interface PublicTeam {
   website: string | null;
   owner_id: string;
   active: boolean;
+  entity_type: string;
 }
 
 interface Tier {
