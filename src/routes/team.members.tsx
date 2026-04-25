@@ -715,6 +715,11 @@ function GroupRow({
           <span className="truncate text-sm font-medium text-ink">
             {group.name || "Untitled group"}
           </span>
+          {group.is_default && (
+            <span className="mono rounded bg-primary/10 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.16em] text-primary">
+              Default
+            </span>
+          )}
           <span className="mono text-xs text-muted-foreground">
             · {group.member_count} total members
           </span>
