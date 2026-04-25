@@ -275,6 +275,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          event_type: Database["public"]["Enums"]["event_type"]
           featured: boolean
           id: string
           location: string | null
@@ -299,6 +300,7 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string | null
+          event_type?: Database["public"]["Enums"]["event_type"]
           featured?: boolean
           id?: string
           location?: string | null
@@ -323,6 +325,7 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string | null
+          event_type?: Database["public"]["Enums"]["event_type"]
           featured?: boolean
           id?: string
           location?: string | null
@@ -1501,6 +1504,7 @@ export type Database = {
       account_type: "individual" | "team"
       app_role: "organizer" | "photographer" | "timekeeper"
       company_kind: "timing" | "production"
+      event_type: "meeting" | "event" | "race"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1631,6 +1635,7 @@ export const Constants = {
       account_type: ["individual", "team"],
       app_role: ["organizer", "photographer", "timekeeper"],
       company_kind: ["timing", "production"],
+      event_type: ["meeting", "event", "race"],
     },
   },
 } as const
