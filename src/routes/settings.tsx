@@ -50,6 +50,7 @@ interface Team {
   postal_code: string | null;
   postal_place: string | null;
   country: string | null;
+  active: boolean;
 }
 
 interface RegistrationRow {
@@ -64,7 +65,7 @@ interface LikedRow {
   events: { id: string; title: string; starts_at: string; location: string } | null;
 }
 
-type Tab = "general" | "address" | "races" | "liked" | "roles" | "profiles";
+type Tab = "general" | "address" | "races" | "liked" | "roles" | "profiles" | "entity-profile" | "signout";
 
 interface EntityRow {
   id: string;
@@ -137,7 +138,7 @@ function SettingsPage() {
     (async () => {
       const { data: t } = await supabase
         .from("teams")
-        .select("id, name, nif_id, contact_email, contact_phone, website, description, address, postal_code, postal_place, country")
+        .select("id, name, nif_id, contact_email, contact_phone, website, description, address, postal_code, postal_place, country, active")
         .eq("id", activeEntityId)
         .maybeSingle();
       if (t) setTeam(t as Team);
