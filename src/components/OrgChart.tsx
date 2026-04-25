@@ -1,5 +1,27 @@
-import { useEffect, useState } from "react";
-import { ChevronDown, X, User2, Mail, Phone, Briefcase } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, X, User2, Mail, Phone, Briefcase, Palette, Check } from "lucide-react";
+
+// Simple, professional preset palette (cohesive with neutral UI)
+const GROUP_COLORS: { name: string; value: string }[] = [
+  { name: "Default", value: "" },
+  { name: "Slate", value: "#64748b" },
+  { name: "Blue", value: "#3b82f6" },
+  { name: "Teal", value: "#14b8a6" },
+  { name: "Green", value: "#22c55e" },
+  { name: "Amber", value: "#f59e0b" },
+  { name: "Red", value: "#ef4444" },
+  { name: "Pink", value: "#ec4899" },
+  { name: "Violet", value: "#8b5cf6" },
+];
+
+// Convert hex → rgba with alpha for soft tinted backgrounds
+function hexToRgba(hex: string, alpha: number) {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export interface OrgPerson {
   id: string;
