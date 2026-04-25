@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 import { RolesPanel } from "@/components/RolesPanel";
+import { ChevronDown, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network } from "lucide-react";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
