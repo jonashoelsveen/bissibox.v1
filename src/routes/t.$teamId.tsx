@@ -35,6 +35,8 @@ interface Tier {
   currency: string;
   group_assignment_mode: "volunteer" | "criteria";
   criteria_label: string;
+  is_active: boolean;
+  is_public: boolean;
 }
 
 interface GroupOpt {
@@ -117,13 +119,15 @@ function TeamPage() {
 
       const { data: tierData } = await supabase
         .from("team_membership_tiers")
-        .select("id, name, description, price, currency, group_assignment_mode, criteria_label")
+        .select("id, name, description, price, currency, group_assignment_mode, criteria_label, is_active, is_public")
         .eq("team_id", teamId)
         .order("sort_order");
       setTiers(((tierData ?? []) as unknown as Tier[]).map((t) => ({
         ...t,
         group_assignment_mode: (t.group_assignment_mode === "criteria" ? "criteria" : "volunteer"),
         criteria_label: t.criteria_label ?? "age",
+        is_active: t.is_active ?? true,
+        is_public: t.is_public ?? true,
       })));
       setTiersLoaded(true);
 
