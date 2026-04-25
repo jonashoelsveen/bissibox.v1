@@ -393,7 +393,9 @@ export function SimplePinMap({
                   <MapPin className="h-3 w-3 text-white" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink">{noun} pin</p>
+                  <p className="truncate text-sm font-medium text-ink">
+                    {name.trim() || `${noun} pin`}
+                  </p>
                   <p className="mono mt-0.5 text-[10px] text-muted-foreground">
                     {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
                   </p>
@@ -406,6 +408,25 @@ export function SimplePinMap({
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
+
+              {showName && (
+                <div className="border-t border-hairline bg-card/50 px-3 py-3">
+                  <label className="block">
+                    <span className="mono mb-1 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                      Pin name
+                    </span>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) =>
+                        trackedChange({ pin: pinRef.current, description: descRef.current, name: e.target.value })
+                      }
+                      placeholder="e.g. Meeting room 3D, Main entrance"
+                      className="w-full rounded-md border border-hairline bg-card px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                    />
+                  </label>
+                </div>
+              )}
 
               {showDescription && (
                 <div className="border-t border-hairline bg-card/50 px-3 py-3">
