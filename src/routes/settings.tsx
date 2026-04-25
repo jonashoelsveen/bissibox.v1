@@ -532,78 +532,53 @@ function ProfileSelector({
   const [open, setOpen] = useState(false);
 
   const label = activeEntity ? activeEntity.name : "Individual profile";
-  const Icon = activeEntity
-    ? activeEntity.entity_type === "company"
-      ? Building2
-      : activeEntity.entity_type === "cooperation"
-        ? Network
-        : UsersIcon
-    : UserIcon;
-  const sub = activeEntity ? ENTITY_LABEL[activeEntity.entity_type] : "Personal";
 
   return (
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-3 rounded-xl border border-hairline bg-card px-3 py-2 text-left transition hover:bg-secondary"
+        className="inline-flex items-baseline gap-1.5 text-2xl font-semibold text-ink transition hover:text-ink/80 md:text-3xl"
       >
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
-          <Icon className="h-4 w-4 text-ink" strokeWidth={2.25} />
-        </span>
-        <span className="min-w-0">
-          <span className="mono block text-[9px] uppercase tracking-[0.2em] text-muted-foreground">{sub}</span>
-          <span className="block truncate text-sm text-ink md:text-base">{label}</span>
-        </span>
-        <ChevronDown className="ml-1 h-4 w-4 text-muted-foreground" />
+        <span className="truncate">{label}</span>
+        <ChevronDown className="h-4 w-4 translate-y-[-2px] text-muted-foreground" strokeWidth={2.25} />
       </button>
 
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 z-40 mt-1.5 w-72 overflow-hidden rounded-xl border border-hairline bg-card shadow-xl">
+          <div className="absolute left-0 z-40 mt-2 w-64 border border-ink/15 bg-card shadow-lg">
             <button
               onClick={() => {
                 onSelect(null);
                 setOpen(false);
               }}
-              className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-secondary ${
-                !activeEntity ? "bg-secondary/60" : ""
+              className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition hover:bg-secondary ${
+                !activeEntity ? "bg-secondary/60 text-ink" : "text-ink"
               }`}
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary">
-                <UserIcon className="h-3.5 w-3.5 text-ink" strokeWidth={2.25} />
-              </span>
-              <span>
-                <span className="mono block text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Personal</span>
-                <span className="block text-sm text-ink">Individual profile</span>
+              <span className="truncate">Individual profile</span>
+              <span className="mono ml-2 shrink-0 text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                Personal
               </span>
             </button>
             {entities.length > 0 && <div className="h-px w-full bg-hairline" />}
-            {entities.map((e) => {
-              const EI = e.entity_type === "company" ? Building2 : e.entity_type === "cooperation" ? Network : UsersIcon;
-              return (
-                <button
-                  key={e.id}
-                  onClick={() => {
-                    onSelect(e.id);
-                    setOpen(false);
-                  }}
-                  className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-secondary ${
-                    activeEntity?.id === e.id ? "bg-secondary/60" : ""
-                  }`}
-                >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary">
-                    <EI className="h-3.5 w-3.5 text-ink" strokeWidth={2.25} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="mono block text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
-                      {ENTITY_LABEL[e.entity_type]}
-                    </span>
-                    <span className="block truncate text-sm text-ink">{e.name}</span>
-                  </span>
-                </button>
-              );
-            })}
+            {entities.map((e) => (
+              <button
+                key={e.id}
+                onClick={() => {
+                  onSelect(e.id);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center justify-between border-t border-hairline/60 px-3 py-2 text-left text-sm transition hover:bg-secondary ${
+                  activeEntity?.id === e.id ? "bg-secondary/60 text-ink" : "text-ink"
+                }`}
+              >
+                <span className="truncate">{e.name}</span>
+                <span className="mono ml-2 shrink-0 text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                  {ENTITY_LABEL[e.entity_type]}
+                </span>
+              </button>
+            ))}
           </div>
         </>
       )}
