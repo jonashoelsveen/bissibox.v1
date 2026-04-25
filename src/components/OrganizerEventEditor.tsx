@@ -84,6 +84,9 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
   const [savedId, setSavedId] = useState<string | undefined>(eventId);
   const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [teamId, setTeamId] = useState<string | null>(null);
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [pinDescription, setPinDescription] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
