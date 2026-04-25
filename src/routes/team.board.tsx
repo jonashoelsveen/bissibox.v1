@@ -51,6 +51,15 @@ interface AttachmentRow {
   file_size: number | null;
 }
 
+interface RosterEntry {
+  id: string;
+  board_member_id: string | null;
+  name: string;
+  role: string;
+  email: string;
+  sort_order: number;
+}
+
 function TeamBoardPage() {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
