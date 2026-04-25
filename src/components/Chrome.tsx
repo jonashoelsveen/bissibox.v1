@@ -98,7 +98,7 @@ export function TopChrome() {
 
         {user && (
           <NavBtn to="/media" label="Content" active={path.startsWith("/media")}>
-            <Image className="h-[18px] w-[18px]" strokeWidth={2.25} />
+            <Library className="h-[18px] w-[18px]" strokeWidth={2.25} />
           </NavBtn>
         )}
 
