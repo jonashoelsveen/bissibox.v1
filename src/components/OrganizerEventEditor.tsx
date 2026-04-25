@@ -514,7 +514,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             )}
             {subevents.map((s, idx) => {
               const dragKey = `sub-${idx}`;
-              const isOver = dragOverId === dragKey && dragId !== null && dragId !== dragKey;
+              const isDragging = dragId === dragKey;
               return (
                 <div
                   key={idx}
@@ -527,16 +527,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                     setDragId(dragKey);
                     e.dataTransfer.effectAllowed = "move";
                   }}
-                  onDragOver={(e) => {
-                    if (!dragId || !dragId.startsWith("sub-")) return;
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = "move";
-                    setDragOverId(dragKey);
-                  }}
-                  onDragLeave={() => {
-                    if (dragOverId === dragKey) setDragOverId(null);
-                  }}
-                  onDrop={(e) => {
+                  onDragEnter={(e) => {
                     e.preventDefault();
                     if (!dragId || !dragId.startsWith("sub-")) return;
                     const fromIdx = Number(dragId.replace("sub-", ""));
@@ -548,7 +539,16 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                       next.splice(toIdx, 0, moved);
                       return next.map((x, i) => ({ ...x, sort_order: i }));
                     });
-                    setOpenSub(toIdx);
+                    setOpenSub((o) => (o === fromIdx ? toIdx : o === toIdx ? fromIdx : o));
+                    setDragId(`sub-${toIdx}`);
+                  }}
+                  onDragOver={(e) => {
+                    if (!dragId || !dragId.startsWith("sub-")) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
                     setDragId(null);
                     setDragOverId(null);
                     setDragHandleId(null);
@@ -558,8 +558,8 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                     setDragOverId(null);
                     setDragHandleId(null);
                   }}
-                  className={`overflow-hidden rounded-lg border transition ${
-                    isOver ? "border-primary bg-primary/5" : "border-hairline bg-card"
+                  className={`overflow-hidden rounded-lg border border-hairline bg-card transition ${
+                    isDragging ? "opacity-40" : ""
                   }`}
                 >
                   <SubeventRow
