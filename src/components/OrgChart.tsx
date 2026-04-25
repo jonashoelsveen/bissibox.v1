@@ -78,6 +78,8 @@ export function OrgChart({ board, groups, teamName }: OrgChartProps) {
             board={board}
             groups={groups}
             teamName={teamName}
+            groupColors={groupColors}
+            onSetGroupColor={setColor}
             onExpandGroup={(id) => setFocus({ kind: "group", id })}
             onExpandBoard={() => setFocus({ kind: "board" })}
             onPersonClick={(p) => setContactPerson(p)}
