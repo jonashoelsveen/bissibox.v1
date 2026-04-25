@@ -1005,6 +1005,8 @@ function MembershipRow({
   onHandleUp?: () => void;
   hasGroups: boolean;
 }) {
+  const publicDisabled = !membership.is_active;
+
   return (
     <div>
       <div className="flex w-full items-center gap-2 bg-secondary/40 px-3 py-3 transition hover:bg-secondary">
@@ -1054,6 +1056,41 @@ function MembershipRow({
                 className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
               />
             </label>
+            <div className="md:col-span-3 grid gap-3 rounded-lg border border-hairline bg-background/60 p-4 md:grid-cols-2">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-ink">Active</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Inactive memberships cannot be joined and are hidden from profile pages.</p>
+                </div>
+                <Switch
+                  checked={membership.is_active}
+                  onCheckedChange={(checked) =>
+                    onChange({
+                      is_active: checked,
+                      is_public: checked ? membership.is_public : false,
+                    })
+                  }
+                  aria-label="Toggle membership active"
+                />
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-ink">Publicly visible</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Only public memberships show a Become a member action to other users.</p>
+                </div>
+                <Switch
+                  checked={membership.is_active && membership.is_public}
+                  disabled={publicDisabled}
+                  onCheckedChange={(checked) => onChange({ is_public: checked })}
+                  aria-label="Toggle membership public visibility"
+                />
+              </div>
+              {publicDisabled && (
+                <p className="md:col-span-2 text-[11px] text-muted-foreground">
+                  Public visibility turns off automatically when the membership is inactive.
+                </p>
+              )}
+            </div>
             <label className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Price</span>
               <input
