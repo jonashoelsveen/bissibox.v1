@@ -55,6 +55,16 @@ interface MembershipDraft {
   is_public: boolean;
 }
 
+interface BoardMemberDraft {
+  id?: string;
+  name: string;
+  role: string;
+  email: string;
+  status: "pending" | "active";
+  invited_at: string | null;
+  sort_order: number;
+}
+
 interface MemberRow {
   team_member_id: string;
   user_id: string;
