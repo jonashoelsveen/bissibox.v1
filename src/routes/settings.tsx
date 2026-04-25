@@ -504,6 +504,8 @@ function SettingsPage() {
                 )}
               </Card>
             )}
+
+            {tab === "desk" && !isTeamMode && <DeskSettingsPanel />}
           </div>
         </div>
       </div>
