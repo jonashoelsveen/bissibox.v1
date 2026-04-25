@@ -915,6 +915,49 @@ function MembershipRow({
               />
             </label>
           </div>
+
+          {hasGroups && (
+            <div className="mt-5 rounded-lg border border-hairline bg-background/50 p-4">
+              <p className="mono mb-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Group assignment
+              </p>
+              <div className="space-y-2">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={membership.group_assignment_mode === "volunteer"}
+                    onChange={() => onChange({ group_assignment_mode: "volunteer" })}
+                    className="mt-0.5 h-4 w-4 cursor-pointer accent-primary"
+                  />
+                  <span className="text-sm text-ink">
+                    <span className="font-medium">Volunteer</span>{" "}
+                    <span className="text-muted-foreground">— member chooses their group when joining.</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={membership.group_assignment_mode === "criteria"}
+                    onChange={() => onChange({ group_assignment_mode: "criteria" })}
+                    className="mt-0.5 h-4 w-4 cursor-pointer accent-primary"
+                  />
+                  <span className="text-sm text-ink">
+                    <span className="font-medium">Categorize by</span>{" "}
+                    <input
+                      value={membership.criteria_label}
+                      onChange={(e) => onChange({ criteria_label: e.target.value, group_assignment_mode: "criteria" })}
+                      placeholder="age"
+                      className="ml-1 inline-block w-32 rounded-md border border-hairline bg-background px-2 py-0.5 text-sm text-ink outline-none focus:border-primary"
+                    />
+                    <span className="text-muted-foreground"> — auto-assigned (currently always uses age range).</span>
+                  </span>
+                </label>
+              </div>
+              <p className="mt-3 text-[11px] text-muted-foreground">
+                One option must be selected. The criteria word is shown to members in the confirmation message.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
