@@ -72,9 +72,9 @@ interface AttendedEvent {
 const MEDIA_HOUSES = ["VG", "NRK", "TV2", "Dagbladet", "Aftenposten"];
 
 function MediaPage() {
-  const { user, mode, loading: authLoading } = useAuth();
+  const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const isTeamMode = mode === "team" || mode === "organizer";
+  const isTeamMode = (mode === "team" || mode === "organizer") || !!activeEntityId;
   const [albums, setAlbums] = useState<Album[]>([]);
   const [items, setItems] = useState<MediaItem[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
@@ -189,11 +189,27 @@ function MediaPage() {
     setUserName(name);
 
     if (isTeamMode) {
-      const { data: team } = await supabase
-        .from("teams")
-        .select("id,name")
-        .eq("owner_id", user.id)
-        .maybeSingle();
+      // Prefer the user's currently active entity selection. Fall back to the
+      // first owned team only when nothing is selected (legacy single-team users).
+      let team: { id: string; name: string } | null = null;
+      if (activeEntityId) {
+        const { data } = await supabase
+          .from("teams")
+          .select("id,name")
+          .eq("id", activeEntityId)
+          .maybeSingle();
+        team = data ?? null;
+      }
+      if (!team) {
+        const { data } = await supabase
+          .from("teams")
+          .select("id,name")
+          .eq("owner_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        team = data ?? null;
+      }
       if (!team) {
         setTeamId(null);
         setAlbums([]);
@@ -278,7 +294,7 @@ function MediaPage() {
     }
     setItemAlbums(map);
     void itemIds;
-  }, [user, isTeamMode]);
+  }, [user, isTeamMode, activeEntityId]);
 
   useEffect(() => {
     void load();
