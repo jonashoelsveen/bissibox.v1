@@ -23,29 +23,61 @@ export interface OrgChartProps {
   teamName?: string;
 }
 
+type FocusTarget =
+  | { kind: "group"; id: string }
+  | { kind: "board" }
+  | null;
+
 export function OrgChart({ board, groups, teamName }: OrgChartProps) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [focus, setFocus] = useState<FocusTarget>(null);
   const [contactPerson, setContactPerson] = useState<OrgPerson | null>(null);
 
-  const focused = expandedId ? groups.find((g) => g.id === expandedId) ?? null : null;
+  const focusedGroup =
+    focus?.kind === "group" ? groups.find((g) => g.id === focus.id) ?? null : null;
+  const isBoardFocused = focus?.kind === "board";
+
+  const close = () => setFocus(null);
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden rounded-lg border border-hairline bg-card">
-      <div className="flex-1 overflow-y-auto">
-        {focused ? (
-          <FocusedView
-            group={focused}
-            onClose={() => setExpandedId(null)}
-            onPersonClick={(p) => setContactPerson(p)}
-          />
-        ) : (
+      <div className="relative flex-1 overflow-y-auto">
+        {/* Full chart fades/zooms out when focused */}
+        <div
+          className={`transition-all duration-300 ease-out ${
+            focus
+              ? "pointer-events-none scale-[0.96] opacity-0"
+              : "scale-100 opacity-100"
+          }`}
+        >
           <FullChart
             board={board}
             groups={groups}
             teamName={teamName}
-            onExpandGroup={(id) => setExpandedId(id)}
+            onExpandGroup={(id) => setFocus({ kind: "group", id })}
+            onExpandBoard={() => setFocus({ kind: "board" })}
             onPersonClick={(p) => setContactPerson(p)}
           />
+        </div>
+
+        {focusedGroup && (
+          <FocusedOverlay onClose={close}>
+            <FocusedGroupCard
+              group={focusedGroup}
+              onClose={close}
+              onPersonClick={(p) => setContactPerson(p)}
+            />
+          </FocusedOverlay>
+        )}
+
+        {isBoardFocused && (
+          <FocusedOverlay onClose={close}>
+            <FocusedBoardCard
+              board={board}
+              teamName={teamName}
+              onClose={close}
+              onPersonClick={(p) => setContactPerson(p)}
+            />
+          </FocusedOverlay>
         )}
       </div>
 
