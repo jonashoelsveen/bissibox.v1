@@ -376,6 +376,55 @@ function TeamBoardPage() {
     setAttachments(data ?? []);
   }
 
+  async function loadAttendance(meetingId: string) {
+    const { data } = await supabase
+      .from("team_board_meeting_attendance")
+      .select("board_member_id")
+      .eq("meeting_id", meetingId);
+    setAttendance((data ?? []).map((r: { board_member_id: string }) => r.board_member_id));
+  }
+
+  function openAttendance() {
+    setAttendanceDraft(attendance);
+    setAttendanceOpen(true);
+  }
+
+  async function saveAttendance() {
+    if (!ongoing || !teamId) return;
+    setAttendanceSaving(true);
+    try {
+      const current = new Set(attendance);
+      const draft = new Set(attendanceDraft);
+      const toAdd = [...draft].filter((id) => !current.has(id));
+      const toRemove = [...current].filter((id) => !draft.has(id));
+      if (toRemove.length) {
+        const { error } = await supabase
+          .from("team_board_meeting_attendance")
+          .delete()
+          .eq("meeting_id", ongoing.id)
+          .in("board_member_id", toRemove);
+        if (error) throw error;
+      }
+      if (toAdd.length) {
+        const { error } = await supabase.from("team_board_meeting_attendance").insert(
+          toAdd.map((bid) => ({
+            meeting_id: ongoing.id,
+            team_id: teamId,
+            board_member_id: bid,
+          })),
+        );
+        if (error) throw error;
+      }
+      setAttendance(attendanceDraft);
+      setAttendanceOpen(false);
+      toast.success("Attendance saved");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save attendance");
+    } finally {
+      setAttendanceSaving(false);
+    }
+  }
+
   async function uploadAttachments(files: FileList | File[]) {
     if (!teamId || !ongoing || !user) return;
     setBusy(true);
