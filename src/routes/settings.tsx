@@ -1005,3 +1005,127 @@ function ProfilesPanel({
     </Card>
   );
 }
+
+const DESK_MATERIALS: Record<string, { label: string; surface: string }> = {
+  oak: {
+    label: "Oak",
+    surface:
+      "repeating-linear-gradient(90deg, rgba(0,0,0,0.05) 0 2px, transparent 2px 6px), linear-gradient(135deg, #d6b07a 0%, #b88753 60%, #8d6033 100%)",
+  },
+  steel: {
+    label: "Stainless steel",
+    surface:
+      "repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 4px), linear-gradient(135deg, #e3e7ec 0%, #b3bac4 55%, #777e88 100%)",
+  },
+};
+
+function DeskSettingsPanel() {
+  const [material, setMaterial] = useState<string>(() => {
+    if (typeof window === "undefined") return "oak";
+    return localStorage.getItem("desk:material") || "oak";
+  });
+  const [files, setFiles] = useState<{ name: string; size: number }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("desk:material", material);
+  }, [material]);
+
+  const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = Array.from(e.target.files ?? []);
+    if (!list.length) return;
+    setFiles((prev) => [
+      ...prev,
+      ...list.map((f) => ({ name: f.name, size: f.size })),
+    ]);
+    toast.success(`Added ${list.length} file${list.length > 1 ? "s" : ""} to desk access`);
+    e.target.value = "";
+  };
+
+  const mat = DESK_MATERIALS[material] ?? DESK_MATERIALS.oak;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-medium text-ink">Desk material</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Pick the surface for your desk. The material themes the workspace background.
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="mt-4 aspect-[16/6] w-full overflow-hidden rounded-2xl border border-hairline shadow-inner"
+          style={{ background: mat.surface }}
+        >
+          <div className="h-full w-full bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.18),transparent_60%)]" />
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {Object.entries(DESK_MATERIALS).map(([key, m]) => (
+            <button
+              key={key}
+              onClick={() => setMaterial(key)}
+              className={`rounded-full border px-4 py-2 text-xs transition ${
+                material === key
+                  ? "border-ink bg-ink text-background"
+                  : "border-hairline text-muted-foreground hover:text-ink"
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+          <span className="rounded-full border border-dashed border-hairline px-4 py-2 text-xs text-muted-foreground">
+            More coming later
+          </span>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-medium text-ink">Files</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Pick files from your computer that the desk should have access to.
+            </p>
+          </div>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add files
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={onPickFiles}
+          />
+        </div>
+
+        {files.length === 0 ? (
+          <div className="mt-4 rounded-xl border border-dashed border-hairline bg-card/40 py-10 text-center text-xs text-muted-foreground">
+            No files yet. Click "Add files" to choose files from your computer.
+          </div>
+        ) : (
+          <ul className="mt-4 divide-y divide-hairline rounded-xl border border-hairline">
+            {files.map((f, i) => (
+              <li key={i} className="flex items-center justify-between px-4 py-2.5 text-xs">
+                <span className="truncate text-ink">{f.name}</span>
+                <button
+                  onClick={() => setFiles((arr) => arr.filter((_, idx) => idx !== i))}
+                  className="mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-destructive"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
+  );
+}
