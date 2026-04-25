@@ -17,7 +17,7 @@ import {
 
 export const Route = createFileRoute("/team/members")({
   component: TeamMembersPage,
-  head: () => ({ meta: [{ title: "Members · Raceline" }] }),
+  head: () => ({ meta: [{ title: "Organization · Raceline" }] }),
 });
 
 interface GroupDraft {
