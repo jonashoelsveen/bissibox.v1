@@ -14,6 +14,7 @@ import {
   Layers,
   Wallet,
 } from "lucide-react";
+import { OrgChart, type OrgPerson, type OrgGroup } from "@/components/OrgChart";
 
 export const Route = createFileRoute("/team/members")({
   component: TeamMembersPage,
