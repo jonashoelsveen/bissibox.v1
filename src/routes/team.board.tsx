@@ -934,7 +934,7 @@ function TeamBoardPage() {
         </div>
       )}
 
-      {tab === "ongoing" && ongoing && (
+      {activeTab !== "meetings" && ongoing && (
         <section className="mt-5 rounded-lg border border-hairline bg-card shadow-sm">
           {/* Document toolbar */}
           <div className="flex items-center gap-2 border-b border-hairline px-4 py-2">
