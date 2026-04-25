@@ -798,9 +798,14 @@ function MediaPage() {
           mode={mode}
           teamId={isTeamMode ? teamId : null}
           onClose={() => setUploadOpen(false)}
-          onUploaded={() => {
+          onUploaded={(insertedIds) => {
             setUploadOpen(false);
             void load();
+            insertedIds.forEach((id) => {
+              runScan({ data: { kind: "media", id } }).catch(() => {
+                /* error reflected via scan_status */
+              });
+            });
           }}
         />
       )}
