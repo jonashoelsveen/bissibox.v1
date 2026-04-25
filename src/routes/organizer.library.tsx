@@ -103,6 +103,7 @@ function LibraryPage() {
         ...rest,
         title: `${(rest as { title: string }).title} (copy)`,
         owner_id: user.id,
+        team_id: activeEntityId ?? null,
         featured: false,
       };
       const { data: inserted, error } = await supabase
