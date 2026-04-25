@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
-import { scanFile } from "@/server/scan-file";
+import { scanFile, pollScan } from "@/server/scan-file";
 import { toast } from "sonner";
 import {
   ChevronDown,
