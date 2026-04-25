@@ -179,7 +179,12 @@ function TeamPage() {
         .select("tier_id")
         .eq("user_id", user.id)
         .eq("team_id", teamId);
-      setMyMemberships(new Set((data ?? []).map((r) => r.tier_id).filter(Boolean) as string[]));
+      const set = new Set<string>();
+      (data ?? []).forEach((r) => {
+        if (r.tier_id) set.add(r.tier_id as string);
+        else set.add("__default__");
+      });
+      setMyMemberships(set);
     })();
   }, [user, teamId]);
 
