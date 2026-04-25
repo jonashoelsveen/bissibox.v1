@@ -91,19 +91,56 @@ function TeamBoardPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  // Ongoing meeting
-  const [ongoing, setOngoing] = useState<MeetingRow | null>(null);
-  const [ongoingText, setOngoingText] = useState("");
-  const [savedText, setSavedText] = useState("");
+  // Open meeting tabs (max 10). "new" tabs are green, "earlier" tabs are grey.
+  interface OpenTab {
+    meeting: MeetingRow;
+    kind: "new" | "earlier";
+    text: string;
+    savedText: string;
+    attachments: AttachmentRow[];
+    attendance: string[];
+    roster: RosterEntry[];
+  }
+  const MAX_TABS = 10;
+  const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
   const [saving, setSaving] = useState(false);
-  const [attachments, setAttachments] = useState<AttachmentRow[]>([]);
-  const [attendance, setAttendance] = useState<string[]>([]); // roster_ids
-  const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   const [attendanceDraft, setAttendanceDraft] = useState<string[]>([]);
   const [attendanceSaving, setAttendanceSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const ongoing = activeTab !== "meetings" ? openTabs.find((t) => t.meeting.id === activeTab) ?? null : null;
+  const ongoingText = ongoing?.text ?? "";
+  const savedText = ongoing?.savedText ?? "";
+  const attachments = ongoing?.attachments ?? [];
+  const attendance = ongoing?.attendance ?? [];
+  const roster = ongoing?.roster ?? [];
   const isDirty = ongoingText !== savedText;
+
+  function patchTab(id: string, patch: Partial<OpenTab>) {
+    setOpenTabs((prev) => prev.map((t) => (t.meeting.id === id ? { ...t, ...patch } : t)));
+  }
+  function setOngoingText(v: string) {
+    if (ongoing) patchTab(ongoing.meeting.id, { text: v });
+  }
+  function setAttachments(next: AttachmentRow[] | ((prev: AttachmentRow[]) => AttachmentRow[])) {
+    if (!ongoing) return;
+    const value = typeof next === "function" ? (next as (p: AttachmentRow[]) => AttachmentRow[])(ongoing.attachments) : next;
+    patchTab(ongoing.meeting.id, { attachments: value });
+  }
+  function setAttendance(next: string[] | ((prev: string[]) => string[])) {
+    if (!ongoing) return;
+    const value = typeof next === "function" ? (next as (p: string[]) => string[])(ongoing.attendance) : next;
+    patchTab(ongoing.meeting.id, { attendance: value });
+  }
+  function setRoster(next: RosterEntry[] | ((prev: RosterEntry[]) => RosterEntry[])) {
+    if (!ongoing) return;
+    const value = typeof next === "function" ? (next as (p: RosterEntry[]) => RosterEntry[])(ongoing.roster) : next;
+    patchTab(ongoing.meeting.id, { roster: value });
+  }
+  function setSavedText(v: string) {
+    if (ongoing) patchTab(ongoing.meeting.id, { savedText: v });
+  }
 
   useEffect(() => {
     if (!authLoading && !user) nav({ to: "/auth" });
