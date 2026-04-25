@@ -439,7 +439,7 @@ function MediaPage() {
   if (authLoading || !user) return null;
 
   return (
-    <div className="px-4 md:px-6">
+    <div>
       <div className="flex justify-end gap-2 pt-4 pr-14">
         {selectMode ? (
           <div className="flex items-center gap-2 rounded-full border border-hairline bg-card p-1 pr-2">
