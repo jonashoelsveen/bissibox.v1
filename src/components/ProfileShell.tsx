@@ -41,7 +41,6 @@ export function ProfileShell({
   website?: WebsiteConfig;
   children: ReactNode;
 }) {
-  const router = useRouter();
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
 
   useEffect(() => {
