@@ -234,6 +234,11 @@ function TeamMembersPage() {
           age_from: g.age_from ? Number(g.age_from) : null,
           age_to: g.age_to ? Number(g.age_to) : null,
           sort_order: i,
+          description: g.description.trim() || null,
+          leader_name: g.leader_name.trim() || null,
+          leader_email: g.leader_email.trim() || null,
+          leader_phone: g.leader_phone.trim() || null,
+          is_default: g.is_default,
         };
         if (g.id) {
           const { error } = await supabase
@@ -291,6 +296,8 @@ function TeamMembersPage() {
           price: m.price ? Number(m.price) : 0,
           currency: m.currency.trim() || "NOK",
           sort_order: i,
+          group_assignment_mode: m.group_assignment_mode,
+          criteria_label: (m.criteria_label.trim() || "age"),
         };
         if (m.id) {
           const { error } = await supabase
