@@ -90,7 +90,7 @@ export function TopChrome() {
             <NavBtn to="/team/members" label="Members" active={path.startsWith("/team/members")}>
               <Users className="h-[18px] w-[18px]" strokeWidth={2.25} />
             </NavBtn>
-            <NavBtn to="/team/board" label="Board" active={path.startsWith("/team/board")}>
+            <NavBtn to="/team/board" label="Meetings" active={path.startsWith("/team/board")}>
               <Briefcase className="h-[18px] w-[18px]" strokeWidth={2.25} />
             </NavBtn>
           </>
