@@ -84,9 +84,92 @@ Deno.serve(async (req) => {
     const meta = (attempt.target_meta ?? {}) as Record<string, any>;
 
     if (attempt.target_kind === "team_membership") {
-      const teamId = attempt.target_id;
-      const tierId = meta.tier_id ?? null;
-      // Avoid duplicate
+      const teamId = attempt.target_id as string;
+      const tierId: string | null = meta.tier_id ?? null;
+      const requestedGroupId: string | null = meta.group_id ?? null;
+
+      // Load tier mode (if tier provided) for assignment_mode + criteria_label
+      let tierMode: "volunteer" | "criteria" = "volunteer";
+      let criteriaLabel = "age";
+      let tierName: string | null = null;
+      if (tierId) {
+        const { data: tier } = await admin
+          .from("team_membership_tiers")
+          .select("name, group_assignment_mode, criteria_label")
+          .eq("id", tierId)
+          .maybeSingle();
+        if (tier) {
+          tierMode = ((tier as any).group_assignment_mode === "criteria" ? "criteria" : "volunteer");
+          criteriaLabel = (tier as any).criteria_label ?? "age";
+          tierName = (tier as any).name ?? null;
+        }
+      }
+
+      // Load team's groups (for auto-assignment + default group + leader info)
+      const { data: groupsData } = await admin
+        .from("team_groups")
+        .select("id, name, age_from, age_to, is_default, leader_name, leader_email, leader_phone, description")
+        .eq("team_id", teamId)
+        .order("sort_order", { ascending: true });
+      const groups = (groupsData ?? []) as Array<{
+        id: string; name: string; age_from: number | null; age_to: number | null;
+        is_default: boolean; leader_name: string | null; leader_email: string | null;
+        leader_phone: string | null; description: string | null;
+      }>;
+
+      // Determine assigned group
+      let assignedGroupId: string | null = null;
+      let autoCreatedDefault = false;
+
+      if (groups.length > 0) {
+        if (tierMode === "volunteer" && requestedGroupId) {
+          if (groups.find((g) => g.id === requestedGroupId)) {
+            assignedGroupId = requestedGroupId;
+          }
+        } else if (tierMode === "criteria") {
+          // Auto-assign by age range using profile.birth_date
+          const { data: prof } = await admin
+            .from("profiles")
+            .select("birth_date")
+            .eq("id", user.id)
+            .maybeSingle();
+          const birth = (prof as any)?.birth_date as string | null | undefined;
+          if (birth) {
+            const birthYear = new Date(birth).getFullYear();
+            const age = new Date().getFullYear() - birthYear;
+            const match = groups.find((g) => {
+              const lo = g.age_from ?? -Infinity;
+              const hi = g.age_to ?? Infinity;
+              return age >= lo && age <= hi;
+            });
+            if (match) assignedGroupId = match.id;
+          }
+          if (!assignedGroupId) {
+            // Find or create default group
+            let def = groups.find((g) => g.is_default);
+            if (!def) {
+              const { data: newDef, error: defErr } = await admin
+                .from("team_groups")
+                .insert({
+                  team_id: teamId,
+                  name: "Default Group",
+                  description: "Members whose age does not fit any defined group land here automatically.",
+                  is_default: true,
+                  sort_order: groups.length,
+                })
+                .select("id, name, age_from, age_to, is_default, leader_name, leader_email, leader_phone, description")
+                .single();
+              if (defErr) throw defErr;
+              def = newDef as any;
+              autoCreatedDefault = true;
+              groups.push(def!);
+            }
+            assignedGroupId = def!.id;
+          }
+        }
+      }
+
+      // Avoid duplicate membership
       let existingQuery = admin
         .from("team_memberships")
         .select("id")
@@ -99,11 +182,18 @@ Deno.serve(async (req) => {
           user_id: user.id,
           team_id: teamId,
           tier_id: tierId,
+          group_id: assignedGroupId,
           status: "active",
         });
         if (error) throw error;
+      } else if (assignedGroupId) {
+        await admin
+          .from("team_memberships")
+          .update({ group_id: assignedGroupId })
+          .eq("id", (existing as any).id);
       }
-      // Also ensure the user appears in the team's member roster
+
+      // Ensure team_members roster row
       const { data: existingMember } = await admin
         .from("team_members")
         .select("id")
@@ -112,18 +202,68 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (!existingMember) {
         const { error: tmErr } = await admin.from("team_members").insert({
-          user_id: user.id,
-          team_id: teamId,
-          accepted: true,
+          user_id: user.id, team_id: teamId, accepted: true,
         });
         if (tmErr) throw tmErr;
       } else {
-        await admin
-          .from("team_members")
-          .update({ accepted: true })
-          .eq("id", (existingMember as { id: string }).id);
+        await admin.from("team_members").update({ accepted: true }).eq("id", (existingMember as any).id);
       }
-      return new Response(JSON.stringify({ ok: true, kind: "team_membership" }), {
+
+      // Insert team_group_members link
+      if (assignedGroupId) {
+        const { data: existingLink } = await admin
+          .from("team_group_members")
+          .select("id")
+          .eq("team_id", teamId)
+          .eq("group_id", assignedGroupId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!existingLink) {
+          await admin.from("team_group_members").insert({
+            team_id: teamId, group_id: assignedGroupId, user_id: user.id,
+          });
+        }
+      }
+
+      // Build response with team + group + leader info for confirmation dialog
+      const { data: team } = await admin
+        .from("teams")
+        .select("name, contact_email, contact_phone")
+        .eq("id", teamId)
+        .maybeSingle();
+
+      const assignedGroup = assignedGroupId ? groups.find((g) => g.id === assignedGroupId) ?? null : null;
+
+      // Compute user's birth year for criteria wording
+      let birthYear: number | null = null;
+      if (tierMode === "criteria") {
+        const { data: prof } = await admin
+          .from("profiles").select("birth_date").eq("id", user.id).maybeSingle();
+        const b = (prof as any)?.birth_date as string | null | undefined;
+        if (b) birthYear = new Date(b).getFullYear();
+      }
+
+      return new Response(JSON.stringify({
+        ok: true,
+        kind: "team_membership",
+        team: team ? { name: (team as any).name, contact_email: (team as any).contact_email, contact_phone: (team as any).contact_phone } : null,
+        tier: tierName ? { name: tierName, mode: tierMode, criteria_label: criteriaLabel } : null,
+        group: assignedGroup ? {
+          id: assignedGroup.id,
+          name: assignedGroup.name,
+          age_from: assignedGroup.age_from,
+          age_to: assignedGroup.age_to,
+          is_default: assignedGroup.is_default,
+          leader_name: assignedGroup.leader_name,
+          leader_email: assignedGroup.leader_email,
+          leader_phone: assignedGroup.leader_phone,
+        } : null,
+        all_groups: groups.map((g) => ({ id: g.id, name: g.name })),
+        birth_year: birthYear,
+        auto_created_default: autoCreatedDefault,
+        assignment_mode: tierMode,
+        criteria_label: criteriaLabel,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

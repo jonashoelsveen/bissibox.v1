@@ -27,6 +27,11 @@ interface GroupDraft {
   age_to: string;
   sort_order: number;
   member_count: number;
+  description: string;
+  leader_name: string;
+  leader_email: string;
+  leader_phone: string;
+  is_default: boolean;
 }
 
 interface MembershipDraft {
@@ -36,6 +41,8 @@ interface MembershipDraft {
   price: string;
   currency: string;
   sort_order: number;
+  group_assignment_mode: "volunteer" | "criteria";
+  criteria_label: string;
 }
 
 interface MemberRow {
@@ -97,7 +104,7 @@ function TeamMembersPage() {
       const [{ data: gs }, { data: tms }, { data: tgms }, { data: tiers }] = await Promise.all([
         supabase
           .from("team_groups")
-          .select("id,name,age_from,age_to,sort_order")
+          .select("id,name,age_from,age_to,sort_order,description,leader_name,leader_email,leader_phone,is_default")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
         supabase
@@ -110,19 +117,21 @@ function TeamMembersPage() {
           .eq("team_id", tid),
         supabase
           .from("team_membership_tiers")
-          .select("id,name,description,price,currency,sort_order")
+          .select("id,name,description,price,currency,sort_order,group_assignment_mode,criteria_label")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
       ]);
 
       setMemberships(
-        (tiers ?? []).map((t, i) => ({
+        ((tiers ?? []) as Array<{ id: string; name: string | null; description: string | null; price: number | null; currency: string | null; sort_order: number | null; group_assignment_mode: string | null; criteria_label: string | null }>).map((t, i) => ({
           id: t.id,
           name: t.name ?? "",
           description: t.description ?? "",
           price: t.price != null ? String(t.price) : "0",
           currency: t.currency ?? "NOK",
           sort_order: t.sort_order ?? i,
+          group_assignment_mode: (t.group_assignment_mode === "criteria" ? "criteria" : "volunteer"),
+          criteria_label: t.criteria_label ?? "age",
         }))
       );
 
@@ -131,13 +140,18 @@ function TeamMembersPage() {
       for (const x of tgmsArr) countByGroup[x.group_id] = (countByGroup[x.group_id] ?? 0) + 1;
 
       setGroups(
-        (gs ?? []).map((g, i) => ({
+        ((gs ?? []) as Array<{ id: string; name: string | null; age_from: number | null; age_to: number | null; sort_order: number | null; description: string | null; leader_name: string | null; leader_email: string | null; leader_phone: string | null; is_default: boolean | null }>).map((g, i) => ({
           id: g.id,
           name: g.name ?? "",
           age_from: g.age_from != null ? String(g.age_from) : "",
           age_to: g.age_to != null ? String(g.age_to) : "",
           sort_order: g.sort_order ?? i,
           member_count: countByGroup[g.id] ?? 0,
+          description: g.description ?? "",
+          leader_name: g.leader_name ?? "",
+          leader_email: g.leader_email ?? "",
+          leader_phone: g.leader_phone ?? "",
+          is_default: !!g.is_default,
         }))
       );
 
@@ -220,6 +234,11 @@ function TeamMembersPage() {
           age_from: g.age_from ? Number(g.age_from) : null,
           age_to: g.age_to ? Number(g.age_to) : null,
           sort_order: i,
+          description: g.description.trim() || null,
+          leader_name: g.leader_name.trim() || null,
+          leader_email: g.leader_email.trim() || null,
+          leader_phone: g.leader_phone.trim() || null,
+          is_default: g.is_default,
         };
         if (g.id) {
           const { error } = await supabase
@@ -277,6 +296,8 @@ function TeamMembersPage() {
           price: m.price ? Number(m.price) : 0,
           currency: m.currency.trim() || "NOK",
           sort_order: i,
+          group_assignment_mode: m.group_assignment_mode,
+          criteria_label: (m.criteria_label.trim() || "age"),
         };
         if (m.id) {
           const { error } = await supabase
@@ -370,7 +391,7 @@ function TeamMembersPage() {
               onClick={() => {
                 setMemberships((arr) => [
                   ...arr,
-                  { name: "", description: "", price: "0", currency: "NOK", sort_order: arr.length },
+                  { name: "", description: "", price: "0", currency: "NOK", sort_order: arr.length, group_assignment_mode: "volunteer", criteria_label: "age" },
                 ]);
                 setOpenMemIdx(memberships.length);
               }}
@@ -447,6 +468,7 @@ function TeamMembersPage() {
                     }}
                     onHandleDown={() => setDragMemHandleIdx(idx)}
                     onHandleUp={() => setDragMemHandleIdx(null)}
+                    hasGroups={groups.length > 0}
                   />
                 </div>
               );
@@ -465,7 +487,7 @@ function TeamMembersPage() {
               onClick={() => {
                 setGroups((arr) => [
                   ...arr,
-                  { name: "", age_from: "", age_to: "", sort_order: arr.length, member_count: 0 },
+                  { name: "", age_from: "", age_to: "", sort_order: arr.length, member_count: 0, description: "", leader_name: "", leader_email: "", leader_phone: "", is_default: false },
                 ]);
                 setOpenIdx(groups.length);
               }}
@@ -586,7 +608,7 @@ function TeamMembersPage() {
                     <Th>Surname</Th>
                     <Th className="w-24">Born</Th>
                     <Th>Email</Th>
-                    <Th className="w-56">Group</Th>
+                    <Th className="w-56">Groups</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -611,22 +633,26 @@ function TeamMembersPage() {
                         <td className="px-3 py-1 num text-ink">{born}</td>
                         <td className="px-3 py-1 text-muted-foreground">{m.email ?? "—"}</td>
                         <td className="px-3 py-1">
-                          <select
-                            value={assignments[m.user_id] ?? ""}
-                            onChange={(e) =>
-                              setAssignments((a) => ({ ...a, [m.user_id]: e.target.value }))
-                            }
-                            className="w-full cursor-pointer rounded-md border border-hairline bg-background px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
-                          >
-                            <option value="">— No group —</option>
-                            {groups
-                              .filter((g) => g.id)
-                              .map((g, gi) => (
-                                <option key={g.id} value={g.id}>
-                                  {g.name || `Group ${gi + 1}`}
-                                </option>
-                              ))}
-                          </select>
+                          {groups.length === 0 ? (
+                            <span className="text-muted-foreground">—</span>
+                          ) : (
+                            <select
+                              value={assignments[m.user_id] ?? ""}
+                              onChange={(e) =>
+                                setAssignments((a) => ({ ...a, [m.user_id]: e.target.value }))
+                              }
+                              className="w-full cursor-pointer rounded-md border border-hairline bg-background px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
+                            >
+                              <option value="">— No group —</option>
+                              {groups
+                                .filter((g) => g.id)
+                                .map((g, gi) => (
+                                  <option key={g.id} value={g.id}>
+                                    {g.name || `Group ${gi + 1}`}{g.is_default ? " (Default)" : ""}
+                                  </option>
+                                ))}
+                            </select>
+                          )}
                         </td>
                       </tr>
                     );
@@ -689,6 +715,11 @@ function GroupRow({
           <span className="truncate text-sm font-medium text-ink">
             {group.name || "Untitled group"}
           </span>
+          {group.is_default && (
+            <span className="mono rounded bg-primary/10 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.16em] text-primary">
+              Default
+            </span>
+          )}
           <span className="mono text-xs text-muted-foreground">
             · {group.member_count} total members
           </span>
@@ -745,6 +776,50 @@ function GroupRow({
               />
             </div>
           </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-3">
+            <label className="flex flex-col gap-1 md:col-span-3">
+              <span className="text-xs text-muted-foreground">Detail / info</span>
+              <textarea
+                value={group.description}
+                onChange={(e) => onChange({ description: e.target.value })}
+                rows={2}
+                placeholder={group.is_default ? "Members whose age does not fit any defined group land here automatically." : "Anything new joiners should know about this group."}
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Group leader name</span>
+              <input
+                value={group.leader_name}
+                onChange={(e) => onChange({ leader_name: e.target.value })}
+                placeholder="—"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Leader email</span>
+              <input
+                type="email"
+                value={group.leader_email}
+                onChange={(e) => onChange({ leader_email: e.target.value })}
+                placeholder="leader@team.com"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Leader phone</span>
+              <input
+                value={group.leader_phone}
+                onChange={(e) => onChange({ leader_phone: e.target.value })}
+                placeholder="+47 …"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <p className="md:col-span-3 text-[11px] text-muted-foreground">
+              If left empty, joiners see the team's contact email/phone instead.
+            </p>
+          </div>
         </div>
       )}
     </div>
@@ -759,6 +834,7 @@ function MembershipRow({
   onDelete,
   onHandleDown,
   onHandleUp,
+  hasGroups,
 }: {
   membership: MembershipDraft;
   open: boolean;
@@ -767,6 +843,7 @@ function MembershipRow({
   onDelete: () => void;
   onHandleDown?: () => void;
   onHandleUp?: () => void;
+  hasGroups: boolean;
 }) {
   return (
     <div>
@@ -848,6 +925,49 @@ function MembershipRow({
               />
             </label>
           </div>
+
+          {hasGroups && (
+            <div className="mt-5 rounded-lg border border-hairline bg-background/50 p-4">
+              <p className="mono mb-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Group assignment
+              </p>
+              <div className="space-y-2">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={membership.group_assignment_mode === "volunteer"}
+                    onChange={() => onChange({ group_assignment_mode: "volunteer" })}
+                    className="mt-0.5 h-4 w-4 cursor-pointer accent-primary"
+                  />
+                  <span className="text-sm text-ink">
+                    <span className="font-medium">Volunteer</span>{" "}
+                    <span className="text-muted-foreground">— member chooses their group when joining.</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={membership.group_assignment_mode === "criteria"}
+                    onChange={() => onChange({ group_assignment_mode: "criteria" })}
+                    className="mt-0.5 h-4 w-4 cursor-pointer accent-primary"
+                  />
+                  <span className="text-sm text-ink">
+                    <span className="font-medium">Categorize by</span>{" "}
+                    <input
+                      value={membership.criteria_label}
+                      onChange={(e) => onChange({ criteria_label: e.target.value, group_assignment_mode: "criteria" })}
+                      placeholder="age"
+                      className="ml-1 inline-block w-32 rounded-md border border-hairline bg-background px-2 py-0.5 text-sm text-ink outline-none focus:border-primary"
+                    />
+                    <span className="text-muted-foreground"> — auto-assigned (currently always uses age range).</span>
+                  </span>
+                </label>
+              </div>
+              <p className="mt-3 text-[11px] text-muted-foreground">
+                One option must be selected. The criteria word is shown to members in the confirmation message.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

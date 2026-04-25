@@ -952,7 +952,12 @@ export type Database = {
           age_from: number | null
           age_to: number | null
           created_at: string
+          description: string | null
           id: string
+          is_default: boolean
+          leader_email: string | null
+          leader_name: string | null
+          leader_phone: string | null
           name: string
           sort_order: number
           team_id: string
@@ -962,7 +967,12 @@ export type Database = {
           age_from?: number | null
           age_to?: number | null
           created_at?: string
+          description?: string | null
           id?: string
+          is_default?: boolean
+          leader_email?: string | null
+          leader_name?: string | null
+          leader_phone?: string | null
           name?: string
           sort_order?: number
           team_id: string
@@ -972,7 +982,12 @@ export type Database = {
           age_from?: number | null
           age_to?: number | null
           created_at?: string
+          description?: string | null
           id?: string
+          is_default?: boolean
+          leader_email?: string | null
+          leader_name?: string | null
+          leader_phone?: string | null
           name?: string
           sort_order?: number
           team_id?: string
@@ -1023,8 +1038,10 @@ export type Database = {
       team_membership_tiers: {
         Row: {
           created_at: string
+          criteria_label: string
           currency: string
           description: string | null
+          group_assignment_mode: string
           id: string
           name: string
           price: number
@@ -1033,8 +1050,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          criteria_label?: string
           currency?: string
           description?: string | null
+          group_assignment_mode?: string
           id?: string
           name: string
           price?: number
@@ -1043,8 +1062,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          criteria_label?: string
           currency?: string
           description?: string | null
+          group_assignment_mode?: string
           id?: string
           name?: string
           price?: number
@@ -1064,6 +1085,7 @@ export type Database = {
       team_memberships: {
         Row: {
           created_at: string
+          group_id: string | null
           id: string
           status: string
           team_id: string
@@ -1073,6 +1095,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          group_id?: string | null
           id?: string
           status?: string
           team_id: string
@@ -1082,6 +1105,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          group_id?: string | null
           id?: string
           status?: string
           team_id?: string

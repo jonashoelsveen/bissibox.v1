@@ -31,6 +31,31 @@ interface Tier {
   description: string | null;
   price: number;
   currency: string;
+  group_assignment_mode: "volunteer" | "criteria";
+  criteria_label: string;
+}
+
+interface GroupOpt {
+  id: string;
+  name: string;
+}
+
+interface ConfirmInfo {
+  team_name: string;
+  tier_name: string | null;
+  mode: "volunteer" | "criteria";
+  criteria_label: string;
+  group_name: string | null;
+  group_age_from: number | null;
+  group_age_to: number | null;
+  group_is_default: boolean;
+  leader_name: string | null;
+  leader_email: string | null;
+  leader_phone: string | null;
+  fallback_email: string | null;
+  fallback_phone: string | null;
+  birth_year: number | null;
+  auto_created_default: boolean;
 }
 
 interface Member {
@@ -59,6 +84,10 @@ function TeamPage() {
   const [coverPath, setCoverPath] = useState<string | null>(null);
   const [followers, setFollowers] = useState(0);
   const [myMemberships, setMyMemberships] = useState<Set<string>>(new Set());
+  const [groupOptions, setGroupOptions] = useState<GroupOpt[]>([]);
+  const [pickerGroupId, setPickerGroupId] = useState<string>("");
+  const [confirmInfo, setConfirmInfo] = useState<ConfirmInfo | null>(null);
+  const [leaderInfoOpen, setLeaderInfoOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -85,10 +114,21 @@ function TeamPage() {
 
       const { data: tierData } = await supabase
         .from("team_membership_tiers")
-        .select("*")
+        .select("id, name, description, price, currency, group_assignment_mode, criteria_label")
         .eq("team_id", teamId)
         .order("sort_order");
-      setTiers((tierData ?? []) as Tier[]);
+      setTiers(((tierData ?? []) as unknown as Tier[]).map((t) => ({
+        ...t,
+        group_assignment_mode: (t.group_assignment_mode === "criteria" ? "criteria" : "volunteer"),
+        criteria_label: t.criteria_label ?? "age",
+      })));
+
+      const { data: groupData } = await supabase
+        .from("team_groups")
+        .select("id, name")
+        .eq("team_id", teamId)
+        .order("sort_order");
+      setGroupOptions(((groupData ?? []) as { id: string; name: string }[]).map((g) => ({ id: g.id, name: g.name || "Untitled group" })));
 
       // Members joined with profiles (only active athletes show publicly)
       const { data: memberRows } = await supabase
@@ -200,28 +240,63 @@ function TeamPage() {
       return;
     }
     setPickerTierId(tiers[0]?.id ?? "__default__");
+    setPickerGroupId(groupOptions[0]?.id ?? "");
     setPickerOpen(true);
   };
 
-  const startJoin = (tierId: string) => {
+  const pickedTier = tiers.find((t) => t.id === pickerTierId) ?? null;
+  const pickerNeedsGroup = !!pickedTier && pickedTier.group_assignment_mode === "volunteer" && groupOptions.length > 0;
+
+  const startJoin = (tierId: string, groupId?: string | null) => {
     if (!user) {
       nav({ to: "/auth", search: { redirect: window.location.pathname } as never });
       return;
     }
     setPendingTierId(tierId);
+    (window as unknown as { __pendingGroupId?: string | null }).__pendingGroupId = groupId ?? null;
     setVerifyOpen(true);
   };
 
   const confirmPicker = () => {
     setPickerOpen(false);
-    startJoin(pickerTierId);
+    startJoin(pickerTierId, pickerNeedsGroup ? pickerGroupId : null);
   };
 
-  const onVerified = () => {
+  const onVerified = (result?: Record<string, unknown>) => {
     if (pendingTierId) setMyMemberships((s) => new Set([...s, pendingTierId]));
     setVerifyOpen(false);
     setPendingTierId(null);
-    toast.success("Membership requested");
+    // Build confirmation info from edge response
+    const r = (result ?? {}) as {
+      team?: { name: string; contact_email: string | null; contact_phone: string | null } | null;
+      tier?: { name: string; mode: "volunteer" | "criteria"; criteria_label: string } | null;
+      group?: {
+        id: string; name: string; age_from: number | null; age_to: number | null;
+        is_default: boolean; leader_name: string | null;
+        leader_email: string | null; leader_phone: string | null;
+      } | null;
+      birth_year?: number | null;
+      auto_created_default?: boolean;
+      assignment_mode?: "volunteer" | "criteria";
+      criteria_label?: string;
+    };
+    setConfirmInfo({
+      team_name: r.team?.name ?? team?.name ?? "this team",
+      tier_name: r.tier?.name ?? null,
+      mode: r.assignment_mode ?? r.tier?.mode ?? "volunteer",
+      criteria_label: r.criteria_label ?? r.tier?.criteria_label ?? "age",
+      group_name: r.group?.name ?? null,
+      group_age_from: r.group?.age_from ?? null,
+      group_age_to: r.group?.age_to ?? null,
+      group_is_default: !!r.group?.is_default,
+      leader_name: r.group?.leader_name ?? null,
+      leader_email: r.group?.leader_email ?? null,
+      leader_phone: r.group?.leader_phone ?? null,
+      fallback_email: r.team?.contact_email ?? null,
+      fallback_phone: r.team?.contact_phone ?? null,
+      birth_year: r.birth_year ?? null,
+      auto_created_default: !!r.auto_created_default,
+    });
   };
 
   if (notFound) {
@@ -419,6 +494,28 @@ function TeamPage() {
                 )}
               </select>
             </div>
+            {pickerNeedsGroup && (
+              <div>
+                <label className="mono mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Group
+                </label>
+                <select
+                  value={pickerGroupId}
+                  onChange={(e) => setPickerGroupId(e.target.value)}
+                  className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                >
+                  {groupOptions.map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+                <p className="mt-1.5 text-[11px] text-muted-foreground">Choose the group you'd like to join.</p>
+              </div>
+            )}
+            {pickedTier && pickedTier.group_assignment_mode === "criteria" && groupOptions.length > 0 && (
+              <p className="text-[12px] text-muted-foreground">
+                You'll be placed automatically based on <span className="text-ink">{pickedTier.criteria_label || "age"}</span>.
+              </p>
+            )}
           </div>
           <footer className="flex items-center justify-end gap-2 border-t border-hairline bg-background/60 px-5 py-3">
             <button
@@ -429,7 +526,7 @@ function TeamPage() {
             </button>
             <button
               onClick={confirmPicker}
-              disabled={myMemberships.has(pickerTierId)}
+              disabled={myMemberships.has(pickerTierId) || (pickerNeedsGroup && !pickerGroupId)}
               className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
             >
               {myMemberships.has(pickerTierId) ? "Already joined" : "Continue"}
@@ -446,8 +543,117 @@ function TeamPage() {
       subtitle={pendingTier ? `${pendingTier.name} · ${formatMoney(pendingTier.price, pendingTier.currency)}` : undefined}
       targetKind="team_membership"
       targetId={teamId}
-      targetMeta={{ tier_id: pendingTierId && pendingTierId !== "__default__" ? pendingTierId : null }}
+      targetMeta={{
+        tier_id: pendingTierId && pendingTierId !== "__default__" ? pendingTierId : null,
+        group_id: (typeof window !== "undefined" ? (window as unknown as { __pendingGroupId?: string | null }).__pendingGroupId ?? null : null),
+      }}
     />
+    {confirmInfo && (
+      <ConfirmJoinedDialog
+        info={confirmInfo}
+        onClose={() => { setConfirmInfo(null); setLeaderInfoOpen(false); }}
+        leaderInfoOpen={leaderInfoOpen}
+        onToggleLeader={() => setLeaderInfoOpen((v) => !v)}
+      />
+    )}
     </>
+  );
+}
+
+function ConfirmJoinedDialog({
+  info,
+  onClose,
+  leaderInfoOpen,
+  onToggleLeader,
+}: {
+  info: ConfirmInfo;
+  onClose: () => void;
+  leaderInfoOpen: boolean;
+  onToggleLeader: () => void;
+}) {
+  const leaderName = info.leader_name?.trim() || info.team_name;
+  const leaderEmail = info.leader_email?.trim() || info.fallback_email || null;
+  const leaderPhone = info.leader_phone?.trim() || info.fallback_phone || null;
+
+  const groupLabel = info.group_name ?? "your group";
+  const criteriaWord = info.criteria_label || "age";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md overflow-hidden rounded-xl border border-hairline bg-card shadow-2xl">
+        <header className="flex items-center justify-between border-b border-hairline px-5 py-3.5">
+          <div>
+            <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">You're in</p>
+            <h2 className="mt-0.5 text-lg text-ink">{info.team_name}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+        <div className="space-y-3 px-5 py-5 text-sm text-ink">
+          {info.group_name ? (
+            info.mode === "criteria" ? (
+              <p>
+                You successfully signed up and in group <span className="font-medium">"{groupLabel}"</span>.{" "}
+                "{info.team_name}" has groups based on <span className="font-medium">{criteriaWord}</span>.{" "}
+                {info.birth_year != null && (
+                  <>Since you are born in <span className="num">{info.birth_year}</span>, you are in <span className="font-medium">"{groupLabel}"</span>. </>
+                )}
+                For more info, contact group administrator{" "}
+                <button
+                  onClick={onToggleLeader}
+                  className="inline-flex items-center gap-1 rounded-md border border-hairline bg-background px-2 py-0.5 text-xs text-ink hover:bg-secondary"
+                >
+                  <UsersIcon className="h-3 w-3" />
+                  <span className="font-medium">"{leaderName}"</span>
+                </button>
+                .
+              </p>
+            ) : (
+              <p>
+                You successfully signed up and in group <span className="font-medium">"{groupLabel}"</span>.{" "}
+                For more info, contact group administrator{" "}
+                <button
+                  onClick={onToggleLeader}
+                  className="inline-flex items-center gap-1 rounded-md border border-hairline bg-background px-2 py-0.5 text-xs text-ink hover:bg-secondary"
+                >
+                  <UsersIcon className="h-3 w-3" />
+                  <span className="font-medium">"{leaderName}"</span>
+                </button>
+                .
+              </p>
+            )
+          ) : (
+            <p>You successfully signed up to "{info.team_name}".</p>
+          )}
+          {info.auto_created_default && info.group_is_default && (
+            <p className="text-xs text-muted-foreground">
+              Your age didn't fit any defined group, so you were placed in the auto-created Default Group.
+            </p>
+          )}
+          {leaderInfoOpen && info.group_name && (
+            <div className="rounded-lg border border-hairline bg-background/60 px-4 py-3 text-xs text-muted-foreground">
+              <div className="text-ink font-medium">{leaderName}</div>
+              {leaderEmail && <div className="mt-1">Email: <a className="text-primary hover:underline" href={`mailto:${leaderEmail}`}>{leaderEmail}</a></div>}
+              {leaderPhone && <div>Phone: <a className="text-primary hover:underline" href={`tel:${leaderPhone}`}>{leaderPhone}</a></div>}
+              {!leaderEmail && !leaderPhone && <div className="mt-1">No contact details on file.</div>}
+            </div>
+          )}
+        </div>
+        <footer className="flex items-center justify-end gap-2 border-t border-hairline bg-background/60 px-5 py-3">
+          <button
+            onClick={onClose}
+            className="rounded-md bg-primary px-5 py-1.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+          >
+            OK
+          </button>
+        </footer>
+      </div>
+    </div>
   );
 }
