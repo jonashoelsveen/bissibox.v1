@@ -129,6 +129,11 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         setMediaPitch(mp);
         setShowMediaSection(!!mce || !!mp);
         setShowTimingSection(!!((e as any).timing_company_id));
+        setTeamId(((e as any).team_id as string | null) ?? null);
+        const pLat = (e as any).pin_lat as number | null;
+        const pLng = (e as any).pin_lng as number | null;
+        setPin(pLat != null && pLng != null ? { lat: pLat, lng: pLng } : null);
+        setPinDescription(((e as any).pin_description as string | null) ?? "");
       }
       const { data: cls } = await supabase
         .from("event_classes")
