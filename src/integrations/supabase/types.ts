@@ -1014,6 +1014,7 @@ export type Database = {
         Row: {
           age_from: number | null
           age_to: number | null
+          color: string | null
           created_at: string
           description: string | null
           id: string
@@ -1029,6 +1030,7 @@ export type Database = {
         Insert: {
           age_from?: number | null
           age_to?: number | null
+          color?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1044,6 +1046,7 @@ export type Database = {
         Update: {
           age_from?: number | null
           age_to?: number | null
+          color?: string | null
           created_at?: string
           description?: string | null
           id?: string
