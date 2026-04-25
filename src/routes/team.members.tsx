@@ -14,10 +14,11 @@ import {
   Layers,
   Wallet,
 } from "lucide-react";
+import { OrgChart, type OrgPerson, type OrgGroup } from "@/components/OrgChart";
 
 export const Route = createFileRoute("/team/members")({
   component: TeamMembersPage,
-  head: () => ({ meta: [{ title: "Members · Raceline" }] }),
+  head: () => ({ meta: [{ title: "Organization · Raceline" }] }),
 });
 
 interface GroupDraft {
@@ -86,22 +87,27 @@ function TeamMembersPage() {
     if (!authLoading && !user) nav({ to: "/auth" });
   }, [authLoading, user, nav]);
 
+  // Board / team meta for org chart
+  const [teamName, setTeamName] = useState<string>("");
+  const [boardMembers, setBoardMembers] = useState<Array<{ id: string; name: string; role: string; email: string }>>([]);
+
   useEffect(() => {
     if (!user) return;
     void (async () => {
       const { data: team } = await supabase
         .from("teams")
-        .select("id")
+        .select("id, name")
         .eq("owner_id", user.id)
         .maybeSingle();
-      const tid = team?.id ?? null;
+      const tid = (team as { id: string; name: string | null } | null)?.id ?? null;
+      setTeamName((team as { id: string; name: string | null } | null)?.name ?? "");
       setTeamId(tid);
       if (!tid) {
         setLoaded(true);
         return;
       }
 
-      const [{ data: gs }, { data: tms }, { data: tgms }, { data: tiers }] = await Promise.all([
+      const [{ data: gs }, { data: tms }, { data: tgms }, { data: tiers }, { data: bms }] = await Promise.all([
         supabase
           .from("team_groups")
           .select("id,name,age_from,age_to,sort_order,description,leader_name,leader_email,leader_phone,is_default")
@@ -120,7 +126,21 @@ function TeamMembersPage() {
           .select("id,name,description,price,currency,sort_order,group_assignment_mode,criteria_label")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
+        supabase
+          .from("team_board_members")
+          .select("id,name,role,email,sort_order")
+          .eq("team_id", tid)
+          .order("sort_order", { ascending: true }),
       ]);
+
+      setBoardMembers(
+        ((bms ?? []) as Array<{ id: string; name: string | null; role: string | null; email: string | null }>).map((b) => ({
+          id: b.id,
+          name: b.name ?? "",
+          role: b.role ?? "",
+          email: b.email ?? "",
+        })),
+      );
 
       setMemberships(
         ((tiers ?? []) as Array<{ id: string; name: string | null; description: string | null; price: number | null; currency: string | null; sort_order: number | null; group_assignment_mode: string | null; criteria_label: string | null }>).map((t, i) => ({
@@ -203,6 +223,54 @@ function TeamMembersPage() {
       return [m.first_name, m.last_name, m.email].filter(Boolean).join(" ").toLowerCase().includes(q);
     });
   }, [members, search]);
+
+  // Build org chart data (board + groups with leaders + members)
+  const orgBoard: OrgPerson[] = useMemo(
+    () =>
+      boardMembers.map((b) => ({
+        id: b.id,
+        name: b.name || b.email || "Board member",
+        role: b.role || null,
+        email: b.email || null,
+        phone: null,
+      })),
+    [boardMembers],
+  );
+
+  const orgGroups: OrgGroup[] = useMemo(() => {
+    return groups
+      .filter((g) => g.id)
+      .map((g) => {
+        const memberPeople: OrgPerson[] = members
+          .filter((m) => (assignments[m.user_id] ?? "") === g.id)
+          .map((m) => ({
+            id: m.user_id,
+            name: [m.first_name, m.last_name].filter(Boolean).join(" ") || m.email || "Unnamed",
+            role: null,
+            email: m.email,
+            phone: null,
+          }));
+        const leaders: OrgPerson[] = g.leader_name || g.leader_email || g.leader_phone
+          ? [
+              {
+                id: `leader-${g.id}`,
+                name: g.leader_name || g.leader_email || "Leader",
+                role: "Leader",
+                email: g.leader_email || null,
+                phone: g.leader_phone || null,
+              },
+            ]
+          : [];
+        return {
+          id: g.id!,
+          name: g.name || "Untitled",
+          description: g.description || null,
+          leaders,
+          members: memberPeople,
+        };
+      });
+  }, [groups, members, assignments]);
+
 
   const save = async () => {
     if (!teamId) {
@@ -357,7 +425,7 @@ function TeamMembersPage() {
       <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
         <div>
           <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Team</p>
-          <h1 className="mt-2 text-3xl text-ink md:text-4xl">Members</h1>
+          <h1 className="mt-2 text-3xl text-ink md:text-4xl">Organization</h1>
         </div>
         <button
           onClick={save}
@@ -576,97 +644,104 @@ function TeamMembersPage() {
       )}
 
       {tab === "members" && (
-        <Panel>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative min-w-[220px] flex-1">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search name, email…"
-                className="h-10 w-full rounded-lg border border-hairline bg-card pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
-              />
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <Panel className="!mt-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[220px] flex-1">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search name, email…"
+                  className="h-10 w-full rounded-lg border border-hairline bg-card pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
+                />
+              </div>
+              <span className="ml-auto mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                {filteredMembers.length} / {members.length}
+              </span>
             </div>
-            <select
-              value=""
-              onChange={() => { /* placeholder global selector — unused */ }}
-              className="hidden"
-            >
-              <option value="">—</option>
-            </select>
-            <span className="ml-auto mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              {filteredMembers.length} / {members.length}
-            </span>
-          </div>
 
-          <section className="mt-3 overflow-hidden rounded-lg border border-hairline bg-card">
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="border-b border-hairline bg-secondary/50 text-left">
-                    <Th>First name</Th>
-                    <Th>Surname</Th>
-                    <Th className="w-24">Born</Th>
-                    <Th>Email</Th>
-                    <Th className="w-56">Groups</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMembers.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-foreground">
-                        No members yet.
-                      </td>
+            <section className="mt-3 overflow-hidden rounded-lg border border-hairline bg-card">
+              <div className="overflow-x-auto">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="border-b border-hairline bg-secondary/50 text-left">
+                      <Th>First name</Th>
+                      <Th>Surname</Th>
+                      <Th className="w-24">Born</Th>
+                      <Th>Email</Th>
+                      <Th className="w-56">Groups</Th>
                     </tr>
-                  )}
-                  {filteredMembers.map((m, i) => {
-                    const born = m.birth_date ? m.birth_date.slice(0, 10).replace(/-/g, "") : "—";
-                    return (
-                      <tr
-                        key={m.user_id}
-                        className={`border-b border-hairline transition last:border-b-0 hover:bg-secondary/40 ${
-                          i % 2 === 0 ? "bg-card" : "bg-background/40"
-                        }`}
-                      >
-                        <td className="px-3 py-1 text-ink">{m.first_name ?? "—"}</td>
-                        <td className="px-3 py-1 text-ink">{m.last_name ?? ""}</td>
-                        <td className="px-3 py-1 num text-ink">{born}</td>
-                        <td className="px-3 py-1 text-muted-foreground">{m.email ?? "—"}</td>
-                        <td className="px-3 py-1">
-                          {groups.length === 0 ? (
-                            <span className="text-muted-foreground">—</span>
-                          ) : (
-                            <select
-                              value={assignments[m.user_id] ?? ""}
-                              onChange={(e) =>
-                                setAssignments((a) => ({ ...a, [m.user_id]: e.target.value }))
-                              }
-                              className="w-full cursor-pointer rounded-md border border-hairline bg-background px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
-                            >
-                              <option value="">— No group —</option>
-                              {groups
-                                .filter((g) => g.id)
-                                .map((g, gi) => (
-                                  <option key={g.id} value={g.id}>
-                                    {g.name || `Group ${gi + 1}`}{g.is_default ? " (Default)" : ""}
-                                  </option>
-                                ))}
-                            </select>
-                          )}
+                  </thead>
+                  <tbody>
+                    {filteredMembers.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                          No members yet.
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    )}
+                    {filteredMembers.map((m, i) => {
+                      const born = m.birth_date ? m.birth_date.slice(0, 10).replace(/-/g, "") : "—";
+                      return (
+                        <tr
+                          key={m.user_id}
+                          className={`border-b border-hairline transition last:border-b-0 hover:bg-secondary/40 ${
+                            i % 2 === 0 ? "bg-card" : "bg-background/40"
+                          }`}
+                        >
+                          <td className="px-3 py-1 text-ink">{m.first_name ?? "—"}</td>
+                          <td className="px-3 py-1 text-ink">{m.last_name ?? ""}</td>
+                          <td className="px-3 py-1 num text-ink">{born}</td>
+                          <td className="px-3 py-1 text-muted-foreground">{m.email ?? "—"}</td>
+                          <td className="px-3 py-1">
+                            {groups.length === 0 ? (
+                              <span className="text-muted-foreground">—</span>
+                            ) : (
+                              <select
+                                value={assignments[m.user_id] ?? ""}
+                                onChange={(e) =>
+                                  setAssignments((a) => ({ ...a, [m.user_id]: e.target.value }))
+                                }
+                                className="w-full cursor-pointer rounded-md border border-hairline bg-background px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
+                              >
+                                <option value="">— No group —</option>
+                                {groups
+                                  .filter((g) => g.id)
+                                  .map((g, gi) => (
+                                    <option key={g.id} value={g.id}>
+                                      {g.name || `Group ${gi + 1}`}{g.is_default ? " (Default)" : ""}
+                                    </option>
+                                  ))}
+                              </select>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+            {groups.some((g) => !g.id) && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                New groups appear in the dropdown after you save.
+              </p>
+            )}
+          </Panel>
+
+          <Panel className="!mt-0 flex flex-col">
+            <div className="flex items-center justify-between">
+              <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                Organization chart
+              </p>
+              <p className="text-[11px] text-muted-foreground">Drag to pan · scroll to zoom</p>
             </div>
-          </section>
-          {groups.some((g) => !g.id) && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              New groups appear in the dropdown after you save.
-            </p>
-          )}
-        </Panel>
+            <div className="mt-3 h-[560px] min-h-[420px] w-full">
+              <OrgChart board={orgBoard} groups={orgGroups} teamName={teamName} />
+            </div>
+          </Panel>
+        </div>
       )}
     </div>
   );
@@ -1000,8 +1075,8 @@ function TabBtn({
   );
 }
 
-function Panel({ children }: { children: React.ReactNode }) {
-  return <section className="mt-5 rounded-lg border border-hairline bg-card p-6 md:p-8">{children}</section>;
+function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <section className={`mt-5 rounded-lg border border-hairline bg-card p-6 md:p-8 ${className ?? ""}`}>{children}</section>;
 }
 
 function Th({ children, className }: { children?: React.ReactNode; className?: string }) {
