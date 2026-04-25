@@ -147,6 +147,7 @@ function SettingsPage() {
 
   useEffect(() => {
     if (isTeamMode && (tab === "races" || tab === "liked" || tab === "profiles")) setTab("general");
+    if (!isTeamMode && tab === "entity-profile") setTab("general");
   }, [isTeamMode, tab]);
 
   const [userRoles, setUserRoles] = useState<{ role: "organizer" | "photographer" | "timekeeper" }[]>([]);
@@ -204,40 +205,51 @@ function SettingsPage() {
   }
 
   const tabs: Tab[] = isTeamMode
-    ? ["general", "address", "roles"]
+    ? ["entity-profile", "general", "address", "roles"]
     : ["general", "address", "roles", "profiles", "races", "liked"];
 
   const activeEntity = entities.find((e) => e.id === activeEntityId) ?? null;
+
+  const tabLabel = (t: Tab) =>
+    t === "general"
+      ? "General"
+      : t === "address"
+        ? "Contact & address"
+        : t === "roles"
+          ? "Roles"
+          : t === "profiles"
+            ? "Profile"
+            : t === "entity-profile"
+              ? "Profile"
+              : t === "races"
+                ? "My races"
+                : t === "liked"
+                  ? "Liked races"
+                  : "Sign out";
 
   return (
     <div className="px-4 md:px-6">
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-2 pt-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-baseline gap-2">
+            <span className="mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+              Account
+            </span>
             <ProfileSelector
               entities={entities}
               activeEntity={activeEntity}
               onSelect={(id) => {
                 setActiveEntity(id);
-                setTab("general");
+                setTab(id ? "entity-profile" : "general");
               }}
             />
-            <button
-              onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-card px-3.5 py-2 text-xs text-ink transition hover:bg-secondary"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Create new entity
-            </button>
           </div>
           <button
-            onClick={async () => {
-              await signOut();
-              navigate({ to: "/" });
-            }}
-            className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+            onClick={() => setCreateOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-ink px-4 py-2 text-xs font-medium text-background transition hover:opacity-90"
           >
-            Sign out
+            <Plus className="h-3.5 w-3.5" />
+            Create new entity
           </button>
         </div>
 
@@ -253,19 +265,19 @@ function SettingsPage() {
                     : "text-muted-foreground hover:text-ink"
                 }`}
               >
-                {t === "general"
-                  ? "General"
-                  : t === "address"
-                    ? "Contact & address"
-                    : t === "roles"
-                      ? "Roles"
-                      : t === "profiles"
-                        ? "Profile"
-                        : t === "races"
-                          ? "My races"
-                          : "Liked races"}
+                {tabLabel(t)}
               </button>
             ))}
+            <div className="my-1 hidden h-px w-full bg-hairline md:block" />
+            <button
+              onClick={async () => {
+                await signOut();
+                navigate({ to: "/" });
+              }}
+              className="rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition hover:text-destructive"
+            >
+              Sign out
+            </button>
           </nav>
 
           <div>
