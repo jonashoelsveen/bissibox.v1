@@ -227,7 +227,7 @@ function TeamMembersPage() {
 
       setLoaded(true);
     })();
-  }, [user]);
+  }, [user, activeEntityId]);
 
   const currentYear = new Date().getFullYear();
 
