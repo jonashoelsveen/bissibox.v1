@@ -165,17 +165,20 @@ function TeamMembersPage() {
           .order("sort_order", { ascending: true }),
         supabase
           .from("team_board_members")
-          .select("id,name,role,email,sort_order")
+          .select("id,name,role,email,status,invited_at,sort_order")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
       ]);
 
       setBoardMembers(
-        ((bms ?? []) as Array<{ id: string; name: string | null; role: string | null; email: string | null }>).map((b) => ({
+        ((bms ?? []) as Array<{ id: string; name: string | null; role: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((b, i) => ({
           id: b.id,
           name: b.name ?? "",
           role: b.role ?? "",
           email: b.email ?? "",
+          status: (b.status as "pending" | "active") ?? "pending",
+          invited_at: b.invited_at,
+          sort_order: b.sort_order ?? i,
         })),
       );
 
