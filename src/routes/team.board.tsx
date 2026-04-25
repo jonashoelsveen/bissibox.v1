@@ -64,7 +64,8 @@ interface RosterEntry {
 function TeamBoardPage() {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"meetings" | "ongoing">("meetings");
+  // Active tab: "meetings" or a meeting id
+  const [activeTab, setActiveTab] = useState<string>("meetings");
   const [teamId, setTeamId] = useState<string | null>(null);
   const [teamName, setTeamName] = useState<string>("");
   const [loaded, setLoaded] = useState(false);
