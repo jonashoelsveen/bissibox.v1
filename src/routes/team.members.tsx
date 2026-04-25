@@ -87,22 +87,27 @@ function TeamMembersPage() {
     if (!authLoading && !user) nav({ to: "/auth" });
   }, [authLoading, user, nav]);
 
+  // Board / team meta for org chart
+  const [teamName, setTeamName] = useState<string>("");
+  const [boardMembers, setBoardMembers] = useState<Array<{ id: string; name: string; role: string; email: string }>>([]);
+
   useEffect(() => {
     if (!user) return;
     void (async () => {
       const { data: team } = await supabase
         .from("teams")
-        .select("id")
+        .select("id, name")
         .eq("owner_id", user.id)
         .maybeSingle();
-      const tid = team?.id ?? null;
+      const tid = (team as { id: string; name: string | null } | null)?.id ?? null;
+      setTeamName((team as { id: string; name: string | null } | null)?.name ?? "");
       setTeamId(tid);
       if (!tid) {
         setLoaded(true);
         return;
       }
 
-      const [{ data: gs }, { data: tms }, { data: tgms }, { data: tiers }] = await Promise.all([
+      const [{ data: gs }, { data: tms }, { data: tgms }, { data: tiers }, { data: bms }] = await Promise.all([
         supabase
           .from("team_groups")
           .select("id,name,age_from,age_to,sort_order,description,leader_name,leader_email,leader_phone,is_default")
@@ -121,7 +126,21 @@ function TeamMembersPage() {
           .select("id,name,description,price,currency,sort_order,group_assignment_mode,criteria_label")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
+        supabase
+          .from("team_board_members")
+          .select("id,name,role,email,sort_order")
+          .eq("team_id", tid)
+          .order("sort_order", { ascending: true }),
       ]);
+
+      setBoardMembers(
+        ((bms ?? []) as Array<{ id: string; name: string | null; role: string | null; email: string | null }>).map((b) => ({
+          id: b.id,
+          name: b.name ?? "",
+          role: b.role ?? "",
+          email: b.email ?? "",
+        })),
+      );
 
       setMemberships(
         ((tiers ?? []) as Array<{ id: string; name: string | null; description: string | null; price: number | null; currency: string | null; sort_order: number | null; group_assignment_mode: string | null; criteria_label: string | null }>).map((t, i) => ({
