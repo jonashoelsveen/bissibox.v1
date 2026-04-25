@@ -275,8 +275,24 @@ function TeamBoardPage() {
 
   async function closeOngoing() {
     if (!ongoing) return;
-    if (!confirm("Do you want to delete board meeting?")) return;
-    // delete attachments storage
+    const hasContent = (savedText && savedText.trim().length > 0) || attachments.length > 0;
+    const isUnsaved = ongoingText !== savedText;
+
+    if (hasContent) {
+      // Saved meeting — just close the tab, keep it in the list
+      setOngoing(null);
+      setAttachments([]);
+      setOngoingText("");
+      setSavedText("");
+      setTab("meetings");
+      return;
+    }
+
+    if (isUnsaved) {
+      if (!confirm("You have unsaved changes. Delete this board meeting?")) return;
+    }
+
+    // Empty / unsaved meeting — delete it
     if (attachments.length) {
       await supabase.storage
         .from("board-attachments")
