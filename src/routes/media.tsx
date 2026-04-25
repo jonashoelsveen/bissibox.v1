@@ -374,6 +374,32 @@ function MediaPage() {
     void load();
   }, [load]);
 
+  // Poll VirusTotal for any pending media items
+  useEffect(() => {
+    const pending = items.filter((it) => it.scan_status === "pending");
+    if (pending.length === 0) return;
+    let cancelled = false;
+    const tick = async () => {
+      const results = await Promise.all(
+        pending.map((it) =>
+          runPoll({ data: { kind: "media", id: it.id } }).catch(() => null),
+        ),
+      );
+      if (cancelled) return;
+      const anyResolved = results.some(
+        (r) => r && (r.status === "safe" || r.status === "infected" || r.status === "error"),
+      );
+      if (anyResolved) void load();
+    };
+    const t = setInterval(() => {
+      void tick();
+    }, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [items, load, runPoll]);
+
   useEffect(() => {
     let cancel = false;
     (async () => {
