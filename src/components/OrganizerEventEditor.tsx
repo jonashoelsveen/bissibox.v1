@@ -206,6 +206,9 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         event_type: eventType,
         media_contact_email: showMediaSection ? (mediaContactEmail.trim() || null) : null,
         media_pitch: showMediaSection ? (mediaPitch.trim() || null) : null,
+        pin_lat: pin?.lat ?? null,
+        pin_lng: pin?.lng ?? null,
+        pin_description: pinDescription.trim() || null,
       };
 
       let id = savedId;
