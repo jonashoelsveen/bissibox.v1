@@ -600,7 +600,9 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         <Panel>
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Races within this event (e.g. 5K, 10K, Marathon). Pick which classes apply to each.
+              {eventType === "event"
+                ? "Tickets for this event (e.g. General, VIP, Early bird)."
+                : "Races within this event (e.g. 5K, 10K, Marathon). Pick which classes apply to each."}
             </p>
             <button
               onClick={() => {
@@ -623,14 +625,14 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
               }}
               className="inline-flex items-center gap-1.5 rounded-md border border-hairline bg-background px-3 py-1.5 text-xs text-ink hover:bg-secondary"
             >
-              <Plus className="h-3.5 w-3.5" /> Add race
+              <Plus className="h-3.5 w-3.5" /> {eventType === "event" ? "Add ticket" : "Add race"}
             </button>
           </div>
 
           <div className="mt-5 space-y-2">
             {subevents.length === 0 && (
               <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
-                No races yet. Add a 5K, 10K, Half Marathon…
+                {eventType === "event" ? "No tickets yet." : "No races yet. Add a 5K, 10K, Half Marathon…"}
               </div>
             )}
             {subevents.map((s, idx) => {
