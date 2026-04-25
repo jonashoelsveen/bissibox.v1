@@ -113,7 +113,7 @@ export function TopChrome() {
                 path === "/"
               }
             >
-              <Library className="h-[18px] w-[18px]" strokeWidth={2.25} />
+              <Tent className="h-[18px] w-[18px]" strokeWidth={2.25} />
             </NavBtn>
             <NavBtn
               to="/organizer/new"
