@@ -1219,6 +1219,54 @@ export type Database = {
           },
         ]
       }
+      verification_attempts: {
+        Row: {
+          attempts: number
+          channel: string
+          code_hash: string
+          consumed_at: string | null
+          created_at: string
+          destination: string
+          expires_at: string
+          id: string
+          max_attempts: number
+          target_id: string
+          target_kind: string
+          target_meta: Json
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          channel: string
+          code_hash: string
+          consumed_at?: string | null
+          created_at?: string
+          destination: string
+          expires_at: string
+          id?: string
+          max_attempts?: number
+          target_id: string
+          target_kind: string
+          target_meta?: Json
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          channel?: string
+          code_hash?: string
+          consumed_at?: string | null
+          created_at?: string
+          destination?: string
+          expires_at?: string
+          id?: string
+          max_attempts?: number
+          target_id?: string
+          target_kind?: string
+          target_meta?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
