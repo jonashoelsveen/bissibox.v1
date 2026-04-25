@@ -743,7 +743,9 @@ function TeamBoardPage() {
             title={ongoing.title}
           >
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            <span className="max-w-[200px] truncate">{ongoing.title}</span>
+            <span className="max-w-[240px] truncate">
+              {ongoing.folder ? `${ongoing.folder} · ${ongoing.title}` : ongoing.title}
+            </span>
             <span
               role="button"
               tabIndex={0}
