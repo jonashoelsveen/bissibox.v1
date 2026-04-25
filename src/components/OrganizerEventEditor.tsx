@@ -493,11 +493,12 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
               <FormGrid>
                 <Row label="Pitch to a production company / photographer" full>
                   <textarea
-                    value={description /* re-using description here is wrong; use dedicated state below */ ? "" : ""}
-                    onChange={() => { /* no-op placeholder, replaced by mediaPitch below */ }}
-                    style={{ display: "none" }}
+                    value={mediaPitch}
+                    onChange={(e) => setMediaPitch(e.target.value)}
+                    rows={4}
+                    className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                    placeholder="Describe the event for a production company or photographer you'd like to approach."
                   />
-                  <MediaPitchField />
                 </Row>
                 <Row label="Contact email" full>
                   <Text
