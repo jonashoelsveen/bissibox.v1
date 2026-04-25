@@ -68,7 +68,7 @@ interface MemberRow {
 function TeamMembersPage() {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"memberships" | "groups" | "members" | "chart">("memberships");
+  const [tab, setTab] = useState<"board" | "memberships" | "groups" | "members" | "chart">("board");
   const [teamId, setTeamId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
