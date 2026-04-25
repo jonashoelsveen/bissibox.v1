@@ -954,19 +954,28 @@ function TeamBoardPage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               title="Attach documents"
-              className="rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-secondary hover:text-ink"
             >
               <Paperclip className="h-4 w-4" />
+              <span>Attach</span>
             </button>
-            <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              {ongoing.title}
-            </span>
             <button
               onClick={openAttendance}
               title="Attendance"
-              className="ml-auto rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-secondary hover:text-ink"
             >
               <ClipboardCheck className="h-4 w-4" />
+              <span>Attendance</span>
+            </button>
+            <span className="ml-3 mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground truncate">
+              {ongoing.folder ? `${ongoing.folder} · ${ongoing.title}` : ongoing.title}
+            </span>
+            <button
+              onClick={openEditMeeting}
+              title="Edit name and folder"
+              className="ml-auto rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+            >
+              <FolderIcon className="h-4 w-4" />
             </button>
             <button
               onClick={saveOngoingText}
