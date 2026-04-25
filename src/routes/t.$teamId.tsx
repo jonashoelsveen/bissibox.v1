@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { ProfileShell, MediaGrid } from "@/components/ProfileShell";
-import { FollowButton } from "@/components/FollowButton";
+import { VerificationDialog } from "@/components/VerificationDialog";
 import { formatMoney } from "@/lib/format";
+import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/t/$teamId")({
   component: TeamPage,
