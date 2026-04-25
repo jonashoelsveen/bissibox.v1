@@ -684,7 +684,7 @@ function TeamBoardPage() {
       <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
         <div>
           <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Team</p>
-          <h1 className="mt-2 text-3xl text-ink md:text-4xl">Board</h1>
+          <h1 className="mt-2 text-3xl text-ink md:text-4xl">Meetings</h1>
         </div>
         <div className="flex items-center gap-2">
           {tab === "meetings" && (
