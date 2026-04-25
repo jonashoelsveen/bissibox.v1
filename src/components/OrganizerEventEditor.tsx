@@ -85,6 +85,12 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (eventType !== "race" && (tab === "classes" || tab === "subevents")) {
+      setTab("details");
+    }
+  }, [eventType, tab]);
+
+  useEffect(() => {
     if (!authLoading && !user) nav({ to: "/auth" });
   }, [authLoading, user, nav]);
 
