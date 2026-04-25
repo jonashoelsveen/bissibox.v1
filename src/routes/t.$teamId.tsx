@@ -336,7 +336,7 @@ function TeamPage() {
         </span>
       }
       actions={
-        tiers.length > 0 ? (
+        tiers.length > 0 && (!user || user.id !== team.owner_id) ? (
           <button
             onClick={openPicker}
             className="rounded-full bg-ink px-5 py-1.5 text-xs font-medium text-background hover:opacity-90"
