@@ -102,6 +102,8 @@ function TeamPage() {
   const [pickerGroupId, setPickerGroupId] = useState<string>("");
   const [confirmInfo, setConfirmInfo] = useState<ConfirmInfo | null>(null);
   const [leaderInfoOpen, setLeaderInfoOpen] = useState(false);
+  const [publicGroups, setPublicGroups] = useState<PublicGroup[]>([]);
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
