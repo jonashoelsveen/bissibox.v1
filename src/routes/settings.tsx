@@ -281,6 +281,23 @@ function SettingsPage() {
           </nav>
 
           <div>
+            {tab === "entity-profile" && isTeamMode && team && (
+              <Card>
+                <p className="text-xs text-muted-foreground">
+                  When inactive, this profile page calmly shows that it is not active. The entity is hidden from public browsing.
+                </p>
+                <div className="mt-4">
+                  <ToggleRow
+                    title="Profile active"
+                    description="Visible publicly and able to accept members."
+                    checked={team.active}
+                    onChange={(v) => updateTeam("active", v as unknown as string)}
+                  />
+                </div>
+                <SaveBar saving={saving} onSave={save} />
+              </Card>
+            )}
+
             {tab === "general" && isTeamMode && team && (
               <Card>
                 <Grid>
