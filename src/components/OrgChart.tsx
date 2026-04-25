@@ -389,18 +389,35 @@ function FocusedOverlay({
 
 function FocusedGroupCard({
   group,
+  accentColor,
   onClose,
   onPersonClick,
 }: {
   group: OrgGroup;
+  accentColor?: string;
   onClose: () => void;
   onPersonClick: (p: OrgPerson) => void;
 }) {
+  const tinted = !!accentColor;
   return (
-    <div className="overflow-hidden rounded-xl border border-primary/40 bg-background shadow-xl">
-      <header className="flex items-center justify-between gap-3 border-b border-hairline bg-background/60 px-5 py-3.5">
+    <div
+      className="overflow-hidden rounded-xl border bg-background shadow-xl"
+      style={{
+        borderColor: tinted ? hexToRgba(accentColor!, 0.5) : undefined,
+        borderTop: tinted ? `3px solid ${accentColor}` : undefined,
+      }}
+    >
+      <header
+        className="flex items-center justify-between gap-3 border-b border-hairline px-5 py-3.5"
+        style={{
+          background: tinted ? hexToRgba(accentColor!, 0.06) : undefined,
+        }}
+      >
         <div className="min-w-0">
-          <p className="mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+          <p
+            className="mono text-[10px] uppercase tracking-[0.22em]"
+            style={{ color: tinted ? accentColor : undefined }}
+          >
             Group
           </p>
           <h3 className="mt-0.5 truncate text-base text-ink">{group.name || "Untitled"}</h3>
