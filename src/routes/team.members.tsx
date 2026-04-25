@@ -16,6 +16,7 @@ import {
   Network,
 } from "lucide-react";
 import { OrgChart, type OrgPerson, type OrgGroup } from "@/components/OrgChart";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/team/members")({
   component: TeamMembersPage,
@@ -45,6 +46,8 @@ interface MembershipDraft {
   sort_order: number;
   group_assignment_mode: "volunteer" | "criteria";
   criteria_label: string;
+  is_active: boolean;
+  is_public: boolean;
 }
 
 interface MemberRow {
