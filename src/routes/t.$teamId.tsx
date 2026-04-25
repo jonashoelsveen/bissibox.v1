@@ -190,7 +190,18 @@ function TeamPage() {
 
   const [verifyOpen, setVerifyOpen] = useState(false);
   const [pendingTierId, setPendingTierId] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerTierId, setPickerTierId] = useState<string>("__default__");
   const nav = useNavigate();
+
+  const openPicker = () => {
+    if (!user) {
+      nav({ to: "/auth", search: { redirect: window.location.pathname } as never });
+      return;
+    }
+    setPickerTierId(tiers[0]?.id ?? "__default__");
+    setPickerOpen(true);
+  };
 
   const startJoin = (tierId: string) => {
     if (!user) {
@@ -199,6 +210,11 @@ function TeamPage() {
     }
     setPendingTierId(tierId);
     setVerifyOpen(true);
+  };
+
+  const confirmPicker = () => {
+    setPickerOpen(false);
+    startJoin(pickerTierId);
   };
 
   const onVerified = () => {
