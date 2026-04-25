@@ -1,5 +1,27 @@
-import { useEffect, useState } from "react";
-import { ChevronDown, X, User2, Mail, Phone, Briefcase } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, X, User2, Mail, Phone, Briefcase, Palette, Check } from "lucide-react";
+
+// Simple, professional preset palette (cohesive with neutral UI)
+const GROUP_COLORS: { name: string; value: string }[] = [
+  { name: "Default", value: "" },
+  { name: "Slate", value: "#64748b" },
+  { name: "Blue", value: "#3b82f6" },
+  { name: "Teal", value: "#14b8a6" },
+  { name: "Green", value: "#22c55e" },
+  { name: "Amber", value: "#f59e0b" },
+  { name: "Red", value: "#ef4444" },
+  { name: "Pink", value: "#ec4899" },
+  { name: "Violet", value: "#8b5cf6" },
+];
+
+// Convert hex → rgba with alpha for soft tinted backgrounds
+function hexToRgba(hex: string, alpha: number) {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export interface OrgPerson {
   id: string;
@@ -31,12 +53,15 @@ type FocusTarget =
 export function OrgChart({ board, groups, teamName }: OrgChartProps) {
   const [focus, setFocus] = useState<FocusTarget>(null);
   const [contactPerson, setContactPerson] = useState<OrgPerson | null>(null);
+  const [groupColors, setGroupColors] = useState<Record<string, string>>({});
 
   const focusedGroup =
     focus?.kind === "group" ? groups.find((g) => g.id === focus.id) ?? null : null;
   const isBoardFocused = focus?.kind === "board";
 
   const close = () => setFocus(null);
+  const setColor = (id: string, color: string) =>
+    setGroupColors((prev) => ({ ...prev, [id]: color }));
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden rounded-lg border border-hairline bg-card">
@@ -53,6 +78,8 @@ export function OrgChart({ board, groups, teamName }: OrgChartProps) {
             board={board}
             groups={groups}
             teamName={teamName}
+            groupColors={groupColors}
+            onSetGroupColor={setColor}
             onExpandGroup={(id) => setFocus({ kind: "group", id })}
             onExpandBoard={() => setFocus({ kind: "board" })}
             onPersonClick={(p) => setContactPerson(p)}
@@ -63,6 +90,7 @@ export function OrgChart({ board, groups, teamName }: OrgChartProps) {
           <FocusedOverlay onClose={close}>
             <FocusedGroupCard
               group={focusedGroup}
+              accentColor={groupColors[focusedGroup.id] || ""}
               onClose={close}
               onPersonClick={(p) => setContactPerson(p)}
             />
@@ -95,6 +123,8 @@ function FullChart({
   board,
   groups,
   teamName,
+  groupColors,
+  onSetGroupColor,
   onExpandGroup,
   onExpandBoard,
   onPersonClick,
@@ -102,6 +132,8 @@ function FullChart({
   board: OrgPerson[];
   groups: OrgGroup[];
   teamName?: string;
+  groupColors: Record<string, string>;
+  onSetGroupColor: (id: string, color: string) => void;
   onExpandGroup: (id: string) => void;
   onExpandBoard: () => void;
   onPersonClick: (p: OrgPerson) => void;
@@ -144,7 +176,12 @@ function FullChart({
                   className="pointer-events-none absolute left-1/2 -top-6 h-6 w-px -translate-x-1/2 bg-hairline"
                   aria-hidden="true"
                 />
-                <GroupBox group={g} onExpand={() => onExpandGroup(g.id)} />
+                <GroupBox
+                  group={g}
+                  color={groupColors[g.id] || ""}
+                  onSetColor={(c) => onSetGroupColor(g.id, c)}
+                  onExpand={() => onExpandGroup(g.id)}
+                />
               </div>
             ))}
           </div>
@@ -180,22 +217,140 @@ function BoardBox({
   );
 }
 
-function GroupBox({ group, onExpand }: { group: OrgGroup; onExpand: () => void }) {
+function GroupBox({
+  group,
+  color,
+  onSetColor,
+  onExpand,
+}: {
+  group: OrgGroup;
+  color: string;
+  onSetColor: (c: string) => void;
+  onExpand: () => void;
+}) {
   const total = group.leaders.length + group.members.length;
+  const tinted = !!color;
   return (
-    <button
-      onClick={onExpand}
-      className="group flex w-full items-center justify-between gap-2 rounded-lg border border-hairline bg-background px-4 py-3 text-left shadow-sm transition hover:border-primary/40 hover:bg-secondary/40"
+    <div
+      className="group/box relative rounded-lg border shadow-sm transition hover:border-primary/40"
+      style={{
+        borderColor: tinted ? hexToRgba(color, 0.45) : undefined,
+        background: tinted
+          ? `linear-gradient(180deg, ${hexToRgba(color, 0.10)}, ${hexToRgba(color, 0.04)})`
+          : undefined,
+        borderLeft: tinted ? `3px solid ${color}` : undefined,
+      }}
     >
-      <div className="min-w-0">
-        <p className="mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">Group</p>
-        <p className="mt-0.5 truncate text-sm text-ink">{group.name || "Untitled"}</p>
-        <p className="mt-0.5 mono text-[10px] text-muted-foreground">
-          {total} {total === 1 ? "person" : "people"}
-        </p>
-      </div>
-      <ChevronDown className="h-4 w-4 shrink-0 -rotate-90 text-muted-foreground transition group-hover:text-primary" />
-    </button>
+      <button
+        onClick={onExpand}
+        className="flex w-full items-center justify-between gap-2 rounded-lg px-4 py-3 text-left transition hover:bg-secondary/30"
+      >
+        <div className="min-w-0">
+          <p
+            className="mono text-[9px] uppercase tracking-[0.22em]"
+            style={{ color: tinted ? color : undefined }}
+          >
+            Group
+          </p>
+          <p className="mt-0.5 truncate text-sm text-ink">{group.name || "Untitled"}</p>
+          <p className="mt-0.5 mono text-[10px] text-muted-foreground">
+            {total} {total === 1 ? "person" : "people"}
+          </p>
+        </div>
+        <ChevronDown className="h-4 w-4 shrink-0 -rotate-90 text-muted-foreground transition" />
+      </button>
+      <ColorPickerButton color={color} onChange={onSetColor} />
+    </div>
+  );
+}
+
+function ColorPickerButton({
+  color,
+  onChange,
+}: {
+  color: string;
+  onChange: (c: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="absolute right-2 top-2 z-10">
+      <button
+        type="button"
+        aria-label="Set color"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        className="flex h-6 w-6 items-center justify-center rounded-md border border-hairline bg-background/80 text-muted-foreground opacity-0 shadow-sm transition hover:text-ink group-hover/box:opacity-100 focus:opacity-100"
+      >
+        {color ? (
+          <span
+            className="h-3 w-3 rounded-full ring-1 ring-black/10"
+            style={{ background: color }}
+          />
+        ) : (
+          <Palette className="h-3.5 w-3.5" />
+        )}
+      </button>
+      {open && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute right-0 top-7 w-44 rounded-md border border-hairline bg-card p-2 shadow-lg animate-in fade-in zoom-in-95 duration-150"
+        >
+          <p className="mb-1.5 px-1 mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
+            Color
+          </p>
+          <div className="grid grid-cols-5 gap-1.5">
+            {GROUP_COLORS.map((c) => {
+              const selected = (c.value || "") === (color || "");
+              return (
+                <button
+                  key={c.name}
+                  type="button"
+                  title={c.name}
+                  onClick={() => {
+                    onChange(c.value);
+                    setOpen(false);
+                  }}
+                  className="relative flex h-6 w-6 items-center justify-center rounded-full border border-hairline transition hover:scale-110"
+                  style={{
+                    background: c.value || "transparent",
+                    backgroundImage: c.value
+                      ? undefined
+                      : "linear-gradient(135deg, transparent 45%, hsl(var(--muted-foreground) / 0.5) 45%, hsl(var(--muted-foreground) / 0.5) 55%, transparent 55%)",
+                  }}
+                >
+                  {selected && (
+                    <Check
+                      className="h-3 w-3"
+                      style={{ color: c.value ? "#fff" : "hsl(var(--ink))" }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -234,18 +389,35 @@ function FocusedOverlay({
 
 function FocusedGroupCard({
   group,
+  accentColor,
   onClose,
   onPersonClick,
 }: {
   group: OrgGroup;
+  accentColor?: string;
   onClose: () => void;
   onPersonClick: (p: OrgPerson) => void;
 }) {
+  const tinted = !!accentColor;
   return (
-    <div className="overflow-hidden rounded-xl border border-primary/40 bg-background shadow-xl">
-      <header className="flex items-center justify-between gap-3 border-b border-hairline bg-background/60 px-5 py-3.5">
+    <div
+      className="overflow-hidden rounded-xl border bg-background shadow-xl"
+      style={{
+        borderColor: tinted ? hexToRgba(accentColor!, 0.5) : undefined,
+        borderTop: tinted ? `3px solid ${accentColor}` : undefined,
+      }}
+    >
+      <header
+        className="flex items-center justify-between gap-3 border-b border-hairline px-5 py-3.5"
+        style={{
+          background: tinted ? hexToRgba(accentColor!, 0.06) : undefined,
+        }}
+      >
         <div className="min-w-0">
-          <p className="mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+          <p
+            className="mono text-[10px] uppercase tracking-[0.22em]"
+            style={{ color: tinted ? accentColor : undefined }}
+          >
             Group
           </p>
           <h3 className="mt-0.5 truncate text-base text-ink">{group.name || "Untitled"}</h3>
