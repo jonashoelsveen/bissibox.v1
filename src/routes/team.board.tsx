@@ -64,7 +64,8 @@ interface RosterEntry {
 function TeamBoardPage() {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"meetings" | "ongoing">("meetings");
+  // Active tab: "meetings" or a meeting id
+  const [activeTab, setActiveTab] = useState<string>("meetings");
   const [teamId, setTeamId] = useState<string | null>(null);
   const [teamName, setTeamName] = useState<string>("");
   const [loaded, setLoaded] = useState(false);
@@ -90,19 +91,56 @@ function TeamBoardPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  // Ongoing meeting
-  const [ongoing, setOngoing] = useState<MeetingRow | null>(null);
-  const [ongoingText, setOngoingText] = useState("");
-  const [savedText, setSavedText] = useState("");
+  // Open meeting tabs (max 10). "new" tabs are green, "earlier" tabs are grey.
+  interface OpenTab {
+    meeting: MeetingRow;
+    kind: "new" | "earlier";
+    text: string;
+    savedText: string;
+    attachments: AttachmentRow[];
+    attendance: string[];
+    roster: RosterEntry[];
+  }
+  const MAX_TABS = 10;
+  const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
   const [saving, setSaving] = useState(false);
-  const [attachments, setAttachments] = useState<AttachmentRow[]>([]);
-  const [attendance, setAttendance] = useState<string[]>([]); // roster_ids
-  const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   const [attendanceDraft, setAttendanceDraft] = useState<string[]>([]);
   const [attendanceSaving, setAttendanceSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const ongoing = activeTab !== "meetings" ? openTabs.find((t) => t.meeting.id === activeTab) ?? null : null;
+  const ongoingText = ongoing?.text ?? "";
+  const savedText = ongoing?.savedText ?? "";
+  const attachments = ongoing?.attachments ?? [];
+  const attendance = ongoing?.attendance ?? [];
+  const roster = ongoing?.roster ?? [];
   const isDirty = ongoingText !== savedText;
+
+  function patchTab(id: string, patch: Partial<OpenTab>) {
+    setOpenTabs((prev) => prev.map((t) => (t.meeting.id === id ? { ...t, ...patch } : t)));
+  }
+  function setOngoingText(v: string) {
+    if (ongoing) patchTab(ongoing.meeting.id, { text: v });
+  }
+  function setAttachments(next: AttachmentRow[] | ((prev: AttachmentRow[]) => AttachmentRow[])) {
+    if (!ongoing) return;
+    const value = typeof next === "function" ? (next as (p: AttachmentRow[]) => AttachmentRow[])(ongoing.attachments) : next;
+    patchTab(ongoing.meeting.id, { attachments: value });
+  }
+  function setAttendance(next: string[] | ((prev: string[]) => string[])) {
+    if (!ongoing) return;
+    const value = typeof next === "function" ? (next as (p: string[]) => string[])(ongoing.attendance) : next;
+    patchTab(ongoing.meeting.id, { attendance: value });
+  }
+  function setRoster(next: RosterEntry[] | ((prev: RosterEntry[]) => RosterEntry[])) {
+    if (!ongoing) return;
+    const value = typeof next === "function" ? (next as (p: RosterEntry[]) => RosterEntry[])(ongoing.roster) : next;
+    patchTab(ongoing.meeting.id, { roster: value });
+  }
+  function setSavedText(v: string) {
+    if (ongoing) patchTab(ongoing.meeting.id, { savedText: v });
+  }
 
   useEffect(() => {
     if (!authLoading && !user) nav({ to: "/auth" });
@@ -302,8 +340,18 @@ function TeamBoardPage() {
     setNewMeetingOpen(true);
   }
 
+  function patchMeetingInTab(id: string, patch: Partial<MeetingRow>) {
+    setOpenTabs((prev) =>
+      prev.map((t) => (t.meeting.id === id ? { ...t, meeting: { ...t.meeting, ...patch } } : t)),
+    );
+  }
+
   async function startNewMeeting() {
     if (!teamId || !user) return;
+    if (openTabs.length >= MAX_TABS) {
+      toast.error(`You can have at most ${MAX_TABS} meeting tabs open at once. Please close another tab to open a new meeting.`);
+      return;
+    }
     const title = newMeetingTitle.trim() || `Board meeting · ${new Date().toLocaleDateString()}`;
     const folder = newMeetingFolder.trim() || null;
     const { data, error } = await supabase
@@ -321,7 +369,6 @@ function TeamBoardPage() {
       toast.error(error.message);
       return;
     }
-    // Snapshot the current board roster for this meeting
     const snapshotRows = members
       .filter((m) => !!m.id)
       .map((m) => ({
@@ -342,92 +389,117 @@ function TeamBoardPage() {
       snapshot = (rosterData ?? []) as RosterEntry[];
     }
     setMeetings((prev) => [data, ...prev]);
-    setOngoing(data);
-    setOngoingText(data.notes ?? "");
-    setSavedText(data.notes ?? "");
-    setAttachments([]);
-    setAttendance([]);
-    setRoster(snapshot.sort((a, b) => a.sort_order - b.sort_order));
+    setOpenTabs((prev) => [
+      ...prev,
+      {
+        meeting: data,
+        kind: "new",
+        text: data.notes ?? "",
+        savedText: data.notes ?? "",
+        attachments: [],
+        attendance: [],
+        roster: snapshot.sort((a, b) => a.sort_order - b.sort_order),
+      },
+    ]);
     setNewMeetingOpen(false);
-    setTab("ongoing");
+    setActiveTab(data.id);
   }
 
   function openEditMeeting() {
     if (!ongoing) return;
-    setEditMeetingTitle(ongoing.title ?? "");
-    setEditMeetingFolder(ongoing.folder ?? "");
+    setEditMeetingTitle(ongoing.meeting.title ?? "");
+    setEditMeetingFolder(ongoing.meeting.folder ?? "");
     setEditMeetingOpen(true);
   }
 
   async function saveEditMeeting() {
     if (!ongoing) return;
-    const title = editMeetingTitle.trim() || ongoing.title;
+    const title = editMeetingTitle.trim() || ongoing.meeting.title;
     const folder = editMeetingFolder.trim() || null;
     const { error } = await supabase
       .from("team_board_meetings")
       .update({ title, folder, updated_at: new Date().toISOString() })
-      .eq("id", ongoing.id);
+      .eq("id", ongoing.meeting.id);
     if (error) {
       toast.error(error.message);
       return;
     }
-    setOngoing((prev) => (prev ? { ...prev, title, folder } : prev));
+    patchMeetingInTab(ongoing.meeting.id, { title, folder });
     setMeetings((prev) =>
-      prev.map((m) => (m.id === ongoing.id ? { ...m, title, folder } : m)),
+      prev.map((m) => (m.id === ongoing.meeting.id ? { ...m, title, folder } : m)),
     );
     setEditMeetingOpen(false);
     toast.success("Updated");
   }
 
   function openMeeting(m: MeetingRow) {
-    setOngoing(m);
-    setOngoingText(m.notes ?? "");
-    setSavedText(m.notes ?? "");
-    setTab("ongoing");
-    void loadAttachments(m.id);
-    void loadRosterAndAttendance(m.id);
+    const existing = openTabs.find((t) => t.meeting.id === m.id);
+    if (existing) {
+      setActiveTab(m.id);
+      return;
+    }
+    if (openTabs.length >= MAX_TABS) {
+      toast.error(`You can have at most ${MAX_TABS} meeting tabs open at once. Please close another tab to open a new meeting.`);
+      return;
+    }
+    const newTab: OpenTab = {
+      meeting: m,
+      kind: "earlier",
+      text: m.notes ?? "",
+      savedText: m.notes ?? "",
+      attachments: [],
+      attendance: [],
+      roster: [],
+    };
+    setOpenTabs((prev) => [...prev, newTab]);
+    setActiveTab(m.id);
+    void loadAttachmentsFor(m.id);
+    void loadRosterAndAttendanceFor(m.id);
   }
 
-  async function closeOngoing() {
-    if (!ongoing) return;
-    const isUnsaved = ongoingText !== savedText;
-    const hasAnyContent =
-      (ongoingText && ongoingText.trim().length > 0) ||
-      (savedText && savedText.trim().length > 0) ||
-      attachments.length > 0;
+  function removeTabFromOpen(id: string) {
+    setOpenTabs((prev) => {
+      const next = prev.filter((t) => t.meeting.id !== id);
+      if (activeTab === id) {
+        if (next.length > 0) setActiveTab(next[next.length - 1].meeting.id);
+        else setActiveTab("meetings");
+      }
+      return next;
+    });
+  }
 
-    // If there's any content, persist any pending edits and just close the tab.
+  async function closeTab(id: string) {
+    const tab = openTabs.find((t) => t.meeting.id === id);
+    if (!tab) return;
+    const isUnsaved = tab.text !== tab.savedText;
+    const hasAnyContent =
+      (tab.text && tab.text.trim().length > 0) ||
+      (tab.savedText && tab.savedText.trim().length > 0) ||
+      tab.attachments.length > 0;
+
     if (hasAnyContent) {
       if (isUnsaved) {
-        await saveOngoingText();
+        await saveTabText(id);
       }
-      setOngoing(null);
-      setAttachments([]);
-      setAttendance([]);
-      setOngoingText("");
-      setSavedText("");
-      setTab("meetings");
+      removeTabFromOpen(id);
       return;
     }
 
-    // Truly empty meeting — confirm deletion
     if (!confirm("Do you want to delete board meeting?")) return;
 
-    if (attachments.length) {
+    if (tab.attachments.length) {
       await supabase.storage
         .from("board-attachments")
-        .remove(attachments.map((a) => a.storage_path));
+        .remove(tab.attachments.map((a) => a.storage_path));
     }
-    await supabase.from("team_board_meeting_attachments").delete().eq("meeting_id", ongoing.id);
-    const { error } = await supabase.from("team_board_meetings").delete().eq("id", ongoing.id);
+    await supabase.from("team_board_meeting_attachments").delete().eq("meeting_id", id);
+    const { error } = await supabase.from("team_board_meetings").delete().eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
     }
-    setMeetings((prev) => prev.filter((m) => m.id !== ongoing.id));
-    setOngoing(null);
-    setAttachments([]);
-    setTab("meetings");
+    setMeetings((prev) => prev.filter((m) => m.id !== id));
+    removeTabFromOpen(id);
   }
 
   async function deleteMeeting(m: MeetingRow) {
@@ -446,46 +518,48 @@ function TeamBoardPage() {
       return;
     }
     setMeetings((prev) => prev.filter((x) => x.id !== m.id));
-    if (ongoing?.id === m.id) {
-      setOngoing(null);
-      setAttachments([]);
-      setTab("meetings");
+    if (openTabs.some((t) => t.meeting.id === m.id)) {
+      removeTabFromOpen(m.id);
     }
   }
 
-  async function saveOngoingText() {
-    if (!ongoing) return;
-    if (ongoingText === savedText) return;
-    const textToSave = ongoingText;
+  async function saveTabText(id: string) {
+    const tab = openTabs.find((t) => t.meeting.id === id);
+    if (!tab) return;
+    if (tab.text === tab.savedText) return;
+    const textToSave = tab.text;
     setSaving(true);
     const { error } = await supabase
       .from("team_board_meetings")
       .update({ notes: textToSave, updated_at: new Date().toISOString() })
-      .eq("id", ongoing.id);
+      .eq("id", id);
     setSaving(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    setSavedText(textToSave);
-    setOngoing((prev) => (prev ? { ...prev, notes: textToSave } : prev));
+    patchTab(id, { savedText: textToSave });
+    patchMeetingInTab(id, { notes: textToSave });
     setMeetings((prev) =>
-      prev.map((m) => (m.id === ongoing.id ? { ...m, notes: textToSave } : m)),
+      prev.map((m) => (m.id === id ? { ...m, notes: textToSave } : m)),
     );
-    toast.success("Saved");
   }
 
-  async function loadAttachments(meetingId: string) {
+  async function saveOngoingText() {
+    if (!ongoing) return;
+    await saveTabText(ongoing.meeting.id);
+  }
+
+  async function loadAttachmentsFor(meetingId: string) {
     const { data } = await supabase
       .from("team_board_meeting_attachments")
       .select("id,file_name,storage_path,file_size")
       .eq("meeting_id", meetingId)
       .order("created_at", { ascending: false });
-    setAttachments(data ?? []);
+    patchTab(meetingId, { attachments: data ?? [] });
   }
 
-  async function loadRosterAndAttendance(meetingId: string) {
-    // Load roster snapshot
+  async function loadRosterAndAttendanceFor(meetingId: string) {
     const { data: rosterData } = await supabase
       .from("team_board_meeting_roster")
       .select("id,board_member_id,name,role,email,sort_order")
@@ -493,7 +567,6 @@ function TeamBoardPage() {
       .order("sort_order", { ascending: true });
     let rosterRows = (rosterData ?? []) as RosterEntry[];
 
-    // Backfill: legacy meetings without a roster — snapshot from current live members.
     if (rosterRows.length === 0 && teamId) {
       const live = members.filter((m) => !!m.id);
       if (live.length) {
@@ -514,7 +587,6 @@ function TeamBoardPage() {
           (a, b) => a.sort_order - b.sort_order,
         );
 
-        // Migrate any legacy attendance rows (which used board_member_id) to roster_id
         const { data: legacyAtt } = await supabase
           .from("team_board_meeting_attendance")
           .select("id,board_member_id,roster_id")
@@ -531,7 +603,6 @@ function TeamBoardPage() {
         }
       }
     }
-    setRoster(rosterRows);
 
     const { data: attData } = await supabase
       .from("team_board_meeting_attendance")
@@ -542,12 +613,11 @@ function TeamBoardPage() {
       if (r.roster_id) {
         ids.push(r.roster_id as string);
       } else if (r.board_member_id) {
-        // Legacy fallback — map to roster entry by board_member_id
         const match = rosterRows.find((x) => x.board_member_id === r.board_member_id);
         if (match) ids.push(match.id);
       }
     }
-    setAttendance(ids);
+    patchTab(meetingId, { roster: rosterRows, attendance: ids });
   }
 
   function openAttendance() {
@@ -567,7 +637,7 @@ function TeamBoardPage() {
         const { error } = await supabase
           .from("team_board_meeting_attendance")
           .delete()
-          .eq("meeting_id", ongoing.id)
+          .eq("meeting_id", ongoing.meeting.id)
           .in("roster_id", toRemove);
         if (error) throw error;
       }
@@ -575,10 +645,10 @@ function TeamBoardPage() {
         const rows = toAdd.map((rid) => {
           const entry = roster.find((r) => r.id === rid);
           return {
-            meeting_id: ongoing.id,
+            meeting_id: ongoing.meeting.id,
             team_id: teamId,
             roster_id: rid,
-            board_member_id: entry?.board_member_id ?? rid, // legacy NOT NULL column
+            board_member_id: entry?.board_member_id ?? rid,
           };
         });
         const { error } = await supabase
@@ -607,13 +677,13 @@ function TeamBoardPage() {
           .replace(/[^a-zA-Z0-9._-]+/g, "_")
           .replace(/_+/g, "_")
           .replace(/^_+|_+$/g, "");
-        const path = `${teamId}/${ongoing.id}/${Date.now()}-${safeName || "file"}`;
+        const path = `${teamId}/${ongoing.meeting.id}/${Date.now()}-${safeName || "file"}`;
         const { error: upErr } = await supabase.storage
           .from("board-attachments")
           .upload(path, file, { contentType: file.type || "application/octet-stream" });
         if (upErr) throw upErr;
         const { error: insErr } = await supabase.from("team_board_meeting_attachments").insert({
-          meeting_id: ongoing.id,
+          meeting_id: ongoing.meeting.id,
           team_id: teamId,
           file_name: file.name,
           storage_path: path,
@@ -624,7 +694,7 @@ function TeamBoardPage() {
         if (insErr) throw insErr;
       }
       toast.success("Uploaded");
-      await loadAttachments(ongoing.id);
+      await loadAttachmentsFor(ongoing.meeting.id);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
     } finally {
@@ -649,7 +719,7 @@ function TeamBoardPage() {
   async function removeAttachment(id: string, path: string) {
     await supabase.storage.from("board-attachments").remove([path]);
     await supabase.from("team_board_meeting_attachments").delete().eq("id", id);
-    if (ongoing) await loadAttachments(ongoing.id);
+    if (ongoing) await loadAttachmentsFor(ongoing.meeting.id);
   }
 
   // ── Render guards ──────────────────────────────────────────────────────────
@@ -687,7 +757,7 @@ function TeamBoardPage() {
           <h1 className="mt-2 text-3xl text-ink md:text-4xl">Meetings</h1>
         </div>
         <div className="flex items-center gap-2">
-          {tab === "meetings" && (
+          {activeTab === "meetings" && (
             <>
               <button
                 onClick={() => setNewFolderOpen(true)}
@@ -707,46 +777,59 @@ function TeamBoardPage() {
         </div>
       </header>
 
-      <nav className="mt-7 flex border-b border-hairline">
+      <nav className="mt-7 flex border-b border-hairline overflow-hidden">
         <TabBtn
-          active={tab === "meetings"}
-          onClick={() => setTab("meetings")}
+          active={activeTab === "meetings"}
+          onClick={() => setActiveTab("meetings")}
           icon={<CalendarClock className="h-3.5 w-3.5" />}
         >
           Meetings
         </TabBtn>
-        {ongoing && (
-          <button
-            onClick={() => setTab("ongoing")}
-            className={`group -mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm transition ${
-              tab === "ongoing"
-                ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
-                : "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
-            }`}
-            title={ongoing.title}
-          >
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            <span className="max-w-[240px] truncate">
-              {ongoing.folder ? `${ongoing.folder} · ${ongoing.title}` : ongoing.title}
-            </span>
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                closeOngoing();
-              }}
-              className="ml-1 rounded px-1 text-xs opacity-60 hover:opacity-100"
+        {openTabs.map((t) => {
+          const isActive = activeTab === t.meeting.id;
+          const isNew = t.kind === "new";
+          // Tabs share remaining space: each gets flex-1 with min basis equal to "Meetings" tab,
+          // so they shrink uniformly when more are added.
+          const colorActive = isNew
+            ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
+            : "border-muted-foreground text-ink";
+          const colorIdle = isNew
+            ? "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
+            : "border-transparent text-muted-foreground hover:text-ink";
+          const dotColor = isNew ? "bg-emerald-500" : "bg-muted-foreground/60";
+          return (
+            <button
+              key={t.meeting.id}
+              onClick={() => setActiveTab(t.meeting.id)}
+              style={{ flex: "1 1 0", minWidth: 0, maxWidth: 240 }}
+              className={`group -mb-px inline-flex min-w-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm transition ${
+                isActive ? colorActive : colorIdle
+              }`}
+              title={t.meeting.title}
             >
-              ✕
-            </span>
-          </button>
-        )}
+              <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
+              <span className="min-w-0 flex-1 truncate text-left">
+                {t.meeting.folder ? `${t.meeting.folder} · ${t.meeting.title}` : t.meeting.title}
+              </span>
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void closeTab(t.meeting.id);
+                }}
+                className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+              >
+                ✕
+              </span>
+            </button>
+          );
+        })}
       </nav>
 
 
 
-      {tab === "meetings" && (
+      {activeTab === "meetings" && (
         <div className="mt-8 grid gap-8 md:grid-cols-[200px_1fr]">
           <nav className="-ml-2 flex flex-col gap-0.5">
             <SideNavBtn active={folderFilter === "all"} onClick={() => setFolderFilter("all")}>
@@ -851,7 +934,7 @@ function TeamBoardPage() {
         </div>
       )}
 
-      {tab === "ongoing" && ongoing && (
+      {activeTab !== "meetings" && ongoing && (
         <section className="mt-5 rounded-lg border border-hairline bg-card shadow-sm">
           {/* Document toolbar */}
           <div className="flex items-center gap-2 border-b border-hairline px-4 py-2">
@@ -872,7 +955,7 @@ function TeamBoardPage() {
               <span>Attendance</span>
             </button>
             <span className="ml-3 mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground truncate">
-              {ongoing.folder ? `${ongoing.folder} · ${ongoing.title}` : ongoing.title}
+              {ongoing.meeting.folder ? `${ongoing.meeting.folder} · ${ongoing.meeting.title}` : ongoing.meeting.title}
             </span>
             <button
               onClick={openEditMeeting}
