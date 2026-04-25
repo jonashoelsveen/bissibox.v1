@@ -470,7 +470,7 @@ function ToolBtn({
       onClick={onClick}
       title={title}
       disabled={disabled}
-      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 transition disabled:cursor-not-allowed disabled:opacity-40 ${
         active ? "bg-primary text-primary-foreground" : "text-ink hover:bg-secondary"
       }`}
     >
