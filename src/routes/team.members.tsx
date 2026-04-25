@@ -108,7 +108,7 @@ function TeamMembersPage() {
 
   // Board / team meta for org chart
   const [teamName, setTeamName] = useState<string>("");
-  const [boardMembers, setBoardMembers] = useState<Array<{ id: string; name: string; role: string; email: string }>>([]);
+  const [boardMembers, setBoardMembers] = useState<BoardMemberDraft[]>([]);
 
   useEffect(() => {
     if (!user) return;
