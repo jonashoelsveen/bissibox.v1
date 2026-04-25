@@ -999,7 +999,10 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         </div>
       )}
 
-      {tab === "participants" && savedId && (
+      {tab === "participants" && savedId && eventType === "meeting" && (
+        <MeetingParticipantsPanel eventId={savedId} teamId={teamId} />
+      )}
+      {tab === "participants" && savedId && eventType !== "meeting" && (
         <ParticipantsPanel eventId={savedId} />
       )}
 
