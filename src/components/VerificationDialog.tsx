@@ -9,7 +9,7 @@ type TargetKind = "event_registration" | "team_membership";
 export interface VerificationDialogProps {
   open: boolean;
   onClose: () => void;
-  onVerified: () => void;
+  onVerified: (result?: Record<string, unknown>) => void;
   title: string;
   subtitle?: string;
   targetKind: TargetKind;
