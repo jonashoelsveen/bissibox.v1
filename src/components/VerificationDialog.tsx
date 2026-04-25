@@ -106,7 +106,7 @@ export function VerificationDialog({
       if (error) throw error;
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
       toast.success("Verified");
-      onVerified();
+      onVerified((data as Record<string, unknown>) ?? undefined);
     } catch (e) {
       toast.error((e as Error).message || "Verification failed");
       setDigits(["", "", "", "", "", ""]);
