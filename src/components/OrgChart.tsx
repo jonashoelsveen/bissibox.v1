@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, X, User2, Mail, Phone, Briefcase } from "lucide-react";
-import { hexToRgba } from "@/components/GroupColorPicker";
+
 
 export interface OrgPerson {
   id: string;
