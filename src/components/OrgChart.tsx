@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, X, User2, Mail, Phone, Briefcase } from "lucide-react";
 
 export interface OrgPerson {
@@ -23,228 +23,32 @@ export interface OrgChartProps {
   teamName?: string;
 }
 
-// Layout constants
-const NODE_W = 220;
-const NODE_H = 64;
-const EXPANDED_W = 320;
-const ROW_H = 28;
-const V_GAP = 110; // gap between board row and groups row
-const H_GAP = 32;
-
 export function OrgChart({ board, groups, teamName }: OrgChartProps) {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-  const [tx, setTx] = useState(0);
-  const [ty, setTy] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const dragStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
-
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [contactPerson, setContactPerson] = useState<OrgPerson | null>(null);
 
-  // Compute layout
-  const layout = useMemo(() => {
-    const totalGroupsW = groups.length * NODE_W + Math.max(0, groups.length - 1) * H_GAP;
-    const startX = -totalGroupsW / 2;
-    const groupNodes = groups.map((g, i) => {
-      const expanded = expandedId === g.id;
-      const w = expanded ? EXPANDED_W : NODE_W;
-      const baseX = startX + i * (NODE_W + H_GAP);
-      // center expanded box around its base center
-      const x = baseX - (w - NODE_W) / 2;
-      const headerH = NODE_H;
-      const bodyH = expanded ? 16 + (g.leaders.length + g.members.length) * ROW_H + 16 : 0;
-      const h = headerH + bodyH;
-      return { group: g, x, y: V_GAP, w, h, expanded };
-    });
-    const boardX = -NODE_W / 2;
-    const boardY = 0;
-    return { groupNodes, boardX, boardY };
-  }, [groups, expandedId]);
-
-  // Pan handlers
-  const onMouseDown = (e: React.MouseEvent) => {
-    // Don't pan if clicking on an interactive element inside a node
-    const target = e.target as HTMLElement;
-    if (target.closest("[data-node-interactive]")) return;
-    setDragging(true);
-    dragStart.current = { x: e.clientX, y: e.clientY, tx, ty };
-  };
-  useEffect(() => {
-    if (!dragging) return;
-    const onMove = (e: MouseEvent) => {
-      if (!dragStart.current) return;
-      setTx(dragStart.current.tx + (e.clientX - dragStart.current.x));
-      setTy(dragStart.current.ty + (e.clientY - dragStart.current.y));
-    };
-    const onUp = () => {
-      setDragging(false);
-      dragStart.current = null;
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [dragging]);
-
-  const onWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = -e.deltaY * 0.0015;
-    setScale((s) => Math.min(2.5, Math.max(0.4, s + delta)));
-  };
-
-  // Auto-zoom and recenter on expansion
-  useEffect(() => {
-    if (!expandedId) return;
-    const node = layout.groupNodes.find((n) => n.group.id === expandedId);
-    if (!node || !wrapperRef.current) return;
-    const rect = wrapperRef.current.getBoundingClientRect();
-    // Target scale: fit node height into 70% of viewport
-    const targetScale = Math.min(1.4, Math.max(0.8, (rect.height * 0.7) / node.h));
-    setScale(targetScale);
-    // Center node: viewport center is at (rect.w/2, rect.h/2). Node center in chart coords is (node.x + w/2, node.y + h/2).
-    const nodeCx = node.x + node.w / 2;
-    const nodeCy = node.y + node.h / 2;
-    setTx(rect.width / 2 - nodeCx * targetScale);
-    setTy(rect.height / 2 - nodeCy * targetScale);
-  }, [expandedId, layout.groupNodes]);
-
-  // Recenter to fit-all when collapsing
-  const fitAll = () => {
-    if (!wrapperRef.current) return;
-    const rect = wrapperRef.current.getBoundingClientRect();
-    const totalW = Math.max(NODE_W, groups.length * NODE_W + Math.max(0, groups.length - 1) * H_GAP) + 80;
-    const totalH = V_GAP + NODE_H + 80;
-    const s = Math.min(1, Math.min(rect.width / totalW, rect.height / totalH));
-    setScale(s);
-    setTx(rect.width / 2);
-    setTy(rect.height * 0.18);
-  };
-  useEffect(() => {
-    fitAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groups.length]);
-
-  const onBackgroundClick = () => {
-    if (expandedId) {
-      setExpandedId(null);
-      // Defer fit to next tick so layout collapses first
-      setTimeout(fitAll, 10);
-    }
-  };
+  const focused = expandedId ? groups.find((g) => g.id === expandedId) ?? null : null;
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-lg border border-hairline bg-card">
-      {/* Toolbar */}
-      <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-md border border-hairline bg-background/90 p-0.5 shadow-sm backdrop-blur" data-node-interactive>
-        <button
-          onClick={() => setScale((s) => Math.min(2.5, s + 0.15))}
-          className="cursor-pointer rounded px-2 py-1 text-sm text-ink hover:bg-secondary"
-          aria-label="Zoom in"
-        >
-          +
-        </button>
-        <button
-          onClick={() => setScale((s) => Math.max(0.4, s - 0.15))}
-          className="cursor-pointer rounded px-2 py-1 text-sm text-ink hover:bg-secondary"
-          aria-label="Zoom out"
-        >
-          −
-        </button>
-        <button
-          onClick={fitAll}
-          className="cursor-pointer rounded px-2 py-1 mono text-[10px] uppercase tracking-wider text-muted-foreground hover:bg-secondary"
-        >
-          Fit
-        </button>
-      </div>
-
-      <div
-        ref={wrapperRef}
-        onMouseDown={onMouseDown}
-        onWheel={onWheel}
-        onClick={onBackgroundClick}
-        className={`h-full w-full select-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
-        style={{ touchAction: "none" }}
-      >
-        <div
-          className="relative h-full w-full origin-top-left"
-          style={{
-            transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
-            transformOrigin: "0 0",
-            transition: dragging ? "none" : "transform 320ms cubic-bezier(.2,.8,.2,1)",
-          }}
-        >
-          {/* SVG connectors */}
-          <svg
-            className="pointer-events-none absolute"
-            style={{ overflow: "visible", left: 0, top: 0 }}
-            width="1"
-            height="1"
-          >
-            {layout.groupNodes.map((n) => {
-              const startX = layout.boardX + NODE_W / 2;
-              const startY = layout.boardY + NODE_H;
-              const endX = n.x + n.w / 2;
-              const endY = n.y;
-              const midY = (startY + endY) / 2;
-              return (
-                <path
-                  key={n.group.id}
-                  d={`M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}`}
-                  stroke="hsl(var(--border, 220 13% 80%))"
-                  className="stroke-hairline"
-                  strokeWidth={1.25}
-                  fill="none"
-                />
-              );
-            })}
-          </svg>
-
-          {/* Board node */}
-          <BoardNode
-            x={layout.boardX}
-            y={layout.boardY}
-            board={board}
-            teamName={teamName}
+    <div className="relative flex h-full w-full flex-col overflow-hidden rounded-lg border border-hairline bg-card">
+      <div className="flex-1 overflow-y-auto">
+        {focused ? (
+          <FocusedView
+            group={focused}
+            onClose={() => setExpandedId(null)}
             onPersonClick={(p) => setContactPerson(p)}
           />
-
-          {/* Group nodes */}
-          {layout.groupNodes.map((n) => (
-            <GroupNode
-              key={n.group.id}
-              x={n.x}
-              y={n.y}
-              w={n.w}
-              h={n.h}
-              group={n.group}
-              expanded={n.expanded}
-              onToggle={() => setExpandedId(n.expanded ? null : n.group.id)}
-              onClose={() => {
-                setExpandedId(null);
-                setTimeout(fitAll, 10);
-              }}
-              onPersonClick={(p) => setContactPerson(p)}
-            />
-          ))}
-
-          {/* Empty state spacing */}
-          {groups.length === 0 && (
-            <div
-              className="absolute text-center text-xs text-muted-foreground"
-              style={{ left: -120, top: V_GAP + 8, width: 240 }}
-              data-node-interactive
-            >
-              No groups yet. Create groups in the Groups tab to see them here.
-            </div>
-          )}
-        </div>
+        ) : (
+          <FullChart
+            board={board}
+            groups={groups}
+            teamName={teamName}
+            onExpandGroup={(id) => setExpandedId(id)}
+            onPersonClick={(p) => setContactPerson(p)}
+          />
+        )}
       </div>
 
-      {/* Contact dialog */}
       {contactPerson && (
         <ContactDialog person={contactPerson} onClose={() => setContactPerson(null)} />
       )}
@@ -253,52 +57,95 @@ export function OrgChart({ board, groups, teamName }: OrgChartProps) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Full chart: Board on top, group boxes below
 
-function BoardNode({
-  x,
-  y,
+function FullChart({
+  board,
+  groups,
+  teamName,
+  onExpandGroup,
+  onPersonClick,
+}: {
+  board: OrgPerson[];
+  groups: OrgGroup[];
+  teamName?: string;
+  onExpandGroup: (id: string) => void;
+  onPersonClick: (p: OrgPerson) => void;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-10 px-6 py-10 animate-in fade-in duration-300">
+      {/* Board */}
+      <div className="w-full max-w-[260px]">
+        <BoardBox board={board} teamName={teamName} onPersonClick={onPersonClick} />
+      </div>
+
+      {/* Connector */}
+      {groups.length > 0 && (
+        <div className="-my-6 h-10 w-px bg-hairline" aria-hidden="true" />
+      )}
+
+      {/* Groups grid */}
+      {groups.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          No groups yet. Create groups in the Groups tab to see them here.
+        </p>
+      ) : (
+        <div className="relative w-full">
+          {/* Horizontal connector line above groups */}
+          {groups.length > 1 && (
+            <div
+              className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 -translate-y-6 bg-hairline"
+              style={{
+                height: 1,
+                width: `min(100%, ${groups.length * 240}px)`,
+              }}
+              aria-hidden="true"
+            />
+          )}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+            {groups.map((g) => (
+              <div key={g.id} className="relative">
+                {/* Vertical drop to box */}
+                <div
+                  className="pointer-events-none absolute left-1/2 -top-6 h-6 w-px -translate-x-1/2 bg-hairline"
+                  aria-hidden="true"
+                />
+                <GroupBox group={g} onExpand={() => onExpandGroup(g.id)} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BoardBox({
   board,
   teamName,
   onPersonClick,
 }: {
-  x: number;
-  y: number;
   board: OrgPerson[];
   teamName?: string;
   onPersonClick: (p: OrgPerson) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const headerH = NODE_H;
-  const bodyH = open ? 16 + Math.max(1, board.length) * ROW_H + 16 : 0;
   return (
-    <div
-      data-node-interactive
-      onClick={(e) => e.stopPropagation()}
-      className="absolute rounded-lg border border-hairline bg-background shadow-sm"
-      style={{
-        left: x,
-        top: y,
-        width: NODE_W,
-        height: headerH + bodyH,
-        transition: "height 280ms cubic-bezier(.2,.8,.2,1)",
-        overflow: "hidden",
-      }}
-    >
+    <div className="overflow-hidden rounded-lg border border-hairline bg-background shadow-sm transition">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-2 px-3.5 py-3 text-left transition hover:bg-secondary/50"
-        style={{ height: headerH }}
+        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left transition hover:bg-secondary/50"
       >
         <div className="min-w-0">
           <p className="mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">Board</p>
-          <p className="mt-0.5 truncate text-sm text-ink">{teamName ?? "Board"}</p>
+          <p className="mt-0.5 truncate text-sm text-ink">{teamName || "Board"}</p>
         </div>
         <ChevronDown
           className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
       {open && (
-        <div className="border-t border-hairline px-3 py-3">
+        <div className="border-t border-hairline px-3 py-3 animate-in fade-in slide-in-from-top-1 duration-200">
           {board.length === 0 ? (
             <p className="text-[11px] text-muted-foreground">No board members yet.</p>
           ) : (
@@ -314,99 +161,112 @@ function BoardNode({
   );
 }
 
-function GroupNode({
-  x,
-  y,
-  w,
-  h,
+function GroupBox({ group, onExpand }: { group: OrgGroup; onExpand: () => void }) {
+  const total = group.leaders.length + group.members.length;
+  return (
+    <button
+      onClick={onExpand}
+      className="group flex w-full items-center justify-between gap-2 rounded-lg border border-hairline bg-background px-4 py-3 text-left shadow-sm transition hover:border-primary/40 hover:bg-secondary/40"
+    >
+      <div className="min-w-0">
+        <p className="mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">Group</p>
+        <p className="mt-0.5 truncate text-sm text-ink">{group.name || "Untitled"}</p>
+        <p className="mt-0.5 mono text-[10px] text-muted-foreground">
+          {total} {total === 1 ? "person" : "people"}
+        </p>
+      </div>
+      <ChevronDown className="h-4 w-4 shrink-0 -rotate-90 text-muted-foreground transition group-hover:text-primary" />
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Focused view: a single group centered, with leaders + members
+
+function FocusedView({
   group,
-  expanded,
-  onToggle,
   onClose,
   onPersonClick,
 }: {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
   group: OrgGroup;
-  expanded: boolean;
-  onToggle: () => void;
   onClose: () => void;
   onPersonClick: (p: OrgPerson) => void;
 }) {
+  // Esc to close
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
     <div
-      data-node-interactive
-      onClick={(e) => e.stopPropagation()}
-      className={`absolute rounded-lg border bg-background shadow-sm ${
-        expanded ? "border-primary/40 shadow-lg" : "border-hairline"
-      }`}
-      style={{
-        left: x,
-        top: y,
-        width: w,
-        height: h,
-        transition: "all 280ms cubic-bezier(.2,.8,.2,1)",
-        overflow: "hidden",
-      }}
+      className="flex min-h-full w-full items-start justify-center px-6 py-10"
+      onClick={onClose}
     >
-      <button
-        onClick={onToggle}
-        className="flex w-full items-center justify-between gap-2 px-3.5 py-3 text-left transition hover:bg-secondary/50"
-        style={{ height: NODE_H }}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-xl overflow-hidden rounded-xl border border-primary/40 bg-background shadow-xl animate-in fade-in zoom-in-95 duration-300"
       >
-        <div className="min-w-0">
-          <p className="mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">Group</p>
-          <p className="mt-0.5 truncate text-sm text-ink">{group.name || "Untitled"}</p>
-        </div>
-        <ChevronDown
-          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      {expanded && (
-        <>
+        <header className="flex items-center justify-between gap-3 border-b border-hairline bg-background/60 px-5 py-3.5">
+          <div className="min-w-0">
+            <p className="mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+              Group
+            </p>
+            <h3 className="mt-0.5 truncate text-base text-ink">{group.name || "Untitled"}</h3>
+          </div>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="absolute right-2 top-2 cursor-pointer rounded-md p-1 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+            className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-4 w-4" />
           </button>
-          <div className="border-t border-hairline px-3 py-3">
-            {group.leaders.length > 0 && (
-              <>
-                <p className="mb-1 mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
-                  Leader{group.leaders.length > 1 ? "s" : ""}
-                </p>
-                <ul className="mb-2 space-y-0.5">
-                  {group.leaders.map((p) => (
-                    <PersonRow key={p.id} person={p} onClick={() => onPersonClick(p)} accent />
-                  ))}
-                </ul>
-              </>
+        </header>
+
+        <div className="space-y-5 px-5 py-5">
+          {group.description && (
+            <p className="text-[12px] leading-relaxed text-muted-foreground">{group.description}</p>
+          )}
+
+          <section>
+            <p className="mb-2 mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+              {group.leaders.length > 1 ? "Leaders" : "Leader"}
+            </p>
+            {group.leaders.length === 0 ? (
+              <p className="text-[12px] text-muted-foreground">No leader assigned.</p>
+            ) : (
+              <ul className="space-y-0.5">
+                {group.leaders.map((p) => (
+                  <PersonRow key={p.id} person={p} onClick={() => onPersonClick(p)} accent />
+                ))}
+              </ul>
             )}
-            {group.members.length > 0 ? (
-              <>
-                <p className="mb-1 mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
-                  Members ({group.members.length})
-                </p>
-                <ul className="space-y-0.5">
-                  {group.members.map((p) => (
-                    <PersonRow key={p.id} person={p} onClick={() => onPersonClick(p)} />
-                  ))}
-                </ul>
-              </>
-            ) : group.leaders.length === 0 ? (
-              <p className="text-[11px] text-muted-foreground">No members yet.</p>
-            ) : null}
-          </div>
-        </>
-      )}
+          </section>
+
+          <section>
+            <p className="mb-2 mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+              Members ({group.members.length})
+            </p>
+            {group.members.length === 0 ? (
+              <p className="text-[12px] text-muted-foreground">No members yet.</p>
+            ) : (
+              <ul className="space-y-0.5">
+                {group.members.map((p) => (
+                  <PersonRow key={p.id} person={p} onClick={() => onPersonClick(p)} />
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </div>
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function PersonRow({
   person,
@@ -421,16 +281,14 @@ function PersonRow({
     <li>
       <button
         onClick={onClick}
-        className={`group flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-[12px] transition hover:bg-secondary ${
-          accent ? "text-ink" : "text-ink"
-        }`}
+        className="group flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] text-ink transition hover:bg-secondary"
       >
         <span
-          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition ${
             accent ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
           } group-hover:bg-primary/20 group-hover:text-primary`}
         >
-          <User2 className="h-3 w-3" />
+          <User2 className="h-3.5 w-3.5" />
         </span>
         <span className="truncate">{person.name || "Unnamed"}</span>
         {person.role && (
