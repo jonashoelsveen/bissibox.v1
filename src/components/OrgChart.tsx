@@ -287,31 +287,35 @@ function FocusedGroupCard({
   const tinted = !!accentColor;
   return (
     <div
-      className="overflow-hidden rounded-xl border bg-background shadow-xl"
-      style={{
-        borderColor: tinted ? hexToRgba(accentColor!, 0.5) : undefined,
-        borderTop: tinted ? `3px solid ${accentColor}` : undefined,
-      }}
+      className="overflow-hidden rounded-xl border border-hairline bg-background shadow-xl"
+      style={tinted ? { borderColor: accentColor } : undefined}
     >
       <header
         className="flex items-center justify-between gap-3 border-b border-hairline px-5 py-3.5"
-        style={{
-          background: tinted ? hexToRgba(accentColor!, 0.06) : undefined,
-        }}
+        style={tinted ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
       >
         <div className="min-w-0">
           <p
-            className="mono text-[10px] uppercase tracking-[0.22em]"
-            style={{ color: tinted ? accentColor : undefined }}
+            className={`mono text-[10px] uppercase tracking-[0.22em] ${
+              tinted ? "text-white/80" : "text-muted-foreground"
+            }`}
           >
             Group
           </p>
-          <h3 className="mt-0.5 truncate text-base text-ink">{group.name || "Untitled"}</h3>
+          <h3
+            className={`mt-0.5 truncate text-base ${tinted ? "text-white" : "text-ink"}`}
+          >
+            {group.name || "Untitled"}
+          </h3>
         </div>
         <button
           onClick={onClose}
           aria-label="Close"
-          className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+          className={`cursor-pointer rounded-md p-1.5 transition ${
+            tinted
+              ? "text-white/80 hover:bg-white/15 hover:text-white"
+              : "text-muted-foreground hover:bg-secondary hover:text-ink"
+          }`}
         >
           <X className="h-4 w-4" />
         </button>
