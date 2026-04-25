@@ -10,6 +10,10 @@ interface AuthContextValue {
   loading: boolean;
   mode: Mode;
   setMode: (m: Mode) => void;
+  /** Currently selected entity (team/company/cooperation) id, or null when on the individual profile. */
+  activeEntityId: string | null;
+  /** Pass an entity id to switch into team mode for that entity, or null to switch back to the individual profile. */
+  setActiveEntity: (id: string | null) => void;
   signOut: () => Promise<void>;
 }
 
@@ -20,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [mode, setModeState] = useState<Mode>("participant");
+  const [activeEntityId, setActiveEntityIdState] = useState<string | null>(null);
 
   useEffect(() => {
     // Set up listener FIRST
@@ -33,8 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    const stored = typeof window !== "undefined" ? localStorage.getItem("rl_mode") : null;
-    if (stored === "organizer" || stored === "participant" || stored === "team") setModeState(stored);
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("rl_mode");
+      if (stored === "organizer" || stored === "participant" || stored === "team") setModeState(stored);
+      const eid = localStorage.getItem("rl_active_entity");
+      if (eid) setActiveEntityIdState(eid);
+    }
 
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -44,12 +53,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined") localStorage.setItem("rl_mode", m);
   };
 
+  const setActiveEntity = (id: string | null) => {
+    setActiveEntityIdState(id);
+    if (typeof window !== "undefined") {
+      if (id) localStorage.setItem("rl_active_entity", id);
+      else localStorage.removeItem("rl_active_entity");
+    }
+    // Keep mode in sync so existing UI continues to work.
+    const next: Mode = id ? "team" : "participant";
+    setModeState(next);
+    if (typeof window !== "undefined") localStorage.setItem("rl_mode", next);
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, mode, setMode, signOut }}>
+    <AuthContext.Provider
+      value={{ user, session, loading, mode, setMode, activeEntityId, setActiveEntity, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );
