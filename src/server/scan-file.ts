@@ -16,7 +16,6 @@ interface VtAnalysisStats {
 }
 
 const VT_BASE = "https://www.virustotal.com/api/v3";
-// Module re-exports: scanFile, pollScan
 
 function tableFor(kind: ScanKind) {
   return kind === "file" ? "files" : "media_items";
