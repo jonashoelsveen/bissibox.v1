@@ -51,6 +51,15 @@ interface AttachmentRow {
   file_size: number | null;
 }
 
+interface RosterEntry {
+  id: string;
+  board_member_id: string | null;
+  name: string;
+  role: string;
+  email: string;
+  sort_order: number;
+}
+
 function TeamBoardPage() {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
@@ -77,7 +86,8 @@ function TeamBoardPage() {
   const [savedText, setSavedText] = useState("");
   const [saving, setSaving] = useState(false);
   const [attachments, setAttachments] = useState<AttachmentRow[]>([]);
-  const [attendance, setAttendance] = useState<string[]>([]); // board_member_ids
+  const [attendance, setAttendance] = useState<string[]>([]); // roster_ids
+  const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   const [attendanceDraft, setAttendanceDraft] = useState<string[]>([]);
   const [attendanceSaving, setAttendanceSaving] = useState(false);
@@ -277,12 +287,33 @@ function TeamBoardPage() {
       toast.error(error.message);
       return;
     }
+    // Snapshot the current board roster for this meeting
+    const snapshotRows = members
+      .filter((m) => !!m.id)
+      .map((m) => ({
+        meeting_id: data.id,
+        team_id: teamId,
+        board_member_id: m.id as string,
+        name: m.name ?? "",
+        role: m.role ?? "",
+        email: m.email ?? "",
+        sort_order: m.sort_order ?? 0,
+      }));
+    let snapshot: RosterEntry[] = [];
+    if (snapshotRows.length) {
+      const { data: rosterData } = await supabase
+        .from("team_board_meeting_roster")
+        .insert(snapshotRows)
+        .select("id,board_member_id,name,role,email,sort_order");
+      snapshot = (rosterData ?? []) as RosterEntry[];
+    }
     setMeetings((prev) => [data, ...prev]);
     setOngoing(data);
     setOngoingText(data.notes ?? "");
     setSavedText(data.notes ?? "");
     setAttachments([]);
     setAttendance([]);
+    setRoster(snapshot.sort((a, b) => a.sort_order - b.sort_order));
     setTab("ongoing");
   }
 
@@ -292,7 +323,7 @@ function TeamBoardPage() {
     setSavedText(m.notes ?? "");
     setTab("ongoing");
     void loadAttachments(m.id);
-    void loadAttendance(m.id);
+    void loadRosterAndAttendance(m.id);
   }
 
   async function closeOngoing() {
@@ -391,12 +422,70 @@ function TeamBoardPage() {
     setAttachments(data ?? []);
   }
 
-  async function loadAttendance(meetingId: string) {
-    const { data } = await supabase
+  async function loadRosterAndAttendance(meetingId: string) {
+    // Load roster snapshot
+    const { data: rosterData } = await supabase
+      .from("team_board_meeting_roster")
+      .select("id,board_member_id,name,role,email,sort_order")
+      .eq("meeting_id", meetingId)
+      .order("sort_order", { ascending: true });
+    let rosterRows = (rosterData ?? []) as RosterEntry[];
+
+    // Backfill: legacy meetings without a roster — snapshot from current live members.
+    if (rosterRows.length === 0 && teamId) {
+      const live = members.filter((m) => !!m.id);
+      if (live.length) {
+        const insertRows = live.map((m) => ({
+          meeting_id: meetingId,
+          team_id: teamId,
+          board_member_id: m.id as string,
+          name: m.name ?? "",
+          role: m.role ?? "",
+          email: m.email ?? "",
+          sort_order: m.sort_order ?? 0,
+        }));
+        const { data: inserted } = await supabase
+          .from("team_board_meeting_roster")
+          .insert(insertRows)
+          .select("id,board_member_id,name,role,email,sort_order");
+        rosterRows = ((inserted ?? []) as RosterEntry[]).sort(
+          (a, b) => a.sort_order - b.sort_order,
+        );
+
+        // Migrate any legacy attendance rows (which used board_member_id) to roster_id
+        const { data: legacyAtt } = await supabase
+          .from("team_board_meeting_attendance")
+          .select("id,board_member_id,roster_id")
+          .eq("meeting_id", meetingId);
+        for (const row of legacyAtt ?? []) {
+          if (row.roster_id) continue;
+          const match = rosterRows.find((r) => r.board_member_id === row.board_member_id);
+          if (match) {
+            await supabase
+              .from("team_board_meeting_attendance")
+              .update({ roster_id: match.id })
+              .eq("id", row.id);
+          }
+        }
+      }
+    }
+    setRoster(rosterRows);
+
+    const { data: attData } = await supabase
       .from("team_board_meeting_attendance")
-      .select("board_member_id")
+      .select("roster_id,board_member_id")
       .eq("meeting_id", meetingId);
-    setAttendance((data ?? []).map((r: { board_member_id: string }) => r.board_member_id));
+    const ids: string[] = [];
+    for (const r of attData ?? []) {
+      if (r.roster_id) {
+        ids.push(r.roster_id as string);
+      } else if (r.board_member_id) {
+        // Legacy fallback — map to roster entry by board_member_id
+        const match = rosterRows.find((x) => x.board_member_id === r.board_member_id);
+        if (match) ids.push(match.id);
+      }
+    }
+    setAttendance(ids);
   }
 
   function openAttendance() {
@@ -417,17 +506,22 @@ function TeamBoardPage() {
           .from("team_board_meeting_attendance")
           .delete()
           .eq("meeting_id", ongoing.id)
-          .in("board_member_id", toRemove);
+          .in("roster_id", toRemove);
         if (error) throw error;
       }
       if (toAdd.length) {
-        const { error } = await supabase.from("team_board_meeting_attendance").insert(
-          toAdd.map((bid) => ({
+        const rows = toAdd.map((rid) => {
+          const entry = roster.find((r) => r.id === rid);
+          return {
             meeting_id: ongoing.id,
             team_id: teamId,
-            board_member_id: bid,
-          })),
-        );
+            roster_id: rid,
+            board_member_id: entry?.board_member_id ?? rid, // legacy NOT NULL column
+          };
+        });
+        const { error } = await supabase
+          .from("team_board_meeting_attendance")
+          .insert(rows);
         if (error) throw error;
       }
       setAttendance(attendanceDraft);
@@ -836,9 +930,9 @@ function TeamBoardPage() {
                   Attendance
                 </div>
                 <div className="text-sm text-ink">
-                  {members
-                    .filter((m) => m.id && attendance.includes(m.id))
-                    .map((m) => m.name || m.email || "—")
+                  {roster
+                    .filter((r) => attendance.includes(r.id))
+                    .map((r) => r.name || r.email || "—")
                     .join(", ")}
                 </div>
               </div>
@@ -876,47 +970,45 @@ function TeamBoardPage() {
               </button>
             </div>
             <div className="max-h-[60vh] overflow-y-auto px-5 py-4">
-              {members.filter((m) => !!m.id).length === 0 ? (
+              {roster.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No board members yet. Add them in the Members tab.
+                  No board members were on the board when this meeting was created.
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {members
-                    .filter((m) => !!m.id)
-                    .map((m) => {
-                      const id = m.id as string;
-                      const checked = attendanceDraft.includes(id);
-                      return (
-                        <label
-                          key={id}
-                          className="flex cursor-pointer items-center gap-3 rounded-md border border-hairline bg-background px-3 py-2 hover:bg-secondary/40"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e) =>
-                              setAttendanceDraft((prev) =>
-                                e.target.checked
-                                  ? [...prev, id]
-                                  : prev.filter((x) => x !== id),
-                              )
-                            }
-                            className="h-4 w-4"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm text-ink">
-                              {m.name || m.email || "—"}
-                            </div>
-                            {m.role && (
-                              <div className="truncate text-xs text-muted-foreground">
-                                {m.role}
-                              </div>
-                            )}
+                  {roster.map((r) => {
+                    const id = r.id;
+                    const checked = attendanceDraft.includes(id);
+                    return (
+                      <label
+                        key={id}
+                        className="flex cursor-pointer items-center gap-3 rounded-md border border-hairline bg-background px-3 py-2 hover:bg-secondary/40"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) =>
+                            setAttendanceDraft((prev) =>
+                              e.target.checked
+                                ? [...prev, id]
+                                : prev.filter((x) => x !== id),
+                            )
+                          }
+                          className="h-4 w-4"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm text-ink">
+                            {r.name || r.email || "—"}
                           </div>
-                        </label>
-                      );
-                    })}
+                          {r.role && (
+                            <div className="truncate text-xs text-muted-foreground">
+                              {r.role}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
               )}
             </div>

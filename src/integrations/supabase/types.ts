@@ -788,6 +788,7 @@ export type Database = {
           created_at: string
           id: string
           meeting_id: string
+          roster_id: string | null
           team_id: string
         }
         Insert: {
@@ -795,6 +796,7 @@ export type Database = {
           created_at?: string
           id?: string
           meeting_id: string
+          roster_id?: string | null
           team_id: string
         }
         Update: {
@@ -802,6 +804,43 @@ export type Database = {
           created_at?: string
           id?: string
           meeting_id?: string
+          roster_id?: string | null
+          team_id?: string
+        }
+        Relationships: []
+      }
+      team_board_meeting_roster: {
+        Row: {
+          board_member_id: string | null
+          created_at: string
+          email: string
+          id: string
+          meeting_id: string
+          name: string
+          role: string
+          sort_order: number
+          team_id: string
+        }
+        Insert: {
+          board_member_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          meeting_id: string
+          name?: string
+          role?: string
+          sort_order?: number
+          team_id: string
+        }
+        Update: {
+          board_member_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          meeting_id?: string
+          name?: string
+          role?: string
+          sort_order?: number
           team_id?: string
         }
         Relationships: []
