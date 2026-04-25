@@ -125,6 +125,7 @@ function TeamPage() {
         group_assignment_mode: (t.group_assignment_mode === "criteria" ? "criteria" : "volunteer"),
         criteria_label: t.criteria_label ?? "age",
       })));
+      setTiersLoaded(true);
 
       const { data: groupData } = await supabase
         .from("team_groups")
