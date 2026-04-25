@@ -781,9 +781,16 @@ function TeamBoardPage() {
               {ongoing.title}
             </span>
             <button
+              onClick={openAttendance}
+              title="Attendance"
+              className="ml-auto rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+            >
+              <ClipboardCheck className="h-4 w-4" />
+            </button>
+            <button
               onClick={saveOngoingText}
               disabled={!isDirty || saving}
-              className={`ml-auto inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition ${
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition ${
                 isDirty && !saving
                   ? "text-ink hover:bg-secondary"
                   : "cursor-default text-muted-foreground/50"
@@ -807,6 +814,21 @@ function TeamBoardPage() {
               </div>
             )}
 
+            {/* Attendance — between attachments divider and notes */}
+            {attendance.length > 0 && (
+              <div className="mb-6 border-b border-hairline pb-4">
+                <div className="mono mb-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Attendance
+                </div>
+                <div className="text-sm text-ink">
+                  {members
+                    .filter((m) => m.id && attendance.includes(m.id))
+                    .map((m) => m.name || m.email || "—")
+                    .join(", ")}
+                </div>
+              </div>
+            )}
+
             <textarea
               value={ongoingText}
               onChange={(e) => setOngoingText(e.target.value)}
@@ -817,6 +839,90 @@ function TeamBoardPage() {
 
           </div>
         </section>
+      )}
+
+      {/* Attendance dialog */}
+      {attendanceOpen && ongoing && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setAttendanceOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-lg border border-hairline bg-card shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
+              <h2 className="text-sm font-medium text-ink">Attendance</h2>
+              <button
+                onClick={() => setAttendanceOpen(false)}
+                className="rounded p-1 text-muted-foreground hover:text-ink"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto px-5 py-4">
+              {members.filter((m) => !!m.id).length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No board members yet. Add them in the Members tab.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {members
+                    .filter((m) => !!m.id)
+                    .map((m) => {
+                      const id = m.id as string;
+                      const checked = attendanceDraft.includes(id);
+                      return (
+                        <label
+                          key={id}
+                          className="flex cursor-pointer items-center gap-3 rounded-md border border-hairline bg-background px-3 py-2 hover:bg-secondary/40"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) =>
+                              setAttendanceDraft((prev) =>
+                                e.target.checked
+                                  ? [...prev, id]
+                                  : prev.filter((x) => x !== id),
+                              )
+                            }
+                            className="h-4 w-4"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm text-ink">
+                              {m.name || m.email || "—"}
+                            </div>
+                            {m.role && (
+                              <div className="truncate text-xs text-muted-foreground">
+                                {m.role}
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 border-t border-hairline px-5 py-3">
+              <button
+                onClick={() => setAttendanceOpen(false)}
+                className="rounded-md border border-hairline bg-background px-3 py-1.5 text-xs text-ink hover:bg-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveAttendance}
+                disabled={attendanceSaving}
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                <Save className="h-3.5 w-3.5" />
+                {attendanceSaving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <input
