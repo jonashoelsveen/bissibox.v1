@@ -340,8 +340,18 @@ function TeamBoardPage() {
     setNewMeetingOpen(true);
   }
 
+  function patchMeetingInTab(id: string, patch: Partial<MeetingRow>) {
+    setOpenTabs((prev) =>
+      prev.map((t) => (t.meeting.id === id ? { ...t, meeting: { ...t.meeting, ...patch } } : t)),
+    );
+  }
+
   async function startNewMeeting() {
     if (!teamId || !user) return;
+    if (openTabs.length >= MAX_TABS) {
+      toast.error(`You can have at most ${MAX_TABS} meeting tabs open at once. Please close another tab to open a new meeting.`);
+      return;
+    }
     const title = newMeetingTitle.trim() || `Board meeting · ${new Date().toLocaleDateString()}`;
     const folder = newMeetingFolder.trim() || null;
     const { data, error } = await supabase
@@ -359,7 +369,6 @@ function TeamBoardPage() {
       toast.error(error.message);
       return;
     }
-    // Snapshot the current board roster for this meeting
     const snapshotRows = members
       .filter((m) => !!m.id)
       .map((m) => ({
@@ -380,92 +389,117 @@ function TeamBoardPage() {
       snapshot = (rosterData ?? []) as RosterEntry[];
     }
     setMeetings((prev) => [data, ...prev]);
-    setOngoing(data);
-    setOngoingText(data.notes ?? "");
-    setSavedText(data.notes ?? "");
-    setAttachments([]);
-    setAttendance([]);
-    setRoster(snapshot.sort((a, b) => a.sort_order - b.sort_order));
+    setOpenTabs((prev) => [
+      ...prev,
+      {
+        meeting: data,
+        kind: "new",
+        text: data.notes ?? "",
+        savedText: data.notes ?? "",
+        attachments: [],
+        attendance: [],
+        roster: snapshot.sort((a, b) => a.sort_order - b.sort_order),
+      },
+    ]);
     setNewMeetingOpen(false);
-    setTab("ongoing");
+    setActiveTab(data.id);
   }
 
   function openEditMeeting() {
     if (!ongoing) return;
-    setEditMeetingTitle(ongoing.title ?? "");
-    setEditMeetingFolder(ongoing.folder ?? "");
+    setEditMeetingTitle(ongoing.meeting.title ?? "");
+    setEditMeetingFolder(ongoing.meeting.folder ?? "");
     setEditMeetingOpen(true);
   }
 
   async function saveEditMeeting() {
     if (!ongoing) return;
-    const title = editMeetingTitle.trim() || ongoing.title;
+    const title = editMeetingTitle.trim() || ongoing.meeting.title;
     const folder = editMeetingFolder.trim() || null;
     const { error } = await supabase
       .from("team_board_meetings")
       .update({ title, folder, updated_at: new Date().toISOString() })
-      .eq("id", ongoing.id);
+      .eq("id", ongoing.meeting.id);
     if (error) {
       toast.error(error.message);
       return;
     }
-    setOngoing((prev) => (prev ? { ...prev, title, folder } : prev));
+    patchMeetingInTab(ongoing.meeting.id, { title, folder });
     setMeetings((prev) =>
-      prev.map((m) => (m.id === ongoing.id ? { ...m, title, folder } : m)),
+      prev.map((m) => (m.id === ongoing.meeting.id ? { ...m, title, folder } : m)),
     );
     setEditMeetingOpen(false);
     toast.success("Updated");
   }
 
   function openMeeting(m: MeetingRow) {
-    setOngoing(m);
-    setOngoingText(m.notes ?? "");
-    setSavedText(m.notes ?? "");
-    setTab("ongoing");
-    void loadAttachments(m.id);
-    void loadRosterAndAttendance(m.id);
+    const existing = openTabs.find((t) => t.meeting.id === m.id);
+    if (existing) {
+      setActiveTab(m.id);
+      return;
+    }
+    if (openTabs.length >= MAX_TABS) {
+      toast.error(`You can have at most ${MAX_TABS} meeting tabs open at once. Please close another tab to open a new meeting.`);
+      return;
+    }
+    const newTab: OpenTab = {
+      meeting: m,
+      kind: "earlier",
+      text: m.notes ?? "",
+      savedText: m.notes ?? "",
+      attachments: [],
+      attendance: [],
+      roster: [],
+    };
+    setOpenTabs((prev) => [...prev, newTab]);
+    setActiveTab(m.id);
+    void loadAttachmentsFor(m.id);
+    void loadRosterAndAttendanceFor(m.id);
   }
 
-  async function closeOngoing() {
-    if (!ongoing) return;
-    const isUnsaved = ongoingText !== savedText;
-    const hasAnyContent =
-      (ongoingText && ongoingText.trim().length > 0) ||
-      (savedText && savedText.trim().length > 0) ||
-      attachments.length > 0;
+  function removeTabFromOpen(id: string) {
+    setOpenTabs((prev) => {
+      const next = prev.filter((t) => t.meeting.id !== id);
+      if (activeTab === id) {
+        if (next.length > 0) setActiveTab(next[next.length - 1].meeting.id);
+        else setActiveTab("meetings");
+      }
+      return next;
+    });
+  }
 
-    // If there's any content, persist any pending edits and just close the tab.
+  async function closeTab(id: string) {
+    const tab = openTabs.find((t) => t.meeting.id === id);
+    if (!tab) return;
+    const isUnsaved = tab.text !== tab.savedText;
+    const hasAnyContent =
+      (tab.text && tab.text.trim().length > 0) ||
+      (tab.savedText && tab.savedText.trim().length > 0) ||
+      tab.attachments.length > 0;
+
     if (hasAnyContent) {
       if (isUnsaved) {
-        await saveOngoingText();
+        await saveTabText(id);
       }
-      setOngoing(null);
-      setAttachments([]);
-      setAttendance([]);
-      setOngoingText("");
-      setSavedText("");
-      setTab("meetings");
+      removeTabFromOpen(id);
       return;
     }
 
-    // Truly empty meeting — confirm deletion
     if (!confirm("Do you want to delete board meeting?")) return;
 
-    if (attachments.length) {
+    if (tab.attachments.length) {
       await supabase.storage
         .from("board-attachments")
-        .remove(attachments.map((a) => a.storage_path));
+        .remove(tab.attachments.map((a) => a.storage_path));
     }
-    await supabase.from("team_board_meeting_attachments").delete().eq("meeting_id", ongoing.id);
-    const { error } = await supabase.from("team_board_meetings").delete().eq("id", ongoing.id);
+    await supabase.from("team_board_meeting_attachments").delete().eq("meeting_id", id);
+    const { error } = await supabase.from("team_board_meetings").delete().eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
     }
-    setMeetings((prev) => prev.filter((m) => m.id !== ongoing.id));
-    setOngoing(null);
-    setAttachments([]);
-    setTab("meetings");
+    setMeetings((prev) => prev.filter((m) => m.id !== id));
+    removeTabFromOpen(id);
   }
 
   async function deleteMeeting(m: MeetingRow) {
@@ -484,46 +518,48 @@ function TeamBoardPage() {
       return;
     }
     setMeetings((prev) => prev.filter((x) => x.id !== m.id));
-    if (ongoing?.id === m.id) {
-      setOngoing(null);
-      setAttachments([]);
-      setTab("meetings");
+    if (openTabs.some((t) => t.meeting.id === m.id)) {
+      removeTabFromOpen(m.id);
     }
   }
 
-  async function saveOngoingText() {
-    if (!ongoing) return;
-    if (ongoingText === savedText) return;
-    const textToSave = ongoingText;
+  async function saveTabText(id: string) {
+    const tab = openTabs.find((t) => t.meeting.id === id);
+    if (!tab) return;
+    if (tab.text === tab.savedText) return;
+    const textToSave = tab.text;
     setSaving(true);
     const { error } = await supabase
       .from("team_board_meetings")
       .update({ notes: textToSave, updated_at: new Date().toISOString() })
-      .eq("id", ongoing.id);
+      .eq("id", id);
     setSaving(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    setSavedText(textToSave);
-    setOngoing((prev) => (prev ? { ...prev, notes: textToSave } : prev));
+    patchTab(id, { savedText: textToSave });
+    patchMeetingInTab(id, { notes: textToSave });
     setMeetings((prev) =>
-      prev.map((m) => (m.id === ongoing.id ? { ...m, notes: textToSave } : m)),
+      prev.map((m) => (m.id === id ? { ...m, notes: textToSave } : m)),
     );
-    toast.success("Saved");
   }
 
-  async function loadAttachments(meetingId: string) {
+  async function saveOngoingText() {
+    if (!ongoing) return;
+    await saveTabText(ongoing.meeting.id);
+  }
+
+  async function loadAttachmentsFor(meetingId: string) {
     const { data } = await supabase
       .from("team_board_meeting_attachments")
       .select("id,file_name,storage_path,file_size")
       .eq("meeting_id", meetingId)
       .order("created_at", { ascending: false });
-    setAttachments(data ?? []);
+    patchTab(meetingId, { attachments: data ?? [] });
   }
 
-  async function loadRosterAndAttendance(meetingId: string) {
-    // Load roster snapshot
+  async function loadRosterAndAttendanceFor(meetingId: string) {
     const { data: rosterData } = await supabase
       .from("team_board_meeting_roster")
       .select("id,board_member_id,name,role,email,sort_order")
@@ -531,7 +567,6 @@ function TeamBoardPage() {
       .order("sort_order", { ascending: true });
     let rosterRows = (rosterData ?? []) as RosterEntry[];
 
-    // Backfill: legacy meetings without a roster — snapshot from current live members.
     if (rosterRows.length === 0 && teamId) {
       const live = members.filter((m) => !!m.id);
       if (live.length) {
@@ -552,7 +587,6 @@ function TeamBoardPage() {
           (a, b) => a.sort_order - b.sort_order,
         );
 
-        // Migrate any legacy attendance rows (which used board_member_id) to roster_id
         const { data: legacyAtt } = await supabase
           .from("team_board_meeting_attendance")
           .select("id,board_member_id,roster_id")
@@ -569,7 +603,6 @@ function TeamBoardPage() {
         }
       }
     }
-    setRoster(rosterRows);
 
     const { data: attData } = await supabase
       .from("team_board_meeting_attendance")
@@ -580,12 +613,11 @@ function TeamBoardPage() {
       if (r.roster_id) {
         ids.push(r.roster_id as string);
       } else if (r.board_member_id) {
-        // Legacy fallback — map to roster entry by board_member_id
         const match = rosterRows.find((x) => x.board_member_id === r.board_member_id);
         if (match) ids.push(match.id);
       }
     }
-    setAttendance(ids);
+    patchTab(meetingId, { roster: rosterRows, attendance: ids });
   }
 
   function openAttendance() {
@@ -605,7 +637,7 @@ function TeamBoardPage() {
         const { error } = await supabase
           .from("team_board_meeting_attendance")
           .delete()
-          .eq("meeting_id", ongoing.id)
+          .eq("meeting_id", ongoing.meeting.id)
           .in("roster_id", toRemove);
         if (error) throw error;
       }
@@ -613,10 +645,10 @@ function TeamBoardPage() {
         const rows = toAdd.map((rid) => {
           const entry = roster.find((r) => r.id === rid);
           return {
-            meeting_id: ongoing.id,
+            meeting_id: ongoing.meeting.id,
             team_id: teamId,
             roster_id: rid,
-            board_member_id: entry?.board_member_id ?? rid, // legacy NOT NULL column
+            board_member_id: entry?.board_member_id ?? rid,
           };
         });
         const { error } = await supabase
@@ -645,13 +677,13 @@ function TeamBoardPage() {
           .replace(/[^a-zA-Z0-9._-]+/g, "_")
           .replace(/_+/g, "_")
           .replace(/^_+|_+$/g, "");
-        const path = `${teamId}/${ongoing.id}/${Date.now()}-${safeName || "file"}`;
+        const path = `${teamId}/${ongoing.meeting.id}/${Date.now()}-${safeName || "file"}`;
         const { error: upErr } = await supabase.storage
           .from("board-attachments")
           .upload(path, file, { contentType: file.type || "application/octet-stream" });
         if (upErr) throw upErr;
         const { error: insErr } = await supabase.from("team_board_meeting_attachments").insert({
-          meeting_id: ongoing.id,
+          meeting_id: ongoing.meeting.id,
           team_id: teamId,
           file_name: file.name,
           storage_path: path,
@@ -662,7 +694,7 @@ function TeamBoardPage() {
         if (insErr) throw insErr;
       }
       toast.success("Uploaded");
-      await loadAttachments(ongoing.id);
+      await loadAttachmentsFor(ongoing.meeting.id);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
     } finally {
@@ -687,7 +719,7 @@ function TeamBoardPage() {
   async function removeAttachment(id: string, path: string) {
     await supabase.storage.from("board-attachments").remove([path]);
     await supabase.from("team_board_meeting_attachments").delete().eq("id", id);
-    if (ongoing) await loadAttachments(ongoing.id);
+    if (ongoing) await loadAttachmentsFor(ongoing.meeting.id);
   }
 
   // ── Render guards ──────────────────────────────────────────────────────────
