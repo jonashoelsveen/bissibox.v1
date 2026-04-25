@@ -27,6 +27,11 @@ interface GroupDraft {
   age_to: string;
   sort_order: number;
   member_count: number;
+  description: string;
+  leader_name: string;
+  leader_email: string;
+  leader_phone: string;
+  is_default: boolean;
 }
 
 interface MembershipDraft {
@@ -36,6 +41,8 @@ interface MembershipDraft {
   price: string;
   currency: string;
   sort_order: number;
+  group_assignment_mode: "volunteer" | "criteria";
+  criteria_label: string;
 }
 
 interface MemberRow {
