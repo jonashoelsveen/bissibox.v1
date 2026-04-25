@@ -144,10 +144,12 @@ function TeamPage() {
 
       const { data: groupData } = await supabase
         .from("team_groups")
-        .select("id, name")
+        .select("id, name, age_from, age_to, description, color")
         .eq("team_id", teamId)
         .order("sort_order");
-      setGroupOptions(((groupData ?? []) as { id: string; name: string }[]).map((g) => ({ id: g.id, name: g.name || "Untitled group" })));
+      const groups = (groupData ?? []) as PublicGroup[];
+      setGroupOptions(groups.map((g) => ({ id: g.id, name: g.name || "Untitled group" })));
+      setPublicGroups(groups);
 
       // Members joined with profiles (only active athletes show publicly)
       const { data: memberRows } = await supabase
