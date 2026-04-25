@@ -1,7 +1,10 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useServerFn } from "@tanstack/react-start";
+import { scanFile } from "@/server/scan-file";
+import { FilesPage } from "@/components/library/FilesPage";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -29,12 +32,80 @@ import {
   GripVertical,
   Pin,
   PinOff,
+  FolderClosed,
+  Image as ImageIcon,
 } from "lucide-react";
 
+type LibraryTab = "files" | "media";
+
 export const Route = createFileRoute("/media")({
-  component: MediaPage,
-  head: () => ({ meta: [{ title: "Media · Raceline" }] }),
+  component: LibraryPage,
+  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab } => ({
+    tab: s.tab === "files" || s.tab === "media" ? (s.tab as LibraryTab) : undefined,
+  }),
+  head: () => ({ meta: [{ title: "Library · Raceline" }] }),
 });
+
+function LibraryPage() {
+  const search = useSearch({ from: "/media" });
+  const navigate = useNavigate();
+  const tab: LibraryTab = search.tab ?? "files";
+
+  const setTab = (next: LibraryTab) => {
+    navigate({ to: "/media", search: { tab: next }, replace: true });
+  };
+
+  return (
+    <div className="px-4 md:px-6">
+      <div className="pt-6 md:pt-8">
+        <h1 className="text-2xl tracking-tight text-ink md:text-3xl">Library</h1>
+      </div>
+      <nav className="mt-6 flex border-b border-hairline">
+        <LibraryTabBtn
+          active={tab === "files"}
+          onClick={() => setTab("files")}
+          icon={<FolderClosed className="h-3.5 w-3.5" />}
+        >
+          Files
+        </LibraryTabBtn>
+        <LibraryTabBtn
+          active={tab === "media"}
+          onClick={() => setTab("media")}
+          icon={<ImageIcon className="h-3.5 w-3.5" />}
+        >
+          Media
+        </LibraryTabBtn>
+      </nav>
+      {tab === "files" ? <FilesPage /> : <MediaPage />}
+    </div>
+  );
+}
+
+function LibraryTabBtn({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm transition ${
+        active
+          ? "border-primary text-ink"
+          : "border-transparent text-muted-foreground hover:text-ink"
+      }`}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
 
 interface Album {
   id: string;
@@ -74,6 +145,7 @@ const MEDIA_HOUSES = ["VG", "NRK", "TV2", "Dagbladet", "Aftenposten"];
 function MediaPage() {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const runScan = useServerFn(scanFile);
   const isTeamMode = (mode === "team" || mode === "organizer") || !!activeEntityId;
   const [albums, setAlbums] = useState<Album[]>([]);
   const [items, setItems] = useState<MediaItem[]>([]);
@@ -368,7 +440,7 @@ function MediaPage() {
   if (authLoading || !user) return null;
 
   return (
-    <div className="px-4 md:px-6">
+    <div>
       <div className="flex justify-end gap-2 pt-4 pr-14">
         {selectMode ? (
           <div className="flex items-center gap-2 rounded-full border border-hairline bg-card p-1 pr-2">
@@ -726,9 +798,14 @@ function MediaPage() {
           mode={mode}
           teamId={isTeamMode ? teamId : null}
           onClose={() => setUploadOpen(false)}
-          onUploaded={() => {
+          onUploaded={(insertedIds) => {
             setUploadOpen(false);
             void load();
+            insertedIds.forEach((id) => {
+              runScan({ data: { kind: "media", id } }).catch(() => {
+                /* error reflected via scan_status */
+              });
+            });
           }}
         />
       )}
@@ -892,7 +969,7 @@ function UploadDialog({
   mode: "participant" | "organizer" | "team";
   teamId: string | null;
   onClose: () => void;
-  onUploaded: () => void;
+  onUploaded: (insertedIds: string[]) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -947,8 +1024,12 @@ function UploadDialog({
       if (insertedIds.length > 0 && albumIds.length > 0) {
         await syncMediaAlbums(insertedIds, albumIds, "replace");
       }
-      toast.success(files.length > 1 ? `Uploaded ${files.length} files` : "Uploaded");
-      onUploaded();
+      toast.success(
+        files.length > 1
+          ? `Uploaded ${files.length} files — running verification`
+          : "Uploaded — running verification",
+      );
+      onUploaded(insertedIds);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
