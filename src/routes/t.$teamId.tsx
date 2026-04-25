@@ -494,6 +494,28 @@ function TeamPage() {
                 )}
               </select>
             </div>
+            {pickerNeedsGroup && (
+              <div>
+                <label className="mono mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Group
+                </label>
+                <select
+                  value={pickerGroupId}
+                  onChange={(e) => setPickerGroupId(e.target.value)}
+                  className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                >
+                  {groupOptions.map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+                <p className="mt-1.5 text-[11px] text-muted-foreground">Choose the group you'd like to join.</p>
+              </div>
+            )}
+            {pickedTier && pickedTier.group_assignment_mode === "criteria" && groupOptions.length > 0 && (
+              <p className="text-[12px] text-muted-foreground">
+                You'll be placed automatically based on <span className="text-ink">{pickedTier.criteria_label || "age"}</span>.
+              </p>
+            )}
           </div>
           <footer className="flex items-center justify-end gap-2 border-t border-hairline bg-background/60 px-5 py-3">
             <button
@@ -504,7 +526,7 @@ function TeamPage() {
             </button>
             <button
               onClick={confirmPicker}
-              disabled={myMemberships.has(pickerTierId)}
+              disabled={myMemberships.has(pickerTierId) || (pickerNeedsGroup && !pickerGroupId)}
               className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
             >
               {myMemberships.has(pickerTierId) ? "Already joined" : "Continue"}
@@ -521,8 +543,117 @@ function TeamPage() {
       subtitle={pendingTier ? `${pendingTier.name} · ${formatMoney(pendingTier.price, pendingTier.currency)}` : undefined}
       targetKind="team_membership"
       targetId={teamId}
-      targetMeta={{ tier_id: pendingTierId && pendingTierId !== "__default__" ? pendingTierId : null }}
+      targetMeta={{
+        tier_id: pendingTierId && pendingTierId !== "__default__" ? pendingTierId : null,
+        group_id: (typeof window !== "undefined" ? (window as unknown as { __pendingGroupId?: string | null }).__pendingGroupId ?? null : null),
+      }}
     />
+    {confirmInfo && (
+      <ConfirmJoinedDialog
+        info={confirmInfo}
+        onClose={() => { setConfirmInfo(null); setLeaderInfoOpen(false); }}
+        leaderInfoOpen={leaderInfoOpen}
+        onToggleLeader={() => setLeaderInfoOpen((v) => !v)}
+      />
+    )}
     </>
+  );
+}
+
+function ConfirmJoinedDialog({
+  info,
+  onClose,
+  leaderInfoOpen,
+  onToggleLeader,
+}: {
+  info: ConfirmInfo;
+  onClose: () => void;
+  leaderInfoOpen: boolean;
+  onToggleLeader: () => void;
+}) {
+  const leaderName = info.leader_name?.trim() || info.team_name;
+  const leaderEmail = info.leader_email?.trim() || info.fallback_email || null;
+  const leaderPhone = info.leader_phone?.trim() || info.fallback_phone || null;
+
+  const groupLabel = info.group_name ?? "your group";
+  const criteriaWord = info.criteria_label || "age";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md overflow-hidden rounded-xl border border-hairline bg-card shadow-2xl">
+        <header className="flex items-center justify-between border-b border-hairline px-5 py-3.5">
+          <div>
+            <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">You're in</p>
+            <h2 className="mt-0.5 text-lg text-ink">{info.team_name}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+        <div className="space-y-3 px-5 py-5 text-sm text-ink">
+          {info.group_name ? (
+            info.mode === "criteria" ? (
+              <p>
+                You successfully signed up and in group <span className="font-medium">"{groupLabel}"</span>.{" "}
+                "{info.team_name}" has groups based on <span className="font-medium">{criteriaWord}</span>.{" "}
+                {info.birth_year != null && (
+                  <>Since you are born in <span className="num">{info.birth_year}</span>, you are in <span className="font-medium">"{groupLabel}"</span>. </>
+                )}
+                For more info, contact group administrator{" "}
+                <button
+                  onClick={onToggleLeader}
+                  className="inline-flex items-center gap-1 rounded-md border border-hairline bg-background px-2 py-0.5 text-xs text-ink hover:bg-secondary"
+                >
+                  <UsersIcon className="h-3 w-3" />
+                  <span className="font-medium">"{leaderName}"</span>
+                </button>
+                .
+              </p>
+            ) : (
+              <p>
+                You successfully signed up and in group <span className="font-medium">"{groupLabel}"</span>.{" "}
+                For more info, contact group administrator{" "}
+                <button
+                  onClick={onToggleLeader}
+                  className="inline-flex items-center gap-1 rounded-md border border-hairline bg-background px-2 py-0.5 text-xs text-ink hover:bg-secondary"
+                >
+                  <UsersIcon className="h-3 w-3" />
+                  <span className="font-medium">"{leaderName}"</span>
+                </button>
+                .
+              </p>
+            )
+          ) : (
+            <p>You successfully signed up to "{info.team_name}".</p>
+          )}
+          {info.auto_created_default && info.group_is_default && (
+            <p className="text-xs text-muted-foreground">
+              Your age didn't fit any defined group, so you were placed in the auto-created Default Group.
+            </p>
+          )}
+          {leaderInfoOpen && info.group_name && (
+            <div className="rounded-lg border border-hairline bg-background/60 px-4 py-3 text-xs text-muted-foreground">
+              <div className="text-ink font-medium">{leaderName}</div>
+              {leaderEmail && <div className="mt-1">Email: <a className="text-primary hover:underline" href={`mailto:${leaderEmail}`}>{leaderEmail}</a></div>}
+              {leaderPhone && <div>Phone: <a className="text-primary hover:underline" href={`tel:${leaderPhone}`}>{leaderPhone}</a></div>}
+              {!leaderEmail && !leaderPhone && <div className="mt-1">No contact details on file.</div>}
+            </div>
+          )}
+        </div>
+        <footer className="flex items-center justify-end gap-2 border-t border-hairline bg-background/60 px-5 py-3">
+          <button
+            onClick={onClose}
+            className="rounded-md bg-primary px-5 py-1.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+          >
+            OK
+          </button>
+        </footer>
+      </div>
+    </div>
   );
 }
