@@ -241,21 +241,25 @@ function TeamPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerTierId, setPickerTierId] = useState<string>("__default__");
   const nav = useNavigate();
+  const visibleTiers = tiers.filter((tier) => tier.is_active && tier.is_public);
+  const canShowMembershipActions = tiersLoaded && visibleTiers.length > 0 && (!user || user.id !== team?.owner_id);
 
   const openPicker = () => {
+    if (!canShowMembershipActions) return;
     if (!user) {
       nav({ to: "/auth", search: { redirect: window.location.pathname } as never });
       return;
     }
-    setPickerTierId(tiers[0]?.id ?? "__default__");
+    setPickerTierId(visibleTiers[0]?.id ?? "__default__");
     setPickerGroupId(groupOptions[0]?.id ?? "");
     setPickerOpen(true);
   };
 
-  const pickedTier = tiers.find((t) => t.id === pickerTierId) ?? null;
+  const pickedTier = visibleTiers.find((t) => t.id === pickerTierId) ?? null;
   const pickerNeedsGroup = !!pickedTier && pickedTier.group_assignment_mode === "volunteer" && groupOptions.length > 0;
 
   const startJoin = (tierId: string, groupId?: string | null) => {
+    if (!visibleTiers.some((tier) => tier.id === tierId)) return;
     if (!user) {
       nav({ to: "/auth", search: { redirect: window.location.pathname } as never });
       return;
