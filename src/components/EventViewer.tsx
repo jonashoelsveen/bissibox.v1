@@ -527,6 +527,22 @@ export function EventViewer({ eventId }: { eventId: string }) {
           </div>
         </div>
       )}
+
+      <VerificationDialog
+        open={verifyOpen}
+        onClose={() => setVerifyOpen(false)}
+        onVerified={onVerified}
+        title={`Sign up · ${event.title}`}
+        subtitle={subForMeta?.name}
+        targetKind="event_registration"
+        targetId={eventId}
+        targetMeta={{
+          subevent_id: chosenSubId,
+          class_code: chosenClass,
+          race_type: subForMeta?.name ?? "",
+          consent_share_data: consent,
+        }}
+      />
     </div>
   );
 }
