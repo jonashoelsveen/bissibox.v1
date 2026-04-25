@@ -76,6 +76,9 @@ function TeamBoardPage() {
   const [meetings, setMeetings] = useState<MeetingRow[]>([]);
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [folderFilter, setFolderFilter] = useState<string>("all");
+  const [extraFolders, setExtraFolders] = useState<string[]>([]);
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
   const [meetingSearch, setMeetingSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -254,8 +257,23 @@ function TeamBoardPage() {
   const folders = useMemo(() => {
     const set = new Set<string>();
     meetings.forEach((m) => m.folder && set.add(m.folder));
+    extraFolders.forEach((f) => f && set.add(f));
     return Array.from(set).sort();
-  }, [meetings]);
+  }, [meetings, extraFolders]);
+
+  function createFolder() {
+    const name = newFolderName.trim();
+    if (!name) return;
+    if (folders.includes(name)) {
+      toast.error("A folder with that name already exists");
+      return;
+    }
+    setExtraFolders((prev) => [...prev, name]);
+    setFolderFilter(name);
+    setNewFolderName("");
+    setNewFolderOpen(false);
+    toast.success("Folder created");
+  }
 
   const filteredMeetings = useMemo(() => {
     return meetings.filter((m) => {
@@ -626,13 +644,21 @@ function TeamBoardPage() {
         </div>
         <div className="flex items-center gap-2">
           {tab === "meetings" && (
-            <button
-              onClick={startNewMeeting}
-              disabled={busy}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" /> New board meeting
-            </button>
+            <>
+              <button
+                onClick={() => setNewFolderOpen(true)}
+                className="inline-flex items-center gap-2 rounded-lg border border-hairline bg-card px-4 py-2.5 text-sm text-ink transition hover:bg-secondary"
+              >
+                <Plus className="h-4 w-4" /> New folder
+              </button>
+              <button
+                onClick={startNewMeeting}
+                disabled={busy}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" /> New board meeting
+              </button>
+            </>
           )}
           {tab === "members" && (
             <button
@@ -1043,6 +1069,58 @@ function TeamBoardPage() {
           e.target.value = "";
         }}
       />
+
+      {newFolderOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setNewFolderOpen(false)}
+        >
+          <div className="absolute inset-0 bg-black/60" />
+          <div
+            className="relative z-10 w-full max-w-md rounded-2xl border border-hairline bg-card p-6 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-2 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg text-ink">New folder</h2>
+              <button
+                onClick={() => setNewFolderOpen(false)}
+                className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <label className="block">
+              <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Name
+              </span>
+              <input
+                autoFocus
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") createFolder();
+                }}
+                className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                onClick={() => setNewFolderOpen(false)}
+                className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createFolder}
+                disabled={!newFolderName.trim()}
+                className="rounded-full bg-primary px-5 py-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
