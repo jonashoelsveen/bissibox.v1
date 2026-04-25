@@ -373,6 +373,7 @@ function TeamPage() {
       }
       tabs={[
         { key: "memberships", label: "Memberships", icon: <CreditCard className="h-3.5 w-3.5" /> },
+        { key: "groups", label: "Groups", icon: <Layers className="h-3.5 w-3.5" /> },
         { key: "members", label: "Members", icon: <UsersIcon className="h-3.5 w-3.5" /> },
         { key: "events", label: "Events", icon: <Calendar className="h-3.5 w-3.5" /> },
         { key: "media", label: "Media", icon: <ImageIcon className="h-3.5 w-3.5" /> },
