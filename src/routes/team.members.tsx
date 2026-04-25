@@ -863,12 +863,23 @@ function GroupRow({
   const yearTo = group.age_to ? currentYear - Number(group.age_to) : null;
   return (
     <div>
-      <div className="flex w-full items-center gap-2 bg-secondary/40 px-3 py-3 transition hover:bg-secondary">
+      <div
+        className="flex w-full items-center gap-2 px-3 py-3 transition"
+        style={
+          group.color
+            ? { backgroundColor: group.color, color: "#fff" }
+            : undefined
+        }
+      >
         <span
           onMouseDown={onHandleDown}
           onMouseUp={onHandleUp}
           onMouseLeave={onHandleUp}
-          className="flex h-7 w-7 cursor-grab items-center justify-center rounded-md border border-hairline bg-background text-muted-foreground hover:text-ink active:cursor-grabbing"
+          className={`flex h-7 w-7 cursor-grab items-center justify-center rounded-md border active:cursor-grabbing ${
+            group.color
+              ? "border-white/30 bg-white/15 text-white hover:text-white"
+              : "border-hairline bg-background text-muted-foreground hover:text-ink"
+          }`}
           aria-label="Drag to reorder"
           title="Drag to reorder"
         >
@@ -876,17 +887,27 @@ function GroupRow({
         </span>
         <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           <ChevronDown
-            className={`h-4 w-4 shrink-0 text-muted-foreground transition ${open ? "rotate-0" : "-rotate-90"}`}
+            className={`h-4 w-4 shrink-0 transition ${open ? "rotate-0" : "-rotate-90"} ${
+              group.color ? "text-white/80" : "text-muted-foreground"
+            }`}
           />
-          <span className="truncate text-sm font-medium text-ink">
+          <span
+            className={`truncate text-sm font-medium ${group.color ? "text-white" : "text-ink"}`}
+          >
             {group.name || "Untitled group"}
           </span>
           {group.is_default && (
-            <span className="mono rounded bg-primary/10 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.16em] text-primary">
+            <span
+              className={`mono rounded px-1.5 py-0.5 text-[10px] uppercase tracking-[0.16em] ${
+                group.color ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
+              }`}
+            >
               Default
             </span>
           )}
-          <span className="mono text-xs text-muted-foreground">
+          <span
+            className={`mono text-xs ${group.color ? "text-white/80" : "text-muted-foreground"}`}
+          >
             · {group.member_count} total members
           </span>
         </button>
@@ -896,7 +917,11 @@ function GroupRow({
             e.stopPropagation();
             onDelete();
           }}
-          className="rounded p-1 text-muted-foreground hover:text-destructive"
+          className={`rounded p-1 ${
+            group.color
+              ? "text-white/80 hover:text-white"
+              : "text-muted-foreground hover:text-destructive"
+          }`}
         >
           <Trash2 className="h-4 w-4" />
         </button>

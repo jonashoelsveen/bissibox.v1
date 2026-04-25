@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, X, User2, Mail, Phone, Briefcase } from "lucide-react";
-import { hexToRgba } from "@/components/GroupColorPicker";
+
 
 export interface OrgPerson {
   id: string;
@@ -200,32 +200,41 @@ function GroupBox({
   const tinted = !!color;
   return (
     <div
-      className="group/box relative rounded-lg border shadow-sm transition hover:border-primary/40"
-      style={{
-        borderColor: tinted ? hexToRgba(color, 0.45) : undefined,
-        background: tinted
-          ? `linear-gradient(180deg, ${hexToRgba(color, 0.10)}, ${hexToRgba(color, 0.04)})`
-          : undefined,
-        borderLeft: tinted ? `3px solid ${color}` : undefined,
-      }}
+      className="group/box relative rounded-lg border border-hairline shadow-sm transition hover:border-primary/40"
+      style={tinted ? { backgroundColor: color, borderColor: color } : undefined}
     >
       <button
         onClick={onExpand}
-        className="flex w-full items-center justify-between gap-2 rounded-lg px-4 py-3 text-left transition hover:bg-secondary/30"
+        className={`flex w-full items-center justify-between gap-2 rounded-lg px-4 py-3 text-left transition ${
+          tinted ? "hover:bg-black/5" : "hover:bg-secondary/30"
+        }`}
       >
         <div className="min-w-0">
           <p
-            className="mono text-[9px] uppercase tracking-[0.22em]"
-            style={{ color: tinted ? color : undefined }}
+            className={`mono text-[9px] uppercase tracking-[0.22em] ${
+              tinted ? "text-white/80" : "text-muted-foreground"
+            }`}
           >
             Group
           </p>
-          <p className="mt-0.5 truncate text-sm text-ink">{group.name || "Untitled"}</p>
-          <p className="mt-0.5 mono text-[10px] text-muted-foreground">
+          <p
+            className={`mt-0.5 truncate text-sm ${tinted ? "text-white" : "text-ink"}`}
+          >
+            {group.name || "Untitled"}
+          </p>
+          <p
+            className={`mt-0.5 mono text-[10px] ${
+              tinted ? "text-white/80" : "text-muted-foreground"
+            }`}
+          >
             {total} {total === 1 ? "person" : "people"}
           </p>
         </div>
-        <ChevronDown className="h-4 w-4 shrink-0 -rotate-90 text-muted-foreground transition" />
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 -rotate-90 transition ${
+            tinted ? "text-white/80" : "text-muted-foreground"
+          }`}
+        />
       </button>
     </div>
   );
@@ -278,31 +287,35 @@ function FocusedGroupCard({
   const tinted = !!accentColor;
   return (
     <div
-      className="overflow-hidden rounded-xl border bg-background shadow-xl"
-      style={{
-        borderColor: tinted ? hexToRgba(accentColor!, 0.5) : undefined,
-        borderTop: tinted ? `3px solid ${accentColor}` : undefined,
-      }}
+      className="overflow-hidden rounded-xl border border-hairline bg-background shadow-xl"
+      style={tinted ? { borderColor: accentColor } : undefined}
     >
       <header
         className="flex items-center justify-between gap-3 border-b border-hairline px-5 py-3.5"
-        style={{
-          background: tinted ? hexToRgba(accentColor!, 0.06) : undefined,
-        }}
+        style={tinted ? { backgroundColor: accentColor, borderColor: accentColor } : undefined}
       >
         <div className="min-w-0">
           <p
-            className="mono text-[10px] uppercase tracking-[0.22em]"
-            style={{ color: tinted ? accentColor : undefined }}
+            className={`mono text-[10px] uppercase tracking-[0.22em] ${
+              tinted ? "text-white/80" : "text-muted-foreground"
+            }`}
           >
             Group
           </p>
-          <h3 className="mt-0.5 truncate text-base text-ink">{group.name || "Untitled"}</h3>
+          <h3
+            className={`mt-0.5 truncate text-base ${tinted ? "text-white" : "text-ink"}`}
+          >
+            {group.name || "Untitled"}
+          </h3>
         </div>
         <button
           onClick={onClose}
           aria-label="Close"
-          className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+          className={`cursor-pointer rounded-md p-1.5 transition ${
+            tinted
+              ? "text-white/80 hover:bg-white/15 hover:text-white"
+              : "text-muted-foreground hover:bg-secondary hover:text-ink"
+          }`}
         >
           <X className="h-4 w-4" />
         </button>
