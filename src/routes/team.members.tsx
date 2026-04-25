@@ -12,6 +12,7 @@ import {
   Trash2,
   Users as UsersIcon,
   Layers,
+  Wallet,
 } from "lucide-react";
 
 export const Route = createFileRoute("/team/members")({
@@ -28,6 +29,15 @@ interface GroupDraft {
   member_count: number;
 }
 
+interface MembershipDraft {
+  id?: string;
+  name: string;
+  description: string;
+  price: string;
+  currency: string;
+  sort_order: number;
+}
+
 interface MemberRow {
   team_member_id: string;
   user_id: string;
@@ -41,7 +51,7 @@ interface MemberRow {
 function TeamMembersPage() {
   const { user, loading: authLoading, mode } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"groups" | "members">("groups");
+  const [tab, setTab] = useState<"memberships" | "groups" | "members">("memberships");
   const [teamId, setTeamId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
