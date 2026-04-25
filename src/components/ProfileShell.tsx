@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Link as LinkIcon, Pencil, Check, X } from "lucide-react";
-import { useRouter } from "@tanstack/react-router";
+import { Link as LinkIcon, Pencil, Check, X } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 
 interface Tab {
@@ -73,14 +73,6 @@ export function ProfileShell({
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-background" />
-
-        <button
-          onClick={() => router.history.back()}
-          className="absolute left-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60"
-          aria-label="Back"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
 
         <div className="absolute inset-x-0 bottom-0 px-6 pb-6 md:px-10 md:pb-8">
           <p className="mono text-[10px] uppercase tracking-[0.25em] text-white/80">{eyebrow}</p>
