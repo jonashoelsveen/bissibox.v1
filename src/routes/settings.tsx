@@ -548,7 +548,7 @@ function ProfileSelector({
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-baseline gap-1.5 text-2xl font-semibold text-ink transition hover:text-ink/80 md:text-3xl"
+        className="inline-flex items-baseline gap-1.5 text-base font-semibold text-ink transition hover:text-ink/80"
       >
         <span className="truncate">{label}</span>
         <ChevronDown className="h-4 w-4 translate-y-[-2px] text-muted-foreground" strokeWidth={2.25} />
