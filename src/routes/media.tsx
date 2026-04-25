@@ -1024,8 +1024,12 @@ function UploadDialog({
       if (insertedIds.length > 0 && albumIds.length > 0) {
         await syncMediaAlbums(insertedIds, albumIds, "replace");
       }
-      toast.success(files.length > 1 ? `Uploaded ${files.length} files` : "Uploaded");
-      onUploaded();
+      toast.success(
+        files.length > 1
+          ? `Uploaded ${files.length} files — running verification`
+          : "Uploaded — running verification",
+      );
+      onUploaded(insertedIds);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
