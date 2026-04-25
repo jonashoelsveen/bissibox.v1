@@ -14,6 +14,9 @@ import {
   Layers,
   Wallet,
   Network,
+  Briefcase,
+  Mail,
+  User as UserIcon,
 } from "lucide-react";
 import { OrgChart, type OrgPerson, type OrgGroup } from "@/components/OrgChart";
 import { GroupColorPicker } from "@/components/GroupColorPicker";
@@ -52,6 +55,16 @@ interface MembershipDraft {
   is_public: boolean;
 }
 
+interface BoardMemberDraft {
+  id?: string;
+  name: string;
+  role: string;
+  email: string;
+  status: "pending" | "active";
+  invited_at: string | null;
+  sort_order: number;
+}
+
 interface MemberRow {
   team_member_id: string;
   user_id: string;
@@ -65,7 +78,7 @@ interface MemberRow {
 function TeamMembersPage() {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"memberships" | "groups" | "members" | "chart">("memberships");
+  const [tab, setTab] = useState<"board" | "memberships" | "groups" | "members" | "chart">("board");
   const [teamId, setTeamId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -95,7 +108,7 @@ function TeamMembersPage() {
 
   // Board / team meta for org chart
   const [teamName, setTeamName] = useState<string>("");
-  const [boardMembers, setBoardMembers] = useState<Array<{ id: string; name: string; role: string; email: string }>>([]);
+  const [boardMembers, setBoardMembers] = useState<BoardMemberDraft[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -152,17 +165,20 @@ function TeamMembersPage() {
           .order("sort_order", { ascending: true }),
         supabase
           .from("team_board_members")
-          .select("id,name,role,email,sort_order")
+          .select("id,name,role,email,status,invited_at,sort_order")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
       ]);
 
       setBoardMembers(
-        ((bms ?? []) as Array<{ id: string; name: string | null; role: string | null; email: string | null }>).map((b) => ({
+        ((bms ?? []) as Array<{ id: string; name: string | null; role: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((b, i) => ({
           id: b.id,
           name: b.name ?? "",
           role: b.role ?? "",
           email: b.email ?? "",
+          status: (b.status as "pending" | "active") ?? "pending",
+          invited_at: b.invited_at,
+          sort_order: b.sort_order ?? i,
         })),
       );
 
@@ -273,13 +289,15 @@ function TeamMembersPage() {
   // Build org chart data (board + groups with leaders + members)
   const orgBoard: OrgPerson[] = useMemo(
     () =>
-      boardMembers.map((b) => ({
-        id: b.id,
-        name: b.name || b.email || "Board member",
-        role: b.role || null,
-        email: b.email || null,
-        phone: null,
-      })),
+      boardMembers
+        .filter((b) => b.id)
+        .map((b) => ({
+          id: b.id!,
+          name: b.name || b.email || "Board member",
+          role: b.role || null,
+          email: b.email || null,
+          phone: null,
+        })),
     [boardMembers],
   );
 
@@ -340,6 +358,72 @@ function TeamMembersPage() {
     }
     return real;
   }, [groups, members, assignments, unassignedMembers]);
+
+  // ── Board members ─────────────────────────────────────────────────────────
+  function addBoardMember() {
+    setBoardMembers((prev) => [
+      ...prev,
+      { name: "", role: "", email: "", status: "pending", invited_at: null, sort_order: prev.length },
+    ]);
+  }
+
+  function updateBoardMember(idx: number, patch: Partial<BoardMemberDraft>) {
+    setBoardMembers((prev) => prev.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
+  }
+
+  async function removeBoardMember(idx: number) {
+    const m = boardMembers[idx];
+    if (m.id) {
+      const { error } = await supabase.from("team_board_members").delete().eq("id", m.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+    }
+    setBoardMembers((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function reloadBoardMembers(tid: string) {
+    const { data } = await supabase
+      .from("team_board_members")
+      .select("id,name,role,email,status,invited_at,sort_order")
+      .eq("team_id", tid)
+      .order("sort_order", { ascending: true });
+    setBoardMembers(
+      ((data ?? []) as Array<{ id: string; name: string | null; role: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((b, i) => ({
+        id: b.id,
+        name: b.name ?? "",
+        role: b.role ?? "",
+        email: b.email ?? "",
+        status: (b.status as "pending" | "active") ?? "pending",
+        invited_at: b.invited_at,
+        sort_order: b.sort_order ?? i,
+      })),
+    );
+  }
+
+  async function inviteBoardMember(idx: number) {
+    const m = boardMembers[idx];
+    if (!m.email || !m.email.includes("@")) {
+      toast.error("Enter a valid email first");
+      return;
+    }
+    if (!m.id) {
+      await save();
+    }
+    const updated = boardMembers[idx];
+    if (!updated.id) return;
+    const { error } = await supabase
+      .from("team_board_members")
+      .update({ invited_at: new Date().toISOString(), status: "pending" })
+      .eq("id", updated.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Invitation sent to ${updated.email}`);
+    if (teamId) await reloadBoardMembers(teamId);
+  }
 
 
   const save = async () => {
@@ -459,7 +543,37 @@ function TeamMembersPage() {
       }
       setMemberships((arr) => arr.map((m, i) => ({ ...m, id: memIdMap[i] })));
 
-      toast.success("Members saved.");
+      // Persist board members
+      const bmIdMap: Record<number, string> = {};
+      for (let i = 0; i < boardMembers.length; i++) {
+        const m = boardMembers[i];
+        if (m.id) {
+          const { error } = await supabase
+            .from("team_board_members")
+            .update({ name: m.name, role: m.role, email: m.email, sort_order: i })
+            .eq("id", m.id);
+          if (error) throw error;
+          bmIdMap[i] = m.id;
+        } else {
+          const { data, error } = await supabase
+            .from("team_board_members")
+            .insert({
+              team_id: teamId,
+              name: m.name,
+              role: m.role,
+              email: m.email,
+              status: "pending",
+              sort_order: i,
+            })
+            .select("id")
+            .single();
+          if (error) throw error;
+          bmIdMap[i] = data!.id as string;
+        }
+      }
+      setBoardMembers((arr) => arr.map((m, i) => ({ ...m, id: bmIdMap[i] ?? m.id })));
+
+      toast.success("Saved.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save.");
     } finally {
@@ -511,6 +625,9 @@ function TeamMembersPage() {
       </header>
 
       <nav className="mt-7 flex border-b border-hairline">
+        <TabBtn active={tab === "board"} onClick={() => setTab("board")} icon={<Briefcase className="h-3.5 w-3.5" />}>
+          Board
+        </TabBtn>
         <TabBtn active={tab === "memberships"} onClick={() => setTab("memberships")} icon={<Wallet className="h-3.5 w-3.5" />}>
           Memberships
         </TabBtn>
@@ -524,6 +641,87 @@ function TeamMembersPage() {
           Chart
         </TabBtn>
       </nav>
+
+      {tab === "board" && (
+        <Panel>
+          <div className="space-y-3">
+            {boardMembers.length === 0 && (
+              <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
+                No board members yet. Add one to get started.
+              </div>
+            )}
+            {boardMembers.map((m, i) => (
+              <div
+                key={m.id ?? `new-${i}`}
+                className="flex items-center gap-4 rounded-lg border border-hairline bg-card p-4"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                  <UserIcon className="h-6 w-6" />
+                </div>
+                <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-3">
+                  <input
+                    placeholder="Name"
+                    value={m.name}
+                    onChange={(e) => updateBoardMember(i, { name: e.target.value })}
+                    className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                  />
+                  <input
+                    placeholder="Role (e.g. Chair, Treasurer)"
+                    value={m.role}
+                    onChange={(e) => updateBoardMember(i, { role: e.target.value })}
+                    className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Mail className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <input
+                        type="email"
+                        placeholder="Email"
+                        value={m.email}
+                        onChange={(e) => updateBoardMember(i, { email: e.target.value })}
+                        className="w-full rounded-md border border-hairline bg-background py-2 pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
+                      />
+                    </div>
+                    <button
+                      onClick={() => inviteBoardMember(i)}
+                      title={
+                        m.status === "active"
+                          ? "Active board member"
+                          : m.invited_at
+                            ? "Invitation pending"
+                            : `Invite to ${teamName || "team"} board`
+                      }
+                      className={`shrink-0 rounded-md px-3 py-2 text-xs font-medium transition ${
+                        m.status === "active"
+                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                          : m.invited_at
+                            ? "border border-hairline bg-card text-muted-foreground hover:text-ink"
+                            : "bg-primary text-primary-foreground hover:opacity-90"
+                      }`}
+                    >
+                      {m.status === "active" ? "Active" : m.invited_at ? "Pending" : "Invite"}
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={() => removeBoardMember(i)}
+                  className="rounded p-1 text-muted-foreground hover:text-destructive"
+                  aria-label="Remove board member"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={addBoardMember}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-hairline bg-background px-3 py-1.5 text-xs text-ink hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add board member
+          </button>
+        </Panel>
+      )}
 
       {tab === "memberships" && (
         <Panel>
