@@ -468,6 +468,7 @@ function TeamMembersPage() {
                     }}
                     onHandleDown={() => setDragMemHandleIdx(idx)}
                     onHandleUp={() => setDragMemHandleIdx(null)}
+                    hasGroups={groups.length > 0}
                   />
                 </div>
               );
