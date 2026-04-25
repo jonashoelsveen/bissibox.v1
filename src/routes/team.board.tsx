@@ -422,12 +422,70 @@ function TeamBoardPage() {
     setAttachments(data ?? []);
   }
 
-  async function loadAttendance(meetingId: string) {
-    const { data } = await supabase
+  async function loadRosterAndAttendance(meetingId: string) {
+    // Load roster snapshot
+    const { data: rosterData } = await supabase
+      .from("team_board_meeting_roster")
+      .select("id,board_member_id,name,role,email,sort_order")
+      .eq("meeting_id", meetingId)
+      .order("sort_order", { ascending: true });
+    let rosterRows = (rosterData ?? []) as RosterEntry[];
+
+    // Backfill: legacy meetings without a roster — snapshot from current live members.
+    if (rosterRows.length === 0 && teamId) {
+      const live = members.filter((m) => !!m.id);
+      if (live.length) {
+        const insertRows = live.map((m) => ({
+          meeting_id: meetingId,
+          team_id: teamId,
+          board_member_id: m.id as string,
+          name: m.name ?? "",
+          role: m.role ?? "",
+          email: m.email ?? "",
+          sort_order: m.sort_order ?? 0,
+        }));
+        const { data: inserted } = await supabase
+          .from("team_board_meeting_roster")
+          .insert(insertRows)
+          .select("id,board_member_id,name,role,email,sort_order");
+        rosterRows = ((inserted ?? []) as RosterEntry[]).sort(
+          (a, b) => a.sort_order - b.sort_order,
+        );
+
+        // Migrate any legacy attendance rows (which used board_member_id) to roster_id
+        const { data: legacyAtt } = await supabase
+          .from("team_board_meeting_attendance")
+          .select("id,board_member_id,roster_id")
+          .eq("meeting_id", meetingId);
+        for (const row of legacyAtt ?? []) {
+          if (row.roster_id) continue;
+          const match = rosterRows.find((r) => r.board_member_id === row.board_member_id);
+          if (match) {
+            await supabase
+              .from("team_board_meeting_attendance")
+              .update({ roster_id: match.id })
+              .eq("id", row.id);
+          }
+        }
+      }
+    }
+    setRoster(rosterRows);
+
+    const { data: attData } = await supabase
       .from("team_board_meeting_attendance")
-      .select("board_member_id")
+      .select("roster_id,board_member_id")
       .eq("meeting_id", meetingId);
-    setAttendance((data ?? []).map((r: { board_member_id: string }) => r.board_member_id));
+    const ids: string[] = [];
+    for (const r of attData ?? []) {
+      if (r.roster_id) {
+        ids.push(r.roster_id as string);
+      } else if (r.board_member_id) {
+        // Legacy fallback — map to roster entry by board_member_id
+        const match = rosterRows.find((x) => x.board_member_id === r.board_member_id);
+        if (match) ids.push(match.id);
+      }
+    }
+    setAttendance(ids);
   }
 
   function openAttendance() {
@@ -448,17 +506,22 @@ function TeamBoardPage() {
           .from("team_board_meeting_attendance")
           .delete()
           .eq("meeting_id", ongoing.id)
-          .in("board_member_id", toRemove);
+          .in("roster_id", toRemove);
         if (error) throw error;
       }
       if (toAdd.length) {
-        const { error } = await supabase.from("team_board_meeting_attendance").insert(
-          toAdd.map((bid) => ({
+        const rows = toAdd.map((rid) => {
+          const entry = roster.find((r) => r.id === rid);
+          return {
             meeting_id: ongoing.id,
             team_id: teamId,
-            board_member_id: bid,
-          })),
-        );
+            roster_id: rid,
+            board_member_id: entry?.board_member_id ?? rid, // legacy NOT NULL column
+          };
+        });
+        const { error } = await supabase
+          .from("team_board_meeting_attendance")
+          .insert(rows);
         if (error) throw error;
       }
       setAttendance(attendanceDraft);
