@@ -782,6 +782,30 @@ export type Database = {
           },
         ]
       }
+      team_board_meeting_attendance: {
+        Row: {
+          board_member_id: string
+          created_at: string
+          id: string
+          meeting_id: string
+          team_id: string
+        }
+        Insert: {
+          board_member_id: string
+          created_at?: string
+          id?: string
+          meeting_id: string
+          team_id: string
+        }
+        Update: {
+          board_member_id?: string
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          team_id?: string
+        }
+        Relationships: []
+      }
       team_board_meetings: {
         Row: {
           created_at: string
