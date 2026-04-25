@@ -6,12 +6,15 @@ type Pin = { lat: number; lng: number } | null;
 interface Props {
   pin: Pin;
   description: string;
-  onChange: (next: { pin: Pin; description: string }) => void;
+  name?: string;
+  onChange: (next: { pin: Pin; description: string; name: string }) => void;
   onSave?: () => void;
   saving?: boolean;
   title?: string;
-  /** When true (Event type), shows the description textarea in the right sidebar. */
+  /** When true, shows the description textarea in the right sidebar. */
   showDescription?: boolean;
+  /** When true, shows the pin name input (e.g. "Meeting room 3D"). */
+  showName?: boolean;
   /** Label noun for the location: "Meeting" or "Event". */
   kindLabel?: string;
 }
@@ -29,11 +32,13 @@ const PIN_COLOR = "#dc2626";
 export function SimplePinMap({
   pin,
   description,
+  name = "",
   onChange,
   onSave,
   saving,
   title,
   showDescription = true,
+  showName = false,
   kindLabel = "location",
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -46,14 +51,16 @@ export function SimplePinMap({
   const onChangeRef = useRef(onChange);
   const pinRef = useRef(pin);
   const descRef = useRef(description);
+  const nameRef = useRef(name);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => { pinRef.current = pin; }, [pin]);
   useEffect(() => { descRef.current = description; }, [description]);
+  useEffect(() => { nameRef.current = name; }, [name]);
   useEffect(() => { toolRef.current = tool; }, [tool]);
 
   // Undo/redo history
-  type Snap = { pin: Pin; description: string };
-  const historyRef = useRef<Snap[]>([{ pin, description }]);
+  type Snap = { pin: Pin; description: string; name: string };
+  const historyRef = useRef<Snap[]>([{ pin, description, name }]);
   const historyIdxRef = useRef(0);
   const skipNextHistoryRef = useRef(false);
   const [, forceTick] = useState(0);
@@ -185,7 +192,7 @@ export function SimplePinMap({
     map.on("click", (e: any) => {
       if (toolRef.current !== "pin") return;
       const ll = { lat: e.latlng.lat, lng: e.latlng.lng };
-      trackedChange({ pin: ll, description: descRef.current });
+      trackedChange({ pin: ll, description: descRef.current, name: nameRef.current });
     });
 
     mapRef.current = map;
@@ -220,13 +227,13 @@ export function SimplePinMap({
       const m = L.marker([pin.lat, pin.lng], { icon, draggable: true }).addTo(mapRef.current);
       m.on("dragend", () => {
         const ll = m.getLatLng();
-        trackedChange({ pin: { lat: ll.lat, lng: ll.lng }, description: descRef.current });
+        trackedChange({ pin: { lat: ll.lat, lng: ll.lng }, description: descRef.current, name: nameRef.current });
       });
       markerRef.current = m;
     }
   }, [L, pin]);
 
-  const clearPin = () => trackedChange({ pin: null, description: descRef.current });
+  const clearPin = () => trackedChange({ pin: null, description: descRef.current, name: nameRef.current });
 
   const sidebarTitle = title || `${kindLabel} location`;
   const noun = kindLabel || "location";
@@ -386,7 +393,9 @@ export function SimplePinMap({
                   <MapPin className="h-3 w-3 text-white" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink">{noun} pin</p>
+                  <p className="truncate text-sm font-medium text-ink">
+                    {name.trim() || `${noun} pin`}
+                  </p>
                   <p className="mono mt-0.5 text-[10px] text-muted-foreground">
                     {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
                   </p>
@@ -400,6 +409,25 @@ export function SimplePinMap({
                 </button>
               </div>
 
+              {showName && (
+                <div className="border-t border-hairline bg-card/50 px-3 py-3">
+                  <label className="block">
+                    <span className="mono mb-1 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                      Pin name
+                    </span>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) =>
+                        trackedChange({ pin: pinRef.current, description: descRef.current, name: e.target.value })
+                      }
+                      placeholder="e.g. Meeting room 3D, Main entrance"
+                      className="w-full rounded-md border border-hairline bg-card px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                    />
+                  </label>
+                </div>
+              )}
+
               {showDescription && (
                 <div className="border-t border-hairline bg-card/50 px-3 py-3">
                   <label className="block">
@@ -409,7 +437,7 @@ export function SimplePinMap({
                     <textarea
                       value={description}
                       onChange={(e) =>
-                        trackedChange({ pin: pinRef.current, description: e.target.value })
+                        trackedChange({ pin: pinRef.current, description: e.target.value, name: nameRef.current })
                       }
                       rows={3}
                       placeholder="e.g. Meet at the main entrance, parking on the south side."

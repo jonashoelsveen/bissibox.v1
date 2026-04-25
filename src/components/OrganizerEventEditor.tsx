@@ -712,15 +712,18 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
           <SimplePinMap
             pin={pin}
             description={pinDescription}
-            onChange={({ pin: p, description: d }) => {
+            name={location}
+            onChange={({ pin: p, description: d, name: n }) => {
               setPin(p);
               setPinDescription(d);
+              setLocation(n);
             }}
             onSave={save}
             saving={busy}
             kindLabel={eventType === "meeting" ? "Meeting" : "Event"}
             title={eventType === "meeting" ? "Meeting location" : "Event location"}
-            showDescription={eventType === "event"}
+            showDescription
+            showName
           />
         </div>
       )}
