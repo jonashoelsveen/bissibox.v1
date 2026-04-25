@@ -13,6 +13,7 @@ import {
   Users as UsersIcon,
   Layers,
   Wallet,
+  Network,
 } from "lucide-react";
 import { OrgChart, type OrgPerson, type OrgGroup } from "@/components/OrgChart";
 
