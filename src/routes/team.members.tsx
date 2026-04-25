@@ -224,6 +224,54 @@ function TeamMembersPage() {
     });
   }, [members, search]);
 
+  // Build org chart data (board + groups with leaders + members)
+  const orgBoard: OrgPerson[] = useMemo(
+    () =>
+      boardMembers.map((b) => ({
+        id: b.id,
+        name: b.name || b.email || "Board member",
+        role: b.role || null,
+        email: b.email || null,
+        phone: null,
+      })),
+    [boardMembers],
+  );
+
+  const orgGroups: OrgGroup[] = useMemo(() => {
+    return groups
+      .filter((g) => g.id)
+      .map((g) => {
+        const memberPeople: OrgPerson[] = members
+          .filter((m) => (assignments[m.user_id] ?? "") === g.id)
+          .map((m) => ({
+            id: m.user_id,
+            name: [m.first_name, m.last_name].filter(Boolean).join(" ") || m.email || "Unnamed",
+            role: null,
+            email: m.email,
+            phone: null,
+          }));
+        const leaders: OrgPerson[] = g.leader_name || g.leader_email || g.leader_phone
+          ? [
+              {
+                id: `leader-${g.id}`,
+                name: g.leader_name || g.leader_email || "Leader",
+                role: "Leader",
+                email: g.leader_email || null,
+                phone: g.leader_phone || null,
+              },
+            ]
+          : [];
+        return {
+          id: g.id!,
+          name: g.name || "Untitled",
+          description: g.description || null,
+          leaders,
+          members: memberPeople,
+        };
+      });
+  }, [groups, members, assignments]);
+
+
   const save = async () => {
     if (!teamId) {
       toast.error("Create a team first in Settings.");
