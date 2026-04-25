@@ -24,6 +24,7 @@ interface PublicTeam {
   website: string | null;
   owner_id: string;
   active: boolean;
+  entity_type: string;
 }
 
 interface Tier {
@@ -79,6 +80,7 @@ function TeamPage() {
   const [notFound, setNotFound] = useState(false);
   const [tab, setTab] = useState<"memberships" | "members" | "media" | "events">("memberships");
   const [tiers, setTiers] = useState<Tier[]>([]);
+  const [tiersLoaded, setTiersLoaded] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
   const [events, setEvents] = useState<EventRow[]>([]);
   const [media, setMedia] = useState<{ id: string; storage_path: string; media_type: string }[]>([]);
@@ -94,7 +96,7 @@ function TeamPage() {
     (async () => {
       const { data } = await supabase
         .from("teams")
-        .select("id, name, description, description_long, country, cover_media_id, website, owner_id, active")
+        .select("id, name, description, description_long, country, cover_media_id, website, owner_id, active, entity_type")
         .eq("id", teamId)
         .maybeSingle();
       if (!data) {
@@ -123,6 +125,7 @@ function TeamPage() {
         group_assignment_mode: (t.group_assignment_mode === "criteria" ? "criteria" : "volunteer"),
         criteria_label: t.criteria_label ?? "age",
       })));
+      setTiersLoaded(true);
 
       const { data: groupData } = await supabase
         .from("team_groups")
@@ -336,7 +339,7 @@ function TeamPage() {
         </span>
       }
       actions={
-        tiers.length > 0 && (!user || user.id !== team.owner_id) ? (
+        tiersLoaded && tiers.length > 0 && (!user || user.id !== team.owner_id) ? (
           <button
             onClick={openPicker}
             className="rounded-full bg-ink px-5 py-1.5 text-xs font-medium text-background hover:opacity-90"
@@ -374,7 +377,7 @@ function TeamPage() {
           {tiers.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 px-6 py-12 text-center">
               <div className="text-sm text-muted-foreground">
-                This team hasn't set up any memberships yet. Check back later.
+                This {team.entity_type === "company" ? "Company" : "Corporate"} has no active memberships.
               </div>
             </div>
           ) : (
