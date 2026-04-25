@@ -381,6 +381,63 @@ function TeamPage() {
 
       {tab === "media" && <MediaGrid items={media} />}
     </ProfileShell>
+    {pickerOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={() => setPickerOpen(false)} />
+        <div className="relative z-10 w-full max-w-md overflow-hidden rounded-xl border border-hairline bg-card shadow-2xl">
+          <header className="flex items-center justify-between border-b border-hairline px-5 py-3.5">
+            <div>
+              <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Become a member</p>
+              <h2 className="mt-0.5 text-lg text-ink">{team.name}</h2>
+            </div>
+            <button
+              onClick={() => setPickerOpen(false)}
+              aria-label="Close"
+              className="rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </header>
+          <div className="space-y-5 px-5 py-5">
+            <div>
+              <label className="mono mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                Membership
+              </label>
+              <select
+                value={pickerTierId}
+                onChange={(e) => setPickerTierId(e.target.value)}
+                className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              >
+                {tiers.length === 0 ? (
+                  <option value="__default__">Member</option>
+                ) : (
+                  tiers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} · {formatMoney(t.price, t.currency)}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          </div>
+          <footer className="flex items-center justify-end gap-2 border-t border-hairline bg-background/60 px-5 py-3">
+            <button
+              onClick={() => setPickerOpen(false)}
+              className="rounded-md border border-hairline bg-card px-4 py-1.5 text-sm text-ink transition hover:bg-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmPicker}
+              disabled={myMemberships.has(pickerTierId)}
+              className="rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+            >
+              {myMemberships.has(pickerTierId) ? "Already joined" : "Continue"}
+            </button>
+          </footer>
+        </div>
+      </div>
+    )}
     <VerificationDialog
       open={verifyOpen}
       onClose={() => setVerifyOpen(false)}
