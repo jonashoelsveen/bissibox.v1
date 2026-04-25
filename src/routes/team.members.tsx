@@ -145,7 +145,7 @@ function TeamMembersPage() {
           .eq("team_id", tid),
         supabase
           .from("team_membership_tiers")
-          .select("id,name,description,price,currency,sort_order,group_assignment_mode,criteria_label")
+          .select("id,name,description,price,currency,sort_order,group_assignment_mode,criteria_label,is_active,is_public")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
         supabase
@@ -165,7 +165,7 @@ function TeamMembersPage() {
       );
 
       setMemberships(
-        ((tiers ?? []) as Array<{ id: string; name: string | null; description: string | null; price: number | null; currency: string | null; sort_order: number | null; group_assignment_mode: string | null; criteria_label: string | null }>).map((t, i) => ({
+        ((tiers ?? []) as Array<{ id: string; name: string | null; description: string | null; price: number | null; currency: string | null; sort_order: number | null; group_assignment_mode: string | null; criteria_label: string | null; is_active: boolean | null; is_public: boolean | null }>).map((t, i) => ({
           id: t.id,
           name: t.name ?? "",
           description: t.description ?? "",
@@ -174,6 +174,8 @@ function TeamMembersPage() {
           sort_order: t.sort_order ?? i,
           group_assignment_mode: (t.group_assignment_mode === "criteria" ? "criteria" : "volunteer"),
           criteria_label: t.criteria_label ?? "age",
+          is_active: t.is_active ?? true,
+          is_public: t.is_public ?? true,
         }))
       );
 
@@ -525,7 +527,7 @@ function TeamMembersPage() {
               onClick={() => {
                 setMemberships((arr) => [
                   ...arr,
-                  { name: "", description: "", price: "0", currency: "NOK", sort_order: arr.length, group_assignment_mode: "volunteer", criteria_label: "age" },
+                  { name: "", description: "", price: "0", currency: "NOK", sort_order: arr.length, group_assignment_mode: "volunteer", criteria_label: "age", is_active: true, is_public: true },
                 ]);
                 setOpenMemIdx(memberships.length);
               }}
