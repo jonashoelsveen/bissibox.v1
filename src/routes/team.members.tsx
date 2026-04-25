@@ -359,6 +359,72 @@ function TeamMembersPage() {
     return real;
   }, [groups, members, assignments, unassignedMembers]);
 
+  // ── Board members ─────────────────────────────────────────────────────────
+  function addBoardMember() {
+    setBoardMembers((prev) => [
+      ...prev,
+      { name: "", role: "", email: "", status: "pending", invited_at: null, sort_order: prev.length },
+    ]);
+  }
+
+  function updateBoardMember(idx: number, patch: Partial<BoardMemberDraft>) {
+    setBoardMembers((prev) => prev.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
+  }
+
+  async function removeBoardMember(idx: number) {
+    const m = boardMembers[idx];
+    if (m.id) {
+      const { error } = await supabase.from("team_board_members").delete().eq("id", m.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+    }
+    setBoardMembers((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function reloadBoardMembers(tid: string) {
+    const { data } = await supabase
+      .from("team_board_members")
+      .select("id,name,role,email,status,invited_at,sort_order")
+      .eq("team_id", tid)
+      .order("sort_order", { ascending: true });
+    setBoardMembers(
+      ((data ?? []) as Array<{ id: string; name: string | null; role: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((b, i) => ({
+        id: b.id,
+        name: b.name ?? "",
+        role: b.role ?? "",
+        email: b.email ?? "",
+        status: (b.status as "pending" | "active") ?? "pending",
+        invited_at: b.invited_at,
+        sort_order: b.sort_order ?? i,
+      })),
+    );
+  }
+
+  async function inviteBoardMember(idx: number) {
+    const m = boardMembers[idx];
+    if (!m.email || !m.email.includes("@")) {
+      toast.error("Enter a valid email first");
+      return;
+    }
+    if (!m.id) {
+      await save();
+    }
+    const updated = boardMembers[idx];
+    if (!updated.id) return;
+    const { error } = await supabase
+      .from("team_board_members")
+      .update({ invited_at: new Date().toISOString(), status: "pending" })
+      .eq("id", updated.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Invitation sent to ${updated.email}`);
+    if (teamId) await reloadBoardMembers(teamId);
+  }
+
 
   const save = async () => {
     if (!teamId) {
