@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Search, Library, Plus, Image, Settings, LogIn, Users, Briefcase, Armchair } from "lucide-react";
+import { Search, Library, Plus, Tent, Settings, LogIn, Users, Briefcase, Armchair } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -98,7 +98,7 @@ export function TopChrome() {
 
         {user && (
           <NavBtn to="/media" label="Content" active={path.startsWith("/media")}>
-            <Image className="h-[18px] w-[18px]" strokeWidth={2.25} />
+            <Library className="h-[18px] w-[18px]" strokeWidth={2.25} />
           </NavBtn>
         )}
 
@@ -113,7 +113,7 @@ export function TopChrome() {
                 path === "/"
               }
             >
-              <Library className="h-[18px] w-[18px]" strokeWidth={2.25} />
+              <Tent className="h-[18px] w-[18px]" strokeWidth={2.25} />
             </NavBtn>
             <NavBtn
               to="/organizer/new"
