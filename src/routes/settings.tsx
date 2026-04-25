@@ -470,37 +470,221 @@ function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {createOpen && user && (
+        <CreateEntityModal
+          ownerId={user.id}
+          onClose={() => setCreateOpen(false)}
+          onCreated={onEntityCreated}
+        />
+      )}
     </div>
   );
 }
 
-type ModeT = "participant" | "organizer" | "team";
+type EntityType = "team" | "company" | "cooperation";
 
-function ModeToggle({
-  mode,
-  setMode,
-  hasTeam,
+const ENTITY_LABEL: Record<EntityType, string> = {
+  team: "Team",
+  company: "Company",
+  cooperation: "Cooperation",
+};
+
+function ProfileSelector({
+  entities,
+  activeEntity,
+  onSelect,
 }: {
-  mode: ModeT;
-  setMode: (m: ModeT) => void;
-  hasTeam: boolean;
+  entities: EntityRow[];
+  activeEntity: EntityRow | null;
+  onSelect: (id: string | null) => void;
 }) {
-  if (!hasTeam) return null;
-  const options: ModeT[] = ["participant", "team"];
-  const current: ModeT = mode === "organizer" ? "team" : mode;
+  const [open, setOpen] = useState(false);
+
+  const label = activeEntity ? activeEntity.name : "Individual profile";
+  const Icon = activeEntity
+    ? activeEntity.entity_type === "company"
+      ? Building2
+      : activeEntity.entity_type === "cooperation"
+        ? Network
+        : UsersIcon
+    : UserIcon;
+  const sub = activeEntity ? ENTITY_LABEL[activeEntity.entity_type] : "Personal";
+
   return (
-    <div className="flex rounded-full border border-hairline bg-card p-1">
-      {options.map((m) => (
-        <button
-          key={m}
-          onClick={() => setMode(m)}
-          className={`rounded-full px-3 py-1.5 text-[10px] uppercase tracking-widest transition ${
-            current === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-ink"
-          }`}
-        >
-          {m === "participant" ? "Individual" : m}
-        </button>
-      ))}
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-3 rounded-xl border border-hairline bg-card px-3 py-2 text-left transition hover:bg-secondary"
+      >
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
+          <Icon className="h-4 w-4 text-ink" strokeWidth={2.25} />
+        </span>
+        <span className="min-w-0">
+          <span className="mono block text-[9px] uppercase tracking-[0.2em] text-muted-foreground">{sub}</span>
+          <span className="block truncate text-sm text-ink md:text-base">{label}</span>
+        </span>
+        <ChevronDown className="ml-1 h-4 w-4 text-muted-foreground" />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 z-40 mt-1.5 w-72 overflow-hidden rounded-xl border border-hairline bg-card shadow-xl">
+            <button
+              onClick={() => {
+                onSelect(null);
+                setOpen(false);
+              }}
+              className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-secondary ${
+                !activeEntity ? "bg-secondary/60" : ""
+              }`}
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary">
+                <UserIcon className="h-3.5 w-3.5 text-ink" strokeWidth={2.25} />
+              </span>
+              <span>
+                <span className="mono block text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Personal</span>
+                <span className="block text-sm text-ink">Individual profile</span>
+              </span>
+            </button>
+            {entities.length > 0 && <div className="h-px w-full bg-hairline" />}
+            {entities.map((e) => {
+              const EI = e.entity_type === "company" ? Building2 : e.entity_type === "cooperation" ? Network : UsersIcon;
+              return (
+                <button
+                  key={e.id}
+                  onClick={() => {
+                    onSelect(e.id);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-secondary ${
+                    activeEntity?.id === e.id ? "bg-secondary/60" : ""
+                  }`}
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary">
+                    <EI className="h-3.5 w-3.5 text-ink" strokeWidth={2.25} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="mono block text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                      {ENTITY_LABEL[e.entity_type]}
+                    </span>
+                    <span className="block truncate text-sm text-ink">{e.name}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function CreateEntityModal({
+  ownerId,
+  onClose,
+  onCreated,
+}: {
+  ownerId: string;
+  onClose: () => void;
+  onCreated: (row: EntityRow) => void;
+}) {
+  const [name, setName] = useState("");
+  const [entityType, setEntityType] = useState<EntityType>("team");
+  const [busy, setBusy] = useState(false);
+
+  const create = async () => {
+    if (!name.trim()) {
+      toast.error("Name is required.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data, error } = await supabase
+        .from("teams")
+        .insert({ name: name.trim(), entity_type: entityType, owner_id: ownerId } as never)
+        .select("id, name, entity_type")
+        .single();
+      if (error) throw error;
+      onCreated(data as EntityRow);
+      toast.success(`${ENTITY_LABEL[entityType]} created.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not create.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md overflow-hidden rounded-xl border border-hairline bg-card shadow-2xl">
+        <header className="flex items-center justify-between border-b border-hairline px-5 py-3.5">
+          <div>
+            <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Profile</p>
+            <h2 className="mt-0.5 text-lg text-ink">Create new entity</h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+
+        <div className="space-y-4 px-5 py-5">
+          <p className="text-xs text-muted-foreground">
+            Just the basics to get started. You can edit everything else after the entity is created.
+          </p>
+
+          <label className="block">
+            <span className="mono mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              Name
+            </span>
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Raufoss IL Langrenn"
+              className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mono mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              Entity type
+            </span>
+            <select
+              value={entityType}
+              onChange={(e) => setEntityType(e.target.value as EntityType)}
+              className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+            >
+              <option value="team">Team</option>
+              <option value="company">Company</option>
+              <option value="cooperation">Cooperation</option>
+            </select>
+          </label>
+        </div>
+
+        <footer className="flex items-center justify-end gap-2 border-t border-hairline bg-background/60 px-5 py-3">
+          <button
+            onClick={onClose}
+            className="rounded-md border border-hairline bg-card px-4 py-1.5 text-sm text-ink transition hover:bg-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={create}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {busy ? "Creating…" : "Create"}
+          </button>
+        </footer>
+      </div>
     </div>
   );
 }
