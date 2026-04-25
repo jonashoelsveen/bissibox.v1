@@ -114,10 +114,21 @@ function TeamPage() {
 
       const { data: tierData } = await supabase
         .from("team_membership_tiers")
-        .select("*")
+        .select("id, name, description, price, currency, group_assignment_mode, criteria_label")
         .eq("team_id", teamId)
         .order("sort_order");
-      setTiers((tierData ?? []) as Tier[]);
+      setTiers(((tierData ?? []) as unknown as Tier[]).map((t) => ({
+        ...t,
+        group_assignment_mode: (t.group_assignment_mode === "criteria" ? "criteria" : "volunteer"),
+        criteria_label: t.criteria_label ?? "age",
+      })));
+
+      const { data: groupData } = await supabase
+        .from("team_groups")
+        .select("id, name")
+        .eq("team_id", teamId)
+        .order("sort_order");
+      setGroupOptions(((groupData ?? []) as { id: string; name: string }[]).map((g) => ({ id: g.id, name: g.name || "Untitled group" })));
 
       // Members joined with profiles (only active athletes show publicly)
       const { data: memberRows } = await supabase
