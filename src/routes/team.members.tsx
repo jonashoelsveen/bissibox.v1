@@ -431,6 +431,8 @@ function TeamMembersPage() {
           sort_order: i,
           group_assignment_mode: m.group_assignment_mode,
           criteria_label: (m.criteria_label.trim() || "age"),
+          is_active: m.is_active,
+          is_public: m.is_active ? m.is_public : false,
         };
         if (m.id) {
           const { error } = await supabase
