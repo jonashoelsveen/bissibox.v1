@@ -234,7 +234,7 @@ function SettingsPage() {
       <div>
         <div className="flex items-center justify-between gap-2 pt-4 pr-14">
           <div className="flex items-baseline gap-2">
-            <span className="mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+            <span className="text-base font-semibold text-ink">
               Account
             </span>
             <ProfileSelector
@@ -548,7 +548,7 @@ function ProfileSelector({
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-baseline gap-1.5 text-2xl font-semibold text-ink transition hover:text-ink/80 md:text-3xl"
+        className="inline-flex items-baseline gap-1.5 text-base font-semibold text-ink transition hover:text-ink/80"
       >
         <span className="truncate">{label}</span>
         <ChevronDown className="h-4 w-4 translate-y-[-2px] text-muted-foreground" strokeWidth={2.25} />
