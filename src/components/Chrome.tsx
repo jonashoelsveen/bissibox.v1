@@ -59,8 +59,11 @@ export function TopChrome() {
             to="/profile"
             aria-label="Profile"
             className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-all ${
-              path.startsWith("/profile")
-                ? "bg-primary text-primary-foreground"
+              path.startsWith("/profile") ||
+              path.startsWith("/u/") ||
+              path.startsWith("/t/") ||
+              path.startsWith("/c/")
+                ? "bg-ink text-background"
                 : "text-ink hover:bg-secondary"
             }`}
           >
