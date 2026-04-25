@@ -644,97 +644,104 @@ function TeamMembersPage() {
       )}
 
       {tab === "members" && (
-        <Panel>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative min-w-[220px] flex-1">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search name, email…"
-                className="h-10 w-full rounded-lg border border-hairline bg-card pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
-              />
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <Panel className="!mt-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[220px] flex-1">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search name, email…"
+                  className="h-10 w-full rounded-lg border border-hairline bg-card pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
+                />
+              </div>
+              <span className="ml-auto mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                {filteredMembers.length} / {members.length}
+              </span>
             </div>
-            <select
-              value=""
-              onChange={() => { /* placeholder global selector — unused */ }}
-              className="hidden"
-            >
-              <option value="">—</option>
-            </select>
-            <span className="ml-auto mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              {filteredMembers.length} / {members.length}
-            </span>
-          </div>
 
-          <section className="mt-3 overflow-hidden rounded-lg border border-hairline bg-card">
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="border-b border-hairline bg-secondary/50 text-left">
-                    <Th>First name</Th>
-                    <Th>Surname</Th>
-                    <Th className="w-24">Born</Th>
-                    <Th>Email</Th>
-                    <Th className="w-56">Groups</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMembers.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-foreground">
-                        No members yet.
-                      </td>
+            <section className="mt-3 overflow-hidden rounded-lg border border-hairline bg-card">
+              <div className="overflow-x-auto">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="border-b border-hairline bg-secondary/50 text-left">
+                      <Th>First name</Th>
+                      <Th>Surname</Th>
+                      <Th className="w-24">Born</Th>
+                      <Th>Email</Th>
+                      <Th className="w-56">Groups</Th>
                     </tr>
-                  )}
-                  {filteredMembers.map((m, i) => {
-                    const born = m.birth_date ? m.birth_date.slice(0, 10).replace(/-/g, "") : "—";
-                    return (
-                      <tr
-                        key={m.user_id}
-                        className={`border-b border-hairline transition last:border-b-0 hover:bg-secondary/40 ${
-                          i % 2 === 0 ? "bg-card" : "bg-background/40"
-                        }`}
-                      >
-                        <td className="px-3 py-1 text-ink">{m.first_name ?? "—"}</td>
-                        <td className="px-3 py-1 text-ink">{m.last_name ?? ""}</td>
-                        <td className="px-3 py-1 num text-ink">{born}</td>
-                        <td className="px-3 py-1 text-muted-foreground">{m.email ?? "—"}</td>
-                        <td className="px-3 py-1">
-                          {groups.length === 0 ? (
-                            <span className="text-muted-foreground">—</span>
-                          ) : (
-                            <select
-                              value={assignments[m.user_id] ?? ""}
-                              onChange={(e) =>
-                                setAssignments((a) => ({ ...a, [m.user_id]: e.target.value }))
-                              }
-                              className="w-full cursor-pointer rounded-md border border-hairline bg-background px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
-                            >
-                              <option value="">— No group —</option>
-                              {groups
-                                .filter((g) => g.id)
-                                .map((g, gi) => (
-                                  <option key={g.id} value={g.id}>
-                                    {g.name || `Group ${gi + 1}`}{g.is_default ? " (Default)" : ""}
-                                  </option>
-                                ))}
-                            </select>
-                          )}
+                  </thead>
+                  <tbody>
+                    {filteredMembers.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                          No members yet.
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    )}
+                    {filteredMembers.map((m, i) => {
+                      const born = m.birth_date ? m.birth_date.slice(0, 10).replace(/-/g, "") : "—";
+                      return (
+                        <tr
+                          key={m.user_id}
+                          className={`border-b border-hairline transition last:border-b-0 hover:bg-secondary/40 ${
+                            i % 2 === 0 ? "bg-card" : "bg-background/40"
+                          }`}
+                        >
+                          <td className="px-3 py-1 text-ink">{m.first_name ?? "—"}</td>
+                          <td className="px-3 py-1 text-ink">{m.last_name ?? ""}</td>
+                          <td className="px-3 py-1 num text-ink">{born}</td>
+                          <td className="px-3 py-1 text-muted-foreground">{m.email ?? "—"}</td>
+                          <td className="px-3 py-1">
+                            {groups.length === 0 ? (
+                              <span className="text-muted-foreground">—</span>
+                            ) : (
+                              <select
+                                value={assignments[m.user_id] ?? ""}
+                                onChange={(e) =>
+                                  setAssignments((a) => ({ ...a, [m.user_id]: e.target.value }))
+                                }
+                                className="w-full cursor-pointer rounded-md border border-hairline bg-background px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
+                              >
+                                <option value="">— No group —</option>
+                                {groups
+                                  .filter((g) => g.id)
+                                  .map((g, gi) => (
+                                    <option key={g.id} value={g.id}>
+                                      {g.name || `Group ${gi + 1}`}{g.is_default ? " (Default)" : ""}
+                                    </option>
+                                  ))}
+                              </select>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+            {groups.some((g) => !g.id) && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                New groups appear in the dropdown after you save.
+              </p>
+            )}
+          </Panel>
+
+          <Panel className="!mt-0 flex flex-col">
+            <div className="flex items-center justify-between">
+              <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                Organization chart
+              </p>
+              <p className="text-[11px] text-muted-foreground">Drag to pan · scroll to zoom</p>
             </div>
-          </section>
-          {groups.some((g) => !g.id) && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              New groups appear in the dropdown after you save.
-            </p>
-          )}
-        </Panel>
+            <div className="mt-3 h-[560px] min-h-[420px] w-full">
+              <OrgChart board={orgBoard} groups={orgGroups} teamName={teamName} />
+            </div>
+          </Panel>
+        </div>
       )}
     </div>
   );
