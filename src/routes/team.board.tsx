@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardCheck,
+  Folder as FolderIcon,
   Mail,
   Paperclip,
   Plus,
@@ -79,6 +80,12 @@ function TeamBoardPage() {
   const [extraFolders, setExtraFolders] = useState<string[]>([]);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [newMeetingOpen, setNewMeetingOpen] = useState(false);
+  const [newMeetingTitle, setNewMeetingTitle] = useState("");
+  const [newMeetingFolder, setNewMeetingFolder] = useState<string>("");
+  const [editMeetingOpen, setEditMeetingOpen] = useState(false);
+  const [editMeetingTitle, setEditMeetingTitle] = useState("");
+  const [editMeetingFolder, setEditMeetingFolder] = useState<string>("");
   const [meetingSearch, setMeetingSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -289,13 +296,22 @@ function TeamBoardPage() {
     });
   }, [meetings, folderFilter, meetingSearch, dateFrom, dateTo]);
 
+  function openNewMeeting() {
+    setNewMeetingTitle(`Board meeting · ${new Date().toLocaleDateString()}`);
+    setNewMeetingFolder("");
+    setNewMeetingOpen(true);
+  }
+
   async function startNewMeeting() {
     if (!teamId || !user) return;
+    const title = newMeetingTitle.trim() || `Board meeting · ${new Date().toLocaleDateString()}`;
+    const folder = newMeetingFolder.trim() || null;
     const { data, error } = await supabase
       .from("team_board_meetings")
       .insert({
         team_id: teamId,
-        title: `Board meeting · ${new Date().toLocaleDateString()}`,
+        title,
+        folder,
         meeting_date: new Date().toISOString().slice(0, 10),
         created_by: user.id,
       })
@@ -332,7 +348,35 @@ function TeamBoardPage() {
     setAttachments([]);
     setAttendance([]);
     setRoster(snapshot.sort((a, b) => a.sort_order - b.sort_order));
+    setNewMeetingOpen(false);
     setTab("ongoing");
+  }
+
+  function openEditMeeting() {
+    if (!ongoing) return;
+    setEditMeetingTitle(ongoing.title ?? "");
+    setEditMeetingFolder(ongoing.folder ?? "");
+    setEditMeetingOpen(true);
+  }
+
+  async function saveEditMeeting() {
+    if (!ongoing) return;
+    const title = editMeetingTitle.trim() || ongoing.title;
+    const folder = editMeetingFolder.trim() || null;
+    const { error } = await supabase
+      .from("team_board_meetings")
+      .update({ title, folder, updated_at: new Date().toISOString() })
+      .eq("id", ongoing.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setOngoing((prev) => (prev ? { ...prev, title, folder } : prev));
+    setMeetings((prev) =>
+      prev.map((m) => (m.id === ongoing.id ? { ...m, title, folder } : m)),
+    );
+    setEditMeetingOpen(false);
+    toast.success("Updated");
   }
 
   function openMeeting(m: MeetingRow) {
@@ -652,7 +696,7 @@ function TeamBoardPage() {
                 <Plus className="h-4 w-4" /> New folder
               </button>
               <button
-                onClick={startNewMeeting}
+                onClick={openNewMeeting}
                 disabled={busy}
                 className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
               >
@@ -699,7 +743,9 @@ function TeamBoardPage() {
             title={ongoing.title}
           >
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            <span className="max-w-[200px] truncate">{ongoing.title}</span>
+            <span className="max-w-[240px] truncate">
+              {ongoing.folder ? `${ongoing.folder} · ${ongoing.title}` : ongoing.title}
+            </span>
             <span
               role="button"
               tabIndex={0}
@@ -908,19 +954,28 @@ function TeamBoardPage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               title="Attach documents"
-              className="rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-secondary hover:text-ink"
             >
               <Paperclip className="h-4 w-4" />
+              <span>Attach</span>
             </button>
-            <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              {ongoing.title}
-            </span>
             <button
               onClick={openAttendance}
               title="Attendance"
-              className="ml-auto rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-secondary hover:text-ink"
             >
               <ClipboardCheck className="h-4 w-4" />
+              <span>Attendance</span>
+            </button>
+            <span className="ml-3 mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground truncate">
+              {ongoing.folder ? `${ongoing.folder} · ${ongoing.title}` : ongoing.title}
+            </span>
+            <button
+              onClick={openEditMeeting}
+              title="Edit name and folder"
+              className="ml-auto rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+            >
+              <FolderIcon className="h-4 w-4" />
             </button>
             <button
               onClick={saveOngoingText}
@@ -1121,6 +1176,34 @@ function TeamBoardPage() {
           </div>
         </div>
       )}
+
+      {newMeetingOpen && (
+        <MeetingDialog
+          title="New board meeting"
+          name={newMeetingTitle}
+          folder={newMeetingFolder}
+          folders={folders}
+          onName={setNewMeetingTitle}
+          onFolder={setNewMeetingFolder}
+          onClose={() => setNewMeetingOpen(false)}
+          onConfirm={startNewMeeting}
+          confirmLabel="Start meeting"
+        />
+      )}
+
+      {editMeetingOpen && (
+        <MeetingDialog
+          title="Edit meeting"
+          name={editMeetingTitle}
+          folder={editMeetingFolder}
+          folders={folders}
+          onName={setEditMeetingTitle}
+          onFolder={setEditMeetingFolder}
+          onClose={() => setEditMeetingOpen(false)}
+          onConfirm={saveEditMeeting}
+          confirmLabel="Save"
+        />
+      )}
     </div>
   );
 }
@@ -1221,5 +1304,96 @@ function SideNavBtn({
     >
       {children}
     </button>
+  );
+}
+
+function MeetingDialog({
+  title,
+  name,
+  folder,
+  folders,
+  onName,
+  onFolder,
+  onClose,
+  onConfirm,
+  confirmLabel,
+}: {
+  title: string;
+  name: string;
+  folder: string;
+  folders: string[];
+  onName: (v: string) => void;
+  onFolder: (v: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+  confirmLabel: string;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/60" />
+      <div
+        className="relative z-10 w-full max-w-md rounded-2xl border border-hairline bg-card p-6 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-2 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg text-ink">{title}</h2>
+          <button
+            onClick={onClose}
+            className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <label className="block">
+          <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            Name
+          </span>
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => onName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onConfirm();
+            }}
+            className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
+          />
+        </label>
+        <div className="mt-4">
+          <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            Folder
+          </span>
+          <select
+            value={folder}
+            onChange={(e) => onFolder(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
+          >
+            <option value="">None</option>
+            {folders.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={!name.trim()}
+            className="rounded-full bg-primary px-5 py-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
