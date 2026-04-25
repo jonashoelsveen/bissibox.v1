@@ -183,19 +183,24 @@ function TeamPage() {
     })();
   }, [user, teamId]);
 
-  const join = async (tierId: string) => {
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [pendingTierId, setPendingTierId] = useState<string | null>(null);
+  const nav = useNavigate();
+
+  const startJoin = (tierId: string) => {
     if (!user) {
-      toast.error("Sign in first");
+      nav({ to: "/auth", search: { redirect: window.location.pathname } as never });
       return;
     }
-    const { error } = await supabase
-      .from("team_memberships")
-      .insert({ team_id: teamId, user_id: user.id, tier_id: tierId, status: "pending" });
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Membership requested");
-      setMyMemberships((s) => new Set([...s, tierId]));
-    }
+    setPendingTierId(tierId);
+    setVerifyOpen(true);
+  };
+
+  const onVerified = () => {
+    if (pendingTierId) setMyMemberships((s) => new Set([...s, pendingTierId]));
+    setVerifyOpen(false);
+    setPendingTierId(null);
+    toast.success("Membership requested");
   };
 
   if (notFound) {
