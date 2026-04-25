@@ -608,7 +608,7 @@ function TeamMembersPage() {
                     <Th>Surname</Th>
                     <Th className="w-24">Born</Th>
                     <Th>Email</Th>
-                    <Th className="w-56">Group</Th>
+                    <Th className="w-56">Groups</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -633,22 +633,26 @@ function TeamMembersPage() {
                         <td className="px-3 py-1 num text-ink">{born}</td>
                         <td className="px-3 py-1 text-muted-foreground">{m.email ?? "—"}</td>
                         <td className="px-3 py-1">
-                          <select
-                            value={assignments[m.user_id] ?? ""}
-                            onChange={(e) =>
-                              setAssignments((a) => ({ ...a, [m.user_id]: e.target.value }))
-                            }
-                            className="w-full cursor-pointer rounded-md border border-hairline bg-background px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
-                          >
-                            <option value="">— No group —</option>
-                            {groups
-                              .filter((g) => g.id)
-                              .map((g, gi) => (
-                                <option key={g.id} value={g.id}>
-                                  {g.name || `Group ${gi + 1}`}
-                                </option>
-                              ))}
-                          </select>
+                          {groups.length === 0 ? (
+                            <span className="text-muted-foreground">—</span>
+                          ) : (
+                            <select
+                              value={assignments[m.user_id] ?? ""}
+                              onChange={(e) =>
+                                setAssignments((a) => ({ ...a, [m.user_id]: e.target.value }))
+                              }
+                              className="w-full cursor-pointer rounded-md border border-hairline bg-background px-2 py-1.5 text-sm text-ink outline-none focus:border-primary"
+                            >
+                              <option value="">— No group —</option>
+                              {groups
+                                .filter((g) => g.id)
+                                .map((g, gi) => (
+                                  <option key={g.id} value={g.id}>
+                                    {g.name || `Group ${gi + 1}`}{g.is_default ? " (Default)" : ""}
+                                  </option>
+                                ))}
+                            </select>
+                          )}
                         </td>
                       </tr>
                     );
