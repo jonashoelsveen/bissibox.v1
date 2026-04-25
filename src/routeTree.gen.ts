@@ -13,6 +13,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MediaRouteImport } from './routes/media'
 import { Route as DiscoverRouteImport } from './routes/discover'
+import { Route as DeskRouteImport } from './routes/desk'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUserIdRouteImport } from './routes/u.$userId'
@@ -44,6 +45,11 @@ const MediaRoute = MediaRouteImport.update({
 const DiscoverRoute = DiscoverRouteImport.update({
   id: '/discover',
   path: '/discover',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeskRoute = DeskRouteImport.update({
+  id: '/desk',
+  path: '/desk',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -111,6 +117,7 @@ const OrganizerEventIdEditRoute = OrganizerEventIdEditRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/desk': typeof DeskRoute
   '/discover': typeof DiscoverRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/desk': typeof DeskRoute
   '/discover': typeof DiscoverRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/desk': typeof DeskRoute
   '/discover': typeof DiscoverRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/desk'
     | '/discover'
     | '/media'
     | '/profile'
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/desk'
     | '/discover'
     | '/media'
     | '/profile'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/auth'
+    | '/desk'
     | '/discover'
     | '/media'
     | '/profile'
@@ -223,6 +235,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  DeskRoute: typeof DeskRoute
   DiscoverRoute: typeof DiscoverRoute
   MediaRoute: typeof MediaRoute
   ProfileRoute: typeof ProfileRoute
@@ -267,6 +280,13 @@ declare module '@tanstack/react-router' {
       path: '/discover'
       fullPath: '/discover'
       preLoaderRoute: typeof DiscoverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/desk': {
+      id: '/desk'
+      path: '/desk'
+      fullPath: '/desk'
+      preLoaderRoute: typeof DeskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -359,6 +379,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  DeskRoute: DeskRoute,
   DiscoverRoute: DiscoverRoute,
   MediaRoute: MediaRoute,
   ProfileRoute: ProfileRoute,
