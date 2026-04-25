@@ -256,6 +256,47 @@ function TeamMembersPage() {
       // Reload group ids back into the local groups list (replace temp)
       setGroups((arr) => arr.map((g, i) => ({ ...g, id: idMap[i] })));
 
+      // Replace memberships
+      const memExistingIds = memberships.filter((m) => m.id).map((m) => m.id!) as string[];
+      const { data: dbTiers } = await supabase
+        .from("team_membership_tiers")
+        .select("id")
+        .eq("team_id", teamId);
+      const dbTierIds = (dbTiers ?? []).map((d) => d.id as string);
+      const tiersToDelete = dbTierIds.filter((id) => !memExistingIds.includes(id));
+      if (tiersToDelete.length) {
+        await supabase.from("team_membership_tiers").delete().in("id", tiersToDelete);
+      }
+      const memIdMap: Record<number, string> = {};
+      for (let i = 0; i < memberships.length; i++) {
+        const m = memberships[i];
+        const payload = {
+          team_id: teamId,
+          name: m.name.trim() || `Membership ${i + 1}`,
+          description: m.description.trim() || null,
+          price: m.price ? Number(m.price) : 0,
+          currency: m.currency.trim() || "NOK",
+          sort_order: i,
+        };
+        if (m.id) {
+          const { error } = await supabase
+            .from("team_membership_tiers")
+            .update(payload as never)
+            .eq("id", m.id);
+          if (error) throw error;
+          memIdMap[i] = m.id;
+        } else {
+          const { data, error } = await supabase
+            .from("team_membership_tiers")
+            .insert(payload as never)
+            .select("id")
+            .single();
+          if (error) throw error;
+          memIdMap[i] = data!.id as string;
+        }
+      }
+      setMemberships((arr) => arr.map((m, i) => ({ ...m, id: memIdMap[i] })));
+
       toast.success("Members saved.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save.");
