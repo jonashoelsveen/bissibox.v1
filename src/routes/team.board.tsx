@@ -8,6 +8,7 @@ import {
   CalendarClock,
   ChevronDown,
   ChevronRight,
+  ClipboardCheck,
   Mail,
   Paperclip,
   Plus,
@@ -16,6 +17,7 @@ import {
   Trash2,
   User as UserIcon,
   Users as UsersIcon,
+  X,
 } from "lucide-react";
 
 export const Route = createFileRoute("/team/board")({
