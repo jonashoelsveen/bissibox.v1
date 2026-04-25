@@ -96,19 +96,21 @@ function FullChart({
   groups,
   teamName,
   onExpandGroup,
+  onExpandBoard,
   onPersonClick,
 }: {
   board: OrgPerson[];
   groups: OrgGroup[];
   teamName?: string;
   onExpandGroup: (id: string) => void;
+  onExpandBoard: () => void;
   onPersonClick: (p: OrgPerson) => void;
 }) {
   return (
     <div className="flex flex-col items-center gap-10 px-6 py-10 animate-in fade-in duration-300">
       {/* Board */}
       <div className="w-full max-w-[260px]">
-        <BoardBox board={board} teamName={teamName} onPersonClick={onPersonClick} />
+        <BoardBox board={board} teamName={teamName} onExpand={onExpandBoard} />
       </div>
 
       {/* Connector */}
@@ -155,41 +157,26 @@ function FullChart({
 function BoardBox({
   board,
   teamName,
-  onPersonClick,
+  onExpand,
 }: {
   board: OrgPerson[];
   teamName?: string;
-  onPersonClick: (p: OrgPerson) => void;
+  onExpand: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   return (
-    <div className="overflow-hidden rounded-lg border border-hairline bg-background shadow-sm transition">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left transition hover:bg-secondary/50"
-      >
-        <div className="min-w-0">
-          <p className="mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">Board</p>
-          <p className="mt-0.5 truncate text-sm text-ink">{teamName || "Board"}</p>
-        </div>
-        <ChevronDown
-          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-      {open && (
-        <div className="border-t border-hairline px-3 py-3 animate-in fade-in slide-in-from-top-1 duration-200">
-          {board.length === 0 ? (
-            <p className="text-[11px] text-muted-foreground">No board members yet.</p>
-          ) : (
-            <ul className="space-y-0.5">
-              {board.map((p) => (
-                <PersonRow key={p.id} person={p} onClick={() => onPersonClick(p)} />
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
+    <button
+      onClick={onExpand}
+      className="group flex w-full items-center justify-between gap-2 rounded-lg border border-hairline bg-background px-4 py-3 text-left shadow-sm transition hover:border-primary/40 hover:bg-secondary/40"
+    >
+      <div className="min-w-0">
+        <p className="mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">Board</p>
+        <p className="mt-0.5 truncate text-sm text-ink">{teamName || "Board"}</p>
+        <p className="mt-0.5 mono text-[10px] text-muted-foreground">
+          {board.length} {board.length === 1 ? "member" : "members"}
+        </p>
+      </div>
+      <ChevronDown className="h-4 w-4 shrink-0 -rotate-90 text-muted-foreground transition group-hover:text-primary" />
+    </button>
   );
 }
 
@@ -209,6 +196,154 @@ function GroupBox({ group, onExpand }: { group: OrgGroup; onExpand: () => void }
       </div>
       <ChevronDown className="h-4 w-4 shrink-0 -rotate-90 text-muted-foreground transition group-hover:text-primary" />
     </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Focus overlay + focused cards (group / board)
+
+function FocusedOverlay({
+  onClose,
+  children,
+}: {
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="absolute inset-0 flex items-start justify-center overflow-y-auto px-6 py-10 animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-xl animate-in fade-in zoom-in-95 duration-300 ease-out"
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function FocusedGroupCard({
+  group,
+  onClose,
+  onPersonClick,
+}: {
+  group: OrgGroup;
+  onClose: () => void;
+  onPersonClick: (p: OrgPerson) => void;
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-primary/40 bg-background shadow-xl">
+      <header className="flex items-center justify-between gap-3 border-b border-hairline bg-background/60 px-5 py-3.5">
+        <div className="min-w-0">
+          <p className="mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+            Group
+          </p>
+          <h3 className="mt-0.5 truncate text-base text-ink">{group.name || "Untitled"}</h3>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </header>
+
+      <div className="space-y-5 px-5 py-5">
+        {group.description && (
+          <p className="text-[12px] leading-relaxed text-muted-foreground">{group.description}</p>
+        )}
+
+        <section>
+          <p className="mb-2 mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+            {group.leaders.length > 1 ? "Leaders" : "Leader"}
+          </p>
+          {group.leaders.length === 0 ? (
+            <p className="text-[12px] text-muted-foreground">No leader assigned.</p>
+          ) : (
+            <ul className="space-y-0.5">
+              {group.leaders.map((p) => (
+                <PersonRow key={p.id} person={p} onClick={() => onPersonClick(p)} accent />
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section>
+          <p className="mb-2 mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+            Members ({group.members.length})
+          </p>
+          {group.members.length === 0 ? (
+            <p className="text-[12px] text-muted-foreground">No members yet.</p>
+          ) : (
+            <ul className="space-y-0.5">
+              {group.members.map((p) => (
+                <PersonRow key={p.id} person={p} onClick={() => onPersonClick(p)} />
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function FocusedBoardCard({
+  board,
+  teamName,
+  onClose,
+  onPersonClick,
+}: {
+  board: OrgPerson[];
+  teamName?: string;
+  onClose: () => void;
+  onPersonClick: (p: OrgPerson) => void;
+}) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-primary/40 bg-background shadow-xl">
+      <header className="flex items-center justify-between gap-3 border-b border-hairline bg-background/60 px-5 py-3.5">
+        <div className="min-w-0">
+          <p className="mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+            Board
+          </p>
+          <h3 className="mt-0.5 truncate text-base text-ink">{teamName || "Board"}</h3>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </header>
+
+      <div className="space-y-5 px-5 py-5">
+        <section>
+          <p className="mb-2 mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+            Members ({board.length})
+          </p>
+          {board.length === 0 ? (
+            <p className="text-[12px] text-muted-foreground">No board members yet.</p>
+          ) : (
+            <ul className="space-y-0.5">
+              {board.map((p) => (
+                <PersonRow key={p.id} person={p} onClick={() => onPersonClick(p)} accent />
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </div>
   );
 }
 
