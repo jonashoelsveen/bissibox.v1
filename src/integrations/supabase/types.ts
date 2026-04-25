@@ -350,6 +350,108 @@ export type Database = {
           },
         ]
       }
+      file_folder_links: {
+        Row: {
+          created_at: string
+          file_id: string
+          folder_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          file_id: string
+          folder_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          file_id?: string
+          folder_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      file_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          pinned: boolean
+          sort_order: number
+          team_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          pinned?: boolean
+          sort_order?: number
+          team_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          pinned?: boolean
+          sort_order?: number
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      files: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size: number | null
+          folder_id: string | null
+          id: string
+          mime_type: string | null
+          scan_details: Json
+          scan_status: string
+          scanned_at: string | null
+          storage_path: string
+          team_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size?: number | null
+          folder_id?: string | null
+          id?: string
+          mime_type?: string | null
+          scan_details?: Json
+          scan_status?: string
+          scanned_at?: string | null
+          storage_path: string
+          team_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size?: number | null
+          folder_id?: string | null
+          id?: string
+          mime_type?: string | null
+          scan_details?: Json
+          scan_status?: string
+          scanned_at?: string | null
+          storage_path?: string
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       media_albums: {
         Row: {
           created_at: string
