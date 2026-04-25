@@ -543,7 +543,37 @@ function TeamMembersPage() {
       }
       setMemberships((arr) => arr.map((m, i) => ({ ...m, id: memIdMap[i] })));
 
-      toast.success("Members saved.");
+      // Persist board members
+      const bmIdMap: Record<number, string> = {};
+      for (let i = 0; i < boardMembers.length; i++) {
+        const m = boardMembers[i];
+        if (m.id) {
+          const { error } = await supabase
+            .from("team_board_members")
+            .update({ name: m.name, role: m.role, email: m.email, sort_order: i })
+            .eq("id", m.id);
+          if (error) throw error;
+          bmIdMap[i] = m.id;
+        } else {
+          const { data, error } = await supabase
+            .from("team_board_members")
+            .insert({
+              team_id: teamId,
+              name: m.name,
+              role: m.role,
+              email: m.email,
+              status: "pending",
+              sort_order: i,
+            })
+            .select("id")
+            .single();
+          if (error) throw error;
+          bmIdMap[i] = data!.id as string;
+        }
+      }
+      setBoardMembers((arr) => arr.map((m, i) => ({ ...m, id: bmIdMap[i] ?? m.id })));
+
+      toast.success("Saved.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save.");
     } finally {
