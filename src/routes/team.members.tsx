@@ -94,7 +94,7 @@ function TeamMembersPage() {
         return;
       }
 
-      const [{ data: gs }, { data: tms }, { data: tgms }] = await Promise.all([
+      const [{ data: gs }, { data: tms }, { data: tgms }, { data: tiers }] = await Promise.all([
         supabase
           .from("team_groups")
           .select("id,name,age_from,age_to,sort_order")
@@ -108,7 +108,23 @@ function TeamMembersPage() {
           .from("team_group_members")
           .select("group_id,user_id")
           .eq("team_id", tid),
+        supabase
+          .from("team_membership_tiers")
+          .select("id,name,description,price,currency,sort_order")
+          .eq("team_id", tid)
+          .order("sort_order", { ascending: true }),
       ]);
+
+      setMemberships(
+        (tiers ?? []).map((t, i) => ({
+          id: t.id,
+          name: t.name ?? "",
+          description: t.description ?? "",
+          price: t.price != null ? String(t.price) : "0",
+          currency: t.currency ?? "NOK",
+          sort_order: t.sort_order ?? i,
+        }))
+      );
 
       const tgmsArr = (tgms ?? []) as { group_id: string; user_id: string }[];
       const countByGroup: Record<string, number> = {};
