@@ -194,13 +194,20 @@ function TeamMembersPage() {
         }))
       );
 
-      const userIds = (tms ?? []).map((t) => t.user_id);
+      const tmembershipsArr = (tmemberships ?? []) as { id: string; user_id: string; group_id: string | null }[];
+      // Union of users known to this team (legacy team_members + paid/joined memberships).
+      const allUserIds = Array.from(
+        new Set<string>([
+          ...((tms ?? []).map((t) => t.user_id) as string[]),
+          ...tmembershipsArr.map((t) => t.user_id),
+        ]),
+      );
       let profMap: Record<string, { first_name: string | null; last_name: string | null; birth_date: string | null; email: string | null }> = {};
-      if (userIds.length) {
+      if (allUserIds.length) {
         const { data: profs } = await supabase
           .from("profiles")
           .select("id,first_name,last_name,birth_date,email")
-          .in("id", userIds);
+          .in("id", allUserIds);
         for (const p of (profs ?? []) as { id: string; first_name: string | null; last_name: string | null; birth_date: string | null; email: string | null }[]) {
           profMap[p.id] = p;
         }
@@ -210,23 +217,35 @@ function TeamMembersPage() {
       for (const x of tgmsArr) {
         (groupsByUser[x.user_id] = groupsByUser[x.user_id] ?? []).push(x.group_id);
       }
+      // Memberships carry a chosen group_id when joining — treat as an assignment hint.
+      const membershipGroupByUser: Record<string, string> = {};
+      for (const m of tmembershipsArr) {
+        if (m.group_id && !membershipGroupByUser[m.user_id]) {
+          membershipGroupByUser[m.user_id] = m.group_id;
+        }
+      }
 
-      const memRows: MemberRow[] = (tms ?? []).map((t) => {
-        const p = profMap[t.user_id];
+      const tmIdByUser: Record<string, string> = {};
+      for (const t of (tms ?? []) as { id: string; user_id: string }[]) tmIdByUser[t.user_id] = t.id;
+
+      const memRows: MemberRow[] = allUserIds.map((uid) => {
+        const p = profMap[uid];
         return {
-          team_member_id: t.id,
-          user_id: t.user_id,
+          team_member_id: tmIdByUser[uid] ?? `membership-${uid}`,
+          user_id: uid,
           first_name: p?.first_name ?? null,
           last_name: p?.last_name ?? null,
           birth_date: p?.birth_date ?? null,
           email: p?.email ?? null,
-          group_ids: groupsByUser[t.user_id] ?? [],
+          group_ids: groupsByUser[uid] ?? [],
         };
       });
       setMembers(memRows);
 
       const initAssign: Record<string, string> = {};
-      for (const m of memRows) initAssign[m.user_id] = m.group_ids[0] ?? "";
+      for (const m of memRows) {
+        initAssign[m.user_id] = m.group_ids[0] ?? membershipGroupByUser[m.user_id] ?? "";
+      }
       setAssignments(initAssign);
 
       setLoaded(true);
