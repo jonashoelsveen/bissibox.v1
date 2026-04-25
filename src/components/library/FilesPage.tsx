@@ -180,15 +180,31 @@ export function FilesPage() {
     void load();
   }, [load]);
 
-  // Subtle polling so verification status updates without a manual refresh
+  // Poll VirusTotal for any pending items, then refresh the list
   useEffect(() => {
-    const hasPending = files.some((f) => f.scan_status === "pending");
-    if (!hasPending) return;
+    const pending = files.filter((f) => f.scan_status === "pending");
+    if (pending.length === 0) return;
+    let cancelled = false;
+    const tick = async () => {
+      const results = await Promise.all(
+        pending.map((f) =>
+          runPoll({ data: { kind: "file", id: f.id } }).catch(() => null),
+        ),
+      );
+      if (cancelled) return;
+      const anyResolved = results.some(
+        (r) => r && (r.status === "safe" || r.status === "infected" || r.status === "error"),
+      );
+      if (anyResolved) void load();
+    };
     const t = setInterval(() => {
-      void load();
-    }, 5000);
-    return () => clearInterval(t);
-  }, [files, load]);
+      void tick();
+    }, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [files, load, runPoll]);
 
   const filtered = useMemo(() => {
     if (view.type === "all") return files;
