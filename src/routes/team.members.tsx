@@ -252,8 +252,13 @@ function TeamMembersPage() {
     [boardMembers],
   );
 
+  const unassignedMembers = useMemo(
+    () => members.filter((m) => !(assignments[m.user_id] ?? "")),
+    [members, assignments],
+  );
+
   const orgGroups: OrgGroup[] = useMemo(() => {
-    return groups
+    const real = groups
       .filter((g) => g.id)
       .map((g) => {
         const memberPeople: OrgPerson[] = members
@@ -284,7 +289,24 @@ function TeamMembersPage() {
           members: memberPeople,
         };
       });
-  }, [groups, members, assignments]);
+    if (unassignedMembers.length > 0) {
+      real.push({
+        id: "__undefined__",
+        name: "Undefined",
+        description:
+          "Members who have joined but have not yet been assigned to a group.",
+        leaders: [],
+        members: unassignedMembers.map((m) => ({
+          id: m.user_id,
+          name: [m.first_name, m.last_name].filter(Boolean).join(" ") || m.email || "Unnamed",
+          role: null,
+          email: m.email,
+          phone: null,
+        })),
+      });
+    }
+    return real;
+  }, [groups, members, assignments, unassignedMembers]);
 
 
   const save = async () => {
