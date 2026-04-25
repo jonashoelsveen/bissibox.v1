@@ -90,6 +90,7 @@ export function OrgChart({ board, groups, teamName }: OrgChartProps) {
           <FocusedOverlay onClose={close}>
             <FocusedGroupCard
               group={focusedGroup}
+              accentColor={groupColors[focusedGroup.id] || ""}
               onClose={close}
               onPersonClick={(p) => setContactPerson(p)}
             />
