@@ -296,13 +296,22 @@ function TeamBoardPage() {
     });
   }, [meetings, folderFilter, meetingSearch, dateFrom, dateTo]);
 
+  function openNewMeeting() {
+    setNewMeetingTitle(`Board meeting · ${new Date().toLocaleDateString()}`);
+    setNewMeetingFolder("");
+    setNewMeetingOpen(true);
+  }
+
   async function startNewMeeting() {
     if (!teamId || !user) return;
+    const title = newMeetingTitle.trim() || `Board meeting · ${new Date().toLocaleDateString()}`;
+    const folder = newMeetingFolder.trim() || null;
     const { data, error } = await supabase
       .from("team_board_meetings")
       .insert({
         team_id: teamId,
-        title: `Board meeting · ${new Date().toLocaleDateString()}`,
+        title,
+        folder,
         meeting_date: new Date().toISOString().slice(0, 10),
         created_by: user.id,
       })
@@ -339,7 +348,35 @@ function TeamBoardPage() {
     setAttachments([]);
     setAttendance([]);
     setRoster(snapshot.sort((a, b) => a.sort_order - b.sort_order));
+    setNewMeetingOpen(false);
     setTab("ongoing");
+  }
+
+  function openEditMeeting() {
+    if (!ongoing) return;
+    setEditMeetingTitle(ongoing.title ?? "");
+    setEditMeetingFolder(ongoing.folder ?? "");
+    setEditMeetingOpen(true);
+  }
+
+  async function saveEditMeeting() {
+    if (!ongoing) return;
+    const title = editMeetingTitle.trim() || ongoing.title;
+    const folder = editMeetingFolder.trim() || null;
+    const { error } = await supabase
+      .from("team_board_meetings")
+      .update({ title, folder, updated_at: new Date().toISOString() })
+      .eq("id", ongoing.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setOngoing((prev) => (prev ? { ...prev, title, folder } : prev));
+    setMeetings((prev) =>
+      prev.map((m) => (m.id === ongoing.id ? { ...m, title, folder } : m)),
+    );
+    setEditMeetingOpen(false);
+    toast.success("Updated");
   }
 
   function openMeeting(m: MeetingRow) {
