@@ -289,13 +289,15 @@ function TeamMembersPage() {
   // Build org chart data (board + groups with leaders + members)
   const orgBoard: OrgPerson[] = useMemo(
     () =>
-      boardMembers.map((b) => ({
-        id: b.id,
-        name: b.name || b.email || "Board member",
-        role: b.role || null,
-        email: b.email || null,
-        phone: null,
-      })),
+      boardMembers
+        .filter((b) => b.id)
+        .map((b) => ({
+          id: b.id!,
+          name: b.name || b.email || "Board member",
+          role: b.role || null,
+          email: b.email || null,
+          phone: null,
+        })),
     [boardMembers],
   );
 
