@@ -76,6 +76,9 @@ function TeamBoardPage() {
   const [meetings, setMeetings] = useState<MeetingRow[]>([]);
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [folderFilter, setFolderFilter] = useState<string>("all");
+  const [extraFolders, setExtraFolders] = useState<string[]>([]);
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
   const [meetingSearch, setMeetingSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
