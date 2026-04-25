@@ -98,8 +98,6 @@ function FullChart({
   board,
   groups,
   teamName,
-  groupColors,
-  onSetGroupColor,
   onExpandGroup,
   onExpandBoard,
   onPersonClick,
@@ -107,8 +105,6 @@ function FullChart({
   board: OrgPerson[];
   groups: OrgGroup[];
   teamName?: string;
-  groupColors: Record<string, string>;
-  onSetGroupColor: (id: string, color: string) => void;
   onExpandGroup: (id: string) => void;
   onExpandBoard: () => void;
   onPersonClick: (p: OrgPerson) => void;
