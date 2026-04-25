@@ -132,7 +132,6 @@ export function TopChrome() {
         )}
 
         <div className="mt-auto flex flex-col items-center gap-2 pb-2">
-          {user && <ModeSwitch />}
           <NavBtn
             to={user ? "/settings" : "/auth"}
             label="Settings"
@@ -146,40 +145,9 @@ export function TopChrome() {
   );
 }
 
-function ModeSwitch() {
-  const { mode, setMode } = useAuth();
-  const isTeam = mode === "team" || mode === "organizer";
-  return (
-    <div
-      className="flex flex-col items-center rounded-full border border-hairline bg-card p-0.5 shadow-sm"
-      role="group"
-      aria-label="Switch account mode"
-    >
-      <button
-        type="button"
-        aria-label="Individual"
-        title="Individual"
-        onClick={() => setMode("participant")}
-        className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold transition ${
-          !isTeam ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-ink"
-        }`}
-      >
-        I
-      </button>
-      <button
-        type="button"
-        aria-label="Team"
-        title="Team"
-        onClick={() => setMode("team")}
-        className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold transition ${
-          isTeam ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-ink"
-        }`}
-      >
-        T
-      </button>
-    </div>
-  );
-}
+
+
+
 
 function NavBtn({
   to,

@@ -52,7 +52,7 @@ interface AttachmentRow {
 }
 
 function TeamBoardPage() {
-  const { user, loading: authLoading, mode } = useAuth();
+  const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
   const [tab, setTab] = useState<"members" | "meetings" | "ongoing">("members");
   const [teamId, setTeamId] = useState<string | null>(null);
@@ -91,11 +91,25 @@ function TeamBoardPage() {
   useEffect(() => {
     if (!user) return;
     void (async () => {
-      const { data: team } = await supabase
-        .from("teams")
-        .select("id,name")
-        .eq("owner_id", user.id)
-        .maybeSingle();
+      let team: { id: string; name: string | null } | null = null;
+      if (activeEntityId) {
+        const { data } = await supabase
+          .from("teams")
+          .select("id,name")
+          .eq("id", activeEntityId)
+          .maybeSingle();
+        team = data as { id: string; name: string | null } | null;
+      }
+      if (!team) {
+        const { data } = await supabase
+          .from("teams")
+          .select("id,name")
+          .eq("owner_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        team = data as { id: string; name: string | null } | null;
+      }
       const tid = team?.id ?? null;
       setTeamId(tid);
       setTeamName(team?.name ?? "");
@@ -106,7 +120,7 @@ function TeamBoardPage() {
       await Promise.all([loadMembers(tid), loadMeetings(tid)]);
       setLoaded(true);
     })();
-  }, [user]);
+  }, [user, activeEntityId]);
 
   async function loadMembers(tid: string) {
     const { data } = await supabase

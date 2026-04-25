@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 import { RolesPanel } from "@/components/RolesPanel";
+import { ChevronDown, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network } from "lucide-react";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -65,53 +66,83 @@ interface LikedRow {
 
 type Tab = "general" | "address" | "races" | "liked" | "roles" | "profiles";
 
+interface EntityRow {
+  id: string;
+  name: string;
+  entity_type: "team" | "company" | "cooperation";
+}
+
 function SettingsPage() {
-  const { user, loading: authLoading, mode, setMode, signOut } = useAuth();
+  const { user, loading: authLoading, activeEntityId, setActiveEntity, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
+  const [entities, setEntities] = useState<EntityRow[]>([]);
   const [regs, setRegs] = useState<RegistrationRow[]>([]);
   const [liked, setLiked] = useState<LikedRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<Tab>("general");
-  const [hasTeam, setHasTeam] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
-  const isTeamMode = mode === "team" || mode === "organizer";
+  // Active selection: null = individual profile, otherwise the entity id.
+  const isTeamMode = !!activeEntityId;
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [authLoading, user, navigate]);
 
+  // Load profile + entity list on mount
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-      if (data) setProfile(data as Profile);
+      const { data: p } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+      if (p) setProfile(p as Profile);
+
       const { data: r } = await supabase
         .from("registrations")
         .select("id, race_type, status, events(id, title, starts_at, location)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setRegs((r as unknown as RegistrationRow[]) ?? []);
+
       const { data: l } = await supabase
         .from("event_likes")
         .select("id, events(id, title, starts_at, location)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       setLiked((l as unknown as LikedRow[]) ?? []);
-      const { data: t } = await supabase
+
+      const { data: ts } = await supabase
         .from("teams")
-        .select("id, name, nif_id, contact_email, contact_phone, website, description, address, postal_code, postal_place, country")
+        .select("id, name, entity_type")
         .eq("owner_id", user.id)
-        .maybeSingle();
-      if (t) setTeam(t as Team);
-      setHasTeam(!!t);
+        .order("created_at", { ascending: true });
+      const list = (ts ?? []) as EntityRow[];
+      setEntities(list);
+
+      // If the stored active entity no longer exists, fall back to individual.
+      if (activeEntityId && !list.some((e) => e.id === activeEntityId)) {
+        setActiveEntity(null);
+      }
     })();
   }, [user]);
 
+  // Load the currently-selected entity's editable fields
   useEffect(() => {
-    if (!hasTeam && (mode === "team" || mode === "organizer")) setMode("participant");
-  }, [hasTeam, mode, setMode]);
+    if (!user) return;
+    if (!activeEntityId) {
+      setTeam(null);
+      return;
+    }
+    (async () => {
+      const { data: t } = await supabase
+        .from("teams")
+        .select("id, name, nif_id, contact_email, contact_phone, website, description, address, postal_code, postal_place, country")
+        .eq("id", activeEntityId)
+        .maybeSingle();
+      if (t) setTeam(t as Team);
+    })();
+  }, [user, activeEntityId]);
 
   useEffect(() => {
     if (isTeamMode && (tab === "races" || tab === "liked" || tab === "profiles")) setTab("general");
@@ -147,7 +178,9 @@ function SettingsPage() {
       const { error } = await supabase.from("teams").update(rest).eq("id", id);
       setSaving(false);
       if (error) return toast.error(error.message);
-      toast.success("Team saved.");
+      toast.success("Saved.");
+      // Refresh entity name in dropdown list
+      setEntities((prev) => prev.map((e) => (e.id === id ? { ...e, name: team.name } : e)));
     } else if (profile) {
       const { error } = await supabase.from("profiles").update(profile).eq("id", user.id);
       setSaving(false);
@@ -158,6 +191,13 @@ function SettingsPage() {
     }
   };
 
+  const onEntityCreated = (row: EntityRow) => {
+    setEntities((prev) => [...prev, row]);
+    setActiveEntity(row.id);
+    setCreateOpen(false);
+    setTab("general");
+  };
+
   if (!user || !profile) {
     return <div className="mx-auto max-w-3xl px-6 py-20 text-muted-foreground">Loading…</div>;
   }
@@ -166,28 +206,38 @@ function SettingsPage() {
     ? ["general", "address", "roles"]
     : ["general", "address", "roles", "profiles", "races", "liked"];
 
+  const activeEntity = entities.find((e) => e.id === activeEntityId) ?? null;
+
   return (
     <div className="px-4 md:px-6">
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-2 pt-4">
-          <div>
-            <p className="mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-              Settings
-            </p>
-            <h1 className="mt-1 text-2xl text-ink md:text-3xl">Account & preferences</h1>
-          </div>
-          <div className="flex gap-2">
-            <ModeToggle mode={mode} setMode={setMode} hasTeam={hasTeam} />
-            <button
-              onClick={async () => {
-                await signOut();
-                navigate({ to: "/" });
+          <div className="flex items-center gap-3">
+            <ProfileSelector
+              entities={entities}
+              activeEntity={activeEntity}
+              onSelect={(id) => {
+                setActiveEntity(id);
+                setTab("general");
               }}
-              className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+            />
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-card px-3.5 py-2 text-xs text-ink transition hover:bg-secondary"
             >
-              Sign out
+              <Plus className="h-3.5 w-3.5" />
+              Create new entity
             </button>
           </div>
+          <button
+            onClick={async () => {
+              await signOut();
+              navigate({ to: "/" });
+            }}
+            className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+          >
+            Sign out
+          </button>
         </div>
 
         <div className="mt-8 grid gap-10 md:grid-cols-[180px_1fr]">
@@ -420,37 +470,221 @@ function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {createOpen && user && (
+        <CreateEntityModal
+          ownerId={user.id}
+          onClose={() => setCreateOpen(false)}
+          onCreated={onEntityCreated}
+        />
+      )}
     </div>
   );
 }
 
-type ModeT = "participant" | "organizer" | "team";
+type EntityType = "team" | "company" | "cooperation";
 
-function ModeToggle({
-  mode,
-  setMode,
-  hasTeam,
+const ENTITY_LABEL: Record<EntityType, string> = {
+  team: "Team",
+  company: "Company",
+  cooperation: "Cooperation",
+};
+
+function ProfileSelector({
+  entities,
+  activeEntity,
+  onSelect,
 }: {
-  mode: ModeT;
-  setMode: (m: ModeT) => void;
-  hasTeam: boolean;
+  entities: EntityRow[];
+  activeEntity: EntityRow | null;
+  onSelect: (id: string | null) => void;
 }) {
-  if (!hasTeam) return null;
-  const options: ModeT[] = ["participant", "team"];
-  const current: ModeT = mode === "organizer" ? "team" : mode;
+  const [open, setOpen] = useState(false);
+
+  const label = activeEntity ? activeEntity.name : "Individual profile";
+  const Icon = activeEntity
+    ? activeEntity.entity_type === "company"
+      ? Building2
+      : activeEntity.entity_type === "cooperation"
+        ? Network
+        : UsersIcon
+    : UserIcon;
+  const sub = activeEntity ? ENTITY_LABEL[activeEntity.entity_type] : "Personal";
+
   return (
-    <div className="flex rounded-full border border-hairline bg-card p-1">
-      {options.map((m) => (
-        <button
-          key={m}
-          onClick={() => setMode(m)}
-          className={`rounded-full px-3 py-1.5 text-[10px] uppercase tracking-widest transition ${
-            current === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-ink"
-          }`}
-        >
-          {m === "participant" ? "Individual" : m}
-        </button>
-      ))}
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-3 rounded-xl border border-hairline bg-card px-3 py-2 text-left transition hover:bg-secondary"
+      >
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
+          <Icon className="h-4 w-4 text-ink" strokeWidth={2.25} />
+        </span>
+        <span className="min-w-0">
+          <span className="mono block text-[9px] uppercase tracking-[0.2em] text-muted-foreground">{sub}</span>
+          <span className="block truncate text-sm text-ink md:text-base">{label}</span>
+        </span>
+        <ChevronDown className="ml-1 h-4 w-4 text-muted-foreground" />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 z-40 mt-1.5 w-72 overflow-hidden rounded-xl border border-hairline bg-card shadow-xl">
+            <button
+              onClick={() => {
+                onSelect(null);
+                setOpen(false);
+              }}
+              className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-secondary ${
+                !activeEntity ? "bg-secondary/60" : ""
+              }`}
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary">
+                <UserIcon className="h-3.5 w-3.5 text-ink" strokeWidth={2.25} />
+              </span>
+              <span>
+                <span className="mono block text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Personal</span>
+                <span className="block text-sm text-ink">Individual profile</span>
+              </span>
+            </button>
+            {entities.length > 0 && <div className="h-px w-full bg-hairline" />}
+            {entities.map((e) => {
+              const EI = e.entity_type === "company" ? Building2 : e.entity_type === "cooperation" ? Network : UsersIcon;
+              return (
+                <button
+                  key={e.id}
+                  onClick={() => {
+                    onSelect(e.id);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-secondary ${
+                    activeEntity?.id === e.id ? "bg-secondary/60" : ""
+                  }`}
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary">
+                    <EI className="h-3.5 w-3.5 text-ink" strokeWidth={2.25} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="mono block text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                      {ENTITY_LABEL[e.entity_type]}
+                    </span>
+                    <span className="block truncate text-sm text-ink">{e.name}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function CreateEntityModal({
+  ownerId,
+  onClose,
+  onCreated,
+}: {
+  ownerId: string;
+  onClose: () => void;
+  onCreated: (row: EntityRow) => void;
+}) {
+  const [name, setName] = useState("");
+  const [entityType, setEntityType] = useState<EntityType>("team");
+  const [busy, setBusy] = useState(false);
+
+  const create = async () => {
+    if (!name.trim()) {
+      toast.error("Name is required.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data, error } = await supabase
+        .from("teams")
+        .insert({ name: name.trim(), entity_type: entityType, owner_id: ownerId } as never)
+        .select("id, name, entity_type")
+        .single();
+      if (error) throw error;
+      onCreated(data as EntityRow);
+      toast.success(`${ENTITY_LABEL[entityType]} created.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not create.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md overflow-hidden rounded-xl border border-hairline bg-card shadow-2xl">
+        <header className="flex items-center justify-between border-b border-hairline px-5 py-3.5">
+          <div>
+            <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Profile</p>
+            <h2 className="mt-0.5 text-lg text-ink">Create new entity</h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+
+        <div className="space-y-4 px-5 py-5">
+          <p className="text-xs text-muted-foreground">
+            Just the basics to get started. You can edit everything else after the entity is created.
+          </p>
+
+          <label className="block">
+            <span className="mono mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              Name
+            </span>
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Raufoss IL Langrenn"
+              className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mono mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              Entity type
+            </span>
+            <select
+              value={entityType}
+              onChange={(e) => setEntityType(e.target.value as EntityType)}
+              className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+            >
+              <option value="team">Team</option>
+              <option value="company">Company</option>
+              <option value="cooperation">Cooperation</option>
+            </select>
+          </label>
+        </div>
+
+        <footer className="flex items-center justify-end gap-2 border-t border-hairline bg-background/60 px-5 py-3">
+          <button
+            onClick={onClose}
+            className="rounded-md border border-hairline bg-card px-4 py-1.5 text-sm text-ink transition hover:bg-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={create}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {busy ? "Creating…" : "Create"}
+          </button>
+        </footer>
+      </div>
     </div>
   );
 }
