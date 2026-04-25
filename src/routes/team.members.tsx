@@ -448,6 +448,9 @@ function TeamMembersPage() {
         <TabBtn active={tab === "members"} onClick={() => setTab("members")} icon={<UsersIcon className="h-3.5 w-3.5" />}>
           Members
         </TabBtn>
+        <TabBtn active={tab === "chart"} onClick={() => setTab("chart")} icon={<Network className="h-3.5 w-3.5" />}>
+          Chart
+        </TabBtn>
       </nav>
 
       {tab === "memberships" && (
