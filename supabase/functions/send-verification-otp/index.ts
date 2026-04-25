@@ -1,7 +1,16 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
+async function hashCode(code: string): Promise<string> {
+  const saltBytes = new Uint8Array(16);
+  crypto.getRandomValues(saltBytes);
+  const salt = Array.from(saltBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const data = new TextEncoder().encode(`${salt}:${code}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  const hash = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${salt}:${hash}`;
+}
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -93,7 +102,7 @@ Deno.serve(async (req) => {
     }
 
     const code = generateCode();
-    const codeHash = await bcrypt.hash(code);
+    const codeHash = await hashCode(code);
     const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
 
     const { data: insertData, error: insertErr } = await admin

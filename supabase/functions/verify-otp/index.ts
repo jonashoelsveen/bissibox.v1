@@ -1,7 +1,19 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 import { corsHeaders } from "../_shared/cors.ts";
+
+async function verifyCode(code: string, stored: string): Promise<boolean> {
+  const [salt, expected] = stored.split(":");
+  if (!salt || !expected) return false;
+  const data = new TextEncoder().encode(`${salt}:${code}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  const hash = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  // constant-time compare
+  if (hash.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < hash.length; i++) diff |= hash.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -49,7 +61,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Too many attempts. Request a new code." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const ok = await bcrypt.compare(body.code, attempt.code_hash);
+    const ok = await verifyCode(body.code, attempt.code_hash);
     if (!ok) {
       const newAttempts = attempt.attempts + 1;
       await admin
