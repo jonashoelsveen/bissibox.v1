@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { CreditCard, Users as UsersIcon, Image as ImageIcon, Calendar, X } from "lucide-react";
+import { CreditCard, Users as UsersIcon, Image as ImageIcon, Calendar, X, Layers, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -44,6 +44,15 @@ interface GroupOpt {
   name: string;
 }
 
+interface PublicGroup {
+  id: string;
+  name: string;
+  age_from: number | null;
+  age_to: number | null;
+  description: string | null;
+  color: string | null;
+}
+
 interface ConfirmInfo {
   team_name: string;
   tier_name: string | null;
@@ -80,7 +89,7 @@ function TeamPage() {
   const { user } = useAuth();
   const [team, setTeam] = useState<PublicTeam | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const [tab, setTab] = useState<"memberships" | "members" | "media" | "events">("memberships");
+  const [tab, setTab] = useState<"memberships" | "groups" | "members" | "media" | "events">("memberships");
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [tiersLoaded, setTiersLoaded] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
@@ -93,6 +102,8 @@ function TeamPage() {
   const [pickerGroupId, setPickerGroupId] = useState<string>("");
   const [confirmInfo, setConfirmInfo] = useState<ConfirmInfo | null>(null);
   const [leaderInfoOpen, setLeaderInfoOpen] = useState(false);
+  const [publicGroups, setPublicGroups] = useState<PublicGroup[]>([]);
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -133,10 +144,12 @@ function TeamPage() {
 
       const { data: groupData } = await supabase
         .from("team_groups")
-        .select("id, name")
+        .select("id, name, age_from, age_to, description, color")
         .eq("team_id", teamId)
         .order("sort_order");
-      setGroupOptions(((groupData ?? []) as { id: string; name: string }[]).map((g) => ({ id: g.id, name: g.name || "Untitled group" })));
+      const groups = (groupData ?? []) as PublicGroup[];
+      setGroupOptions(groups.map((g) => ({ id: g.id, name: g.name || "Untitled group" })));
+      setPublicGroups(groups);
 
       // Members joined with profiles (only active athletes show publicly)
       const { data: memberRows } = await supabase
@@ -360,6 +373,7 @@ function TeamPage() {
       }
       tabs={[
         { key: "memberships", label: "Memberships", icon: <CreditCard className="h-3.5 w-3.5" /> },
+        { key: "groups", label: "Groups", icon: <Layers className="h-3.5 w-3.5" /> },
         { key: "members", label: "Members", icon: <UsersIcon className="h-3.5 w-3.5" /> },
         { key: "events", label: "Events", icon: <Calendar className="h-3.5 w-3.5" /> },
         { key: "media", label: "Media", icon: <ImageIcon className="h-3.5 w-3.5" /> },
@@ -429,6 +443,65 @@ function TeamPage() {
                       {joined ? "Joined" : "Join"}
                     </button>
                   </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {tab === "groups" && (
+        <div className="space-y-2">
+          {publicGroups.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-16 text-center text-sm text-muted-foreground">
+              No groups yet.
+            </div>
+          ) : (
+            publicGroups.map((g) => {
+              const expanded = expandedGroupId === g.id;
+              const ageText =
+                g.age_from != null && g.age_to != null
+                  ? `${g.age_from}–${g.age_to}`
+                  : g.age_from != null
+                    ? `${g.age_from}+`
+                    : g.age_to != null
+                      ? `≤ ${g.age_to}`
+                      : "All ages";
+              const colored = !!g.color;
+              return (
+                <div
+                  key={g.id}
+                  className="overflow-hidden rounded-xl border border-hairline bg-card"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setExpandedGroupId(expanded ? null : g.id)}
+                    className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition"
+                    style={colored ? { backgroundColor: g.color!, color: "#fff" } : undefined}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium">
+                        {g.name || "Untitled group"}
+                      </span>
+                      <span
+                        className={`text-xs ${colored ? "text-white/80" : "text-muted-foreground"}`}
+                      >
+                        Age {ageText}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  {expanded && (
+                    <div className="border-t border-hairline px-5 py-4 text-sm text-ink">
+                      {g.description ? (
+                        <p className="whitespace-pre-wrap">{g.description}</p>
+                      ) : (
+                        <p className="text-muted-foreground">No description.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })
