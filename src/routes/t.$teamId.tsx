@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { CreditCard, Users as UsersIcon, Image as ImageIcon, Calendar } from "lucide-react";
+import { CreditCard, Users as UsersIcon, Image as ImageIcon, Calendar, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
