@@ -376,6 +376,7 @@ function TeamMembersPage() {
           leader_email: g.leader_email.trim() || null,
           leader_phone: g.leader_phone.trim() || null,
           is_default: g.is_default,
+          color: g.color || null,
         };
         if (g.id) {
           const { error } = await supabase
