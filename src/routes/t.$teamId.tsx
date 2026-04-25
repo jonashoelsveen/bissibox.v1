@@ -347,7 +347,7 @@ function TeamPage() {
         </span>
       }
       actions={
-        tiersLoaded && tiers.length > 0 && (!user || user.id !== team.owner_id) ? (
+        canShowMembershipActions ? (
           <button
             onClick={openPicker}
             className="rounded-full bg-ink px-5 py-1.5 text-xs font-medium text-background hover:opacity-90"
@@ -382,14 +382,14 @@ function TeamPage() {
     >
       {tab === "memberships" && (
         <div id="team-membership-picker" className="space-y-2 scroll-mt-24">
-          {tiers.length === 0 ? (
+          {visibleTiers.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 px-6 py-12 text-center">
               <div className="text-sm text-muted-foreground">
-                This {team.entity_type === "company" ? "Company" : "Corporate"} has no active memberships.
+                This {team.entity_type === "company" ? "Company" : team.entity_type === "cooperation" ? "Corporate" : "Team"} has no active memberships.
               </div>
             </div>
           ) : (
-            tiers.map((tier) => {
+            visibleTiers.map((tier) => {
               const joined = myMemberships.has(tier.id);
               return (
                 <div
@@ -517,10 +517,10 @@ function TeamPage() {
                 onChange={(e) => setPickerTierId(e.target.value)}
                 className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
               >
-                {tiers.length === 0 ? (
+                {visibleTiers.length === 0 ? (
                   <option value="__default__">Member</option>
                 ) : (
-                  tiers.map((t) => (
+                  visibleTiers.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name} · {formatMoney(t.price, t.currency)}
                     </option>
