@@ -65,7 +65,20 @@ interface LikedRow {
   events: { id: string; title: string; starts_at: string; location: string } | null;
 }
 
-type Tab = "general" | "address" | "races" | "liked" | "roles" | "profiles" | "entity-profile" | "desk" | "signout";
+type Tab =
+  | "general"
+  | "address"
+  | "races"
+  | "liked"
+  | "roles"
+  | "profiles"
+  | "entity-profile"
+  | "desk"
+  | "signout"
+  | "entity-organization"
+  | "entity-meetings"
+  | "entity-library"
+  | "entity-events";
 
 interface EntityRow {
   id: string;
@@ -147,7 +160,15 @@ function SettingsPage() {
 
   useEffect(() => {
     if (isTeamMode && (tab === "races" || tab === "liked" || tab === "profiles" || tab === "desk")) setTab("general");
-    if (!isTeamMode && tab === "entity-profile") setTab("general");
+    if (
+      !isTeamMode &&
+      (tab === "entity-profile" ||
+        tab === "entity-organization" ||
+        tab === "entity-meetings" ||
+        tab === "entity-library" ||
+        tab === "entity-events")
+    )
+      setTab("general");
   }, [isTeamMode, tab]);
 
   const [userRoles, setUserRoles] = useState<{ role: "organizer" | "photographer" | "timekeeper" }[]>([]);
@@ -205,7 +226,16 @@ function SettingsPage() {
   }
 
   const tabs: Tab[] = isTeamMode
-    ? ["entity-profile", "general", "address", "roles"]
+    ? [
+        "entity-profile",
+        "general",
+        "address",
+        "roles",
+        "entity-organization",
+        "entity-meetings",
+        "entity-library",
+        "entity-events",
+      ]
     : ["general", "address", "roles", "profiles", "desk", "races", "liked"];
 
   const activeEntity = entities.find((e) => e.id === activeEntityId) ?? null;
@@ -227,7 +257,15 @@ function SettingsPage() {
                   ? "My races"
                   : t === "liked"
                     ? "Liked races"
-                    : "Sign out";
+                    : t === "entity-organization"
+                      ? "Organization"
+                      : t === "entity-meetings"
+                        ? "Meetings"
+                        : t === "entity-library"
+                          ? "Library"
+                          : t === "entity-events"
+                            ? "Events"
+                            : "Sign out";
 
   return (
     <div className="px-4 md:px-6">
@@ -506,6 +544,42 @@ function SettingsPage() {
             )}
 
             {tab === "desk" && !isTeamMode && <DeskSettingsPanel />}
+
+            {tab === "entity-organization" && isTeamMode && (
+              <Card>
+                <h3 className="text-sm font-semibold text-ink">Organization</h3>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Settings related to your organization page will appear here.
+                </p>
+              </Card>
+            )}
+
+            {tab === "entity-meetings" && isTeamMode && (
+              <Card>
+                <h3 className="text-sm font-semibold text-ink">Meetings</h3>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Settings related to board meetings will appear here.
+                </p>
+              </Card>
+            )}
+
+            {tab === "entity-library" && isTeamMode && (
+              <Card>
+                <h3 className="text-sm font-semibold text-ink">Library</h3>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Settings related to your library will appear here.
+                </p>
+              </Card>
+            )}
+
+            {tab === "entity-events" && isTeamMode && (
+              <Card>
+                <h3 className="text-sm font-semibold text-ink">Events</h3>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Settings related to events will appear here.
+                </p>
+              </Card>
+            )}
           </div>
         </div>
       </div>
