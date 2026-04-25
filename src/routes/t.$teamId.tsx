@@ -89,7 +89,7 @@ function TeamPage() {
   const { user } = useAuth();
   const [team, setTeam] = useState<PublicTeam | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const [tab, setTab] = useState<"memberships" | "members" | "media" | "events">("memberships");
+  const [tab, setTab] = useState<"memberships" | "groups" | "members" | "media" | "events">("memberships");
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [tiersLoaded, setTiersLoaded] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
