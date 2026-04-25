@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardCheck,
+  Folder as FolderIcon,
   Mail,
   Paperclip,
   Plus,
