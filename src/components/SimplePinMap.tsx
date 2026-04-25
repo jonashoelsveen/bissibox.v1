@@ -6,12 +6,15 @@ type Pin = { lat: number; lng: number } | null;
 interface Props {
   pin: Pin;
   description: string;
-  onChange: (next: { pin: Pin; description: string }) => void;
+  name?: string;
+  onChange: (next: { pin: Pin; description: string; name: string }) => void;
   onSave?: () => void;
   saving?: boolean;
   title?: string;
-  /** When true (Event type), shows the description textarea in the right sidebar. */
+  /** When true, shows the description textarea in the right sidebar. */
   showDescription?: boolean;
+  /** When true, shows the pin name input (e.g. "Meeting room 3D"). */
+  showName?: boolean;
   /** Label noun for the location: "Meeting" or "Event". */
   kindLabel?: string;
 }
