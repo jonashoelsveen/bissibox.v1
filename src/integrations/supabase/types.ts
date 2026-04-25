@@ -279,6 +279,7 @@ export type Database = {
           featured: boolean
           id: string
           location: string | null
+          media_contact_email: string | null
           organizer: string
           owner_id: string | null
           popularity: number
@@ -304,6 +305,7 @@ export type Database = {
           featured?: boolean
           id?: string
           location?: string | null
+          media_contact_email?: string | null
           organizer: string
           owner_id?: string | null
           popularity?: number
@@ -329,6 +331,7 @@ export type Database = {
           featured?: boolean
           id?: string
           location?: string | null
+          media_contact_email?: string | null
           organizer?: string
           owner_id?: string | null
           popularity?: number
