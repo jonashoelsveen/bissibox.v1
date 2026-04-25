@@ -231,8 +231,8 @@ function SettingsPage() {
 
   return (
     <div className="px-4 md:px-6">
-      <div className="mx-auto max-w-5xl">
-        <div className="flex items-center justify-between gap-2 pt-4">
+      <div>
+        <div className="flex items-center justify-between gap-2 pt-4 pr-14">
           <div className="flex items-baseline gap-2">
             <span className="mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
               Account
