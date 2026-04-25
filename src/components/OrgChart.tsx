@@ -14,6 +14,7 @@ export interface OrgGroup {
   id: string;
   name: string;
   description?: string | null;
+  color?: string | null;
   leaders: OrgPerson[];
   members: OrgPerson[];
 }
