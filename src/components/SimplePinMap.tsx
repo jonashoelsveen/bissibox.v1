@@ -32,11 +32,13 @@ const PIN_COLOR = "#dc2626";
 export function SimplePinMap({
   pin,
   description,
+  name = "",
   onChange,
   onSave,
   saving,
   title,
   showDescription = true,
+  showName = false,
   kindLabel = "location",
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -49,14 +51,16 @@ export function SimplePinMap({
   const onChangeRef = useRef(onChange);
   const pinRef = useRef(pin);
   const descRef = useRef(description);
+  const nameRef = useRef(name);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => { pinRef.current = pin; }, [pin]);
   useEffect(() => { descRef.current = description; }, [description]);
+  useEffect(() => { nameRef.current = name; }, [name]);
   useEffect(() => { toolRef.current = tool; }, [tool]);
 
   // Undo/redo history
-  type Snap = { pin: Pin; description: string };
-  const historyRef = useRef<Snap[]>([{ pin, description }]);
+  type Snap = { pin: Pin; description: string; name: string };
+  const historyRef = useRef<Snap[]>([{ pin, description, name }]);
   const historyIdxRef = useRef(0);
   const skipNextHistoryRef = useRef(false);
   const [, forceTick] = useState(0);
