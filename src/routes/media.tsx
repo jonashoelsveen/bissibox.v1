@@ -145,6 +145,7 @@ const MEDIA_HOUSES = ["VG", "NRK", "TV2", "Dagbladet", "Aftenposten"];
 function MediaPage() {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const runScan = useServerFn(scanFile);
   const isTeamMode = (mode === "team" || mode === "organizer") || !!activeEntityId;
   const [albums, setAlbums] = useState<Album[]>([]);
   const [items, setItems] = useState<MediaItem[]>([]);
