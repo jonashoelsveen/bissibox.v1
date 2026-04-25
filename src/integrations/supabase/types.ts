@@ -283,6 +283,9 @@ export type Database = {
           media_pitch: string | null
           organizer: string
           owner_id: string | null
+          pin_description: string | null
+          pin_lat: number | null
+          pin_lng: number | null
           popularity: number
           published: boolean
           race_types: string[]
@@ -290,6 +293,7 @@ export type Database = {
           signup_deadline: string | null
           signup_fee: number
           starts_at: string
+          team_id: string | null
           timing_company_id: string | null
           title: string
           updated_at: string
@@ -310,6 +314,9 @@ export type Database = {
           media_pitch?: string | null
           organizer: string
           owner_id?: string | null
+          pin_description?: string | null
+          pin_lat?: number | null
+          pin_lng?: number | null
           popularity?: number
           published?: boolean
           race_types?: string[]
@@ -317,6 +324,7 @@ export type Database = {
           signup_deadline?: string | null
           signup_fee?: number
           starts_at: string
+          team_id?: string | null
           timing_company_id?: string | null
           title: string
           updated_at?: string
@@ -337,6 +345,9 @@ export type Database = {
           media_pitch?: string | null
           organizer?: string
           owner_id?: string | null
+          pin_description?: string | null
+          pin_lat?: number | null
+          pin_lng?: number | null
           popularity?: number
           published?: boolean
           race_types?: string[]
@@ -344,12 +355,20 @@ export type Database = {
           signup_deadline?: string | null
           signup_fee?: number
           starts_at?: string
+          team_id?: string | null
           timing_company_id?: string | null
           title?: string
           updated_at?: string
           world_athletics_certified?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_timing_company_id_fkey"
             columns: ["timing_company_id"]
@@ -637,6 +656,77 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_audience: {
+        Row: {
+          created_at: string
+          event_id: string
+          group_id: string | null
+          id: string
+          include_board: boolean
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          group_id?: string | null
+          id?: string
+          include_board?: boolean
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          group_id?: string | null
+          id?: string
+          include_board?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_audience_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_audience_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "team_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_invites: {
+        Row: {
+          email: string
+          event_id: string
+          id: string
+          invited_at: string
+          invited_by: string | null
+        }
+        Insert: {
+          email: string
+          event_id: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+        }
+        Update: {
+          email?: string
+          event_id?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_invites_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]

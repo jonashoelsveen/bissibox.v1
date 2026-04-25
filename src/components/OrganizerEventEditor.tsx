@@ -9,6 +9,8 @@ import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as Map
 import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
 import { ElevationProfile } from "@/components/ElevationProfile";
 import { ParticipantsPanel } from "@/components/ParticipantsPanel";
+import { MeetingParticipantsPanel } from "@/components/MeetingParticipantsPanel";
+import { SimplePinMap } from "@/components/SimplePinMap";
 import { CoOrganizersManager } from "@/components/CoOrganizersManager";
 import { EventMediaTab } from "@/components/EventMediaTab";
 
@@ -82,10 +84,15 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
   const [savedId, setSavedId] = useState<string | undefined>(eventId);
   const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [teamId, setTeamId] = useState<string | null>(null);
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [pinDescription, setPinDescription] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (eventType !== "race" && (tab === "classes" || tab === "subevents")) {
+    if (eventType === "meeting" && (tab === "classes" || tab === "subevents")) {
+      setTab("details");
+    } else if (eventType === "event" && tab === "classes") {
       setTab("details");
     }
   }, [eventType, tab]);
@@ -122,6 +129,11 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         setMediaPitch(mp);
         setShowMediaSection(!!mce || !!mp);
         setShowTimingSection(!!((e as any).timing_company_id));
+        setTeamId(((e as any).team_id as string | null) ?? null);
+        const pLat = (e as any).pin_lat as number | null;
+        const pLng = (e as any).pin_lng as number | null;
+        setPin(pLat != null && pLng != null ? { lat: pLat, lng: pLng } : null);
+        setPinDescription(((e as any).pin_description as string | null) ?? "");
       }
       const { data: cls } = await supabase
         .from("event_classes")
@@ -194,6 +206,9 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         event_type: eventType,
         media_contact_email: showMediaSection ? (mediaContactEmail.trim() || null) : null,
         media_pitch: showMediaSection ? (mediaPitch.trim() || null) : null,
+        pin_lat: pin?.lat ?? null,
+        pin_lng: pin?.lng ?? null,
+        pin_description: pinDescription.trim() || null,
       };
 
       let id = savedId;
@@ -311,18 +326,18 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             Event details
           </TabBtn>
           {eventType === "race" && (
-            <>
-              <TabBtn active={tab === "classes"} onClick={() => setTab("classes")} icon={<Layers className="h-3.5 w-3.5" />}>
-                Classes
-              </TabBtn>
-              <TabBtn
-                active={tab === "subevents"}
-                onClick={() => setTab("subevents")}
-                icon={<ListTree className="h-3.5 w-3.5" />}
-              >
-                Subevents
-              </TabBtn>
-            </>
+            <TabBtn active={tab === "classes"} onClick={() => setTab("classes")} icon={<Layers className="h-3.5 w-3.5" />}>
+              Classes
+            </TabBtn>
+          )}
+          {(eventType === "race" || eventType === "event") && (
+            <TabBtn
+              active={tab === "subevents"}
+              onClick={() => setTab("subevents")}
+              icon={<ListTree className="h-3.5 w-3.5" />}
+            >
+              {eventType === "event" ? "Tickets" : "Subevents"}
+            </TabBtn>
           )}
           <TabBtn active={tab === "map"} onClick={() => setTab("map")} icon={<MapIcon className="h-3.5 w-3.5" />}>
             Map
@@ -585,7 +600,9 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         <Panel>
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Races within this event (e.g. 5K, 10K, Marathon). Pick which classes apply to each.
+              {eventType === "event"
+                ? "Tickets for this event (e.g. General, VIP, Early bird)."
+                : "Races within this event (e.g. 5K, 10K, Marathon). Pick which classes apply to each."}
             </p>
             <button
               onClick={() => {
@@ -608,14 +625,14 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
               }}
               className="inline-flex items-center gap-1.5 rounded-md border border-hairline bg-background px-3 py-1.5 text-xs text-ink hover:bg-secondary"
             >
-              <Plus className="h-3.5 w-3.5" /> Add race
+              <Plus className="h-3.5 w-3.5" /> {eventType === "event" ? "Add ticket" : "Add race"}
             </button>
           </div>
 
           <div className="mt-5 space-y-2">
             {subevents.length === 0 && (
               <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
-                No races yet. Add a 5K, 10K, Half Marathon…
+                {eventType === "event" ? "No tickets yet." : "No races yet. Add a 5K, 10K, Half Marathon…"}
               </div>
             )}
             {subevents.map((s, idx) => {
@@ -690,7 +707,24 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         </Panel>
       )}
 
-      {tab === "map" && (
+      {tab === "map" && eventType !== "race" && (
+        <div className="mt-5 flex flex-1 overflow-hidden rounded-lg border border-hairline bg-card">
+          <SimplePinMap
+            pin={pin}
+            description={pinDescription}
+            onChange={({ pin: p, description: d }) => {
+              setPin(p);
+              setPinDescription(d);
+            }}
+            onSave={save}
+            saving={busy}
+            title={eventType === "meeting" ? "Meeting location" : "Event location"}
+            showDescription={eventType === "event"}
+          />
+        </div>
+      )}
+
+      {tab === "map" && eventType === "race" && (
         <div className="mt-5 flex flex-1 overflow-hidden rounded-lg border border-hairline bg-card">
           {/* Left: map + elevation profile stacked */}
           <div className="flex min-w-0 flex-1 flex-col">
@@ -967,7 +1001,10 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         </div>
       )}
 
-      {tab === "participants" && savedId && (
+      {tab === "participants" && savedId && eventType === "meeting" && (
+        <MeetingParticipantsPanel eventId={savedId} teamId={teamId} />
+      )}
+      {tab === "participants" && savedId && eventType !== "meeting" && (
         <ParticipantsPanel eventId={savedId} />
       )}
 
