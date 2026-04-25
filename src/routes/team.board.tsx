@@ -970,47 +970,45 @@ function TeamBoardPage() {
               </button>
             </div>
             <div className="max-h-[60vh] overflow-y-auto px-5 py-4">
-              {members.filter((m) => !!m.id).length === 0 ? (
+              {roster.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No board members yet. Add them in the Members tab.
+                  No board members were on the board when this meeting was created.
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {members
-                    .filter((m) => !!m.id)
-                    .map((m) => {
-                      const id = m.id as string;
-                      const checked = attendanceDraft.includes(id);
-                      return (
-                        <label
-                          key={id}
-                          className="flex cursor-pointer items-center gap-3 rounded-md border border-hairline bg-background px-3 py-2 hover:bg-secondary/40"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e) =>
-                              setAttendanceDraft((prev) =>
-                                e.target.checked
-                                  ? [...prev, id]
-                                  : prev.filter((x) => x !== id),
-                              )
-                            }
-                            className="h-4 w-4"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm text-ink">
-                              {m.name || m.email || "—"}
-                            </div>
-                            {m.role && (
-                              <div className="truncate text-xs text-muted-foreground">
-                                {m.role}
-                              </div>
-                            )}
+                  {roster.map((r) => {
+                    const id = r.id;
+                    const checked = attendanceDraft.includes(id);
+                    return (
+                      <label
+                        key={id}
+                        className="flex cursor-pointer items-center gap-3 rounded-md border border-hairline bg-background px-3 py-2 hover:bg-secondary/40"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) =>
+                            setAttendanceDraft((prev) =>
+                              e.target.checked
+                                ? [...prev, id]
+                                : prev.filter((x) => x !== id),
+                            )
+                          }
+                          className="h-4 w-4"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm text-ink">
+                            {r.name || r.email || "—"}
                           </div>
-                        </label>
-                      );
-                    })}
+                          {r.role && (
+                            <div className="truncate text-xs text-muted-foreground">
+                              {r.role}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
               )}
             </div>
