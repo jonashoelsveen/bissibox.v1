@@ -353,9 +353,6 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                         );
                         if (!ok) return;
                         setEventType(t);
-                        if (t !== "race" && (tab === "classes" || tab === "subevents")) {
-                          setTab("details");
-                        }
                       }}
                       className={`rounded-md border px-2.5 py-1 text-xs transition ${
                         on
