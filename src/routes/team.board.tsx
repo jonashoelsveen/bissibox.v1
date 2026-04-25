@@ -1069,6 +1069,58 @@ function TeamBoardPage() {
           e.target.value = "";
         }}
       />
+
+      {newFolderOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setNewFolderOpen(false)}
+        >
+          <div className="absolute inset-0 bg-black/60" />
+          <div
+            className="relative z-10 w-full max-w-md rounded-2xl border border-hairline bg-card p-6 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-2 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg text-ink">New folder</h2>
+              <button
+                onClick={() => setNewFolderOpen(false)}
+                className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <label className="block">
+              <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Name
+              </span>
+              <input
+                autoFocus
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") createFolder();
+                }}
+                className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                onClick={() => setNewFolderOpen(false)}
+                className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createFolder}
+                disabled={!newFolderName.trim()}
+                className="rounded-full bg-primary px-5 py-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
