@@ -23,7 +23,7 @@ import {
 
 export const Route = createFileRoute("/team/board")({
   component: TeamBoardPage,
-  head: () => ({ meta: [{ title: "Board · Raceline" }] }),
+  head: () => ({ meta: [{ title: "Meetings · Raceline" }] }),
 });
 
 interface BoardMemberDraft {
