@@ -280,6 +280,7 @@ export type Database = {
           id: string
           location: string | null
           media_contact_email: string | null
+          media_pitch: string | null
           organizer: string
           owner_id: string | null
           popularity: number
@@ -306,6 +307,7 @@ export type Database = {
           id?: string
           location?: string | null
           media_contact_email?: string | null
+          media_pitch?: string | null
           organizer: string
           owner_id?: string | null
           popularity?: number
@@ -332,6 +334,7 @@ export type Database = {
           id?: string
           location?: string | null
           media_contact_email?: string | null
+          media_pitch?: string | null
           organizer?: string
           owner_id?: string | null
           popularity?: number
