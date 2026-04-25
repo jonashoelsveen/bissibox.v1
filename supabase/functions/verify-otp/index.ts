@@ -75,13 +75,13 @@ Deno.serve(async (req) => {
       const teamId = attempt.target_id;
       const tierId = meta.tier_id ?? null;
       // Avoid duplicate
-      const { data: existing } = await admin
+      let existingQuery = admin
         .from("team_memberships")
         .select("id")
         .eq("user_id", user.id)
-        .eq("team_id", teamId)
-        .eq("tier_id", tierId)
-        .maybeSingle();
+        .eq("team_id", teamId);
+      existingQuery = tierId ? existingQuery.eq("tier_id", tierId) : existingQuery.is("tier_id", null);
+      const { data: existing } = await existingQuery.maybeSingle();
       if (!existing) {
         const { error } = await admin.from("team_memberships").insert({
           user_id: user.id,

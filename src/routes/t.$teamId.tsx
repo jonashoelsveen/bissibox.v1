@@ -179,7 +179,12 @@ function TeamPage() {
         .select("tier_id")
         .eq("user_id", user.id)
         .eq("team_id", teamId);
-      setMyMemberships(new Set((data ?? []).map((r) => r.tier_id).filter(Boolean) as string[]));
+      const set = new Set<string>();
+      (data ?? []).forEach((r) => {
+        if (r.tier_id) set.add(r.tier_id as string);
+        else set.add("__default__");
+      });
+      setMyMemberships(set);
     })();
   }, [user, teamId]);
 
@@ -259,8 +264,17 @@ function TeamPage() {
       {tab === "memberships" && (
         <div className="space-y-2">
           {tiers.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-16 text-center text-sm text-muted-foreground">
-              No memberships available yet.
+            <div className="rounded-2xl border border-dashed border-hairline bg-card/40 px-6 py-12 text-center">
+              <div className="text-sm text-muted-foreground">
+                This team hasn't set up membership tiers yet.
+              </div>
+              <button
+                onClick={() => startJoin("__default__")}
+                disabled={myMemberships.has("__default__")}
+                className="mt-4 rounded-full bg-ink px-5 py-1.5 text-xs text-background hover:opacity-90 disabled:opacity-50"
+              >
+                {myMemberships.has("__default__") ? "Joined" : "Join as member"}
+              </button>
             </div>
           ) : (
             tiers.map((tier) => {
@@ -359,7 +373,7 @@ function TeamPage() {
       subtitle={pendingTier ? `${pendingTier.name} · ${formatMoney(pendingTier.price, pendingTier.currency)}` : undefined}
       targetKind="team_membership"
       targetId={teamId}
-      targetMeta={{ tier_id: pendingTierId }}
+      targetMeta={{ tier_id: pendingTierId && pendingTierId !== "__default__" ? pendingTierId : null }}
     />
     </>
   );
