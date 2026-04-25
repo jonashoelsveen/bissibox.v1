@@ -544,6 +544,42 @@ function SettingsPage() {
             )}
 
             {tab === "desk" && !isTeamMode && <DeskSettingsPanel />}
+
+            {tab === "entity-organization" && isTeamMode && (
+              <Card>
+                <h3 className="text-sm font-semibold text-ink">Organization</h3>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Settings related to your organization page will appear here.
+                </p>
+              </Card>
+            )}
+
+            {tab === "entity-meetings" && isTeamMode && (
+              <Card>
+                <h3 className="text-sm font-semibold text-ink">Meetings</h3>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Settings related to board meetings will appear here.
+                </p>
+              </Card>
+            )}
+
+            {tab === "entity-library" && isTeamMode && (
+              <Card>
+                <h3 className="text-sm font-semibold text-ink">Library</h3>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Settings related to your library will appear here.
+                </p>
+              </Card>
+            )}
+
+            {tab === "entity-events" && isTeamMode && (
+              <Card>
+                <h3 className="text-sm font-semibold text-ink">Events</h3>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Settings related to events will appear here.
+                </p>
+              </Card>
+            )}
           </div>
         </div>
       </div>
