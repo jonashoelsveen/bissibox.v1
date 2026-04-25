@@ -419,7 +419,7 @@ export function SimplePinMap({
                       onChange={(e) =>
                         trackedChange({ pin: pinRef.current, description: descRef.current, name: e.target.value })
                       }
-                      placeholder="e.g. Meeting room 3D, Main entrance"
+                      placeholder={`${noun} pin`}
                       className="w-full rounded-md border border-hairline bg-card px-3 py-2 text-sm text-ink outline-none focus:border-primary"
                     />
                   </label>
