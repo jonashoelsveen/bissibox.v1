@@ -751,6 +751,109 @@ function GroupRow({
   );
 }
 
+function MembershipRow({
+  membership,
+  open,
+  onToggle,
+  onChange,
+  onDelete,
+  onHandleDown,
+  onHandleUp,
+}: {
+  membership: MembershipDraft;
+  open: boolean;
+  onToggle: () => void;
+  onChange: (patch: Partial<MembershipDraft>) => void;
+  onDelete: () => void;
+  onHandleDown?: () => void;
+  onHandleUp?: () => void;
+}) {
+  return (
+    <div>
+      <div className="flex w-full items-center gap-2 bg-secondary/40 px-3 py-3 transition hover:bg-secondary">
+        <span
+          onMouseDown={onHandleDown}
+          onMouseUp={onHandleUp}
+          onMouseLeave={onHandleUp}
+          className="flex h-7 w-7 cursor-grab items-center justify-center rounded-md border border-hairline bg-background text-muted-foreground hover:text-ink active:cursor-grabbing"
+          aria-label="Drag to reorder"
+          title="Drag to reorder"
+        >
+          <GripVertical className="h-4 w-4" />
+        </span>
+        <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-muted-foreground transition ${open ? "rotate-0" : "-rotate-90"}`}
+          />
+          <span className="truncate text-sm font-medium text-ink">
+            {membership.name || "Untitled membership"}
+          </span>
+          {membership.price && Number(membership.price) > 0 && (
+            <span className="mono text-xs text-muted-foreground">
+              · {membership.price} {membership.currency || "NOK"}
+            </span>
+          )}
+        </button>
+        <button
+          aria-label="Delete"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="rounded p-1 text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+      {open && (
+        <div className="px-5 py-5">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-3">
+            <label className="flex flex-col gap-1 md:col-span-3">
+              <span className="text-xs text-muted-foreground">Name</span>
+              <input
+                value={membership.name}
+                onChange={(e) => onChange({ name: e.target.value })}
+                placeholder="Standard, Family, Junior…"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Price</span>
+              <input
+                type="number"
+                min={0}
+                value={membership.price}
+                onChange={(e) => onChange({ price: e.target.value })}
+                placeholder="0"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Currency</span>
+              <input
+                value={membership.currency}
+                onChange={(e) => onChange({ currency: e.target.value })}
+                placeholder="NOK"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1 md:col-span-3">
+              <span className="text-xs text-muted-foreground">Description</span>
+              <textarea
+                value={membership.description}
+                onChange={(e) => onChange({ description: e.target.value })}
+                rows={3}
+                placeholder="What's included with this membership."
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TabBtn({
   active,
   onClick,
