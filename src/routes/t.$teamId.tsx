@@ -336,12 +336,14 @@ function TeamPage() {
         </span>
       }
       actions={
-        <button
-          onClick={openPicker}
-          className="rounded-full bg-ink px-5 py-1.5 text-xs font-medium text-background hover:opacity-90"
-        >
-          Become a member
-        </button>
+        tiers.length > 0 ? (
+          <button
+            onClick={openPicker}
+            className="rounded-full bg-ink px-5 py-1.5 text-xs font-medium text-background hover:opacity-90"
+          >
+            Become a member
+          </button>
+        ) : null
       }
       tabs={[
         { key: "memberships", label: "Memberships", icon: <CreditCard className="h-3.5 w-3.5" /> },
@@ -372,15 +374,8 @@ function TeamPage() {
           {tiers.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 px-6 py-12 text-center">
               <div className="text-sm text-muted-foreground">
-                This team hasn't set up membership tiers yet.
+                This team hasn't set up any memberships yet. Check back later.
               </div>
-              <button
-                onClick={() => startJoin("__default__")}
-                disabled={myMemberships.has("__default__")}
-                className="mt-4 rounded-full bg-ink px-5 py-1.5 text-xs text-background hover:opacity-90 disabled:opacity-50"
-              >
-                {myMemberships.has("__default__") ? "Joined" : "Join as member"}
-              </button>
             </div>
           ) : (
             tiers.map((tier) => {
