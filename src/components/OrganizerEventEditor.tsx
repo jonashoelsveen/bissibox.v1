@@ -338,6 +338,35 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
           {detailsSection === "about" && (
           <FormGrid>
+            <Row label="Event type" full>
+              <div className="flex flex-wrap gap-1.5">
+                {(["meeting", "event", "race"] as const).map((t) => {
+                  const on = eventType === t;
+                  const label = t === "meeting" ? "Meeting" : t === "event" ? "Event" : "Race";
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => {
+                        if (on) return;
+                        const ok = window.confirm(
+                          "Changing the event type may discard data that doesn't apply to the new type (e.g. classes, sub-events, course points). Continue?",
+                        );
+                        if (!ok) return;
+                        setEventType(t);
+                      }}
+                      className={`rounded-md border px-2.5 py-1 text-xs transition ${
+                        on
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-hairline bg-background text-muted-foreground hover:text-ink"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </Row>
             <Row label="Name">
               <Text value={title} onChange={setTitle} placeholder="Perseløpet #7 - 2026" />
             </Row>
