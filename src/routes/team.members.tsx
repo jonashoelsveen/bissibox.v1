@@ -315,6 +315,7 @@ function TeamMembersPage() {
           id: g.id!,
           name: g.name || "Untitled",
           description: g.description || null,
+          color: g.color || null,
           leaders,
           members: memberPeople,
         };
