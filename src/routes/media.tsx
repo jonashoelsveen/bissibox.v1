@@ -969,7 +969,7 @@ function UploadDialog({
   mode: "participant" | "organizer" | "team";
   teamId: string | null;
   onClose: () => void;
-  onUploaded: () => void;
+  onUploaded: (insertedIds: string[]) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
