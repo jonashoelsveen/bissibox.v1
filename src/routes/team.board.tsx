@@ -296,6 +296,7 @@ function TeamBoardPage() {
       }
       setOngoing(null);
       setAttachments([]);
+      setAttendance([]);
       setOngoingText("");
       setSavedText("");
       setTab("meetings");
