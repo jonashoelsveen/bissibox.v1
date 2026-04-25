@@ -450,6 +450,65 @@ function TeamPage() {
         </div>
       )}
 
+      {tab === "groups" && (
+        <div className="space-y-2">
+          {publicGroups.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-16 text-center text-sm text-muted-foreground">
+              No groups yet.
+            </div>
+          ) : (
+            publicGroups.map((g) => {
+              const expanded = expandedGroupId === g.id;
+              const ageText =
+                g.age_from != null && g.age_to != null
+                  ? `${g.age_from}–${g.age_to}`
+                  : g.age_from != null
+                    ? `${g.age_from}+`
+                    : g.age_to != null
+                      ? `≤ ${g.age_to}`
+                      : "All ages";
+              const colored = !!g.color;
+              return (
+                <div
+                  key={g.id}
+                  className="overflow-hidden rounded-xl border border-hairline bg-card"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setExpandedGroupId(expanded ? null : g.id)}
+                    className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition"
+                    style={colored ? { backgroundColor: g.color!, color: "#fff" } : undefined}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium">
+                        {g.name || "Untitled group"}
+                      </span>
+                      <span
+                        className={`text-xs ${colored ? "text-white/80" : "text-muted-foreground"}`}
+                      >
+                        Age {ageText}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  {expanded && (
+                    <div className="border-t border-hairline px-5 py-4 text-sm text-ink">
+                      {g.description ? (
+                        <p className="whitespace-pre-wrap">{g.description}</p>
+                      ) : (
+                        <p className="text-muted-foreground">No description.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
       {tab === "members" && (
         <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
           {members.length === 0 ? (
