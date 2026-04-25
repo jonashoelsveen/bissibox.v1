@@ -66,6 +66,7 @@ function NewEventModal() {
           starts_at: new Date(startsAt).toISOString(),
           owner_id: user.id,
           event_type: eventType,
+          team_id: activeEntityId,
         } as never)
         .select("id")
         .single();
