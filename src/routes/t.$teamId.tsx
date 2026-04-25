@@ -336,12 +336,14 @@ function TeamPage() {
         </span>
       }
       actions={
-        <button
-          onClick={openPicker}
-          className="rounded-full bg-ink px-5 py-1.5 text-xs font-medium text-background hover:opacity-90"
-        >
-          Become a member
-        </button>
+        tiers.length > 0 ? (
+          <button
+            onClick={openPicker}
+            className="rounded-full bg-ink px-5 py-1.5 text-xs font-medium text-background hover:opacity-90"
+          >
+            Become a member
+          </button>
+        ) : null
       }
       tabs={[
         { key: "memberships", label: "Memberships", icon: <CreditCard className="h-3.5 w-3.5" /> },
