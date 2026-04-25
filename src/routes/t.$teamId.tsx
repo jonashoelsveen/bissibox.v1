@@ -377,7 +377,7 @@ function TeamPage() {
           {tiers.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 px-6 py-12 text-center">
               <div className="text-sm text-muted-foreground">
-                This team hasn't set up any memberships yet. Check back later.
+                This {team.entity_type === "company" ? "Company" : "Corporate"} has no active memberships.
               </div>
             </div>
           ) : (
