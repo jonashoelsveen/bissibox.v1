@@ -77,6 +77,10 @@ function TeamBoardPage() {
   const [savedText, setSavedText] = useState("");
   const [saving, setSaving] = useState(false);
   const [attachments, setAttachments] = useState<AttachmentRow[]>([]);
+  const [attendance, setAttendance] = useState<string[]>([]); // board_member_ids
+  const [attendanceOpen, setAttendanceOpen] = useState(false);
+  const [attendanceDraft, setAttendanceDraft] = useState<string[]>([]);
+  const [attendanceSaving, setAttendanceSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isDirty = ongoingText !== savedText;
 
