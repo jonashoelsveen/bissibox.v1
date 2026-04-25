@@ -311,7 +311,7 @@ function TeamMembersPage() {
               </div>
             )}
             {groups.map((g, idx) => {
-              const isOver = dragOverIdx === idx && dragIdx !== null && dragIdx !== idx;
+              const isDragging = dragIdx === idx;
               return (
                 <div
                   key={g.id ?? `new-${idx}`}
@@ -324,28 +324,28 @@ function TeamMembersPage() {
                     setDragIdx(idx);
                     e.dataTransfer.effectAllowed = "move";
                   }}
-                  onDragOver={(e) => {
-                    if (dragIdx === null) return;
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = "move";
-                    setDragOverIdx(idx);
-                  }}
-                  onDragLeave={() => {
-                    if (dragOverIdx === idx) setDragOverIdx(null);
-                  }}
-                  onDrop={(e) => {
+                  onDragEnter={(e) => {
                     e.preventDefault();
                     if (dragIdx === null) return;
                     const from = dragIdx;
                     const to = idx;
-                    if (from !== to) {
-                      setGroups((arr) => {
-                        const next = [...arr];
-                        const [moved] = next.splice(from, 1);
-                        next.splice(to, 0, moved);
-                        return next.map((x, i) => ({ ...x, sort_order: i }));
-                      });
-                    }
+                    if (from === to) return;
+                    setGroups((arr) => {
+                      const next = [...arr];
+                      const [moved] = next.splice(from, 1);
+                      next.splice(to, 0, moved);
+                      return next.map((x, i) => ({ ...x, sort_order: i }));
+                    });
+                    setOpenIdx((o) => (o === from ? to : o === to ? from : o));
+                    setDragIdx(to);
+                  }}
+                  onDragOver={(e) => {
+                    if (dragIdx === null) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
                     setDragIdx(null);
                     setDragOverIdx(null);
                     setDragHandleIdx(null);
@@ -355,8 +355,8 @@ function TeamMembersPage() {
                     setDragOverIdx(null);
                     setDragHandleIdx(null);
                   }}
-                  className={`overflow-hidden rounded-lg border transition ${
-                    isOver ? "border-primary bg-primary/5" : "border-hairline bg-card"
+                  className={`overflow-hidden rounded-lg border border-hairline bg-card transition ${
+                    isDragging ? "opacity-40" : ""
                   }`}
                 >
                   <GroupRow
