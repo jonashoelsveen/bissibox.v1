@@ -1164,6 +1164,7 @@ export type Database = {
           created_at: string
           description: string | null
           description_long: string | null
+          entity_type: string
           id: string
           name: string
           nif_id: string | null
@@ -1182,6 +1183,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           description_long?: string | null
+          entity_type?: string
           id?: string
           name: string
           nif_id?: string | null
@@ -1200,6 +1202,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           description_long?: string | null
+          entity_type?: string
           id?: string
           name?: string
           nif_id?: string | null
