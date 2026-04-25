@@ -80,6 +80,12 @@ function TeamBoardPage() {
   const [extraFolders, setExtraFolders] = useState<string[]>([]);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [newMeetingOpen, setNewMeetingOpen] = useState(false);
+  const [newMeetingTitle, setNewMeetingTitle] = useState("");
+  const [newMeetingFolder, setNewMeetingFolder] = useState<string>("");
+  const [editMeetingOpen, setEditMeetingOpen] = useState(false);
+  const [editMeetingTitle, setEditMeetingTitle] = useState("");
+  const [editMeetingFolder, setEditMeetingFolder] = useState<string>("");
   const [meetingSearch, setMeetingSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
