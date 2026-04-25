@@ -246,16 +246,14 @@ export function SimplePinMap({
 
         {/* Top-left: toolbar + search (mirrors CourseMapEditor) */}
         <div className="pointer-events-none absolute left-4 top-4 z-[400] flex flex-col gap-2">
-          <div className="pointer-events-auto flex flex-wrap items-center gap-1 rounded-xl border border-hairline bg-card/95 p-1.5 shadow-md backdrop-blur">
+          <div className="pointer-events-auto inline-flex items-center gap-0.5 self-start rounded-xl border border-hairline bg-card/95 p-1 shadow-md backdrop-blur">
             <ToolBtn active={tool === "pan"} onClick={() => setTool("pan")} title="Pan & select">
               <Hand className="h-4 w-4" />
-              <span className="text-sm">Pan</span>
             </ToolBtn>
             <ToolBtn active={tool === "pin"} onClick={() => setTool("pin")} title="Place pin">
               <MapPin className="h-4 w-4" style={{ color: PIN_COLOR }} />
-              <span className="text-sm">Pin</span>
             </ToolBtn>
-            <span className="mx-1 h-5 w-px bg-hairline" />
+            <span className="mx-0.5 h-5 w-px bg-hairline" />
             <ToolBtn onClick={undo} title="Undo" disabled={!canUndo}>
               <Undo2 className="h-4 w-4" />
             </ToolBtn>
