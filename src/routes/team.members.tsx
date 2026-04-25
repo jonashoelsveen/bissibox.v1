@@ -902,20 +902,19 @@ function GroupRow({
       </div>
       {open && (
         <div className="px-5 py-5">
-          <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-[2fr_1fr_1fr_auto]">
             <label className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Name</span>
               <input
                 value={group.name}
                 onChange={(e) => onChange({ name: e.target.value })}
                 placeholder="U10, Senior, Masters…"
-                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                className="h-[38px] rounded-md border border-hairline bg-background px-3 text-sm text-ink outline-none focus:border-primary"
               />
             </label>
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Age from</span>
-              <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                {yearFrom ?? "—"}
+              <span className="text-xs text-muted-foreground">
+                Age from <span className="mono text-[10px] uppercase tracking-[0.18em]">· {yearFrom ?? "—"}</span>
               </span>
               <input
                 type="number"
@@ -923,13 +922,12 @@ function GroupRow({
                 value={group.age_from}
                 onChange={(e) => onChange({ age_from: e.target.value })}
                 placeholder="6"
-                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                className="h-[38px] rounded-md border border-hairline bg-background px-3 text-sm text-ink outline-none focus:border-primary"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Age to</span>
-              <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                {yearTo ?? "—"}
+              <span className="text-xs text-muted-foreground">
+                Age to <span className="mono text-[10px] uppercase tracking-[0.18em]">· {yearTo ?? "—"}</span>
               </span>
               <input
                 type="number"
@@ -937,7 +935,13 @@ function GroupRow({
                 value={group.age_to}
                 onChange={(e) => onChange({ age_to: e.target.value })}
                 placeholder="10"
-                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                className="h-[38px] rounded-md border border-hairline bg-background px-3 text-sm text-ink outline-none focus:border-primary"
+              />
+            </div>
+            <div className="md:w-[180px]">
+              <GroupColorPicker
+                color={group.color}
+                onChange={(c) => onChange({ color: c })}
               />
             </div>
           </div>
