@@ -129,7 +129,7 @@ function TeamMembersPage() {
       const [{ data: gs }, { data: tms }, { data: tmemberships }, { data: tgms }, { data: tiers }, { data: bms }] = await Promise.all([
         supabase
           .from("team_groups")
-          .select("id,name,age_from,age_to,sort_order,description,leader_name,leader_email,leader_phone,is_default")
+          .select("id,name,age_from,age_to,sort_order,description,leader_name,leader_email,leader_phone,is_default,color")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
         supabase
