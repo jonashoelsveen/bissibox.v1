@@ -1156,6 +1156,7 @@ export type Database = {
       }
       teams: {
         Row: {
+          active: boolean
           address: string | null
           contact_email: string | null
           contact_phone: string | null
@@ -1175,6 +1176,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          active?: boolean
           address?: string | null
           contact_email?: string | null
           contact_phone?: string | null
@@ -1194,6 +1196,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          active?: boolean
           address?: string | null
           contact_email?: string | null
           contact_phone?: string | null
