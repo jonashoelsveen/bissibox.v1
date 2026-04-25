@@ -336,17 +336,22 @@ function TeamBoardPage() {
   async function saveOngoingText() {
     if (!ongoing) return;
     if (ongoingText === savedText) return;
+    const textToSave = ongoingText;
     setSaving(true);
     const { error } = await supabase
       .from("team_board_meetings")
-      .update({ notes: ongoingText })
+      .update({ notes: textToSave, updated_at: new Date().toISOString() })
       .eq("id", ongoing.id);
     setSaving(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    setSavedText(ongoingText);
+    setSavedText(textToSave);
+    setOngoing((prev) => (prev ? { ...prev, notes: textToSave } : prev));
+    setMeetings((prev) =>
+      prev.map((m) => (m.id === ongoing.id ? { ...m, notes: textToSave } : m)),
+    );
     toast.success("Saved");
   }
 
