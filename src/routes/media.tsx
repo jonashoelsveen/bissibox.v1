@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
-import { scanFile } from "@/server/scan-file";
+import { scanFile, pollScan } from "@/server/scan-file";
 import { FilesPage } from "@/components/library/FilesPage";
 import { toast } from "sonner";
 import {
@@ -131,6 +131,7 @@ interface MediaItem {
   allowed_media_houses: string[];
   uploaded_in_mode: string;
   created_at: string;
+  scan_status?: "pending" | "safe" | "infected" | "error";
 }
 
 interface AttendedEvent {
@@ -146,6 +147,7 @@ function MediaPage() {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const runScan = useServerFn(scanFile);
+  const runPoll = useServerFn(pollScan);
   const isTeamMode = (mode === "team" || mode === "organizer") || !!activeEntityId;
   const [albums, setAlbums] = useState<Album[]>([]);
   const [items, setItems] = useState<MediaItem[]>([]);
@@ -371,6 +373,32 @@ function MediaPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Poll VirusTotal for any pending media items
+  useEffect(() => {
+    const pending = items.filter((it) => it.scan_status === "pending");
+    if (pending.length === 0) return;
+    let cancelled = false;
+    const tick = async () => {
+      const results = await Promise.all(
+        pending.map((it) =>
+          runPoll({ data: { kind: "media", id: it.id } }).catch(() => null),
+        ),
+      );
+      if (cancelled) return;
+      const anyResolved = results.some(
+        (r) => r && (r.status === "safe" || r.status === "infected" || r.status === "error"),
+      );
+      if (anyResolved) void load();
+    };
+    const t = setInterval(() => {
+      void tick();
+    }, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [items, load, runPoll]);
 
   useEffect(() => {
     let cancel = false;
