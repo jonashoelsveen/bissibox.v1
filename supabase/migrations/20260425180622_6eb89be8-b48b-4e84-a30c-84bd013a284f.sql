@@ -1,0 +1,1 @@
+ALTER TABLE public.team_groups ADD COLUMN IF NOT EXISTS color TEXT;

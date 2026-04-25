@@ -16,6 +16,7 @@ import {
   Network,
 } from "lucide-react";
 import { OrgChart, type OrgPerson, type OrgGroup } from "@/components/OrgChart";
+import { GroupColorPicker } from "@/components/GroupColorPicker";
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/team/members")({
@@ -35,6 +36,7 @@ interface GroupDraft {
   leader_email: string;
   leader_phone: string;
   is_default: boolean;
+  color: string;
 }
 
 interface MembershipDraft {
@@ -128,7 +130,7 @@ function TeamMembersPage() {
       const [{ data: gs }, { data: tms }, { data: tmemberships }, { data: tgms }, { data: tiers }, { data: bms }] = await Promise.all([
         supabase
           .from("team_groups")
-          .select("id,name,age_from,age_to,sort_order,description,leader_name,leader_email,leader_phone,is_default")
+          .select("id,name,age_from,age_to,sort_order,description,leader_name,leader_email,leader_phone,is_default,color")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
         supabase
@@ -184,7 +186,7 @@ function TeamMembersPage() {
       for (const x of tgmsArr) countByGroup[x.group_id] = (countByGroup[x.group_id] ?? 0) + 1;
 
       setGroups(
-        ((gs ?? []) as Array<{ id: string; name: string | null; age_from: number | null; age_to: number | null; sort_order: number | null; description: string | null; leader_name: string | null; leader_email: string | null; leader_phone: string | null; is_default: boolean | null }>).map((g, i) => ({
+        ((gs ?? []) as Array<{ id: string; name: string | null; age_from: number | null; age_to: number | null; sort_order: number | null; description: string | null; leader_name: string | null; leader_email: string | null; leader_phone: string | null; is_default: boolean | null; color: string | null }>).map((g, i) => ({
           id: g.id,
           name: g.name ?? "",
           age_from: g.age_from != null ? String(g.age_from) : "",
@@ -196,6 +198,7 @@ function TeamMembersPage() {
           leader_email: g.leader_email ?? "",
           leader_phone: g.leader_phone ?? "",
           is_default: !!g.is_default,
+          color: g.color ?? "",
         }))
       );
 
@@ -313,6 +316,7 @@ function TeamMembersPage() {
           id: g.id!,
           name: g.name || "Untitled",
           description: g.description || null,
+          color: g.color || null,
           leaders,
           members: memberPeople,
         };
@@ -323,6 +327,7 @@ function TeamMembersPage() {
         name: "Undefined",
         description:
           "Members who have joined but have not yet been assigned to a group.",
+        color: null,
         leaders: [],
         members: unassignedMembers.map((m) => ({
           id: m.user_id,
@@ -372,6 +377,7 @@ function TeamMembersPage() {
           leader_email: g.leader_email.trim() || null,
           leader_phone: g.leader_phone.trim() || null,
           is_default: g.is_default,
+          color: g.color || null,
         };
         if (g.id) {
           const { error } = await supabase
@@ -625,7 +631,7 @@ function TeamMembersPage() {
               onClick={() => {
                 setGroups((arr) => [
                   ...arr,
-                  { name: "", age_from: "", age_to: "", sort_order: arr.length, member_count: 0, description: "", leader_name: "", leader_email: "", leader_phone: "", is_default: false },
+                  { name: "", age_from: "", age_to: "", sort_order: arr.length, member_count: 0, description: "", leader_name: "", leader_email: "", leader_phone: "", is_default: false, color: "" },
                 ]);
                 setOpenIdx(groups.length);
               }}
@@ -897,20 +903,19 @@ function GroupRow({
       </div>
       {open && (
         <div className="px-5 py-5">
-          <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-[2fr_1fr_1fr_auto]">
             <label className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Name</span>
               <input
                 value={group.name}
                 onChange={(e) => onChange({ name: e.target.value })}
                 placeholder="U10, Senior, Masters…"
-                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                className="h-[38px] rounded-md border border-hairline bg-background px-3 text-sm text-ink outline-none focus:border-primary"
               />
             </label>
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Age from</span>
-              <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                {yearFrom ?? "—"}
+              <span className="text-xs text-muted-foreground">
+                Age from <span className="mono text-[10px] uppercase tracking-[0.18em]">· {yearFrom ?? "—"}</span>
               </span>
               <input
                 type="number"
@@ -918,13 +923,12 @@ function GroupRow({
                 value={group.age_from}
                 onChange={(e) => onChange({ age_from: e.target.value })}
                 placeholder="6"
-                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                className="h-[38px] rounded-md border border-hairline bg-background px-3 text-sm text-ink outline-none focus:border-primary"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Age to</span>
-              <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                {yearTo ?? "—"}
+              <span className="text-xs text-muted-foreground">
+                Age to <span className="mono text-[10px] uppercase tracking-[0.18em]">· {yearTo ?? "—"}</span>
               </span>
               <input
                 type="number"
@@ -932,7 +936,13 @@ function GroupRow({
                 value={group.age_to}
                 onChange={(e) => onChange({ age_to: e.target.value })}
                 placeholder="10"
-                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                className="h-[38px] rounded-md border border-hairline bg-background px-3 text-sm text-ink outline-none focus:border-primary"
+              />
+            </div>
+            <div className="md:w-[180px]">
+              <GroupColorPicker
+                color={group.color}
+                onChange={(c) => onChange({ color: c })}
               />
             </div>
           </div>
