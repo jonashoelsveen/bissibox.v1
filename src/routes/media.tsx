@@ -131,6 +131,7 @@ interface MediaItem {
   allowed_media_houses: string[];
   uploaded_in_mode: string;
   created_at: string;
+  scan_status?: "pending" | "safe" | "infected" | "error";
 }
 
 interface AttendedEvent {
