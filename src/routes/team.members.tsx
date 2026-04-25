@@ -58,7 +58,7 @@ interface MemberRow {
 }
 
 function TeamMembersPage() {
-  const { user, loading: authLoading, mode } = useAuth();
+  const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
   const [tab, setTab] = useState<"memberships" | "groups" | "members" | "chart">("memberships");
   const [teamId, setTeamId] = useState<string | null>(null);
@@ -95,13 +95,27 @@ function TeamMembersPage() {
   useEffect(() => {
     if (!user) return;
     void (async () => {
-      const { data: team } = await supabase
-        .from("teams")
-        .select("id, name")
-        .eq("owner_id", user.id)
-        .maybeSingle();
-      const tid = (team as { id: string; name: string | null } | null)?.id ?? null;
-      setTeamName((team as { id: string; name: string | null } | null)?.name ?? "");
+      let team: { id: string; name: string | null } | null = null;
+      if (activeEntityId) {
+        const { data } = await supabase
+          .from("teams")
+          .select("id, name")
+          .eq("id", activeEntityId)
+          .maybeSingle();
+        team = data as { id: string; name: string | null } | null;
+      }
+      if (!team) {
+        const { data } = await supabase
+          .from("teams")
+          .select("id, name")
+          .eq("owner_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        team = data as { id: string; name: string | null } | null;
+      }
+      const tid = team?.id ?? null;
+      setTeamName(team?.name ?? "");
       setTeamId(tid);
       if (!tid) {
         setLoaded(true);
