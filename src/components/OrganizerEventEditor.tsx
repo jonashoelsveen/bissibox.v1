@@ -54,6 +54,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const [dragHandleId, setDragHandleId] = useState<string | null>(null);
 
   // Event details
+  const [eventType, setEventType] = useState<"meeting" | "event" | "race">("race");
   const [title, setTitle] = useState("");
   const [organizer, setOrganizer] = useState("");
   const [description, setDescription] = useState("");
@@ -104,6 +105,8 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         setPublished(!!(e as any).published);
         setOwnerId((e as any).owner_id ?? null);
         setTimingCompanyId(((e as any).timing_company_id as string | null) ?? null);
+        const et = (e as any).event_type as "meeting" | "event" | "race" | undefined;
+        if (et) setEventType(et);
       }
       const { data: cls } = await supabase
         .from("event_classes")
@@ -173,6 +176,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         world_athletics_certified: waCertified,
         owner_id: user.id,
         timing_company_id: timingCompanyId,
+        event_type: eventType,
       };
 
       let id = savedId;
