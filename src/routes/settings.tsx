@@ -240,7 +240,7 @@ function SettingsPage() {
               activeEntity={activeEntity}
               individualName={
                 [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
-                profile.email ||
+                user.email ||
                 "Individual profile"
               }
               onSelect={(id) => {
