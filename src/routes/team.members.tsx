@@ -35,6 +35,7 @@ interface GroupDraft {
   leader_email: string;
   leader_phone: string;
   is_default: boolean;
+  color: string;
 }
 
 interface MembershipDraft {
