@@ -757,7 +757,7 @@ function TeamBoardPage() {
           <h1 className="mt-2 text-3xl text-ink md:text-4xl">Meetings</h1>
         </div>
         <div className="flex items-center gap-2">
-          {tab === "meetings" && (
+          {activeTab === "meetings" && (
             <>
               <button
                 onClick={() => setNewFolderOpen(true)}
