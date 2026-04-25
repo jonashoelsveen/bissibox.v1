@@ -627,7 +627,7 @@ function TeamMembersPage() {
               onClick={() => {
                 setGroups((arr) => [
                   ...arr,
-                  { name: "", age_from: "", age_to: "", sort_order: arr.length, member_count: 0, description: "", leader_name: "", leader_email: "", leader_phone: "", is_default: false },
+                  { name: "", age_from: "", age_to: "", sort_order: arr.length, member_count: 0, description: "", leader_name: "", leader_email: "", leader_phone: "", is_default: false, color: "" },
                 ]);
                 setOpenIdx(groups.length);
               }}
