@@ -625,6 +625,9 @@ function TeamMembersPage() {
       </header>
 
       <nav className="mt-7 flex border-b border-hairline">
+        <TabBtn active={tab === "board"} onClick={() => setTab("board")} icon={<Briefcase className="h-3.5 w-3.5" />}>
+          Board
+        </TabBtn>
         <TabBtn active={tab === "memberships"} onClick={() => setTab("memberships")} icon={<Wallet className="h-3.5 w-3.5" />}>
           Memberships
         </TabBtn>
