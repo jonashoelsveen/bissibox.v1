@@ -54,6 +54,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const [dragHandleId, setDragHandleId] = useState<string | null>(null);
 
   // Event details
+  const [eventType, setEventType] = useState<"meeting" | "event" | "race">("race");
   const [title, setTitle] = useState("");
   const [organizer, setOrganizer] = useState("");
   const [description, setDescription] = useState("");
@@ -104,6 +105,8 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         setPublished(!!(e as any).published);
         setOwnerId((e as any).owner_id ?? null);
         setTimingCompanyId(((e as any).timing_company_id as string | null) ?? null);
+        const et = (e as any).event_type as "meeting" | "event" | "race" | undefined;
+        if (et) setEventType(et);
       }
       const { data: cls } = await supabase
         .from("event_classes")
@@ -173,6 +176,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         world_athletics_certified: waCertified,
         owner_id: user.id,
         timing_company_id: timingCompanyId,
+        event_type: eventType,
       };
 
       let id = savedId;
@@ -334,6 +338,35 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
           {detailsSection === "about" && (
           <FormGrid>
+            <Row label="Event type" full>
+              <div className="flex flex-wrap gap-1.5">
+                {(["meeting", "event", "race"] as const).map((t) => {
+                  const on = eventType === t;
+                  const label = t === "meeting" ? "Meeting" : t === "event" ? "Event" : "Race";
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => {
+                        if (on) return;
+                        const ok = window.confirm(
+                          "Changing the event type may discard data that doesn't apply to the new type (e.g. classes, sub-events, course points). Continue?",
+                        );
+                        if (!ok) return;
+                        setEventType(t);
+                      }}
+                      className={`rounded-md border px-2.5 py-1 text-xs transition ${
+                        on
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-hairline bg-background text-muted-foreground hover:text-ink"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </Row>
             <Row label="Name">
               <Text value={title} onChange={setTitle} placeholder="Perseløpet #7 - 2026" />
             </Row>
