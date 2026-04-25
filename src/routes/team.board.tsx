@@ -930,9 +930,9 @@ function TeamBoardPage() {
                   Attendance
                 </div>
                 <div className="text-sm text-ink">
-                  {members
-                    .filter((m) => m.id && attendance.includes(m.id))
-                    .map((m) => m.name || m.email || "—")
+                  {roster
+                    .filter((r) => attendance.includes(r.id))
+                    .map((r) => r.name || r.email || "—")
                     .join(", ")}
                 </div>
               </div>
