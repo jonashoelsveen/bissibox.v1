@@ -815,6 +815,8 @@ function GroupRow({
     </div>
   );
 }
+
+function MembershipRow({
   membership,
   open,
   onToggle,
