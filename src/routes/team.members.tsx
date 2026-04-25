@@ -326,6 +326,7 @@ function TeamMembersPage() {
         name: "Undefined",
         description:
           "Members who have joined but have not yet been assigned to a group.",
+        color: null,
         leaders: [],
         members: unassignedMembers.map((m) => ({
           id: m.user_id,
