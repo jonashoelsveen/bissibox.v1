@@ -90,7 +90,9 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (eventType !== "race" && (tab === "classes" || tab === "subevents")) {
+    if (eventType === "meeting" && (tab === "classes" || tab === "subevents")) {
+      setTab("details");
+    } else if (eventType === "event" && tab === "classes") {
       setTab("details");
     }
   }, [eventType, tab]);
