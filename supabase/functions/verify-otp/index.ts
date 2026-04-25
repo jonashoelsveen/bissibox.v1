@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Too many attempts. Request a new code." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const ok = await bcrypt.compare(body.code, attempt.code_hash);
+    const ok = await verifyCode(body.code, attempt.code_hash);
     if (!ok) {
       const newAttempts = attempt.attempts + 1;
       await admin
