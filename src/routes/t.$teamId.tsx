@@ -231,7 +231,14 @@ function TeamPage() {
       }
       actions={
         <button
-          onClick={() => setTab("memberships")}
+          onClick={() => {
+            setTab("memberships");
+            requestAnimationFrame(() => {
+              document
+                .getElementById("team-membership-picker")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+          }}
           className="rounded-full bg-ink px-5 py-1.5 text-xs font-medium text-background hover:opacity-90"
         >
           Become a member
