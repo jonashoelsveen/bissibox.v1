@@ -558,8 +558,8 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                     setDragOverId(null);
                     setDragHandleId(null);
                   }}
-                  className={`overflow-hidden rounded-lg border transition ${
-                    isOver ? "border-primary bg-primary/5" : "border-hairline bg-card"
+                  className={`overflow-hidden rounded-lg border border-hairline bg-card transition ${
+                    isDragging ? "opacity-40" : ""
                   }`}
                 >
                   <SubeventRow
