@@ -825,6 +825,7 @@ function MembershipRow({
   onDelete,
   onHandleDown,
   onHandleUp,
+  hasGroups,
 }: {
   membership: MembershipDraft;
   open: boolean;
