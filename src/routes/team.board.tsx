@@ -257,8 +257,23 @@ function TeamBoardPage() {
   const folders = useMemo(() => {
     const set = new Set<string>();
     meetings.forEach((m) => m.folder && set.add(m.folder));
+    extraFolders.forEach((f) => f && set.add(f));
     return Array.from(set).sort();
-  }, [meetings]);
+  }, [meetings, extraFolders]);
+
+  function createFolder() {
+    const name = newFolderName.trim();
+    if (!name) return;
+    if (folders.includes(name)) {
+      toast.error("A folder with that name already exists");
+      return;
+    }
+    setExtraFolders((prev) => [...prev, name]);
+    setFolderFilter(name);
+    setNewFolderName("");
+    setNewFolderOpen(false);
+    toast.success("Folder created");
+  }
 
   const filteredMeetings = useMemo(() => {
     return meetings.filter((m) => {
