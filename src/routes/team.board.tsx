@@ -715,22 +715,6 @@ function TeamBoardPage() {
         >
           Meetings
         </TabBtn>
-
-      <nav className="mt-7 flex border-b border-hairline">
-        <TabBtn
-          active={tab === "members"}
-          onClick={() => setTab("members")}
-          icon={<UsersIcon className="h-3.5 w-3.5" />}
-        >
-          Members of the board
-        </TabBtn>
-        <TabBtn
-          active={tab === "meetings"}
-          onClick={() => setTab("meetings")}
-          icon={<CalendarClock className="h-3.5 w-3.5" />}
-        >
-          Board meetings
-        </TabBtn>
         {ongoing && (
           <button
             onClick={() => setTab("ongoing")}
