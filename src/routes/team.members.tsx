@@ -349,6 +349,9 @@ function TeamMembersPage() {
       </header>
 
       <nav className="mt-7 flex border-b border-hairline">
+        <TabBtn active={tab === "memberships"} onClick={() => setTab("memberships")} icon={<Wallet className="h-3.5 w-3.5" />}>
+          Memberships
+        </TabBtn>
         <TabBtn active={tab === "groups"} onClick={() => setTab("groups")} icon={<Layers className="h-3.5 w-3.5" />}>
           Groups
         </TabBtn>
@@ -356,6 +359,101 @@ function TeamMembersPage() {
           Members
         </TabBtn>
       </nav>
+
+      {tab === "memberships" && (
+        <Panel>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Memberships people can choose when joining your team. Drag to reorder, click to expand.
+            </p>
+            <button
+              onClick={() => {
+                setMemberships((arr) => [
+                  ...arr,
+                  { name: "", description: "", price: "0", currency: "NOK", sort_order: arr.length },
+                ]);
+                setOpenMemIdx(memberships.length);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-md border border-hairline bg-background px-3 py-1.5 text-xs text-ink hover:bg-secondary"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add new membership
+            </button>
+          </div>
+
+          <div className="mt-5 space-y-2">
+            {memberships.length === 0 && (
+              <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
+                No memberships yet. Add one to let people join.
+              </div>
+            )}
+            {memberships.map((m, idx) => {
+              const isDragging = dragMemIdx === idx;
+              return (
+                <div
+                  key={m.id ?? `new-mem-${idx}`}
+                  draggable={dragMemHandleIdx === idx}
+                  onDragStart={(e) => {
+                    if (dragMemHandleIdx !== idx) {
+                      e.preventDefault();
+                      return;
+                    }
+                    setDragMemIdx(idx);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    if (dragMemIdx === null) return;
+                    const from = dragMemIdx;
+                    const to = idx;
+                    if (from === to) return;
+                    setMemberships((arr) => {
+                      const next = [...arr];
+                      const [moved] = next.splice(from, 1);
+                      next.splice(to, 0, moved);
+                      return next.map((x, i) => ({ ...x, sort_order: i }));
+                    });
+                    setOpenMemIdx((o) => (o === from ? to : o === to ? from : o));
+                    setDragMemIdx(to);
+                  }}
+                  onDragOver={(e) => {
+                    if (dragMemIdx === null) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragMemIdx(null);
+                    setDragMemHandleIdx(null);
+                  }}
+                  onDragEnd={() => {
+                    setDragMemIdx(null);
+                    setDragMemHandleIdx(null);
+                  }}
+                  className={`overflow-hidden rounded-lg border border-hairline bg-card transition ${
+                    isDragging ? "opacity-40" : ""
+                  }`}
+                >
+                  <MembershipRow
+                    membership={m}
+                    open={openMemIdx === idx}
+                    onToggle={() => setOpenMemIdx((o) => (o === idx ? null : idx))}
+                    onChange={(patch) =>
+                      setMemberships((arr) => arr.map((x, i) => (i === idx ? { ...x, ...patch } : x)))
+                    }
+                    onDelete={() => {
+                      if (!confirm(`Delete membership "${m.name || `Membership ${idx + 1}`}"? This cannot be undone.`)) return;
+                      setMemberships((arr) => arr.filter((_, i) => i !== idx));
+                      setOpenMemIdx(null);
+                    }}
+                    onHandleDown={() => setDragMemHandleIdx(idx)}
+                    onHandleUp={() => setDragMemHandleIdx(null)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </Panel>
+      )}
 
       {tab === "groups" && (
         <Panel>
