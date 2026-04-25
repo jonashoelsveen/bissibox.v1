@@ -169,7 +169,7 @@ function SettingsPage() {
   const updateProfile = (k: keyof Profile, v: string | boolean | null) =>
     setProfile((p) => (p ? { ...p, [k]: v } : p));
 
-  const updateTeam = (k: keyof Team, v: string | null) =>
+  const updateTeam = (k: keyof Team, v: string | boolean | null) =>
     setTeam((t) => (t ? { ...t, [k]: v } : t));
 
   const save = async () => {
@@ -291,7 +291,7 @@ function SettingsPage() {
                     title="Profile active"
                     description="Visible publicly and able to accept members."
                     checked={team.active}
-                    onChange={(v) => updateTeam("active", v as unknown as string)}
+                    onChange={(v) => updateTeam("active", v)}
                   />
                 </div>
                 <SaveBar saving={saving} onSave={save} />
