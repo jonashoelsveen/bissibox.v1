@@ -1106,6 +1106,8 @@ export type Database = {
           description: string | null
           group_assignment_mode: string
           id: string
+          is_active: boolean
+          is_public: boolean
           name: string
           price: number
           sort_order: number
@@ -1118,6 +1120,8 @@ export type Database = {
           description?: string | null
           group_assignment_mode?: string
           id?: string
+          is_active?: boolean
+          is_public?: boolean
           name: string
           price?: number
           sort_order?: number
@@ -1130,6 +1134,8 @@ export type Database = {
           description?: string | null
           group_assignment_mode?: string
           id?: string
+          is_active?: boolean
+          is_public?: boolean
           name?: string
           price?: number
           sort_order?: number

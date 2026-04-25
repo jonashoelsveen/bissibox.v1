@@ -16,6 +16,7 @@ import {
   Network,
 } from "lucide-react";
 import { OrgChart, type OrgPerson, type OrgGroup } from "@/components/OrgChart";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/team/members")({
   component: TeamMembersPage,
@@ -45,6 +46,8 @@ interface MembershipDraft {
   sort_order: number;
   group_assignment_mode: "volunteer" | "criteria";
   criteria_label: string;
+  is_active: boolean;
+  is_public: boolean;
 }
 
 interface MemberRow {
@@ -142,7 +145,7 @@ function TeamMembersPage() {
           .eq("team_id", tid),
         supabase
           .from("team_membership_tiers")
-          .select("id,name,description,price,currency,sort_order,group_assignment_mode,criteria_label")
+          .select("id,name,description,price,currency,sort_order,group_assignment_mode,criteria_label,is_active,is_public")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
         supabase
@@ -162,7 +165,7 @@ function TeamMembersPage() {
       );
 
       setMemberships(
-        ((tiers ?? []) as Array<{ id: string; name: string | null; description: string | null; price: number | null; currency: string | null; sort_order: number | null; group_assignment_mode: string | null; criteria_label: string | null }>).map((t, i) => ({
+        ((tiers ?? []) as Array<{ id: string; name: string | null; description: string | null; price: number | null; currency: string | null; sort_order: number | null; group_assignment_mode: string | null; criteria_label: string | null; is_active: boolean | null; is_public: boolean | null }>).map((t, i) => ({
           id: t.id,
           name: t.name ?? "",
           description: t.description ?? "",
@@ -171,6 +174,8 @@ function TeamMembersPage() {
           sort_order: t.sort_order ?? i,
           group_assignment_mode: (t.group_assignment_mode === "criteria" ? "criteria" : "volunteer"),
           criteria_label: t.criteria_label ?? "age",
+          is_active: t.is_active ?? true,
+          is_public: t.is_public ?? true,
         }))
       );
 
@@ -426,6 +431,8 @@ function TeamMembersPage() {
           sort_order: i,
           group_assignment_mode: m.group_assignment_mode,
           criteria_label: (m.criteria_label.trim() || "age"),
+          is_active: m.is_active,
+          is_public: m.is_active ? m.is_public : false,
         };
         if (m.id) {
           const { error } = await supabase
@@ -522,7 +529,7 @@ function TeamMembersPage() {
               onClick={() => {
                 setMemberships((arr) => [
                   ...arr,
-                  { name: "", description: "", price: "0", currency: "NOK", sort_order: arr.length, group_assignment_mode: "volunteer", criteria_label: "age" },
+                  { name: "", description: "", price: "0", currency: "NOK", sort_order: arr.length, group_assignment_mode: "volunteer", criteria_label: "age", is_active: true, is_public: true },
                 ]);
                 setOpenMemIdx(memberships.length);
               }}
@@ -998,6 +1005,8 @@ function MembershipRow({
   onHandleUp?: () => void;
   hasGroups: boolean;
 }) {
+  const publicDisabled = !membership.is_active;
+
   return (
     <div>
       <div className="flex w-full items-center gap-2 bg-secondary/40 px-3 py-3 transition hover:bg-secondary">
@@ -1047,6 +1056,41 @@ function MembershipRow({
                 className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
               />
             </label>
+            <div className="md:col-span-3 grid gap-3 rounded-lg border border-hairline bg-background/60 p-4 md:grid-cols-2">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-ink">Active</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Inactive memberships cannot be joined and are hidden from profile pages.</p>
+                </div>
+                <Switch
+                  checked={membership.is_active}
+                  onCheckedChange={(checked) =>
+                    onChange({
+                      is_active: checked,
+                      is_public: checked ? membership.is_public : false,
+                    })
+                  }
+                  aria-label="Toggle membership active"
+                />
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-ink">Publicly visible</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Only public memberships show a Become a member action to other users.</p>
+                </div>
+                <Switch
+                  checked={membership.is_active && membership.is_public}
+                  disabled={publicDisabled}
+                  onCheckedChange={(checked) => onChange({ is_public: checked })}
+                  aria-label="Toggle membership public visibility"
+                />
+              </div>
+              {publicDisabled && (
+                <p className="md:col-span-2 text-[11px] text-muted-foreground">
+                  Public visibility turns off automatically when the membership is inactive.
+                </p>
+              )}
+            </div>
             <label className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Price</span>
               <input

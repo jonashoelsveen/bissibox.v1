@@ -35,6 +35,8 @@ interface Tier {
   currency: string;
   group_assignment_mode: "volunteer" | "criteria";
   criteria_label: string;
+  is_active: boolean;
+  is_public: boolean;
 }
 
 interface GroupOpt {
@@ -117,13 +119,15 @@ function TeamPage() {
 
       const { data: tierData } = await supabase
         .from("team_membership_tiers")
-        .select("id, name, description, price, currency, group_assignment_mode, criteria_label")
+        .select("id, name, description, price, currency, group_assignment_mode, criteria_label, is_active, is_public")
         .eq("team_id", teamId)
         .order("sort_order");
       setTiers(((tierData ?? []) as unknown as Tier[]).map((t) => ({
         ...t,
         group_assignment_mode: (t.group_assignment_mode === "criteria" ? "criteria" : "volunteer"),
         criteria_label: t.criteria_label ?? "age",
+        is_active: t.is_active ?? true,
+        is_public: t.is_public ?? true,
       })));
       setTiersLoaded(true);
 
@@ -237,21 +241,27 @@ function TeamPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerTierId, setPickerTierId] = useState<string>("__default__");
   const nav = useNavigate();
+  const visibleTiers = tiers.filter((tier) => tier.is_active && tier.is_public);
+  const displayTiers = tiers.filter((tier) => visibleTiers.some((visibleTier) => visibleTier.id === tier.id) || myMemberships.has(tier.id));
+  const canShowMembershipActions = tiersLoaded && visibleTiers.length > 0 && (!user || user.id !== team?.owner_id);
+  const entityLabel = team?.entity_type === "company" ? "Company" : team?.entity_type === "cooperation" ? "Corporate" : "Team";
 
   const openPicker = () => {
+    if (!canShowMembershipActions) return;
     if (!user) {
       nav({ to: "/auth", search: { redirect: window.location.pathname } as never });
       return;
     }
-    setPickerTierId(tiers[0]?.id ?? "__default__");
+    setPickerTierId(visibleTiers[0]?.id ?? "__default__");
     setPickerGroupId(groupOptions[0]?.id ?? "");
     setPickerOpen(true);
   };
 
-  const pickedTier = tiers.find((t) => t.id === pickerTierId) ?? null;
+  const pickedTier = visibleTiers.find((t) => t.id === pickerTierId) ?? null;
   const pickerNeedsGroup = !!pickedTier && pickedTier.group_assignment_mode === "volunteer" && groupOptions.length > 0;
 
   const startJoin = (tierId: string, groupId?: string | null) => {
+    if (!visibleTiers.some((tier) => tier.id === tierId)) return;
     if (!user) {
       nav({ to: "/auth", search: { redirect: window.location.pathname } as never });
       return;
@@ -339,7 +349,7 @@ function TeamPage() {
         </span>
       }
       actions={
-        tiersLoaded && tiers.length > 0 && (!user || user.id !== team.owner_id) ? (
+        canShowMembershipActions ? (
           <button
             onClick={openPicker}
             className="rounded-full bg-ink px-5 py-1.5 text-xs font-medium text-background hover:opacity-90"
@@ -374,14 +384,14 @@ function TeamPage() {
     >
       {tab === "memberships" && (
         <div id="team-membership-picker" className="space-y-2 scroll-mt-24">
-          {tiers.length === 0 ? (
+          {displayTiers.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 px-6 py-12 text-center">
               <div className="text-sm text-muted-foreground">
-                This {team.entity_type === "company" ? "Company" : "Corporate"} has no active memberships.
+                This {entityLabel} has no active memberships.
               </div>
             </div>
           ) : (
-            tiers.map((tier) => {
+            displayTiers.map((tier) => {
               const joined = myMemberships.has(tier.id);
               return (
                 <div
@@ -509,10 +519,10 @@ function TeamPage() {
                 onChange={(e) => setPickerTierId(e.target.value)}
                 className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
               >
-                {tiers.length === 0 ? (
+                {visibleTiers.length === 0 ? (
                   <option value="__default__">Member</option>
                 ) : (
-                  tiers.map((t) => (
+                  visibleTiers.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name} · {formatMoney(t.price, t.currency)}
                     </option>

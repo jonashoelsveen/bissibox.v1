@@ -95,14 +95,30 @@ Deno.serve(async (req) => {
       if (tierId) {
         const { data: tier } = await admin
           .from("team_membership_tiers")
-          .select("name, group_assignment_mode, criteria_label")
+          .select("name, group_assignment_mode, criteria_label, is_active, is_public")
           .eq("id", tierId)
           .maybeSingle();
         if (tier) {
+          if ((tier as any).is_active !== true || (tier as any).is_public !== true) {
+            return new Response(JSON.stringify({ error: "This membership is not available." }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
           tierMode = ((tier as any).group_assignment_mode === "criteria" ? "criteria" : "volunteer");
           criteriaLabel = (tier as any).criteria_label ?? "age";
           tierName = (tier as any).name ?? null;
+        } else {
+          return new Response(JSON.stringify({ error: "This membership is not available." }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
+      } else {
+        return new Response(JSON.stringify({ error: "Choose a membership before joining." }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       // Load team's groups (for auto-assignment + default group + leader info)
