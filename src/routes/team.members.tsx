@@ -185,7 +185,7 @@ function TeamMembersPage() {
       for (const x of tgmsArr) countByGroup[x.group_id] = (countByGroup[x.group_id] ?? 0) + 1;
 
       setGroups(
-        ((gs ?? []) as Array<{ id: string; name: string | null; age_from: number | null; age_to: number | null; sort_order: number | null; description: string | null; leader_name: string | null; leader_email: string | null; leader_phone: string | null; is_default: boolean | null }>).map((g, i) => ({
+        ((gs ?? []) as Array<{ id: string; name: string | null; age_from: number | null; age_to: number | null; sort_order: number | null; description: string | null; leader_name: string | null; leader_email: string | null; leader_phone: string | null; is_default: boolean | null; color: string | null }>).map((g, i) => ({
           id: g.id,
           name: g.name ?? "",
           age_from: g.age_from != null ? String(g.age_from) : "",
@@ -197,6 +197,7 @@ function TeamMembersPage() {
           leader_email: g.leader_email ?? "",
           leader_phone: g.leader_phone ?? "",
           is_default: !!g.is_default,
+          color: g.color ?? "",
         }))
       );
 
