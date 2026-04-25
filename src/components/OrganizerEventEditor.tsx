@@ -42,7 +42,10 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
   // Top-level
   const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map" | "participants" | "media">("details");
-  const [detailsSection, setDetailsSection] = useState<"about" | "timing" | "media">("about");
+  const [showMediaSection, setShowMediaSection] = useState(false);
+  const [showTimingSection, setShowTimingSection] = useState(false);
+  const [mediaContactEmail, setMediaContactEmail] = useState("");
+  const [mediaPitch, setMediaPitch] = useState("");
   const [timingCompanyId, setTimingCompanyId] = useState<string | null>(null);
   const [timingCompanies, setTimingCompanies] = useState<{ id: string; name: string }[]>([]);
   const [activeMapSub, setActiveMapSub] = useState<number>(0);
@@ -82,6 +85,12 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (eventType !== "race" && (tab === "classes" || tab === "subevents")) {
+      setTab("details");
+    }
+  }, [eventType, tab]);
+
+  useEffect(() => {
     if (!authLoading && !user) nav({ to: "/auth" });
   }, [authLoading, user, nav]);
 
@@ -107,6 +116,12 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         setTimingCompanyId(((e as any).timing_company_id as string | null) ?? null);
         const et = (e as any).event_type as "meeting" | "event" | "race" | undefined;
         if (et) setEventType(et);
+        const mce = ((e as any).media_contact_email as string | null) ?? "";
+        const mp = ((e as any).media_pitch as string | null) ?? "";
+        setMediaContactEmail(mce);
+        setMediaPitch(mp);
+        setShowMediaSection(!!mce || !!mp);
+        setShowTimingSection(!!((e as any).timing_company_id));
       }
       const { data: cls } = await supabase
         .from("event_classes")
@@ -175,8 +190,10 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         race_types: raceTypes,
         world_athletics_certified: waCertified,
         owner_id: user.id,
-        timing_company_id: timingCompanyId,
+        timing_company_id: eventType === "race" && showTimingSection ? timingCompanyId : null,
         event_type: eventType,
+        media_contact_email: showMediaSection ? (mediaContactEmail.trim() || null) : null,
+        media_pitch: showMediaSection ? (mediaPitch.trim() || null) : null,
       };
 
       let id = savedId;
@@ -293,16 +310,20 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
           <TabBtn active={tab === "details"} onClick={() => setTab("details")} icon={<FileText className="h-3.5 w-3.5" />}>
             Event details
           </TabBtn>
-          <TabBtn active={tab === "classes"} onClick={() => setTab("classes")} icon={<Layers className="h-3.5 w-3.5" />}>
-            Classes
-          </TabBtn>
-          <TabBtn
-            active={tab === "subevents"}
-            onClick={() => setTab("subevents")}
-            icon={<ListTree className="h-3.5 w-3.5" />}
-          >
-            Subevents
-          </TabBtn>
+          {eventType === "race" && (
+            <>
+              <TabBtn active={tab === "classes"} onClick={() => setTab("classes")} icon={<Layers className="h-3.5 w-3.5" />}>
+                Classes
+              </TabBtn>
+              <TabBtn
+                active={tab === "subevents"}
+                onClick={() => setTab("subevents")}
+                icon={<ListTree className="h-3.5 w-3.5" />}
+              >
+                Subevents
+              </TabBtn>
+            </>
+          )}
           <TabBtn active={tab === "map"} onClick={() => setTab("map")} icon={<MapIcon className="h-3.5 w-3.5" />}>
             Map
           </TabBtn>
@@ -320,23 +341,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
       {tab === "details" && (
         <Panel>
-          {/* Sub-sections inside Details */}
-          <div className="mb-5 flex flex-wrap gap-1.5">
-            <SubTabBtn active={detailsSection === "about"} onClick={() => setDetailsSection("about")} icon={<Info className="h-3.5 w-3.5" />}>
-              About
-              <span className="ml-1.5 text-[10px] text-muted-foreground">Public</span>
-            </SubTabBtn>
-            <SubTabBtn active={detailsSection === "timing"} onClick={() => setDetailsSection("timing")} icon={<Timer className="h-3.5 w-3.5" />}>
-              Timing
-              <span className="ml-1.5 text-[10px] text-muted-foreground">Organizer only</span>
-            </SubTabBtn>
-            <SubTabBtn active={detailsSection === "media"} onClick={() => setDetailsSection("media")} icon={<ImageIcon className="h-3.5 w-3.5" />}>
-              Media
-              <span className="ml-1.5 text-[10px] text-muted-foreground">Organizer only</span>
-            </SubTabBtn>
-          </div>
-
-          {detailsSection === "about" && (
+          {/* About — always visible, single well-structured form */}
           <FormGrid>
             <Row label="Event type" full>
               <div className="flex flex-wrap gap-1.5">
@@ -376,9 +381,11 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             <Row label="Date & start">
               <Text type="datetime-local" value={startsAt} onChange={setStartsAt} />
             </Row>
-            <Row label="Signup deadline">
-              <Text type="datetime-local" value={signupDeadline} onChange={setSignupDeadline} />
-            </Row>
+            {eventType === "race" && (
+              <Row label="Signup deadline">
+                <Text type="datetime-local" value={signupDeadline} onChange={setSignupDeadline} />
+              </Row>
+            )}
             <Row label="Location">
               <Text value={location} onChange={setLocation} placeholder="Oslo" />
             </Row>
@@ -388,50 +395,56 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             <Row label="Country">
               <Text value={country} onChange={setCountry} placeholder="NO" />
             </Row>
-            <Row label="Signup fee">
-              <div className="flex gap-2">
-                <Text value={signupFee} onChange={setSignupFee} type="number" />
-                <Text value={currency} onChange={setCurrency} placeholder="NOK" />
-              </div>
-            </Row>
-            <Row label="Discipline / type" full>
-              <div className="flex flex-wrap gap-1.5">
-                {RACE_TYPE_OPTIONS.map((t) => {
-                  const on = raceTypes.includes(t);
-                  return (
-                    <button
-                      key={t}
-                      onClick={() => setRaceTypes((arr) => (on ? arr.filter((x) => x !== t) : [...arr, t]))}
-                      className={`rounded-md border px-2.5 py-1 text-xs transition ${
-                        on ? "border-primary bg-primary text-primary-foreground" : "border-hairline bg-background text-muted-foreground hover:text-ink"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  );
-                })}
-              </div>
-            </Row>
+            {eventType === "race" && (
+              <Row label="Signup fee">
+                <div className="flex gap-2">
+                  <Text value={signupFee} onChange={setSignupFee} type="number" />
+                  <Text value={currency} onChange={setCurrency} placeholder="NOK" />
+                </div>
+              </Row>
+            )}
+            {eventType === "race" && (
+              <Row label="Discipline / type" full>
+                <div className="flex flex-wrap gap-1.5">
+                  {RACE_TYPE_OPTIONS.map((t) => {
+                    const on = raceTypes.includes(t);
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => setRaceTypes((arr) => (on ? arr.filter((x) => x !== t) : [...arr, t]))}
+                        className={`rounded-md border px-2.5 py-1 text-xs transition ${
+                          on ? "border-primary bg-primary text-primary-foreground" : "border-hairline bg-background text-muted-foreground hover:text-ink"
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Row>
+            )}
             <Row label="Description" full>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
                 className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-                placeholder="What runners need to know."
+                placeholder="What attendees need to know."
               />
             </Row>
-            <Row label="Course" full>
-              <label className="flex items-center gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  checked={waCertified}
-                  onChange={(e) => setWaCertified(e.target.checked)}
-                  className="h-4 w-4 accent-primary"
-                />
-                World Athletics certified course
-              </label>
-            </Row>
+            {eventType === "race" && (
+              <Row label="Course" full>
+                <label className="flex items-center gap-2 text-sm text-ink">
+                  <input
+                    type="checkbox"
+                    checked={waCertified}
+                    onChange={(e) => setWaCertified(e.target.checked)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  World Athletics certified course
+                </label>
+              </Row>
+            )}
             <Row label="Co-organizers" full>
               <CoOrganizersManager
                 eventId={savedId}
@@ -439,44 +452,104 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                 currentUserId={user.id}
               />
             </Row>
+
+            {/* Toggle row(s): Media (all types), Timing (race only) */}
+            <Row label=" " full>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-hairline pt-3">
+                <label className="inline-flex items-center gap-2 text-sm text-ink">
+                  <input
+                    type="checkbox"
+                    checked={showMediaSection}
+                    onChange={(e) => setShowMediaSection(e.target.checked)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                  Media
+                </label>
+                {eventType === "race" && (
+                  <label className="inline-flex items-center gap-2 text-sm text-ink">
+                    <input
+                      type="checkbox"
+                      checked={showTimingSection}
+                      onChange={(e) => setShowTimingSection(e.target.checked)}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    <Timer className="h-3.5 w-3.5 text-muted-foreground" />
+                    Timing
+                  </label>
+                )}
+              </div>
+            </Row>
           </FormGrid>
-          )}
 
-          {detailsSection === "timing" && (
-            <FormGrid>
-              <Row label="Timing company" full>
-                <select
-                  value={timingCompanyId ?? ""}
-                  onChange={(e) => setTimingCompanyId(e.target.value || null)}
-                  className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-                >
-                  <option value="">— Select a timing company —</option>
-                  {timingCompanies.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Choose which timing company will run this race. Visible to organizers and the chosen timing company only.
-                </p>
-              </Row>
-            </FormGrid>
-          )}
-
-          {detailsSection === "media" && (
-            <div>
-              {savedId ? (
-                <EventMediaTab
-                  eventId={savedId}
-                  ownerUserId={ownerId ?? user.id}
-                  currentUserId={user.id}
-                  organizerMode={true}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Save the event first to manage media.
-                </p>
+          {/* Media section — opens just below About with a small gap */}
+          {showMediaSection && (
+            <section className="mt-3 rounded-lg border border-hairline bg-background/40 p-4">
+              <header className="mb-3 flex items-center gap-2">
+                <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                <h3 className="text-sm font-medium text-ink">Media</h3>
+                <span className="mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Organizer only</span>
+              </header>
+              <FormGrid>
+                <Row label="Pitch to a production company / photographer" full>
+                  <textarea
+                    value={mediaPitch}
+                    onChange={(e) => setMediaPitch(e.target.value)}
+                    rows={4}
+                    className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                    placeholder="Describe the event for a production company or photographer you'd like to approach."
+                  />
+                </Row>
+                <Row label="Contact email" full>
+                  <Text
+                    value={mediaContactEmail}
+                    onChange={setMediaContactEmail}
+                    placeholder="contact@production-company.com"
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Stored for your reference only — nothing is sent automatically.
+                  </p>
+                </Row>
+              </FormGrid>
+              {eventType === "race" && savedId && (
+                <div className="mt-4 border-t border-hairline pt-4">
+                  <EventMediaTab
+                    eventId={savedId}
+                    ownerUserId={ownerId ?? user.id}
+                    currentUserId={user.id}
+                    organizerMode={true}
+                  />
+                </div>
               )}
-            </div>
+            </section>
+          )}
+
+          {/* Timing section — race only, opens just below */}
+          {eventType === "race" && showTimingSection && (
+            <section className="mt-3 rounded-lg border border-hairline bg-background/40 p-4">
+              <header className="mb-3 flex items-center gap-2">
+                <Timer className="h-3.5 w-3.5 text-muted-foreground" />
+                <h3 className="text-sm font-medium text-ink">Timing</h3>
+                <span className="mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Organizer only</span>
+              </header>
+              <FormGrid>
+                <Row label="Timing company" full>
+                  <select
+                    value={timingCompanyId ?? ""}
+                    onChange={(e) => setTimingCompanyId(e.target.value || null)}
+                    className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                  >
+                    <option value="">— Select a timing company —</option>
+                    {timingCompanies.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Choose which timing company will run this race. Visible to organizers and the chosen timing company only.
+                  </p>
+                </Row>
+              </FormGrid>
+            </section>
           )}
         </Panel>
       )}
