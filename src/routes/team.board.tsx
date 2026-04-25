@@ -955,7 +955,7 @@ function TeamBoardPage() {
               <span>Attendance</span>
             </button>
             <span className="ml-3 mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground truncate">
-              {ongoing.folder ? `${ongoing.folder} · ${ongoing.title}` : ongoing.title}
+              {ongoing.meeting.folder ? `${ongoing.meeting.folder} · ${ongoing.meeting.title}` : ongoing.meeting.title}
             </span>
             <button
               onClick={openEditMeeting}
