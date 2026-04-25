@@ -104,7 +104,7 @@ function TeamMembersPage() {
       const [{ data: gs }, { data: tms }, { data: tgms }, { data: tiers }] = await Promise.all([
         supabase
           .from("team_groups")
-          .select("id,name,age_from,age_to,sort_order")
+          .select("id,name,age_from,age_to,sort_order,description,leader_name,leader_email,leader_phone,is_default")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
         supabase
@@ -117,19 +117,21 @@ function TeamMembersPage() {
           .eq("team_id", tid),
         supabase
           .from("team_membership_tiers")
-          .select("id,name,description,price,currency,sort_order")
+          .select("id,name,description,price,currency,sort_order,group_assignment_mode,criteria_label")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
       ]);
 
       setMemberships(
-        (tiers ?? []).map((t, i) => ({
+        ((tiers ?? []) as Array<{ id: string; name: string | null; description: string | null; price: number | null; currency: string | null; sort_order: number | null; group_assignment_mode: string | null; criteria_label: string | null }>).map((t, i) => ({
           id: t.id,
           name: t.name ?? "",
           description: t.description ?? "",
           price: t.price != null ? String(t.price) : "0",
           currency: t.currency ?? "NOK",
           sort_order: t.sort_order ?? i,
+          group_assignment_mode: (t.group_assignment_mode === "criteria" ? "criteria" : "volunteer"),
+          criteria_label: t.criteria_label ?? "age",
         }))
       );
 
@@ -138,13 +140,18 @@ function TeamMembersPage() {
       for (const x of tgmsArr) countByGroup[x.group_id] = (countByGroup[x.group_id] ?? 0) + 1;
 
       setGroups(
-        (gs ?? []).map((g, i) => ({
+        ((gs ?? []) as Array<{ id: string; name: string | null; age_from: number | null; age_to: number | null; sort_order: number | null; description: string | null; leader_name: string | null; leader_email: string | null; leader_phone: string | null; is_default: boolean | null }>).map((g, i) => ({
           id: g.id,
           name: g.name ?? "",
           age_from: g.age_from != null ? String(g.age_from) : "",
           age_to: g.age_to != null ? String(g.age_to) : "",
           sort_order: g.sort_order ?? i,
           member_count: countByGroup[g.id] ?? 0,
+          description: g.description ?? "",
+          leader_name: g.leader_name ?? "",
+          leader_email: g.leader_email ?? "",
+          leader_phone: g.leader_phone ?? "",
+          is_default: !!g.is_default,
         }))
       );
 
