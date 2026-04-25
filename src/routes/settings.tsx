@@ -65,7 +65,7 @@ interface LikedRow {
   events: { id: string; title: string; starts_at: string; location: string } | null;
 }
 
-type Tab = "general" | "address" | "races" | "liked" | "roles" | "profiles" | "entity-profile" | "signout";
+type Tab = "general" | "address" | "races" | "liked" | "roles" | "profiles" | "entity-profile" | "desk" | "signout";
 
 interface EntityRow {
   id: string;
@@ -146,7 +146,7 @@ function SettingsPage() {
   }, [user, activeEntityId]);
 
   useEffect(() => {
-    if (isTeamMode && (tab === "races" || tab === "liked" || tab === "profiles")) setTab("general");
+    if (isTeamMode && (tab === "races" || tab === "liked" || tab === "profiles" || tab === "desk")) setTab("general");
     if (!isTeamMode && tab === "entity-profile") setTab("general");
   }, [isTeamMode, tab]);
 
@@ -206,7 +206,7 @@ function SettingsPage() {
 
   const tabs: Tab[] = isTeamMode
     ? ["entity-profile", "general", "address", "roles"]
-    : ["general", "address", "roles", "profiles", "races", "liked"];
+    : ["general", "address", "roles", "profiles", "desk", "races", "liked"];
 
   const activeEntity = entities.find((e) => e.id === activeEntityId) ?? null;
 
@@ -221,11 +221,13 @@ function SettingsPage() {
             ? "Profile"
             : t === "entity-profile"
               ? "Profile"
-              : t === "races"
-                ? "My races"
-                : t === "liked"
-                  ? "Liked races"
-                  : "Sign out";
+              : t === "desk"
+                ? "Desk"
+                : t === "races"
+                  ? "My races"
+                  : t === "liked"
+                    ? "Liked races"
+                    : "Sign out";
 
   return (
     <div className="px-4 md:px-6">
