@@ -31,6 +31,31 @@ interface Tier {
   description: string | null;
   price: number;
   currency: string;
+  group_assignment_mode: "volunteer" | "criteria";
+  criteria_label: string;
+}
+
+interface GroupOpt {
+  id: string;
+  name: string;
+}
+
+interface ConfirmInfo {
+  team_name: string;
+  tier_name: string | null;
+  mode: "volunteer" | "criteria";
+  criteria_label: string;
+  group_name: string | null;
+  group_age_from: number | null;
+  group_age_to: number | null;
+  group_is_default: boolean;
+  leader_name: string | null;
+  leader_email: string | null;
+  leader_phone: string | null;
+  fallback_email: string | null;
+  fallback_phone: string | null;
+  birth_year: number | null;
+  auto_created_default: boolean;
 }
 
 interface Member {
