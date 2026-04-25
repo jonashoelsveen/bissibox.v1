@@ -44,6 +44,15 @@ interface GroupOpt {
   name: string;
 }
 
+interface PublicGroup {
+  id: string;
+  name: string;
+  age_from: number | null;
+  age_to: number | null;
+  description: string | null;
+  color: string | null;
+}
+
 interface ConfirmInfo {
   team_name: string;
   tier_name: string | null;
