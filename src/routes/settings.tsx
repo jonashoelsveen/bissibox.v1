@@ -238,6 +238,11 @@ function SettingsPage() {
             <ProfileSelector
               entities={entities}
               activeEntity={activeEntity}
+              individualName={
+                [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
+                user.email ||
+                "Individual profile"
+              }
               onSelect={(id) => {
                 setActiveEntity(id);
                 setTab(id ? "entity-profile" : "general");
@@ -523,15 +528,17 @@ const ENTITY_LABEL: Record<EntityType, string> = {
 function ProfileSelector({
   entities,
   activeEntity,
+  individualName,
   onSelect,
 }: {
   entities: EntityRow[];
   activeEntity: EntityRow | null;
+  individualName: string;
   onSelect: (id: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
 
-  const label = activeEntity ? activeEntity.name : "Individual profile";
+  const label = activeEntity ? activeEntity.name : individualName;
 
   return (
     <div className="relative">
@@ -556,7 +563,7 @@ function ProfileSelector({
                 !activeEntity ? "bg-secondary/60 text-ink" : "text-ink"
               }`}
             >
-              <span className="truncate">Individual profile</span>
+              <span className="truncate">{individualName}</span>
               <span className="mono ml-2 shrink-0 text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
                 Personal
               </span>
