@@ -240,28 +240,63 @@ function TeamPage() {
       return;
     }
     setPickerTierId(tiers[0]?.id ?? "__default__");
+    setPickerGroupId(groupOptions[0]?.id ?? "");
     setPickerOpen(true);
   };
 
-  const startJoin = (tierId: string) => {
+  const pickedTier = tiers.find((t) => t.id === pickerTierId) ?? null;
+  const pickerNeedsGroup = !!pickedTier && pickedTier.group_assignment_mode === "volunteer" && groupOptions.length > 0;
+
+  const startJoin = (tierId: string, groupId?: string | null) => {
     if (!user) {
       nav({ to: "/auth", search: { redirect: window.location.pathname } as never });
       return;
     }
     setPendingTierId(tierId);
+    (window as unknown as { __pendingGroupId?: string | null }).__pendingGroupId = groupId ?? null;
     setVerifyOpen(true);
   };
 
   const confirmPicker = () => {
     setPickerOpen(false);
-    startJoin(pickerTierId);
+    startJoin(pickerTierId, pickerNeedsGroup ? pickerGroupId : null);
   };
 
-  const onVerified = () => {
+  const onVerified = (result?: Record<string, unknown>) => {
     if (pendingTierId) setMyMemberships((s) => new Set([...s, pendingTierId]));
     setVerifyOpen(false);
     setPendingTierId(null);
-    toast.success("Membership requested");
+    // Build confirmation info from edge response
+    const r = (result ?? {}) as {
+      team?: { name: string; contact_email: string | null; contact_phone: string | null } | null;
+      tier?: { name: string; mode: "volunteer" | "criteria"; criteria_label: string } | null;
+      group?: {
+        id: string; name: string; age_from: number | null; age_to: number | null;
+        is_default: boolean; leader_name: string | null;
+        leader_email: string | null; leader_phone: string | null;
+      } | null;
+      birth_year?: number | null;
+      auto_created_default?: boolean;
+      assignment_mode?: "volunteer" | "criteria";
+      criteria_label?: string;
+    };
+    setConfirmInfo({
+      team_name: r.team?.name ?? team?.name ?? "this team",
+      tier_name: r.tier?.name ?? null,
+      mode: r.assignment_mode ?? r.tier?.mode ?? "volunteer",
+      criteria_label: r.criteria_label ?? r.tier?.criteria_label ?? "age",
+      group_name: r.group?.name ?? null,
+      group_age_from: r.group?.age_from ?? null,
+      group_age_to: r.group?.age_to ?? null,
+      group_is_default: !!r.group?.is_default,
+      leader_name: r.group?.leader_name ?? null,
+      leader_email: r.group?.leader_email ?? null,
+      leader_phone: r.group?.leader_phone ?? null,
+      fallback_email: r.team?.contact_email ?? null,
+      fallback_phone: r.team?.contact_phone ?? null,
+      birth_year: r.birth_year ?? null,
+      auto_created_default: !!r.auto_created_default,
+    });
   };
 
   if (notFound) {
