@@ -9,6 +9,8 @@ import { ChevronDown, Plus, Trash2, Save, FileText, Layers, ListTree, Map as Map
 import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
 import { ElevationProfile } from "@/components/ElevationProfile";
 import { ParticipantsPanel } from "@/components/ParticipantsPanel";
+import { MeetingParticipantsPanel } from "@/components/MeetingParticipantsPanel";
+import { SimplePinMap } from "@/components/SimplePinMap";
 import { CoOrganizersManager } from "@/components/CoOrganizersManager";
 import { EventMediaTab } from "@/components/EventMediaTab";
 
