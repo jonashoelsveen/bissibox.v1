@@ -1056,7 +1056,7 @@ function MembershipRow({
                 className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
               />
             </label>
-            <div className="md:col-span-3 grid gap-3 rounded-lg border border-hairline bg-background/60 p-4 md:grid-cols-2">
+            <div className="md:col-span-3 grid gap-3 rounded-lg border border-primary/20 bg-secondary/60 p-4 md:grid-cols-2">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-ink">Active</p>
