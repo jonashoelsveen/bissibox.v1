@@ -718,6 +718,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             }}
             onSave={save}
             saving={busy}
+            kindLabel={eventType === "meeting" ? "Meeting" : "Event"}
             title={eventType === "meeting" ? "Meeting location" : "Event location"}
             showDescription={eventType === "event"}
           />
