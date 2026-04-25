@@ -287,12 +287,33 @@ function TeamBoardPage() {
       toast.error(error.message);
       return;
     }
+    // Snapshot the current board roster for this meeting
+    const snapshotRows = members
+      .filter((m) => !!m.id)
+      .map((m) => ({
+        meeting_id: data.id,
+        team_id: teamId,
+        board_member_id: m.id as string,
+        name: m.name ?? "",
+        role: m.role ?? "",
+        email: m.email ?? "",
+        sort_order: m.sort_order ?? 0,
+      }));
+    let snapshot: RosterEntry[] = [];
+    if (snapshotRows.length) {
+      const { data: rosterData } = await supabase
+        .from("team_board_meeting_roster")
+        .insert(snapshotRows)
+        .select("id,board_member_id,name,role,email,sort_order");
+      snapshot = (rosterData ?? []) as RosterEntry[];
+    }
     setMeetings((prev) => [data, ...prev]);
     setOngoing(data);
     setOngoingText(data.notes ?? "");
     setSavedText(data.notes ?? "");
     setAttachments([]);
     setAttendance([]);
+    setRoster(snapshot.sort((a, b) => a.sort_order - b.sort_order));
     setTab("ongoing");
   }
 
@@ -302,7 +323,7 @@ function TeamBoardPage() {
     setSavedText(m.notes ?? "");
     setTab("ongoing");
     void loadAttachments(m.id);
-    void loadAttendance(m.id);
+    void loadRosterAndAttendance(m.id);
   }
 
   async function closeOngoing() {
