@@ -12,6 +12,7 @@ import {
   Trash2,
   Users as UsersIcon,
   Layers,
+  Wallet,
 } from "lucide-react";
 
 export const Route = createFileRoute("/team/members")({
@@ -28,6 +29,15 @@ interface GroupDraft {
   member_count: number;
 }
 
+interface MembershipDraft {
+  id?: string;
+  name: string;
+  description: string;
+  price: string;
+  currency: string;
+  sort_order: number;
+}
+
 interface MemberRow {
   team_member_id: string;
   user_id: string;
@@ -41,7 +51,7 @@ interface MemberRow {
 function TeamMembersPage() {
   const { user, loading: authLoading, mode } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"groups" | "members">("groups");
+  const [tab, setTab] = useState<"memberships" | "groups" | "members">("memberships");
   const [teamId, setTeamId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -52,6 +62,12 @@ function TeamMembersPage() {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [dragHandleIdx, setDragHandleIdx] = useState<number | null>(null);
+
+  // Memberships state
+  const [memberships, setMemberships] = useState<MembershipDraft[]>([]);
+  const [openMemIdx, setOpenMemIdx] = useState<number | null>(null);
+  const [dragMemIdx, setDragMemIdx] = useState<number | null>(null);
+  const [dragMemHandleIdx, setDragMemHandleIdx] = useState<number | null>(null);
 
   // Members state
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -78,7 +94,7 @@ function TeamMembersPage() {
         return;
       }
 
-      const [{ data: gs }, { data: tms }, { data: tgms }] = await Promise.all([
+      const [{ data: gs }, { data: tms }, { data: tgms }, { data: tiers }] = await Promise.all([
         supabase
           .from("team_groups")
           .select("id,name,age_from,age_to,sort_order")
@@ -92,7 +108,23 @@ function TeamMembersPage() {
           .from("team_group_members")
           .select("group_id,user_id")
           .eq("team_id", tid),
+        supabase
+          .from("team_membership_tiers")
+          .select("id,name,description,price,currency,sort_order")
+          .eq("team_id", tid)
+          .order("sort_order", { ascending: true }),
       ]);
+
+      setMemberships(
+        (tiers ?? []).map((t, i) => ({
+          id: t.id,
+          name: t.name ?? "",
+          description: t.description ?? "",
+          price: t.price != null ? String(t.price) : "0",
+          currency: t.currency ?? "NOK",
+          sort_order: t.sort_order ?? i,
+        }))
+      );
 
       const tgmsArr = (tgms ?? []) as { group_id: string; user_id: string }[];
       const countByGroup: Record<string, number> = {};
@@ -224,6 +256,47 @@ function TeamMembersPage() {
       // Reload group ids back into the local groups list (replace temp)
       setGroups((arr) => arr.map((g, i) => ({ ...g, id: idMap[i] })));
 
+      // Replace memberships
+      const memExistingIds = memberships.filter((m) => m.id).map((m) => m.id!) as string[];
+      const { data: dbTiers } = await supabase
+        .from("team_membership_tiers")
+        .select("id")
+        .eq("team_id", teamId);
+      const dbTierIds = (dbTiers ?? []).map((d) => d.id as string);
+      const tiersToDelete = dbTierIds.filter((id) => !memExistingIds.includes(id));
+      if (tiersToDelete.length) {
+        await supabase.from("team_membership_tiers").delete().in("id", tiersToDelete);
+      }
+      const memIdMap: Record<number, string> = {};
+      for (let i = 0; i < memberships.length; i++) {
+        const m = memberships[i];
+        const payload = {
+          team_id: teamId,
+          name: m.name.trim() || `Membership ${i + 1}`,
+          description: m.description.trim() || null,
+          price: m.price ? Number(m.price) : 0,
+          currency: m.currency.trim() || "NOK",
+          sort_order: i,
+        };
+        if (m.id) {
+          const { error } = await supabase
+            .from("team_membership_tiers")
+            .update(payload as never)
+            .eq("id", m.id);
+          if (error) throw error;
+          memIdMap[i] = m.id;
+        } else {
+          const { data, error } = await supabase
+            .from("team_membership_tiers")
+            .insert(payload as never)
+            .select("id")
+            .single();
+          if (error) throw error;
+          memIdMap[i] = data!.id as string;
+        }
+      }
+      setMemberships((arr) => arr.map((m, i) => ({ ...m, id: memIdMap[i] })));
+
       toast.success("Members saved.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save.");
@@ -276,6 +349,9 @@ function TeamMembersPage() {
       </header>
 
       <nav className="mt-7 flex border-b border-hairline">
+        <TabBtn active={tab === "memberships"} onClick={() => setTab("memberships")} icon={<Wallet className="h-3.5 w-3.5" />}>
+          Memberships
+        </TabBtn>
         <TabBtn active={tab === "groups"} onClick={() => setTab("groups")} icon={<Layers className="h-3.5 w-3.5" />}>
           Groups
         </TabBtn>
@@ -283,6 +359,101 @@ function TeamMembersPage() {
           Members
         </TabBtn>
       </nav>
+
+      {tab === "memberships" && (
+        <Panel>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Memberships people can choose when joining your team. Drag to reorder, click to expand.
+            </p>
+            <button
+              onClick={() => {
+                setMemberships((arr) => [
+                  ...arr,
+                  { name: "", description: "", price: "0", currency: "NOK", sort_order: arr.length },
+                ]);
+                setOpenMemIdx(memberships.length);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-md border border-hairline bg-background px-3 py-1.5 text-xs text-ink hover:bg-secondary"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add new membership
+            </button>
+          </div>
+
+          <div className="mt-5 space-y-2">
+            {memberships.length === 0 && (
+              <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
+                No memberships yet. Add one to let people join.
+              </div>
+            )}
+            {memberships.map((m, idx) => {
+              const isDragging = dragMemIdx === idx;
+              return (
+                <div
+                  key={m.id ?? `new-mem-${idx}`}
+                  draggable={dragMemHandleIdx === idx}
+                  onDragStart={(e) => {
+                    if (dragMemHandleIdx !== idx) {
+                      e.preventDefault();
+                      return;
+                    }
+                    setDragMemIdx(idx);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    if (dragMemIdx === null) return;
+                    const from = dragMemIdx;
+                    const to = idx;
+                    if (from === to) return;
+                    setMemberships((arr) => {
+                      const next = [...arr];
+                      const [moved] = next.splice(from, 1);
+                      next.splice(to, 0, moved);
+                      return next.map((x, i) => ({ ...x, sort_order: i }));
+                    });
+                    setOpenMemIdx((o) => (o === from ? to : o === to ? from : o));
+                    setDragMemIdx(to);
+                  }}
+                  onDragOver={(e) => {
+                    if (dragMemIdx === null) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragMemIdx(null);
+                    setDragMemHandleIdx(null);
+                  }}
+                  onDragEnd={() => {
+                    setDragMemIdx(null);
+                    setDragMemHandleIdx(null);
+                  }}
+                  className={`overflow-hidden rounded-lg border border-hairline bg-card transition ${
+                    isDragging ? "opacity-40" : ""
+                  }`}
+                >
+                  <MembershipRow
+                    membership={m}
+                    open={openMemIdx === idx}
+                    onToggle={() => setOpenMemIdx((o) => (o === idx ? null : idx))}
+                    onChange={(patch) =>
+                      setMemberships((arr) => arr.map((x, i) => (i === idx ? { ...x, ...patch } : x)))
+                    }
+                    onDelete={() => {
+                      if (!confirm(`Delete membership "${m.name || `Membership ${idx + 1}`}"? This cannot be undone.`)) return;
+                      setMemberships((arr) => arr.filter((_, i) => i !== idx));
+                      setOpenMemIdx(null);
+                    }}
+                    onHandleDown={() => setDragMemHandleIdx(idx)}
+                    onHandleUp={() => setDragMemHandleIdx(null)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </Panel>
+      )}
 
       {tab === "groups" && (
         <Panel>
@@ -573,6 +744,109 @@ function GroupRow({
                 className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
               />
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MembershipRow({
+  membership,
+  open,
+  onToggle,
+  onChange,
+  onDelete,
+  onHandleDown,
+  onHandleUp,
+}: {
+  membership: MembershipDraft;
+  open: boolean;
+  onToggle: () => void;
+  onChange: (patch: Partial<MembershipDraft>) => void;
+  onDelete: () => void;
+  onHandleDown?: () => void;
+  onHandleUp?: () => void;
+}) {
+  return (
+    <div>
+      <div className="flex w-full items-center gap-2 bg-secondary/40 px-3 py-3 transition hover:bg-secondary">
+        <span
+          onMouseDown={onHandleDown}
+          onMouseUp={onHandleUp}
+          onMouseLeave={onHandleUp}
+          className="flex h-7 w-7 cursor-grab items-center justify-center rounded-md border border-hairline bg-background text-muted-foreground hover:text-ink active:cursor-grabbing"
+          aria-label="Drag to reorder"
+          title="Drag to reorder"
+        >
+          <GripVertical className="h-4 w-4" />
+        </span>
+        <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-muted-foreground transition ${open ? "rotate-0" : "-rotate-90"}`}
+          />
+          <span className="truncate text-sm font-medium text-ink">
+            {membership.name || "Untitled membership"}
+          </span>
+          {membership.price && Number(membership.price) > 0 && (
+            <span className="mono text-xs text-muted-foreground">
+              · {membership.price} {membership.currency || "NOK"}
+            </span>
+          )}
+        </button>
+        <button
+          aria-label="Delete"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="rounded p-1 text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+      {open && (
+        <div className="px-5 py-5">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-3">
+            <label className="flex flex-col gap-1 md:col-span-3">
+              <span className="text-xs text-muted-foreground">Name</span>
+              <input
+                value={membership.name}
+                onChange={(e) => onChange({ name: e.target.value })}
+                placeholder="Standard, Family, Junior…"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Price</span>
+              <input
+                type="number"
+                min={0}
+                value={membership.price}
+                onChange={(e) => onChange({ price: e.target.value })}
+                placeholder="0"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Currency</span>
+              <input
+                value={membership.currency}
+                onChange={(e) => onChange({ currency: e.target.value })}
+                placeholder="NOK"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1 md:col-span-3">
+              <span className="text-xs text-muted-foreground">Description</span>
+              <textarea
+                value={membership.description}
+                onChange={(e) => onChange({ description: e.target.value })}
+                rows={3}
+                placeholder="What's included with this membership."
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
           </div>
         </div>
       )}
