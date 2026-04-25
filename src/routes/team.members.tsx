@@ -16,6 +16,7 @@ import {
   Network,
 } from "lucide-react";
 import { OrgChart, type OrgPerson, type OrgGroup } from "@/components/OrgChart";
+import { GroupColorPicker } from "@/components/GroupColorPicker";
 import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/team/members")({
