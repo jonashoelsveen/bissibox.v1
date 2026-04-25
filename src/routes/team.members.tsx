@@ -1005,8 +1005,6 @@ function MembershipRow({
   onHandleUp?: () => void;
   hasGroups: boolean;
 }) {
-  const publicDisabled = !membership.is_active;
-
   return (
     <div>
       <div className="flex w-full items-center gap-2 bg-secondary/40 px-3 py-3 transition hover:bg-secondary">
