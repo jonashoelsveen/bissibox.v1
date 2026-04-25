@@ -210,7 +210,9 @@ function TeamPage() {
   }
   if (!team) return null;
 
+  const pendingTier = tiers.find((t) => t.id === pendingTierId);
   return (
+    <>
     <ProfileShell
       coverPath={coverPath}
       fallbackInitial={team.name[0]?.toUpperCase() ?? "T"}
@@ -349,5 +351,16 @@ function TeamPage() {
 
       {tab === "media" && <MediaGrid items={media} />}
     </ProfileShell>
+    <VerificationDialog
+      open={verifyOpen}
+      onClose={() => setVerifyOpen(false)}
+      onVerified={onVerified}
+      title={`Join ${team.name}`}
+      subtitle={pendingTier ? `${pendingTier.name} · ${formatMoney(pendingTier.price, pendingTier.currency)}` : undefined}
+      targetKind="team_membership"
+      targetId={teamId}
+      targetMeta={{ tier_id: pendingTierId }}
+    />
+    </>
   );
 }
