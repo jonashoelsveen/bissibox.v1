@@ -32,12 +32,80 @@ import {
   GripVertical,
   Pin,
   PinOff,
+  FolderClosed,
+  Image as ImageIcon,
 } from "lucide-react";
 
+type LibraryTab = "files" | "media";
+
 export const Route = createFileRoute("/media")({
-  component: MediaPage,
-  head: () => ({ meta: [{ title: "Media · Raceline" }] }),
+  component: LibraryPage,
+  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab } => ({
+    tab: s.tab === "files" || s.tab === "media" ? (s.tab as LibraryTab) : undefined,
+  }),
+  head: () => ({ meta: [{ title: "Library · Raceline" }] }),
 });
+
+function LibraryPage() {
+  const search = useSearch({ from: "/media" });
+  const navigate = useNavigate();
+  const tab: LibraryTab = search.tab ?? "files";
+
+  const setTab = (next: LibraryTab) => {
+    navigate({ to: "/media", search: { tab: next }, replace: true });
+  };
+
+  return (
+    <div className="px-4 md:px-6">
+      <div className="pt-6 md:pt-8">
+        <h1 className="text-2xl tracking-tight text-ink md:text-3xl">Library</h1>
+      </div>
+      <nav className="mt-6 flex border-b border-hairline">
+        <LibraryTabBtn
+          active={tab === "files"}
+          onClick={() => setTab("files")}
+          icon={<FolderClosed className="h-3.5 w-3.5" />}
+        >
+          Files
+        </LibraryTabBtn>
+        <LibraryTabBtn
+          active={tab === "media"}
+          onClick={() => setTab("media")}
+          icon={<ImageIcon className="h-3.5 w-3.5" />}
+        >
+          Media
+        </LibraryTabBtn>
+      </nav>
+      {tab === "files" ? <FilesPage /> : <MediaPage />}
+    </div>
+  );
+}
+
+function LibraryTabBtn({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm transition ${
+        active
+          ? "border-primary text-ink"
+          : "border-transparent text-muted-foreground hover:text-ink"
+      }`}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
 
 interface Album {
   id: string;
