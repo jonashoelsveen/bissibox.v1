@@ -384,7 +384,7 @@ function TeamMembersPage() {
               onClick={() => {
                 setMemberships((arr) => [
                   ...arr,
-                  { name: "", description: "", price: "0", currency: "NOK", sort_order: arr.length },
+                  { name: "", description: "", price: "0", currency: "NOK", sort_order: arr.length, group_assignment_mode: "volunteer", criteria_label: "age" },
                 ]);
                 setOpenMemIdx(memberships.length);
               }}
@@ -479,7 +479,7 @@ function TeamMembersPage() {
               onClick={() => {
                 setGroups((arr) => [
                   ...arr,
-                  { name: "", age_from: "", age_to: "", sort_order: arr.length, member_count: 0 },
+                  { name: "", age_from: "", age_to: "", sort_order: arr.length, member_count: 0, description: "", leader_name: "", leader_email: "", leader_phone: "", is_default: false },
                 ]);
                 setOpenIdx(groups.length);
               }}
