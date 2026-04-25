@@ -234,7 +234,7 @@ function SettingsPage() {
       <div>
         <div className="flex items-center justify-between gap-2 pt-4 pr-14">
           <div className="flex items-baseline gap-2">
-            <span className="mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+            <span className="text-base font-semibold text-ink">
               Account
             </span>
             <ProfileSelector
