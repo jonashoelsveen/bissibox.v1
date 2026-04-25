@@ -386,7 +386,20 @@ function TeamPage() {
                       {formatMoney(tier.price, tier.currency)}
                     </span>
                     <button
-                      onClick={() => startJoin(tier.id)}
+                      onClick={() => {
+                        if (!user) {
+                          nav({ to: "/auth", search: { redirect: window.location.pathname } as never });
+                          return;
+                        }
+                        // If this tier is volunteer mode and team has groups, force the picker so the user can choose a group.
+                        if (tier.group_assignment_mode === "volunteer" && groupOptions.length > 0) {
+                          setPickerTierId(tier.id);
+                          setPickerGroupId(groupOptions[0]?.id ?? "");
+                          setPickerOpen(true);
+                          return;
+                        }
+                        startJoin(tier.id);
+                      }}
                       disabled={joined}
                       className="rounded-full bg-ink px-4 py-1.5 text-xs text-background hover:opacity-90 disabled:opacity-50"
                     >
