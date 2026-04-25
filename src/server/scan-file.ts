@@ -133,8 +133,8 @@ export const scanFile = createServerFn({ method: "POST" })
           scan_details: {
             provider: "virustotal",
             analysis_id: analysisId,
-            stats: result.stats,
-          },
+            stats: result.stats as Record<string, number>,
+          } as never,
         })
         .eq("id", fileRow.id);
 
