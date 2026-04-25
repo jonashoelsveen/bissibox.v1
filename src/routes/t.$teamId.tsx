@@ -373,7 +373,7 @@ function TeamPage() {
       subtitle={pendingTier ? `${pendingTier.name} · ${formatMoney(pendingTier.price, pendingTier.currency)}` : undefined}
       targetKind="team_membership"
       targetId={teamId}
-      targetMeta={{ tier_id: pendingTierId }}
+      targetMeta={{ tier_id: pendingTierId && pendingTierId !== "__default__" ? pendingTierId : null }}
     />
     </>
   );
