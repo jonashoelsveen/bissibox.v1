@@ -149,8 +149,7 @@ function FullChart({
                 />
                 <GroupBox
                   group={g}
-                  color={groupColors[g.id] || ""}
-                  onSetColor={(c) => onSetGroupColor(g.id, c)}
+                  color={g.color || ""}
                   onExpand={() => onExpandGroup(g.id)}
                 />
               </div>
