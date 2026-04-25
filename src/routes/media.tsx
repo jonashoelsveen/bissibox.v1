@@ -72,9 +72,9 @@ interface AttendedEvent {
 const MEDIA_HOUSES = ["VG", "NRK", "TV2", "Dagbladet", "Aftenposten"];
 
 function MediaPage() {
-  const { user, mode, loading: authLoading } = useAuth();
+  const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const isTeamMode = mode === "team" || mode === "organizer";
+  const isTeamMode = (mode === "team" || mode === "organizer") || !!activeEntityId;
   const [albums, setAlbums] = useState<Album[]>([]);
   const [items, setItems] = useState<MediaItem[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
