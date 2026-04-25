@@ -275,11 +275,17 @@ function TeamBoardPage() {
 
   async function closeOngoing() {
     if (!ongoing) return;
-    const hasContent = (savedText && savedText.trim().length > 0) || attachments.length > 0;
     const isUnsaved = ongoingText !== savedText;
+    const hasAnyContent =
+      (ongoingText && ongoingText.trim().length > 0) ||
+      (savedText && savedText.trim().length > 0) ||
+      attachments.length > 0;
 
-    if (hasContent) {
-      // Saved meeting — just close the tab, keep it in the list
+    // If there's any content, persist any pending edits and just close the tab.
+    if (hasAnyContent) {
+      if (isUnsaved) {
+        await saveOngoingText();
+      }
       setOngoing(null);
       setAttachments([]);
       setOngoingText("");
@@ -288,11 +294,9 @@ function TeamBoardPage() {
       return;
     }
 
-    if (isUnsaved) {
-      if (!confirm("You have unsaved changes. Delete this board meeting?")) return;
-    }
+    // Truly empty meeting — confirm deletion
+    if (!confirm("Do you want to delete board meeting?")) return;
 
-    // Empty / unsaved meeting — delete it
     if (attachments.length) {
       await supabase.storage
         .from("board-attachments")
@@ -336,17 +340,22 @@ function TeamBoardPage() {
   async function saveOngoingText() {
     if (!ongoing) return;
     if (ongoingText === savedText) return;
+    const textToSave = ongoingText;
     setSaving(true);
     const { error } = await supabase
       .from("team_board_meetings")
-      .update({ notes: ongoingText })
+      .update({ notes: textToSave, updated_at: new Date().toISOString() })
       .eq("id", ongoing.id);
     setSaving(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    setSavedText(ongoingText);
+    setSavedText(textToSave);
+    setOngoing((prev) => (prev ? { ...prev, notes: textToSave } : prev));
+    setMeetings((prev) =>
+      prev.map((m) => (m.id === ongoing.id ? { ...m, notes: textToSave } : m)),
+    );
     toast.success("Saved");
   }
 
