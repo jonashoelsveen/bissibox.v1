@@ -80,6 +80,7 @@ function TeamPage() {
   const [notFound, setNotFound] = useState(false);
   const [tab, setTab] = useState<"memberships" | "members" | "media" | "events">("memberships");
   const [tiers, setTiers] = useState<Tier[]>([]);
+  const [tiersLoaded, setTiersLoaded] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
   const [events, setEvents] = useState<EventRow[]>([]);
   const [media, setMedia] = useState<{ id: string; storage_path: string; media_type: string }[]>([]);
