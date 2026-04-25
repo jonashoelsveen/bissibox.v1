@@ -189,11 +189,27 @@ function MediaPage() {
     setUserName(name);
 
     if (isTeamMode) {
-      const { data: team } = await supabase
-        .from("teams")
-        .select("id,name")
-        .eq("owner_id", user.id)
-        .maybeSingle();
+      // Prefer the user's currently active entity selection. Fall back to the
+      // first owned team only when nothing is selected (legacy single-team users).
+      let team: { id: string; name: string } | null = null;
+      if (activeEntityId) {
+        const { data } = await supabase
+          .from("teams")
+          .select("id,name")
+          .eq("id", activeEntityId)
+          .maybeSingle();
+        team = data ?? null;
+      }
+      if (!team) {
+        const { data } = await supabase
+          .from("teams")
+          .select("id,name")
+          .eq("owner_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        team = data ?? null;
+      }
       if (!team) {
         setTeamId(null);
         setAlbums([]);
