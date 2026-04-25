@@ -146,6 +146,11 @@ export function TopChrome() {
         )}
 
         <div className="mt-auto flex flex-col items-center gap-2 pb-2">
+          {isIndividual && user && (
+            <NavBtn to="/desk" label="Desk" active={path.startsWith("/desk")}>
+              <Armchair className="h-[18px] w-[18px]" strokeWidth={2.25} />
+            </NavBtn>
+          )}
           <NavBtn
             to={user ? "/settings" : "/auth"}
             label="Settings"
