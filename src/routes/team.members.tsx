@@ -252,8 +252,13 @@ function TeamMembersPage() {
     [boardMembers],
   );
 
+  const unassignedMembers = useMemo(
+    () => members.filter((m) => !(assignments[m.user_id] ?? "")),
+    [members, assignments],
+  );
+
   const orgGroups: OrgGroup[] = useMemo(() => {
-    return groups
+    const real = groups
       .filter((g) => g.id)
       .map((g) => {
         const memberPeople: OrgPerson[] = members
@@ -284,7 +289,24 @@ function TeamMembersPage() {
           members: memberPeople,
         };
       });
-  }, [groups, members, assignments]);
+    if (unassignedMembers.length > 0) {
+      real.push({
+        id: "__undefined__",
+        name: "Undefined",
+        description:
+          "Members who have joined but have not yet been assigned to a group.",
+        leaders: [],
+        members: unassignedMembers.map((m) => ({
+          id: m.user_id,
+          name: [m.first_name, m.last_name].filter(Boolean).join(" ") || m.email || "Unnamed",
+          role: null,
+          email: m.email,
+          phone: null,
+        })),
+      });
+    }
+    return real;
+  }, [groups, members, assignments, unassignedMembers]);
 
 
   const save = async () => {
@@ -657,6 +679,27 @@ function TeamMembersPage() {
                 </div>
               );
             })}
+            {unassignedMembers.length > 0 && (
+              <div className="overflow-hidden rounded-lg border border-dashed border-hairline bg-card/60">
+                <div className="flex w-full items-center gap-2 bg-secondary/30 px-3 py-3">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md border border-hairline bg-background text-muted-foreground">
+                    <UsersIcon className="h-4 w-4" />
+                  </span>
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="truncate text-sm font-medium text-ink">Undefined</span>
+                    <span className="mono rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                      Auto
+                    </span>
+                    <span className="mono text-xs text-muted-foreground">
+                      · {unassignedMembers.length} total members
+                    </span>
+                  </div>
+                </div>
+                <div className="px-5 py-3 text-xs text-muted-foreground">
+                  Members who joined this {teamName ? "entity" : "team"} but have not been assigned to a group yet appear here automatically, so the chart always shows everyone.
+                </div>
+              </div>
+            )}
           </div>
         </Panel>
       )}
