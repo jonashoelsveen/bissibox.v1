@@ -42,7 +42,9 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
   // Top-level
   const [tab, setTab] = useState<"details" | "classes" | "subevents" | "map" | "participants" | "media">("details");
-  const [detailsSection, setDetailsSection] = useState<"about" | "timing" | "media">("about");
+  const [showMediaSection, setShowMediaSection] = useState(false);
+  const [showTimingSection, setShowTimingSection] = useState(false);
+  const [mediaContactEmail, setMediaContactEmail] = useState("");
   const [timingCompanyId, setTimingCompanyId] = useState<string | null>(null);
   const [timingCompanies, setTimingCompanies] = useState<{ id: string; name: string }[]>([]);
   const [activeMapSub, setActiveMapSub] = useState<number>(0);
@@ -107,6 +109,10 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         setTimingCompanyId(((e as any).timing_company_id as string | null) ?? null);
         const et = (e as any).event_type as "meeting" | "event" | "race" | undefined;
         if (et) setEventType(et);
+        const mce = ((e as any).media_contact_email as string | null) ?? "";
+        setMediaContactEmail(mce);
+        setShowMediaSection(!!mce);
+        setShowTimingSection(!!((e as any).timing_company_id));
       }
       const { data: cls } = await supabase
         .from("event_classes")
@@ -175,8 +181,9 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         race_types: raceTypes,
         world_athletics_certified: waCertified,
         owner_id: user.id,
-        timing_company_id: timingCompanyId,
+        timing_company_id: eventType === "race" && showTimingSection ? timingCompanyId : null,
         event_type: eventType,
+        media_contact_email: showMediaSection ? (mediaContactEmail.trim() || null) : null,
       };
 
       let id = savedId;
