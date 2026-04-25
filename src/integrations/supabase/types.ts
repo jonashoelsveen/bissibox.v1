@@ -545,6 +545,9 @@ export type Database = {
           mime_type: string | null
           organizer: string | null
           photographer: string | null
+          scan_details: Json
+          scan_status: string
+          scanned_at: string | null
           storage_path: string
           subject: string | null
           team_id: string | null
@@ -567,6 +570,9 @@ export type Database = {
           mime_type?: string | null
           organizer?: string | null
           photographer?: string | null
+          scan_details?: Json
+          scan_status?: string
+          scanned_at?: string | null
           storage_path: string
           subject?: string | null
           team_id?: string | null
@@ -589,6 +595,9 @@ export type Database = {
           mime_type?: string | null
           organizer?: string | null
           photographer?: string | null
+          scan_details?: Json
+          scan_status?: string
+          scanned_at?: string | null
           storage_path?: string
           subject?: string | null
           team_id?: string | null
