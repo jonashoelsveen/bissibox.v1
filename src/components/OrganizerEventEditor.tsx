@@ -705,7 +705,24 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         </Panel>
       )}
 
-      {tab === "map" && (
+      {tab === "map" && eventType !== "race" && (
+        <div className="mt-5 flex flex-1 overflow-hidden rounded-lg border border-hairline bg-card">
+          <SimplePinMap
+            pin={pin}
+            description={pinDescription}
+            onChange={({ pin: p, description: d }) => {
+              setPin(p);
+              setPinDescription(d);
+            }}
+            onSave={save}
+            saving={busy}
+            title={eventType === "meeting" ? "Meeting location" : "Event location"}
+            showDescription={eventType === "event"}
+          />
+        </div>
+      )}
+
+      {tab === "map" && eventType === "race" && (
         <div className="mt-5 flex flex-1 overflow-hidden rounded-lg border border-hairline bg-card">
           {/* Left: map + elevation profile stacked */}
           <div className="flex min-w-0 flex-1 flex-col">
