@@ -644,13 +644,21 @@ function TeamBoardPage() {
         </div>
         <div className="flex items-center gap-2">
           {tab === "meetings" && (
-            <button
-              onClick={startNewMeeting}
-              disabled={busy}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" /> New board meeting
-            </button>
+            <>
+              <button
+                onClick={() => setNewFolderOpen(true)}
+                className="inline-flex items-center gap-2 rounded-lg border border-hairline bg-card px-4 py-2.5 text-sm text-ink transition hover:bg-secondary"
+              >
+                <Plus className="h-4 w-4" /> New folder
+              </button>
+              <button
+                onClick={startNewMeeting}
+                disabled={busy}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" /> New board meeting
+              </button>
+            </>
           )}
           {tab === "members" && (
             <button
