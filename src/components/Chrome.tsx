@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 export function TopChrome() {
   const router = useRouterState();
   const path = router.location.pathname;
-  const { user, mode } = useAuth();
+  const { user, mode, activeEntityId } = useAuth();
   const [letter, setLetter] = useState<string>("");
 
   const isOrganizer = (mode === "organizer" || mode === "team") && !!user;
@@ -20,6 +20,17 @@ export function TopChrome() {
       return;
     }
     (async () => {
+      if (activeEntityId) {
+        const { data } = await supabase
+          .from("teams")
+          .select("name")
+          .eq("id", activeEntityId)
+          .maybeSingle();
+        if (cancel) return;
+        const src = (data?.name && data.name.trim()) || "?";
+        setLetter(src.charAt(0).toUpperCase());
+        return;
+      }
       const { data } = await supabase
         .from("profiles")
         .select("first_name,last_name,email")
@@ -37,7 +48,7 @@ export function TopChrome() {
     return () => {
       cancel = true;
     };
-  }, [user]);
+  }, [user, activeEntityId]);
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen p-5 md:p-6">

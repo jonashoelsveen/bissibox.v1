@@ -50,6 +50,7 @@ interface Team {
   postal_code: string | null;
   postal_place: string | null;
   country: string | null;
+  active: boolean;
 }
 
 interface RegistrationRow {
@@ -64,7 +65,7 @@ interface LikedRow {
   events: { id: string; title: string; starts_at: string; location: string } | null;
 }
 
-type Tab = "general" | "address" | "races" | "liked" | "roles" | "profiles";
+type Tab = "general" | "address" | "races" | "liked" | "roles" | "profiles" | "entity-profile" | "signout";
 
 interface EntityRow {
   id: string;
@@ -137,7 +138,7 @@ function SettingsPage() {
     (async () => {
       const { data: t } = await supabase
         .from("teams")
-        .select("id, name, nif_id, contact_email, contact_phone, website, description, address, postal_code, postal_place, country")
+        .select("id, name, nif_id, contact_email, contact_phone, website, description, address, postal_code, postal_place, country, active")
         .eq("id", activeEntityId)
         .maybeSingle();
       if (t) setTeam(t as Team);
@@ -146,6 +147,7 @@ function SettingsPage() {
 
   useEffect(() => {
     if (isTeamMode && (tab === "races" || tab === "liked" || tab === "profiles")) setTab("general");
+    if (!isTeamMode && tab === "entity-profile") setTab("general");
   }, [isTeamMode, tab]);
 
   const [userRoles, setUserRoles] = useState<{ role: "organizer" | "photographer" | "timekeeper" }[]>([]);
@@ -167,7 +169,7 @@ function SettingsPage() {
   const updateProfile = (k: keyof Profile, v: string | boolean | null) =>
     setProfile((p) => (p ? { ...p, [k]: v } : p));
 
-  const updateTeam = (k: keyof Team, v: string | null) =>
+  const updateTeam = (k: keyof Team, v: string | boolean | null) =>
     setTeam((t) => (t ? { ...t, [k]: v } : t));
 
   const save = async () => {
@@ -203,40 +205,51 @@ function SettingsPage() {
   }
 
   const tabs: Tab[] = isTeamMode
-    ? ["general", "address", "roles"]
+    ? ["entity-profile", "general", "address", "roles"]
     : ["general", "address", "roles", "profiles", "races", "liked"];
 
   const activeEntity = entities.find((e) => e.id === activeEntityId) ?? null;
+
+  const tabLabel = (t: Tab) =>
+    t === "general"
+      ? "General"
+      : t === "address"
+        ? "Contact & address"
+        : t === "roles"
+          ? "Roles"
+          : t === "profiles"
+            ? "Profile"
+            : t === "entity-profile"
+              ? "Profile"
+              : t === "races"
+                ? "My races"
+                : t === "liked"
+                  ? "Liked races"
+                  : "Sign out";
 
   return (
     <div className="px-4 md:px-6">
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between gap-2 pt-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-baseline gap-2">
+            <span className="mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+              Account
+            </span>
             <ProfileSelector
               entities={entities}
               activeEntity={activeEntity}
               onSelect={(id) => {
                 setActiveEntity(id);
-                setTab("general");
+                setTab(id ? "entity-profile" : "general");
               }}
             />
-            <button
-              onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-card px-3.5 py-2 text-xs text-ink transition hover:bg-secondary"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Create new entity
-            </button>
           </div>
           <button
-            onClick={async () => {
-              await signOut();
-              navigate({ to: "/" });
-            }}
-            className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+            onClick={() => setCreateOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-ink px-4 py-2 text-xs font-medium text-background transition hover:opacity-90"
           >
-            Sign out
+            <Plus className="h-3.5 w-3.5" />
+            Create new entity
           </button>
         </div>
 
@@ -252,22 +265,39 @@ function SettingsPage() {
                     : "text-muted-foreground hover:text-ink"
                 }`}
               >
-                {t === "general"
-                  ? "General"
-                  : t === "address"
-                    ? "Contact & address"
-                    : t === "roles"
-                      ? "Roles"
-                      : t === "profiles"
-                        ? "Profile"
-                        : t === "races"
-                          ? "My races"
-                          : "Liked races"}
+                {tabLabel(t)}
               </button>
             ))}
+            <div className="my-1 hidden h-px w-full bg-hairline md:block" />
+            <button
+              onClick={async () => {
+                await signOut();
+                navigate({ to: "/" });
+              }}
+              className="rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition hover:text-destructive"
+            >
+              Sign out
+            </button>
           </nav>
 
           <div>
+            {tab === "entity-profile" && isTeamMode && team && (
+              <Card>
+                <p className="text-xs text-muted-foreground">
+                  When inactive, this profile page calmly shows that it is not active. The entity is hidden from public browsing.
+                </p>
+                <div className="mt-4">
+                  <ToggleRow
+                    title="Profile active"
+                    description="Visible publicly and able to accept members."
+                    checked={team.active}
+                    onChange={(v) => updateTeam("active", v)}
+                  />
+                </div>
+                <SaveBar saving={saving} onSave={save} />
+              </Card>
+            )}
+
             {tab === "general" && isTeamMode && team && (
               <Card>
                 <Grid>
@@ -502,78 +532,53 @@ function ProfileSelector({
   const [open, setOpen] = useState(false);
 
   const label = activeEntity ? activeEntity.name : "Individual profile";
-  const Icon = activeEntity
-    ? activeEntity.entity_type === "company"
-      ? Building2
-      : activeEntity.entity_type === "cooperation"
-        ? Network
-        : UsersIcon
-    : UserIcon;
-  const sub = activeEntity ? ENTITY_LABEL[activeEntity.entity_type] : "Personal";
 
   return (
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-3 rounded-xl border border-hairline bg-card px-3 py-2 text-left transition hover:bg-secondary"
+        className="inline-flex items-baseline gap-1.5 text-2xl font-semibold text-ink transition hover:text-ink/80 md:text-3xl"
       >
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
-          <Icon className="h-4 w-4 text-ink" strokeWidth={2.25} />
-        </span>
-        <span className="min-w-0">
-          <span className="mono block text-[9px] uppercase tracking-[0.2em] text-muted-foreground">{sub}</span>
-          <span className="block truncate text-sm text-ink md:text-base">{label}</span>
-        </span>
-        <ChevronDown className="ml-1 h-4 w-4 text-muted-foreground" />
+        <span className="truncate">{label}</span>
+        <ChevronDown className="h-4 w-4 translate-y-[-2px] text-muted-foreground" strokeWidth={2.25} />
       </button>
 
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 z-40 mt-1.5 w-72 overflow-hidden rounded-xl border border-hairline bg-card shadow-xl">
+          <div className="absolute left-0 z-40 mt-2 w-64 border border-ink/15 bg-card shadow-lg">
             <button
               onClick={() => {
                 onSelect(null);
                 setOpen(false);
               }}
-              className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-secondary ${
-                !activeEntity ? "bg-secondary/60" : ""
+              className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition hover:bg-secondary ${
+                !activeEntity ? "bg-secondary/60 text-ink" : "text-ink"
               }`}
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary">
-                <UserIcon className="h-3.5 w-3.5 text-ink" strokeWidth={2.25} />
-              </span>
-              <span>
-                <span className="mono block text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Personal</span>
-                <span className="block text-sm text-ink">Individual profile</span>
+              <span className="truncate">Individual profile</span>
+              <span className="mono ml-2 shrink-0 text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                Personal
               </span>
             </button>
             {entities.length > 0 && <div className="h-px w-full bg-hairline" />}
-            {entities.map((e) => {
-              const EI = e.entity_type === "company" ? Building2 : e.entity_type === "cooperation" ? Network : UsersIcon;
-              return (
-                <button
-                  key={e.id}
-                  onClick={() => {
-                    onSelect(e.id);
-                    setOpen(false);
-                  }}
-                  className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-secondary ${
-                    activeEntity?.id === e.id ? "bg-secondary/60" : ""
-                  }`}
-                >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary">
-                    <EI className="h-3.5 w-3.5 text-ink" strokeWidth={2.25} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="mono block text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
-                      {ENTITY_LABEL[e.entity_type]}
-                    </span>
-                    <span className="block truncate text-sm text-ink">{e.name}</span>
-                  </span>
-                </button>
-              );
-            })}
+            {entities.map((e) => (
+              <button
+                key={e.id}
+                onClick={() => {
+                  onSelect(e.id);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center justify-between border-t border-hairline/60 px-3 py-2 text-left text-sm transition hover:bg-secondary ${
+                  activeEntity?.id === e.id ? "bg-secondary/60 text-ink" : "text-ink"
+                }`}
+              >
+                <span className="truncate">{e.name}</span>
+                <span className="mono ml-2 shrink-0 text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                  {ENTITY_LABEL[e.entity_type]}
+                </span>
+              </button>
+            ))}
           </div>
         </>
       )}

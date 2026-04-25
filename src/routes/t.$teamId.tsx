@@ -23,6 +23,7 @@ interface PublicTeam {
   cover_media_id: string | null;
   website: string | null;
   owner_id: string;
+  active: boolean;
 }
 
 interface Tier {
@@ -93,7 +94,7 @@ function TeamPage() {
     (async () => {
       const { data } = await supabase
         .from("teams")
-        .select("id, name, description, description_long, country, cover_media_id, website, owner_id")
+        .select("id, name, description, description_long, country, cover_media_id, website, owner_id, active")
         .eq("id", teamId)
         .maybeSingle();
       if (!data) {
@@ -305,6 +306,20 @@ function TeamPage() {
     );
   }
   if (!team) return null;
+
+  if (team.active === false) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-6 text-center">
+        <div className="mono mb-3 text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+          {team.name}
+        </div>
+        <h1 className="text-xl text-ink">This profile is not active</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The owner has set this profile to inactive.
+        </p>
+      </div>
+    );
+  }
 
   const pendingTier = tiers.find((t) => t.id === pendingTierId);
   return (
