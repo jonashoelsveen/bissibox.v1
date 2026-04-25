@@ -192,7 +192,7 @@ export function SimplePinMap({
     map.on("click", (e: any) => {
       if (toolRef.current !== "pin") return;
       const ll = { lat: e.latlng.lat, lng: e.latlng.lng };
-      trackedChange({ pin: ll, description: descRef.current });
+      trackedChange({ pin: ll, description: descRef.current, name: nameRef.current });
     });
 
     mapRef.current = map;
@@ -227,13 +227,13 @@ export function SimplePinMap({
       const m = L.marker([pin.lat, pin.lng], { icon, draggable: true }).addTo(mapRef.current);
       m.on("dragend", () => {
         const ll = m.getLatLng();
-        trackedChange({ pin: { lat: ll.lat, lng: ll.lng }, description: descRef.current });
+        trackedChange({ pin: { lat: ll.lat, lng: ll.lng }, description: descRef.current, name: nameRef.current });
       });
       markerRef.current = m;
     }
   }, [L, pin]);
 
-  const clearPin = () => trackedChange({ pin: null, description: descRef.current });
+  const clearPin = () => trackedChange({ pin: null, description: descRef.current, name: nameRef.current });
 
   const sidebarTitle = title || `${kindLabel} location`;
   const noun = kindLabel || "location";
@@ -416,7 +416,7 @@ export function SimplePinMap({
                     <textarea
                       value={description}
                       onChange={(e) =>
-                        trackedChange({ pin: pinRef.current, description: e.target.value })
+                        trackedChange({ pin: pinRef.current, description: e.target.value, name: nameRef.current })
                       }
                       rows={3}
                       placeholder="e.g. Meet at the main entrance, parking on the south side."
