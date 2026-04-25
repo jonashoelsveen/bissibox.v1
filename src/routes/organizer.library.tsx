@@ -34,7 +34,7 @@ interface OrgEvent {
 }
 
 function LibraryPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, activeEntityId } = useAuth();
   const nav = useNavigate();
   const [events, setEvents] = useState<OrgEvent[]>([]);
   const [busy, setBusy] = useState(false);
@@ -50,13 +50,29 @@ function LibraryPage() {
   useEffect(() => {
     if (!user) return;
     void load();
-  }, [user]);
+    // Reload when the active entity changes so each entity has its own list.
+  }, [user, activeEntityId]);
 
   const load = async () => {
     if (!user) return;
-    // Events the user owns
-    const ownedReq = supabase.from("events").select("*").eq("owner_id", user.id);
-    // Events where the user is a co-organizer
+
+    if (activeEntityId) {
+      // Entity mode: show only events that belong to this entity.
+      const { data } = await supabase
+        .from("events")
+        .select("*")
+        .eq("team_id", activeEntityId)
+        .order("starts_at", { ascending: false });
+      setEvents((data as OrgEvent[]) ?? []);
+      return;
+    }
+
+    // Individual mode: events the user owns directly (no team) plus co-organized.
+    const ownedReq = supabase
+      .from("events")
+      .select("*")
+      .eq("owner_id", user.id)
+      .is("team_id", null);
     const coReq = supabase
       .from("event_co_organizers")
       .select("event_id")
@@ -87,6 +103,7 @@ function LibraryPage() {
         ...rest,
         title: `${(rest as { title: string }).title} (copy)`,
         owner_id: user.id,
+        team_id: activeEntityId ?? null,
         featured: false,
       };
       const { data: inserted, error } = await supabase
