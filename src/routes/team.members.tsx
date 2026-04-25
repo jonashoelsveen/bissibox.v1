@@ -766,13 +766,55 @@ function GroupRow({
               />
             </div>
           </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-3">
+            <label className="flex flex-col gap-1 md:col-span-3">
+              <span className="text-xs text-muted-foreground">Detail / info</span>
+              <textarea
+                value={group.description}
+                onChange={(e) => onChange({ description: e.target.value })}
+                rows={2}
+                placeholder={group.is_default ? "Members whose age does not fit any defined group land here automatically." : "Anything new joiners should know about this group."}
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Group leader name</span>
+              <input
+                value={group.leader_name}
+                onChange={(e) => onChange({ leader_name: e.target.value })}
+                placeholder="—"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Leader email</span>
+              <input
+                type="email"
+                value={group.leader_email}
+                onChange={(e) => onChange({ leader_email: e.target.value })}
+                placeholder="leader@team.com"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Leader phone</span>
+              <input
+                value={group.leader_phone}
+                onChange={(e) => onChange({ leader_phone: e.target.value })}
+                placeholder="+47 …"
+                className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <p className="md:col-span-3 text-[11px] text-muted-foreground">
+              If left empty, joiners see the team's contact email/phone instead.
+            </p>
+          </div>
         </div>
       )}
     </div>
   );
 }
-
-function MembershipRow({
   membership,
   open,
   onToggle,
