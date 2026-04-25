@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
-import { scanFile } from "@/server/scan-file";
+import { scanFile, pollScan } from "@/server/scan-file";
 import { FilesPage } from "@/components/library/FilesPage";
 import { toast } from "sonner";
 import {
