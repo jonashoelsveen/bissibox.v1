@@ -1,0 +1,136 @@
+// deno-lint-ignore-file no-explicit-any
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import { corsHeaders } from "../_shared/cors.ts";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+interface Body {
+  attempt_id: string;
+  code: string;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  try {
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace("Bearer ", "");
+    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userRes, error: userErr } = await userClient.auth.getUser(token);
+    if (userErr || !userRes.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const user = userRes.user;
+    const body = (await req.json()) as Body;
+    if (!body.attempt_id || !body.code) {
+      return new Response(JSON.stringify({ error: "Missing fields" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const { data: attempt, error: attErr } = await admin
+      .from("verification_attempts")
+      .select("*")
+      .eq("id", body.attempt_id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (attErr || !attempt) {
+      return new Response(JSON.stringify({ error: "Invalid session" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (attempt.consumed_at) {
+      return new Response(JSON.stringify({ error: "Code already used" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (new Date(attempt.expires_at).getTime() < Date.now()) {
+      return new Response(JSON.stringify({ error: "Code expired. Request a new one." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (attempt.attempts >= attempt.max_attempts) {
+      return new Response(JSON.stringify({ error: "Too many attempts. Request a new code." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const ok = await bcrypt.compare(body.code, attempt.code_hash);
+    if (!ok) {
+      const newAttempts = attempt.attempts + 1;
+      await admin
+        .from("verification_attempts")
+        .update({ attempts: newAttempts })
+        .eq("id", attempt.id);
+      const remaining = attempt.max_attempts - newAttempts;
+      return new Response(
+        JSON.stringify({ error: `Wrong code. ${remaining} attempt${remaining === 1 ? "" : "s"} left.` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Mark consumed and create the registration / membership
+    await admin
+      .from("verification_attempts")
+      .update({ consumed_at: new Date().toISOString() })
+      .eq("id", attempt.id);
+
+    const meta = (attempt.target_meta ?? {}) as Record<string, any>;
+
+    if (attempt.target_kind === "team_membership") {
+      const teamId = attempt.target_id;
+      const tierId = meta.tier_id ?? null;
+      // Avoid duplicate
+      const { data: existing } = await admin
+        .from("team_memberships")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("team_id", teamId)
+        .eq("tier_id", tierId)
+        .maybeSingle();
+      if (!existing) {
+        const { error } = await admin.from("team_memberships").insert({
+          user_id: user.id,
+          team_id: teamId,
+          tier_id: tierId,
+          status: "pending",
+        });
+        if (error) throw error;
+      }
+      return new Response(JSON.stringify({ ok: true, kind: "team_membership" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (attempt.target_kind === "event_registration") {
+      const eventId = attempt.target_id;
+      const subeventId = meta.subevent_id ?? null;
+      const classCode = meta.class_code ?? null;
+      const raceType = meta.race_type ?? "";
+      const consent = !!meta.consent_share_data;
+      const { data: existing } = await admin
+        .from("registrations")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("event_id", eventId)
+        .maybeSingle();
+      if (!existing) {
+        const { error } = await admin.from("registrations").insert({
+          user_id: user.id,
+          event_id: eventId,
+          subevent_id: subeventId,
+          class_code: classCode,
+          race_type: raceType,
+          consent_share_data: consent,
+          status: "pending",
+        });
+        if (error) throw error;
+      }
+      return new Response(JSON.stringify({ ok: true, kind: "event_registration" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: "Unknown target" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (e) {
+    console.error("verify-otp error", e);
+    return new Response(JSON.stringify({ error: (e as Error).message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

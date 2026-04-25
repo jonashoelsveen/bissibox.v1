@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { ProfileShell, MediaGrid } from "@/components/ProfileShell";
-import { FollowButton } from "@/components/FollowButton";
+import { VerificationDialog } from "@/components/VerificationDialog";
 import { formatMoney } from "@/lib/format";
+import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/t/$teamId")({
   component: TeamPage,
@@ -182,19 +183,24 @@ function TeamPage() {
     })();
   }, [user, teamId]);
 
-  const join = async (tierId: string) => {
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [pendingTierId, setPendingTierId] = useState<string | null>(null);
+  const nav = useNavigate();
+
+  const startJoin = (tierId: string) => {
     if (!user) {
-      toast.error("Sign in first");
+      nav({ to: "/auth", search: { redirect: window.location.pathname } as never });
       return;
     }
-    const { error } = await supabase
-      .from("team_memberships")
-      .insert({ team_id: teamId, user_id: user.id, tier_id: tierId, status: "pending" });
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Membership requested");
-      setMyMemberships((s) => new Set([...s, tierId]));
-    }
+    setPendingTierId(tierId);
+    setVerifyOpen(true);
+  };
+
+  const onVerified = () => {
+    if (pendingTierId) setMyMemberships((s) => new Set([...s, pendingTierId]));
+    setVerifyOpen(false);
+    setPendingTierId(null);
+    toast.success("Membership requested");
   };
 
   if (notFound) {
@@ -204,7 +210,9 @@ function TeamPage() {
   }
   if (!team) return null;
 
+  const pendingTier = tiers.find((t) => t.id === pendingTierId);
   return (
+    <>
     <ProfileShell
       coverPath={coverPath}
       fallbackInitial={team.name[0]?.toUpperCase() ?? "T"}
@@ -216,7 +224,14 @@ function TeamPage() {
           {team.country && <> · {team.country}</>}
         </span>
       }
-      actions={<FollowButton target={{ kind: "team", teamId }} />}
+      actions={
+        <button
+          onClick={() => setTab("memberships")}
+          className="rounded-full bg-ink px-5 py-1.5 text-xs font-medium text-background hover:opacity-90"
+        >
+          Become a member
+        </button>
+      }
       tabs={[
         { key: "memberships", label: "Memberships", icon: <CreditCard className="h-3.5 w-3.5" /> },
         { key: "members", label: "Members", icon: <UsersIcon className="h-3.5 w-3.5" /> },
@@ -266,7 +281,7 @@ function TeamPage() {
                       {formatMoney(tier.price, tier.currency)}
                     </span>
                     <button
-                      onClick={() => join(tier.id)}
+                      onClick={() => startJoin(tier.id)}
                       disabled={joined}
                       className="rounded-full bg-ink px-4 py-1.5 text-xs text-background hover:opacity-90 disabled:opacity-50"
                     >
@@ -336,5 +351,16 @@ function TeamPage() {
 
       {tab === "media" && <MediaGrid items={media} />}
     </ProfileShell>
+    <VerificationDialog
+      open={verifyOpen}
+      onClose={() => setVerifyOpen(false)}
+      onVerified={onVerified}
+      title={`Join ${team.name}`}
+      subtitle={pendingTier ? `${pendingTier.name} · ${formatMoney(pendingTier.price, pendingTier.currency)}` : undefined}
+      targetKind="team_membership"
+      targetId={teamId}
+      targetMeta={{ tier_id: pendingTierId }}
+    />
+    </>
   );
 }

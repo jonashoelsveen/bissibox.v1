@@ -9,6 +9,7 @@ import { MapLocationLabel } from "@/components/MapLocationLabel";
 import { ElevationProfile } from "@/components/ElevationProfile";
 import { PublicParticipantsPanel } from "@/components/PublicParticipantsPanel";
 import { EventMediaTab } from "@/components/EventMediaTab";
+import { VerificationDialog } from "@/components/VerificationDialog";
 import type { LatLng, SplitPoint } from "@/components/CourseMapEditor";
 import { formatDateLong, formatMoney, formatTime } from "@/lib/format";
 
@@ -59,6 +60,7 @@ export function EventViewer({ eventId }: { eventId: string }) {
   const [chosenSubId, setChosenSubId] = useState<string | null>(null);
   const [chosenClass, setChosenClass] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -159,26 +161,22 @@ export function EventViewer({ eventId }: { eventId: string }) {
     setSignupOpen(true);
   };
 
-  const submitSignup = async () => {
+  const submitSignup = () => {
     if (!user || !chosenSubId) return;
     const sub = subevents.find((s) => s.id === chosenSubId);
     if (!sub) return;
-    setSubmitting(true);
-    const { error } = await supabase.from("registrations").insert({
-      user_id: user.id,
-      event_id: eventId,
-      subevent_id: chosenSubId,
-      class_code: chosenClass,
-      race_type: sub.name,
-      consent_share_data: consent,
-      status: "pending",
-    } as never);
-    setSubmitting(false);
-    if (error) return toast.error(error.message);
-    setRegistered(true);
     setSignupOpen(false);
+    setVerifyOpen(true);
+    void sub;
+  };
+
+  const onVerified = () => {
+    setRegistered(true);
+    setVerifyOpen(false);
     toast.success("You're signed up.");
   };
+
+  const subForMeta = subevents.find((s) => s.id === chosenSubId);
 
   if (!event) {
     return <div className="px-6 py-16 text-muted-foreground">Loading…</div>;
@@ -529,6 +527,22 @@ export function EventViewer({ eventId }: { eventId: string }) {
           </div>
         </div>
       )}
+
+      <VerificationDialog
+        open={verifyOpen}
+        onClose={() => setVerifyOpen(false)}
+        onVerified={onVerified}
+        title={`Sign up · ${event.title}`}
+        subtitle={subForMeta?.name}
+        targetKind="event_registration"
+        targetId={eventId}
+        targetMeta={{
+          subevent_id: chosenSubId,
+          class_code: chosenClass,
+          race_type: subForMeta?.name ?? "",
+          consent_share_data: consent,
+        }}
+      />
     </div>
   );
 }
