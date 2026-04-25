@@ -123,8 +123,6 @@ Deno.serve(async (req) => {
     if (insertErr) throw insertErr;
 
     await sendEmail(body.destination, code);
-    // Suppress unused warning for LOVABLE_API_KEY (kept for parity / future)
-    void LOVABLE_API_KEY;
 
     return new Response(
       JSON.stringify({ ok: true, attempt_id: insertData.id, masked: maskEmail(body.destination) }),
