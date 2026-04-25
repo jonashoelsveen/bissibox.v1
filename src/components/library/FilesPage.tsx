@@ -59,6 +59,7 @@ export function FilesPage() {
   const navigate = useNavigate();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
   const runScan = useServerFn(scanFile);
+  const runPoll = useServerFn(pollScan);
 
   const [folders, setFolders] = useState<Folder[]>([]);
   const [files, setFiles] = useState<FileRow[]>([]);
