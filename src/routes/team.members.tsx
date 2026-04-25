@@ -1075,8 +1075,8 @@ function TabBtn({
   );
 }
 
-function Panel({ children }: { children: React.ReactNode }) {
-  return <section className="mt-5 rounded-lg border border-hairline bg-card p-6 md:p-8">{children}</section>;
+function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <section className={`mt-5 rounded-lg border border-hairline bg-card p-6 md:p-8 ${className ?? ""}`}>{children}</section>;
 }
 
 function Th({ children, className }: { children?: React.ReactNode; className?: string }) {
