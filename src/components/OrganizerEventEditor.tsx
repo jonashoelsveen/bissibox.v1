@@ -45,6 +45,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const [showMediaSection, setShowMediaSection] = useState(false);
   const [showTimingSection, setShowTimingSection] = useState(false);
   const [mediaContactEmail, setMediaContactEmail] = useState("");
+  const [mediaPitch, setMediaPitch] = useState("");
   const [timingCompanyId, setTimingCompanyId] = useState<string | null>(null);
   const [timingCompanies, setTimingCompanies] = useState<{ id: string; name: string }[]>([]);
   const [activeMapSub, setActiveMapSub] = useState<number>(0);
@@ -110,8 +111,10 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         const et = (e as any).event_type as "meeting" | "event" | "race" | undefined;
         if (et) setEventType(et);
         const mce = ((e as any).media_contact_email as string | null) ?? "";
+        const mp = ((e as any).media_pitch as string | null) ?? "";
         setMediaContactEmail(mce);
-        setShowMediaSection(!!mce);
+        setMediaPitch(mp);
+        setShowMediaSection(!!mce || !!mp);
         setShowTimingSection(!!((e as any).timing_company_id));
       }
       const { data: cls } = await supabase
@@ -184,6 +187,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         timing_company_id: eventType === "race" && showTimingSection ? timingCompanyId : null,
         event_type: eventType,
         media_contact_email: showMediaSection ? (mediaContactEmail.trim() || null) : null,
+        media_pitch: showMediaSection ? (mediaPitch.trim() || null) : null,
       };
 
       let id = savedId;
