@@ -14,9 +14,11 @@ async function hashCode(code: string): Promise<string> {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
-const FROM_EMAIL = "Raceline <onboarding@resend.dev>";
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend/emails";
+const FROM_EMAIL = "onboarding@resend.dev";
+const SANDBOX_TO_EMAIL = "jonashoelsveen@outlook.com";
 
 interface Body {
   channel: "email" | "sms";
@@ -39,28 +41,65 @@ function generateCode(): string {
 }
 
 async function sendEmail(to: string, code: string) {
-  const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": RESEND_API_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  if (!LOVABLE_API_KEY) {
+    throw new Error("LOVABLE_API_KEY is not configured");
+  }
+  if (!RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY is not configured");
+  }
+
+  const payload = {
+    from: FROM_EMAIL,
+    to: SANDBOX_TO_EMAIL,
+    subject: `Your verification code: ${code}`,
+    html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#0f172a">
+      <h1 style="font-size:18px;margin:0 0 16px">Verify it's you</h1>
+      <p style="margin:0 0 12px;color:#475569">Enter this 6-digit code to complete your sign up:</p>
+      <p style="font-size:32px;letter-spacing:8px;font-weight:600;margin:24px 0;text-align:center">${code}</p>
+      <p style="margin:0;color:#94a3b8;font-size:12px">This code expires in 10 minutes. If you didn't request it, you can ignore this email.</p>
+    </div>`,
+  };
+
+  try {
+    console.log("send-verification-otp gateway request", {
+      url: GATEWAY_URL,
+      requestedTo: to,
+      actualTo: SANDBOX_TO_EMAIL,
       from: FROM_EMAIL,
-      to: [to],
-      subject: `Your verification code: ${code}`,
-      html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#0f172a">
-        <h1 style="font-size:18px;margin:0 0 16px">Verify it's you</h1>
-        <p style="margin:0 0 12px;color:#475569">Enter this 6-digit code to complete your sign up:</p>
-        <p style="font-size:32px;letter-spacing:8px;font-weight:600;margin:24px 0;text-align:center">${code}</p>
-        <p style="margin:0;color:#94a3b8;font-size:12px">This code expires in 10 minutes. If you didn't request it, you can ignore this email.</p>
-      </div>`,
-    }),
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`Resend error ${res.status}: ${t}`);
+      hasAuthorizationBearer: true,
+      hasLovableApiKey: Boolean(LOVABLE_API_KEY),
+      hasConnectionApiKey: Boolean(RESEND_API_KEY),
+    });
+
+    const res = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": RESEND_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const responseText = await res.text();
+
+    if (!res.ok) {
+      console.error("Resend gateway error", {
+        status: res.status,
+        statusText: res.statusText,
+        body: responseText,
+        payload,
+      });
+      throw new Error(`Resend error ${res.status}: ${responseText}`);
+    }
+
+    console.log("Resend gateway success", {
+      status: res.status,
+      body: responseText,
+    });
+  } catch (error) {
+    console.error("Error sending email via Resend gateway", error);
+    throw error;
   }
 }
 
