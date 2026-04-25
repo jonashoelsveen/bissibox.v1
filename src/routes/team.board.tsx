@@ -1176,6 +1176,34 @@ function TeamBoardPage() {
           </div>
         </div>
       )}
+
+      {newMeetingOpen && (
+        <MeetingDialog
+          title="New board meeting"
+          name={newMeetingTitle}
+          folder={newMeetingFolder}
+          folders={folders}
+          onName={setNewMeetingTitle}
+          onFolder={setNewMeetingFolder}
+          onClose={() => setNewMeetingOpen(false)}
+          onConfirm={startNewMeeting}
+          confirmLabel="Start meeting"
+        />
+      )}
+
+      {editMeetingOpen && (
+        <MeetingDialog
+          title="Edit meeting"
+          name={editMeetingTitle}
+          folder={editMeetingFolder}
+          folders={folders}
+          onName={setEditMeetingTitle}
+          onFolder={setEditMeetingFolder}
+          onClose={() => setEditMeetingOpen(false)}
+          onConfirm={saveEditMeeting}
+          confirmLabel="Save"
+        />
+      )}
     </div>
   );
 }
