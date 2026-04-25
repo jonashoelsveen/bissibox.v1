@@ -242,7 +242,9 @@ function TeamPage() {
   const [pickerTierId, setPickerTierId] = useState<string>("__default__");
   const nav = useNavigate();
   const visibleTiers = tiers.filter((tier) => tier.is_active && tier.is_public);
+  const displayTiers = tiers.filter((tier) => visibleTiers.some((visibleTier) => visibleTier.id === tier.id) || myMemberships.has(tier.id));
   const canShowMembershipActions = tiersLoaded && visibleTiers.length > 0 && (!user || user.id !== team?.owner_id);
+  const entityLabel = team?.entity_type === "company" ? "Company" : team?.entity_type === "cooperation" ? "Corporate" : "Team";
 
   const openPicker = () => {
     if (!canShowMembershipActions) return;
@@ -382,14 +384,14 @@ function TeamPage() {
     >
       {tab === "memberships" && (
         <div id="team-membership-picker" className="space-y-2 scroll-mt-24">
-          {visibleTiers.length === 0 ? (
+          {displayTiers.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 px-6 py-12 text-center">
               <div className="text-sm text-muted-foreground">
-                This {team.entity_type === "company" ? "Company" : team.entity_type === "cooperation" ? "Corporate" : "Team"} has no active memberships.
+                This {entityLabel} has no active memberships.
               </div>
             </div>
           ) : (
-            visibleTiers.map((tier) => {
+            displayTiers.map((tier) => {
               const joined = myMemberships.has(tier.id);
               return (
                 <div
