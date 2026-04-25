@@ -268,6 +268,7 @@ function TeamBoardPage() {
     setOngoingText(data.notes ?? "");
     setSavedText(data.notes ?? "");
     setAttachments([]);
+    setAttendance([]);
     setTab("ongoing");
   }
 
@@ -277,6 +278,7 @@ function TeamBoardPage() {
     setSavedText(m.notes ?? "");
     setTab("ongoing");
     void loadAttachments(m.id);
+    void loadAttendance(m.id);
   }
 
   async function closeOngoing() {
