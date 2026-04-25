@@ -294,7 +294,7 @@ function MediaPage() {
     }
     setItemAlbums(map);
     void itemIds;
-  }, [user, isTeamMode]);
+  }, [user, isTeamMode, activeEntityId]);
 
   useEffect(() => {
     void load();
