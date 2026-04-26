@@ -23,22 +23,9 @@ import {
   Folder as FolderIcon,
 } from "lucide-react";
 
-/* ───────── fuzzy search helpers ───────── */
+/* ───────── search helpers ───────── */
 
-// Lightweight fuzzy: returns true if all chars of needle appear in haystack in order
-function fuzzyContains(haystack: string, needle: string): boolean {
-  if (!needle) return true;
-  const h = haystack.toLowerCase();
-  const n = needle.toLowerCase();
-  if (h.includes(n)) return true;
-  let i = 0;
-  for (let j = 0; j < h.length && i < n.length; j++) {
-    if (h[j] === n[i]) i++;
-  }
-  return i === n.length;
-}
-
-// Simple Levenshtein for typo tolerance on short strings
+// Levenshtein distance for typo tolerance on individual words
 function levenshtein(a: string, b: string): number {
   if (a === b) return 0;
   if (!a.length) return b.length;
@@ -56,31 +43,52 @@ function levenshtein(a: string, b: string): number {
   return dp[a.length];
 }
 
+// Allowed edit distance based on token length
+function maxEditsFor(len: number): number {
+  if (len <= 3) return 0;
+  if (len <= 5) return 1;
+  return 2;
+}
+
+// True if any word in `text` matches `token` exactly, as a substring, or within a small edit distance
+function tokenMatchesWord(text: string, token: string): boolean {
+  if (!token) return false;
+  if (text.includes(token)) return true;
+  const max = maxEditsFor(token.length);
+  if (max === 0) return false;
+  const words = text.split(/[^a-z0-9]+/i).filter(Boolean);
+  for (const w of words) {
+    if (Math.abs(w.length - token.length) > max) continue;
+    if (levenshtein(w, token) <= max) return true;
+  }
+  return false;
+}
+
 // Score a string against a query. Higher = better match. 0 = no match.
-function scoreText(text: string | null | undefined, query: string, weights: { exact: number; partial: number; fuzzy: number }): number {
+// Only returns > 0 when the query (or all of its tokens) actually appear
+// in the text — as substrings or as close typo variants of real words.
+function scoreText(
+  text: string | null | undefined,
+  query: string,
+  weights: { exact: number; partial: number; fuzzy: number },
+): number {
   if (!text || !query) return 0;
   const t = text.toLowerCase();
-  const q = query.toLowerCase();
+  const q = query.toLowerCase().trim();
+  if (!q) return 0;
+
   if (t === q) return weights.exact * 2;
   if (t.startsWith(q)) return weights.exact;
   if (t.includes(q)) return weights.partial;
-  // Per-token partial
+
   const tokens = q.split(/\s+/).filter(Boolean);
-  if (tokens.length > 1 && tokens.every((tok) => t.includes(tok))) return weights.partial * 0.85;
-  // Fuzzy / typo tolerance: word-level Levenshtein
-  if (q.length >= 3) {
-    if (fuzzyContains(t, q)) return weights.fuzzy;
-    const words = t.split(/\s+/);
-    for (const w of words) {
-      if (Math.abs(w.length - q.length) <= 2) {
-        const d = levenshtein(w, q);
-        const max = Math.max(w.length, q.length);
-        if (d / max <= 0.34) return weights.fuzzy * (1 - d / max);
-      }
-    }
+  if (tokens.length > 1) {
+    return tokens.every((tok) => tokenMatchesWord(t, tok)) ? weights.partial * 0.85 : 0;
   }
-  return 0;
+
+  return tokenMatchesWord(t, q) ? weights.fuzzy : 0;
 }
+
 
 function snippet(body: string | null | undefined, query: string, len = 120): { text: string; matchAt: number } {
   if (!body) return { text: "", matchAt: -1 };
