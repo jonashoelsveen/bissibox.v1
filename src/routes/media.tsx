@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
 import { scanFile, pollScan } from "@/server/scan-file";
 import { FilesPage } from "@/components/library/FilesPage";
+import { NotesPage } from "@/components/library/NotesPage";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -34,14 +35,19 @@ import {
   PinOff,
   FolderClosed,
   Image as ImageIcon,
+  StickyNote,
 } from "lucide-react";
 
-type LibraryTab = "files" | "media";
+type LibraryTab = "notes" | "files" | "media";
 
 export const Route = createFileRoute("/media")({
   component: LibraryPage,
-  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab } => ({
-    tab: s.tab === "files" || s.tab === "media" ? (s.tab as LibraryTab) : undefined,
+  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; new?: string } => ({
+    tab:
+      s.tab === "files" || s.tab === "media" || s.tab === "notes"
+        ? (s.tab as LibraryTab)
+        : undefined,
+    new: typeof s.new === "string" ? (s.new as string) : undefined,
   }),
   head: () => ({ meta: [{ title: "Library · Raceline" }] }),
 });
@@ -62,6 +68,13 @@ function LibraryPage() {
       </div>
       <nav className="mt-6 flex border-b border-hairline">
         <LibraryTabBtn
+          active={tab === "notes"}
+          onClick={() => setTab("notes")}
+          icon={<StickyNote className="h-3.5 w-3.5" />}
+        >
+          Notes
+        </LibraryTabBtn>
+        <LibraryTabBtn
           active={tab === "files"}
           onClick={() => setTab("files")}
           icon={<FolderClosed className="h-3.5 w-3.5" />}
@@ -76,7 +89,7 @@ function LibraryPage() {
           Media
         </LibraryTabBtn>
       </nav>
-      {tab === "files" ? <FilesPage /> : <MediaPage />}
+      {tab === "notes" ? <NotesPage /> : tab === "files" ? <FilesPage /> : <MediaPage />}
     </div>
   );
 }

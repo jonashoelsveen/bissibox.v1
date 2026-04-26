@@ -97,7 +97,7 @@ export function TopChrome() {
         )}
 
         {user && (
-          <NavBtn to="/media" label="Content" active={path.startsWith("/media")}>
+          <NavBtn to="/media" label="Content" active={path.startsWith("/media") || path.startsWith("/notes")}>
             <Library className="h-[18px] w-[18px]" strokeWidth={2.25} />
           </NavBtn>
         )}
@@ -141,6 +141,18 @@ export function TopChrome() {
                   </span>
                 </span>
               </NavBtn>
+            )}
+            {isIndividual && user && (
+              <Link
+                to="/media"
+                search={{ tab: "notes", new: "1" }}
+                aria-label="New note"
+                className={`flex h-9 w-9 items-center justify-center rounded-full transition-all ${
+                  path.startsWith("/notes") ? "bg-primary text-primary-foreground" : "text-ink hover:bg-secondary"
+                }`}
+              >
+                <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
+              </Link>
             )}
           </>
         )}
