@@ -156,6 +156,82 @@ function LibraryPage() {
 
   const showingNote = activeNoteId !== null;
 
+  // Pointer-based, X-axis-locked tab drag (Chrome-style).
+  const onTabPointerDown = (e: React.PointerEvent<HTMLButtonElement>, id: string) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("[data-tab-close]")) return;
+    setActiveNoteId(id); // immediate focus
+
+    const strip = tabStripRef.current;
+    if (!strip) return;
+    const tabsArr = openNoteTabs;
+    const startIndex = tabsArr.findIndex((t) => t.id === id);
+    if (startIndex < 0) return;
+    const buttons = tabsArr
+      .map((t) => tabRefs.current.get(t.id))
+      .filter((b): b is HTMLButtonElement => !!b);
+    if (buttons.length !== tabsArr.length) return;
+    const stripRect = strip.getBoundingClientRect();
+    const offsets = buttons.map(
+      (b) => b.getBoundingClientRect().left - stripRect.left + strip.scrollLeft,
+    );
+    const width = buttons[startIndex].getBoundingClientRect().width;
+
+    dragStateRef.current = {
+      id,
+      startX: e.clientX,
+      startIndex,
+      currentIndex: startIndex,
+      width,
+      offsets,
+      moved: false,
+    };
+
+    const onMove = (ev: PointerEvent) => {
+      const st = dragStateRef.current;
+      if (!st) return;
+      const dx = ev.clientX - st.startX;
+      if (!st.moved && Math.abs(dx) < 4) return;
+      st.moved = true;
+      if (dragNoteId !== st.id) setDragNoteId(st.id);
+      setDragDx(dx);
+      const stripEl = tabStripRef.current;
+      if (!stripEl) return;
+      const pointerXInStrip =
+        ev.clientX - stripEl.getBoundingClientRect().left + stripEl.scrollLeft;
+      let newIdx = 0;
+      for (let i = 0; i < st.offsets.length; i++) {
+        const mid = st.offsets[i] + st.width / 2;
+        if (pointerXInStrip < mid) { newIdx = i; break; }
+        newIdx = i;
+      }
+      if (newIdx !== st.currentIndex) st.currentIndex = newIdx;
+    };
+
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      const st = dragStateRef.current;
+      dragStateRef.current = null;
+      setDragNoteId(null);
+      setDragDx(0);
+      if (st && st.moved && st.currentIndex !== st.startIndex) {
+        setOpenNoteTabs((prev) => {
+          const next = prev.slice();
+          const [moved] = next.splice(st.startIndex, 1);
+          next.splice(st.currentIndex, 0, moved);
+          return next;
+        });
+      }
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  };
+
   return (
     <div className="px-4 md:px-6">
       <div className="pt-6 md:pt-8">
