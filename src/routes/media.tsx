@@ -2391,6 +2391,125 @@ function ConfirmDialog({
   );
 }
 
+function formatVideoTime(s: number) {
+  if (!isFinite(s) || s < 0) s = 0;
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  const cs = Math.floor((s - Math.floor(s)) * 100);
+  return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(cs).padStart(2, "0")}`;
+}
+
+function VideoPlayer({ src }: { src?: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const wasPlayingRef = useRef(false);
+  const scrubbingRef = useRef(false);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onTime = () => {
+      if (!scrubbingRef.current) setCurrent(v.currentTime);
+    };
+    const onMeta = () => setDuration(v.duration || 0);
+    const onPlay = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
+    v.addEventListener("timeupdate", onTime);
+    v.addEventListener("loadedmetadata", onMeta);
+    v.addEventListener("durationchange", onMeta);
+    v.addEventListener("play", onPlay);
+    v.addEventListener("pause", onPause);
+    return () => {
+      v.removeEventListener("timeupdate", onTime);
+      v.removeEventListener("loadedmetadata", onMeta);
+      v.removeEventListener("durationchange", onMeta);
+      v.removeEventListener("play", onPlay);
+      v.removeEventListener("pause", onPause);
+    };
+  }, [src]);
+
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) v.play();
+    else v.pause();
+  };
+
+  const handleScrubStart = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    scrubbingRef.current = true;
+    wasPlayingRef.current = !v.paused;
+    if (!v.paused) v.pause();
+  };
+
+  const handleScrubChange = (vals: number[]) => {
+    const v = videoRef.current;
+    if (!v) return;
+    const t = vals[0] ?? 0;
+    setCurrent(t);
+    // Real-time frame updates
+    try {
+      v.currentTime = t;
+    } catch {}
+  };
+
+  const handleScrubCommit = (vals: number[]) => {
+    const v = videoRef.current;
+    scrubbingRef.current = false;
+    if (!v) return;
+    const t = vals[0] ?? 0;
+    try {
+      v.currentTime = t;
+    } catch {}
+    if (wasPlayingRef.current) v.play();
+  };
+
+  return (
+    <div className="flex max-h-[88%] max-w-[88%] flex-col gap-3">
+      <div
+        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg bg-black"
+        onClick={togglePlay}
+      >
+        <video
+          ref={videoRef}
+          src={src}
+          className="max-h-full max-w-full"
+          playsInline
+        />
+      </div>
+      <div className="rounded-xl bg-zinc-900/90 px-4 py-3 text-zinc-100 ring-1 ring-zinc-800">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={togglePlay}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-900 transition hover:bg-white"
+            aria-label={playing ? "Pause" : "Play"}
+          >
+            {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 translate-x-[1px]" />}
+          </button>
+          <div className="group flex-1">
+            <Slider
+              value={[Math.min(current, duration || 0)]}
+              min={0}
+              max={duration || 0.0001}
+              step={0.01}
+              onPointerDown={handleScrubStart}
+              onValueChange={handleScrubChange}
+              onValueCommit={handleScrubCommit}
+              className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:border-zinc-300 [&_[role=slider]]:bg-white [&_[data-orientation=horizontal]]:h-1.5 [&_[data-orientation=horizontal]]:bg-zinc-700 group-hover:[&_[data-orientation=horizontal]]:bg-zinc-600 [&_.bg-primary]:bg-zinc-100"
+            />
+          </div>
+          <div className="shrink-0 font-mono text-xs tabular-nums text-zinc-300">
+            {formatVideoTime(current)} / {formatVideoTime(duration)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Mac-Dock style fish-eye magnification strip for the Lightbox bottom flow.
 function DockStrip({
   items,
