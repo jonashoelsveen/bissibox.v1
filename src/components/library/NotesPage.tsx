@@ -161,6 +161,10 @@ export function NotesPage({
   const [folderDragHandle, setFolderDragHandle] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<NoteFolder | null>(null);
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const isSearching = searchQuery.trim().length > 0;
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
