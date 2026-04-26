@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ArrowLeft, ChevronDown, FileText, Heart, Image as ImageIcon, Map as MapIcon, Share2, Users, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileText, Heart, Image as ImageIcon, Map as MapIcon, MapPin, Share2, Users, X } from "lucide-react";
 import { ReadOnlyCourseMap } from "@/components/ReadOnlyCourseMap";
+import { ReadOnlyPinMap } from "@/components/ReadOnlyPinMap";
 import { MapLocationLabel } from "@/components/MapLocationLabel";
 import { ElevationProfile } from "@/components/ElevationProfile";
 import { PublicParticipantsPanel } from "@/components/PublicParticipantsPanel";
@@ -27,6 +28,9 @@ interface EventRow {
   currency: string;
   race_types: string[];
   world_athletics_certified: boolean;
+  pin_lat: number | null;
+  pin_lng: number | null;
+  pin_description: string | null;
 }
 
 interface SubeventRow {
@@ -51,6 +55,7 @@ export function EventViewer({ eventId }: { eventId: string }) {
   const [subevents, setSubevents] = useState<SubeventRow[]>([]);
   const [openSub, setOpenSub] = useState<number | null>(0);
   const [activeMapSub, setActiveMapSub] = useState(0);
+  const [mapMode, setMapMode] = useState<"location" | "race">("location");
   const [expandedSubMap, setExpandedSubMap] = useState<Record<number, boolean>>({ 0: true });
   const [selectedSplitId, setSelectedSplitId] = useState<string | null>(null);
   const [hoverPos, setHoverPos] = useState<LatLng | null>(null);
@@ -307,54 +312,112 @@ export function EventViewer({ eventId }: { eventId: string }) {
       {tab === "map" && (
         <div className="mt-5 flex flex-1 overflow-hidden rounded-lg border border-hairline bg-card">
           <div className="flex min-w-0 flex-1 flex-col">
-            <div className="relative min-h-[480px] flex-1">
-              {subevents.length === 0 ? (
-                <div className="flex h-full min-h-[480px] items-center justify-center p-10 text-center text-sm text-muted-foreground">
-                  No course map available.
-                </div>
-              ) : (
-                <>
-                  <ReadOnlyCourseMap
-                    key={activeMapSub}
-                    path={subevents[activeMapSub]?.course_path ?? []}
-                    splits={subevents[activeMapSub]?.split_points ?? []}
-                    selectedSplitId={selectedSplitId}
-                    hoverPosition={hoverPos}
-                  />
-                  <MapLocationLabel
-                    point={
-                      subevents[activeMapSub]?.course_path?.[0] ??
-                      subevents[activeMapSub]?.split_points?.[0]?.position ??
-                      null
-                    }
-                  />
-                </>
-              )}
-            </div>
-            {subevents.length > 0 && (subevents[activeMapSub]?.course_path?.length ?? 0) > 0 && (
-              <div className="border-t border-hairline p-3">
-                <ElevationProfile
-                  path={subevents[activeMapSub]?.course_path ?? []}
-                  splits={subevents[activeMapSub]?.split_points ?? []}
-                  selectedSplitId={selectedSplitId}
-                  onSelectSplit={(id) => {
-                    setSelectedSplitId(id);
-                    setExpandedSubMap((m) => ({ ...m, [activeMapSub]: true }));
-                  }}
-                  onHover={setHoverPos}
-                />
+            {mapMode === "location" ? (
+              <div className="relative min-h-[480px] flex-1">
+                {event.pin_lat != null && event.pin_lng != null ? (
+                  <ReadOnlyPinMap pin={{ lat: event.pin_lat, lng: event.pin_lng }} />
+                ) : (
+                  <div className="flex h-full min-h-[480px] items-center justify-center p-10 text-center text-sm text-muted-foreground">
+                    No location set for this race.
+                  </div>
+                )}
               </div>
+            ) : (
+              <>
+                <div className="relative min-h-[480px] flex-1">
+                  {subevents.length === 0 ? (
+                    <div className="flex h-full min-h-[480px] items-center justify-center p-10 text-center text-sm text-muted-foreground">
+                      No course map available.
+                    </div>
+                  ) : (
+                    <>
+                      <ReadOnlyCourseMap
+                        key={activeMapSub}
+                        path={subevents[activeMapSub]?.course_path ?? []}
+                        splits={subevents[activeMapSub]?.split_points ?? []}
+                        selectedSplitId={selectedSplitId}
+                        hoverPosition={hoverPos}
+                      />
+                      <MapLocationLabel
+                        point={
+                          subevents[activeMapSub]?.course_path?.[0] ??
+                          subevents[activeMapSub]?.split_points?.[0]?.position ??
+                          null
+                        }
+                      />
+                    </>
+                  )}
+                </div>
+                {subevents.length > 0 && (subevents[activeMapSub]?.course_path?.length ?? 0) > 0 && (
+                  <div className="border-t border-hairline p-3">
+                    <ElevationProfile
+                      path={subevents[activeMapSub]?.course_path ?? []}
+                      splits={subevents[activeMapSub]?.split_points ?? []}
+                      selectedSplitId={selectedSplitId}
+                      onSelectSplit={(id) => {
+                        setSelectedSplitId(id);
+                        setExpandedSubMap((m) => ({ ...m, [activeMapSub]: true }));
+                      }}
+                      onHover={setHoverPos}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </div>
 
           <aside className="w-96 shrink-0 overflow-y-auto border-l border-hairline bg-background px-3 py-3">
-            <div className="border-b border-hairline px-1 pb-3">
+            {/* Location card (read-only) */}
+            <div
+              onClick={() => { if (mapMode !== "location") setMapMode("location"); }}
+              className={`mb-3 ${mapMode === "location" ? "" : "cursor-pointer"}`}
+            >
+              {event.pin_lat != null && event.pin_lng != null ? (
+                <div className={`overflow-hidden rounded-md border bg-ink/5 ${mapMode === "location" ? "border-primary" : "border-ink"}`}>
+                  <div className="flex items-start gap-2 px-3 py-3">
+                    <span
+                      className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                      style={{ background: "#dc2626" }}
+                    >
+                      <MapPin className="h-3 w-3 text-white" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Location</p>
+                      <p className="mt-0.5 truncate text-sm font-medium text-ink">
+                        {event.location || "Race location"}
+                      </p>
+                      {event.pin_description && (
+                        <p className="mt-1 text-xs text-muted-foreground">{event.pin_description}</p>
+                      )}
+                      <p className="mono mt-0.5 text-[10px] text-muted-foreground">
+                        {event.pin_lat.toFixed(5)}, {event.pin_lng.toFixed(5)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 overflow-hidden rounded-md border border-hairline bg-card px-3 py-3">
+                  <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <MapPin className="h-3 w-3" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Location</p>
+                    <p className="mt-0.5 truncate text-sm text-muted-foreground">No location set</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div
+              className="border-b border-hairline px-1 pb-3 cursor-pointer"
+              onClick={() => setMapMode("race")}
+            >
               <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Races</p>
               <p className="mt-0.5 text-sm text-ink">Select a race</p>
             </div>
             <div className="flex flex-col gap-2 pt-3">
               {subevents.map((s, i) => {
-                const active = i === activeMapSub;
+                const active = mapMode === "race" && i === activeMapSub;
                 const expanded = !!expandedSubMap[i];
                 const points = s.split_points ?? [];
                 return (
@@ -365,6 +428,7 @@ export function EventViewer({ eventId }: { eventId: string }) {
                     <div className="flex w-full items-center gap-2 px-3 py-3 text-left select-none">
                       <button
                         onClick={() => {
+                          if (mapMode !== "race") setMapMode("race");
                           if (active) {
                             setExpandedSubMap((m) => ({ ...m, [i]: !m[i] }));
                           } else {
