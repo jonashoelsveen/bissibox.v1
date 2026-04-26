@@ -238,96 +238,120 @@ function LibraryPage() {
         <h1 className="text-2xl tracking-tight text-ink md:text-3xl">Library</h1>
       </div>
       <div className="mt-6 flex items-end justify-between gap-4 border-b border-hairline">
-        <nav className="flex min-w-0 flex-1 overflow-hidden">
-          <LibraryTabBtn
-            active={!showingNote && baseTab === "notes"}
-            onClick={() => setTab("notes")}
-            icon={<StickyNote className="h-3.5 w-3.5" />}
-          >
-            Notes
-          </LibraryTabBtn>
-          <LibraryTabBtn
-            active={!showingNote && baseTab === "files"}
-            onClick={() => setTab("files")}
-            icon={<FolderClosed className="h-3.5 w-3.5" />}
-          >
-            Files
-          </LibraryTabBtn>
-          <LibraryTabBtn
-            active={!showingNote && baseTab === "media"}
-            onClick={() => setTab("media")}
-            icon={<ImageIcon className="h-3.5 w-3.5" />}
-          >
-            Media
-          </LibraryTabBtn>
-          {openNoteTabs.map((t) => {
-            const isActive = activeNoteId === t.id;
-            const isNew = t.kind === "new";
-            const colorActive = isNew
-              ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
-              : "border-muted-foreground text-ink";
-            const colorIdle = isNew
-              ? "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
-              : "border-transparent text-muted-foreground hover:text-ink";
-            const dotColor = isNew ? "bg-emerald-500" : "bg-muted-foreground/60";
-            const isDragging = dragNoteId === t.id;
-            const isDragOver = dragOverNoteId === t.id && dragNoteId !== t.id;
-            return (
-              <button
-                key={t.id}
-                draggable
-                onDragStart={(e) => {
-                  setDragNoteId(t.id);
-                  e.dataTransfer.effectAllowed = "move";
-                  try { e.dataTransfer.setData("text/plain", t.id); } catch {}
-                }}
-                onDragOver={(e) => {
-                  if (!dragNoteId) return;
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = "move";
-                  if (dragOverNoteId !== t.id) setDragOverNoteId(t.id);
-                }}
-                onDragLeave={() => {
-                  if (dragOverNoteId === t.id) setDragOverNoteId(null);
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (dragNoteId) reorderNoteTabs(dragNoteId, t.id);
-                  setDragNoteId(null);
-                  setDragOverNoteId(null);
-                }}
-                onDragEnd={() => {
-                  setDragNoteId(null);
-                  setDragOverNoteId(null);
-                }}
-                onClick={() => setActiveNoteId(t.id)}
-                style={{ flex: "1 1 0", minWidth: 0, maxWidth: 240 }}
-                className={`group -mb-px inline-flex min-w-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm transition-[color,border-color,opacity,transform] duration-150 ease-out ${
-                  isActive ? colorActive : colorIdle
-                } ${isDragging ? "opacity-50" : ""} ${isDragOver ? "bg-muted/40" : ""}`}
-                title={t.title}
+        <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
+          <div className="flex shrink-0">
+            <LibraryTabBtn
+              active={!showingNote && baseTab === "notes"}
+              onClick={() => setTab("notes")}
+              icon={<StickyNote className="h-3.5 w-3.5" />}
+            >
+              Notes
+            </LibraryTabBtn>
+            <LibraryTabBtn
+              active={!showingNote && baseTab === "files"}
+              onClick={() => setTab("files")}
+              icon={<FolderClosed className="h-3.5 w-3.5" />}
+            >
+              Files
+            </LibraryTabBtn>
+            <LibraryTabBtn
+              active={!showingNote && baseTab === "media"}
+              onClick={() => setTab("media")}
+              icon={<ImageIcon className="h-3.5 w-3.5" />}
+            >
+              Media
+            </LibraryTabBtn>
+          </div>
+          {openNoteTabs.length > 0 && (
+            <div className="relative min-w-0 flex-1">
+              {/* edge fades */}
+              {edgeFade.left && (
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent" />
+              )}
+              {edgeFade.right && (
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent" />
+              )}
+              <div
+                ref={tabStripRef}
+                onScroll={updateEdgeFade}
+                className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                style={{ scrollBehavior: "smooth" }}
               >
-                <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
-                <span className="min-w-0 flex-1 truncate text-left">
-                  {t.folder ? `${t.folder} · ${t.title}` : t.title}
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeNoteTab(t.id);
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  draggable={false}
-                  onDragStart={(e) => e.preventDefault()}
-                  className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
-                >
-                  ✕
-                </span>
-              </button>
-            );
-          })}
+                {openNoteTabs.map((t, idx) => {
+                  const isActive = activeNoteId === t.id;
+                  const isNew = t.kind === "new";
+                  const colorActive = isNew
+                    ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
+                    : "border-muted-foreground text-ink";
+                  const colorIdle = isNew
+                    ? "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
+                    : "border-transparent text-muted-foreground hover:text-ink";
+                  const dotColor = isNew ? "bg-emerald-500" : "bg-muted-foreground/60";
+                  const isDragging = dragNoteId === t.id;
+
+                  // Compute X-axis-only displacement for non-dragged tabs to
+                  // visualize the new index (Chrome-style slide).
+                  let translateX = 0;
+                  if (dragNoteId && !isDragging) {
+                    const st = dragStateRef.current;
+                    if (st) {
+                      const from = st.startIndex;
+                      const to = st.currentIndex;
+                      if (to > from && idx > from && idx <= to) translateX = -st.width;
+                      else if (to < from && idx >= to && idx < from) translateX = st.width;
+                    }
+                  }
+                  const dragStyle: React.CSSProperties = isDragging
+                    ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
+                    : { transform: `translate3d(${translateX}px,0,0)` };
+
+                  return (
+                    <button
+                      key={t.id}
+                      ref={(el) => {
+                        if (el) tabRefs.current.set(t.id, el);
+                        else tabRefs.current.delete(t.id);
+                      }}
+                      onPointerDown={(e) => onTabPointerDown(e, t.id)}
+                      onClick={() => setActiveNoteId(t.id)}
+                      style={{
+                        flex: "1 1 200px",
+                        minWidth: 140,
+                        maxWidth: 240,
+                        touchAction: "pan-y",
+                        ...dragStyle,
+                        transition: isDragging
+                          ? "none"
+                          : "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms, opacity 150ms",
+                      }}
+                      className={`group -mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
+                        isActive ? colorActive : colorIdle
+                      } ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+                      title={t.title}
+                    >
+                      <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
+                      <span className="min-w-0 flex-1 truncate text-left">
+                        {t.folder ? `${t.folder} · ${t.title}` : t.title}
+                      </span>
+                      <span
+                        data-tab-close
+                        role="button"
+                        tabIndex={0}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeNoteTab(t.id);
+                        }}
+                        className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                      >
+                        ✕
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </nav>
         <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5" />
       </div>
