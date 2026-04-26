@@ -382,72 +382,107 @@ export function SimplePinMap({
               </p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-md border border-primary bg-primary/5">
-              <div className="flex items-start gap-2 px-3 py-3">
-                <span
-                  className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                  style={{ background: PIN_COLOR }}
-                >
-                  <MapPin className="h-3 w-3 text-white" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink">
-                    {name.trim() || `${noun} pin`}
-                  </p>
-                  <p className="mono mt-0.5 text-[10px] text-muted-foreground">
-                    {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
-                  </p>
-                </div>
-                <button
-                  onClick={clearPin}
-                  className="rounded p-1 text-muted-foreground hover:text-destructive"
-                  title="Remove pin"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              {showName && (
-                <div className="border-t border-hairline bg-card/50 px-3 py-3">
-                  <label className="block">
-                    <span className="mono mb-1 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                      Pin name
-                    </span>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) =>
-                        trackedChange({ pin: pinRef.current, description: descRef.current, name: e.target.value })
-                      }
-                      placeholder={`${noun} pin`}
-                      className="w-full rounded-md border border-hairline bg-card px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-                    />
-                  </label>
-                </div>
-              )}
-
-              {showDescription && (
-                <div className="border-t border-hairline bg-card/50 px-3 py-3">
-                  <label className="block">
-                    <span className="mono mb-1 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                      Pin description (optional)
-                    </span>
-                    <textarea
-                      value={description}
-                      onChange={(e) =>
-                        trackedChange({ pin: pinRef.current, description: e.target.value, name: nameRef.current })
-                      }
-                      rows={3}
-                      placeholder="e.g. Meet at the main entrance, parking on the south side."
-                      className="w-full resize-none rounded-md border border-hairline bg-card px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-                    />
-                  </label>
-                </div>
-              )}
-            </div>
+            <PinCard
+              pin={pin}
+              name={name}
+              description={description}
+              noun={noun}
+              showDescription={showDescription}
+              onChangeName={(v) =>
+                trackedChange({ pin: pinRef.current, description: descRef.current, name: v })
+              }
+              onChangeDescription={(v) =>
+                trackedChange({ pin: pinRef.current, description: v, name: nameRef.current })
+              }
+              onRemove={clearPin}
+            />
           )}
         </div>
       </aside>
+    </div>
+  );
+}
+
+function PinCard({
+  pin,
+  name,
+  description,
+  noun,
+  showDescription,
+  onChangeName,
+  onChangeDescription,
+  onRemove,
+}: {
+  pin: { lat: number; lng: number };
+  name: string;
+  description: string;
+  noun: string;
+  showDescription: boolean;
+  onChangeName: (v: string) => void;
+  onChangeDescription: (v: string) => void;
+  onRemove: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const placeholder = `${noun} pin`;
+
+  return (
+    <div className="overflow-hidden rounded-md border border-ink bg-ink/5">
+      <div className="flex items-start gap-2 px-3 py-3">
+        <span
+          className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+          style={{ background: PIN_COLOR }}
+        >
+          <MapPin className="h-3 w-3 text-white" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => onChangeName(e.target.value)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded(true);
+            }}
+            placeholder={placeholder}
+            className="w-full truncate bg-transparent text-sm font-medium text-ink outline-none placeholder:text-muted-foreground"
+          />
+          <p className="mono mt-0.5 text-[10px] text-muted-foreground">
+            {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
+          </p>
+        </div>
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="rounded p-1 text-muted-foreground hover:text-ink"
+          title={expanded ? "Collapse" : "Expand"}
+          aria-label={expanded ? "Collapse" : "Expand"}
+        >
+          <ChevronDown className={`h-4 w-4 transition ${expanded ? "rotate-0" : "-rotate-90"}`} />
+        </button>
+        <button
+          onClick={onRemove}
+          className="rounded p-1 text-muted-foreground hover:text-destructive"
+          title="Remove pin"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {expanded && showDescription && (
+        <div className="border-t border-hairline bg-card/50 px-3 py-3">
+          <label className="block">
+            <span className="mono mb-1 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              Pin description (optional)
+            </span>
+            <textarea
+              value={description}
+              onChange={(e) => onChangeDescription(e.target.value)}
+              rows={3}
+              placeholder="e.g. Meet at the main entrance, parking on the south side."
+              className="w-full resize-none rounded-md border border-hairline bg-card px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+            />
+          </label>
+        </div>
+      )}
     </div>
   );
 }
