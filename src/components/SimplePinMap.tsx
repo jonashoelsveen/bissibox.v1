@@ -412,7 +412,6 @@ export function PinCard({
   showDescription,
   onChangeName,
   onChangeDescription,
-  onRemove,
 }: {
   pin: { lat: number; lng: number };
   name: string;
@@ -421,7 +420,6 @@ export function PinCard({
   showDescription: boolean;
   onChangeName: (v: string) => void;
   onChangeDescription: (v: string) => void;
-  onRemove: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const placeholder = `${noun} pin`;
