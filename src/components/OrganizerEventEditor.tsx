@@ -825,7 +825,6 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                   showDescription
                   onChangeName={(v) => setLocation(v)}
                   onChangeDescription={(v) => setPinDescription(v)}
-                  onRemove={() => setPin(null)}
                 />
               ) : (
                 <div className="flex items-start gap-2 overflow-hidden rounded-md border border-ink bg-ink/5 px-3 py-3">
