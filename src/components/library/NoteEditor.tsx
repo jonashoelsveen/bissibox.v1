@@ -41,6 +41,7 @@ export function NoteEditor({
 }) {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   const [note, setNote] = useState<NoteRow | null>(null);
   const [body, setBody] = useState("");
