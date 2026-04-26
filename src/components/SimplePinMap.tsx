@@ -17,18 +17,16 @@ interface Props {
   showName?: boolean;
   /** Label noun for the location: "Meeting" or "Event". */
   kindLabel?: string;
+  /** When true, hides the internal right sidebar (caller renders its own). */
+  hideSidebar?: boolean;
 }
+
+export const PIN_COLOR = "#dc2626";
 
 type Tool = "pan" | "pin";
 
-const PIN_COLOR = "#dc2626";
+// Single-pin map for Meeting / Event types and Race location mode.
 
-/**
- * Simple single-pin map for Meeting / Event types.
- * UI mirrors CourseMapEditor: floating top-left toolbar (Pan / Pin / Undo / Redo),
- * centered search bar, top-right Save / Delete, and a right sidebar describing
- * the location (with optional description for Event type).
- */
 export function SimplePinMap({
   pin,
   description,
@@ -40,6 +38,7 @@ export function SimplePinMap({
   showDescription = true,
   showName = false,
   kindLabel = "location",
+  hideSidebar = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -366,44 +365,46 @@ export function SimplePinMap({
       </div>
 
       {/* Right sidebar — mirrors CourseMapEditor sidebar */}
-      <aside className="w-96 shrink-0 overflow-y-auto border-l border-hairline bg-background px-3 py-3">
-        <div className="border-b border-hairline px-1 pb-3">
-          <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Location</p>
-          <p className="mt-0.5 text-sm text-ink">{sidebarTitle}</p>
-        </div>
+      {!hideSidebar && (
+        <aside className="w-96 shrink-0 overflow-y-auto border-l border-hairline bg-background px-3 py-3">
+          <div className="border-b border-hairline px-1 pb-3">
+            <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Location</p>
+            <p className="mt-0.5 text-sm text-ink">{sidebarTitle}</p>
+          </div>
 
-        <div className="flex flex-col gap-3 pt-3">
-          {!pin ? (
-            <div className="rounded-md border border-dashed border-hairline bg-card/50 px-3 py-6 text-center">
-              <MapPin className="mx-auto mb-2 h-5 w-5 text-muted-foreground" />
-              <p className="text-sm text-ink">Select location for this {noun}.</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Pick the <span className="text-ink">Pin</span> tool, then click anywhere on the map.
-              </p>
-            </div>
-          ) : (
-            <PinCard
-              pin={pin}
-              name={name}
-              description={description}
-              noun={noun}
-              showDescription={showDescription}
-              onChangeName={(v) =>
-                trackedChange({ pin: pinRef.current, description: descRef.current, name: v })
-              }
-              onChangeDescription={(v) =>
-                trackedChange({ pin: pinRef.current, description: v, name: nameRef.current })
-              }
-              onRemove={clearPin}
-            />
-          )}
-        </div>
-      </aside>
+          <div className="flex flex-col gap-3 pt-3">
+            {!pin ? (
+              <div className="rounded-md border border-dashed border-hairline bg-card/50 px-3 py-6 text-center">
+                <MapPin className="mx-auto mb-2 h-5 w-5 text-muted-foreground" />
+                <p className="text-sm text-ink">Select location for this {noun}.</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Pick the <span className="text-ink">Pin</span> tool, then click anywhere on the map.
+                </p>
+              </div>
+            ) : (
+              <PinCard
+                pin={pin}
+                name={name}
+                description={description}
+                noun={noun}
+                showDescription={showDescription}
+                onChangeName={(v) =>
+                  trackedChange({ pin: pinRef.current, description: descRef.current, name: v })
+                }
+                onChangeDescription={(v) =>
+                  trackedChange({ pin: pinRef.current, description: v, name: nameRef.current })
+                }
+                onRemove={clearPin}
+              />
+            )}
+          </div>
+        </aside>
+      )}
     </div>
   );
 }
 
-function PinCard({
+export function PinCard({
   pin,
   name,
   description,
@@ -439,12 +440,9 @@ function PinCard({
             type="text"
             value={name}
             onChange={(e) => onChangeName(e.target.value)}
-            onClick={(e) => {
-              e.stopPropagation();
-              setExpanded(true);
-            }}
+            onClick={(e) => e.stopPropagation()}
             placeholder={placeholder}
-            className="w-full truncate bg-transparent text-sm font-medium text-ink outline-none placeholder:text-muted-foreground"
+            className="block max-w-[180px] truncate bg-transparent text-sm font-medium text-ink outline-none placeholder:text-muted-foreground"
           />
           <p className="mono mt-0.5 text-[10px] text-muted-foreground">
             {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}

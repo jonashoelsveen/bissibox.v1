@@ -10,7 +10,7 @@ import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/Cour
 import { ElevationProfile } from "@/components/ElevationProfile";
 import { ParticipantsPanel } from "@/components/ParticipantsPanel";
 import { MeetingParticipantsPanel } from "@/components/MeetingParticipantsPanel";
-import { SimplePinMap } from "@/components/SimplePinMap";
+import { SimplePinMap, PinCard } from "@/components/SimplePinMap";
 import { CoOrganizersManager } from "@/components/CoOrganizersManager";
 import { EventMediaTab } from "@/components/EventMediaTab";
 
@@ -747,6 +747,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                 kindLabel="Race"
                 title="Race location"
                 showDescription
+                hideSidebar
               />
             ) : (
               <>
@@ -808,29 +809,39 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
 
           {/* Right sidebar — Location + subevent headers */}
           <aside className="w-96 shrink-0 overflow-y-auto border-l border-hairline bg-background px-3 py-3">
-            {/* Location box (black accent) */}
-            <button
-              type="button"
-              onClick={() => setRaceMapMode("location")}
-              className={`mb-3 flex w-full items-start gap-2 overflow-hidden rounded-md border px-3 py-3 text-left transition ${
-                raceMapMode === "location"
-                  ? "border-ink bg-ink/5"
-                  : "border-hairline bg-card hover:border-ink/40"
-              }`}
+            {/* Location box (red pin, inline-editable name, expand via arrow) */}
+            <div
+              onClick={() => {
+                if (raceMapMode !== "location") setRaceMapMode("location");
+              }}
+              className={`mb-3 ${raceMapMode === "location" ? "" : "cursor-pointer"}`}
             >
-              <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink text-background">
-                <MapPin className="h-3 w-3" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Location</p>
-                <p className="mt-0.5 truncate text-sm font-medium text-ink">
-                  {location?.trim() || "Race location"}
-                </p>
-                <p className="mono mt-0.5 text-[10px] text-muted-foreground">
-                  {pin ? `${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}` : "No pin set"}
-                </p>
-              </div>
-            </button>
+              {pin ? (
+                <PinCard
+                  pin={pin}
+                  name={location}
+                  description={pinDescription}
+                  noun="Race"
+                  showDescription
+                  onChangeName={(v) => setLocation(v)}
+                  onChangeDescription={(v) => setPinDescription(v)}
+                  onRemove={() => setPin(null)}
+                />
+              ) : (
+                <div className="flex items-start gap-2 overflow-hidden rounded-md border border-ink bg-ink/5 px-3 py-3">
+                  <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink text-background">
+                    <MapPin className="h-3 w-3" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Location</p>
+                    <p className="mt-0.5 truncate text-sm font-medium text-ink">
+                      Select location for this Race
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
 
             <div
               className="border-b border-hairline px-1 pb-3 cursor-pointer"
