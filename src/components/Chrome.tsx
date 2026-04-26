@@ -11,6 +11,8 @@ export function TopChrome() {
   const path = router.location.pathname;
   const { user, mode, activeEntityId } = useAuth();
   const [letter, setLetter] = useState<string>("");
+  const [newNoteOpen, setNewNoteOpen] = useState(false);
+  const [newEventOpen, setNewEventOpen] = useState(false);
 
   const isOrganizer = (mode === "organizer" || mode === "team") && !!user;
   const isIndividual = !isOrganizer;
