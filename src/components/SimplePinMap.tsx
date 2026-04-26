@@ -17,7 +17,11 @@ interface Props {
   showName?: boolean;
   /** Label noun for the location: "Meeting" or "Event". */
   kindLabel?: string;
+  /** When true, hides the internal right sidebar (caller renders its own). */
+  hideSidebar?: boolean;
 }
+
+export const PIN_COLOR = "#dc2626";
 
 type Tool = "pan" | "pin";
 
