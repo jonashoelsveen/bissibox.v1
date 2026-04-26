@@ -450,7 +450,10 @@ export function NotesPage({
               <NavBtn small active={view.type === "folder" && view.name === null} onClick={() => setView({ type: "folder", name: null })}>
                 Unsorted
               </NavBtn>
-              {folders.map((a) => {
+              {(isSearching
+                ? folders.filter((f) => searchResults.folders.some((sf) => sf.id === f.id))
+                : folders
+              ).map((a) => {
                 const active = view.type === "folder" && view.name === a.name;
                 const isDragging = folderDragId === a.id;
                 return (
