@@ -119,6 +119,38 @@ export function NotesPage({
 
   useEffect(() => { void load(); }, [load]);
 
+  // Realtime: update cover_image_url / cover_status as the worker finishes
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`notes-cover-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "notes" },
+        (payload) => {
+          const row = payload.new as NoteRow;
+          setNotes((prev) =>
+            prev.map((n) =>
+              n.id === row.id
+                ? {
+                    ...n,
+                    cover_image_url: row.cover_image_url ?? n.cover_image_url,
+                    cover_status: row.cover_status ?? n.cover_status,
+                    title: row.title ?? n.title,
+                    folder: row.folder ?? n.folder,
+                    updated_at: row.updated_at ?? n.updated_at,
+                  }
+                : n,
+            ),
+          );
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   // Auto-open the new-note dialog when ?new=1 is in URL (from + icon in left menu)
   useEffect(() => {
     if (search.new === "1" && search.tab === "notes") {
