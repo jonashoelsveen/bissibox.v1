@@ -511,7 +511,7 @@ function CreateFolderDialog({
   );
 }
 
-function NewNoteDialog({
+export function NewNoteDialog({
   folders, onClose, onCreate, onCreateFolder,
 }: {
   folders: string[];

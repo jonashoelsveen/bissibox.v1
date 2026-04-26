@@ -3,12 +3,16 @@ import { useEffect, useState } from "react";
 import { Search, Library, Plus, Tent, Settings, LogIn, Users, Briefcase, Armchair } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
+import { NewEventDialog } from "@/components/organizer/NewEventDialog";
 
 export function TopChrome() {
   const router = useRouterState();
   const path = router.location.pathname;
   const { user, mode, activeEntityId } = useAuth();
   const [letter, setLetter] = useState<string>("");
+  const [newNoteOpen, setNewNoteOpen] = useState(false);
+  const [newEventOpen, setNewEventOpen] = useState(false);
 
   const isOrganizer = (mode === "organizer" || mode === "team") && !!user;
   const isIndividual = !isOrganizer;
@@ -115,13 +119,13 @@ export function TopChrome() {
             >
               <Tent className="h-[18px] w-[18px]" strokeWidth={2.25} />
             </NavBtn>
-            <NavBtn
-              to="/organizer/new"
-              label="Create event"
-              active={path.startsWith("/organizer/new")}
+            <button
+              onClick={() => setNewEventOpen(true)}
+              aria-label="Create event"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-secondary hover:text-ink"
             >
               <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
-            </NavBtn>
+            </button>
           </>
         ) : (
           <>
@@ -143,14 +147,13 @@ export function TopChrome() {
               </NavBtn>
             )}
             {isIndividual && user && (
-              <Link
-                to="/media"
-                search={{ tab: "notes", new: "1" }}
+              <button
+                onClick={() => setNewNoteOpen(true)}
                 aria-label="New note"
                 className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-secondary hover:text-ink"
               >
                 <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
-              </Link>
+              </button>
             )}
           </>
         )}
@@ -170,6 +173,8 @@ export function TopChrome() {
           </NavBtn>
         </div>
       </div>
+      {newNoteOpen && <NewNoteOverlay onClose={() => setNewNoteOpen(false)} />}
+      {newEventOpen && <NewEventDialog onClose={() => setNewEventOpen(false)} />}
     </aside>
   );
 }
