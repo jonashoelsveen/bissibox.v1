@@ -1386,9 +1386,19 @@ function FolderSelect({
     if (creating && inputRef.current) inputRef.current.focus();
   }, [creating]);
 
-  function commitNew() {
+
+  function commitAdd() {
     const name = draft.trim();
-    if (name) onFolder(name);
+    if (!name) {
+      toast.error("Folder name is required");
+      return;
+    }
+    if (folders.includes(name)) {
+      toast.error("A folder with that name already exists");
+      return;
+    }
+    onFolder(name);
+    toast.success(`Folder "${name}" created`);
     setDraft("");
     setCreating(false);
   }
@@ -1399,45 +1409,58 @@ function FolderSelect({
         Folder
       </span>
       {creating ? (
-        <input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              commitNew();
-            } else if (e.key === "Escape") {
-              setDraft("");
-              setCreating(false);
-            }
-          }}
-          onBlur={commitNew}
-          placeholder="New folder name"
-          className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
-        />
+        <div className="mt-1 flex items-center gap-2 rounded-xl border border-hairline bg-background pr-1 focus-within:border-primary">
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitAdd();
+              } else if (e.key === "Escape") {
+                setDraft("");
+                setCreating(false);
+              }
+            }}
+            placeholder="New folder name"
+            className="flex-1 bg-transparent px-4 py-2.5 text-sm text-ink outline-none"
+          />
+          <button
+            type="button"
+            onClick={commitAdd}
+            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+          >
+            Add folder
+          </button>
+        </div>
       ) : (
-        <select
-          value={folder}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v === "__new__") {
+        <div className="mt-1 flex items-center gap-2">
+          <select
+            value={folder}
+            onChange={(e) => onFolder(e.target.value)}
+            className="flex-1 rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
+          >
+            <option value="">None</option>
+            {folders.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => {
               setDraft("");
               setCreating(true);
-            } else {
-              onFolder(v);
-            }
-          }}
-          className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
-        >
-          <option value="">None</option>
-          {folders.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-          <option value="__new__">+ New folder…</option>
-        </select>
+            }}
+            title="Add folder"
+            aria-label="Add folder"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-hairline bg-background text-ink hover:bg-muted"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
       )}
     </div>
   );
