@@ -1714,11 +1714,7 @@ function Lightbox({
                 />
               )
             ) : (
-              <video
-                src={url}
-                controls
-                className="max-h-[88%] max-w-[88%]"
-              />
+              <VideoPlayer src={url} />
             )}
           </div>
           {isMulti && (
