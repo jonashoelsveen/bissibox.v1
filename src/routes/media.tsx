@@ -473,8 +473,9 @@ interface AttendedEvent {
 const MEDIA_HOUSES = ["VG", "NRK", "TV2", "Dagbladet", "Aftenposten"];
 
 function MediaPage({ actionsMount }: { actionsMount?: HTMLDivElement | null } = {}) {
-  const { user, mode, activeEntityId, loading: authLoading } = useAuth();
+  const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const accessToken = session?.access_token ?? null;
   const runScan = useServerFn(scanFile);
   const runPoll = useServerFn(pollScan);
   const isTeamMode = (mode === "team" || mode === "organizer") || !!activeEntityId;
@@ -705,13 +706,13 @@ function MediaPage({ actionsMount }: { actionsMount?: HTMLDivElement | null } = 
 
   // Poll VirusTotal for any pending media items
   useEffect(() => {
-    if (!user) return;
+    if (!user || !accessToken) return;
     const pending = items.filter((it) => it.scan_status === "pending");
     if (pending.length === 0) return;
     let cancelled = false;
     const safePoll = (id: string) => {
       try {
-        return Promise.resolve(runPoll({ data: { kind: "media", id } })).catch(
+        return Promise.resolve(runPoll({ data: { kind: "media", id, accessToken } })).catch(
           () => null,
         );
       } catch {
@@ -733,7 +734,7 @@ function MediaPage({ actionsMount }: { actionsMount?: HTMLDivElement | null } = 
       cancelled = true;
       clearInterval(t);
     };
-  }, [items, load, runPoll, user]);
+  }, [accessToken, items, load, runPoll, user]);
 
   useEffect(() => {
     let cancel = false;
@@ -1186,8 +1187,9 @@ function MediaPage({ actionsMount }: { actionsMount?: HTMLDivElement | null } = 
           onUploaded={(insertedIds) => {
             setUploadOpen(false);
             void load();
+            if (!accessToken) return;
             insertedIds.forEach((id) => {
-              runScan({ data: { kind: "media", id } }).catch(() => {
+              runScan({ data: { kind: "media", id, accessToken } }).catch(() => {
                 /* error reflected via scan_status */
               });
             });
