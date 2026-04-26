@@ -283,6 +283,48 @@ export function NotesPage({
     return notes.filter((n) => n.folder === view.name);
   }, [notes, view]);
 
+  // Force the "All" tab while searching
+  useEffect(() => {
+    if (isSearching && view.type !== "all") setView({ type: "all" });
+  }, [isSearching, view.type]);
+
+  // Focus the input on expand
+  useEffect(() => {
+    if (searchOpen) {
+      const t = setTimeout(() => searchInputRef.current?.focus(), 60);
+      return () => clearTimeout(t);
+    }
+  }, [searchOpen]);
+
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim();
+    if (!q) return { folders: [] as NoteFolder[], notes: [] as Array<NoteRow & { _score: number }> };
+
+    const folderMatches = folders
+      .map((f) => ({ f, score: scoreText(f.name, q, { exact: 100, partial: 60, fuzzy: 25 }) }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((x) => x.f);
+
+    const noteMatches = notes
+      .map((n) => {
+        const titleScore = scoreText(n.title, q, { exact: 100, partial: 70, fuzzy: 30 });
+        const folderScore = scoreText(n.folder ?? "", q, { exact: 50, partial: 30, fuzzy: 12 });
+        const bodyScore = scoreText(n.body, q, { exact: 40, partial: 25, fuzzy: 10 });
+        const total = titleScore + folderScore * 0.5 + bodyScore;
+        return { ...n, _score: total };
+      })
+      .filter((n) => n._score > 0)
+      .sort((a, b) => b._score - a._score);
+
+    return { folders: folderMatches, notes: noteMatches };
+  }, [searchQuery, folders, notes]);
+
+  const closeSearch = () => {
+    setSearchQuery("");
+    setSearchOpen(false);
+  };
+
   const toggleSel = (id: string) => {
     setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   };
