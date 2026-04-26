@@ -55,6 +55,7 @@ export function EventViewer({ eventId }: { eventId: string }) {
   const [subevents, setSubevents] = useState<SubeventRow[]>([]);
   const [openSub, setOpenSub] = useState<number | null>(0);
   const [activeMapSub, setActiveMapSub] = useState(0);
+  const [mapMode, setMapMode] = useState<"location" | "race">("location");
   const [expandedSubMap, setExpandedSubMap] = useState<Record<number, boolean>>({ 0: true });
   const [selectedSplitId, setSelectedSplitId] = useState<string | null>(null);
   const [hoverPos, setHoverPos] = useState<LatLng | null>(null);
