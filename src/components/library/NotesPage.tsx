@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +19,97 @@ import {
   StickyNote,
   FileText as NoteIcon,
   PenLine,
+  Search as SearchIcon,
+  Folder as FolderIcon,
 } from "lucide-react";
+
+/* ───────── fuzzy search helpers ───────── */
+
+// Lightweight fuzzy: returns true if all chars of needle appear in haystack in order
+function fuzzyContains(haystack: string, needle: string): boolean {
+  if (!needle) return true;
+  const h = haystack.toLowerCase();
+  const n = needle.toLowerCase();
+  if (h.includes(n)) return true;
+  let i = 0;
+  for (let j = 0; j < h.length && i < n.length; j++) {
+    if (h[j] === n[i]) i++;
+  }
+  return i === n.length;
+}
+
+// Simple Levenshtein for typo tolerance on short strings
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => i);
+  for (let j = 1; j <= b.length; j++) {
+    let prev = dp[0];
+    dp[0] = j;
+    for (let i = 1; i <= a.length; i++) {
+      const tmp = dp[i];
+      dp[i] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[i], dp[i - 1]);
+      prev = tmp;
+    }
+  }
+  return dp[a.length];
+}
+
+// Score a string against a query. Higher = better match. 0 = no match.
+function scoreText(text: string | null | undefined, query: string, weights: { exact: number; partial: number; fuzzy: number }): number {
+  if (!text || !query) return 0;
+  const t = text.toLowerCase();
+  const q = query.toLowerCase();
+  if (t === q) return weights.exact * 2;
+  if (t.startsWith(q)) return weights.exact;
+  if (t.includes(q)) return weights.partial;
+  // Per-token partial
+  const tokens = q.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1 && tokens.every((tok) => t.includes(tok))) return weights.partial * 0.85;
+  // Fuzzy / typo tolerance: word-level Levenshtein
+  if (q.length >= 3) {
+    if (fuzzyContains(t, q)) return weights.fuzzy;
+    const words = t.split(/\s+/);
+    for (const w of words) {
+      if (Math.abs(w.length - q.length) <= 2) {
+        const d = levenshtein(w, q);
+        const max = Math.max(w.length, q.length);
+        if (d / max <= 0.34) return weights.fuzzy * (1 - d / max);
+      }
+    }
+  }
+  return 0;
+}
+
+function snippet(body: string | null | undefined, query: string, len = 120): { text: string; matchAt: number } {
+  if (!body) return { text: "", matchAt: -1 };
+  const idx = body.toLowerCase().indexOf(query.toLowerCase());
+  if (idx < 0) {
+    return { text: body.length > len ? body.slice(0, len) + "…" : body, matchAt: -1 };
+  }
+  const start = Math.max(0, idx - 30);
+  const end = Math.min(body.length, idx + query.length + 80);
+  const prefix = start > 0 ? "…" : "";
+  const suffix = end < body.length ? "…" : "";
+  return { text: prefix + body.slice(start, end) + suffix, matchAt: idx - start + prefix.length };
+}
+
+function HighlightedSnippet({ body, query }: { body: string | null | undefined; query: string }) {
+  const { text, matchAt } = snippet(body, query);
+  if (!text) return <span className="text-muted-foreground/60 italic">No content</span>;
+  if (matchAt < 0 || !query) return <span>{text}</span>;
+  const before = text.slice(0, matchAt);
+  const match = text.slice(matchAt, matchAt + query.length);
+  const after = text.slice(matchAt + query.length);
+  return (
+    <span>
+      {before}
+      <mark className="rounded bg-primary/20 px-0.5 text-ink">{match}</mark>
+      {after}
+    </span>
+  );
+}
 
 interface NoteFolder {
   id: string;
@@ -71,6 +161,10 @@ export function NotesPage({
   const [folderDragHandle, setFolderDragHandle] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<NoteFolder | null>(null);
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const isSearching = searchQuery.trim().length > 0;
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -189,6 +283,48 @@ export function NotesPage({
     return notes.filter((n) => n.folder === view.name);
   }, [notes, view]);
 
+  // Force the "All" tab while searching
+  useEffect(() => {
+    if (isSearching && view.type !== "all") setView({ type: "all" });
+  }, [isSearching, view.type]);
+
+  // Focus the input on expand
+  useEffect(() => {
+    if (searchOpen) {
+      const t = setTimeout(() => searchInputRef.current?.focus(), 60);
+      return () => clearTimeout(t);
+    }
+  }, [searchOpen]);
+
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim();
+    if (!q) return { folders: [] as NoteFolder[], notes: [] as Array<NoteRow & { _score: number }> };
+
+    const folderMatches = folders
+      .map((f) => ({ f, score: scoreText(f.name, q, { exact: 100, partial: 60, fuzzy: 25 }) }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((x) => x.f);
+
+    const noteMatches = notes
+      .map((n) => {
+        const titleScore = scoreText(n.title, q, { exact: 100, partial: 70, fuzzy: 30 });
+        const folderScore = scoreText(n.folder ?? "", q, { exact: 50, partial: 30, fuzzy: 12 });
+        const bodyScore = scoreText(n.body, q, { exact: 40, partial: 25, fuzzy: 10 });
+        const total = titleScore + folderScore * 0.5 + bodyScore;
+        return { ...n, _score: total };
+      })
+      .filter((n) => n._score > 0)
+      .sort((a, b) => b._score - a._score);
+
+    return { folders: folderMatches, notes: noteMatches };
+  }, [searchQuery, folders, notes]);
+
+  const closeSearch = () => {
+    setSearchQuery("");
+    setSearchOpen(false);
+  };
+
   const toggleSel = (id: string) => {
     setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   };
@@ -213,6 +349,52 @@ export function NotesPage({
 
   const actions = (
     <>
+      {!selectMode && (
+        <div
+          className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
+            searchOpen
+              ? "w-64 border-hairline bg-card pl-3 pr-1"
+              : "w-9 hover:border-hairline hover:bg-card"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              if (!searchOpen) setSearchOpen(true);
+              else searchInputRef.current?.focus();
+            }}
+            aria-label="Search notes"
+            className="grid h-9 w-9 shrink-0 place-items-center text-muted-foreground transition hover:text-ink"
+          >
+            <SearchIcon className="h-4 w-4" />
+          </button>
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") closeSearch();
+            }}
+            placeholder="Search in notes"
+            className={`min-w-0 flex-1 border-b border-hairline bg-transparent py-1 text-xs text-ink outline-none transition placeholder:text-muted-foreground/70 focus:border-ink/40 ${
+              searchOpen ? "opacity-100" : "pointer-events-none w-0 opacity-0"
+            }`}
+          />
+          {searchOpen && (
+            <button
+              type="button"
+              onClick={closeSearch}
+              aria-label="Clear search"
+              className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-ink ${
+                searchQuery ? "opacity-100" : "opacity-60"
+              }`}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
       {selectMode ? (
         <div className="flex items-center gap-2 rounded-full border border-hairline bg-card p-1 pr-2">
           <button
@@ -364,7 +546,21 @@ export function NotesPage({
         </nav>
 
         <section>
-          {filtered.length === 0 ? (
+          {isSearching ? (
+            <SearchResults
+              query={searchQuery}
+              folders={searchResults.folders}
+              notes={searchResults.notes}
+              onOpenFolder={(name) => {
+                closeSearch();
+                setView({ type: "folder", name });
+              }}
+              onOpenNote={(id) => {
+                closeSearch();
+                openNote(id);
+              }}
+            />
+          ) : filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-20 text-center text-sm text-muted-foreground">
               No notes yet. Create your first note.
             </div>
@@ -687,6 +883,87 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
         </div>
         {children}
       </div>
+    </div>
+  );
+}
+
+function SearchResults({
+  query, folders, notes, onOpenFolder, onOpenNote,
+}: {
+  query: string;
+  folders: NoteFolder[];
+  notes: Array<NoteRow & { _score: number }>;
+  onOpenFolder: (name: string) => void;
+  onOpenNote: (id: string) => void;
+}) {
+  const noResults = folders.length === 0 && notes.length === 0;
+
+  if (noResults) {
+    return (
+      <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-20 text-center">
+        <p className="text-sm text-ink">No results found</p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Try different keywords or check your spelling.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-in fade-in duration-200">
+      {folders.length > 0 && (
+        <div>
+          <h3 className="mono mb-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+            Matching folders ({folders.length})
+          </h3>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {folders.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => onOpenFolder(f.name)}
+                className="group flex items-center gap-2 rounded-xl border border-hairline bg-card px-3 py-2.5 text-left transition hover:border-ink/20 hover:bg-secondary/50"
+              >
+                <FolderIcon className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-ink" />
+                <span className="truncate text-xs text-ink">{f.name}</span>
+                {f.pinned && <Pin className="ml-auto h-2.5 w-2.5 shrink-0 fill-current text-ink/60" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {folders.length > 0 && notes.length > 0 && (
+        <div className="my-6 border-t border-hairline" />
+      )}
+
+      {notes.length > 0 && (
+        <div>
+          <h3 className="mono mb-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+            Matching notes ({notes.length})
+          </h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {notes.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => onOpenNote(n.id)}
+                className="group flex flex-col gap-2 rounded-xl border border-hairline bg-card p-4 text-left transition hover:border-ink/20"
+              >
+                <div className="flex items-start gap-2">
+                  <NoteIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <p className="flex-1 truncate text-sm text-ink">{n.title}</p>
+                </div>
+                <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                  <HighlightedSnippet body={n.body} query={query} />
+                </p>
+                <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span className="truncate">{n.folder ?? "Unsorted"}</span>
+                  <span className="mono">{new Date(n.updated_at).toLocaleDateString()}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
