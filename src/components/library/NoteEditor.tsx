@@ -41,6 +41,7 @@ export function NoteEditor({
 }) {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   const [note, setNote] = useState<NoteRow | null>(null);
   const [body, setBody] = useState("");
@@ -77,6 +78,16 @@ export function NoteEditor({
         : supabase.from("note_folders").select("name").is("team_id", null).eq("user_id", user.id);
       const { data: f } = await folderQuery;
       setFolders((f ?? []).map((x) => (x as { name: string }).name));
+
+      // Auto-focus the writing area when the note opens
+      requestAnimationFrame(() => {
+        const el = bodyRef.current;
+        if (el) {
+          el.focus();
+          const len = el.value.length;
+          el.setSelectionRange(len, len);
+        }
+      });
     })();
   }, [user, noteId]);
 
@@ -251,6 +262,7 @@ export function NoteEditor({
           )}
 
           <textarea
+            ref={bodyRef}
             value={body}
             onChange={(e) => setBody(e.target.value)}
             onBlur={() => void saveBody()}
