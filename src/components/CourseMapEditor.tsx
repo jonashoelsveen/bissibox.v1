@@ -24,6 +24,8 @@ interface Props {
   selectedSplitId?: string | null;
   onSelectSplit?: (id: string | null) => void;
   hoverPosition?: LatLng | null;
+  /** When the path is empty, smoothly pan the map to this coordinate (does not display anything). */
+  panToTarget?: LatLng | null;
 }
 
 type Tool = "pan" | "draw" | "split" | "fuel" | "marker" | "start" | "finish";
