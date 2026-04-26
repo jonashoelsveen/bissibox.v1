@@ -25,10 +25,8 @@ export const PIN_COLOR = "#dc2626";
 
 type Tool = "pan" | "pin";
 
-// (PIN_COLOR exported above)
- * centered search bar, top-right Save / Delete, and a right sidebar describing
- * the location (with optional description for Event type).
- */
+// Single-pin map for Meeting / Event types and Race location mode.
+
 export function SimplePinMap({
   pin,
   description,
