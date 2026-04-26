@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Search, Library, Plus, Tent, Settings, LogIn, Users, Briefcase, Armchair } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
+import { NewEventDialog } from "@/components/organizer/NewEventDialog";
 
 export function TopChrome() {
   const router = useRouterState();
