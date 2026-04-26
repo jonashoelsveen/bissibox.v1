@@ -25,11 +25,7 @@ export const PIN_COLOR = "#dc2626";
 
 type Tool = "pan" | "pin";
 
-const PIN_COLOR = "#dc2626";
-
-/**
- * Simple single-pin map for Meeting / Event types.
- * UI mirrors CourseMapEditor: floating top-left toolbar (Pan / Pin / Undo / Redo),
+// (PIN_COLOR exported above)
  * centered search bar, top-right Save / Delete, and a right sidebar describing
  * the location (with optional description for Event type).
  */
