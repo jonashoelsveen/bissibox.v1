@@ -373,6 +373,18 @@ export function CourseMapEditor({
     };
   }, [L]);
 
+  // Smoothly pan to an external target (e.g. event Location pin) when the path is empty.
+  // Does not place a marker — purely a viewport hint so the user starts drawing in the right area.
+  useEffect(() => {
+    if (!mapRef.current || !panToTarget) return;
+    if (path.length > 0) return;
+    try {
+      mapRef.current.flyTo(panToTarget as any, 14, { duration: 0.9 });
+    } catch {
+      // ignore
+    }
+  }, [panToTarget, path.length]);
+
   // Cursor
   useEffect(() => {
     if (!containerRef.current) return;
