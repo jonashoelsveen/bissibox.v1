@@ -72,21 +72,35 @@ function LibraryPage() {
   const [openNoteTabs, setOpenNoteTabs] = useState<OpenNoteTab[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
-  const [dragNoteId, setDragNoteId] = useState<string | null>(null);
-  const [dragOverNoteId, setDragOverNoteId] = useState<string | null>(null);
 
-  const reorderNoteTabs = (fromId: string, toId: string) => {
-    if (fromId === toId) return;
-    setOpenNoteTabs((prev) => {
-      const fromIdx = prev.findIndex((t) => t.id === fromId);
-      const toIdx = prev.findIndex((t) => t.id === toId);
-      if (fromIdx < 0 || toIdx < 0) return prev;
-      const next = prev.slice();
-      const [moved] = next.splice(fromIdx, 1);
-      next.splice(toIdx, 0, moved);
-      return next;
+  // Chrome-like tab DnD (pointer-based, X-axis only)
+  const tabStripRef = useRef<HTMLDivElement | null>(null);
+  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const [dragNoteId, setDragNoteId] = useState<string | null>(null);
+  const [dragDx, setDragDx] = useState(0);
+  const dragStateRef = useRef<{
+    id: string;
+    startX: number;
+    startIndex: number;
+    currentIndex: number;
+    width: number;
+    offsets: number[]; // left offset of each tab within strip
+    moved: boolean;
+  } | null>(null);
+  const [edgeFade, setEdgeFade] = useState({ left: false, right: false });
+
+  const updateEdgeFade = useCallback(() => {
+    const el = tabStripRef.current;
+    if (!el) return;
+    setEdgeFade({
+      left: el.scrollLeft > 2,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 2,
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    updateEdgeFade();
+  }, [openNoteTabs, updateEdgeFade]);
 
   const setTab = (next: LibraryTab) => {
     setActiveNoteId(null);
