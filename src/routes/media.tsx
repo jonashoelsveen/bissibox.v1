@@ -72,6 +72,21 @@ function LibraryPage() {
   const [openNoteTabs, setOpenNoteTabs] = useState<OpenNoteTab[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
+  const [dragNoteId, setDragNoteId] = useState<string | null>(null);
+  const [dragOverNoteId, setDragOverNoteId] = useState<string | null>(null);
+
+  const reorderNoteTabs = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    setOpenNoteTabs((prev) => {
+      const fromIdx = prev.findIndex((t) => t.id === fromId);
+      const toIdx = prev.findIndex((t) => t.id === toId);
+      if (fromIdx < 0 || toIdx < 0) return prev;
+      const next = prev.slice();
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      return next;
+    });
+  };
 
   const setTab = (next: LibraryTab) => {
     setActiveNoteId(null);
@@ -141,44 +156,6 @@ function LibraryPage() {
           >
             Notes
           </LibraryTabBtn>
-          {openNoteTabs.map((t) => {
-            const isActive = activeNoteId === t.id;
-            const isNew = t.kind === "new";
-            const colorActive = isNew
-              ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
-              : "border-muted-foreground text-ink";
-            const colorIdle = isNew
-              ? "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
-              : "border-transparent text-muted-foreground hover:text-ink";
-            const dotColor = isNew ? "bg-emerald-500" : "bg-muted-foreground/60";
-            return (
-              <button
-                key={t.id}
-                onClick={() => setActiveNoteId(t.id)}
-                style={{ flex: "1 1 0", minWidth: 0, maxWidth: 240 }}
-                className={`group -mb-px inline-flex min-w-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm transition ${
-                  isActive ? colorActive : colorIdle
-                }`}
-                title={t.title}
-              >
-                <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
-                <span className="min-w-0 flex-1 truncate text-left">
-                  {t.folder ? `${t.folder} · ${t.title}` : t.title}
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeNoteTab(t.id);
-                  }}
-                  className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
-                >
-                  ✕
-                </span>
-              </button>
-            );
-          })}
           <LibraryTabBtn
             active={!showingNote && baseTab === "files"}
             onClick={() => setTab("files")}
@@ -193,6 +170,74 @@ function LibraryPage() {
           >
             Media
           </LibraryTabBtn>
+          {openNoteTabs.map((t) => {
+            const isActive = activeNoteId === t.id;
+            const isNew = t.kind === "new";
+            const colorActive = isNew
+              ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
+              : "border-muted-foreground text-ink";
+            const colorIdle = isNew
+              ? "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
+              : "border-transparent text-muted-foreground hover:text-ink";
+            const dotColor = isNew ? "bg-emerald-500" : "bg-muted-foreground/60";
+            const isDragging = dragNoteId === t.id;
+            const isDragOver = dragOverNoteId === t.id && dragNoteId !== t.id;
+            return (
+              <button
+                key={t.id}
+                draggable
+                onDragStart={(e) => {
+                  setDragNoteId(t.id);
+                  e.dataTransfer.effectAllowed = "move";
+                  try { e.dataTransfer.setData("text/plain", t.id); } catch {}
+                }}
+                onDragOver={(e) => {
+                  if (!dragNoteId) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (dragOverNoteId !== t.id) setDragOverNoteId(t.id);
+                }}
+                onDragLeave={() => {
+                  if (dragOverNoteId === t.id) setDragOverNoteId(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragNoteId) reorderNoteTabs(dragNoteId, t.id);
+                  setDragNoteId(null);
+                  setDragOverNoteId(null);
+                }}
+                onDragEnd={() => {
+                  setDragNoteId(null);
+                  setDragOverNoteId(null);
+                }}
+                onClick={() => setActiveNoteId(t.id)}
+                style={{ flex: "1 1 0", minWidth: 0, maxWidth: 240 }}
+                className={`group -mb-px inline-flex min-w-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm transition-[color,border-color,opacity,transform] duration-150 ease-out ${
+                  isActive ? colorActive : colorIdle
+                } ${isDragging ? "opacity-50" : ""} ${isDragOver ? "bg-muted/40" : ""}`}
+                title={t.title}
+              >
+                <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
+                <span className="min-w-0 flex-1 truncate text-left">
+                  {t.folder ? `${t.folder} · ${t.title}` : t.title}
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeNoteTab(t.id);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  draggable={false}
+                  onDragStart={(e) => e.preventDefault()}
+                  className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                >
+                  ✕
+                </span>
+              </button>
+            );
+          })}
         </nav>
         <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5" />
       </div>
