@@ -38,6 +38,7 @@ export function SimplePinMap({
   showDescription = true,
   showName = false,
   kindLabel = "location",
+  hideSidebar = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
