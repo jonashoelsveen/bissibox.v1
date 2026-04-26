@@ -98,6 +98,17 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
     }
   }, [eventType, tab]);
 
+  // Race map: when the active subevent has no course drawn yet but a location pin exists,
+  // default to showing the Location view. The user can still click "Races" or a subevent
+  // to switch to drawing mode.
+  useEffect(() => {
+    if (eventType !== "race" || tab !== "map") return;
+    const path = subevents[activeMapSub]?.course_path ?? [];
+    if (pin && path.length === 0) {
+      setRaceMapMode((m) => (m === "race" ? "location" : m));
+    }
+  }, [eventType, tab, pin, activeMapSub, subevents]);
+
   useEffect(() => {
     if (!authLoading && !user) nav({ to: "/auth" });
   }, [authLoading, user, nav]);
