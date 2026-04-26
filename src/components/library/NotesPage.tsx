@@ -167,7 +167,10 @@ export function NotesPage({
     void load();
   };
 
-  const openNote = (id: string) => navigate({ to: "/notes/$noteId", params: { noteId: id } });
+  const openNote = (id: string, kind: "new" | "earlier" = "earlier") => {
+    if (onOpenNote) onOpenNote(id, kind);
+    else navigate({ to: "/notes/$noteId", params: { noteId: id } });
+  };
 
   if (authLoading || !user) return null;
 
