@@ -2392,3 +2392,79 @@ function ConfirmDialog({
   );
 }
 
+// Mac-Dock style fish-eye magnification strip for the Lightbox bottom flow.
+function DockStrip({
+  items,
+  urls,
+  activeIdx,
+  onSelect,
+}: {
+  items: MediaItem[];
+  urls: Record<string, string>;
+  activeIdx: number;
+  onSelect: (i: number) => void;
+}) {
+  const mouseX = useMotionValue<number>(Number.POSITIVE_INFINITY);
+  return (
+    <motion.div
+      onMouseMove={(e) => mouseX.set(e.clientX)}
+      onMouseLeave={() => mouseX.set(Number.POSITIVE_INFINITY)}
+      className="mt-4 flex h-24 items-end justify-center gap-2 px-6 pb-2"
+    >
+      {items.map((it, i) => (
+        <DockItem
+          key={it.id}
+          mouseX={mouseX}
+          active={i === activeIdx}
+          onClick={() => onSelect(i)}
+        >
+          {it.media_type === "photo" && urls[it.id] ? (
+            <img src={urls[it.id]} alt="" className="h-full w-full object-cover" />
+          ) : it.media_type === "video" && urls[it.id] ? (
+            <video src={urls[it.id]} muted className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full bg-secondary" />
+          )}
+        </DockItem>
+      ))}
+    </motion.div>
+  );
+}
+
+function DockItem({
+  mouseX,
+  active,
+  onClick,
+  children,
+}: {
+  mouseX: MotionValue<number>;
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const baseSize = 56;
+  const maxSize = 104;
+
+  const distance = useTransform(mouseX, (val) => {
+    const rect = ref.current?.getBoundingClientRect() ?? { x: 0, width: baseSize };
+    return val - rect.x - rect.width / 2;
+  });
+
+  const sizeRaw = useTransform(distance, [-140, 0, 140], [baseSize, maxSize, baseSize]);
+  const size = useSpring(sizeRaw, { mass: 0.1, stiffness: 220, damping: 16 });
+
+  return (
+    <motion.button
+      ref={ref}
+      onClick={onClick}
+      style={{ width: size, height: size }}
+      className={`relative shrink-0 overflow-hidden rounded-lg bg-secondary transition-[box-shadow,outline] ${
+        active ? "outline outline-2 outline-primary" : "opacity-80 hover:opacity-100"
+      }`}
+    >
+      {children}
+    </motion.button>
+  );
+}
+
