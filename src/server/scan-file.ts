@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Database } from "@/integrations/supabase/types";
 
 type ScanStatus = "pending" | "safe" | "infected" | "error";
 type ScanKind = "file" | "media";
@@ -16,6 +17,39 @@ interface VtAnalysisStats {
 }
 
 const VT_BASE = "https://www.virustotal.com/api/v3";
+
+async function getAuthenticatedContext(accessToken: string) {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+
+  if (!supabaseUrl || !publishableKey) {
+    throw new Error("Server auth is not configured");
+  }
+  if (!accessToken) {
+    throw new Error("Unauthorized");
+  }
+
+  const supabase = createClient<Database>(supabaseUrl, publishableKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+    auth: {
+      storage: undefined,
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  const { data, error } = await supabase.auth.getClaims(accessToken);
+  const userId = data?.claims?.sub;
+  if (error || !userId) {
+    throw new Error("Unauthorized");
+  }
+
+  return { supabase, userId };
+}
 
 function tableFor(kind: ScanKind) {
   return kind === "file" ? "files" : "media_items";
@@ -52,21 +86,23 @@ async function uploadToVirusTotal(
  * Designed to finish within ~3-5s (single upload, no polling).
  */
 export const scanFile = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: { kind: ScanKind; id: string }) => {
+  .inputValidator((input: { kind: ScanKind; id: string; accessToken: string }) => {
     if (!input?.id || typeof input.id !== "string") {
       throw new Error("id is required");
+    }
+    if (!input?.accessToken || typeof input.accessToken !== "string") {
+      throw new Error("accessToken is required");
     }
     if (input.kind !== "file" && input.kind !== "media") {
       throw new Error("kind must be 'file' or 'media'");
     }
     return input;
   })
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
     const apiKey = process.env.VIRUSTOTAL_API_KEY;
     if (!apiKey) throw new Error("VIRUSTOTAL_API_KEY is not configured");
 
-    const { userId } = context;
+    const { supabase, userId } = await getAuthenticatedContext(data.accessToken);
     const isFile = data.kind === "file";
     const table = tableFor(data.kind);
     const bucket = bucketFor(data.kind);
@@ -75,7 +111,7 @@ export const scanFile = createServerFn({ method: "POST" })
       ? "id, user_id, storage_path, file_name"
       : "id, user_id, storage_path";
 
-    const { data: row, error: rowErr } = await context.supabase
+    const { data: row, error: rowErr } = await supabase
       .from(table)
       .select(selectCols)
       .eq("id", data.id)
@@ -138,24 +174,26 @@ export const scanFile = createServerFn({ method: "POST" })
  * Called by the client on a short interval until the row reaches a terminal state.
  */
 export const pollScan = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: { kind: ScanKind; id: string }) => {
+  .inputValidator((input: { kind: ScanKind; id: string; accessToken: string }) => {
     if (!input?.id || typeof input.id !== "string") {
       throw new Error("id is required");
+    }
+    if (!input?.accessToken || typeof input.accessToken !== "string") {
+      throw new Error("accessToken is required");
     }
     if (input.kind !== "file" && input.kind !== "media") {
       throw new Error("kind must be 'file' or 'media'");
     }
     return input;
   })
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
     const apiKey = process.env.VIRUSTOTAL_API_KEY;
     if (!apiKey) throw new Error("VIRUSTOTAL_API_KEY is not configured");
 
-    const { userId } = context;
+    const { supabase, userId } = await getAuthenticatedContext(data.accessToken);
     const table = tableFor(data.kind);
 
-    const { data: row, error: rowErr } = await context.supabase
+    const { data: row, error: rowErr } = await supabase
       .from(table)
       .select("id, user_id, scan_status, scan_details")
       .eq("id", data.id)
