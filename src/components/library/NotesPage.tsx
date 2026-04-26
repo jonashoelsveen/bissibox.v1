@@ -18,6 +18,7 @@ import {
   PinOff,
   StickyNote,
   FileText as NoteIcon,
+  PenLine,
 } from "lucide-react";
 
 interface NoteFolder {
