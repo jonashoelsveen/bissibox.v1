@@ -1348,23 +1348,7 @@ function MeetingDialog({
             className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
           />
         </label>
-        <div className="mt-4">
-          <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            Folder
-          </span>
-          <select
-            value={folder}
-            onChange={(e) => onFolder(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
-          >
-            <option value="">None</option>
-            {folders.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </select>
-        </div>
+        <FolderSelect folder={folder} folders={folders} onFolder={onFolder} />
         <div className="mt-6 flex justify-end gap-2">
           <button
             onClick={onClose}
