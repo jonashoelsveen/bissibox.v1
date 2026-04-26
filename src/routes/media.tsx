@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from "framer-motion";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -1028,7 +1029,25 @@ function MediaPage({ actionsMount }: { actionsMount?: HTMLDivElement | null } = 
                         />
                       )
                     ) : (
-                      <video src={urls[it.id]} className="h-full w-full object-cover" muted />
+                      <video
+                        src={urls[it.id]}
+                        className="h-full w-full object-cover"
+                        muted
+                        playsInline
+                        preload="metadata"
+                        onMouseEnter={(e) => {
+                          const v = e.currentTarget;
+                          try {
+                            v.currentTime = 0;
+                            void v.play();
+                          } catch {}
+                        }}
+                        onMouseLeave={(e) => {
+                          const v = e.currentTarget;
+                          v.pause();
+                          v.currentTime = 0;
+                        }}
+                      />
                     )}
                     {selectMode && (
                       <div className="absolute left-2 top-2 rounded-full bg-background/80 p-0.5">
@@ -1682,29 +1701,30 @@ function Lightbox({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-1 flex-col items-center justify-center p-8">
-          <div className="flex flex-1 items-center justify-center">
+          <div className="flex w-full flex-1 items-center justify-center px-[6%] py-[3%]">
             {current?.media_type === "photo" ? (
-              url && <img src={url} alt="" className="max-h-full max-w-full object-contain" />
+              url && (
+                <img
+                  src={url}
+                  alt=""
+                  className="max-h-[88%] max-w-[88%] object-contain"
+                />
+              )
             ) : (
-              <video src={url} controls className="max-h-full max-w-full" />
+              <video
+                src={url}
+                controls
+                className="max-h-[88%] max-w-[88%]"
+              />
             )}
           </div>
           {isMulti && (
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
-              {items.map((it, i) => (
-                <button
-                  key={it.id}
-                  onClick={() => setIdx(i)}
-                  className={`h-12 w-12 overflow-hidden rounded ${
-                    i === idx ? "ring-2 ring-primary" : "opacity-60 hover:opacity-100"
-                  }`}
-                >
-                  {it.media_type === "photo" && urls[it.id] && (
-                    <img src={urls[it.id]} alt="" className="h-full w-full object-cover" />
-                  )}
-                </button>
-              ))}
-            </div>
+            <DockStrip
+              items={items}
+              urls={urls}
+              activeIdx={idx}
+              onSelect={setIdx}
+            />
           )}
         </div>
         <aside className="flex w-96 flex-col border-l border-hairline bg-background">
@@ -2369,6 +2389,82 @@ function ConfirmDialog({
         </div>
       </div>
     </div>
+  );
+}
+
+// Mac-Dock style fish-eye magnification strip for the Lightbox bottom flow.
+function DockStrip({
+  items,
+  urls,
+  activeIdx,
+  onSelect,
+}: {
+  items: MediaItem[];
+  urls: Record<string, string>;
+  activeIdx: number;
+  onSelect: (i: number) => void;
+}) {
+  const mouseX = useMotionValue<number>(Number.POSITIVE_INFINITY);
+  return (
+    <motion.div
+      onMouseMove={(e) => mouseX.set(e.clientX)}
+      onMouseLeave={() => mouseX.set(Number.POSITIVE_INFINITY)}
+      className="mt-4 flex h-24 items-end justify-center gap-2 px-6 pb-2"
+    >
+      {items.map((it, i) => (
+        <DockItem
+          key={it.id}
+          mouseX={mouseX}
+          active={i === activeIdx}
+          onClick={() => onSelect(i)}
+        >
+          {it.media_type === "photo" && urls[it.id] ? (
+            <img src={urls[it.id]} alt="" className="h-full w-full object-cover" />
+          ) : it.media_type === "video" && urls[it.id] ? (
+            <video src={urls[it.id]} muted className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full bg-secondary" />
+          )}
+        </DockItem>
+      ))}
+    </motion.div>
+  );
+}
+
+function DockItem({
+  mouseX,
+  active,
+  onClick,
+  children,
+}: {
+  mouseX: MotionValue<number>;
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const baseSize = 56;
+  const maxSize = 104;
+
+  const distance = useTransform(mouseX, (val) => {
+    const rect = ref.current?.getBoundingClientRect() ?? { x: 0, width: baseSize };
+    return val - rect.x - rect.width / 2;
+  });
+
+  const sizeRaw = useTransform(distance, [-140, 0, 140], [baseSize, maxSize, baseSize]);
+  const size = useSpring(sizeRaw, { mass: 0.1, stiffness: 220, damping: 16 });
+
+  return (
+    <motion.button
+      ref={ref}
+      onClick={onClick}
+      style={{ width: size, height: size }}
+      className={`relative shrink-0 overflow-hidden rounded-lg bg-secondary transition-[box-shadow,outline] ${
+        active ? "outline outline-2 outline-primary" : "opacity-80 hover:opacity-100"
+      }`}
+    >
+      {children}
+    </motion.button>
   );
 }
 
