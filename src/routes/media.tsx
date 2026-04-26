@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -84,9 +84,11 @@ function LibraryPage() {
     startIndex: number;
     currentIndex: number;
     width: number;
-    offsets: number[]; // left offset of each tab within strip
+    offsets: number[];
     moved: boolean;
   } | null>(null);
+  // FLIP settle: animate ONLY the dropped tab into its new DOM home.
+  const flipRef = useRef<{ id: string; fromLeft: number } | null>(null);
   const [edgeFade, setEdgeFade] = useState({ left: false, right: false });
 
   const updateEdgeFade = useCallback(() => {
@@ -101,6 +103,28 @@ function LibraryPage() {
   useEffect(() => {
     updateEdgeFade();
   }, [openNoteTabs, updateEdgeFade]);
+
+  useLayoutEffect(() => {
+    const flip = flipRef.current;
+    if (!flip) return;
+    flipRef.current = null;
+    const el = tabRefs.current.get(flip.id);
+    if (!el) return;
+    const newLeft = el.getBoundingClientRect().left;
+    const delta = flip.fromLeft - newLeft;
+    if (Math.abs(delta) < 0.5) return;
+    el.style.transition = "none";
+    el.style.transform = `translate3d(${delta}px,0,0)`;
+    void el.offsetWidth;
+    el.style.transition = "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)";
+    el.style.transform = "translate3d(0,0,0)";
+    const cleanup = () => {
+      el.style.transition = "";
+      el.style.transform = "";
+      el.removeEventListener("transitionend", cleanup);
+    };
+    el.addEventListener("transitionend", cleanup);
+  });
 
   const setTab = (next: LibraryTab) => {
     setActiveNoteId(null);
@@ -215,9 +239,14 @@ function LibraryPage() {
       window.removeEventListener("pointercancel", onUp);
       const st = dragStateRef.current;
       dragStateRef.current = null;
-      setDragNoteId(null);
-      setDragDx(0);
-      if (st && st.moved && st.currentIndex !== st.startIndex) {
+      const willReorder = !!(st && st.moved && st.currentIndex !== st.startIndex);
+      if (willReorder && st) {
+        // Capture the dragged tab's CURRENT visual left (with drag transform)
+        // so we can FLIP-animate it to its new DOM home after reorder.
+        const el = tabRefs.current.get(st.id);
+        if (el) {
+          flipRef.current = { id: st.id, fromLeft: el.getBoundingClientRect().left };
+        }
         setOpenNoteTabs((prev) => {
           const next = prev.slice();
           const [moved] = next.splice(st.startIndex, 1);
@@ -225,6 +254,8 @@ function LibraryPage() {
           return next;
         });
       }
+      setDragNoteId(null);
+      setDragDx(0);
     };
 
     window.addEventListener("pointermove", onMove);
@@ -322,11 +353,13 @@ function LibraryPage() {
                         ...dragStyle,
                         transition: isDragging
                           ? "none"
-                          : "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms, opacity 150ms",
+                          : dragNoteId
+                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
+                            : "color 150ms, border-color 150ms",
                       }}
                       className={`group -mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
                         isActive ? colorActive : colorIdle
-                      } ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+                      }`}
                       title={t.title}
                     >
                       <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
