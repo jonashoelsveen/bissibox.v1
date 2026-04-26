@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -37,7 +38,13 @@ interface NoteRow {
   created_at: string;
 }
 
-export function NotesPage() {
+export function NotesPage({
+  actionsMount,
+  onOpenNote,
+}: {
+  actionsMount?: HTMLDivElement | null;
+  onOpenNote?: (id: string, kind: "new" | "earlier") => void;
+}) {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const search = useSearch({ from: "/media" }) as { tab?: string; new?: string };
