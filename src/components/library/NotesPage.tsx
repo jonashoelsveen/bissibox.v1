@@ -886,3 +886,84 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
     </div>
   );
 }
+
+function SearchResults({
+  query, folders, notes, onOpenFolder, onOpenNote,
+}: {
+  query: string;
+  folders: NoteFolder[];
+  notes: Array<NoteRow & { _score: number }>;
+  onOpenFolder: (name: string) => void;
+  onOpenNote: (id: string) => void;
+}) {
+  const noResults = folders.length === 0 && notes.length === 0;
+
+  if (noResults) {
+    return (
+      <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-20 text-center">
+        <p className="text-sm text-ink">No results found</p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Try different keywords or check your spelling.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-in fade-in duration-200">
+      {folders.length > 0 && (
+        <div>
+          <h3 className="mono mb-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+            Matching folders ({folders.length})
+          </h3>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {folders.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => onOpenFolder(f.name)}
+                className="group flex items-center gap-2 rounded-xl border border-hairline bg-card px-3 py-2.5 text-left transition hover:border-ink/20 hover:bg-secondary/50"
+              >
+                <FolderIcon className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-ink" />
+                <span className="truncate text-xs text-ink">{f.name}</span>
+                {f.pinned && <Pin className="ml-auto h-2.5 w-2.5 shrink-0 fill-current text-ink/60" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {folders.length > 0 && notes.length > 0 && (
+        <div className="my-6 border-t border-hairline" />
+      )}
+
+      {notes.length > 0 && (
+        <div>
+          <h3 className="mono mb-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+            Matching notes ({notes.length})
+          </h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {notes.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => onOpenNote(n.id)}
+                className="group flex flex-col gap-2 rounded-xl border border-hairline bg-card p-4 text-left transition hover:border-ink/20"
+              >
+                <div className="flex items-start gap-2">
+                  <NoteIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <p className="flex-1 truncate text-sm text-ink">{n.title}</p>
+                </div>
+                <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                  <HighlightedSnippet body={n.body} query={query} />
+                </p>
+                <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span className="truncate">{n.folder ?? "Unsorted"}</span>
+                  <span className="mono">{new Date(n.updated_at).toLocaleDateString()}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
