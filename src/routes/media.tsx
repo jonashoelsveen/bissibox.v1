@@ -1028,7 +1028,25 @@ function MediaPage({ actionsMount }: { actionsMount?: HTMLDivElement | null } = 
                         />
                       )
                     ) : (
-                      <video src={urls[it.id]} className="h-full w-full object-cover" muted />
+                      <video
+                        src={urls[it.id]}
+                        className="h-full w-full object-cover"
+                        muted
+                        playsInline
+                        preload="metadata"
+                        onMouseEnter={(e) => {
+                          const v = e.currentTarget;
+                          try {
+                            v.currentTime = 0;
+                            void v.play();
+                          } catch {}
+                        }}
+                        onMouseLeave={(e) => {
+                          const v = e.currentTarget;
+                          v.pause();
+                          v.currentTime = 0;
+                        }}
+                      />
                     )}
                     {selectMode && (
                       <div className="absolute left-2 top-2 rounded-full bg-background/80 p-0.5">
