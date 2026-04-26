@@ -174,43 +174,47 @@ export function NotesPage({
 
   if (authLoading || !user) return null;
 
+  const actions = (
+    <>
+      {selectMode ? (
+        <div className="flex items-center gap-2 rounded-full border border-hairline bg-card p-1 pr-2">
+          <button
+            onClick={handleDelete}
+            disabled={selected.size === 0}
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-40"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Delete ({selected.size})
+          </button>
+          <button onClick={exitSelect} className="ml-1 rounded-full p-1.5 text-muted-foreground hover:bg-secondary">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setSelectMode(true)}
+          className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+        >
+          <CheckSquare className="h-3.5 w-3.5" /> Select
+        </button>
+      )}
+      <button
+        onClick={() => setCreateFolderOpen(true)}
+        className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
+      >
+        <Plus className="h-3.5 w-3.5" /> New folder
+      </button>
+      <button
+        onClick={() => setNewNoteOpen(true)}
+        className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
+      >
+        <Plus className="h-3.5 w-3.5" /> New note
+      </button>
+    </>
+  );
+
   return (
     <div>
-      <div className="flex justify-end gap-2 pt-4 pr-14">
-        {selectMode ? (
-          <div className="flex items-center gap-2 rounded-full border border-hairline bg-card p-1 pr-2">
-            <button
-              onClick={handleDelete}
-              disabled={selected.size === 0}
-              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-40"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> Delete ({selected.size})
-            </button>
-            <button onClick={exitSelect} className="ml-1 rounded-full p-1.5 text-muted-foreground hover:bg-secondary">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setSelectMode(true)}
-            className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
-          >
-            <CheckSquare className="h-3.5 w-3.5" /> Select
-          </button>
-        )}
-        <button
-          onClick={() => setCreateFolderOpen(true)}
-          className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
-        >
-          <Plus className="h-3.5 w-3.5" /> New folder
-        </button>
-        <button
-          onClick={() => setNewNoteOpen(true)}
-          className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
-        >
-          <Plus className="h-3.5 w-3.5" /> New note
-        </button>
-      </div>
+      {actionsMount && createPortal(actions, actionsMount)}
 
       <div className="mt-8 grid gap-8 md:grid-cols-[200px_1fr]">
         <nav className="-ml-2 flex flex-col gap-0.5">
