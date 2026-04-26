@@ -383,8 +383,23 @@ export function NotesPage({
                         {isSel ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}
                       </div>
                     )}
-                    <div className="flex flex-1 items-center justify-center">
-                      <StickyNote className="h-12 w-12 text-muted-foreground/60" strokeWidth={1.25} />
+                    <div className="flex flex-1 items-center justify-center overflow-hidden rounded-lg bg-secondary/40">
+                      {n.cover_image_url ? (
+                        <img
+                          src={n.cover_image_url}
+                          alt=""
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : n.cover_status === "pending" || n.cover_status === "generating" ? (
+                        <div className="flex h-full w-full animate-pulse items-center justify-center bg-gradient-to-br from-secondary/30 to-secondary/60">
+                          <StickyNote className="h-10 w-10 text-muted-foreground/40" strokeWidth={1.25} />
+                        </div>
+                      ) : n.cover_status === "failed" ? (
+                        <PenLine className="h-12 w-12 text-muted-foreground/60" strokeWidth={1.25} />
+                      ) : (
+                        <StickyNote className="h-12 w-12 text-muted-foreground/60" strokeWidth={1.25} />
+                      )}
                     </div>
                     <div className="mt-2 min-w-0">
                       <p className="truncate text-xs text-ink" title={n.title}>{n.title}</p>
