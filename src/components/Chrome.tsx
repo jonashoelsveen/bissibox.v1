@@ -173,6 +173,8 @@ export function TopChrome() {
           </NavBtn>
         </div>
       </div>
+      {newNoteOpen && <NewNoteOverlay onClose={() => setNewNoteOpen(false)} />}
+      {newEventOpen && <NewEventDialog onClose={() => setNewEventOpen(false)} />}
     </aside>
   );
 }
