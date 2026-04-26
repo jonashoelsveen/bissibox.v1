@@ -394,7 +394,6 @@ export function SimplePinMap({
                 onChangeDescription={(v) =>
                   trackedChange({ pin: pinRef.current, description: v, name: nameRef.current })
                 }
-                onRemove={clearPin}
               />
             )}
           </div>
@@ -412,7 +411,6 @@ export function PinCard({
   showDescription,
   onChangeName,
   onChangeDescription,
-  onRemove,
 }: {
   pin: { lat: number; lng: number };
   name: string;
@@ -421,7 +419,6 @@ export function PinCard({
   showDescription: boolean;
   onChangeName: (v: string) => void;
   onChangeDescription: (v: string) => void;
-  onRemove: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const placeholder = `${noun} pin`;
@@ -455,13 +452,6 @@ export function PinCard({
           aria-label={expanded ? "Collapse" : "Expand"}
         >
           <ChevronDown className={`h-4 w-4 transition ${expanded ? "rotate-0" : "-rotate-90"}`} />
-        </button>
-        <button
-          onClick={onRemove}
-          className="rounded p-1 text-muted-foreground hover:text-destructive"
-          title="Remove pin"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
 
