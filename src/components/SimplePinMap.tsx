@@ -404,7 +404,7 @@ export function SimplePinMap({
   );
 }
 
-function PinCard({
+export function PinCard({
   pin,
   name,
   description,
@@ -440,12 +440,9 @@ function PinCard({
             type="text"
             value={name}
             onChange={(e) => onChangeName(e.target.value)}
-            onClick={(e) => {
-              e.stopPropagation();
-              setExpanded(true);
-            }}
+            onClick={(e) => e.stopPropagation()}
             placeholder={placeholder}
-            className="w-full truncate bg-transparent text-sm font-medium text-ink outline-none placeholder:text-muted-foreground"
+            className="block max-w-[180px] truncate bg-transparent text-sm font-medium text-ink outline-none placeholder:text-muted-foreground"
           />
           <p className="mono mt-0.5 text-[10px] text-muted-foreground">
             {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
