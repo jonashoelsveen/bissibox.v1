@@ -1700,29 +1700,30 @@ function Lightbox({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-1 flex-col items-center justify-center p-8">
-          <div className="flex flex-1 items-center justify-center">
+          <div className="flex w-full flex-1 items-center justify-center px-[6%] py-[3%]">
             {current?.media_type === "photo" ? (
-              url && <img src={url} alt="" className="max-h-full max-w-full object-contain" />
+              url && (
+                <img
+                  src={url}
+                  alt=""
+                  className="max-h-[88%] max-w-[88%] object-contain"
+                />
+              )
             ) : (
-              <video src={url} controls className="max-h-full max-w-full" />
+              <video
+                src={url}
+                controls
+                className="max-h-[88%] max-w-[88%]"
+              />
             )}
           </div>
           {isMulti && (
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
-              {items.map((it, i) => (
-                <button
-                  key={it.id}
-                  onClick={() => setIdx(i)}
-                  className={`h-12 w-12 overflow-hidden rounded ${
-                    i === idx ? "ring-2 ring-primary" : "opacity-60 hover:opacity-100"
-                  }`}
-                >
-                  {it.media_type === "photo" && urls[it.id] && (
-                    <img src={urls[it.id]} alt="" className="h-full w-full object-cover" />
-                  )}
-                </button>
-              ))}
-            </div>
+            <DockStrip
+              items={items}
+              urls={urls}
+              activeIdx={idx}
+              onSelect={setIdx}
+            />
           )}
         </div>
         <aside className="flex w-96 flex-col border-l border-hairline bg-background">
