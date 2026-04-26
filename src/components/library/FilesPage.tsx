@@ -56,9 +56,10 @@ function formatBytes(n: number | null) {
 }
 
 export function FilesPage({ actionsMount }: { actionsMount?: HTMLDivElement | null } = {}) {
-  const { user, mode, activeEntityId, loading: authLoading } = useAuth();
+  const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
+  const accessToken = session?.access_token ?? null;
   const runScan = useServerFn(scanFile);
   const runPoll = useServerFn(pollScan);
 
@@ -183,13 +184,14 @@ export function FilesPage({ actionsMount }: { actionsMount?: HTMLDivElement | nu
 
   // Poll VirusTotal for any pending items, then refresh the list
   useEffect(() => {
+    if (!accessToken) return;
     const pending = files.filter((f) => f.scan_status === "pending");
     if (pending.length === 0) return;
     let cancelled = false;
     const tick = async () => {
       const results = await Promise.all(
         pending.map((f) =>
-          runPoll({ data: { kind: "file", id: f.id } }).catch(() => null),
+          runPoll({ data: { kind: "file", id: f.id, accessToken } }).catch(() => null),
         ),
       );
       if (cancelled) return;
@@ -205,7 +207,7 @@ export function FilesPage({ actionsMount }: { actionsMount?: HTMLDivElement | nu
       cancelled = true;
       clearInterval(t);
     };
-  }, [files, load, runPoll]);
+  }, [accessToken, files, load, runPoll]);
 
   const filtered = useMemo(() => {
     if (view.type === "all") return files;
@@ -567,8 +569,9 @@ export function FilesPage({ actionsMount }: { actionsMount?: HTMLDivElement | nu
             setImportOpen(false);
             void load();
             // Trigger verification in background; status pill will reflect outcome
+            if (!accessToken) return;
             insertedIds.forEach((id) => {
-              runScan({ data: { kind: "file", id } }).catch(() => {
+              runScan({ data: { kind: "file", id, accessToken } }).catch(() => {
                 /* error reflected via scan_status="error" pill */
               });
             });
