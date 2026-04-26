@@ -10,7 +10,7 @@ import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/Cour
 import { ElevationProfile } from "@/components/ElevationProfile";
 import { ParticipantsPanel } from "@/components/ParticipantsPanel";
 import { MeetingParticipantsPanel } from "@/components/MeetingParticipantsPanel";
-import { SimplePinMap } from "@/components/SimplePinMap";
+import { SimplePinMap, PinCard } from "@/components/SimplePinMap";
 import { CoOrganizersManager } from "@/components/CoOrganizersManager";
 import { EventMediaTab } from "@/components/EventMediaTab";
 
