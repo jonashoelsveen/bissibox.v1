@@ -450,7 +450,10 @@ export function NotesPage({
               <NavBtn small active={view.type === "folder" && view.name === null} onClick={() => setView({ type: "folder", name: null })}>
                 Unsorted
               </NavBtn>
-              {folders.map((a) => {
+              {(isSearching
+                ? folders.filter((f) => searchResults.folders.some((sf) => sf.id === f.id))
+                : folders
+              ).map((a) => {
                 const active = view.type === "folder" && view.name === a.name;
                 const isDragging = folderDragId === a.id;
                 return (
@@ -901,7 +904,7 @@ function SearchResults({
   if (noResults) {
     return (
       <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-20 text-center">
-        <p className="text-sm text-ink">No results found</p>
+        <p className="text-sm text-ink">No results found for "{query}"</p>
         <p className="mt-2 text-xs text-muted-foreground">
           Try different keywords or check your spelling.
         </p>
