@@ -546,7 +546,21 @@ export function NotesPage({
         </nav>
 
         <section>
-          {filtered.length === 0 ? (
+          {isSearching ? (
+            <SearchResults
+              query={searchQuery}
+              folders={searchResults.folders}
+              notes={searchResults.notes}
+              onOpenFolder={(name) => {
+                closeSearch();
+                setView({ type: "folder", name });
+              }}
+              onOpenNote={(id) => {
+                closeSearch();
+                openNote(id);
+              }}
+            />
+          ) : filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-20 text-center text-sm text-muted-foreground">
               No notes yet. Create your first note.
             </div>
