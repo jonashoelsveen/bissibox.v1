@@ -357,7 +357,7 @@ function LibraryPage() {
                       }}
                       className={`group -mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
                         isActive ? colorActive : colorIdle
-                      } ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+                      }`}
                       title={t.title}
                     >
                       <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
