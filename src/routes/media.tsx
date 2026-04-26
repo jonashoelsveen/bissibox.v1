@@ -39,7 +39,10 @@ import {
   FolderClosed,
   Image as ImageIcon,
   StickyNote,
+  Play,
+  Pause,
 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 
 type LibraryTab = "notes" | "files" | "media";
 
