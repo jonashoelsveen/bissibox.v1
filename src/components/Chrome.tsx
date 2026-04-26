@@ -147,14 +147,13 @@ export function TopChrome() {
               </NavBtn>
             )}
             {isIndividual && user && (
-              <Link
-                to="/media"
-                search={{ tab: "notes", new: "1" }}
+              <button
+                onClick={() => setNewNoteOpen(true)}
                 aria-label="New note"
                 className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-secondary hover:text-ink"
               >
                 <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
-              </Link>
+              </button>
             )}
           </>
         )}
