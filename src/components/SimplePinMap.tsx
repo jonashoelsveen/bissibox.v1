@@ -394,7 +394,6 @@ export function SimplePinMap({
                 onChangeDescription={(v) =>
                   trackedChange({ pin: pinRef.current, description: v, name: nameRef.current })
                 }
-                onRemove={clearPin}
               />
             )}
           </div>
