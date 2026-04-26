@@ -28,6 +28,9 @@ interface EventRow {
   currency: string;
   race_types: string[];
   world_athletics_certified: boolean;
+  pin_lat: number | null;
+  pin_lng: number | null;
+  pin_description: string | null;
 }
 
 interface SubeventRow {
