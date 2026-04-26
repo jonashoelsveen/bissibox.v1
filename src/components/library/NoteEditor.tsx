@@ -262,6 +262,7 @@ export function NoteEditor({
           )}
 
           <textarea
+            ref={bodyRef}
             value={body}
             onChange={(e) => setBody(e.target.value)}
             onBlur={() => void saveBody()}
