@@ -732,63 +732,110 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         <div className="mt-5 flex flex-1 overflow-hidden rounded-lg border border-hairline bg-card">
           {/* Left: map + elevation profile stacked */}
           <div className="flex min-w-0 flex-1 flex-col">
-            <div className="relative min-h-[480px] flex-1">
-              {subevents.length === 0 ? (
-                <div className="flex h-full min-h-[480px] items-center justify-center p-10 text-center text-sm text-muted-foreground">
-                  Add a race in the Subevents tab to draw its course map.
+            {raceMapMode === "location" ? (
+              <SimplePinMap
+                pin={pin}
+                description={pinDescription}
+                name={location}
+                onChange={({ pin: p, description: d, name: n }) => {
+                  setPin(p);
+                  setPinDescription(d);
+                  setLocation(n);
+                }}
+                onSave={save}
+                saving={busy}
+                kindLabel="Race"
+                title="Race location"
+                showDescription
+              />
+            ) : (
+              <>
+                <div className="relative min-h-[480px] flex-1">
+                  {subevents.length === 0 ? (
+                    <div className="flex h-full min-h-[480px] items-center justify-center p-10 text-center text-sm text-muted-foreground">
+                      Add a race in the Subevents tab to draw its course map.
+                    </div>
+                  ) : (
+                    <CourseMapEditor
+                      key={activeMapSub}
+                      title={subevents[activeMapSub]?.name || `Race ${activeMapSub + 1}`}
+                      path={subevents[activeMapSub]?.course_path ?? []}
+                      splits={subevents[activeMapSub]?.split_points ?? []}
+                      selectedSplitId={selectedSplitId}
+                      hoverPosition={hoverPos}
+                      onSelectSplit={(id) => {
+                        setSelectedSplitId(id);
+                        if (id != null)
+                          setExpandedSubMap((m) => ({ ...m, [activeMapSub]: true }));
+                      }}
+                      onChange={({ path, splits }) =>
+                        setSubevents((arr) =>
+                          arr.map((x, i) =>
+                            i === activeMapSub ? { ...x, course_path: path, split_points: splits } : x
+                          )
+                        )
+                      }
+                      onSave={save}
+                      saving={busy}
+                      onDelete={() =>
+                        setSubevents((arr) =>
+                          arr.map((x, i) =>
+                            i === activeMapSub ? { ...x, course_path: [], split_points: [] } : x
+                          )
+                        )
+                      }
+                    />
+                  )}
                 </div>
-              ) : (
-                <CourseMapEditor
-                  key={activeMapSub}
-                  title={subevents[activeMapSub]?.name || `Race ${activeMapSub + 1}`}
-                  path={subevents[activeMapSub]?.course_path ?? []}
-                  splits={subevents[activeMapSub]?.split_points ?? []}
-                  selectedSplitId={selectedSplitId}
-                  hoverPosition={hoverPos}
-                  onSelectSplit={(id) => {
-                    setSelectedSplitId(id);
-                    if (id != null)
-                      setExpandedSubMap((m) => ({ ...m, [activeMapSub]: true }));
-                  }}
-                  onChange={({ path, splits }) =>
-                    setSubevents((arr) =>
-                      arr.map((x, i) =>
-                        i === activeMapSub ? { ...x, course_path: path, split_points: splits } : x
-                      )
-                    )
-                  }
-                  onSave={save}
-                  saving={busy}
-                  onDelete={() =>
-                    setSubevents((arr) =>
-                      arr.map((x, i) =>
-                        i === activeMapSub ? { ...x, course_path: [], split_points: [] } : x
-                      )
-                    )
-                  }
-                />
-              )}
-            </div>
-            {subevents.length > 0 && (
-              <div className="border-t border-hairline p-3">
-                <ElevationProfile
-                  path={subevents[activeMapSub]?.course_path ?? []}
-                  splits={subevents[activeMapSub]?.split_points ?? []}
-                  selectedSplitId={selectedSplitId}
-                  onSelectSplit={(id) => {
-                    setSelectedSplitId(id);
-                    if (id != null)
-                      setExpandedSubMap((m) => ({ ...m, [activeMapSub]: true }));
-                  }}
-                  onHover={setHoverPos}
-                />
-              </div>
+                {subevents.length > 0 && (
+                  <div className="border-t border-hairline p-3">
+                    <ElevationProfile
+                      path={subevents[activeMapSub]?.course_path ?? []}
+                      splits={subevents[activeMapSub]?.split_points ?? []}
+                      selectedSplitId={selectedSplitId}
+                      onSelectSplit={(id) => {
+                        setSelectedSplitId(id);
+                        if (id != null)
+                          setExpandedSubMap((m) => ({ ...m, [activeMapSub]: true }));
+                      }}
+                      onHover={setHoverPos}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </div>
 
-          {/* Right sidebar — subevent headers with collapsible points */}
+          {/* Right sidebar — Location + subevent headers */}
           <aside className="w-96 shrink-0 overflow-y-auto border-l border-hairline bg-background px-3 py-3">
-            <div className="border-b border-hairline px-1 pb-3">
+            {/* Location box (black accent) */}
+            <button
+              type="button"
+              onClick={() => setRaceMapMode("location")}
+              className={`mb-3 flex w-full items-start gap-2 overflow-hidden rounded-md border px-3 py-3 text-left transition ${
+                raceMapMode === "location"
+                  ? "border-ink bg-ink/5"
+                  : "border-hairline bg-card hover:border-ink/40"
+              }`}
+            >
+              <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink text-background">
+                <MapPin className="h-3 w-3" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Location</p>
+                <p className="mt-0.5 truncate text-sm font-medium text-ink">
+                  {location?.trim() || "Race location"}
+                </p>
+                <p className="mono mt-0.5 text-[10px] text-muted-foreground">
+                  {pin ? `${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}` : "No pin set"}
+                </p>
+              </div>
+            </button>
+
+            <div
+              className="border-b border-hairline px-1 pb-3 cursor-pointer"
+              onClick={() => setRaceMapMode("race")}
+            >
               <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Races</p>
               <p className="mt-0.5 text-sm text-ink">Select a race to draw</p>
             </div>
