@@ -2401,11 +2401,20 @@ function formatVideoTime(s: number) {
 
 function VideoPlayer({ src }: { src?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [ready, setReady] = useState(false);
+  const [stripWidth, setStripWidth] = useState(0);
   const wasPlayingRef = useRef(false);
   const scrubbingRef = useRef(false);
+
+  useEffect(() => {
+    setReady(false);
+    setCurrent(0);
+    setDuration(0);
+  }, [src]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -2413,7 +2422,13 @@ function VideoPlayer({ src }: { src?: string }) {
     const onTime = () => {
       if (!scrubbingRef.current) setCurrent(v.currentTime);
     };
-    const onMeta = () => setDuration(v.duration || 0);
+    const onMeta = () => {
+      const d = v.duration;
+      if (isFinite(d) && d > 0) {
+        setDuration(d);
+        setReady(true);
+      }
+    };
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
     v.addEventListener("timeupdate", onTime);
@@ -2421,6 +2436,7 @@ function VideoPlayer({ src }: { src?: string }) {
     v.addEventListener("durationchange", onMeta);
     v.addEventListener("play", onPlay);
     v.addEventListener("pause", onPause);
+    if (v.readyState >= 1) onMeta();
     return () => {
       v.removeEventListener("timeupdate", onTime);
       v.removeEventListener("loadedmetadata", onMeta);
@@ -2430,45 +2446,70 @@ function VideoPlayer({ src }: { src?: string }) {
     };
   }, [src]);
 
+  // Track strip width responsively
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const e of entries) setStripWidth(e.contentRect.width);
+    });
+    ro.observe(el);
+    setStripWidth(el.clientWidth);
+    return () => ro.disconnect();
+  }, [ready]);
+
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.paused) v.play();
+    if (v.paused) v.play().catch(() => {});
     else v.pause();
   };
 
-  const handleScrubStart = () => {
+  const seekFromClientX = (clientX: number) => {
+    const el = stripRef.current;
+    const v = videoRef.current;
+    if (!el || !v || !ready || !duration) return;
+    const rect = el.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const t = ratio * duration;
+    setCurrent(t);
+    try {
+      v.currentTime = t;
+    } catch {}
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!ready) return;
     const v = videoRef.current;
     if (!v) return;
     scrubbingRef.current = true;
     wasPlayingRef.current = !v.paused;
     if (!v.paused) v.pause();
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    seekFromClientX(e.clientX);
   };
 
-  const handleScrubChange = (vals: number[]) => {
-    const v = videoRef.current;
-    if (!v) return;
-    const t = vals[0] ?? 0;
-    setCurrent(t);
-    // Real-time frame updates
-    try {
-      v.currentTime = t;
-    } catch {}
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!scrubbingRef.current) return;
+    seekFromClientX(e.clientX);
   };
 
-  const handleScrubCommit = (vals: number[]) => {
-    const v = videoRef.current;
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!scrubbingRef.current) return;
     scrubbingRef.current = false;
-    if (!v) return;
-    const t = vals[0] ?? 0;
     try {
-      v.currentTime = t;
+      (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
     } catch {}
-    if (wasPlayingRef.current) v.play();
+    const v = videoRef.current;
+    if (v && wasPlayingRef.current) v.play().catch(() => {});
   };
+
+  // Tick generation: ~6px per tick, capped for perf
+  const tickCount = Math.max(40, Math.min(240, Math.floor(stripWidth / 6) || 80));
+  const progress = ready && duration > 0 ? Math.min(1, current / duration) : 0;
 
   return (
-    <div className="flex max-h-[88%] max-w-[88%] flex-col gap-3">
+    <div className="flex max-h-[88%] w-full max-w-[88%] flex-col gap-4">
       <div
         className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg bg-black"
         onClick={togglePlay}
@@ -2478,32 +2519,62 @@ function VideoPlayer({ src }: { src?: string }) {
           src={src}
           className="max-h-full max-w-full"
           playsInline
+          preload="metadata"
         />
       </div>
-      <div className="rounded-xl bg-zinc-900/90 px-4 py-3 text-zinc-100 ring-1 ring-zinc-800">
-        <div className="flex items-center gap-3">
+      <div className="w-full">
+        {/* Centered minimalist play/pause */}
+        <div className="mb-2 flex items-center justify-center">
           <button
             onClick={togglePlay}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-900 transition hover:bg-white"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-100 transition hover:text-white"
             aria-label={playing ? "Pause" : "Play"}
           >
-            {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 translate-x-[1px]" />}
+            {playing ? (
+              <Pause className="h-5 w-5" />
+            ) : (
+              <Play className="h-5 w-5 translate-x-[1px]" />
+            )}
           </button>
-          <div className="group flex-1">
-            <Slider
-              value={[Math.min(current, duration || 0)]}
-              min={0}
-              max={duration || 0.0001}
-              step={0.01}
-              onPointerDown={handleScrubStart}
-              onValueChange={handleScrubChange}
-              onValueCommit={handleScrubCommit}
-              className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:border-zinc-300 [&_[role=slider]]:bg-white [&_[data-orientation=horizontal]]:h-1.5 [&_[data-orientation=horizontal]]:bg-zinc-700 group-hover:[&_[data-orientation=horizontal]]:bg-zinc-600 [&_.bg-primary]:bg-zinc-100"
+        </div>
+
+        {/* Film-strip scrubber */}
+        <div
+          ref={stripRef}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          className="relative h-12 w-full touch-none select-none"
+          role="slider"
+          aria-valuemin={0}
+          aria-valuemax={duration || 0}
+          aria-valuenow={current}
+        >
+          {/* Ticks */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-between">
+            {Array.from({ length: tickCount }).map((_, i) => {
+              const isMajor = i % 5 === 0;
+              return (
+                <span
+                  key={i}
+                  className={`block w-px ${isMajor ? "h-7 bg-zinc-500/70" : "h-4 bg-zinc-600/50"}`}
+                />
+              );
+            })}
+          </div>
+
+          {/* Current position needle */}
+          {ready && (
+            <div
+              className="pointer-events-none absolute top-0 bottom-0 w-px bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+              style={{ left: `${progress * 100}%` }}
             />
-          </div>
-          <div className="shrink-0 font-mono text-xs tabular-nums text-zinc-300">
-            {formatVideoTime(current)} / {formatVideoTime(duration)}
-          </div>
+          )}
+        </div>
+
+        <div className="mt-2 flex justify-center font-mono text-[11px] tabular-nums text-zinc-400">
+          {formatVideoTime(current)} / {formatVideoTime(ready ? duration : 0)}
         </div>
       </div>
     </div>
