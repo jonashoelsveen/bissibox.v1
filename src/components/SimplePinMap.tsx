@@ -456,13 +456,6 @@ export function PinCard({
         >
           <ChevronDown className={`h-4 w-4 transition ${expanded ? "rotate-0" : "-rotate-90"}`} />
         </button>
-        <button
-          onClick={onRemove}
-          className="rounded p-1 text-muted-foreground hover:text-destructive"
-          title="Remove pin"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
       </div>
 
       {expanded && showDescription && (
