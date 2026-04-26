@@ -239,9 +239,14 @@ function LibraryPage() {
       window.removeEventListener("pointercancel", onUp);
       const st = dragStateRef.current;
       dragStateRef.current = null;
-      setDragNoteId(null);
-      setDragDx(0);
-      if (st && st.moved && st.currentIndex !== st.startIndex) {
+      const willReorder = !!(st && st.moved && st.currentIndex !== st.startIndex);
+      if (willReorder && st) {
+        // Capture the dragged tab's CURRENT visual left (with drag transform)
+        // so we can FLIP-animate it to its new DOM home after reorder.
+        const el = tabRefs.current.get(st.id);
+        if (el) {
+          flipRef.current = { id: st.id, fromLeft: el.getBoundingClientRect().left };
+        }
         setOpenNoteTabs((prev) => {
           const next = prev.slice();
           const [moved] = next.splice(st.startIndex, 1);
@@ -249,6 +254,8 @@ function LibraryPage() {
           return next;
         });
       }
+      setDragNoteId(null);
+      setDragDx(0);
     };
 
     window.addEventListener("pointermove", onMove);
