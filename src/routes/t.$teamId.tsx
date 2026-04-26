@@ -172,21 +172,15 @@ function TeamPage() {
         );
       }
 
-      // Events organized by team owner — fetch by owner_id from teams
-      const { data: teamRow } = await supabase
-        .from("teams")
-        .select("owner_id")
-        .eq("id", teamId)
-        .maybeSingle();
-      if (teamRow?.owner_id) {
-        const { data: ev } = await supabase
-          .from("events")
-          .select("id, title, starts_at, location")
-          .eq("owner_id", teamRow.owner_id)
-          .eq("published", true)
-          .order("starts_at", { ascending: true });
-        setEvents((ev ?? []) as EventRow[]);
-      }
+      // Events for this specific team — fetch by team_id so each team only
+      // shows events created under its own organizer workspace.
+      const { data: ev } = await supabase
+        .from("events")
+        .select("id, title, starts_at, location")
+        .eq("team_id", teamId)
+        .eq("published", true)
+        .order("starts_at", { ascending: true });
+      setEvents((ev ?? []) as EventRow[]);
 
       const { count } = await supabase
         .from("team_follows")
