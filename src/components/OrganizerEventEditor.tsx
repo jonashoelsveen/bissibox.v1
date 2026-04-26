@@ -51,6 +51,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
   const [timingCompanyId, setTimingCompanyId] = useState<string | null>(null);
   const [timingCompanies, setTimingCompanies] = useState<{ id: string; name: string }[]>([]);
   const [activeMapSub, setActiveMapSub] = useState<number>(0);
+  const [raceMapMode, setRaceMapMode] = useState<"location" | "race">("race");
   const [expandedSubMap, setExpandedSubMap] = useState<Record<number, boolean>>({ 0: true });
   const [selectedSplitId, setSelectedSplitId] = useState<string | null>(null);
   const [hoverPos, setHoverPos] = useState<LatLng | null>(null);
