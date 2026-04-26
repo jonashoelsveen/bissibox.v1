@@ -1386,12 +1386,6 @@ function FolderSelect({
     if (creating && inputRef.current) inputRef.current.focus();
   }, [creating]);
 
-  function commitNew() {
-    const name = draft.trim();
-    if (name) onFolder(name);
-    setDraft("");
-    setCreating(false);
-  }
 
   function commitAdd() {
     const name = draft.trim();
