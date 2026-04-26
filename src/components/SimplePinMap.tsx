@@ -365,39 +365,41 @@ export function SimplePinMap({
       </div>
 
       {/* Right sidebar — mirrors CourseMapEditor sidebar */}
-      <aside className="w-96 shrink-0 overflow-y-auto border-l border-hairline bg-background px-3 py-3">
-        <div className="border-b border-hairline px-1 pb-3">
-          <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Location</p>
-          <p className="mt-0.5 text-sm text-ink">{sidebarTitle}</p>
-        </div>
+      {!hideSidebar && (
+        <aside className="w-96 shrink-0 overflow-y-auto border-l border-hairline bg-background px-3 py-3">
+          <div className="border-b border-hairline px-1 pb-3">
+            <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Location</p>
+            <p className="mt-0.5 text-sm text-ink">{sidebarTitle}</p>
+          </div>
 
-        <div className="flex flex-col gap-3 pt-3">
-          {!pin ? (
-            <div className="rounded-md border border-dashed border-hairline bg-card/50 px-3 py-6 text-center">
-              <MapPin className="mx-auto mb-2 h-5 w-5 text-muted-foreground" />
-              <p className="text-sm text-ink">Select location for this {noun}.</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Pick the <span className="text-ink">Pin</span> tool, then click anywhere on the map.
-              </p>
-            </div>
-          ) : (
-            <PinCard
-              pin={pin}
-              name={name}
-              description={description}
-              noun={noun}
-              showDescription={showDescription}
-              onChangeName={(v) =>
-                trackedChange({ pin: pinRef.current, description: descRef.current, name: v })
-              }
-              onChangeDescription={(v) =>
-                trackedChange({ pin: pinRef.current, description: v, name: nameRef.current })
-              }
-              onRemove={clearPin}
-            />
-          )}
-        </div>
-      </aside>
+          <div className="flex flex-col gap-3 pt-3">
+            {!pin ? (
+              <div className="rounded-md border border-dashed border-hairline bg-card/50 px-3 py-6 text-center">
+                <MapPin className="mx-auto mb-2 h-5 w-5 text-muted-foreground" />
+                <p className="text-sm text-ink">Select location for this {noun}.</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Pick the <span className="text-ink">Pin</span> tool, then click anywhere on the map.
+                </p>
+              </div>
+            ) : (
+              <PinCard
+                pin={pin}
+                name={name}
+                description={description}
+                noun={noun}
+                showDescription={showDescription}
+                onChangeName={(v) =>
+                  trackedChange({ pin: pinRef.current, description: descRef.current, name: v })
+                }
+                onChangeDescription={(v) =>
+                  trackedChange({ pin: pinRef.current, description: v, name: nameRef.current })
+                }
+                onRemove={clearPin}
+              />
+            )}
+          </div>
+        </aside>
+      )}
     </div>
   );
 }
