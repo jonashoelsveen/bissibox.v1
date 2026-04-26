@@ -433,7 +433,8 @@ export function NotesPage({
             if (error) { toast.error(error.message); return; }
             setNewNoteOpen(false);
             toast.success("Note created");
-            navigate({ to: "/notes/$noteId", params: { noteId: data!.id } });
+            await load();
+            openNote(data!.id, "new");
           }}
           onCreateFolder={async (name) => {
             const { error } = await supabase
