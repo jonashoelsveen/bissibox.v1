@@ -2,3 +2,6 @@ project_id = "amakxzegfryagorwoxbx"
 
 [functions.ai-draw-course]
 verify_jwt = false
+
+[functions.note-cover-worker]
+verify_jwt = false
