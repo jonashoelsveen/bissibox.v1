@@ -1348,23 +1348,7 @@ function MeetingDialog({
             className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
           />
         </label>
-        <div className="mt-4">
-          <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            Folder
-          </span>
-          <select
-            value={folder}
-            onChange={(e) => onFolder(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
-          >
-            <option value="">None</option>
-            {folders.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </select>
-        </div>
+        <FolderSelect folder={folder} folders={folders} onFolder={onFolder} />
         <div className="mt-6 flex justify-end gap-2">
           <button
             onClick={onClose}
@@ -1381,6 +1365,136 @@ function MeetingDialog({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function FolderSelect({
+  folder,
+  folders,
+  onFolder,
+}: {
+  folder: string;
+  folders: string[];
+  onFolder: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [draft, setDraft] = useState("");
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (creating && inputRef.current) inputRef.current.focus();
+  }, [creating]);
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (!wrapRef.current) return;
+      if (!wrapRef.current.contains(e.target as Node)) {
+        if (creating) {
+          const name = draft.trim();
+          if (name && !folders.includes(name)) onFolder(name);
+          setDraft("");
+          setCreating(false);
+        }
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [open, creating, draft, folders, onFolder]);
+
+  function commitNew() {
+    const name = draft.trim();
+    if (!name) {
+      setCreating(false);
+      return;
+    }
+    if (!folders.includes(name)) {
+      onFolder(name);
+    } else {
+      onFolder(name);
+    }
+    setDraft("");
+    setCreating(false);
+    setOpen(false);
+  }
+
+  return (
+    <div className="mt-4" ref={wrapRef}>
+      <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        Folder
+      </span>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="mt-1 flex w-full items-center justify-between rounded-xl border border-hairline bg-background px-4 py-2.5 text-left text-sm text-ink outline-none focus:border-primary"
+      >
+        <span className={folder ? "" : "text-muted-foreground"}>
+          {folder || "None"}
+        </span>
+        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+      </button>
+      {open && (
+        <div className="relative">
+          <div className="absolute left-0 right-0 top-1 z-20 max-h-64 overflow-auto rounded-xl border border-hairline bg-card py-1 shadow-lg">
+            <button
+              type="button"
+              onClick={() => {
+                onFolder("");
+                setOpen(false);
+              }}
+              className="block w-full px-4 py-2 text-left text-sm text-ink hover:bg-secondary"
+            >
+              None
+            </button>
+            {folders.map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => {
+                  onFolder(f);
+                  setOpen(false);
+                }}
+                className="block w-full px-4 py-2 text-left text-sm text-ink hover:bg-secondary"
+              >
+                {f}
+              </button>
+            ))}
+            <div className="my-1 h-px bg-hairline" />
+            {creating ? (
+              <div className="flex items-center gap-2 px-3 py-1.5">
+                <Plus className="h-4 w-4 text-muted-foreground" />
+                <input
+                  ref={inputRef}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      commitNew();
+                    } else if (e.key === "Escape") {
+                      setDraft("");
+                      setCreating(false);
+                    }
+                  }}
+                  placeholder="Folder name"
+                  className="w-full rounded-md border border-hairline bg-background px-2 py-1 text-sm text-ink outline-none focus:border-primary"
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setCreating(true)}
+                className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-primary hover:bg-secondary"
+              >
+                <Plus className="h-4 w-4" /> New folder
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
