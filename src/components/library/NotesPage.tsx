@@ -36,6 +36,10 @@ interface NoteRow {
   body: string | null;
   updated_at: string;
   created_at: string;
+  cover_image_url?: string | null;
+  cover_status?: string | null;
+  word_count?: number | null;
+  attachments_count?: number | null;
 }
 
 export function NotesPage({
