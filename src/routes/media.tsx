@@ -84,9 +84,11 @@ function LibraryPage() {
     startIndex: number;
     currentIndex: number;
     width: number;
-    offsets: number[]; // left offset of each tab within strip
+    offsets: number[];
     moved: boolean;
   } | null>(null);
+  // FLIP settle: animate ONLY the dropped tab into its new DOM home.
+  const flipRef = useRef<{ id: string; fromLeft: number } | null>(null);
   const [edgeFade, setEdgeFade] = useState({ left: false, right: false });
 
   const updateEdgeFade = useCallback(() => {
@@ -101,6 +103,28 @@ function LibraryPage() {
   useEffect(() => {
     updateEdgeFade();
   }, [openNoteTabs, updateEdgeFade]);
+
+  useLayoutEffect(() => {
+    const flip = flipRef.current;
+    if (!flip) return;
+    flipRef.current = null;
+    const el = tabRefs.current.get(flip.id);
+    if (!el) return;
+    const newLeft = el.getBoundingClientRect().left;
+    const delta = flip.fromLeft - newLeft;
+    if (Math.abs(delta) < 0.5) return;
+    el.style.transition = "none";
+    el.style.transform = `translate3d(${delta}px,0,0)`;
+    void el.offsetWidth;
+    el.style.transition = "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)";
+    el.style.transform = "translate3d(0,0,0)";
+    const cleanup = () => {
+      el.style.transition = "";
+      el.style.transform = "";
+      el.removeEventListener("transitionend", cleanup);
+    };
+    el.addEventListener("transitionend", cleanup);
+  });
 
   const setTab = (next: LibraryTab) => {
     setActiveNoteId(null);
