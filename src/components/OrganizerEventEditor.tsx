@@ -774,6 +774,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                       splits={subevents[activeMapSub]?.split_points ?? []}
                       selectedSplitId={selectedSplitId}
                       hoverPosition={hoverPos}
+                      panToTarget={pin ? [pin.lat, pin.lng] : null}
                       onSelectSplit={(id) => {
                         setSelectedSplitId(id);
                         if (id != null)
