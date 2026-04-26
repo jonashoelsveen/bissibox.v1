@@ -724,7 +724,6 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
             kindLabel={eventType === "meeting" ? "Meeting" : "Event"}
             title={eventType === "meeting" ? "Meeting location" : "Event location"}
             showDescription
-            showName
           />
         </div>
       )}
