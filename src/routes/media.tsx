@@ -353,7 +353,9 @@ function LibraryPage() {
                         ...dragStyle,
                         transition: isDragging
                           ? "none"
-                          : "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms, opacity 150ms",
+                          : dragNoteId
+                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
+                            : "color 150ms, border-color 150ms",
                       }}
                       className={`group -mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
                         isActive ? colorActive : colorIdle
