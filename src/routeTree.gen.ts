@@ -22,6 +22,7 @@ import { Route as TeamBoardRouteImport } from './routes/team.board'
 import { Route as TTeamIdRouteImport } from './routes/t.$teamId'
 import { Route as OrganizerNewRouteImport } from './routes/organizer.new'
 import { Route as OrganizerLibraryRouteImport } from './routes/organizer.library'
+import { Route as NotesNoteIdRouteImport } from './routes/notes.$noteId'
 import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
 import { Route as CCompanyIdRouteImport } from './routes/c.$companyId'
 import { Route as OrganizerEventIdParticipantsRouteImport } from './routes/organizer.$eventId.participants'
@@ -92,6 +93,11 @@ const OrganizerLibraryRoute = OrganizerLibraryRouteImport.update({
   path: '/organizer/library',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotesNoteIdRoute = NotesNoteIdRouteImport.update({
+  id: '/notes/$noteId',
+  path: '/notes/$noteId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EventsEventIdRoute = EventsEventIdRouteImport.update({
   id: '/events/$eventId',
   path: '/events/$eventId',
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
   '/events/$eventId': typeof EventsEventIdRoute
+  '/notes/$noteId': typeof NotesNoteIdRoute
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
   '/t/$teamId': typeof TTeamIdRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
   '/events/$eventId': typeof EventsEventIdRoute
+  '/notes/$noteId': typeof NotesNoteIdRoute
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
   '/t/$teamId': typeof TTeamIdRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
   '/events/$eventId': typeof EventsEventIdRoute
+  '/notes/$noteId': typeof NotesNoteIdRoute
   '/organizer/library': typeof OrganizerLibraryRoute
   '/organizer/new': typeof OrganizerNewRoute
   '/t/$teamId': typeof TTeamIdRoute
@@ -184,6 +193,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/c/$companyId'
     | '/events/$eventId'
+    | '/notes/$noteId'
     | '/organizer/library'
     | '/organizer/new'
     | '/t/$teamId'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/c/$companyId'
     | '/events/$eventId'
+    | '/notes/$noteId'
     | '/organizer/library'
     | '/organizer/new'
     | '/t/$teamId'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/c/$companyId'
     | '/events/$eventId'
+    | '/notes/$noteId'
     | '/organizer/library'
     | '/organizer/new'
     | '/t/$teamId'
@@ -242,6 +254,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   CCompanyIdRoute: typeof CCompanyIdRoute
   EventsEventIdRoute: typeof EventsEventIdRoute
+  NotesNoteIdRoute: typeof NotesNoteIdRoute
   OrganizerLibraryRoute: typeof OrganizerLibraryRoute
   OrganizerNewRoute: typeof OrganizerNewRoute
   TTeamIdRoute: typeof TTeamIdRoute
@@ -345,6 +358,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrganizerLibraryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notes/$noteId': {
+      id: '/notes/$noteId'
+      path: '/notes/$noteId'
+      fullPath: '/notes/$noteId'
+      preLoaderRoute: typeof NotesNoteIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events/$eventId': {
       id: '/events/$eventId'
       path: '/events/$eventId'
@@ -386,6 +406,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   CCompanyIdRoute: CCompanyIdRoute,
   EventsEventIdRoute: EventsEventIdRoute,
+  NotesNoteIdRoute: NotesNoteIdRoute,
   OrganizerLibraryRoute: OrganizerLibraryRoute,
   OrganizerNewRoute: OrganizerNewRoute,
   TTeamIdRoute: TTeamIdRoute,
