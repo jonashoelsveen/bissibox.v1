@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { scanFile, pollScan } from "@/server/scan-file";
 import { FilesPage } from "@/components/library/FilesPage";
 import { NotesPage } from "@/components/library/NotesPage";
+import { NoteEditor } from "@/components/library/NoteEditor";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -40,56 +41,174 @@ import {
 
 type LibraryTab = "notes" | "files" | "media";
 
+export interface OpenNoteTab {
+  id: string;
+  title: string;
+  folder: string | null;
+  kind: "new" | "earlier";
+}
+
 export const Route = createFileRoute("/media")({
   component: LibraryPage,
-  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; new?: string } => ({
+  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; new?: string; open?: string } => ({
     tab:
       s.tab === "files" || s.tab === "media" || s.tab === "notes"
         ? (s.tab as LibraryTab)
         : undefined,
     new: typeof s.new === "string" ? (s.new as string) : undefined,
+    open: typeof s.open === "string" ? (s.open as string) : undefined,
   }),
   head: () => ({ meta: [{ title: "Library · Raceline" }] }),
 });
 
+const MAX_NOTE_TABS = 10;
+
 function LibraryPage() {
   const search = useSearch({ from: "/media" });
   const navigate = useNavigate();
-  const tab: LibraryTab = search.tab ?? "files";
+  const baseTab: LibraryTab = search.tab ?? "files";
+
+  const [openNoteTabs, setOpenNoteTabs] = useState<OpenNoteTab[]>([]);
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
 
   const setTab = (next: LibraryTab) => {
+    setActiveNoteId(null);
     navigate({ to: "/media", search: { tab: next }, replace: true });
   };
+
+  const openNote = useCallback(
+    async (id: string, kind: "new" | "earlier" = "earlier") => {
+      const existing = openNoteTabs.find((t) => t.id === id);
+      if (existing) {
+        setActiveNoteId(id);
+        return;
+      }
+      if (openNoteTabs.length >= MAX_NOTE_TABS) {
+        toast.error(`You can have at most ${MAX_NOTE_TABS} note tabs open at once.`);
+        return;
+      }
+      const { data } = await supabase
+        .from("notes").select("id,title,folder").eq("id", id).maybeSingle();
+      if (!data) { toast.error("Note not found"); return; }
+      setOpenNoteTabs((prev) => [
+        ...prev,
+        { id: data.id, title: data.title, folder: data.folder, kind },
+      ]);
+      setActiveNoteId(id);
+    },
+    [openNoteTabs],
+  );
+
+  const closeNoteTab = (id: string) => {
+    setOpenNoteTabs((prev) => prev.filter((t) => t.id !== id));
+    if (activeNoteId === id) setActiveNoteId(null);
+  };
+
+  const updateNoteTab = (patch: { id: string; title?: string; folder?: string | null }) => {
+    setOpenNoteTabs((prev) =>
+      prev.map((t) =>
+        t.id === patch.id
+          ? { ...t, title: patch.title ?? t.title, folder: patch.folder !== undefined ? patch.folder : t.folder }
+          : t,
+      ),
+    );
+  };
+
+  // Auto-open via ?open=<id> (from /notes/$noteId redirect)
+  useEffect(() => {
+    if (search.open) {
+      void openNote(search.open, "earlier");
+      navigate({ to: "/media", search: { tab: search.tab ?? "notes" }, replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.open]);
+
+  const showingNote = activeNoteId !== null;
 
   return (
     <div className="px-4 md:px-6">
       <div className="pt-6 md:pt-8">
         <h1 className="text-2xl tracking-tight text-ink md:text-3xl">Library</h1>
       </div>
-      <nav className="mt-6 flex border-b border-hairline">
-        <LibraryTabBtn
-          active={tab === "notes"}
-          onClick={() => setTab("notes")}
-          icon={<StickyNote className="h-3.5 w-3.5" />}
-        >
-          Notes
-        </LibraryTabBtn>
-        <LibraryTabBtn
-          active={tab === "files"}
-          onClick={() => setTab("files")}
-          icon={<FolderClosed className="h-3.5 w-3.5" />}
-        >
-          Files
-        </LibraryTabBtn>
-        <LibraryTabBtn
-          active={tab === "media"}
-          onClick={() => setTab("media")}
-          icon={<ImageIcon className="h-3.5 w-3.5" />}
-        >
-          Media
-        </LibraryTabBtn>
-      </nav>
-      {tab === "notes" ? <NotesPage /> : tab === "files" ? <FilesPage /> : <MediaPage />}
+      <div className="mt-6 flex items-end justify-between gap-4 border-b border-hairline">
+        <nav className="flex min-w-0 flex-1 overflow-hidden">
+          <LibraryTabBtn
+            active={!showingNote && baseTab === "notes"}
+            onClick={() => setTab("notes")}
+            icon={<StickyNote className="h-3.5 w-3.5" />}
+          >
+            Notes
+          </LibraryTabBtn>
+          {openNoteTabs.map((t) => {
+            const isActive = activeNoteId === t.id;
+            const isNew = t.kind === "new";
+            const colorActive = isNew
+              ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
+              : "border-muted-foreground text-ink";
+            const colorIdle = isNew
+              ? "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
+              : "border-transparent text-muted-foreground hover:text-ink";
+            const dotColor = isNew ? "bg-emerald-500" : "bg-muted-foreground/60";
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveNoteId(t.id)}
+                style={{ flex: "1 1 0", minWidth: 0, maxWidth: 240 }}
+                className={`group -mb-px inline-flex min-w-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm transition ${
+                  isActive ? colorActive : colorIdle
+                }`}
+                title={t.title}
+              >
+                <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
+                <span className="min-w-0 flex-1 truncate text-left">
+                  {t.folder ? `${t.folder} · ${t.title}` : t.title}
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeNoteTab(t.id);
+                  }}
+                  className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                >
+                  ✕
+                </span>
+              </button>
+            );
+          })}
+          <LibraryTabBtn
+            active={!showingNote && baseTab === "files"}
+            onClick={() => setTab("files")}
+            icon={<FolderClosed className="h-3.5 w-3.5" />}
+          >
+            Files
+          </LibraryTabBtn>
+          <LibraryTabBtn
+            active={!showingNote && baseTab === "media"}
+            onClick={() => setTab("media")}
+            icon={<ImageIcon className="h-3.5 w-3.5" />}
+          >
+            Media
+          </LibraryTabBtn>
+        </nav>
+        <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5" />
+      </div>
+      {showingNote && activeNoteId ? (
+        <NoteEditor
+          key={activeNoteId}
+          noteId={activeNoteId}
+          actionsMount={actionsMount}
+          onChanged={updateNoteTab}
+        />
+      ) : baseTab === "notes" ? (
+        <NotesPage actionsMount={actionsMount} onOpenNote={(id, kind) => void openNote(id, kind)} />
+      ) : baseTab === "files" ? (
+        <FilesPage actionsMount={actionsMount} />
+      ) : (
+        <MediaPage actionsMount={actionsMount} />
+      )}
     </div>
   );
 }
