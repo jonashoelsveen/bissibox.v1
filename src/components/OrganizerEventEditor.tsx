@@ -747,6 +747,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                 kindLabel="Race"
                 title="Race location"
                 showDescription
+                hideSidebar
               />
             ) : (
               <>
