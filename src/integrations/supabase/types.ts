@@ -778,6 +778,56 @@ export type Database = {
           },
         ]
       }
+      note_cover_jobs: {
+        Row: {
+          attempts: number
+          created_at: string
+          finished_at: string | null
+          id: string
+          last_error: string | null
+          note_id: string
+          started_at: string | null
+          status: string
+          team_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          last_error?: string | null
+          note_id: string
+          started_at?: string | null
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          last_error?: string | null
+          note_id?: string
+          started_at?: string | null
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_cover_jobs_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       note_folders: {
         Row: {
           created_at: string
@@ -813,7 +863,10 @@ export type Database = {
       }
       notes: {
         Row: {
+          attachments_count: number
           body: string | null
+          cover_image_url: string | null
+          cover_status: string
           created_at: string
           folder: string | null
           id: string
@@ -821,9 +874,13 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          word_count: number
         }
         Insert: {
+          attachments_count?: number
           body?: string | null
+          cover_image_url?: string | null
+          cover_status?: string
           created_at?: string
           folder?: string | null
           id?: string
@@ -831,9 +888,13 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id: string
+          word_count?: number
         }
         Update: {
+          attachments_count?: number
           body?: string | null
+          cover_image_url?: string | null
+          cover_status?: string
           created_at?: string
           folder?: string | null
           id?: string
@@ -841,6 +902,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          word_count?: number
         }
         Relationships: []
       }
@@ -1697,6 +1759,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calc_word_count: { Args: { _body: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

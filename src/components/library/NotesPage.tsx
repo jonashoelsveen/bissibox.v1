@@ -18,6 +18,7 @@ import {
   PinOff,
   StickyNote,
   FileText as NoteIcon,
+  PenLine,
 } from "lucide-react";
 
 interface NoteFolder {
@@ -36,6 +37,10 @@ interface NoteRow {
   body: string | null;
   updated_at: string;
   created_at: string;
+  cover_image_url?: string | null;
+  cover_status?: string | null;
+  word_count?: number | null;
+  attachments_count?: number | null;
 }
 
 export function NotesPage({
@@ -113,6 +118,38 @@ export function NotesPage({
   }, [user, isTeamMode, activeEntityId]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Realtime: update cover_image_url / cover_status as the worker finishes
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`notes-cover-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "notes" },
+        (payload) => {
+          const row = payload.new as NoteRow;
+          setNotes((prev) =>
+            prev.map((n) =>
+              n.id === row.id
+                ? {
+                    ...n,
+                    cover_image_url: row.cover_image_url ?? n.cover_image_url,
+                    cover_status: row.cover_status ?? n.cover_status,
+                    title: row.title ?? n.title,
+                    folder: row.folder ?? n.folder,
+                    updated_at: row.updated_at ?? n.updated_at,
+                  }
+                : n,
+            ),
+          );
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   // Auto-open the new-note dialog when ?new=1 is in URL (from + icon in left menu)
   useEffect(() => {
@@ -346,8 +383,23 @@ export function NotesPage({
                         {isSel ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}
                       </div>
                     )}
-                    <div className="flex flex-1 items-center justify-center">
-                      <StickyNote className="h-12 w-12 text-muted-foreground/60" strokeWidth={1.25} />
+                    <div className="flex flex-1 items-center justify-center overflow-hidden rounded-lg bg-secondary/40">
+                      {n.cover_image_url ? (
+                        <img
+                          src={n.cover_image_url}
+                          alt=""
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : n.cover_status === "pending" || n.cover_status === "generating" ? (
+                        <div className="flex h-full w-full animate-pulse items-center justify-center bg-gradient-to-br from-secondary/30 to-secondary/60">
+                          <StickyNote className="h-10 w-10 text-muted-foreground/40" strokeWidth={1.25} />
+                        </div>
+                      ) : n.cover_status === "failed" ? (
+                        <PenLine className="h-12 w-12 text-muted-foreground/60" strokeWidth={1.25} />
+                      ) : (
+                        <StickyNote className="h-12 w-12 text-muted-foreground/60" strokeWidth={1.25} />
+                      )}
                     </div>
                     <div className="mt-2 min-w-0">
                       <p className="truncate text-xs text-ink" title={n.title}>{n.title}</p>
