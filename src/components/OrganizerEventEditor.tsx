@@ -858,6 +858,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
                     >
                       <button
                         onClick={() => {
+                          if (raceMapMode !== "race") setRaceMapMode("race");
                           if (active) {
                             setExpandedSubMap((m) => ({ ...m, [i]: !m[i] }));
                           } else {
