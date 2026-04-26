@@ -119,13 +119,13 @@ export function TopChrome() {
             >
               <Tent className="h-[18px] w-[18px]" strokeWidth={2.25} />
             </NavBtn>
-            <NavBtn
-              to="/organizer/new"
-              label="Create event"
-              active={path.startsWith("/organizer/new")}
+            <button
+              onClick={() => setNewEventOpen(true)}
+              aria-label="Create event"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-secondary hover:text-ink"
             >
               <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
-            </NavBtn>
+            </button>
           </>
         ) : (
           <>
