@@ -1172,6 +1172,10 @@ function TeamBoardPage() {
           folders={folders}
           onName={setNewMeetingTitle}
           onFolder={setNewMeetingFolder}
+          onCreateFolder={(name) => {
+            setExtraFolders((prev) => (prev.includes(name) ? prev : [...prev, name]));
+            setNewMeetingFolder(name);
+          }}
           onClose={() => setNewMeetingOpen(false)}
           onConfirm={startNewMeeting}
           confirmLabel="Start meeting"
@@ -1186,6 +1190,10 @@ function TeamBoardPage() {
           folders={folders}
           onName={setEditMeetingTitle}
           onFolder={setEditMeetingFolder}
+          onCreateFolder={(name) => {
+            setExtraFolders((prev) => (prev.includes(name) ? prev : [...prev, name]));
+            setEditMeetingFolder(name);
+          }}
           onClose={() => setEditMeetingOpen(false)}
           onConfirm={saveEditMeeting}
           confirmLabel="Save"
@@ -1301,6 +1309,7 @@ function MeetingDialog({
   folders,
   onName,
   onFolder,
+  onCreateFolder,
   onClose,
   onConfirm,
   confirmLabel,
@@ -1311,6 +1320,7 @@ function MeetingDialog({
   folders: string[];
   onName: (v: string) => void;
   onFolder: (v: string) => void;
+  onCreateFolder: (v: string) => void;
   onClose: () => void;
   onConfirm: () => void;
   confirmLabel: string;
@@ -1348,7 +1358,7 @@ function MeetingDialog({
             className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
           />
         </label>
-        <FolderSelect folder={folder} folders={folders} onFolder={onFolder} />
+        <FolderSelect folder={folder} folders={folders} onFolder={onFolder} onCreateFolder={onCreateFolder} />
         <div className="mt-6 flex justify-end gap-2">
           <button
             onClick={onClose}
@@ -1373,10 +1383,12 @@ function FolderSelect({
   folder,
   folders,
   onFolder,
+  onCreateFolder,
 }: {
   folder: string;
   folders: string[];
   onFolder: (v: string) => void;
+  onCreateFolder: (v: string) => void;
 }) {
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState("");
@@ -1397,7 +1409,7 @@ function FolderSelect({
       toast.error("A folder with that name already exists");
       return;
     }
-    onFolder(name);
+    onCreateFolder(name);
     toast.success(`Folder "${name}" created`);
     setDraft("");
     setCreating(false);
