@@ -1068,9 +1068,11 @@ function TeamBoardPage() {
                           <div className="truncate text-sm text-ink">
                             {r.name || r.email || "—"}
                           </div>
-                          <div className="truncate text-xs text-muted-foreground">
-                            {r.role || "\u00A0"}
-                          </div>
+                          {r.role && (
+                            <div className="truncate text-xs text-muted-foreground">
+                              {r.role}
+                            </div>
+                          )}
                         </div>
                       </label>
                     );
