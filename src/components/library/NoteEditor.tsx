@@ -33,14 +33,14 @@ interface NoteAttachment {
 
 export function NoteEditor({
   noteId,
-  actionsMount,
+  actionsMount: _actionsMount,
   onChanged,
 }: {
   noteId: string;
-  actionsMount: HTMLDivElement | null;
+  actionsMount?: HTMLDivElement | null;
   onChanged?: (patch: { id: string; title?: string; folder?: string | null }) => void;
 }) {
-  const { user, mode, activeEntityId } = useAuth();
+  const { user, activeEntityId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
