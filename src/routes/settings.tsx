@@ -111,12 +111,12 @@ function SettingsPage() {
   const [tab, setTab] = useState<Tab>("general");
   const [createOpen, setCreateOpen] = useState(false);
 
+  // Active selection: null = individual profile, otherwise the entity id.
+  const isTeamMode = !!activeEntityId;
+
   const isDirty = isTeamMode
     ? !!team && JSON.stringify(team) !== teamBaseline
     : !!profile && JSON.stringify(profile) !== profileBaseline;
-
-  // Active selection: null = individual profile, otherwise the entity id.
-  const isTeamMode = !!activeEntityId;
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
