@@ -84,6 +84,33 @@ function LibraryPage() {
   const [openNoteTabs, setOpenNoteTabs] = useState<OpenNoteTab[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
+  const [newNoteOpen, setNewNoteOpen] = useState(false);
+  const [newMeetingTick, setNewMeetingTick] = useState(0);
+  const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
+
+  const handleCreateFromPrevious = (kind: PreviousNewKind) => {
+    if (kind === "meeting") {
+      setActiveNoteId(null);
+      navigate({ to: "/media", search: { tab: baseTab, view: "meetings" }, replace: true });
+      // bump after navigation so TeamBoardPage effect fires
+      setNewMeetingTick((t) => t + 1);
+      return;
+    }
+    if (kind === "note") {
+      setNewNoteOpen(true);
+      return;
+    }
+    if (kind === "files") {
+      setActiveNoteId(null);
+      navigate({ to: "/media", search: { tab: "files", new: "1" }, replace: true });
+      return;
+    }
+    if (kind === "media") {
+      setActiveNoteId(null);
+      navigate({ to: "/media", search: { tab: "media", new: "1" }, replace: true });
+      return;
+    }
+  };
 
   // Persist open library tabs per profile so they survive logout / page reloads.
   const profileScopeKey = `${mode}:${activeEntityId ?? "self"}`;
