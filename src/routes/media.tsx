@@ -354,14 +354,19 @@ function LibraryPage() {
       : undefined;
 
   const showingPrevious = search.view === "previous";
+  const showingMeetings = search.view === "meetings";
   const sideValue: LibrarySideNavValue = {
-    category: showingPrevious ? "previous" : baseTab,
-    folder: showingPrevious ? "" : (search.folder ?? ""),
+    category: showingPrevious ? "previous" : showingMeetings ? "meetings" : baseTab,
+    folder: showingPrevious || showingMeetings ? "" : (search.folder ?? ""),
   };
   const onSideChange = (v: LibrarySideNavValue) => {
     setActiveNoteId(null);
     if (v.category === "previous") {
       navigate({ to: "/media", search: { tab: baseTab, view: "previous" }, replace: true });
+      return;
+    }
+    if (v.category === "meetings") {
+      navigate({ to: "/media", search: { tab: baseTab, view: "meetings" }, replace: true });
       return;
     }
     navigate({
