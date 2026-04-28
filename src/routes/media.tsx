@@ -356,6 +356,11 @@ function LibraryPage() {
   };
   const onSideChange = (v: LibrarySideNavValue) => {
     setActiveNoteId(null);
+    if (v.category === "previous") {
+      // "Previous" entry: keep current tab, just clear folder + active note.
+      navigate({ to: "/media", search: { tab: baseTab }, replace: true });
+      return;
+    }
     navigate({
       to: "/media",
       search: { tab: v.category, folder: v.folder || undefined },

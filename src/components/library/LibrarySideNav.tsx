@@ -7,9 +7,10 @@ import {
   FolderClosed,
   Image as ImageIcon,
   Pin,
+  History,
 } from "lucide-react";
 
-export type LibraryCategory = "notes" | "files" | "media";
+export type LibraryCategory = "previous" | "notes" | "files" | "media";
 
 interface FolderLite {
   id: string;
@@ -37,7 +38,7 @@ export function LibrarySideNav({
   const [noteFolders, setNoteFolders] = useState<FolderLite[]>([]);
   const [fileFolders, setFileFolders] = useState<FolderLite[]>([]);
   const [mediaAlbums, setMediaAlbums] = useState<FolderLite[]>([]);
-  const [open, setOpen] = useState<Record<LibraryCategory, boolean>>({
+  const [open, setOpen] = useState<Record<Exclude<LibraryCategory, "previous">, boolean>>({
     notes: true,
     files: true,
     media: true,
@@ -114,7 +115,7 @@ export function LibrarySideNav({
   }, [load, user?.id]);
 
   const sections: {
-    key: LibraryCategory;
+    key: Exclude<LibraryCategory, "previous">;
     label: string;
     icon: React.ReactNode;
     folders: FolderLite[];
@@ -148,8 +149,21 @@ export function LibrarySideNav({
     },
   ];
 
+  const isPreviousActive = value.category === "previous";
+
   return (
     <nav className="flex flex-col gap-1">
+      <button
+        onClick={() => onChange({ category: "previous", folder: "" })}
+        className={`group flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition ${
+          isPreviousActive ? "bg-secondary font-medium text-ink" : "text-ink hover:bg-secondary/60"
+        }`}
+      >
+        <span className="grid h-5 w-5 shrink-0 place-items-center text-muted-foreground">
+          <History className="h-3.5 w-3.5" strokeWidth={2.25} />
+        </span>
+        <span className="ml-2 min-w-0 flex-1 truncate">Previous</span>
+      </button>
       {sections.map((s) => {
         const isCategoryActive = value.category === s.key;
         const isAllActive = isCategoryActive && value.folder === "";
