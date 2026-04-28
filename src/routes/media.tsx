@@ -45,6 +45,7 @@ import {
   Image as ImageIcon,
   StickyNote,
   Library,
+  Briefcase,
   Play,
   Pause,
 } from "lucide-react";
