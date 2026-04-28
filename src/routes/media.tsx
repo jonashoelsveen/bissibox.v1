@@ -2956,3 +2956,63 @@ function DockItem({
   );
 }
 
+
+function UnsavedChangesDialog({
+  title,
+  isNew,
+  onSave,
+  onDiscard,
+  onCancel,
+}: {
+  title: string;
+  isNew: boolean;
+  onSave: () => void | Promise<void>;
+  onDiscard: () => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const run = (fn: () => void | Promise<void>) => async () => {
+    setBusy(true);
+    try { await fn(); } finally { setBusy(false); }
+  };
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center p-4 animate-in fade-in"
+      onClick={onCancel}
+    >
+      <div className="absolute inset-0 bg-black/60" />
+      <div
+        className="relative z-10 w-full max-w-md rounded-2xl border border-hairline bg-card p-6 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-2 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-lg text-ink">Unsaved changes</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Do you want to save “{title}”?
+        </p>
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
+          <button
+            onClick={onCancel}
+            disabled={busy}
+            className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={run(onDiscard)}
+            disabled={busy}
+            className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-50"
+          >
+            {isNew ? "Delete" : "Reject changes"}
+          </button>
+          <button
+            onClick={run(onSave)}
+            disabled={busy}
+            className="rounded-full bg-primary px-5 py-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          >
+            {busy ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
