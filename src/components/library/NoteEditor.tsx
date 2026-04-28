@@ -40,7 +40,7 @@ export function NoteEditor({
   actionsMount: HTMLDivElement | null;
   onChanged?: (patch: { id: string; title?: string; folder?: string | null }) => void;
 }) {
-  const { user } = useAuth();
+  const { user, mode, activeEntityId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
@@ -55,6 +55,12 @@ export function NoteEditor({
   const [editFolder, setEditFolder] = useState("");
 
   const isDirty = body !== savedBody;
+  const scopeKey = activeEntityId
+    ? `entity:${activeEntityId}`
+    : user
+      ? `user:${user.id}`
+      : "user:anon";
+  const [autosave] = useLibrarySetting<boolean>(notesAutosaveKey(scopeKey), false);
 
   useEffect(() => {
     if (!user) return;
