@@ -588,6 +588,10 @@ function SettingsPage() {
                 </p>
               </Card>
             )}
+
+            {(tab === "appearance" || tab === "entity-appearance") && (
+              <AppearancePanel />
+            )}
           </div>
         </div>
       </div>
