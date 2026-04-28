@@ -55,7 +55,19 @@ function formatBytes(n: number | null) {
   return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
 
-export function FilesPage({ actionsMount }: { actionsMount?: HTMLDivElement | null } = {}) {
+export function FilesPage({
+  actionsMount,
+  hideSideNav,
+  externalView,
+  hideNewActions,
+  onOpenFile,
+}: {
+  actionsMount?: HTMLDivElement | null;
+  hideSideNav?: boolean;
+  externalView?: { type: "all" } | { type: "folder"; id: string | null };
+  hideNewActions?: boolean;
+  onOpenFile?: (id: string) => void;
+} = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
@@ -65,9 +77,11 @@ export function FilesPage({ actionsMount }: { actionsMount?: HTMLDivElement | nu
 
   const [folders, setFolders] = useState<Folder[]>([]);
   const [files, setFiles] = useState<FileRow[]>([]);
-  const [view, setView] = useState<{ type: "all" } | { type: "folder"; id: string | null }>({
+  const [internalView, setInternalView] = useState<{ type: "all" } | { type: "folder"; id: string | null }>({
     type: "all",
   });
+  const view = externalView ?? internalView;
+  const setView = setInternalView;
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -281,18 +295,22 @@ export function FilesPage({ actionsMount }: { actionsMount?: HTMLDivElement | nu
           <CheckSquare className="h-3.5 w-3.5" /> Select
         </button>
       )}
-      <button
-        onClick={() => setCreateOpen(true)}
-        className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
-      >
-        <Plus className="h-3.5 w-3.5" /> New folder
-      </button>
-      <button
-        onClick={() => setImportOpen(true)}
-        className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
-      >
-        <Upload className="h-3.5 w-3.5" /> Import
-      </button>
+      {!hideNewActions && (
+        <>
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" /> New folder
+          </button>
+          <button
+            onClick={() => setImportOpen(true)}
+            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
+          >
+            <Upload className="h-3.5 w-3.5" /> Import
+          </button>
+        </>
+      )}
     </>
   );
 
@@ -300,7 +318,8 @@ export function FilesPage({ actionsMount }: { actionsMount?: HTMLDivElement | nu
     <div>
       {actionsMount && createPortal(actions, actionsMount)}
 
-      <div className="mt-8 grid gap-8 md:grid-cols-[200px_1fr]">
+      <div className={`mt-4 grid gap-8 ${hideSideNav ? "md:grid-cols-1" : "md:grid-cols-[200px_1fr]"}`}>
+        {!hideSideNav && (
         <nav className="-ml-2 flex flex-col gap-0.5">
           <NavBtn active={view.type === "all"} onClick={() => setView({ type: "all" })}>
             All
@@ -447,6 +466,7 @@ export function FilesPage({ actionsMount }: { actionsMount?: HTMLDivElement | nu
             </div>
           )}
         </nav>
+        )}
 
         <section>
           {filtered.length === 0 ? (
@@ -462,6 +482,7 @@ export function FilesPage({ actionsMount }: { actionsMount?: HTMLDivElement | nu
                     key={f.id}
                     onClick={() => {
                       if (selectMode) toggleSel(f.id);
+                      else if (onOpenFile) onOpenFile(f.id);
                       else void downloadOne(f);
                     }}
                     className="group relative flex aspect-square cursor-pointer flex-col overflow-hidden rounded-xl border border-hairline bg-card p-3 transition hover:border-ink/20"

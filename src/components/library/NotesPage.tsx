@@ -144,9 +144,18 @@ interface NoteRow {
 export function NotesPage({
   actionsMount,
   onOpenNote,
+  hideSideNav,
+  externalView,
+  hideNewActions,
 }: {
   actionsMount?: HTMLDivElement | null;
   onOpenNote?: (id: string, kind: "new" | "earlier") => void;
+  /** When true, hide the internal left nav column (parent renders LibrarySideNav). */
+  hideSideNav?: boolean;
+  /** When set, drives the view from outside (parent URL state). */
+  externalView?: { type: "all" } | { type: "folder"; name: string | null };
+  /** When true, hide the "New folder" / "New note" action buttons (parent renders unified ones). */
+  hideNewActions?: boolean;
 }) {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -155,9 +164,11 @@ export function NotesPage({
 
   const [folders, setFolders] = useState<NoteFolder[]>([]);
   const [notes, setNotes] = useState<NoteRow[]>([]);
-  const [view, setView] = useState<{ type: "all" } | { type: "folder"; name: string | null }>({
+  const [internalView, setInternalView] = useState<{ type: "all" } | { type: "folder"; name: string | null }>({
     type: "all",
   });
+  const view = externalView ?? internalView;
+  const setView = setInternalView;
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [newNoteOpen, setNewNoteOpen] = useState(false);
@@ -424,18 +435,22 @@ export function NotesPage({
           <CheckSquare className="h-3.5 w-3.5" /> Select
         </button>
       )}
-      <button
-        onClick={() => setCreateFolderOpen(true)}
-        className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
-      >
-        <Plus className="h-3.5 w-3.5" /> New folder
-      </button>
-      <button
-        onClick={() => setNewNoteOpen(true)}
-        className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
-      >
-        <Plus className="h-3.5 w-3.5" /> New note
-      </button>
+      {!hideNewActions && (
+        <>
+          <button
+            onClick={() => setCreateFolderOpen(true)}
+            className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" /> New folder
+          </button>
+          <button
+            onClick={() => setNewNoteOpen(true)}
+            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
+          >
+            <Plus className="h-3.5 w-3.5" /> New note
+          </button>
+        </>
+      )}
     </>
   );
 
@@ -443,7 +458,8 @@ export function NotesPage({
     <div>
       {actionsMount && createPortal(actions, actionsMount)}
 
-      <div className="mt-8 grid gap-8 md:grid-cols-[200px_1fr]">
+      <div className={`mt-4 grid gap-8 ${hideSideNav ? "md:grid-cols-1" : "md:grid-cols-[200px_1fr]"}`}>
+        {!hideSideNav && (
         <nav className="-ml-2 flex flex-col gap-0.5">
           <NavBtn active={view.type === "all"} onClick={() => setView({ type: "all" })}>All</NavBtn>
           <button
@@ -555,6 +571,7 @@ export function NotesPage({
             </div>
           )}
         </nav>
+        )}
 
         <section>
           {isSearching ? (
