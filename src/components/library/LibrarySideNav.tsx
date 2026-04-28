@@ -1,4 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+  type DragStartEvent,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
+import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -26,13 +46,10 @@ interface FolderLite {
 
 export interface LibrarySideNavValue {
   category: LibraryCategory;
-  /** For notes: folder name (string) or null = unsorted, "" = all.
-   *  For files/media: folder/album id (string) or null = unsorted, "" = all. */
   folder: string;
 }
 
 type SectionKey = "meetings" | "notes" | "files" | "media";
-
 type TableName = "note_folders" | "file_folders" | "media_albums";
 
 export function LibrarySideNav({
@@ -56,7 +73,6 @@ export function LibrarySideNav({
     media: true,
   });
 
-  // Per-row UI state
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -65,9 +81,10 @@ export function LibrarySideNav({
     folder: FolderLite;
   } | null>(null);
 
-  // Drag state — keyed per-section so a drag in Notes can't reorder Files
-  const [dragSection, setDragSection] = useState<SectionKey | null>(null);
-  const [dragId, setDragId] = useState<string | null>(null);
+  // Drag overlay state
+  const [activeDrag, setActiveDrag] = useState<{ section: SectionKey; folder: FolderLite } | null>(
+    null,
+  );
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -124,7 +141,6 @@ export function LibrarySideNav({
     setFileFolders((ff ?? []) as FolderLite[]);
     setMediaAlbums((ma ?? []) as FolderLite[]);
 
-    // Meetings: derive folder names from team_board_meetings (team mode only)
     if (isTeamMode && teamId) {
       const { data: mtgs } = await supabase
         .from("team_board_meetings")
@@ -162,29 +178,24 @@ export function LibrarySideNav({
     };
   }, [load, user?.id]);
 
-  // ----- Helpers ----------------------------------------------------------
-
   const tableFor = (section: SectionKey): TableName | null => {
     if (section === "notes") return "note_folders";
     if (section === "files") return "file_folders";
     if (section === "media") return "media_albums";
-    return null; // meetings: derived
+    return null;
   };
 
-  const setStateFor = (section: SectionKey, updater: (arr: FolderLite[]) => FolderLite[]) => {
-    if (section === "notes") setNoteFolders(updater);
-    else if (section === "files") setFileFolders(updater);
-    else if (section === "media") setMediaAlbums(updater);
-    else if (section === "meetings") setMeetingFolders(updater);
+  const setStateFor = (section: SectionKey, next: FolderLite[]) => {
+    if (section === "notes") setNoteFolders(next);
+    else if (section === "files") setFileFolders(next);
+    else if (section === "media") setMediaAlbums(next);
   };
 
   const persistOrder = async (section: SectionKey, next: FolderLite[]) => {
     const table = tableFor(section);
     if (!table) return;
     await Promise.all(
-      next.map((f, idx) =>
-        supabase.from(table).update({ sort_order: idx }).eq("id", f.id),
-      ),
+      next.map((f, idx) => supabase.from(table).update({ sort_order: idx }).eq("id", f.id)),
     );
     window.dispatchEvent(new Event("library:refresh"));
   };
@@ -243,8 +254,6 @@ export function LibrarySideNav({
     }
   };
 
-  // ----- Sections ---------------------------------------------------------
-
   const allSections: {
     key: SectionKey;
     label: string;
@@ -253,7 +262,7 @@ export function LibrarySideNav({
     folderLabel: string;
     folderKey: (f: FolderLite) => string;
     teamOnly?: boolean;
-    derived?: boolean; // meetings: no DnD / menu
+    derived?: boolean;
   }[] = [
     {
       key: "meetings",
@@ -294,6 +303,28 @@ export function LibrarySideNav({
 
   const isPreviousActive = value.category === "previous";
 
+  // dnd-kit sensors — small activation distance so click vs drag is clean
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  const handleDragStart = (section: SectionKey, folders: FolderLite[]) => (e: DragStartEvent) => {
+    const f = folders.find((x) => x.id === e.active.id);
+    if (f) setActiveDrag({ section, folder: f });
+  };
+
+  const handleDragEnd = (section: SectionKey, folders: FolderLite[]) => (e: DragEndEvent) => {
+    setActiveDrag(null);
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const from = folders.findIndex((f) => f.id === active.id);
+    const to = folders.findIndex((f) => f.id === over.id);
+    if (from < 0 || to < 0) return;
+    // Disallow crossing pinned/unpinned groups
+    if (folders[from].pinned !== folders[to].pinned) return;
+    const next = arrayMove(folders, from, to);
+    setStateFor(section, next);
+    void persistOrder(section, next);
+  };
+
   return (
     <nav className="flex flex-col gap-1">
       <button
@@ -322,6 +353,8 @@ export function LibrarySideNav({
           }
         };
 
+        const ids = s.folders.map((f) => f.id);
+
         return (
           <div key={s.key} className="flex flex-col">
             <button
@@ -346,7 +379,8 @@ export function LibrarySideNav({
                 isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
               }`}
             >
-              <div className="overflow-hidden">
+              {/* overflow-visible so the row's three-dot menu is never clipped */}
+              <div className="overflow-visible">
                 <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-hairline pl-2">
                   <button
                     onClick={() => onChange({ category: s.key, folder: "__unsorted__" })}
@@ -359,75 +393,92 @@ export function LibrarySideNav({
                     Unsorted
                   </button>
 
-                  {s.folders.map((f) => {
-                    const id = s.folderKey(f);
-                    const active = isCategoryActive && value.folder === id;
-                    const isDragging = dragSection === s.key && dragId === f.id;
-                    const draggable = !s.derived;
+                  {s.derived ? (
+                    s.folders.map((f) => {
+                      const id = s.folderKey(f);
+                      const active = isCategoryActive && value.folder === id;
+                      return (
+                        <FolderRow
+                          key={f.id}
+                          folder={f}
+                          active={active}
+                          renaming={false}
+                          renameValue=""
+                          setRenameValue={() => {}}
+                          onSelect={() => onChange({ category: s.key, folder: id })}
+                          onCommitRename={() => {}}
+                          onCancelRename={() => {}}
+                          menuOpen={false}
+                          onToggleMenu={() => {}}
+                          onCloseMenu={() => {}}
+                          onPin={() => {}}
+                          onRename={() => {}}
+                          onDelete={() => {}}
+                          showMenu={false}
+                          sortable={false}
+                        />
+                      );
+                    })
+                  ) : (
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+                      onDragStart={handleDragStart(s.key, s.folders)}
+                      onDragEnd={handleDragEnd(s.key, s.folders)}
+                      onDragCancel={() => setActiveDrag(null)}
+                    >
+                      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+                        <motion.div layout className="flex flex-col gap-0.5">
+                          <AnimatePresence initial={false}>
+                            {s.folders.map((f) => {
+                              const id = s.folderKey(f);
+                              const active = isCategoryActive && value.folder === id;
+                              return (
+                                <SortableFolderRow
+                                  key={f.id}
+                                  folder={f}
+                                  active={active}
+                                  renaming={renamingId === f.id}
+                                  renameValue={renameValue}
+                                  setRenameValue={setRenameValue}
+                                  onSelect={() => onChange({ category: s.key, folder: id })}
+                                  onCommitRename={() => void commitRename(s.key, f)}
+                                  onCancelRename={() => setRenamingId(null)}
+                                  menuOpen={menuFor === f.id}
+                                  onToggleMenu={() =>
+                                    setMenuFor(menuFor === f.id ? null : f.id)
+                                  }
+                                  onCloseMenu={() => setMenuFor(null)}
+                                  onPin={() => void togglePin(s.key, f)}
+                                  onRename={() => startRename(f)}
+                                  onDelete={() =>
+                                    setConfirmDelete({ section: s.key, folder: f })
+                                  }
+                                />
+                              );
+                            })}
+                          </AnimatePresence>
+                        </motion.div>
+                      </SortableContext>
 
-                    return (
-                      <FolderRow
-                        key={f.id}
-                        folder={f}
-                        active={active}
-                        isDragging={isDragging}
-                        draggable={draggable}
-                        renaming={renamingId === f.id}
-                        renameValue={renameValue}
-                        setRenameValue={setRenameValue}
-                        onSelect={() => onChange({ category: s.key, folder: id })}
-                        onCommitRename={() => void commitRename(s.key, f)}
-                        onCancelRename={() => setRenamingId(null)}
-                        menuOpen={menuFor === f.id}
-                        onToggleMenu={() =>
-                          setMenuFor(menuFor === f.id ? null : f.id)
-                        }
-                        onCloseMenu={() => setMenuFor(null)}
-                        onPin={() => void togglePin(s.key, f)}
-                        onRename={() => startRename(f)}
-                        onDelete={() =>
-                          setConfirmDelete({ section: s.key, folder: f })
-                        }
-                        onDragStartRow={() => {
-                          setDragSection(s.key);
-                          setDragId(f.id);
-                        }}
-                        onDragEnterRow={() => {
-                          if (
-                            dragSection === s.key &&
-                            dragId &&
-                            dragId !== f.id
-                          ) {
-                            setStateFor(s.key, (arr) => {
-                              const from = arr.findIndex((x) => x.id === dragId);
-                              const to = arr.findIndex((x) => x.id === f.id);
-                              if (from < 0 || to < 0 || from === to) return arr;
-                              if (arr[from].pinned !== arr[to].pinned) return arr;
-                              const next = [...arr];
-                              const [moved] = next.splice(from, 1);
-                              next.splice(to, 0, moved);
-                              return next;
-                            });
-                          }
-                        }}
-                        onDragEndRow={() => {
-                          const sec = dragSection;
-                          setDragId(null);
-                          setDragSection(null);
-                          if (!sec) return;
-                          const arr =
-                            sec === "notes"
-                              ? noteFolders
-                              : sec === "files"
-                              ? fileFolders
-                              : sec === "media"
-                              ? mediaAlbums
-                              : null;
-                          if (arr) void persistOrder(sec, arr);
-                        }}
-                      />
-                    );
-                  })}
+                      <DragOverlay
+                        dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}
+                      >
+                        {activeDrag && activeDrag.section === s.key ? (
+                          <div className="rounded-md bg-card/95 px-3 py-1 text-xs text-ink shadow-lg ring-1 ring-hairline backdrop-blur-sm">
+                            <div className="flex items-center gap-1.5">
+                              {activeDrag.folder.pinned && (
+                                <Pin className="h-2.5 w-2.5 fill-current text-ink/70" />
+                              )}
+                              <span className="truncate">{activeDrag.folder.name}</span>
+                            </div>
+                          </div>
+                        ) : null}
+                      </DragOverlay>
+                    </DndContext>
+                  )}
+
                   {s.folders.length === 0 && (
                     <span className="px-3 py-1 text-[11px] text-muted-foreground/70">
                       No {s.folderLabel.toLowerCase()} yet
@@ -476,34 +527,12 @@ export function LibrarySideNav({
 }
 
 // ---------------------------------------------------------------------------
-// Row component
+// Sortable wrapper
 // ---------------------------------------------------------------------------
 
-function FolderRow({
-  folder,
-  active,
-  isDragging,
-  draggable,
-  renaming,
-  renameValue,
-  setRenameValue,
-  onSelect,
-  onCommitRename,
-  onCancelRename,
-  menuOpen,
-  onToggleMenu,
-  onCloseMenu,
-  onPin,
-  onRename,
-  onDelete,
-  onDragStartRow,
-  onDragEnterRow,
-  onDragEndRow,
-}: {
+function SortableFolderRow(props: {
   folder: FolderLite;
   active: boolean;
-  isDragging: boolean;
-  draggable: boolean;
   renaming: boolean;
   renameValue: string;
   setRenameValue: (v: string) => void;
@@ -516,11 +545,67 @@ function FolderRow({
   onPin: () => void;
   onRename: () => void;
   onDelete: () => void;
-  onDragStartRow: () => void;
-  onDragEnterRow: () => void;
-  onDragEndRow: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: props.folder.id,
+    disabled: props.renaming,
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0 : 1, // hide original; DragOverlay shows the lifted clone
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <FolderRow {...props} sortable />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Row component
+// ---------------------------------------------------------------------------
+
+function FolderRow({
+  folder,
+  active,
+  renaming,
+  renameValue,
+  setRenameValue,
+  onSelect,
+  onCommitRename,
+  onCancelRename,
+  menuOpen,
+  onToggleMenu,
+  onCloseMenu,
+  onPin,
+  onRename,
+  onDelete,
+  showMenu = true,
+  sortable = true,
+}: {
+  folder: FolderLite;
+  active: boolean;
+  renaming: boolean;
+  renameValue: string;
+  setRenameValue: (v: string) => void;
+  onSelect: () => void;
+  onCommitRename: () => void;
+  onCancelRename: () => void;
+  menuOpen: boolean;
+  onToggleMenu: () => void;
+  onCloseMenu: () => void;
+  onPin: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+  showMenu?: boolean;
+  sortable?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     if (renaming && inputRef.current) {
@@ -529,31 +614,22 @@ function FolderRow({
     }
   }, [renaming]);
 
+  useEffect(() => {
+    if (menuOpen && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      const menuW = 160;
+      // align right edge of menu with right edge of button
+      setMenuPos({ top: r.bottom + 4, left: Math.max(8, r.right - menuW) });
+    } else {
+      setMenuPos(null);
+    }
+  }, [menuOpen]);
+
   return (
     <div
-      draggable={draggable && !renaming}
-      onDragStart={(e) => {
-        if (!draggable || renaming) {
-          e.preventDefault();
-          return;
-        }
-        onDragStartRow();
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", folder.id);
-      }}
-      onDragEnter={(e) => {
-        e.preventDefault();
-        onDragEnterRow();
-      }}
-      onDragOver={(e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-      }}
-      onDragEnd={() => onDragEndRow()}
-      onDrop={(e) => e.preventDefault()}
-      className={`group relative flex items-center gap-1 rounded-md pr-1 transition-all duration-150 ease-out ${
+      className={`group relative flex items-center gap-1 rounded-md pr-1 transition-colors duration-150 ease-out ${
         active ? "bg-secondary" : "hover:bg-secondary/70"
-      } ${isDragging ? "opacity-40" : ""}`}
+      }`}
     >
       {renaming ? (
         <input
@@ -565,6 +641,7 @@ function FolderRow({
             if (e.key === "Enter") onCommitRename();
             else if (e.key === "Escape") onCancelRename();
           }}
+          onPointerDown={(e) => e.stopPropagation()}
           className="min-w-0 flex-1 rounded-md border border-hairline bg-background px-2 py-1 text-xs text-ink outline-none ring-0 focus:border-ink/30"
         />
       ) : (
@@ -581,52 +658,66 @@ function FolderRow({
         </button>
       )}
 
-      {!renaming && (
-        <div className="relative shrink-0">
+      {!renaming && showMenu && (
+        <>
           <button
+            ref={btnRef}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               onToggleMenu();
             }}
             data-open={menuOpen}
             aria-label="Folder actions"
-            className="grid h-6 w-6 place-items-center rounded-md text-muted-foreground/60 opacity-0 transition hover:bg-card hover:text-ink group-hover:opacity-100 data-[open=true]:opacity-100"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-muted-foreground/60 opacity-0 transition hover:bg-card hover:text-ink group-hover:opacity-100 data-[open=true]:opacity-100"
           >
             <MoreHorizontal className="h-3.5 w-3.5" />
           </button>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={onCloseMenu} />
-              <div className="absolute right-0 top-7 z-50 w-40 overflow-hidden rounded-lg border border-hairline bg-card py-1 shadow-lg">
-                <MenuItem
-                  icon={folder.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-                  label={folder.pinned ? "Unpin" : "Pin to top"}
-                  onClick={() => {
+          {menuOpen && menuPos &&
+            createPortal(
+              <>
+                <div
+                  className="fixed inset-0 z-[60]"
+                  onClick={onCloseMenu}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
                     onCloseMenu();
-                    onPin();
                   }}
                 />
-                <MenuItem
-                  icon={<Pencil className="h-3.5 w-3.5" />}
-                  label="Rename"
-                  onClick={() => {
-                    onCloseMenu();
-                    onRename();
-                  }}
-                />
-                <MenuItem
-                  icon={<Trash2 className="h-3.5 w-3.5" />}
-                  label="Delete"
-                  destructive
-                  onClick={() => {
-                    onCloseMenu();
-                    onDelete();
-                  }}
-                />
-              </div>
-            </>
-          )}
-        </div>
+                <div
+                  className="fixed z-[70] w-40 overflow-hidden rounded-lg border border-hairline bg-card py-1 shadow-lg animate-in fade-in-0 zoom-in-95"
+                  style={{ top: menuPos.top, left: menuPos.left }}
+                >
+                  <MenuItem
+                    icon={folder.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                    label={folder.pinned ? "Unpin" : "Pin to top"}
+                    onClick={() => {
+                      onCloseMenu();
+                      onPin();
+                    }}
+                  />
+                  <MenuItem
+                    icon={<Pencil className="h-3.5 w-3.5" />}
+                    label="Rename"
+                    onClick={() => {
+                      onCloseMenu();
+                      onRename();
+                    }}
+                  />
+                  <MenuItem
+                    icon={<Trash2 className="h-3.5 w-3.5" />}
+                    label="Delete"
+                    destructive
+                    onClick={() => {
+                      onCloseMenu();
+                      onDelete();
+                    }}
+                  />
+                </div>
+              </>,
+              document.body,
+            )}
+        </>
       )}
     </div>
   );
