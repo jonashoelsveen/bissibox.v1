@@ -183,6 +183,17 @@ export function TeamBoardPage({
     })();
   }, [user, activeEntityId]);
 
+  // External "new meeting" trigger from the embedding parent (Library Previous tab).
+  const lastSignalRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (newMeetingSignal === undefined) return;
+    if (lastSignalRef.current === newMeetingSignal) return;
+    lastSignalRef.current = newMeetingSignal;
+    if (!loaded || !teamId) return;
+    setActiveTab("meetings");
+    openNewMeeting();
+  }, [newMeetingSignal, loaded, teamId]);
+
   async function loadMembers(tid: string) {
     const { data } = await supabase
       .from("team_board_members")
