@@ -155,76 +155,81 @@ export function LibrarySideNav({
         const isCategoryActive = value.category === s.key;
         const isAllActive = isCategoryActive && value.folder === "";
         const isUnsortedActive = isCategoryActive && value.folder === "__unsorted__";
+        const isOpen = open[s.key];
+        const handleCategoryClick = () => {
+          // Single click: select category AND toggle expansion smoothly.
+          // If category is already active and open, collapse it; otherwise open + select.
+          if (isCategoryActive && isOpen) {
+            setOpen((o) => ({ ...o, [s.key]: false }));
+          } else {
+            setOpen((o) => ({ ...o, [s.key]: true }));
+            onChange({ category: s.key, folder: "" });
+          }
+        };
         return (
           <div key={s.key} className="flex flex-col">
-            <div
-              className={`group flex items-center rounded-md transition ${
-                isAllActive ? "bg-secondary" : "hover:bg-secondary/60"
+            <button
+              onClick={handleCategoryClick}
+              className={`group flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition ${
+                isAllActive ? "bg-secondary font-medium text-ink" : "text-ink hover:bg-secondary/60"
               }`}
             >
-              <button
-                onClick={() => onChange({ category: s.key, folder: "" })}
-                className={`flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm transition ${
-                  isAllActive ? "font-medium text-ink" : "text-ink"
+              <span className="grid h-5 w-5 shrink-0 place-items-center text-muted-foreground">
+                {s.icon}
+              </span>
+              <span className="ml-2 min-w-0 flex-1 truncate">{s.label}</span>
+              <ChevronRight
+                className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                  isOpen ? "rotate-90" : "rotate-0"
                 }`}
-              >
-                <span className="grid h-5 w-5 shrink-0 place-items-center text-muted-foreground">
-                  {s.icon}
-                </span>
-                <span className="truncate">{s.label}</span>
-              </button>
-              <button
-                onClick={() => setOpen((o) => ({ ...o, [s.key]: !o[s.key] }))}
-                aria-label={open[s.key] ? "Collapse" : "Expand"}
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground transition hover:text-ink"
-              >
-                {open[s.key] ? (
-                  <ChevronDown className="h-3.5 w-3.5" />
-                ) : (
-                  <ChevronRight className="h-3.5 w-3.5" />
-                )}
-              </button>
-            </div>
+              />
+            </button>
 
-            {open[s.key] && (
-              <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-hairline pl-2">
-                <button
-                  onClick={() => onChange({ category: s.key, folder: "__unsorted__" })}
-                  className={`rounded-md px-3 py-1 text-left text-xs transition ${
-                    isUnsortedActive
-                      ? "bg-secondary font-medium text-ink"
-                      : "text-muted-foreground hover:text-ink"
-                  }`}
-                >
-                  Unsorted
-                </button>
-                {s.folders.map((f) => {
-                  const id = s.folderKey(f);
-                  const active = isCategoryActive && value.folder === id;
-                  return (
-                    <button
-                      key={f.id}
-                      onClick={() => onChange({ category: s.key, folder: id })}
-                      className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-left text-xs transition ${
-                        active
-                          ? "bg-secondary font-medium text-ink"
-                          : "text-muted-foreground hover:text-ink"
-                      }`}
-                    >
-                      {f.pinned && (
-                        <Pin className="h-2.5 w-2.5 shrink-0 fill-current text-ink/70" />
-                      )}
-                      <span className="truncate">{f.name}</span>
-                    </button>
-                  );
-                })}
-                {s.folders.length === 0 && (
-                  <span className="px-3 py-1 text-[11px] text-muted-foreground/70">
-                    No {s.folderLabel.toLowerCase()} yet
-                  </span>
-                )}
+            <div
+              className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+                isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-hairline pl-2">
+                  <button
+                    onClick={() => onChange({ category: s.key, folder: "__unsorted__" })}
+                    className={`rounded-md px-3 py-1 text-left text-xs transition ${
+                      isUnsortedActive
+                        ? "bg-secondary font-medium text-ink"
+                        : "text-muted-foreground hover:text-ink"
+                    }`}
+                  >
+                    Unsorted
+                  </button>
+                  {s.folders.map((f) => {
+                    const id = s.folderKey(f);
+                    const active = isCategoryActive && value.folder === id;
+                    return (
+                      <button
+                        key={f.id}
+                        onClick={() => onChange({ category: s.key, folder: id })}
+                        className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-left text-xs transition ${
+                          active
+                            ? "bg-secondary font-medium text-ink"
+                            : "text-muted-foreground hover:text-ink"
+                        }`}
+                      >
+                        {f.pinned && (
+                          <Pin className="h-2.5 w-2.5 shrink-0 fill-current text-ink/70" />
+                        )}
+                        <span className="truncate">{f.name}</span>
+                      </button>
+                    );
+                  })}
+                  {s.folders.length === 0 && (
+                    <span className="px-3 py-1 text-[11px] text-muted-foreground/70">
+                      No {s.folderLabel.toLowerCase()} yet
+                    </span>
+                  )}
+                </div>
               </div>
-            )}
+            </div>
           </div>
         );
       })}
