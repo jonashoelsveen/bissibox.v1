@@ -1046,6 +1046,7 @@ function MediaPage({
                     key={it.id}
                     onClick={() => {
                       if (selectMode) toggleSel(it.id);
+                      else if (onOpenMedia) onOpenMedia(it.id);
                       else setOpenItems([it]);
                     }}
                     className="group relative aspect-square cursor-default overflow-hidden rounded-sm bg-secondary"
