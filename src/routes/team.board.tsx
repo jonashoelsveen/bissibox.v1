@@ -615,6 +615,32 @@ export function TeamBoardPage({
     await saveTabText(ongoing.meeting.id);
   }
 
+  // Autosave for the active meeting tab when enabled
+  useEffect(() => {
+    if (!meetingsAutosave || !isDirty || !ongoing) return;
+    const t = setTimeout(() => { void saveOngoingText(); }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meetingsAutosave, ongoingText, isDirty, ongoing?.meeting.id]);
+
+  // Register dirty-state for host close-confirmation
+  useEffect(() => {
+    if (!ongoing) return;
+    const id = ongoing.meeting.id;
+    const title = ongoing.meeting.title || "Untitled meeting";
+    return registerUnsaved(id, {
+      isDirty: () => (openTabs.find((t) => t.meeting.id === id)?.text ?? "") !== (openTabs.find((t) => t.meeting.id === id)?.savedText ?? ""),
+      isNew: () => false,
+      title: () => title,
+      save: async () => { await saveTabText(id); },
+      discard: async () => {
+        const t = openTabs.find((x) => x.meeting.id === id);
+        if (t) patchTab(id, { text: t.savedText });
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ongoing?.meeting.id, ongoingText, savedText]);
+
   async function loadAttachmentsFor(meetingId: string) {
     const { data } = await supabase
       .from("team_board_meeting_attachments")
