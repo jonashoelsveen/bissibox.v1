@@ -5,7 +5,8 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 import { RolesPanel } from "@/components/RolesPanel";
-import { ChevronDown, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network } from "lucide-react";
+import { TopBarColorPicker } from "@/components/appearance/TopBarColorPicker";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -72,13 +73,15 @@ type Tab =
   | "liked"
   | "roles"
   | "profiles"
+  | "appearance"
   | "entity-profile"
   | "desk"
   | "signout"
   | "entity-organization"
   | "entity-meetings"
   | "entity-library"
-  | "entity-events";
+  | "entity-events"
+  | "entity-appearance";
 
 interface EntityRow {
   id: string;
