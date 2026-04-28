@@ -98,6 +98,15 @@ export function FilesPage({
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [authLoading, user, navigate]);
 
+  // Auto-open the import dialog when ?new=1 is in URL (from + dropdown in Previous tab)
+  const search = useSearch({ from: "/media" });
+  useEffect(() => {
+    if (search.new === "1" && search.tab === "files") {
+      setImportOpen(true);
+      navigate({ to: "/media", search: { tab: "files" }, replace: true });
+    }
+  }, [search.new, search.tab, navigate]);
+
   const persistFolderOrder = useCallback(async (next: Folder[]) => {
     await Promise.all(
       next.map((f, idx) =>
