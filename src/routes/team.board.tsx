@@ -391,6 +391,25 @@ export function TeamBoardPage({
         .select("id,board_member_id,name,role,email,sort_order");
       snapshot = (rosterData ?? []) as RosterEntry[];
     }
+
+    // Auto-attend the creator: match by email against the roster snapshot.
+    const creatorEmail = (user.email ?? "").toLowerCase();
+    let initialAttendance: string[] = [];
+    if (creatorEmail) {
+      const selfEntry = snapshot.find((r) => (r.email ?? "").toLowerCase() === creatorEmail);
+      if (selfEntry) {
+        const { error: attErr } = await supabase
+          .from("team_board_meeting_attendance")
+          .insert({
+            meeting_id: data.id,
+            team_id: teamId,
+            roster_id: selfEntry.id,
+            board_member_id: selfEntry.board_member_id ?? selfEntry.id,
+          });
+        if (!attErr) initialAttendance = [selfEntry.id];
+      }
+    }
+
     setMeetings((prev) => [data, ...prev]);
     setOpenTabs((prev) => [
       ...prev,
@@ -400,7 +419,7 @@ export function TeamBoardPage({
         text: data.notes ?? "",
         savedText: data.notes ?? "",
         attachments: [],
-        attendance: [],
+        attendance: initialAttendance,
         roster: snapshot.sort((a, b) => a.sort_order - b.sort_order),
       },
     ]);
