@@ -375,19 +375,18 @@ export function LibrarySideNav({
               />
             </button>
 
-            <AnimatePresence initial={false}>
-              {isOpen && (
-                <motion.div
-                  key="content"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{
-                    height: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
-                    opacity: { duration: 0.16, ease: "easeOut" },
-                  }}
-                  style={{ overflow: "hidden", willChange: "height, opacity" }}
-                >
+            <motion.div
+              initial={false}
+              animate={{
+                height: isOpen ? "auto" : 0,
+                opacity: isOpen ? 1 : 0,
+              }}
+              transition={{
+                height: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+                opacity: { duration: isOpen ? 0.18 : 0.12, ease: "easeOut", delay: isOpen ? 0.04 : 0 },
+              }}
+              style={{ overflow: isOpen ? "visible" : "hidden", willChange: "height, opacity", pointerEvents: isOpen ? "auto" : "none" }}
+            >
                   <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-hairline pl-2" style={{ overflow: "visible" }}>
                   <button
                     onClick={() => onChange({ category: s.key, folder: "__unsorted__" })}
