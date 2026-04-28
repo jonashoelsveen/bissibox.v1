@@ -206,6 +206,22 @@ export function TeamBoardPage({
     openNewMeeting();
   }, [newMeetingSignal, loaded, teamId]);
 
+  // External "force open this meeting" — used when the parent (Library) drives
+  // the top tab strip and wants this embedded view to render a specific meeting.
+  useEffect(() => {
+    if (!forceMeetingId) return;
+    if (!loaded || !teamId) return;
+    if (activeTab === forceMeetingId) return;
+    const existing = openTabs.find((t) => t.meeting.id === forceMeetingId);
+    if (existing) {
+      setActiveTab(forceMeetingId);
+      return;
+    }
+    const m = meetings.find((x) => x.id === forceMeetingId);
+    if (m) openMeeting(m);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceMeetingId, loaded, teamId, meetings]);
+
   async function loadMembers(tid: string) {
     const { data } = await supabase
       .from("team_board_members")
