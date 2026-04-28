@@ -571,6 +571,7 @@ export function NotesPage({
             </div>
           )}
         </nav>
+        )}
 
         <section>
           {isSearching ? (
