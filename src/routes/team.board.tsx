@@ -464,6 +464,7 @@ export function TeamBoardPage({
     ]);
     setNewMeetingOpen(false);
     setActiveTab(data.id);
+    onMeetingOpened?.({ id: data.id, title: data.title, folder: data.folder, kind: "new" });
   }
 
   function openEditMeeting() {
