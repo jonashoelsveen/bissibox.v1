@@ -13,6 +13,7 @@ import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/L
 import { PreviousPage, type PreviousNewKind } from "@/components/library/PreviousPage";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { MeetingsListPage } from "@/components/library/MeetingsListPage";
+import { TeamBoardPage } from "@/routes/team.board";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -44,6 +45,7 @@ import {
   Image as ImageIcon,
   StickyNote,
   Library,
+  Briefcase,
   Play,
   Pause,
 } from "lucide-react";
@@ -56,6 +58,7 @@ export interface OpenNoteTab {
   title: string;
   folder: string | null;
   kind: "new" | "earlier";
+  type?: "note" | "meeting";
 }
 
 export const Route = createFileRoute("/media")({
@@ -85,12 +88,15 @@ function LibraryPage() {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
   const [newNoteOpen, setNewNoteOpen] = useState(false);
+  const [newMeetingSignal, setNewMeetingSignal] = useState(0);
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
 
   const handleCreateFromPrevious = (kind: PreviousNewKind) => {
     if (kind === "meeting") {
       setActiveNoteId(null);
-      navigate({ to: "/media", search: { tab: "meetings", new: "1" }, replace: true });
+      // Switch to meetings tab and trigger the inline new-meeting dialog.
+      navigate({ to: "/media", search: { tab: "meetings" }, replace: true });
+      setNewMeetingSignal((n) => n + 1);
       return;
     }
     if (kind === "note") {
@@ -250,6 +256,21 @@ function LibraryPage() {
     if (activeNoteId === id) setActiveNoteId(null);
   };
 
+  const openMeetingTab = useCallback(
+    (m: { id: string; title: string; folder: string | null }, kind: "new" | "earlier" = "earlier") => {
+      setOpenNoteTabs((prev) => {
+        if (prev.some((t) => t.id === m.id)) return prev;
+        if (prev.length >= MAX_NOTE_TABS) {
+          toast.error(`You can have at most ${MAX_NOTE_TABS} tabs open at once.`);
+          return prev;
+        }
+        return [...prev, { id: m.id, title: m.title, folder: m.folder, kind, type: "meeting" }];
+      });
+      setActiveNoteId(m.id);
+    },
+    [],
+  );
+
   const updateNoteTab = (patch: { id: string; title?: string; folder?: string | null }) => {
     setOpenNoteTabs((prev) =>
       prev.map((t) =>
@@ -270,6 +291,8 @@ function LibraryPage() {
   }, [search.open]);
 
   const showingNote = activeNoteId !== null;
+  const activeTabEntry = activeNoteId ? openNoteTabs.find((t) => t.id === activeNoteId) ?? null : null;
+  const showingMeeting = !!activeTabEntry && activeTabEntry.type === "meeting";
 
   // Pointer-based, X-axis-locked tab drag (Chrome-style).
   const onTabPointerDown = (e: React.PointerEvent<HTMLButtonElement>, id: string) => {
@@ -490,7 +513,11 @@ function LibraryPage() {
                       }`}
                       title={t.title}
                     >
-                      <StickyNote className="h-3 w-3 shrink-0 opacity-70" />
+                      {t.type === "meeting" ? (
+                        <Briefcase className="h-3 w-3 shrink-0 opacity-70" />
+                      ) : (
+                        <StickyNote className="h-3 w-3 shrink-0 opacity-70" />
+                      )}
                       <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
                       <span className="min-w-0 flex-1 truncate text-left">
                         {t.folder ? `${t.folder} · ${t.title}` : t.title}
@@ -525,7 +552,17 @@ function LibraryPage() {
 
         <div className="min-w-0">
 
-          {showingNote && activeNoteId ? (
+          {showingNote && activeNoteId && showingMeeting ? (
+            <TeamBoardPage
+              key={activeNoteId}
+              embedded
+              hideOwnTabBar
+              forceMeetingId={activeNoteId}
+              onMeetingOpened={(m) =>
+                openMeetingTab({ id: m.id, title: m.title, folder: m.folder }, m.kind)
+              }
+            />
+          ) : showingNote && activeNoteId ? (
             <NoteEditor
               key={activeNoteId}
               noteId={activeNoteId}
@@ -546,6 +583,9 @@ function LibraryPage() {
             <MeetingsListPage
               actionsMount={actionsMount}
               externalView={externalMeetingsView ?? { type: "all" }}
+              newMeetingSignal={newMeetingSignal}
+              onOpenMeeting={(m) => openMeetingTab(m, "earlier")}
+              onMeetingCreated={(m) => openMeetingTab(m, "new")}
             />
           ) : baseTab === "notes" ? (
             <NotesPage

@@ -64,7 +64,19 @@ interface RosterEntry {
 export function TeamBoardPage({
   embedded,
   newMeetingSignal,
-}: { embedded?: boolean; newMeetingSignal?: number } = {}) {
+  hideOwnTabBar,
+  forceMeetingId,
+  onMeetingOpened,
+}: {
+  embedded?: boolean;
+  newMeetingSignal?: number;
+  /** When true, hide the inner tab nav and meetings list — parent controls tabs. */
+  hideOwnTabBar?: boolean;
+  /** When set, auto-open this meeting and force-activate it. */
+  forceMeetingId?: string | null;
+  /** Notify parent when a meeting is opened (e.g. after creation via newMeetingSignal). */
+  onMeetingOpened?: (meeting: { id: string; title: string; folder: string | null; kind: "new" | "earlier" }) => void;
+} = {}) {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
   // Active tab: "meetings" or a meeting id
@@ -193,6 +205,22 @@ export function TeamBoardPage({
     setActiveTab("meetings");
     openNewMeeting();
   }, [newMeetingSignal, loaded, teamId]);
+
+  // External "force open this meeting" — used when the parent (Library) drives
+  // the top tab strip and wants this embedded view to render a specific meeting.
+  useEffect(() => {
+    if (!forceMeetingId) return;
+    if (!loaded || !teamId) return;
+    if (activeTab === forceMeetingId) return;
+    const existing = openTabs.find((t) => t.meeting.id === forceMeetingId);
+    if (existing) {
+      setActiveTab(forceMeetingId);
+      return;
+    }
+    const m = meetings.find((x) => x.id === forceMeetingId);
+    if (m) openMeeting(m);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceMeetingId, loaded, teamId, meetings]);
 
   async function loadMembers(tid: string) {
     const { data } = await supabase
@@ -436,6 +464,7 @@ export function TeamBoardPage({
     ]);
     setNewMeetingOpen(false);
     setActiveTab(data.id);
+    onMeetingOpened?.({ id: data.id, title: data.title, folder: data.folder, kind: "new" });
   }
 
   function openEditMeeting() {
@@ -812,59 +841,59 @@ export function TeamBoardPage({
         </header>
       )}
 
-      <nav className="mt-7 flex border-b border-hairline overflow-hidden">
-        <TabBtn
-          active={activeTab === "meetings"}
-          onClick={() => setActiveTab("meetings")}
-          icon={<CalendarClock className="h-3.5 w-3.5" />}
-        >
-          Meetings
-        </TabBtn>
-        {openTabs.map((t) => {
-          const isActive = activeTab === t.meeting.id;
-          const isNew = t.kind === "new";
-          // Tabs share remaining space: each gets flex-1 with min basis equal to "Meetings" tab,
-          // so they shrink uniformly when more are added.
-          const colorActive = isNew
-            ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
-            : "border-muted-foreground text-ink";
-          const colorIdle = isNew
-            ? "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
-            : "border-transparent text-muted-foreground hover:text-ink";
-          const dotColor = isNew ? "bg-emerald-500" : "bg-muted-foreground/60";
-          return (
-            <button
-              key={t.meeting.id}
-              onClick={() => setActiveTab(t.meeting.id)}
-              style={{ flex: "1 1 0", minWidth: 0, maxWidth: 240 }}
-              className={`group -mb-px inline-flex min-w-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm transition ${
-                isActive ? colorActive : colorIdle
-              }`}
-              title={t.meeting.title}
-            >
-              <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
-              <span className="min-w-0 flex-1 truncate text-left">
-                {t.meeting.folder ? `${t.meeting.folder} · ${t.meeting.title}` : t.meeting.title}
-              </span>
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void closeTab(t.meeting.id);
-                }}
-                className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+      {!hideOwnTabBar && (
+        <nav className="mt-7 flex border-b border-hairline overflow-hidden">
+          <TabBtn
+            active={activeTab === "meetings"}
+            onClick={() => setActiveTab("meetings")}
+            icon={<CalendarClock className="h-3.5 w-3.5" />}
+          >
+            Meetings
+          </TabBtn>
+          {openTabs.map((t) => {
+            const isActive = activeTab === t.meeting.id;
+            const isNew = t.kind === "new";
+            const colorActive = isNew
+              ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
+              : "border-muted-foreground text-ink";
+            const colorIdle = isNew
+              ? "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
+              : "border-transparent text-muted-foreground hover:text-ink";
+            const dotColor = isNew ? "bg-emerald-500" : "bg-muted-foreground/60";
+            return (
+              <button
+                key={t.meeting.id}
+                onClick={() => setActiveTab(t.meeting.id)}
+                style={{ flex: "1 1 0", minWidth: 0, maxWidth: 240 }}
+                className={`group -mb-px inline-flex min-w-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm transition ${
+                  isActive ? colorActive : colorIdle
+                }`}
+                title={t.meeting.title}
               >
-                ✕
-              </span>
-            </button>
-          );
-        })}
-      </nav>
+                <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
+                <span className="min-w-0 flex-1 truncate text-left">
+                  {t.meeting.folder ? `${t.meeting.folder} · ${t.meeting.title}` : t.meeting.title}
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void closeTab(t.meeting.id);
+                  }}
+                  className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                >
+                  ✕
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
 
 
 
-      {activeTab === "meetings" && (
+      {!hideOwnTabBar && activeTab === "meetings" && (
         <div className="mt-8 grid gap-8 md:grid-cols-[200px_1fr]">
           <nav className="-ml-2 flex flex-col gap-0.5">
             <SideNavBtn active={folderFilter === "all"} onClick={() => setFolderFilter("all")}>

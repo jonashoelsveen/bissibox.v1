@@ -26,11 +26,20 @@ export function MeetingsListPage({
   actionsMount,
   hideNewActions,
   externalView,
+  onOpenMeeting,
+  onMeetingCreated,
+  newMeetingSignal,
 }: {
   actionsMount?: HTMLDivElement | null;
   hideNewActions?: boolean;
   /** "all" or filter by folder name (null = unsorted, string = folder name). */
   externalView?: { type: "all" } | { type: "folder"; name: string | null };
+  /** When provided, clicking a meeting card calls this instead of navigating. */
+  onOpenMeeting?: (m: { id: string; title: string; folder: string | null }) => void;
+  /** Notify parent when a new meeting is created here. */
+  onMeetingCreated?: (m: { id: string; title: string; folder: string | null }) => void;
+  /** Trigger the "new meeting" dialog from the parent (counter increments). */
+  newMeetingSignal?: number;
 } = {}) {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -209,15 +218,32 @@ export function MeetingsListPage({
     setNewMeetingOpen(false);
     setNewMeetingTitle("");
     setNewMeetingFolder("");
-    // Open the new meeting in the existing TeamBoard editor
-    navigate({ to: "/team/board" });
+    if (onMeetingCreated) {
+      onMeetingCreated({ id: data.id, title: data.title, folder: data.folder });
+    } else {
+      // Fallback (standalone usage): open the existing TeamBoard editor.
+      navigate({ to: "/team/board" });
+    }
   }
 
   function openMeeting(id: string) {
-    // Reuse the existing meeting editor in /team/board
+    const m = meetings.find((x) => x.id === id);
+    if (onOpenMeeting && m) {
+      onOpenMeeting({ id: m.id, title: m.title, folder: m.folder });
+      return;
+    }
+    // Fallback (standalone usage): open the existing TeamBoard editor.
     navigate({ to: "/team/board" });
-    void id;
   }
+
+  // External "new meeting" trigger from the embedding parent.
+  const lastSigRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (newMeetingSignal === undefined) return;
+    if (lastSigRef.current === newMeetingSignal) return;
+    lastSigRef.current = newMeetingSignal;
+    setNewMeetingOpen(true);
+  }, [newMeetingSignal]);
 
   if (authLoading || !user) return null;
 
