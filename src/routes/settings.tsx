@@ -1215,3 +1215,66 @@ function DeskSettingsPanel() {
     </div>
   );
 }
+
+function AppearancePanel() {
+  const { user, activeEntityId } = useAuth();
+  const [open, setOpen] = useState(true);
+  const [currentColor, setCurrentColor] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancel = false;
+    if (!user) return;
+    (async () => {
+      if (activeEntityId) {
+        const { data } = await supabase
+          .from("teams")
+          .select("top_bar_color")
+          .eq("id", activeEntityId)
+          .maybeSingle();
+        if (!cancel) setCurrentColor((data?.top_bar_color as string | null) ?? null);
+      } else {
+        const { data } = await supabase
+          .from("profiles")
+          .select("top_bar_color")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!cancel) setCurrentColor((data?.top_bar_color as string | null) ?? null);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [user, activeEntityId]);
+
+  return (
+    <div className="space-y-3">
+      <Card>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className="h-4 w-4 border border-hairline"
+              style={{ background: currentColor || "transparent" }}
+            />
+            <h3 className="text-sm font-semibold text-ink">Top bar color</h3>
+          </div>
+          {open ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
+          )}
+        </button>
+        {open && (
+          <div className="mt-4">
+            <TopBarColorPicker
+              initial={currentColor}
+              onSaved={(hex) => setCurrentColor(hex)}
+            />
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
