@@ -53,20 +53,30 @@ export interface OpenNoteTab {
   kind: "new" | "earlier";
 }
 
+export interface OpenItemTab {
+  id: string;
+  kind: "note" | "file" | "media";
+  title: string;
+  folder: string | null;
+  /** For notes only: distinguishes brand-new from earlier notes for the green dot. */
+  noteKind?: "new" | "earlier";
+}
+
 export const Route = createFileRoute("/media")({
   component: LibraryPage,
-  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; new?: string; open?: string } => ({
+  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; folder?: string; new?: string; open?: string } => ({
     tab:
       s.tab === "files" || s.tab === "media" || s.tab === "notes"
         ? (s.tab as LibraryTab)
         : undefined,
+    folder: typeof s.folder === "string" ? (s.folder as string) : undefined,
     new: typeof s.new === "string" ? (s.new as string) : undefined,
     open: typeof s.open === "string" ? (s.open as string) : undefined,
   }),
   head: () => ({ meta: [{ title: "Library · Raceline" }] }),
 });
 
-const MAX_NOTE_TABS = 10;
+const MAX_ITEM_TABS = 10;
 
 function LibraryPage() {
   const search = useSearch({ from: "/media" });
