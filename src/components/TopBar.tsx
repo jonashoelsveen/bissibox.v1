@@ -14,6 +14,13 @@ const ENTITY_LABEL: Record<Entity["entity_type"], string> = {
 
 export function TopBar() {
   const { user, activeEntityId, setActiveEntity } = useAuth();
+  const router = useRouterState();
+  const path = router.location.pathname;
+  const isProfileActive =
+    path.startsWith("/profile") ||
+    path.startsWith("/u/") ||
+    path.startsWith("/t/") ||
+    path.startsWith("/c/");
   const [individualName, setIndividualName] = useState("");
   const [individualAvatar, setIndividualAvatar] = useState<string | null>(null);
   const [individualColor, setIndividualColor] = useState<string | null>(null);
