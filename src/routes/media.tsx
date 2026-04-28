@@ -353,15 +353,15 @@ function LibraryPage() {
           : { type: "album", id: search.folder }
       : undefined;
 
+  const showingPrevious = search.view === "previous";
   const sideValue: LibrarySideNavValue = {
-    category: baseTab,
-    folder: search.folder ?? "",
+    category: showingPrevious ? "previous" : baseTab,
+    folder: showingPrevious ? "" : (search.folder ?? ""),
   };
   const onSideChange = (v: LibrarySideNavValue) => {
     setActiveNoteId(null);
     if (v.category === "previous") {
-      // "Previous" entry: keep current tab, just clear folder + active note.
-      navigate({ to: "/media", search: { tab: baseTab }, replace: true });
+      navigate({ to: "/media", search: { tab: baseTab, view: "previous" }, replace: true });
       return;
     }
     navigate({
