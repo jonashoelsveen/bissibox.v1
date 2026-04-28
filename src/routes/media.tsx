@@ -510,6 +510,8 @@ function LibraryPage() {
                 navigate({ to: "/media", search: { tab: t }, replace: true })
               }
             />
+          ) : showingMeetings ? (
+            <TeamBoardPage />
           ) : baseTab === "notes" ? (
             <NotesPage
               actionsMount={actionsMount}
