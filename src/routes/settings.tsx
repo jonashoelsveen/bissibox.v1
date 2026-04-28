@@ -281,21 +281,8 @@ function SettingsPage() {
         <div className="flex items-center justify-between gap-2 pt-4 pr-14">
           <div className="flex items-baseline gap-2">
             <span className="text-base font-semibold text-ink">
-              Account
+              Settings
             </span>
-            <ProfileSelector
-              entities={entities}
-              activeEntity={activeEntity}
-              individualName={
-                [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
-                user.email ||
-                "Individual profile"
-              }
-              onSelect={(id) => {
-                setActiveEntity(id);
-                setTab(id ? "entity-profile" : "general");
-              }}
-            />
           </div>
           <button
             onClick={() => setCreateOpen(true)}
