@@ -761,10 +761,15 @@ function CreateFolderDialog({
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const create = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || busy) return;
     setBusy(true);
+    const scopeQ = supabase.from("note_folders").select("sort_order").order("sort_order", { ascending: false }).limit(1);
+    const { data: maxRows } = teamId
+      ? await scopeQ.eq("team_id", teamId)
+      : await scopeQ.is("team_id", null).eq("user_id", userId);
+    const nextOrder = ((maxRows?.[0]?.sort_order as number | undefined) ?? -1) + 1;
     const { error } = await supabase
-      .from("note_folders").insert({ user_id: userId, team_id: teamId, name: name.trim() });
+      .from("note_folders").insert({ user_id: userId, team_id: teamId, name: name.trim(), sort_order: nextOrder });
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Folder created");
