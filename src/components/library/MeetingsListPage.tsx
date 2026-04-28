@@ -385,9 +385,10 @@ export function MeetingsListPage({
           className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4"
           onClick={() => setNewMeetingOpen(false)}
         >
-          <div
+          <form
             className="w-full max-w-md rounded-xl border border-hairline bg-popover p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
+            onSubmit={(e) => { e.preventDefault(); void createMeeting(); }}
           >
             <h2 className="mb-4 text-lg text-ink">New meeting</h2>
             <label className="mb-3 block text-xs text-muted-foreground">
@@ -415,19 +416,20 @@ export function MeetingsListPage({
             </label>
             <div className="flex justify-end gap-2">
               <button
+                type="button"
                 onClick={() => setNewMeetingOpen(false)}
                 className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
               >
                 Cancel
               </button>
               <button
-                onClick={() => void createMeeting()}
+                type="submit"
                 className="rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
               >
                 Create
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

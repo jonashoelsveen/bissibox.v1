@@ -709,11 +709,16 @@ function CreateFolderDialog({
   const [busy, setBusy] = useState(false);
 
   const create = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || busy) return;
     setBusy(true);
+    const scopeQ = supabase.from("file_folders").select("sort_order").order("sort_order", { ascending: false }).limit(1);
+    const { data: maxRows } = teamId
+      ? await scopeQ.eq("team_id", teamId)
+      : await scopeQ.is("team_id", null).eq("user_id", userId);
+    const nextOrder = ((maxRows?.[0]?.sort_order as number | undefined) ?? -1) + 1;
     const { error } = await supabase
       .from("file_folders")
-      .insert({ user_id: userId, team_id: teamId, name: name.trim() });
+      .insert({ user_id: userId, team_id: teamId, name: name.trim(), sort_order: nextOrder });
     setBusy(false);
     if (error) {
       toast.error(error.message);
@@ -726,7 +731,7 @@ function CreateFolderDialog({
 
   return (
     <Modal title="New folder" onClose={onClose}>
-      <FieldInput label="Name" value={name} onChange={setName} autoFocus />
+      <FieldInput label="Name" value={name} onChange={setName} autoFocus onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void create(); } }} />
       <div className="mt-6 flex justify-end gap-2">
         <button
           onClick={onClose}
@@ -958,11 +963,13 @@ function FieldInput({
   value,
   onChange,
   autoFocus,
+  onKeyDown,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   autoFocus?: boolean;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
   return (
     <label className="block">
@@ -971,6 +978,7 @@ function FieldInput({
         autoFocus={autoFocus}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
       />
     </label>
