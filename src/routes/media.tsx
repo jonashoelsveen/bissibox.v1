@@ -728,7 +728,7 @@ function MediaPage({
       .update({ pinned: !album.pinned })
       .eq("id", album.id);
     if (error) toast.error(error.message);
-    else void load();
+    else { void load(); window.dispatchEvent(new Event("library:refresh")); }
   };
 
   const deleteAlbum = async (album: Album) => {
@@ -741,6 +741,7 @@ function MediaPage({
     toast.success(`Deleted "${album.name}"`);
     if (view.type === "album" && view.id === album.id) setView({ type: "all" });
     void load();
+    window.dispatchEvent(new Event("library:refresh"));
   };
 
   const setAsCover = async (
@@ -1539,6 +1540,7 @@ function CreateAlbumDialog({
       return;
     }
     toast.success("Album created");
+    window.dispatchEvent(new Event("library:refresh"));
     onCreated();
   };
 

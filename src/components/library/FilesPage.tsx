@@ -122,7 +122,7 @@ export function FilesPage({
       .update({ pinned: !folder.pinned })
       .eq("id", folder.id);
     if (error) toast.error(error.message);
-    else void load();
+    else { void load(); window.dispatchEvent(new Event("library:refresh")); }
   };
 
   const deleteFolder = async (folder: Folder) => {
@@ -135,6 +135,7 @@ export function FilesPage({
     toast.success(`Deleted "${folder.name}"`);
     if (view.type === "folder" && view.id === folder.id) setView({ type: "all" });
     void load();
+    window.dispatchEvent(new Event("library:refresh"));
   };
 
   const load = useCallback(async () => {
@@ -719,6 +720,7 @@ function CreateFolderDialog({
       return;
     }
     toast.success("Folder created");
+    window.dispatchEvent(new Event("library:refresh"));
     onCreated();
   };
 

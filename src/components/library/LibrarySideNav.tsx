@@ -133,8 +133,12 @@ export function LibrarySideNav({
       .on("postgres_changes", { event: "*", schema: "public", table: "media_albums" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "team_board_meetings" }, () => load())
       .subscribe();
+    // Local same-tab signal so creations reflect immediately, even without realtime
+    const onLocal = () => void load();
+    window.addEventListener("library:refresh", onLocal);
     return () => {
       void supabase.removeChannel(ch);
+      window.removeEventListener("library:refresh", onLocal);
     };
   }, [load, user?.id]);
 
