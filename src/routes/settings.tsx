@@ -248,7 +248,7 @@ function SettingsPage() {
         "entity-events",
         "entity-appearance",
       ]
-    : ["profiles", "general", "address", "roles", "appearance", "desk", "races", "liked"];
+    : ["profiles", "general", "address", "roles", "library", "appearance", "desk", "races", "liked"];
 
   
 
