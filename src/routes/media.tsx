@@ -623,6 +623,38 @@ function LibraryPage() {
         </div>
       </div>
       {newNoteOpen && <NewNoteOverlay onClose={() => setNewNoteOpen(false)} />}
+      {unsavedPrompt && (
+        <UnsavedChangesDialog
+          title={unsavedPrompt.title}
+          isNew={unsavedPrompt.isNew}
+          onSave={async () => {
+            const h = getUnsaved(unsavedPrompt.id);
+            if (h) await h.save();
+            const id = unsavedPrompt.id;
+            setUnsavedPrompt(null);
+            finalizeClose(id);
+          }}
+          onDiscard={async () => {
+            const h = getUnsaved(unsavedPrompt.id);
+            if (h) {
+              if (unsavedPrompt.isNew) {
+                // delete the brand-new record
+                await supabase.from(
+                  openNoteTabs.find((t) => t.id === unsavedPrompt.id)?.type === "meeting"
+                    ? "team_board_meetings"
+                    : "notes",
+                ).delete().eq("id", unsavedPrompt.id);
+              } else {
+                await h.discard();
+              }
+            }
+            const id = unsavedPrompt.id;
+            setUnsavedPrompt(null);
+            finalizeClose(id);
+          }}
+          onCancel={() => setUnsavedPrompt(null)}
+        />
+      )}
     </div>
   );
 }
