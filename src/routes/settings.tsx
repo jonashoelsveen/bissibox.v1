@@ -101,13 +101,19 @@ function SettingsPage() {
   const { user, loading: authLoading, activeEntityId, setActiveEntity, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileBaseline, setProfileBaseline] = useState<string>("");
   const [team, setTeam] = useState<Team | null>(null);
+  const [teamBaseline, setTeamBaseline] = useState<string>("");
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [regs, setRegs] = useState<RegistrationRow[]>([]);
   const [liked, setLiked] = useState<LikedRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<Tab>("general");
   const [createOpen, setCreateOpen] = useState(false);
+
+  const isDirty = isTeamMode
+    ? !!team && JSON.stringify(team) !== teamBaseline
+    : !!profile && JSON.stringify(profile) !== profileBaseline;
 
   // Active selection: null = individual profile, otherwise the entity id.
   const isTeamMode = !!activeEntityId;
