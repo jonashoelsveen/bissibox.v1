@@ -85,15 +85,12 @@ function LibraryPage() {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
   const [newNoteOpen, setNewNoteOpen] = useState(false);
-  const [newMeetingTick, setNewMeetingTick] = useState(0);
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
 
   const handleCreateFromPrevious = (kind: PreviousNewKind) => {
     if (kind === "meeting") {
       setActiveNoteId(null);
-      navigate({ to: "/media", search: { tab: baseTab, view: "meetings" }, replace: true });
-      // bump after navigation so TeamBoardPage effect fires
-      setNewMeetingTick((t) => t + 1);
+      navigate({ to: "/media", search: { tab: "meetings", new: "1" }, replace: true });
       return;
     }
     if (kind === "note") {
