@@ -958,11 +958,13 @@ function FieldInput({
   value,
   onChange,
   autoFocus,
+  onKeyDown,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   autoFocus?: boolean;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
   return (
     <label className="block">
@@ -971,6 +973,7 @@ function FieldInput({
         autoFocus={autoFocus}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
       />
     </label>
