@@ -5,7 +5,8 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 import { RolesPanel } from "@/components/RolesPanel";
-import { ChevronDown, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network } from "lucide-react";
+import { TopBarColorPicker } from "@/components/appearance/TopBarColorPicker";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -72,13 +73,15 @@ type Tab =
   | "liked"
   | "roles"
   | "profiles"
+  | "appearance"
   | "entity-profile"
   | "desk"
   | "signout"
   | "entity-organization"
   | "entity-meetings"
   | "entity-library"
-  | "entity-events";
+  | "entity-events"
+  | "entity-appearance";
 
 interface EntityRow {
   id: string;
@@ -235,8 +238,9 @@ function SettingsPage() {
         "entity-meetings",
         "entity-library",
         "entity-events",
+        "entity-appearance",
       ]
-    : ["general", "address", "roles", "profiles", "desk", "races", "liked"];
+    : ["general", "address", "roles", "profiles", "appearance", "desk", "races", "liked"];
 
   const activeEntity = entities.find((e) => e.id === activeEntityId) ?? null;
 
@@ -257,15 +261,19 @@ function SettingsPage() {
                   ? "My races"
                   : t === "liked"
                     ? "Liked races"
-                    : t === "entity-organization"
-                      ? "Organization"
-                      : t === "entity-meetings"
-                        ? "Meetings"
-                        : t === "entity-library"
-                          ? "Library"
-                          : t === "entity-events"
-                            ? "Events"
-                            : "Sign out";
+                    : t === "appearance"
+                      ? "Appearance"
+                      : t === "entity-appearance"
+                        ? "Appearance"
+                        : t === "entity-organization"
+                          ? "Organization"
+                          : t === "entity-meetings"
+                            ? "Meetings"
+                            : t === "entity-library"
+                              ? "Library"
+                              : t === "entity-events"
+                                ? "Events"
+                                : "Sign out";
 
   return (
     <div className="px-4 md:px-6">
@@ -579,6 +587,10 @@ function SettingsPage() {
                   Settings related to events will appear here.
                 </p>
               </Card>
+            )}
+
+            {(tab === "appearance" || tab === "entity-appearance") && (
+              <AppearancePanel />
             )}
           </div>
         </div>
@@ -1198,6 +1210,69 @@ function DeskSettingsPanel() {
               </li>
             ))}
           </ul>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function AppearancePanel() {
+  const { user, activeEntityId } = useAuth();
+  const [open, setOpen] = useState(true);
+  const [currentColor, setCurrentColor] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancel = false;
+    if (!user) return;
+    (async () => {
+      if (activeEntityId) {
+        const { data } = await supabase
+          .from("teams")
+          .select("top_bar_color")
+          .eq("id", activeEntityId)
+          .maybeSingle();
+        if (!cancel) setCurrentColor((data?.top_bar_color as string | null) ?? null);
+      } else {
+        const { data } = await supabase
+          .from("profiles")
+          .select("top_bar_color")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!cancel) setCurrentColor((data?.top_bar_color as string | null) ?? null);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [user, activeEntityId]);
+
+  return (
+    <div className="space-y-3">
+      <Card>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className="h-4 w-4 border border-hairline"
+              style={{ background: currentColor || "transparent" }}
+            />
+            <h3 className="text-sm font-semibold text-ink">Top bar color</h3>
+          </div>
+          {open ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
+          )}
+        </button>
+        {open && (
+          <div className="mt-4">
+            <TopBarColorPicker
+              initial={currentColor}
+              onSaved={(hex) => setCurrentColor(hex)}
+            />
+          </div>
         )}
       </Card>
     </div>

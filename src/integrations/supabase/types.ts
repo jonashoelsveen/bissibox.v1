@@ -956,6 +956,7 @@ export type Database = {
           anonymous: boolean
           athlete_active: boolean
           athlete_cover_media_id: string | null
+          avatar_url: string | null
           birth_date: string | null
           club: string | null
           companion: string | null
@@ -982,6 +983,7 @@ export type Database = {
           postal_place: string | null
           team: string | null
           team_group: string | null
+          top_bar_color: string | null
           updated_at: string
           website: string | null
         }
@@ -992,6 +994,7 @@ export type Database = {
           anonymous?: boolean
           athlete_active?: boolean
           athlete_cover_media_id?: string | null
+          avatar_url?: string | null
           birth_date?: string | null
           club?: string | null
           companion?: string | null
@@ -1018,6 +1021,7 @@ export type Database = {
           postal_place?: string | null
           team?: string | null
           team_group?: string | null
+          top_bar_color?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -1028,6 +1032,7 @@ export type Database = {
           anonymous?: boolean
           athlete_active?: boolean
           athlete_cover_media_id?: string | null
+          avatar_url?: string | null
           birth_date?: string | null
           club?: string | null
           companion?: string | null
@@ -1054,6 +1059,7 @@ export type Database = {
           postal_place?: string | null
           team?: string | null
           team_group?: string | null
+          top_bar_color?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -1605,6 +1611,7 @@ export type Database = {
           owner_id: string
           postal_code: string | null
           postal_place: string | null
+          top_bar_color: string | null
           updated_at: string
           website: string | null
         }
@@ -1625,6 +1632,7 @@ export type Database = {
           owner_id: string
           postal_code?: string | null
           postal_place?: string | null
+          top_bar_color?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -1645,6 +1653,7 @@ export type Database = {
           owner_id?: string
           postal_code?: string | null
           postal_place?: string | null
+          top_bar_color?: string | null
           updated_at?: string
           website?: string | null
         }

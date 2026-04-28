@@ -1,79 +1,25 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Search, Library, Plus, Tent, Settings, LogIn, Users, Briefcase, Armchair } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { supabase } from "@/integrations/supabase/client";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { NewEventDialog } from "@/components/organizer/NewEventDialog";
 
 export function TopChrome() {
   const router = useRouterState();
   const path = router.location.pathname;
-  const { user, mode, activeEntityId } = useAuth();
-  const [letter, setLetter] = useState<string>("");
+  const { user, mode } = useAuth();
   const [newNoteOpen, setNewNoteOpen] = useState(false);
   const [newEventOpen, setNewEventOpen] = useState(false);
 
   const isOrganizer = (mode === "organizer" || mode === "team") && !!user;
   const isIndividual = !isOrganizer;
 
-  useEffect(() => {
-    let cancel = false;
-    if (!user) {
-      setLetter("");
-      return;
-    }
-    (async () => {
-      if (activeEntityId) {
-        const { data } = await supabase
-          .from("teams")
-          .select("name")
-          .eq("id", activeEntityId)
-          .maybeSingle();
-        if (cancel) return;
-        const src = (data?.name && data.name.trim()) || "?";
-        setLetter(src.charAt(0).toUpperCase());
-        return;
-      }
-      const { data } = await supabase
-        .from("profiles")
-        .select("first_name,last_name,email")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (cancel) return;
-      const src =
-        (data?.first_name && data.first_name.trim()) ||
-        (data?.last_name && data.last_name.trim()) ||
-        data?.email ||
-        user.email ||
-        "?";
-      setLetter(src.charAt(0).toUpperCase());
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, [user, activeEntityId]);
-
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen p-5 md:p-6">
-      <div className="flex h-full flex-col items-center gap-2 pt-2">
-        {/* Profile / Sign-in at the top */}
-        {user ? (
-          <Link
-            to="/profile"
-            aria-label="Profile"
-            className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-all ${
-              path.startsWith("/profile") ||
-              path.startsWith("/u/") ||
-              path.startsWith("/t/") ||
-              path.startsWith("/c/")
-                ? "bg-ink text-background"
-                : "text-ink hover:bg-secondary"
-            }`}
-          >
-            {letter}
-          </Link>
-        ) : (
+    <aside className="fixed left-0 top-0 z-40 h-screen p-5 pt-[72px] md:p-6 md:pt-[72px]">
+      <div className="flex h-full flex-col items-center gap-2">
+        {/* Sign-in shortcut for logged-out users (logged-in identity lives in the top bar) */}
+        {!user && (
           <Link
             to="/auth"
             aria-label="Sign in"
@@ -87,8 +33,7 @@ export function TopChrome() {
           </Link>
         )}
 
-        <div className="my-1 h-px w-6 bg-hairline" />
-
+        {!user && <div className="my-1 h-px w-6 bg-hairline" />}
         {user && mode === "team" && (
           <>
             <NavBtn to="/team/members" label="Members" active={path.startsWith("/team/members")}>

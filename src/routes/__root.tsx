@@ -2,6 +2,7 @@ import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/r
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TopChrome } from "@/components/Chrome";
+import { TopBar } from "@/components/TopBar";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -70,8 +71,9 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   return (
     <AuthProvider>
+      <TopBar />
       <TopChrome />
-      <main className="min-h-screen pb-16 pt-8 pl-20 md:pl-24">
+      <main className="min-h-screen pb-16 pl-20 pt-20 md:pl-24">
         <Outlet />
       </main>
       <Toaster />
