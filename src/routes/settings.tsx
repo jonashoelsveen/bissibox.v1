@@ -559,13 +559,8 @@ function SettingsPage() {
               </Card>
             )}
 
-            {tab === "entity-library" && isTeamMode && (
-              <Card>
-                <h3 className="text-sm font-semibold text-ink">Library</h3>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Settings related to your library will appear here.
-                </p>
-              </Card>
+            {tab === "entity-library" && isTeamMode && team && (
+              <LibrarySettingsPanel scopeKey={`entity:${team.id}`} />
             )}
 
             {tab === "entity-events" && isTeamMode && (
