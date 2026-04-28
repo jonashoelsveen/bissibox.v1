@@ -10,6 +10,7 @@ import { FilesPage } from "@/components/library/FilesPage";
 import { NotesPage } from "@/components/library/NotesPage";
 import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
+import { PreviousPage } from "@/components/library/PreviousPage";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -40,6 +41,7 @@ import {
   FolderClosed,
   Image as ImageIcon,
   StickyNote,
+  Library,
   Play,
   Pause,
 } from "lucide-react";
@@ -56,7 +58,7 @@ export interface OpenNoteTab {
 
 export const Route = createFileRoute("/media")({
   component: LibraryPage,
-  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; folder?: string; new?: string; open?: string } => ({
+  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; folder?: string; new?: string; open?: string; view?: "previous" } => ({
     tab:
       s.tab === "files" || s.tab === "media" || s.tab === "notes"
         ? (s.tab as LibraryTab)
@@ -64,6 +66,7 @@ export const Route = createFileRoute("/media")({
     folder: typeof s.folder === "string" ? (s.folder as string) : undefined,
     new: typeof s.new === "string" ? (s.new as string) : undefined,
     open: typeof s.open === "string" ? (s.open as string) : undefined,
+    view: s.view === "previous" ? "previous" : undefined,
   }),
   head: () => ({ meta: [{ title: "Library · Raceline" }] }),
 });
@@ -350,15 +353,15 @@ function LibraryPage() {
           : { type: "album", id: search.folder }
       : undefined;
 
+  const showingPrevious = search.view === "previous";
   const sideValue: LibrarySideNavValue = {
-    category: baseTab,
-    folder: search.folder ?? "",
+    category: showingPrevious ? "previous" : baseTab,
+    folder: showingPrevious ? "" : (search.folder ?? ""),
   };
   const onSideChange = (v: LibrarySideNavValue) => {
     setActiveNoteId(null);
     if (v.category === "previous") {
-      // "Previous" entry: keep current tab, just clear folder + active note.
-      navigate({ to: "/media", search: { tab: baseTab }, replace: true });
+      navigate({ to: "/media", search: { tab: baseTab, view: "previous" }, replace: true });
       return;
     }
     navigate({
@@ -376,10 +379,10 @@ function LibraryPage() {
         </aside>
 
         <div className="min-w-0">
-          <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-0 pr-4 md:-mx-6 md:pr-6">
+          <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
             <button
               onClick={() => setActiveNoteId(null)}
-              className={`-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-medium ${
+              className={`-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 py-2.5 pl-0 pr-4 text-sm font-medium ${
                 showingNote
                   ? "border-transparent text-muted-foreground hover:text-ink"
                   : "border-primary text-ink"
@@ -387,7 +390,7 @@ function LibraryPage() {
               style={{ width: 220, justifyContent: "flex-start" }}
               title="Library"
             >
-              <FolderClosed className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
+              <Library className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
               <span>Library</span>
             </button>
             <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
@@ -491,6 +494,13 @@ function LibraryPage() {
               noteId={activeNoteId}
               actionsMount={actionsMount}
               onChanged={updateNoteTab}
+            />
+          ) : showingPrevious ? (
+            <PreviousPage
+              onOpenNote={(id) => void openNote(id, "earlier")}
+              onOpenTab={(t) =>
+                navigate({ to: "/media", search: { tab: t }, replace: true })
+              }
             />
           ) : baseTab === "notes" ? (
             <NotesPage
