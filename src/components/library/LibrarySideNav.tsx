@@ -7,9 +7,10 @@ import {
   FolderClosed,
   Image as ImageIcon,
   Pin,
+  History,
 } from "lucide-react";
 
-export type LibraryCategory = "notes" | "files" | "media";
+export type LibraryCategory = "previous" | "notes" | "files" | "media";
 
 interface FolderLite {
   id: string;
