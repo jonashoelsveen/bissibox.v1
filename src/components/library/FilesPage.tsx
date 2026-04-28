@@ -482,6 +482,7 @@ export function FilesPage({
                     key={f.id}
                     onClick={() => {
                       if (selectMode) toggleSel(f.id);
+                      else if (onOpenFile) onOpenFile(f.id);
                       else void downloadOne(f);
                     }}
                     className="group relative flex aspect-square cursor-pointer flex-col overflow-hidden rounded-xl border border-hairline bg-card p-3 transition hover:border-ink/20"
