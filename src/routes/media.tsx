@@ -256,6 +256,21 @@ function LibraryPage() {
     if (activeNoteId === id) setActiveNoteId(null);
   };
 
+  const openMeetingTab = useCallback(
+    (m: { id: string; title: string; folder: string | null }, kind: "new" | "earlier" = "earlier") => {
+      setOpenNoteTabs((prev) => {
+        if (prev.some((t) => t.id === m.id)) return prev;
+        if (prev.length >= MAX_NOTE_TABS) {
+          toast.error(`You can have at most ${MAX_NOTE_TABS} tabs open at once.`);
+          return prev;
+        }
+        return [...prev, { id: m.id, title: m.title, folder: m.folder, kind, type: "meeting" }];
+      });
+      setActiveNoteId(m.id);
+    },
+    [],
+  );
+
   const updateNoteTab = (patch: { id: string; title?: string; folder?: string | null }) => {
     setOpenNoteTabs((prev) =>
       prev.map((t) =>
