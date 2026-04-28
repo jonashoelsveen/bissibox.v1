@@ -1259,3 +1259,113 @@ function AppearancePanel() {
     </div>
   );
 }
+
+const PROFILE_VISIBILITY_ITEMS = [
+  "Memberships",
+  "Groups",
+  "Members",
+  "Events",
+  "Media",
+  "Contact",
+] as const;
+
+function ProfileVisibilityPanel({
+  scopeKey,
+  active,
+  onActiveChange,
+}: {
+  scopeKey: string;
+  active: boolean;
+  onActiveChange: (v: boolean) => void;
+}) {
+  const storageKey = `profile-visibility:${scopeKey}`;
+  const [open, setOpen] = useState(false);
+  const [checked, setChecked] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") {
+      return Object.fromEntries(PROFILE_VISIBILITY_ITEMS.map((i) => [i, true]));
+    }
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) return JSON.parse(raw) as Record<string, boolean>;
+    } catch {
+      /* ignore */
+    }
+    return Object.fromEntries(PROFILE_VISIBILITY_ITEMS.map((i) => [i, true]));
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(checked));
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [storageKey, checked]);
+
+  return (
+    <div className="space-y-3">
+      <Card>
+        <div className="flex w-full items-center gap-3">
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          >
+            <h3 className="text-sm font-semibold text-ink">Profile</h3>
+          </button>
+          <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={active}
+              onClick={() => onActiveChange(!active)}
+              className={`relative h-5 w-9 shrink-0 rounded-full transition ${
+                active ? "bg-primary" : "bg-secondary"
+              }`}
+              aria-label="Toggle profile active"
+            >
+              <span
+                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition ${
+                  active ? "left-[18px]" : "left-0.5"
+                }`}
+              />
+            </button>
+            <button
+              onClick={() => setOpen((v) => !v)}
+              aria-label={open ? "Collapse" : "Expand"}
+              className="text-muted-foreground hover:text-ink"
+            >
+              {open ? (
+                <ChevronDown className="h-4 w-4" strokeWidth={2.25} />
+              ) : (
+                <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+              )}
+            </button>
+          </div>
+        </div>
+        {open && (
+          <div className="mt-4 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              The following tabs will be included and visible in the profile page.
+            </p>
+            <ul className="divide-y divide-hairline rounded-xl border border-hairline">
+              {PROFILE_VISIBILITY_ITEMS.map((item) => (
+                <li key={item} className="flex items-center justify-between px-4 py-3">
+                  <span className="text-sm text-ink">{item}</span>
+                  <input
+                    type="checkbox"
+                    checked={checked[item] ?? true}
+                    onChange={(e) =>
+                      setChecked((c) => ({ ...c, [item]: e.target.checked }))
+                    }
+                    className="h-4 w-4 accent-primary"
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
