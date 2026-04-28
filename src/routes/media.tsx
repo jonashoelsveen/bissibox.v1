@@ -57,7 +57,7 @@ export interface OpenNoteTab {
 
 export const Route = createFileRoute("/media")({
   component: LibraryPage,
-  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; folder?: string; new?: string; open?: string } => ({
+  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; folder?: string; new?: string; open?: string; view?: "previous" } => ({
     tab:
       s.tab === "files" || s.tab === "media" || s.tab === "notes"
         ? (s.tab as LibraryTab)
@@ -65,6 +65,7 @@ export const Route = createFileRoute("/media")({
     folder: typeof s.folder === "string" ? (s.folder as string) : undefined,
     new: typeof s.new === "string" ? (s.new as string) : undefined,
     open: typeof s.open === "string" ? (s.open as string) : undefined,
+    view: s.view === "previous" ? "previous" : undefined,
   }),
   head: () => ({ meta: [{ title: "Library · Raceline" }] }),
 });
