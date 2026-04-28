@@ -11,6 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useLibrarySetting, notesAutosaveKey, registerUnsaved } from "@/lib/library-settings";
 
 interface NoteRow {
   id: string;
