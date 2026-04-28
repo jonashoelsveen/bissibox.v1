@@ -11,6 +11,7 @@ import { NotesPage } from "@/components/library/NotesPage";
 import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
 import { PreviousPage } from "@/components/library/PreviousPage";
+import { TeamBoardPage } from "@/routes/team.board";
 import { toast } from "sonner";
 import {
   ChevronDown,
