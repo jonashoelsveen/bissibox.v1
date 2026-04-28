@@ -8,6 +8,7 @@ import { ProfileShell, MediaGrid } from "@/components/ProfileShell";
 import { VerificationDialog } from "@/components/VerificationDialog";
 import { formatMoney } from "@/lib/format";
 import { useNavigate } from "@tanstack/react-router";
+import { useProfileVisibility } from "@/lib/library-settings";
 
 export const Route = createFileRoute("/t/$teamId")({
   component: TeamPage,
@@ -98,6 +99,7 @@ function TeamPage() {
   const [coverPath, setCoverPath] = useState<string | null>(null);
   const [followers, setFollowers] = useState(0);
   const [myMemberships, setMyMemberships] = useState<Set<string>>(new Set());
+  const [visibility] = useProfileVisibility(`entity:${teamId}`);
   const [groupOptions, setGroupOptions] = useState<GroupOpt[]>([]);
   const [pickerGroupId, setPickerGroupId] = useState<string>("");
   const [confirmInfo, setConfirmInfo] = useState<ConfirmInfo | null>(null);
@@ -371,7 +373,9 @@ function TeamPage() {
         { key: "members", label: "Members", icon: <UsersIcon className="h-3.5 w-3.5" /> },
         { key: "events", label: "Events", icon: <Calendar className="h-3.5 w-3.5" /> },
         { key: "media", label: "Media", icon: <ImageIcon className="h-3.5 w-3.5" /> },
-      ]}
+      ].filter((t) => visibility[
+        ({ memberships: "Memberships", groups: "Groups", members: "Members", events: "Events", media: "Media" } as const)[t.key as "memberships" | "groups" | "members" | "events" | "media"]
+      ] !== false)}
       activeTab={tab}
       onTabChange={(k) => setTab(k as typeof tab)}
       website={{

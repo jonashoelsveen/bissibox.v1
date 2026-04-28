@@ -7,6 +7,7 @@ import { FollowButton } from "@/components/FollowButton";
 import { useAuth } from "@/lib/auth";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
+import { useProfileVisibility } from "@/lib/library-settings";
 
 const search = z.object({
   as: fallback(z.enum(["athlete", "photographer"]), "athlete").default("athlete"),
@@ -151,12 +152,14 @@ function UserProfilePage() {
 
   const name = [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Unnamed";
 
-  const tabs = showPhotographer
+  const [visibility] = useProfileVisibility(`user:${userId}`);
+  const baseTabs = showPhotographer
     ? [{ key: "media", label: "Media", icon: <ImageIcon className="h-3.5 w-3.5" /> }]
     : [
         { key: "bests", label: "Personal bests", icon: <Trophy className="h-3.5 w-3.5" /> },
         { key: "media", label: "Media", icon: <ImageIcon className="h-3.5 w-3.5" /> },
       ];
+  const tabs = baseTabs.filter((t) => (t.key === "media" ? visibility.Media !== false : true));
 
   return (
     <ProfileShell

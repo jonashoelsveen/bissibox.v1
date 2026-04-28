@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useLibrarySetting, notesAutosaveKey, registerUnsaved } from "@/lib/library-settings";
 
 interface NoteRow {
   id: string;
@@ -32,14 +33,14 @@ interface NoteAttachment {
 
 export function NoteEditor({
   noteId,
-  actionsMount,
+  actionsMount: _actionsMount,
   onChanged,
 }: {
   noteId: string;
-  actionsMount: HTMLDivElement | null;
+  actionsMount?: HTMLDivElement | null;
   onChanged?: (patch: { id: string; title?: string; folder?: string | null }) => void;
 }) {
-  const { user } = useAuth();
+  const { user, activeEntityId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
@@ -54,6 +55,12 @@ export function NoteEditor({
   const [editFolder, setEditFolder] = useState("");
 
   const isDirty = body !== savedBody;
+  const scopeKey = activeEntityId
+    ? `entity:${activeEntityId}`
+    : user
+      ? `user:${user.id}`
+      : "user:anon";
+  const [autosave] = useLibrarySetting<boolean>(notesAutosaveKey(scopeKey), false);
 
   useEffect(() => {
     if (!user) return;
@@ -102,6 +109,30 @@ export function NoteEditor({
     if (error) { toast.error(error.message); return; }
     setSavedBody(body);
   };
+
+  // Autosave (debounced) when enabled
+  useEffect(() => {
+    if (!autosave || !isDirty || !note) return;
+    const t = setTimeout(() => { void saveBody(); }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autosave, body, isDirty, note?.id]);
+
+  // Register dirty-state so the host can prompt before closing the tab.
+  useEffect(() => {
+    if (!note) return;
+    return registerUnsaved(note.id, {
+      isDirty: () => body !== savedBody,
+      isNew: () => false,
+      title: () => note.title || "Untitled note",
+      save: async () => { await saveBody(); },
+      discard: async () => {
+        // revert to saved body without writing
+        setBody(savedBody);
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note?.id, body, savedBody]);
 
   const uploadAttachments = async (files: FileList) => {
     if (!note || !user) return;
@@ -173,26 +204,9 @@ export function NoteEditor({
 
   if (!user || !note) return null;
 
-  const actions = (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => void saveBody()}
-        disabled={!isDirty || saving}
-        className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs transition ${
-          isDirty && !saving
-            ? "bg-primary text-primary-foreground hover:opacity-90"
-            : "cursor-default border border-hairline bg-card text-muted-foreground/60"
-        }`}
-      >
-        <Save className="h-3.5 w-3.5" />
-        {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
-      </button>
-    </div>
-  );
-
   return (
     <div>
-      {actionsMount && createPortal(actions, actionsMount)}
+      {/* Top-level save button removed; the document toolbar below owns it. */}
 
       <section className="mt-5 rounded-lg border border-hairline bg-card shadow-sm">
         {/* Document toolbar */}
@@ -215,18 +229,28 @@ export function NoteEditor({
           >
             <FolderIcon className="h-4 w-4" />
           </button>
-          <button
-            onClick={() => void saveBody()}
-            disabled={!isDirty || saving}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition ${
-              isDirty && !saving
-                ? "text-ink hover:bg-secondary"
-                : "cursor-default text-muted-foreground/50"
-            }`}
-          >
-            <Save className="h-3.5 w-3.5" />
-            {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
-          </button>
+          {autosave ? (
+            <span
+              title="Autosave is on. Edits are saved automatically."
+              className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-emerald-600 dark:text-emerald-400"
+            >
+              <Save className="h-3.5 w-3.5" />
+              {saving ? "Saving…" : "Autosave"}
+            </span>
+          ) : (
+            <button
+              onClick={() => void saveBody()}
+              disabled={!isDirty || saving}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition ${
+                isDirty && !saving
+                  ? "text-ink hover:bg-secondary"
+                  : "cursor-default text-muted-foreground/50"
+              }`}
+            >
+              <Save className="h-3.5 w-3.5" />
+              {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
+            </button>
+          )}
         </div>
 
         <div className="mx-auto my-6 flex min-h-[700px] w-full max-w-3xl flex-col rounded-md border border-hairline bg-background p-10 shadow-inner">

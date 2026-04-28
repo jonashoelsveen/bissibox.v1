@@ -20,6 +20,7 @@ import {
   Users as UsersIcon,
   X,
 } from "lucide-react";
+import { useLibrarySetting, meetingsAutosaveKey, registerUnsaved } from "@/lib/library-settings";
 
 export const Route = createFileRoute("/team/board")({
   component: TeamBoardPage,
@@ -131,6 +132,8 @@ export function TeamBoardPage({
   const attendance = ongoing?.attendance ?? [];
   const roster = ongoing?.roster ?? [];
   const isDirty = ongoingText !== savedText;
+  const meetingsScopeKey = activeEntityId ? `entity:${activeEntityId}` : `user:${user?.id ?? "anon"}`;
+  const [meetingsAutosave] = useLibrarySetting<boolean>(meetingsAutosaveKey(meetingsScopeKey), false);
 
   function patchTab(id: string, patch: Partial<OpenTab>) {
     setOpenTabs((prev) => prev.map((t) => (t.meeting.id === id ? { ...t, ...patch } : t)));
@@ -612,6 +615,32 @@ export function TeamBoardPage({
     await saveTabText(ongoing.meeting.id);
   }
 
+  // Autosave for the active meeting tab when enabled
+  useEffect(() => {
+    if (!meetingsAutosave || !isDirty || !ongoing) return;
+    const t = setTimeout(() => { void saveOngoingText(); }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meetingsAutosave, ongoingText, isDirty, ongoing?.meeting.id]);
+
+  // Register dirty-state for host close-confirmation
+  useEffect(() => {
+    if (!ongoing) return;
+    const id = ongoing.meeting.id;
+    const title = ongoing.meeting.title || "Untitled meeting";
+    return registerUnsaved(id, {
+      isDirty: () => (openTabs.find((t) => t.meeting.id === id)?.text ?? "") !== (openTabs.find((t) => t.meeting.id === id)?.savedText ?? ""),
+      isNew: () => false,
+      title: () => title,
+      save: async () => { await saveTabText(id); },
+      discard: async () => {
+        const t = openTabs.find((x) => x.meeting.id === id);
+        if (t) patchTab(id, { text: t.savedText });
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ongoing?.meeting.id, ongoingText, savedText]);
+
   async function loadAttachmentsFor(meetingId: string) {
     const { data } = await supabase
       .from("team_board_meeting_attachments")
@@ -1028,18 +1057,28 @@ export function TeamBoardPage({
             >
               <FolderIcon className="h-4 w-4" />
             </button>
-            <button
-              onClick={saveOngoingText}
-              disabled={!isDirty || saving}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition ${
-                isDirty && !saving
-                  ? "text-ink hover:bg-secondary"
-                  : "cursor-default text-muted-foreground/50"
-              }`}
-            >
-              <Save className="h-3.5 w-3.5" />
-              {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
-            </button>
+            {meetingsAutosave ? (
+              <span
+                title="Autosave is on. Edits are saved automatically."
+                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-emerald-600 dark:text-emerald-400"
+              >
+                <Save className="h-3.5 w-3.5" />
+                {saving ? "Saving…" : "Autosave"}
+              </span>
+            ) : (
+              <button
+                onClick={saveOngoingText}
+                disabled={!isDirty || saving}
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition ${
+                  isDirty && !saving
+                    ? "text-ink hover:bg-secondary"
+                    : "cursor-default text-muted-foreground/50"
+                }`}
+              >
+                <Save className="h-3.5 w-3.5" />
+                {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
+              </button>
+            )}
           </div>
 
           {/* Document body — single blank page */}
