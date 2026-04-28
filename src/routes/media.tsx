@@ -380,19 +380,14 @@ function LibraryPage() {
       : undefined;
 
   const showingPrevious = search.view === "previous";
-  const showingMeetings = search.view === "meetings";
   const sideValue: LibrarySideNavValue = {
-    category: showingPrevious ? "previous" : showingMeetings ? "meetings" : baseTab,
-    folder: showingPrevious || showingMeetings ? "" : (search.folder ?? ""),
+    category: showingPrevious ? "previous" : baseTab,
+    folder: showingPrevious ? "" : (search.folder ?? ""),
   };
   const onSideChange = (v: LibrarySideNavValue) => {
     setActiveNoteId(null);
     if (v.category === "previous") {
       navigate({ to: "/media", search: { tab: baseTab, view: "previous" }, replace: true });
-      return;
-    }
-    if (v.category === "meetings") {
-      navigate({ to: "/media", search: { tab: baseTab, view: "meetings" }, replace: true });
       return;
     }
     navigate({
@@ -401,6 +396,15 @@ function LibraryPage() {
       replace: true,
     });
   };
+
+  const externalMeetingsView: { type: "all" } | { type: "folder"; name: string | null } | undefined =
+    baseTab === "meetings" && search.folder !== undefined
+      ? search.folder === "__unsorted__"
+        ? { type: "folder", name: null }
+        : search.folder === ""
+          ? { type: "all" }
+          : { type: "folder", name: search.folder }
+      : undefined;
 
   return (
     <div className="px-4 md:px-6">
