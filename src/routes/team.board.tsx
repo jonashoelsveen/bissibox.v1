@@ -64,7 +64,19 @@ interface RosterEntry {
 export function TeamBoardPage({
   embedded,
   newMeetingSignal,
-}: { embedded?: boolean; newMeetingSignal?: number } = {}) {
+  hideOwnTabBar,
+  forceMeetingId,
+  onMeetingOpened,
+}: {
+  embedded?: boolean;
+  newMeetingSignal?: number;
+  /** When true, hide the inner tab nav and meetings list — parent controls tabs. */
+  hideOwnTabBar?: boolean;
+  /** When set, auto-open this meeting and force-activate it. */
+  forceMeetingId?: string | null;
+  /** Notify parent when a meeting is opened (e.g. after creation via newMeetingSignal). */
+  onMeetingOpened?: (meeting: { id: string; title: string; folder: string | null; kind: "new" | "earlier" }) => void;
+} = {}) {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
   // Active tab: "meetings" or a meeting id
