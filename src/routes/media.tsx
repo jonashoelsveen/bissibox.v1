@@ -94,7 +94,9 @@ function LibraryPage() {
   const handleCreateFromPrevious = (kind: PreviousNewKind) => {
     if (kind === "meeting") {
       setActiveNoteId(null);
-      navigate({ to: "/media", search: { tab: "meetings", new: "1" }, replace: true });
+      // Switch to meetings tab and trigger the inline new-meeting dialog.
+      navigate({ to: "/media", search: { tab: "meetings" }, replace: true });
+      setNewMeetingSignal((n) => n + 1);
       return;
     }
     if (kind === "note") {
