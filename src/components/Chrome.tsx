@@ -16,8 +16,8 @@ export function TopChrome() {
   const isIndividual = !isOrganizer;
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen p-5 pt-[72px] md:p-6 md:pt-[72px]">
-      <div className="flex h-full flex-col items-center gap-2">
+    <aside className="pointer-events-none fixed left-0 top-0 z-40 h-screen p-5 pt-[72px] md:p-6 md:pt-[72px]">
+      <div className="pointer-events-auto flex h-full flex-col items-center gap-2">
         {/* Sign-in shortcut for logged-out users (logged-in identity lives in the top bar) */}
         {!user && (
           <Link
