@@ -87,33 +87,43 @@ export function TopBar() {
       className="fixed left-0 right-0 top-0 z-30 flex h-14 items-center pl-20 pr-6 md:pl-24"
       style={{ background: bgColor }}
     >
-      <div className="relative flex items-center gap-2">
+      {/* Avatar/initial: links to profile/settings page */}
+      <Link
+        to="/settings"
+        aria-label="Open profile"
+        className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary text-sm font-medium text-ink ring-1 ring-black/5 transition hover:opacity-90"
+      >
+        {avatarUrl ? (
+          <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          initial
+        )}
+      </Link>
+
+      {/* Name + chevron: opens entity switcher dropdown */}
+      <div className="relative ml-2.5">
         <button
           onClick={() => setOpen((v) => !v)}
-          className="group flex items-center gap-2.5"
+          className="group flex h-9 w-56 items-center justify-between pl-2 pr-2.5 text-left"
           aria-label="Switch profile"
         >
-          <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-secondary text-sm font-medium text-ink ring-1 ring-black/5">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              initial
-            )}
-          </span>
-          <span className="text-sm font-medium text-ink">{displayName}</span>
-          <ChevronDown className="h-4 w-4 text-ink/70 transition group-hover:text-ink" strokeWidth={2.25} />
+          <span className="truncate text-sm font-medium text-ink">{displayName}</span>
+          <ChevronDown
+            className="ml-2 h-4 w-4 shrink-0 text-ink/70 transition group-hover:text-ink"
+            strokeWidth={2.25}
+          />
         </button>
 
         {open && (
           <>
             <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-            <div className="absolute left-0 top-full z-40 mt-2 w-64 border border-ink/15 bg-card shadow-lg">
+            <div className="absolute left-0 top-full z-40 mt-0 w-full border border-ink/15 bg-card shadow-lg">
               <button
                 onClick={() => {
                   setActiveEntity(null);
                   setOpen(false);
                 }}
-                className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition hover:bg-secondary ${
+                className={`flex w-full items-center justify-between px-2 py-2 text-left text-sm transition hover:bg-secondary ${
                   !activeEntityId ? "bg-secondary/60 text-ink" : "text-ink"
                 }`}
               >
@@ -130,7 +140,7 @@ export function TopBar() {
                     setActiveEntity(e.id);
                     setOpen(false);
                   }}
-                  className={`flex w-full items-center justify-between border-t border-hairline/60 px-3 py-2 text-left text-sm transition hover:bg-secondary ${
+                  className={`flex w-full items-center justify-between border-t border-hairline/60 px-2 py-2 text-left text-sm transition hover:bg-secondary ${
                     activeEntityId === e.id ? "bg-secondary/60 text-ink" : "text-ink"
                   }`}
                 >
