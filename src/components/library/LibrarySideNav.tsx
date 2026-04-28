@@ -345,10 +345,11 @@ export function LibrarySideNav({
         const isUnsortedActive = isCategoryActive && value.folder === "__unsorted__";
         const isOpen = open[s.key];
         const handleCategoryClick = () => {
-          if (isCategoryActive && isOpen) {
-            setOpen((o) => ({ ...o, [s.key]: false }));
-          } else {
-            setOpen((o) => ({ ...o, [s.key]: true }));
+          // Always toggle expand/collapse on click
+          setOpen((o) => ({ ...o, [s.key]: !o[s.key] }));
+          // If we're opening it (or it's already open) and not yet active,
+          // also navigate to the category's "All" view
+          if (!isCategoryActive) {
             onChange({ category: s.key, folder: "" });
           }
         };
@@ -379,8 +380,8 @@ export function LibrarySideNav({
                 isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
               }`}
             >
-              {/* overflow-visible so the row's three-dot menu is never clipped */}
-              <div className="overflow-visible">
+              {/* When open, overflow-visible so the three-dot menu isn't clipped; while collapsed, hide overflow */}
+              <div className={isOpen ? "overflow-visible" : "overflow-hidden"}>
                 <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-hairline pl-2">
                   <button
                     onClick={() => onChange({ category: s.key, folder: "__unsorted__" })}
