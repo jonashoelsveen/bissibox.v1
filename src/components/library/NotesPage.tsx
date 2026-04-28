@@ -144,9 +144,18 @@ interface NoteRow {
 export function NotesPage({
   actionsMount,
   onOpenNote,
+  hideSideNav,
+  externalView,
+  hideNewActions,
 }: {
   actionsMount?: HTMLDivElement | null;
   onOpenNote?: (id: string, kind: "new" | "earlier") => void;
+  /** When true, hide the internal left nav column (parent renders LibrarySideNav). */
+  hideSideNav?: boolean;
+  /** When set, drives the view from outside (parent URL state). */
+  externalView?: { type: "all" } | { type: "folder"; name: string | null };
+  /** When true, hide the "New folder" / "New note" action buttons (parent renders unified ones). */
+  hideNewActions?: boolean;
 }) {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
