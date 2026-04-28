@@ -291,6 +291,8 @@ function LibraryPage() {
   }, [search.open]);
 
   const showingNote = activeNoteId !== null;
+  const activeTabEntry = activeNoteId ? openNoteTabs.find((t) => t.id === activeNoteId) ?? null : null;
+  const showingMeeting = !!activeTabEntry && activeTabEntry.type === "meeting";
 
   // Pointer-based, X-axis-locked tab drag (Chrome-style).
   const onTabPointerDown = (e: React.PointerEvent<HTMLButtonElement>, id: string) => {
