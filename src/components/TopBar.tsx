@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,6 +14,13 @@ const ENTITY_LABEL: Record<Entity["entity_type"], string> = {
 
 export function TopBar() {
   const { user, activeEntityId, setActiveEntity } = useAuth();
+  const router = useRouterState();
+  const path = router.location.pathname;
+  const isProfileActive =
+    path.startsWith("/profile") ||
+    path.startsWith("/u/") ||
+    path.startsWith("/t/") ||
+    path.startsWith("/c/");
   const [individualName, setIndividualName] = useState("");
   const [individualAvatar, setIndividualAvatar] = useState<string | null>(null);
   const [individualColor, setIndividualColor] = useState<string | null>(null);
@@ -91,7 +98,11 @@ export function TopBar() {
       <Link
         to="/profile"
         aria-label="Open profile"
-        className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary text-sm font-medium text-ink ring-1 ring-black/5 transition hover:opacity-90"
+        className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-medium ring-1 ring-black/5 transition ${
+          isProfileActive
+            ? "bg-primary text-primary-foreground"
+            : "bg-secondary text-ink hover:opacity-90"
+        }`}
       >
         {avatarUrl ? (
           <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
