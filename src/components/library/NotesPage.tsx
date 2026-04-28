@@ -768,6 +768,7 @@ function CreateFolderDialog({
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Folder created");
+    window.dispatchEvent(new Event("library:refresh"));
     onCreated();
   };
   return (
