@@ -132,6 +132,8 @@ export function TeamBoardPage({
   const attendance = ongoing?.attendance ?? [];
   const roster = ongoing?.roster ?? [];
   const isDirty = ongoingText !== savedText;
+  const meetingsScopeKey = activeEntityId ? `entity:${activeEntityId}` : `user:${user?.id ?? "anon"}`;
+  const [meetingsAutosave] = useLibrarySetting<boolean>(meetingsAutosaveKey(meetingsScopeKey), false);
 
   function patchTab(id: string, patch: Partial<OpenTab>) {
     setOpenTabs((prev) => prev.map((t) => (t.meeting.id === id ? { ...t, ...patch } : t)));
