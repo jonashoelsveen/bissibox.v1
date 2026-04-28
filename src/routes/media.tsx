@@ -56,6 +56,7 @@ export interface OpenNoteTab {
   title: string;
   folder: string | null;
   kind: "new" | "earlier";
+  type?: "note" | "meeting";
 }
 
 export const Route = createFileRoute("/media")({
