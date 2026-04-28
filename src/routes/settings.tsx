@@ -575,6 +575,10 @@ function SettingsPage() {
               </Card>
             )}
 
+            {tab === "library" && !isTeamMode && (
+              <LibrarySettingsPanel scopeKey={`user:${user.id}`} />
+            )}
+
             {(tab === "appearance" || tab === "entity-appearance") && (
               <AppearancePanel />
             )}
