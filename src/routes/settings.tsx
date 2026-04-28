@@ -166,6 +166,7 @@ function SettingsPage() {
     if (!user) return;
     if (!activeEntityId) {
       setTeam(null);
+      setTeamBaseline("");
       return;
     }
     (async () => {
@@ -174,7 +175,10 @@ function SettingsPage() {
         .select("id, name, nif_id, contact_email, contact_phone, website, description, address, postal_code, postal_place, country, active")
         .eq("id", activeEntityId)
         .maybeSingle();
-      if (t) setTeam(t as Team);
+      if (t) {
+        setTeam(t as Team);
+        setTeamBaseline(JSON.stringify(t));
+      }
     })();
   }, [user, activeEntityId]);
 
