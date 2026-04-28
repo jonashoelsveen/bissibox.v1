@@ -20,6 +20,7 @@ import {
   Users as UsersIcon,
   X,
 } from "lucide-react";
+import { useLibrarySetting, meetingsAutosaveKey, registerUnsaved } from "@/lib/library-settings";
 
 export const Route = createFileRoute("/team/board")({
   component: TeamBoardPage,
