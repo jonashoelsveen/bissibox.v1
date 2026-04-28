@@ -436,7 +436,7 @@ export function LibrarySideNav({
                       onDragCancel={() => setActiveDrag(null)}
                     >
                       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-                        <motion.div layout className="flex flex-col gap-0.5">
+                        <div className="flex flex-col gap-0.5">
                           <AnimatePresence initial={false}>
                             {s.folders.map((f) => {
                               const id = s.folderKey(f);
