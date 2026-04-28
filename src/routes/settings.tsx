@@ -242,7 +242,7 @@ function SettingsPage() {
       ]
     : ["general", "address", "roles", "profiles", "appearance", "desk", "races", "liked"];
 
-  const activeEntity = entities.find((e) => e.id === activeEntityId) ?? null;
+  
 
   const tabLabel = (t: Tab) =>
     t === "general"
