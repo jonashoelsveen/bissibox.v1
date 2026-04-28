@@ -1278,15 +1278,6 @@ function MembershipRow({
               aria-label="Toggle membership active"
             />
           </label>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Public</span>
-            <Switch
-              checked={membership.is_active && membership.is_public}
-              disabled={!membership.is_active}
-              onCheckedChange={(checked) => onChange({ is_public: checked })}
-              aria-label="Toggle membership public visibility"
-            />
-          </label>
         </div>
         <button
           aria-label="Delete"
