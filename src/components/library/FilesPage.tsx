@@ -77,9 +77,11 @@ export function FilesPage({
 
   const [folders, setFolders] = useState<Folder[]>([]);
   const [files, setFiles] = useState<FileRow[]>([]);
-  const [view, setView] = useState<{ type: "all" } | { type: "folder"; id: string | null }>({
+  const [internalView, setInternalView] = useState<{ type: "all" } | { type: "folder"; id: string | null }>({
     type: "all",
   });
+  const view = externalView ?? internalView;
+  const setView = setInternalView;
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
