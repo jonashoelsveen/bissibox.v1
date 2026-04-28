@@ -61,7 +61,10 @@ interface RosterEntry {
   sort_order: number;
 }
 
-export function TeamBoardPage() {
+export function TeamBoardPage({
+  embedded,
+  newMeetingSignal,
+}: { embedded?: boolean; newMeetingSignal?: number } = {}) {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
   // Active tab: "meetings" or a meeting id
@@ -179,6 +182,17 @@ export function TeamBoardPage() {
       setLoaded(true);
     })();
   }, [user, activeEntityId]);
+
+  // External "new meeting" trigger from the embedding parent (Library Previous tab).
+  const lastSignalRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (newMeetingSignal === undefined) return;
+    if (lastSignalRef.current === newMeetingSignal) return;
+    lastSignalRef.current = newMeetingSignal;
+    if (!loaded || !teamId) return;
+    setActiveTab("meetings");
+    openNewMeeting();
+  }, [newMeetingSignal, loaded, teamId]);
 
   async function loadMembers(tid: string) {
     const { data } = await supabase
@@ -388,6 +402,25 @@ export function TeamBoardPage() {
         .select("id,board_member_id,name,role,email,sort_order");
       snapshot = (rosterData ?? []) as RosterEntry[];
     }
+
+    // Auto-attend the creator: match by email against the roster snapshot.
+    const creatorEmail = (user.email ?? "").toLowerCase();
+    let initialAttendance: string[] = [];
+    if (creatorEmail) {
+      const selfEntry = snapshot.find((r) => (r.email ?? "").toLowerCase() === creatorEmail);
+      if (selfEntry) {
+        const { error: attErr } = await supabase
+          .from("team_board_meeting_attendance")
+          .insert({
+            meeting_id: data.id,
+            team_id: teamId,
+            roster_id: selfEntry.id,
+            board_member_id: selfEntry.board_member_id ?? selfEntry.id,
+          });
+        if (!attErr) initialAttendance = [selfEntry.id];
+      }
+    }
+
     setMeetings((prev) => [data, ...prev]);
     setOpenTabs((prev) => [
       ...prev,
@@ -397,7 +430,7 @@ export function TeamBoardPage() {
         text: data.notes ?? "",
         savedText: data.notes ?? "",
         attachments: [],
-        attendance: [],
+        attendance: initialAttendance,
         roster: snapshot.sort((a, b) => a.sort_order - b.sort_order),
       },
     ]);
@@ -751,31 +784,33 @@ export function TeamBoardPage() {
 
   return (
     <div className="px-4 md:px-6">
-      <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
-        <div>
-          <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Team</p>
-          <h1 className="mt-2 text-3xl text-ink md:text-4xl">Meetings</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {activeTab === "meetings" && (
-            <>
-              <button
-                onClick={() => setNewFolderOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-hairline bg-card px-4 py-2.5 text-sm text-ink transition hover:bg-secondary"
-              >
-                <Plus className="h-4 w-4" /> New folder
-              </button>
-              <button
-                onClick={openNewMeeting}
-                disabled={busy}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" /> New board meeting
-              </button>
-            </>
-          )}
-        </div>
-      </header>
+      {!embedded && (
+        <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
+          <div>
+            <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Team</p>
+            <h1 className="mt-2 text-3xl text-ink md:text-4xl">Meetings</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            {activeTab === "meetings" && (
+              <>
+                <button
+                  onClick={() => setNewFolderOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-hairline bg-card px-4 py-2.5 text-sm text-ink transition hover:bg-secondary"
+                >
+                  <Plus className="h-4 w-4" /> New folder
+                </button>
+                <button
+                  onClick={openNewMeeting}
+                  disabled={busy}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+                >
+                  <Plus className="h-4 w-4" /> New board meeting
+                </button>
+              </>
+            )}
+          </div>
+        </header>
+      )}
 
       <nav className="mt-7 flex border-b border-hairline overflow-hidden">
         <TabBtn

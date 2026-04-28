@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
@@ -97,6 +97,15 @@ export function FilesPage({
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [authLoading, user, navigate]);
+
+  // Auto-open the import dialog when ?new=1 is in URL (from + dropdown in Previous tab)
+  const search = useSearch({ from: "/media" });
+  useEffect(() => {
+    if (search.new === "1" && search.tab === "files") {
+      setImportOpen(true);
+      navigate({ to: "/media", search: { tab: "files" }, replace: true });
+    }
+  }, [search.new, search.tab, navigate]);
 
   const persistFolderOrder = useCallback(async (next: Folder[]) => {
     await Promise.all(

@@ -10,7 +10,8 @@ import { FilesPage } from "@/components/library/FilesPage";
 import { NotesPage } from "@/components/library/NotesPage";
 import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
-import { PreviousPage } from "@/components/library/PreviousPage";
+import { PreviousPage, type PreviousNewKind } from "@/components/library/PreviousPage";
+import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { TeamBoardPage } from "@/routes/team.board";
 import { toast } from "sonner";
 import {
@@ -83,6 +84,33 @@ function LibraryPage() {
   const [openNoteTabs, setOpenNoteTabs] = useState<OpenNoteTab[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
+  const [newNoteOpen, setNewNoteOpen] = useState(false);
+  const [newMeetingTick, setNewMeetingTick] = useState(0);
+  const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
+
+  const handleCreateFromPrevious = (kind: PreviousNewKind) => {
+    if (kind === "meeting") {
+      setActiveNoteId(null);
+      navigate({ to: "/media", search: { tab: baseTab, view: "meetings" }, replace: true });
+      // bump after navigation so TeamBoardPage effect fires
+      setNewMeetingTick((t) => t + 1);
+      return;
+    }
+    if (kind === "note") {
+      setNewNoteOpen(true);
+      return;
+    }
+    if (kind === "files") {
+      setActiveNoteId(null);
+      navigate({ to: "/media", search: { tab: "files", new: "1" }, replace: true });
+      return;
+    }
+    if (kind === "media") {
+      setActiveNoteId(null);
+      navigate({ to: "/media", search: { tab: "media", new: "1" }, replace: true });
+      return;
+    }
+  };
 
   // Persist open library tabs per profile so they survive logout / page reloads.
   const profileScopeKey = `${mode}:${activeEntityId ?? "self"}`;
@@ -509,9 +537,11 @@ function LibraryPage() {
               onOpenTab={(t) =>
                 navigate({ to: "/media", search: { tab: t }, replace: true })
               }
+              onCreate={handleCreateFromPrevious}
+              showMeetingOption={isTeamMode}
             />
           ) : showingMeetings ? (
-            <TeamBoardPage />
+            <TeamBoardPage embedded newMeetingSignal={newMeetingTick} />
           ) : baseTab === "notes" ? (
             <NotesPage
               actionsMount={actionsMount}
@@ -526,6 +556,7 @@ function LibraryPage() {
           )}
         </div>
       </div>
+      {newNoteOpen && <NewNoteOverlay onClose={() => setNewNoteOpen(false)} />}
     </div>
   );
 }
@@ -709,6 +740,15 @@ function MediaPage({
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [authLoading, user, navigate]);
+
+  // Auto-open the upload dialog when ?new=1 is in URL (from + dropdown in Previous tab)
+  const mediaSearch = useSearch({ from: "/media" });
+  useEffect(() => {
+    if (mediaSearch.new === "1" && mediaSearch.tab === "media") {
+      setUploadOpen(true);
+      navigate({ to: "/media", search: { tab: "media" }, replace: true });
+    }
+  }, [mediaSearch.new, mediaSearch.tab, navigate]);
 
   const load = useCallback(async () => {
     if (!user) return;
