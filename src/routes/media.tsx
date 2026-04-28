@@ -511,7 +511,11 @@ function LibraryPage() {
                       }`}
                       title={t.title}
                     >
-                      <StickyNote className="h-3 w-3 shrink-0 opacity-70" />
+                      {t.type === "meeting" ? (
+                        <Briefcase className="h-3 w-3 shrink-0 opacity-70" />
+                      ) : (
+                        <StickyNote className="h-3 w-3 shrink-0 opacity-70" />
+                      )}
                       <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
                       <span className="min-w-0 flex-1 truncate text-left">
                         {t.folder ? `${t.folder} · ${t.title}` : t.title}
