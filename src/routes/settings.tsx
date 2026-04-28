@@ -81,6 +81,7 @@ type Tab =
   | "roles"
   | "profiles"
   | "appearance"
+  | "library"
   | "entity-profile"
   | "desk"
   | "signout"
