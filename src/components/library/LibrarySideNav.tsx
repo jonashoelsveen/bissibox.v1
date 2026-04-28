@@ -466,7 +466,7 @@ export function LibrarySideNav({
                               );
                             })}
                           </AnimatePresence>
-                        </motion.div>
+                        </div>
                       </SortableContext>
 
                       <DragOverlay
