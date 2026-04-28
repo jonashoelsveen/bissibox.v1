@@ -165,6 +165,21 @@ export function LibrarySideNav({
         </span>
         <span className="ml-2 min-w-0 flex-1 truncate">Previous</span>
       </button>
+      {isTeamMode && (
+        <button
+          onClick={() => onChange({ category: "meetings", folder: "" })}
+          className={`group flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition ${
+            value.category === "meetings"
+              ? "bg-secondary font-medium text-ink"
+              : "text-ink hover:bg-secondary/60"
+          }`}
+        >
+          <span className="grid h-5 w-5 shrink-0 place-items-center text-muted-foreground">
+            <Briefcase className="h-3.5 w-3.5" strokeWidth={2.25} />
+          </span>
+          <span className="ml-2 min-w-0 flex-1 truncate">Meetings</span>
+        </button>
+      )}
       {sections.map((s) => {
         const isCategoryActive = value.category === s.key;
         const isAllActive = isCategoryActive && value.folder === "";
