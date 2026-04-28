@@ -204,26 +204,9 @@ export function NoteEditor({
 
   if (!user || !note) return null;
 
-  const actions = (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => void saveBody()}
-        disabled={!isDirty || saving}
-        className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs transition ${
-          isDirty && !saving
-            ? "bg-primary text-primary-foreground hover:opacity-90"
-            : "cursor-default border border-hairline bg-card text-muted-foreground/60"
-        }`}
-      >
-        <Save className="h-3.5 w-3.5" />
-        {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
-      </button>
-    </div>
-  );
-
   return (
     <div>
-      {actionsMount && createPortal(actions, actionsMount)}
+      {/* Top-level save button removed; the document toolbar below owns it. */}
 
       <section className="mt-5 rounded-lg border border-hairline bg-card shadow-sm">
         {/* Document toolbar */}
