@@ -88,6 +88,7 @@ function LibraryPage() {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
   const [newNoteOpen, setNewNoteOpen] = useState(false);
+  const [newMeetingSignal, setNewMeetingSignal] = useState(0);
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
 
   const handleCreateFromPrevious = (kind: PreviousNewKind) => {
