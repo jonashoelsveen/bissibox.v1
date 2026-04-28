@@ -237,7 +237,10 @@ export function MeetingsListPage({
   }
 
   // External "new meeting" trigger from the embedding parent.
-  const lastSigRef = useRef<number | undefined>(undefined);
+  // Initialize the ref to the incoming signal so a fresh mount (e.g. when the
+  // user navigates back to the meetings tab) does NOT re-trigger the dialog
+  // for a stale signal value. Only true increments after mount should fire.
+  const lastSigRef = useRef<number | undefined>(newMeetingSignal);
   useEffect(() => {
     if (newMeetingSignal === undefined) return;
     if (lastSigRef.current === newMeetingSignal) return;
