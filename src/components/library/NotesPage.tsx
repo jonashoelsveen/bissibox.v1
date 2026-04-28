@@ -435,18 +435,22 @@ export function NotesPage({
           <CheckSquare className="h-3.5 w-3.5" /> Select
         </button>
       )}
-      <button
-        onClick={() => setCreateFolderOpen(true)}
-        className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
-      >
-        <Plus className="h-3.5 w-3.5" /> New folder
-      </button>
-      <button
-        onClick={() => setNewNoteOpen(true)}
-        className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
-      >
-        <Plus className="h-3.5 w-3.5" /> New note
-      </button>
+      {!hideNewActions && (
+        <>
+          <button
+            onClick={() => setCreateFolderOpen(true)}
+            className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" /> New folder
+          </button>
+          <button
+            onClick={() => setNewNoteOpen(true)}
+            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
+          >
+            <Plus className="h-3.5 w-3.5" /> New note
+          </button>
+        </>
+      )}
     </>
   );
 
