@@ -170,7 +170,7 @@ function SettingsPage() {
   }, [user, activeEntityId]);
 
   useEffect(() => {
-    if (isTeamMode && (tab === "races" || tab === "liked" || tab === "profiles" || tab === "desk")) setTab("general");
+    if (isTeamMode && (tab === "races" || tab === "liked" || tab === "profiles" || tab === "desk" || tab === "library")) setTab("general");
     if (
       !isTeamMode &&
       (tab === "entity-profile" ||
