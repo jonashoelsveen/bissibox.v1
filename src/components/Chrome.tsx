@@ -1,58 +1,19 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Search, Library, Plus, Tent, Settings, LogIn, Users, Briefcase, Armchair } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { supabase } from "@/integrations/supabase/client";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { NewEventDialog } from "@/components/organizer/NewEventDialog";
 
 export function TopChrome() {
   const router = useRouterState();
   const path = router.location.pathname;
-  const { user, mode, activeEntityId } = useAuth();
-  const [letter, setLetter] = useState<string>("");
+  const { user, mode } = useAuth();
   const [newNoteOpen, setNewNoteOpen] = useState(false);
   const [newEventOpen, setNewEventOpen] = useState(false);
 
   const isOrganizer = (mode === "organizer" || mode === "team") && !!user;
   const isIndividual = !isOrganizer;
-
-  useEffect(() => {
-    let cancel = false;
-    if (!user) {
-      setLetter("");
-      return;
-    }
-    (async () => {
-      if (activeEntityId) {
-        const { data } = await supabase
-          .from("teams")
-          .select("name")
-          .eq("id", activeEntityId)
-          .maybeSingle();
-        if (cancel) return;
-        const src = (data?.name && data.name.trim()) || "?";
-        setLetter(src.charAt(0).toUpperCase());
-        return;
-      }
-      const { data } = await supabase
-        .from("profiles")
-        .select("first_name,last_name,email")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (cancel) return;
-      const src =
-        (data?.first_name && data.first_name.trim()) ||
-        (data?.last_name && data.last_name.trim()) ||
-        data?.email ||
-        user.email ||
-        "?";
-      setLetter(src.charAt(0).toUpperCase());
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, [user, activeEntityId]);
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen p-5 pt-[72px] md:p-6 md:pt-[72px]">
