@@ -1539,6 +1539,7 @@ function CreateAlbumDialog({
       return;
     }
     toast.success("Album created");
+    window.dispatchEvent(new Event("library:refresh"));
     onCreated();
   };
 
