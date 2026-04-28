@@ -540,9 +540,13 @@ function LibraryPage() {
               }
               onCreate={handleCreateFromPrevious}
               showMeetingOption={isTeamMode}
+              actionsMount={actionsMount}
             />
-          ) : showingMeetings ? (
-            <TeamBoardPage embedded newMeetingSignal={newMeetingTick} />
+          ) : baseTab === "meetings" ? (
+            <MeetingsListPage
+              actionsMount={actionsMount}
+              externalView={externalMeetingsView ?? { type: "all" }}
+            />
           ) : baseTab === "notes" ? (
             <NotesPage
               actionsMount={actionsMount}
