@@ -720,6 +720,7 @@ function CreateFolderDialog({
       return;
     }
     toast.success("Folder created");
+    window.dispatchEvent(new Event("library:refresh"));
     onCreated();
   };
 
