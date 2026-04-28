@@ -267,145 +267,169 @@ function LibraryPage() {
     window.addEventListener("pointercancel", onUp);
   };
 
+  const externalNotesView: { type: "all" } | { type: "folder"; name: string | null } | undefined =
+    baseTab === "notes" && search.folder !== undefined
+      ? search.folder === "__unsorted__"
+        ? { type: "folder", name: null }
+        : search.folder === ""
+          ? { type: "all" }
+          : { type: "folder", name: search.folder }
+      : undefined;
+  const externalFilesView: { type: "all" } | { type: "folder"; id: string | null } | undefined =
+    baseTab === "files" && search.folder !== undefined
+      ? search.folder === "__unsorted__"
+        ? { type: "folder", id: null }
+        : search.folder === ""
+          ? { type: "all" }
+          : { type: "folder", id: search.folder }
+      : undefined;
+  const externalMediaView: { type: "all" } | { type: "album"; id: string | null } | undefined =
+    baseTab === "media" && search.folder !== undefined
+      ? search.folder === "__unsorted__"
+        ? { type: "album", id: null }
+        : search.folder === ""
+          ? { type: "all" }
+          : { type: "album", id: search.folder }
+      : undefined;
+
+  const sideValue: LibrarySideNavValue = {
+    category: baseTab,
+    folder: search.folder ?? "",
+  };
+  const onSideChange = (v: LibrarySideNavValue) => {
+    setActiveNoteId(null);
+    navigate({
+      to: "/media",
+      search: { tab: v.category, folder: v.folder || undefined },
+      replace: true,
+    });
+  };
+
   return (
     <div className="px-4 md:px-6">
-      <div className="pt-6 md:pt-8">
-        <h1 className="text-2xl tracking-tight text-ink md:text-3xl">Library</h1>
-      </div>
-      <div className="mt-6 flex items-end justify-between gap-4 border-b border-hairline">
-        <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
-          <div className="flex shrink-0">
-            <LibraryTabBtn
-              active={!showingNote && baseTab === "notes"}
-              onClick={() => setTab("notes")}
-              icon={<StickyNote className="h-3.5 w-3.5" />}
-            >
-              Notes
-            </LibraryTabBtn>
-            <LibraryTabBtn
-              active={!showingNote && baseTab === "files"}
-              onClick={() => setTab("files")}
-              icon={<FolderClosed className="h-3.5 w-3.5" />}
-            >
-              Files
-            </LibraryTabBtn>
-            <LibraryTabBtn
-              active={!showingNote && baseTab === "media"}
-              onClick={() => setTab("media")}
-              icon={<ImageIcon className="h-3.5 w-3.5" />}
-            >
-              Media
-            </LibraryTabBtn>
+      <div className="grid gap-6 pt-4 md:grid-cols-[220px_1fr]">
+        <aside className="md:sticky md:top-20 md:self-start">
+          <LibrarySideNav value={sideValue} onChange={onSideChange} />
+        </aside>
+
+        <div className="min-w-0">
+          <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-4 border-b border-hairline bg-background px-4 pt-2 md:-mx-6 md:px-6">
+            <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
+              {openNoteTabs.length > 0 && (
+                <div className="relative min-w-0 flex-1">
+                  {edgeFade.left && (
+                    <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent" />
+                  )}
+                  {edgeFade.right && (
+                    <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent" />
+                  )}
+                  <div
+                    ref={tabStripRef}
+                    onScroll={updateEdgeFade}
+                    className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    style={{ scrollBehavior: "smooth" }}
+                  >
+                    {openNoteTabs.map((t, idx) => {
+                      const isActive = activeNoteId === t.id;
+                      const isNew = t.kind === "new";
+                      const colorActive = isNew
+                        ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
+                        : "border-muted-foreground text-ink";
+                      const colorIdle = isNew
+                        ? "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
+                        : "border-transparent text-muted-foreground hover:text-ink";
+                      const dotColor = isNew ? "bg-emerald-500" : "bg-muted-foreground/60";
+                      const isDragging = dragNoteId === t.id;
+
+                      let translateX = 0;
+                      if (dragNoteId && !isDragging) {
+                        const st = dragStateRef.current;
+                        if (st) {
+                          const from = st.startIndex;
+                          const to = st.currentIndex;
+                          if (to > from && idx > from && idx <= to) translateX = -st.width;
+                          else if (to < from && idx >= to && idx < from) translateX = st.width;
+                        }
+                      }
+                      const dragStyle: React.CSSProperties = isDragging
+                        ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
+                        : { transform: `translate3d(${translateX}px,0,0)` };
+
+                      return (
+                        <button
+                          key={t.id}
+                          ref={(el) => {
+                            if (el) tabRefs.current.set(t.id, el);
+                            else tabRefs.current.delete(t.id);
+                          }}
+                          onPointerDown={(e) => onTabPointerDown(e, t.id)}
+                          onClick={() => setActiveNoteId(t.id)}
+                          style={{
+                            flex: "1 1 200px",
+                            minWidth: 140,
+                            maxWidth: 240,
+                            touchAction: "pan-y",
+                            ...dragStyle,
+                            transition: isDragging
+                              ? "none"
+                              : dragNoteId
+                                ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
+                                : "color 150ms, border-color 150ms",
+                          }}
+                          className={`group -mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
+                            isActive ? colorActive : colorIdle
+                          }`}
+                          title={t.title}
+                        >
+                          <StickyNote className="h-3 w-3 shrink-0 opacity-70" />
+                          <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
+                          <span className="min-w-0 flex-1 truncate text-left">
+                            {t.folder ? `${t.folder} · ${t.title}` : t.title}
+                          </span>
+                          <span
+                            data-tab-close
+                            role="button"
+                            tabIndex={0}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              closeNoteTab(t.id);
+                            }}
+                            className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                          >
+                            ✕
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </nav>
+            <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5" />
           </div>
-          {openNoteTabs.length > 0 && (
-            <div className="relative min-w-0 flex-1">
-              {/* edge fades */}
-              {edgeFade.left && (
-                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent" />
-              )}
-              {edgeFade.right && (
-                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent" />
-              )}
-              <div
-                ref={tabStripRef}
-                onScroll={updateEdgeFade}
-                className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                style={{ scrollBehavior: "smooth" }}
-              >
-                {openNoteTabs.map((t, idx) => {
-                  const isActive = activeNoteId === t.id;
-                  const isNew = t.kind === "new";
-                  const colorActive = isNew
-                    ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
-                    : "border-muted-foreground text-ink";
-                  const colorIdle = isNew
-                    ? "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
-                    : "border-transparent text-muted-foreground hover:text-ink";
-                  const dotColor = isNew ? "bg-emerald-500" : "bg-muted-foreground/60";
-                  const isDragging = dragNoteId === t.id;
 
-                  // Compute X-axis-only displacement for non-dragged tabs to
-                  // visualize the new index (Chrome-style slide).
-                  let translateX = 0;
-                  if (dragNoteId && !isDragging) {
-                    const st = dragStateRef.current;
-                    if (st) {
-                      const from = st.startIndex;
-                      const to = st.currentIndex;
-                      if (to > from && idx > from && idx <= to) translateX = -st.width;
-                      else if (to < from && idx >= to && idx < from) translateX = st.width;
-                    }
-                  }
-                  const dragStyle: React.CSSProperties = isDragging
-                    ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
-                    : { transform: `translate3d(${translateX}px,0,0)` };
-
-                  return (
-                    <button
-                      key={t.id}
-                      ref={(el) => {
-                        if (el) tabRefs.current.set(t.id, el);
-                        else tabRefs.current.delete(t.id);
-                      }}
-                      onPointerDown={(e) => onTabPointerDown(e, t.id)}
-                      onClick={() => setActiveNoteId(t.id)}
-                      style={{
-                        flex: "1 1 200px",
-                        minWidth: 140,
-                        maxWidth: 240,
-                        touchAction: "pan-y",
-                        ...dragStyle,
-                        transition: isDragging
-                          ? "none"
-                          : dragNoteId
-                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
-                            : "color 150ms, border-color 150ms",
-                      }}
-                      className={`group -mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
-                        isActive ? colorActive : colorIdle
-                      }`}
-                      title={t.title}
-                    >
-                      <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
-                      <span className="min-w-0 flex-1 truncate text-left">
-                        {t.folder ? `${t.folder} · ${t.title}` : t.title}
-                      </span>
-                      <span
-                        data-tab-close
-                        role="button"
-                        tabIndex={0}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          closeNoteTab(t.id);
-                        }}
-                        className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
-                      >
-                        ✕
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+          {showingNote && activeNoteId ? (
+            <NoteEditor
+              key={activeNoteId}
+              noteId={activeNoteId}
+              actionsMount={actionsMount}
+              onChanged={updateNoteTab}
+            />
+          ) : baseTab === "notes" ? (
+            <NotesPage
+              actionsMount={actionsMount}
+              onOpenNote={(id, kind) => void openNote(id, kind)}
+              hideSideNav
+              externalView={externalNotesView}
+            />
+          ) : baseTab === "files" ? (
+            <FilesPage actionsMount={actionsMount} hideSideNav externalView={externalFilesView} />
+          ) : (
+            <MediaPage actionsMount={actionsMount} hideSideNav externalView={externalMediaView} />
           )}
-        </nav>
-        <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5" />
+        </div>
       </div>
-      {showingNote && activeNoteId ? (
-        <NoteEditor
-          key={activeNoteId}
-          noteId={activeNoteId}
-          actionsMount={actionsMount}
-          onChanged={updateNoteTab}
-        />
-      ) : baseTab === "notes" ? (
-        <NotesPage actionsMount={actionsMount} onOpenNote={(id, kind) => void openNote(id, kind)} />
-      ) : baseTab === "files" ? (
-        <FilesPage actionsMount={actionsMount} />
-      ) : (
-        <MediaPage actionsMount={actionsMount} />
-      )}
     </div>
   );
 }
