@@ -66,7 +66,7 @@ export const Route = createFileRoute("/media")({
   head: () => ({ meta: [{ title: "Library · Raceline" }] }),
 });
 
-const MAX_ITEM_TABS = 10;
+const MAX_NOTE_TABS = 10;
 
 function LibraryPage() {
   const search = useSearch({ from: "/media" });
@@ -142,8 +142,8 @@ function LibraryPage() {
         setActiveNoteId(id);
         return;
       }
-      if (openNoteTabs.length >= MAX_ITEM_TABS) {
-        toast.error(`You can have at most ${MAX_ITEM_TABS} note tabs open at once.`);
+      if (openNoteTabs.length >= MAX_NOTE_TABS) {
+        toast.error(`You can have at most ${MAX_NOTE_TABS} note tabs open at once.`);
         return;
       }
       const { data } = await supabase
