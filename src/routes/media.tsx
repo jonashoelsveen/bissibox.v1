@@ -494,9 +494,11 @@ function MediaPage({
   const [albums, setAlbums] = useState<Album[]>([]);
   const [items, setItems] = useState<MediaItem[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
-  const [view, setView] = useState<{ type: "all" } | { type: "album"; id: string | null }>({
+  const [internalView, setInternalView] = useState<{ type: "all" } | { type: "album"; id: string | null }>({
     type: "all",
   });
+  const view = externalView ?? internalView;
+  const setView = setInternalView;
   const [albumsOpen, setAlbumsOpen] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
