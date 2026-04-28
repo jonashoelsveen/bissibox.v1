@@ -116,7 +116,7 @@ export function LibrarySideNav({
   }, [load, user?.id]);
 
   const sections: {
-    key: Exclude<LibraryCategory, "previous">;
+    key: "notes" | "files" | "media";
     label: string;
     icon: React.ReactNode;
     folders: FolderLite[];
