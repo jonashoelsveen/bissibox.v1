@@ -720,6 +720,7 @@ export function NotesPage({
               .insert({ user_id: user.id, team_id: isTeamMode ? teamId : null, name });
             if (error) { toast.error(error.message); return false; }
             await load();
+            window.dispatchEvent(new Event("library:refresh"));
             return true;
           }}
         />
