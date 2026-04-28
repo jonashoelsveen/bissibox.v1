@@ -1218,7 +1218,7 @@ function DeskSettingsPanel() {
 
 function AppearancePanel() {
   const { user, activeEntityId } = useAuth();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [currentColor, setCurrentColor] = useState<string | null>(null);
 
   useEffect(() => {
