@@ -375,14 +375,20 @@ export function LibrarySideNav({
               />
             </button>
 
-            <div
-              className={`grid transition-[grid-template-rows] duration-200 ease-out ${
-                isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-              }`}
-            >
-              {/* When open, overflow-visible so the three-dot menu isn't clipped; while collapsed, hide overflow */}
-              <div className={isOpen ? "overflow-visible" : "overflow-hidden"}>
-                <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-hairline pl-2">
+            <AnimatePresence initial={false}>
+              {isOpen && (
+                <motion.div
+                  key="content"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{
+                    height: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+                    opacity: { duration: 0.16, ease: "easeOut" },
+                  }}
+                  style={{ overflow: "hidden", willChange: "height, opacity" }}
+                >
+                  <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-hairline pl-2" style={{ overflow: "visible" }}>
                   <button
                     onClick={() => onChange({ category: s.key, folder: "__unsorted__" })}
                     className={`rounded-md px-3 py-1 text-left text-xs transition ${
