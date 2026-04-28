@@ -10,7 +10,8 @@ import { FilesPage } from "@/components/library/FilesPage";
 import { NotesPage } from "@/components/library/NotesPage";
 import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
-import { PreviousPage } from "@/components/library/PreviousPage";
+import { PreviousPage, type PreviousNewKind } from "@/components/library/PreviousPage";
+import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { TeamBoardPage } from "@/routes/team.board";
 import { toast } from "sonner";
 import {
