@@ -320,10 +320,14 @@ function SettingsPage() {
             </button>
             <button
               onClick={save}
-              disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-md border border-hairline bg-background px-4 py-2 text-xs font-medium text-ink transition hover:bg-secondary disabled:opacity-50"
+              disabled={saving || !isDirty}
+              className={`inline-flex items-center gap-1.5 rounded-md border px-4 py-2 text-xs font-medium transition ${
+                isDirty && !saving
+                  ? "border-ink bg-ink text-background hover:opacity-90"
+                  : "border-hairline bg-secondary text-muted-foreground cursor-not-allowed"
+              }`}
             >
-              {saving ? "Saving…" : "Save"}
+              {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
             </button>
           </div>
         </div>
