@@ -84,12 +84,12 @@ export function TopBar() {
 
   return (
     <div
-      className="fixed left-0 right-0 top-0 z-30 flex h-14 items-center pl-20 pr-6 md:pl-24"
+      className="fixed left-0 right-0 top-0 z-30 flex h-14 items-center pl-5 pr-6 md:pl-6"
       style={{ background: bgColor }}
     >
-      {/* Avatar/initial: links to profile/settings page */}
+      {/* Avatar/initial: links to the user/entity profile page */}
       <Link
-        to="/settings"
+        to="/profile"
         aria-label="Open profile"
         className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary text-sm font-medium text-ink ring-1 ring-black/5 transition hover:opacity-90"
       >
@@ -101,7 +101,7 @@ export function TopBar() {
       </Link>
 
       {/* Name + chevron: opens entity switcher dropdown */}
-      <div className="relative ml-2.5">
+      <div className="relative ml-2">
         <button
           onClick={() => setOpen((v) => !v)}
           className="group flex h-9 w-56 items-center justify-between pl-2 pr-2.5 text-left"
