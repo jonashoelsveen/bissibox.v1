@@ -537,9 +537,11 @@ function LibraryPage() {
               onOpenTab={(t) =>
                 navigate({ to: "/media", search: { tab: t }, replace: true })
               }
+              onCreate={handleCreateFromPrevious}
+              showMeetingOption={isTeamMode}
             />
           ) : showingMeetings ? (
-            <TeamBoardPage />
+            <TeamBoardPage embedded newMeetingSignal={newMeetingTick} />
           ) : baseTab === "notes" ? (
             <NotesPage
               actionsMount={actionsMount}
@@ -554,6 +556,7 @@ function LibraryPage() {
           )}
         </div>
       </div>
+      {newNoteOpen && <NewNoteOverlay onClose={() => setNewNoteOpen(false)} />}
     </div>
   );
 }
