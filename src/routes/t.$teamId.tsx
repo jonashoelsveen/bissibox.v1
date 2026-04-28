@@ -99,6 +99,7 @@ function TeamPage() {
   const [coverPath, setCoverPath] = useState<string | null>(null);
   const [followers, setFollowers] = useState(0);
   const [myMemberships, setMyMemberships] = useState<Set<string>>(new Set());
+  const [visibility] = useProfileVisibility(`entity:${teamId}`);
   const [groupOptions, setGroupOptions] = useState<GroupOpt[]>([]);
   const [pickerGroupId, setPickerGroupId] = useState<string>("");
   const [confirmInfo, setConfirmInfo] = useState<ConfirmInfo | null>(null);
