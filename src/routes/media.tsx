@@ -40,6 +40,7 @@ import {
   FolderClosed,
   Image as ImageIcon,
   StickyNote,
+  Library,
   Play,
   Pause,
 } from "lucide-react";
