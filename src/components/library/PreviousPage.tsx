@@ -59,7 +59,7 @@ export function PreviousPage({
       ),
       scope(
         supabase
-          .from("media")
+          .from("media_items")
           .select("id,storage_path,created_at")
           .order("created_at", { ascending: false })
           .limit(20),
