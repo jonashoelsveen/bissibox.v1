@@ -279,9 +279,11 @@ function SettingsPage() {
                             ? "Meetings"
                             : t === "entity-library"
                               ? "Library"
-                              : t === "entity-events"
-                                ? "Events"
-                                : "Sign out";
+                                : t === "entity-events"
+                                  ? "Events"
+                                  : t === "library"
+                                    ? "Library"
+                                    : "Sign out";
 
   return (
     <div className="px-4 md:px-6">
