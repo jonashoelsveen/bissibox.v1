@@ -61,7 +61,7 @@ interface RosterEntry {
   sort_order: number;
 }
 
-function TeamBoardPage() {
+export function TeamBoardPage() {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
   // Active tab: "meetings" or a meeting id
