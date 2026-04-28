@@ -12,7 +12,7 @@ import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
 import { PreviousPage, type PreviousNewKind } from "@/components/library/PreviousPage";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
-import { TeamBoardPage } from "@/routes/team.board";
+import { MeetingsListPage } from "@/components/library/MeetingsListPage";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -49,7 +49,7 @@ import {
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 
-type LibraryTab = "notes" | "files" | "media";
+type LibraryTab = "notes" | "files" | "media" | "meetings";
 
 export interface OpenNoteTab {
   id: string;
@@ -60,15 +60,15 @@ export interface OpenNoteTab {
 
 export const Route = createFileRoute("/media")({
   component: LibraryPage,
-  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; folder?: string; new?: string; open?: string; view?: "previous" | "meetings" } => ({
+  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; folder?: string; new?: string; open?: string; view?: "previous" } => ({
     tab:
-      s.tab === "files" || s.tab === "media" || s.tab === "notes"
+      s.tab === "files" || s.tab === "media" || s.tab === "notes" || s.tab === "meetings"
         ? (s.tab as LibraryTab)
         : undefined,
     folder: typeof s.folder === "string" ? (s.folder as string) : undefined,
     new: typeof s.new === "string" ? (s.new as string) : undefined,
     open: typeof s.open === "string" ? (s.open as string) : undefined,
-    view: s.view === "previous" ? "previous" : s.view === "meetings" ? "meetings" : undefined,
+    view: s.view === "previous" ? "previous" : undefined,
   }),
   head: () => ({ meta: [{ title: "Library · Raceline" }] }),
 });
