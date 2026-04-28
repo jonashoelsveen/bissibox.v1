@@ -1267,15 +1267,7 @@ function AppearancePanel() {
   );
 }
 
-const PROFILE_VISIBILITY_ITEMS = [
-  "Memberships",
-  "Groups",
-  "Members",
-  "Events",
-  "Media",
-  "Contact",
-] as const;
-
+/* PROFILE_VISIBILITY_ITEMS now imported from @/lib/library-settings */
 function ProfileVisibilityPanel({
   scopeKey,
   active,
