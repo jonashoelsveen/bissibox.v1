@@ -458,7 +458,8 @@ export function NotesPage({
     <div>
       {actionsMount && createPortal(actions, actionsMount)}
 
-      <div className="mt-8 grid gap-8 md:grid-cols-[200px_1fr]">
+      <div className={`mt-4 grid gap-8 ${hideSideNav ? "md:grid-cols-1" : "md:grid-cols-[200px_1fr]"}`}>
+        {!hideSideNav && (
         <nav className="-ml-2 flex flex-col gap-0.5">
           <NavBtn active={view.type === "all"} onClick={() => setView({ type: "all" })}>All</NavBtn>
           <button
