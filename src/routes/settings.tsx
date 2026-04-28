@@ -219,6 +219,7 @@ function SettingsPage() {
 
   const save = async () => {
     if (!user) return;
+    if (!isDirty) return;
     setSaving(true);
     if (isTeamMode && team) {
       const { id, ...rest } = team;
@@ -226,6 +227,7 @@ function SettingsPage() {
       setSaving(false);
       if (error) return toast.error(error.message);
       toast.success("Saved.");
+      setTeamBaseline(JSON.stringify(team));
       // Refresh entity name in dropdown list
       setEntities((prev) => prev.map((e) => (e.id === id ? { ...e, name: team.name } : e)));
     } else if (profile) {
@@ -233,6 +235,7 @@ function SettingsPage() {
       setSaving(false);
       if (error) return toast.error(error.message);
       toast.success("Settings saved.");
+      setProfileBaseline(JSON.stringify(profile));
     } else {
       setSaving(false);
     }
