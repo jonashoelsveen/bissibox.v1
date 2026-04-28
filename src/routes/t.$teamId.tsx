@@ -8,6 +8,7 @@ import { ProfileShell, MediaGrid } from "@/components/ProfileShell";
 import { VerificationDialog } from "@/components/VerificationDialog";
 import { formatMoney } from "@/lib/format";
 import { useNavigate } from "@tanstack/react-router";
+import { useProfileVisibility } from "@/lib/library-settings";
 
 export const Route = createFileRoute("/t/$teamId")({
   component: TeamPage,
