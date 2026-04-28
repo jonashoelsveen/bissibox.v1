@@ -73,11 +73,24 @@ const MAX_NOTE_TABS = 10;
 function LibraryPage() {
   const search = useSearch({ from: "/media" });
   const navigate = useNavigate();
+  const { mode, activeEntityId } = useAuth();
   const baseTab: LibraryTab = search.tab ?? "files";
 
   const [openNoteTabs, setOpenNoteTabs] = useState<OpenNoteTab[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
+
+  // Reset open tabs when the active profile (individual vs team/entity) changes.
+  // Tabs are scoped to the currently-viewed profile.
+  const profileScopeKey = `${mode}:${activeEntityId ?? "self"}`;
+  const lastScopeRef = useRef<string>(profileScopeKey);
+  useEffect(() => {
+    if (lastScopeRef.current !== profileScopeKey) {
+      lastScopeRef.current = profileScopeKey;
+      setOpenNoteTabs([]);
+      setActiveNoteId(null);
+    }
+  }, [profileScopeKey]);
 
   // Chrome-like tab DnD (pointer-based, X-axis only)
   const tabStripRef = useRef<HTMLDivElement | null>(null);
@@ -315,8 +328,21 @@ function LibraryPage() {
         </aside>
 
         <div className="min-w-0">
-          <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-4 border-b border-hairline bg-background px-4 pt-2 md:-mx-6 md:px-6">
-            <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
+          <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-0 pr-4 md:-mx-6 md:pr-6">
+            <button
+              onClick={() => setActiveNoteId(null)}
+              className={`-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-medium ${
+                showingNote
+                  ? "border-transparent text-muted-foreground hover:text-ink"
+                  : "border-primary text-ink"
+              }`}
+              style={{ width: 220, justifyContent: "flex-start" }}
+              title="Library"
+            >
+              <FolderClosed className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
+              <span>Library</span>
+            </button>
+            <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
               {openNoteTabs.length > 0 && (
                 <div className="relative min-w-0 flex-1">
                   {edgeFade.left && (
@@ -408,7 +434,7 @@ function LibraryPage() {
                 </div>
               )}
             </nav>
-            <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5" />
+            <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5 pl-2" />
           </div>
 
           {showingNote && activeNoteId ? (
