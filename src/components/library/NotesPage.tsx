@@ -282,7 +282,8 @@ export function NotesPage({
   const togglePin = async (folder: NoteFolder) => {
     setFolderMenuFor(null);
     const { error } = await supabase.from("note_folders").update({ pinned: !folder.pinned }).eq("id", folder.id);
-    if (error) toast.error(error.message); else void load();
+    if (error) toast.error(error.message);
+    else { void load(); window.dispatchEvent(new Event("library:refresh")); }
   };
 
   const deleteFolder = async (folder: NoteFolder) => {
@@ -294,6 +295,7 @@ export function NotesPage({
     toast.success(`Deleted "${folder.name}"`);
     if (view.type === "folder" && view.name === folder.name) setView({ type: "all" });
     void load();
+    window.dispatchEvent(new Event("library:refresh"));
   };
 
   const filtered = useMemo(() => {
