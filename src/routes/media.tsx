@@ -472,7 +472,19 @@ interface AttendedEvent {
 
 const MEDIA_HOUSES = ["VG", "NRK", "TV2", "Dagbladet", "Aftenposten"];
 
-function MediaPage({ actionsMount }: { actionsMount?: HTMLDivElement | null } = {}) {
+function MediaPage({
+  actionsMount,
+  hideSideNav,
+  externalView,
+  hideNewActions,
+  onOpenMedia,
+}: {
+  actionsMount?: HTMLDivElement | null;
+  hideSideNav?: boolean;
+  externalView?: { type: "all" } | { type: "album"; id: string | null };
+  hideNewActions?: boolean;
+  onOpenMedia?: (id: string) => void;
+} = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const accessToken = session?.access_token ?? null;
