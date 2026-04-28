@@ -345,11 +345,11 @@ export function LibrarySideNav({
         const isUnsortedActive = isCategoryActive && value.folder === "__unsorted__";
         const isOpen = open[s.key];
         const handleCategoryClick = () => {
-          // Always toggle expand/collapse on click
-          setOpen((o) => ({ ...o, [s.key]: !o[s.key] }));
-          // If we're opening it (or it's already open) and not yet active,
-          // also navigate to the category's "All" view
-          if (!isCategoryActive) {
+          // Only toggle fold/unfold when already inside this category.
+          // Otherwise, just navigate to the category (don't change open state).
+          if (isCategoryActive) {
+            setOpen((o) => ({ ...o, [s.key]: !o[s.key] }));
+          } else {
             onChange({ category: s.key, folder: "" });
           }
         };
