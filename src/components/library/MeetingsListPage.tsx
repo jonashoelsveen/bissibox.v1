@@ -26,11 +26,20 @@ export function MeetingsListPage({
   actionsMount,
   hideNewActions,
   externalView,
+  onOpenMeeting,
+  onMeetingCreated,
+  newMeetingSignal,
 }: {
   actionsMount?: HTMLDivElement | null;
   hideNewActions?: boolean;
   /** "all" or filter by folder name (null = unsorted, string = folder name). */
   externalView?: { type: "all" } | { type: "folder"; name: string | null };
+  /** When provided, clicking a meeting card calls this instead of navigating. */
+  onOpenMeeting?: (m: { id: string; title: string; folder: string | null }) => void;
+  /** Notify parent when a new meeting is created here. */
+  onMeetingCreated?: (m: { id: string; title: string; folder: string | null }) => void;
+  /** Trigger the "new meeting" dialog from the parent (counter increments). */
+  newMeetingSignal?: number;
 } = {}) {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
