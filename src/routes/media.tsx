@@ -252,9 +252,29 @@ function LibraryPage() {
     [openNoteTabs],
   );
 
-  const closeNoteTab = (id: string) => {
+  const [unsavedPrompt, setUnsavedPrompt] = useState<{
+    id: string;
+    title: string;
+    isNew: boolean;
+  } | null>(null);
+
+  const finalizeClose = (id: string) => {
     setOpenNoteTabs((prev) => prev.filter((t) => t.id !== id));
     if (activeNoteId === id) setActiveNoteId(null);
+  };
+
+  const closeNoteTab = (id: string) => {
+    const tab = openNoteTabs.find((t) => t.id === id);
+    const handle = getUnsaved(id);
+    if (handle && handle.isDirty()) {
+      setUnsavedPrompt({
+        id,
+        title: handle.title(),
+        isNew: tab?.kind === "new",
+      });
+      return;
+    }
+    finalizeClose(id);
   };
 
   const openMeetingTab = useCallback(
