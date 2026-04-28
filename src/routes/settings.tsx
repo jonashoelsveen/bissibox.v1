@@ -7,6 +7,13 @@ import { formatDate } from "@/lib/format";
 import { RolesPanel } from "@/components/RolesPanel";
 import { ChevronDown, ChevronRight, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network } from "lucide-react";
 import { TopBarColorPicker } from "@/components/appearance/TopBarColorPicker";
+import {
+  PROFILE_VISIBILITY_ITEMS,
+  useProfileVisibility,
+  notesAutosaveKey,
+  meetingsAutosaveKey,
+  useLibrarySetting,
+} from "@/lib/library-settings";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
