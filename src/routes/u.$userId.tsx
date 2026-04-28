@@ -7,6 +7,7 @@ import { FollowButton } from "@/components/FollowButton";
 import { useAuth } from "@/lib/auth";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
+import { useProfileVisibility } from "@/lib/library-settings";
 
 const search = z.object({
   as: fallback(z.enum(["athlete", "photographer"]), "athlete").default("athlete"),
