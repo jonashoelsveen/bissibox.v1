@@ -1524,8 +1524,14 @@ function CreateAlbumDialog({
   const [busy, setBusy] = useState(false);
 
   const create = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || busy) return;
     setBusy(true);
+    // Place new album at the bottom by computing next sort_order in scope
+    const scopeQ = supabase.from("media_albums").select("sort_order").order("sort_order", { ascending: false }).limit(1);
+    const { data: maxRows } = teamId
+      ? await scopeQ.eq("team_id", teamId)
+      : await scopeQ.is("team_id", null).eq("user_id", userId);
+    const nextOrder = ((maxRows?.[0]?.sort_order as number | undefined) ?? -1) + 1;
     const { error } = await supabase
       .from("media_albums")
       .insert({
@@ -1533,6 +1539,7 @@ function CreateAlbumDialog({
         team_id: teamId,
         name: name.trim(),
         description: description.trim() || null,
+        sort_order: nextOrder,
       });
     setBusy(false);
     if (error) {
@@ -1546,8 +1553,8 @@ function CreateAlbumDialog({
 
   return (
     <Modal title="New album" onClose={onClose}>
-      <Field label="Name" value={name} onChange={setName} autoFocus />
-      <Field label="Description" value={description} onChange={setDescription} />
+      <Field label="Name" value={name} onChange={setName} autoFocus onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void create(); } }} />
+      <Field label="Description" value={description} onChange={setDescription} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void create(); } }} />
       <div className="mt-6 flex justify-end gap-2">
         <button
           onClick={onClose}
