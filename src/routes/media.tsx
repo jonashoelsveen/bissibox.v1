@@ -741,6 +741,15 @@ function MediaPage({
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [authLoading, user, navigate]);
 
+  // Auto-open the upload dialog when ?new=1 is in URL (from + dropdown in Previous tab)
+  const mediaSearch = useSearch({ from: "/media" });
+  useEffect(() => {
+    if (mediaSearch.new === "1" && mediaSearch.tab === "media") {
+      setUploadOpen(true);
+      navigate({ to: "/media", search: { tab: "media" }, replace: true });
+    }
+  }, [mediaSearch.new, mediaSearch.tab, navigate]);
+
   const load = useCallback(async () => {
     if (!user) return;
     const [{ data: r }, { data: p }] = await Promise.all([
