@@ -495,6 +495,13 @@ function LibraryPage() {
               actionsMount={actionsMount}
               onChanged={updateNoteTab}
             />
+          ) : showingPrevious ? (
+            <PreviousPage
+              onOpenNote={(id) => void openNote(id, "earlier")}
+              onOpenTab={(t) =>
+                navigate({ to: "/media", search: { tab: t }, replace: true })
+              }
+            />
           ) : baseTab === "notes" ? (
             <NotesPage
               actionsMount={actionsMount}
