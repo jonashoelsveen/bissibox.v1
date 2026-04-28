@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, Library, Plus, Tent, Settings, LogIn, Users, Briefcase, Armchair } from "lucide-react";
+import { Search, Library, Plus, Tent, Settings, LogIn, Users, Armchair } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { NewEventDialog } from "@/components/organizer/NewEventDialog";
@@ -35,14 +35,9 @@ export function TopChrome() {
 
         {!user && <div className="my-1 h-px w-6 bg-hairline" />}
         {user && mode === "team" && (
-          <>
-            <NavBtn to="/team/members" label="Members" active={path.startsWith("/team/members")}>
-              <Users className="h-[18px] w-[18px]" strokeWidth={2.25} />
-            </NavBtn>
-            <NavBtn to="/team/board" label="Meetings" active={path.startsWith("/team/board")}>
-              <Briefcase className="h-[18px] w-[18px]" strokeWidth={2.25} />
-            </NavBtn>
-          </>
+          <NavBtn to="/team/members" label="Members" active={path.startsWith("/team/members")}>
+            <Users className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </NavBtn>
         )}
 
         {user && (
