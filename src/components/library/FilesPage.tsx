@@ -55,7 +55,19 @@ function formatBytes(n: number | null) {
   return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
 
-export function FilesPage({ actionsMount }: { actionsMount?: HTMLDivElement | null } = {}) {
+export function FilesPage({
+  actionsMount,
+  hideSideNav,
+  externalView,
+  hideNewActions,
+  onOpenFile,
+}: {
+  actionsMount?: HTMLDivElement | null;
+  hideSideNav?: boolean;
+  externalView?: { type: "all" } | { type: "folder"; id: string | null };
+  hideNewActions?: boolean;
+  onOpenFile?: (id: string) => void;
+} = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
