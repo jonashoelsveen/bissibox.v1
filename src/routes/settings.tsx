@@ -238,8 +238,9 @@ function SettingsPage() {
         "entity-meetings",
         "entity-library",
         "entity-events",
+        "entity-appearance",
       ]
-    : ["general", "address", "roles", "profiles", "desk", "races", "liked"];
+    : ["general", "address", "roles", "profiles", "appearance", "desk", "races", "liked"];
 
   const activeEntity = entities.find((e) => e.id === activeEntityId) ?? null;
 
@@ -260,15 +261,19 @@ function SettingsPage() {
                   ? "My races"
                   : t === "liked"
                     ? "Liked races"
-                    : t === "entity-organization"
-                      ? "Organization"
-                      : t === "entity-meetings"
-                        ? "Meetings"
-                        : t === "entity-library"
-                          ? "Library"
-                          : t === "entity-events"
-                            ? "Events"
-                            : "Sign out";
+                    : t === "appearance"
+                      ? "Appearance"
+                      : t === "entity-appearance"
+                        ? "Appearance"
+                        : t === "entity-organization"
+                          ? "Organization"
+                          : t === "entity-meetings"
+                            ? "Meetings"
+                            : t === "entity-library"
+                              ? "Library"
+                              : t === "entity-events"
+                                ? "Events"
+                                : "Sign out";
 
   return (
     <div className="px-4 md:px-6">
