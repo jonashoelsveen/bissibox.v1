@@ -1028,6 +1028,7 @@ function MediaPage({
             </div>
           )}
         </nav>
+        )}
 
         <section>
           {filtered.length === 0 ? (
