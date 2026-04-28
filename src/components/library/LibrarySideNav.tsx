@@ -39,7 +39,9 @@ export function LibrarySideNav({
   const [noteFolders, setNoteFolders] = useState<FolderLite[]>([]);
   const [fileFolders, setFileFolders] = useState<FolderLite[]>([]);
   const [mediaAlbums, setMediaAlbums] = useState<FolderLite[]>([]);
-  const [open, setOpen] = useState<Record<"notes" | "files" | "media", boolean>>({
+  const [meetingFolders, setMeetingFolders] = useState<FolderLite[]>([]);
+  const [open, setOpen] = useState<Record<"meetings" | "notes" | "files" | "media", boolean>>({
+    meetings: true,
     notes: true,
     files: true,
     media: true,
@@ -99,6 +101,26 @@ export function LibrarySideNav({
     setNoteFolders((nf ?? []) as FolderLite[]);
     setFileFolders((ff ?? []) as FolderLite[]);
     setMediaAlbums((ma ?? []) as FolderLite[]);
+
+    // Meetings: derive folder names from team_board_meetings (team mode only)
+    if (isTeamMode && teamId) {
+      const { data: mtgs } = await supabase
+        .from("team_board_meetings")
+        .select("folder")
+        .eq("team_id", teamId);
+      const seen = new Set<string>();
+      const list: FolderLite[] = [];
+      for (const row of (mtgs ?? []) as { folder: string | null }[]) {
+        if (row.folder && !seen.has(row.folder)) {
+          seen.add(row.folder);
+          list.push({ id: row.folder, name: row.folder, pinned: false });
+        }
+      }
+      list.sort((a, b) => a.name.localeCompare(b.name));
+      setMeetingFolders(list);
+    } else {
+      setMeetingFolders([]);
+    }
   }, [user, isTeamMode, activeEntityId]);
 
   useEffect(() => {
@@ -109,21 +131,32 @@ export function LibrarySideNav({
       .on("postgres_changes", { event: "*", schema: "public", table: "note_folders" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "file_folders" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "media_albums" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "team_board_meetings" }, () => load())
       .subscribe();
     return () => {
       void supabase.removeChannel(ch);
     };
   }, [load, user?.id]);
 
-  const sections: {
-    key: "notes" | "files" | "media";
+  const allSections: {
+    key: "meetings" | "notes" | "files" | "media";
     label: string;
     icon: React.ReactNode;
     folders: FolderLite[];
     folderLabel: string;
-    /** For notes folder identifier is the name; for files/media it's the id. */
+    /** For notes/meetings folder identifier is the name; for files/media it's the id. */
     folderKey: (f: FolderLite) => string;
+    teamOnly?: boolean;
   }[] = [
+    {
+      key: "meetings",
+      label: "Meetings",
+      icon: <Briefcase className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      folders: meetingFolders,
+      folderLabel: "Folders",
+      folderKey: (f) => f.name,
+      teamOnly: true,
+    },
     {
       key: "notes",
       label: "Notes",
@@ -149,6 +182,7 @@ export function LibrarySideNav({
       folderKey: (f) => f.id,
     },
   ];
+  const sections = allSections.filter((s) => !s.teamOnly || isTeamMode);
 
   const isPreviousActive = value.category === "previous";
 
@@ -165,21 +199,6 @@ export function LibrarySideNav({
         </span>
         <span className="ml-2 min-w-0 flex-1 truncate">Previous</span>
       </button>
-      {isTeamMode && (
-        <button
-          onClick={() => onChange({ category: "meetings", folder: "" })}
-          className={`group flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition ${
-            value.category === "meetings"
-              ? "bg-secondary font-medium text-ink"
-              : "text-ink hover:bg-secondary/60"
-          }`}
-        >
-          <span className="grid h-5 w-5 shrink-0 place-items-center text-muted-foreground">
-            <Briefcase className="h-3.5 w-3.5" strokeWidth={2.25} />
-          </span>
-          <span className="ml-2 min-w-0 flex-1 truncate">Meetings</span>
-        </button>
-      )}
       {sections.map((s) => {
         const isCategoryActive = value.category === s.key;
         const isAllActive = isCategoryActive && value.folder === "";

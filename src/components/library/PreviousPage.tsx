@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {
   StickyNote,
   FolderClosed,
   Image as ImageIcon,
-  Search,
+  Search as SearchIcon,
   Plus,
   Briefcase,
+  X,
 } from "lucide-react";
 
 type PreviousItem = {
@@ -24,18 +26,33 @@ export function PreviousPage({
   onOpenTab,
   onCreate,
   showMeetingOption,
+  actionsMount,
 }: {
   onOpenNote: (id: string) => void;
   onOpenTab: (tab: "files" | "media") => void;
   onCreate: (kind: PreviousNewKind) => void;
   showMeetingOption?: boolean;
+  actionsMount?: HTMLDivElement | null;
 }) {
   const { user, mode, activeEntityId } = useAuth();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
   const [items, setItems] = useState<PreviousItem[] | null>(null);
-  const [query, setQuery] = useState("");
+
+  // search (matches NotesPage style)
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  // + dropdown
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (searchOpen) {
+      const t = setTimeout(() => searchInputRef.current?.focus(), 60);
+      return () => clearTimeout(t);
+    }
+  }, [searchOpen]);
 
   // Close dropdown on outside click / Escape
   useEffect(() => {
@@ -132,77 +149,120 @@ export function PreviousPage({
 
   const filtered = useMemo(() => {
     if (!items) return null;
-    const q = query.trim().toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
     if (!q) return items;
     return items.filter((it) => it.title.toLowerCase().includes(q));
-  }, [items, query]);
+  }, [items, searchQuery]);
+
+  const closeSearch = () => {
+    setSearchQuery("");
+    setSearchOpen(false);
+  };
+
+  const actions = (
+    <>
+      <div
+        className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
+          searchOpen
+            ? "w-64 border-hairline bg-card pl-3 pr-1"
+            : "w-9 hover:border-hairline hover:bg-card"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            if (!searchOpen) setSearchOpen(true);
+            else searchInputRef.current?.focus();
+          }}
+          aria-label="Search recent"
+          className="grid h-9 w-9 shrink-0 place-items-center text-muted-foreground transition hover:text-ink"
+        >
+          <SearchIcon className="h-4 w-4" />
+        </button>
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") closeSearch();
+          }}
+          placeholder="Search recent"
+          className={`min-w-0 flex-1 border-b border-hairline bg-transparent py-1 text-xs text-ink outline-none transition placeholder:text-muted-foreground/70 focus:border-ink/40 ${
+            searchOpen ? "opacity-100" : "pointer-events-none w-0 opacity-0"
+          }`}
+        />
+        {searchOpen && (
+          <button
+            type="button"
+            onClick={closeSearch}
+            aria-label="Clear search"
+            className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-ink ${
+              searchQuery ? "opacity-100" : "opacity-60"
+            }`}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      <div className="relative" ref={menuRef}>
+        <button
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label="Create new"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-secondary hover:text-ink"
+        >
+          <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
+        </button>
+        {menuOpen && (
+          <div
+            role="menu"
+            className="absolute right-0 top-full z-30 mt-2 w-44 origin-top-right overflow-hidden rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
+          >
+            {showMeetingOption && (
+              <DropdownItem
+                icon={<Briefcase className="h-3.5 w-3.5" />}
+                label="Meeting"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onCreate("meeting");
+                }}
+              />
+            )}
+            <DropdownItem
+              icon={<StickyNote className="h-3.5 w-3.5" />}
+              label="Note"
+              onClick={() => {
+                setMenuOpen(false);
+                onCreate("note");
+              }}
+            />
+            <DropdownItem
+              icon={<FolderClosed className="h-3.5 w-3.5" />}
+              label="Files"
+              onClick={() => {
+                setMenuOpen(false);
+                onCreate("files");
+              }}
+            />
+            <DropdownItem
+              icon={<ImageIcon className="h-3.5 w-3.5" />}
+              label="Media"
+              onClick={() => {
+                setMenuOpen(false);
+                onCreate("media");
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </>
+  );
 
   return (
     <div className="pt-4">
-      {/* Search + Plus header */}
-      <div className="mb-4 flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search recent…"
-            className="h-10 w-full rounded-full border border-hairline bg-card pl-9 pr-3 text-sm text-ink outline-none transition focus:border-primary"
-          />
-        </div>
-        <div className="relative" ref={menuRef}>
-          <button
-            onClick={() => setMenuOpen((o) => !o)}
-            aria-label="Create new"
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-secondary hover:text-ink"
-          >
-            <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
-          </button>
-          {menuOpen && (
-            <div
-              role="menu"
-              className="absolute right-0 top-full z-30 mt-2 w-44 origin-top-right overflow-hidden rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
-            >
-              {showMeetingOption && (
-                <DropdownItem
-                  icon={<Briefcase className="h-3.5 w-3.5" />}
-                  label="Meeting"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onCreate("meeting");
-                  }}
-                />
-              )}
-              <DropdownItem
-                icon={<StickyNote className="h-3.5 w-3.5" />}
-                label="Note"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onCreate("note");
-                }}
-              />
-              <DropdownItem
-                icon={<FolderClosed className="h-3.5 w-3.5" />}
-                label="Files"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onCreate("files");
-                }}
-              />
-              <DropdownItem
-                icon={<ImageIcon className="h-3.5 w-3.5" />}
-                label="Media"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onCreate("media");
-                }}
-              />
-            </div>
-          )}
-        </div>
-      </div>
+      {actionsMount && createPortal(actions, actionsMount)}
 
       {filtered === null ? (
         <div className="px-2 py-12 text-center text-sm text-muted-foreground">Loading…</div>

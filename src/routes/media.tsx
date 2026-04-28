@@ -12,7 +12,7 @@ import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
 import { PreviousPage, type PreviousNewKind } from "@/components/library/PreviousPage";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
-import { TeamBoardPage } from "@/routes/team.board";
+import { MeetingsListPage } from "@/components/library/MeetingsListPage";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -49,7 +49,7 @@ import {
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 
-type LibraryTab = "notes" | "files" | "media";
+type LibraryTab = "notes" | "files" | "media" | "meetings";
 
 export interface OpenNoteTab {
   id: string;
@@ -60,15 +60,15 @@ export interface OpenNoteTab {
 
 export const Route = createFileRoute("/media")({
   component: LibraryPage,
-  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; folder?: string; new?: string; open?: string; view?: "previous" | "meetings" } => ({
+  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; folder?: string; new?: string; open?: string; view?: "previous" } => ({
     tab:
-      s.tab === "files" || s.tab === "media" || s.tab === "notes"
+      s.tab === "files" || s.tab === "media" || s.tab === "notes" || s.tab === "meetings"
         ? (s.tab as LibraryTab)
         : undefined,
     folder: typeof s.folder === "string" ? (s.folder as string) : undefined,
     new: typeof s.new === "string" ? (s.new as string) : undefined,
     open: typeof s.open === "string" ? (s.open as string) : undefined,
-    view: s.view === "previous" ? "previous" : s.view === "meetings" ? "meetings" : undefined,
+    view: s.view === "previous" ? "previous" : undefined,
   }),
   head: () => ({ meta: [{ title: "Library · Raceline" }] }),
 });
@@ -85,15 +85,12 @@ function LibraryPage() {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
   const [newNoteOpen, setNewNoteOpen] = useState(false);
-  const [newMeetingTick, setNewMeetingTick] = useState(0);
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
 
   const handleCreateFromPrevious = (kind: PreviousNewKind) => {
     if (kind === "meeting") {
       setActiveNoteId(null);
-      navigate({ to: "/media", search: { tab: baseTab, view: "meetings" }, replace: true });
-      // bump after navigation so TeamBoardPage effect fires
-      setNewMeetingTick((t) => t + 1);
+      navigate({ to: "/media", search: { tab: "meetings", new: "1" }, replace: true });
       return;
     }
     if (kind === "note") {
@@ -383,19 +380,14 @@ function LibraryPage() {
       : undefined;
 
   const showingPrevious = search.view === "previous";
-  const showingMeetings = search.view === "meetings";
   const sideValue: LibrarySideNavValue = {
-    category: showingPrevious ? "previous" : showingMeetings ? "meetings" : baseTab,
-    folder: showingPrevious || showingMeetings ? "" : (search.folder ?? ""),
+    category: showingPrevious ? "previous" : baseTab,
+    folder: showingPrevious ? "" : (search.folder ?? ""),
   };
   const onSideChange = (v: LibrarySideNavValue) => {
     setActiveNoteId(null);
     if (v.category === "previous") {
       navigate({ to: "/media", search: { tab: baseTab, view: "previous" }, replace: true });
-      return;
-    }
-    if (v.category === "meetings") {
-      navigate({ to: "/media", search: { tab: baseTab, view: "meetings" }, replace: true });
       return;
     }
     navigate({
@@ -404,6 +396,15 @@ function LibraryPage() {
       replace: true,
     });
   };
+
+  const externalMeetingsView: { type: "all" } | { type: "folder"; name: string | null } | undefined =
+    baseTab === "meetings" && search.folder !== undefined
+      ? search.folder === "__unsorted__"
+        ? { type: "folder", name: null }
+        : search.folder === ""
+          ? { type: "all" }
+          : { type: "folder", name: search.folder }
+      : undefined;
 
   return (
     <div className="px-4 md:px-6">
@@ -539,9 +540,13 @@ function LibraryPage() {
               }
               onCreate={handleCreateFromPrevious}
               showMeetingOption={isTeamMode}
+              actionsMount={actionsMount}
             />
-          ) : showingMeetings ? (
-            <TeamBoardPage embedded newMeetingSignal={newMeetingTick} />
+          ) : baseTab === "meetings" ? (
+            <MeetingsListPage
+              actionsMount={actionsMount}
+              externalView={externalMeetingsView ?? { type: "all" }}
+            />
           ) : baseTab === "notes" ? (
             <NotesPage
               actionsMount={actionsMount}

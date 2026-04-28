@@ -1,97 +1,53 @@
-## Library page restructure
+## Goal
 
-### Layout changes
+Make the Library page's category behavior fully consistent across **Previous, Meetings, Notes, Files, Media** — every category renders content in the main area and exposes its actions (search icon + "+" dropdown/button) in the **horizontal top-tab actions area** (the `actionsMount` portal), matching the existing Notes search-icon style. Meetings stops being its own embedded sub-app and becomes a normal Library category with an expandable folder list in the sidebar.
 
-Remove the "Library" page header (`<h1>Library</h1>`) entirely.
+## Changes
 
-Move the internal library left-side nav (currently inside each of NotesPage, FilesPage, MediaPage) up into the parent `LibraryPage` (`src/routes/media.tsx`). The page becomes a 3-zone layout:
+### 1. Sidebar — Meetings becomes a normal expandable category
+File: `src/components/library/LibrarySideNav.tsx`
+- Remove the standalone "Meetings" button.
+- Add `meetings` to the `sections` array (team-mode only) with the `Briefcase` icon. Loads folder list from `team_board_meetings` (`distinct folder` for current team) plus pulls any `extra` folders if needed (initially just real folder names from meeting rows is enough).
+- Folder identifier: the folder name string (mirrors Notes folder behavior). `__unsorted__` = meetings with `folder = null`.
+- Selecting Meetings (no folder) sets `folder=""` (All), expanding/collapsing matches other categories.
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│  TopBar (existing, colored)                                  │
-├──────────┬───────────────────────────────────────────────────┤
-│ Left     │  Sticky horizontal tab bar (open items + actions) │
-│ category │───────────────────────────────────────────────────│
-│ nav      │                                                   │
-│  ▾ Notes │  Active panel content                             │
-│   Folder │                                                   │
-│  ▾ Files │                                                   │
-│   Folder │                                                   │
-│  ▾ Media │                                                   │
-│   Album  │                                                   │
-└──────────┴───────────────────────────────────────────────────┘
-```
+### 2. Routing / state in `src/routes/media.tsx`
+- Drop the special `view=meetings` URL param. Treat `tab=meetings` like `tab=notes/files/media`.
+  - Update `validateSearch` to add `"meetings"` to `LibraryTab` (team-mode only enforced at render).
+- Remove `showingMeetings` branch and `<TeamBoardPage embedded …/>`. Render new `<MeetingsListPage actionsMount={…} hideSideNav externalView={…} onOpenMeeting={…} />` instead.
+- The "Previous" view also stops rendering its own search/+; it portals its actions into `actionsMount` instead. Keep `view=previous` URL param.
+- "+" dropdown for Previous and Meetings still includes Meeting/Note/Files/Media (same `handleCreateFromPrevious`).
 
-### Left category nav (new unified `LibrarySideNav`)
+### 3. New component `src/components/library/MeetingsListPage.tsx`
+Slim list view that mirrors the structure/style of NotesPage:
+- Loads meetings (`team_board_meetings`) for the active team. Filters by `externalView` (all vs folder name vs unsorted).
+- Renders meeting cards (title, date, folder badge) using the same card grid styling NotesPage uses.
+- Click a meeting → calls `onOpenMeeting(id)`. Initial implementation: navigate to existing `/team/board` route with the meeting id (cheap, preserves the current editor). Opening meetings as horizontal tabs inside Library is **out of scope for this change** (would require porting all TeamBoard editor state).
+- Portals into `actionsMount`:
+  - **Search icon** (expanding pill) — copy the exact JSX/classes from NotesPage's search affordance, switched to filter the meetings list.
+  - **"+ New meeting"** primary button — opens the same NewMeeting modal flow. Reuse logic from team.board.tsx (extract `createMeeting(teamId, title, folder)` helper into the new component, or call a small shared util).
+  - **"+ New folder"** secondary button — inserts into local extraFolders + triggers sidebar refresh (folders are derived from meetings, so until a meeting is created in the folder it won't persist; mirrors current TeamBoard behavior).
 
-Three top-level rows, each with an icon + name + chevron toggle:
+### 4. PreviousPage — move actions into the top tab bar
+File: `src/components/library/PreviousPage.tsx`
+- Accept `actionsMount?: HTMLDivElement | null`.
+- Remove the in-content search input and "+" dropdown header.
+- Build the same `actions` JSX (search icon + "+" dropdown with Meeting/Note/Files/Media) and `createPortal(actions, actionsMount)`.
+- The list rendering (Recently edited) and empty/loading states stay.
 
-- **(StickyNote) Notes** → folders below (existing folder list from NotesPage)
-- **(FolderClosed) Files** → folders below (from FilesPage)
-- **(Image) Media** → albums below (from MediaPage)
+### 5. Cleanup
+- `team.board.tsx`: keep the `embedded` and `newMeetingSignal` props (still used by `/team/board` route directly and possibly future), but Library no longer mounts it.
+- No DB migrations.
 
-Clicking a category name selects "All [category]" and switches the main panel. Clicking a folder/album selects that specific view. Chevron toggles the sublist independently. The currently-active category stays highlighted.
+## Out of scope (explicit)
 
-This nav lives on the left of the library page (replacing the per-page 200px nav columns). It is NOT moved into the global app sidebar (`Chrome.tsx`) — only visible inside `/media`.
+- Opening meetings as draggable horizontal tabs inside the Library (notes-style multi-tab editor for meetings). Today the meeting editor is large and lives inside TeamBoardPage; clicking a meeting card from the Library list will route to `/team/board?meeting=<id>` which already supports tabbed editing.
+- Any visual/behavior change to the existing `/team/board` route itself.
 
-### Sticky horizontal tab bar
+## Technical notes
 
-The existing tab strip (already in `media.tsx`, lines 275–394) stays at the top, now positioned `sticky top-14` (just under the colored TopBar), with the page background so it visually attaches. It contains:
-
-- **Open item tabs** — notes (existing), plus new file and media tabs (with their respective icon prefix and `folder · name` label, same close behavior as notes).
-- **Actions area** (right side, the existing `actionsMount` portal): Search, New folder/album, New.
-
-The standalone Notes/Files/Media tabs are removed from the strip (those moved to the left nav).
-
-### Files & media as tabs
-
-Extend the existing `openNoteTabs` model into a unified `openItemTabs` with `kind: "note" | "file" | "media"`:
-
-```ts
-interface OpenItemTab {
-  id: string;
-  kind: "note" | "file" | "media";
-  title: string;
-  folder: string | null;  // folder name or album name
-}
-```
-
-- **Files**: clicking a file in `FilesPage` calls `onOpenFile(id)` which adds a tab; the tab renders an inline file viewer (image preview / PDF iframe / download link based on mime type).
-- **Media**: clicking a media card calls `onOpenMedia(id)` which adds a tab; the tab renders the full-size media viewer (existing lightbox markup, but inline in the panel area instead of a fullscreen overlay).
-- Tab icon prefix: `StickyNote` (note) / `FolderClosed`-style file icon (file) / `ImageIcon` (media).
-
-The TopBar (colored) stays visible because we are still inside `/media` — no change needed; opening media in a tab does not navigate away or open a fullscreen overlay.
-
-### Unified "New" dialog
-
-Replace the three separate creation buttons (New note, New file/upload, New media upload) with one **New** button in the actions area. Behavior depends on context:
-
-- New folder/album button stays separate, contextual:
-  - Notes/Files panel → "New folder" with header `(FolderClosed) New {note|file} folder`
-  - Media panel → "New album" with header `(ImageIcon) New media album`
-
-- **New** button opens a centered dialog:
-  - **Category** select: Note / File / Media (defaults to current panel's category)
-  - **Folder/Album** select: list of folders for the chosen category, plus "Unsorted"
-  - For Note: title input; on Save creates the note and opens it in a tab
-  - For File: file picker; on Save uploads + scans, then opens in a tab
-  - For Media: file picker (image/video); on Save uploads + scans, then opens in a tab
-  - Footer: **Cancel** (bottom-left), **Save note/file/media** (bottom-right)
-
-### Files affected
-
-- `src/routes/media.tsx` — remove header, restructure layout, add `LibrarySideNav`, generalize tabs to `openItemTabs`, route file/media open events.
-- `src/components/library/NotesPage.tsx` — remove internal `<nav>` left column; keep grid; expose folders via parent. Keep the per-folder list rendering.
-- `src/components/library/FilesPage.tsx` — same: drop internal left column; add `onOpenFile` prop.
-- `src/routes/media.tsx` `MediaPage` — same: drop internal left column; add `onOpenMedia` prop; convert lightbox into an inline tab viewer when invoked from a tab.
-- New `src/components/library/LibrarySideNav.tsx` — unified 3-category nav with expandable folders/albums.
-- New `src/components/library/NewItemDialog.tsx` — unified create dialog.
-- New `src/components/library/FileTabViewer.tsx` and `MediaTabViewer.tsx` — inline viewers used inside an open tab.
-
-### Out of scope
-
-- No database schema changes.
-- No changes to global sidebar (`Chrome.tsx`) other than what already exists.
-- No changes to the new-note overlay used from the global "+" sidebar button.
-- Search, select-mode, drag-reorder, realtime cover updates — preserved as-is.
-
+- Sidebar meeting folders query (per active team):
+  `select folder from team_board_meetings where team_id = $1 and folder is not null` then dedupe client-side. Sorted alphabetically. No `pinned`/`sort_order` (the table doesn't have folder rows — folders are implicit).
+- `MeetingsListPage` uses the same `scope` pattern as other Library pages (`team_id` for team mode).
+- Search-icon pill JSX is copied verbatim from `NotesPage` for visual parity.
+- `tab=meetings` is only valid in team mode; if the user is not in team mode, we redirect to `tab=files`.
