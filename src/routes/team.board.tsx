@@ -893,7 +893,7 @@ export function TeamBoardPage({
 
 
 
-      {activeTab === "meetings" && (
+      {!hideOwnTabBar && activeTab === "meetings" && (
         <div className="mt-8 grid gap-8 md:grid-cols-[200px_1fr]">
           <nav className="-ml-2 flex flex-col gap-0.5">
             <SideNavBtn active={folderFilter === "all"} onClick={() => setFolderFilter("all")}>
