@@ -754,31 +754,33 @@ export function TeamBoardPage({
 
   return (
     <div className="px-4 md:px-6">
-      <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
-        <div>
-          <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Team</p>
-          <h1 className="mt-2 text-3xl text-ink md:text-4xl">Meetings</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {activeTab === "meetings" && (
-            <>
-              <button
-                onClick={() => setNewFolderOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-hairline bg-card px-4 py-2.5 text-sm text-ink transition hover:bg-secondary"
-              >
-                <Plus className="h-4 w-4" /> New folder
-              </button>
-              <button
-                onClick={openNewMeeting}
-                disabled={busy}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" /> New board meeting
-              </button>
-            </>
-          )}
-        </div>
-      </header>
+      {!embedded && (
+        <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
+          <div>
+            <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Team</p>
+            <h1 className="mt-2 text-3xl text-ink md:text-4xl">Meetings</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            {activeTab === "meetings" && (
+              <>
+                <button
+                  onClick={() => setNewFolderOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-hairline bg-card px-4 py-2.5 text-sm text-ink transition hover:bg-secondary"
+                >
+                  <Plus className="h-4 w-4" /> New folder
+                </button>
+                <button
+                  onClick={openNewMeeting}
+                  disabled={busy}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+                >
+                  <Plus className="h-4 w-4" /> New board meeting
+                </button>
+              </>
+            )}
+          </div>
+        </header>
+      )}
 
       <nav className="mt-7 flex border-b border-hairline overflow-hidden">
         <TabBtn
