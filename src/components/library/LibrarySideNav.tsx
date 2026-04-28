@@ -490,10 +490,8 @@ export function LibrarySideNav({
                       No {s.folderLabel.toLowerCase()} yet
                     </span>
                   )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </div>
+            </motion.div>
           </div>
         );
       })}
