@@ -101,7 +101,9 @@ function SettingsPage() {
   const { user, loading: authLoading, activeEntityId, setActiveEntity, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileBaseline, setProfileBaseline] = useState<string>("");
   const [team, setTeam] = useState<Team | null>(null);
+  const [teamBaseline, setTeamBaseline] = useState<string>("");
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [regs, setRegs] = useState<RegistrationRow[]>([]);
   const [liked, setLiked] = useState<LikedRow[]>([]);
@@ -112,6 +114,10 @@ function SettingsPage() {
   // Active selection: null = individual profile, otherwise the entity id.
   const isTeamMode = !!activeEntityId;
 
+  const isDirty = isTeamMode
+    ? !!team && JSON.stringify(team) !== teamBaseline
+    : !!profile && JSON.stringify(profile) !== profileBaseline;
+
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
   }, [authLoading, user, navigate]);
@@ -121,7 +127,10 @@ function SettingsPage() {
     if (!user) return;
     (async () => {
       const { data: p } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-      if (p) setProfile(p as Profile);
+      if (p) {
+        setProfile(p as Profile);
+        setProfileBaseline(JSON.stringify(p));
+      }
 
       const { data: r } = await supabase
         .from("registrations")
@@ -157,6 +166,7 @@ function SettingsPage() {
     if (!user) return;
     if (!activeEntityId) {
       setTeam(null);
+      setTeamBaseline("");
       return;
     }
     (async () => {
@@ -165,7 +175,10 @@ function SettingsPage() {
         .select("id, name, nif_id, contact_email, contact_phone, website, description, address, postal_code, postal_place, country, active")
         .eq("id", activeEntityId)
         .maybeSingle();
-      if (t) setTeam(t as Team);
+      if (t) {
+        setTeam(t as Team);
+        setTeamBaseline(JSON.stringify(t));
+      }
     })();
   }, [user, activeEntityId]);
 
@@ -206,6 +219,7 @@ function SettingsPage() {
 
   const save = async () => {
     if (!user) return;
+    if (!isDirty) return;
     setSaving(true);
     if (isTeamMode && team) {
       const { id, ...rest } = team;
@@ -213,6 +227,7 @@ function SettingsPage() {
       setSaving(false);
       if (error) return toast.error(error.message);
       toast.success("Saved.");
+      setTeamBaseline(JSON.stringify(team));
       // Refresh entity name in dropdown list
       setEntities((prev) => prev.map((e) => (e.id === id ? { ...e, name: team.name } : e)));
     } else if (profile) {
@@ -220,6 +235,7 @@ function SettingsPage() {
       setSaving(false);
       if (error) return toast.error(error.message);
       toast.success("Settings saved.");
+      setProfileBaseline(JSON.stringify(profile));
     } else {
       setSaving(false);
     }
@@ -304,10 +320,14 @@ function SettingsPage() {
             </button>
             <button
               onClick={save}
-              disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-md border border-hairline bg-background px-4 py-2 text-xs font-medium text-ink transition hover:bg-secondary disabled:opacity-50"
+              disabled={saving || !isDirty}
+              className={`inline-flex items-center gap-1.5 rounded-md border px-4 py-2 text-xs font-medium transition ${
+                isDirty && !saving
+                  ? "border-ink bg-ink text-background hover:opacity-90"
+                  : "border-hairline bg-secondary text-muted-foreground cursor-not-allowed"
+              }`}
             >
-              {saving ? "Saving…" : "Save"}
+              {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
             </button>
           </div>
         </div>
