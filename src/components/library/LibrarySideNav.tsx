@@ -39,7 +39,9 @@ export function LibrarySideNav({
   const [noteFolders, setNoteFolders] = useState<FolderLite[]>([]);
   const [fileFolders, setFileFolders] = useState<FolderLite[]>([]);
   const [mediaAlbums, setMediaAlbums] = useState<FolderLite[]>([]);
-  const [open, setOpen] = useState<Record<"notes" | "files" | "media", boolean>>({
+  const [meetingFolders, setMeetingFolders] = useState<FolderLite[]>([]);
+  const [open, setOpen] = useState<Record<"meetings" | "notes" | "files" | "media", boolean>>({
+    meetings: true,
     notes: true,
     files: true,
     media: true,
@@ -99,6 +101,26 @@ export function LibrarySideNav({
     setNoteFolders((nf ?? []) as FolderLite[]);
     setFileFolders((ff ?? []) as FolderLite[]);
     setMediaAlbums((ma ?? []) as FolderLite[]);
+
+    // Meetings: derive folder names from team_board_meetings (team mode only)
+    if (isTeamMode && teamId) {
+      const { data: mtgs } = await supabase
+        .from("team_board_meetings")
+        .select("folder")
+        .eq("team_id", teamId);
+      const seen = new Set<string>();
+      const list: FolderLite[] = [];
+      for (const row of (mtgs ?? []) as { folder: string | null }[]) {
+        if (row.folder && !seen.has(row.folder)) {
+          seen.add(row.folder);
+          list.push({ id: row.folder, name: row.folder, pinned: false });
+        }
+      }
+      list.sort((a, b) => a.name.localeCompare(b.name));
+      setMeetingFolders(list);
+    } else {
+      setMeetingFolders([]);
+    }
   }, [user, isTeamMode, activeEntityId]);
 
   useEffect(() => {
