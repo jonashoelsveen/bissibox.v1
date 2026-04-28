@@ -322,20 +322,14 @@ function SettingsPage() {
 
           <div>
             {tab === "entity-profile" && isTeamMode && team && (
-              <Card>
-                <p className="text-xs text-muted-foreground">
-                  When inactive, this profile page calmly shows that it is not active. The entity is hidden from public browsing.
-                </p>
-                <div className="mt-4">
-                  <ToggleRow
-                    title="Profile active"
-                    description="Visible publicly and able to accept members."
-                    checked={team.active}
-                    onChange={(v) => updateTeam("active", v)}
-                  />
-                </div>
-                <SaveBar saving={saving} onSave={save} />
-              </Card>
+              <ProfileVisibilityPanel
+                scopeKey={`entity:${team.id}`}
+                active={team.active}
+                onActiveChange={async (v) => {
+                  updateTeam("active", v);
+                  await supabase.from("teams").update({ active: v }).eq("id", team.id);
+                }}
+              />
             )}
 
             {tab === "general" && isTeamMode && team && (
