@@ -1057,18 +1057,28 @@ export function TeamBoardPage({
             >
               <FolderIcon className="h-4 w-4" />
             </button>
-            <button
-              onClick={saveOngoingText}
-              disabled={!isDirty || saving}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition ${
-                isDirty && !saving
-                  ? "text-ink hover:bg-secondary"
-                  : "cursor-default text-muted-foreground/50"
-              }`}
-            >
-              <Save className="h-3.5 w-3.5" />
-              {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
-            </button>
+            {meetingsAutosave ? (
+              <span
+                title="Autosave is on. Edits are saved automatically."
+                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-emerald-600 dark:text-emerald-400"
+              >
+                <Save className="h-3.5 w-3.5" />
+                {saving ? "Saving…" : "Autosave"}
+              </span>
+            ) : (
+              <button
+                onClick={saveOngoingText}
+                disabled={!isDirty || saving}
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition ${
+                  isDirty && !saving
+                    ? "text-ink hover:bg-secondary"
+                    : "cursor-default text-muted-foreground/50"
+                }`}
+              >
+                <Save className="h-3.5 w-3.5" />
+                {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
+              </button>
+            )}
           </div>
 
           {/* Document body — single blank page */}
