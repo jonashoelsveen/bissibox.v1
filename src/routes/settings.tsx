@@ -1277,30 +1277,8 @@ function ProfileVisibilityPanel({
   active: boolean;
   onActiveChange: (v: boolean) => void;
 }) {
-  const storageKey = `profile-visibility:${scopeKey}`;
   const [open, setOpen] = useState(false);
-  const [checked, setChecked] = useState<Record<string, boolean>>(() => {
-    if (typeof window === "undefined") {
-      return Object.fromEntries(PROFILE_VISIBILITY_ITEMS.map((i) => [i, true]));
-    }
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) return JSON.parse(raw) as Record<string, boolean>;
-    } catch {
-      /* ignore */
-    }
-    return Object.fromEntries(PROFILE_VISIBILITY_ITEMS.map((i) => [i, true]));
-  });
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(checked));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, [storageKey, checked]);
+  const [checked, setChecked] = useProfileVisibility(scopeKey);
 
   return (
     <div className="space-y-3">
@@ -1355,7 +1333,7 @@ function ProfileVisibilityPanel({
                     type="checkbox"
                     checked={checked[item] ?? true}
                     onChange={(e) =>
-                      setChecked((c) => ({ ...c, [item]: e.target.checked }))
+                      setChecked({ ...checked, [item]: e.target.checked })
                     }
                     className="h-4 w-4 accent-primary"
                   />
@@ -1366,5 +1344,92 @@ function ProfileVisibilityPanel({
         )}
       </Card>
     </div>
+  );
+}
+
+/* ───────── Library category settings (autosave per category) ───────── */
+
+function LibrarySettingsPanel({ scopeKey }: { scopeKey: string }) {
+  return (
+    <div className="space-y-3">
+      <CategoryAutosaveCard
+        title="Notes"
+        storageKey={notesAutosaveKey(scopeKey)}
+        description="Automatically save your note as you type. When off, you'll see a Save button."
+      />
+      <CategoryAutosaveCard
+        title="Meetings"
+        storageKey={meetingsAutosaveKey(scopeKey)}
+        description="Automatically save meeting notes as you type. When off, you'll see a Save button."
+      />
+    </div>
+  );
+}
+
+function CategoryAutosaveCard({
+  title,
+  storageKey,
+  description,
+}: {
+  title: string;
+  storageKey: string;
+  description: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [enabled, setEnabled] = useLibrarySetting<boolean>(storageKey, false);
+  return (
+    <Card>
+      <div className="flex w-full items-center gap-3">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          <h3 className="text-sm font-semibold text-ink">{title}</h3>
+        </button>
+        <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            onClick={() => setEnabled(!enabled)}
+            className={`relative h-5 w-9 shrink-0 rounded-full transition ${
+              enabled ? "bg-primary" : "bg-secondary"
+            }`}
+            aria-label={`Toggle ${title} autosave`}
+          >
+            <span
+              className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition ${
+                enabled ? "left-[18px]" : "left-0.5"
+              }`}
+            />
+          </button>
+          <button
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Collapse" : "Expand"}
+            className="text-muted-foreground hover:text-ink"
+          >
+            {open ? (
+              <ChevronDown className="h-4 w-4" strokeWidth={2.25} />
+            ) : (
+              <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+            )}
+          </button>
+        </div>
+      </div>
+      {open && (
+        <div className="mt-4 space-y-3">
+          <p className="text-xs text-muted-foreground">{description}</p>
+          <label className="flex items-center justify-between rounded-xl border border-hairline px-4 py-3">
+            <span className="text-sm text-ink">Enable autosave</span>
+            <input
+              type="checkbox"
+              checked={enabled}
+              onChange={(e) => setEnabled(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+          </label>
+        </div>
+      )}
+    </Card>
   );
 }
