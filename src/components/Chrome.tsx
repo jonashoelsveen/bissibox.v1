@@ -55,25 +55,10 @@ export function TopChrome() {
   }, [user, activeEntityId]);
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen p-5 md:p-6">
-      <div className="flex h-full flex-col items-center gap-2 pt-2">
-        {/* Profile / Sign-in at the top */}
-        {user ? (
-          <Link
-            to="/profile"
-            aria-label="Profile"
-            className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-all ${
-              path.startsWith("/profile") ||
-              path.startsWith("/u/") ||
-              path.startsWith("/t/") ||
-              path.startsWith("/c/")
-                ? "bg-ink text-background"
-                : "text-ink hover:bg-secondary"
-            }`}
-          >
-            {letter}
-          </Link>
-        ) : (
+    <aside className="fixed left-0 top-0 z-40 h-screen p-5 pt-[72px] md:p-6 md:pt-[72px]">
+      <div className="flex h-full flex-col items-center gap-2">
+        {/* Sign-in shortcut for logged-out users (logged-in identity lives in the top bar) */}
+        {!user && (
           <Link
             to="/auth"
             aria-label="Sign in"
@@ -87,8 +72,7 @@ export function TopChrome() {
           </Link>
         )}
 
-        <div className="my-1 h-px w-6 bg-hairline" />
-
+        {!user && <div className="my-1 h-px w-6 bg-hairline" />}
         {user && mode === "team" && (
           <>
             <NavBtn to="/team/members" label="Members" active={path.startsWith("/team/members")}>
