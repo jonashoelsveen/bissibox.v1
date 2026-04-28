@@ -98,7 +98,11 @@ export function TopBar() {
       <Link
         to="/profile"
         aria-label="Open profile"
-        className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary text-sm font-medium text-ink ring-1 ring-black/5 transition hover:opacity-90"
+        className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-medium ring-1 ring-black/5 transition ${
+          isProfileActive
+            ? "bg-primary text-primary-foreground"
+            : "bg-secondary text-ink hover:opacity-90"
+        }`}
       >
         {avatarUrl ? (
           <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
