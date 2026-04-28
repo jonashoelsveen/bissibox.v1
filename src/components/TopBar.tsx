@@ -91,17 +91,17 @@ export function TopBar() {
 
   return (
     <div
-      className="fixed left-0 right-0 top-0 z-30 flex h-14 items-center pl-5 pr-6 md:pl-6"
+      className="pointer-events-none fixed left-0 right-0 top-0 z-50 flex h-14 items-center pl-5 pr-6 md:pl-6"
       style={{ background: bgColor }}
     >
       {/* Avatar/initial: links to the user/entity profile page */}
       <Link
         to="/profile"
         aria-label="Open profile"
-        className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-medium ring-1 ring-black/5 transition ${
+        className={`pointer-events-auto relative z-20 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-medium transition-all ${
           isProfileActive
             ? "bg-primary text-primary-foreground"
-            : "bg-secondary text-ink hover:opacity-90"
+            : "text-ink hover:bg-secondary"
         }`}
       >
         {avatarUrl ? (
@@ -112,7 +112,7 @@ export function TopBar() {
       </Link>
 
       {/* Name + chevron: opens entity switcher dropdown */}
-      <div className="relative ml-2">
+      <div className="pointer-events-auto relative z-10 ml-2">
         <button
           onClick={() => setOpen((v) => !v)}
           className="group flex h-9 w-56 items-center justify-between pl-2 pr-2.5 text-left"
@@ -127,8 +127,8 @@ export function TopBar() {
 
         {open && (
           <>
-            <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-            <div className="absolute left-0 top-full z-40 mt-0 w-full border border-ink/15 bg-card shadow-lg">
+            <div className="pointer-events-auto fixed inset-0 z-30" onClick={() => setOpen(false)} />
+            <div className="pointer-events-auto absolute left-0 top-full z-40 mt-0 w-full border border-ink/15 bg-card shadow-lg">
               <button
                 onClick={() => {
                   setActiveEntity(null);
