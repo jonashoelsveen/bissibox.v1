@@ -552,7 +552,17 @@ function LibraryPage() {
 
         <div className="min-w-0">
 
-          {showingNote && activeNoteId ? (
+          {showingNote && activeNoteId && showingMeeting ? (
+            <TeamBoardPage
+              key={activeNoteId}
+              embedded
+              hideOwnTabBar
+              forceMeetingId={activeNoteId}
+              onMeetingOpened={(m) =>
+                openMeetingTab({ id: m.id, title: m.title, folder: m.folder }, m.kind)
+              }
+            />
+          ) : showingNote && activeNoteId ? (
             <NoteEditor
               key={activeNoteId}
               noteId={activeNoteId}
@@ -573,6 +583,9 @@ function LibraryPage() {
             <MeetingsListPage
               actionsMount={actionsMount}
               externalView={externalMeetingsView ?? { type: "all" }}
+              newMeetingSignal={newMeetingSignal}
+              onOpenMeeting={(m) => openMeetingTab(m, "earlier")}
+              onMeetingCreated={(m) => openMeetingTab(m, "new")}
             />
           ) : baseTab === "notes" ? (
             <NotesPage
