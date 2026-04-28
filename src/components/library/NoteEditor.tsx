@@ -229,18 +229,28 @@ export function NoteEditor({
           >
             <FolderIcon className="h-4 w-4" />
           </button>
-          <button
-            onClick={() => void saveBody()}
-            disabled={!isDirty || saving}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition ${
-              isDirty && !saving
-                ? "text-ink hover:bg-secondary"
-                : "cursor-default text-muted-foreground/50"
-            }`}
-          >
-            <Save className="h-3.5 w-3.5" />
-            {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
-          </button>
+          {autosave ? (
+            <span
+              title="Autosave is on. Edits are saved automatically."
+              className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-emerald-600 dark:text-emerald-400"
+            >
+              <Save className="h-3.5 w-3.5" />
+              {saving ? "Saving…" : "Autosave"}
+            </span>
+          ) : (
+            <button
+              onClick={() => void saveBody()}
+              disabled={!isDirty || saving}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition ${
+                isDirty && !saving
+                  ? "text-ink hover:bg-secondary"
+                  : "cursor-default text-muted-foreground/50"
+              }`}
+            >
+              <Save className="h-3.5 w-3.5" />
+              {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
+            </button>
+          )}
         </div>
 
         <div className="mx-auto my-6 flex min-h-[700px] w-full max-w-3xl flex-col rounded-md border border-hairline bg-background p-10 shadow-inner">
