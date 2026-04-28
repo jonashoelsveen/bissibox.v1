@@ -121,7 +121,8 @@ export function PreviousPage({
               <button
                 onClick={() => {
                   if (it.kind === "note") onOpenNote(it.id);
-                  else onOpenTab(it.kind);
+                  else if (it.kind === "file") onOpenTab("files");
+                  else onOpenTab("media");
                 }}
                 className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition hover:bg-secondary/60"
               >
