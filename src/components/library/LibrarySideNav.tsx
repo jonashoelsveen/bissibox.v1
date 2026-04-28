@@ -8,9 +8,10 @@ import {
   Image as ImageIcon,
   Pin,
   History,
+  Briefcase,
 } from "lucide-react";
 
-export type LibraryCategory = "previous" | "notes" | "files" | "media";
+export type LibraryCategory = "previous" | "meetings" | "notes" | "files" | "media";
 
 interface FolderLite {
   id: string;
@@ -38,7 +39,7 @@ export function LibrarySideNav({
   const [noteFolders, setNoteFolders] = useState<FolderLite[]>([]);
   const [fileFolders, setFileFolders] = useState<FolderLite[]>([]);
   const [mediaAlbums, setMediaAlbums] = useState<FolderLite[]>([]);
-  const [open, setOpen] = useState<Record<Exclude<LibraryCategory, "previous">, boolean>>({
+  const [open, setOpen] = useState<Record<"notes" | "files" | "media", boolean>>({
     notes: true,
     files: true,
     media: true,
@@ -115,7 +116,7 @@ export function LibrarySideNav({
   }, [load, user?.id]);
 
   const sections: {
-    key: Exclude<LibraryCategory, "previous">;
+    key: "notes" | "files" | "media";
     label: string;
     icon: React.ReactNode;
     folders: FolderLite[];
@@ -164,6 +165,21 @@ export function LibrarySideNav({
         </span>
         <span className="ml-2 min-w-0 flex-1 truncate">Previous</span>
       </button>
+      {isTeamMode && (
+        <button
+          onClick={() => onChange({ category: "meetings", folder: "" })}
+          className={`group flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition ${
+            value.category === "meetings"
+              ? "bg-secondary font-medium text-ink"
+              : "text-ink hover:bg-secondary/60"
+          }`}
+        >
+          <span className="grid h-5 w-5 shrink-0 place-items-center text-muted-foreground">
+            <Briefcase className="h-3.5 w-3.5" strokeWidth={2.25} />
+          </span>
+          <span className="ml-2 min-w-0 flex-1 truncate">Meetings</span>
+        </button>
+      )}
       {sections.map((s) => {
         const isCategoryActive = value.category === s.key;
         const isAllActive = isCategoryActive && value.folder === "";

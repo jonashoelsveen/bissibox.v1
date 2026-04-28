@@ -11,6 +11,7 @@ import { NotesPage } from "@/components/library/NotesPage";
 import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
 import { PreviousPage } from "@/components/library/PreviousPage";
+import { TeamBoardPage } from "@/routes/team.board";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -58,7 +59,7 @@ export interface OpenNoteTab {
 
 export const Route = createFileRoute("/media")({
   component: LibraryPage,
-  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; folder?: string; new?: string; open?: string; view?: "previous" } => ({
+  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; folder?: string; new?: string; open?: string; view?: "previous" | "meetings" } => ({
     tab:
       s.tab === "files" || s.tab === "media" || s.tab === "notes"
         ? (s.tab as LibraryTab)
@@ -66,7 +67,7 @@ export const Route = createFileRoute("/media")({
     folder: typeof s.folder === "string" ? (s.folder as string) : undefined,
     new: typeof s.new === "string" ? (s.new as string) : undefined,
     open: typeof s.open === "string" ? (s.open as string) : undefined,
-    view: s.view === "previous" ? "previous" : undefined,
+    view: s.view === "previous" ? "previous" : s.view === "meetings" ? "meetings" : undefined,
   }),
   head: () => ({ meta: [{ title: "Library · Raceline" }] }),
 });
@@ -354,14 +355,19 @@ function LibraryPage() {
       : undefined;
 
   const showingPrevious = search.view === "previous";
+  const showingMeetings = search.view === "meetings";
   const sideValue: LibrarySideNavValue = {
-    category: showingPrevious ? "previous" : baseTab,
-    folder: showingPrevious ? "" : (search.folder ?? ""),
+    category: showingPrevious ? "previous" : showingMeetings ? "meetings" : baseTab,
+    folder: showingPrevious || showingMeetings ? "" : (search.folder ?? ""),
   };
   const onSideChange = (v: LibrarySideNavValue) => {
     setActiveNoteId(null);
     if (v.category === "previous") {
       navigate({ to: "/media", search: { tab: baseTab, view: "previous" }, replace: true });
+      return;
+    }
+    if (v.category === "meetings") {
+      navigate({ to: "/media", search: { tab: baseTab, view: "meetings" }, replace: true });
       return;
     }
     navigate({
@@ -504,6 +510,8 @@ function LibraryPage() {
                 navigate({ to: "/media", search: { tab: t }, replace: true })
               }
             />
+          ) : showingMeetings ? (
+            <TeamBoardPage />
           ) : baseTab === "notes" ? (
             <NotesPage
               actionsMount={actionsMount}
