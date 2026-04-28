@@ -466,6 +466,7 @@ export function FilesPage({
             </div>
           )}
         </nav>
+        )}
 
         <section>
           {filtered.length === 0 ? (
