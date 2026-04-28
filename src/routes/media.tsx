@@ -13,6 +13,7 @@ import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/L
 import { PreviousPage, type PreviousNewKind } from "@/components/library/PreviousPage";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { MeetingsListPage } from "@/components/library/MeetingsListPage";
+import { getUnsaved } from "@/lib/library-settings";
 import { TeamBoardPage } from "@/routes/team.board";
 import { toast } from "sonner";
 import {
