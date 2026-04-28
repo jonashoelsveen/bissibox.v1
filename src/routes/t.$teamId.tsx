@@ -372,7 +372,9 @@ function TeamPage() {
         { key: "members", label: "Members", icon: <UsersIcon className="h-3.5 w-3.5" /> },
         { key: "events", label: "Events", icon: <Calendar className="h-3.5 w-3.5" /> },
         { key: "media", label: "Media", icon: <ImageIcon className="h-3.5 w-3.5" /> },
-      ]}
+      ].filter((t) => visibility[
+        ({ memberships: "Memberships", groups: "Groups", members: "Members", events: "Events", media: "Media" } as const)[t.key as "memberships" | "groups" | "members" | "events" | "media"]
+      ] !== false)}
       activeTab={tab}
       onTabChange={(k) => setTab(k as typeof tab)}
       website={{
