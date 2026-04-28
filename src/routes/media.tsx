@@ -73,11 +73,24 @@ const MAX_NOTE_TABS = 10;
 function LibraryPage() {
   const search = useSearch({ from: "/media" });
   const navigate = useNavigate();
+  const { mode, activeEntityId } = useAuth();
   const baseTab: LibraryTab = search.tab ?? "files";
 
   const [openNoteTabs, setOpenNoteTabs] = useState<OpenNoteTab[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
+
+  // Reset open tabs when the active profile (individual vs team/entity) changes.
+  // Tabs are scoped to the currently-viewed profile.
+  const profileScopeKey = `${mode}:${activeEntityId ?? "self"}`;
+  const lastScopeRef = useRef<string>(profileScopeKey);
+  useEffect(() => {
+    if (lastScopeRef.current !== profileScopeKey) {
+      lastScopeRef.current = profileScopeKey;
+      setOpenNoteTabs([]);
+      setActiveNoteId(null);
+    }
+  }, [profileScopeKey]);
 
   // Chrome-like tab DnD (pointer-based, X-axis only)
   const tabStripRef = useRef<HTMLDivElement | null>(null);
