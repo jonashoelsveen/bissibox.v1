@@ -8,9 +8,10 @@ import {
   Image as ImageIcon,
   Pin,
   History,
+  Briefcase,
 } from "lucide-react";
 
-export type LibraryCategory = "previous" | "notes" | "files" | "media";
+export type LibraryCategory = "previous" | "meetings" | "notes" | "files" | "media";
 
 interface FolderLite {
   id: string;
