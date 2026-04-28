@@ -380,8 +380,8 @@ export function LibrarySideNav({
                 isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
               }`}
             >
-              {/* overflow-visible so the row's three-dot menu is never clipped */}
-              <div className="overflow-visible">
+              {/* When open, overflow-visible so the three-dot menu isn't clipped; while collapsed, hide overflow */}
+              <div className={isOpen ? "overflow-visible" : "overflow-hidden"}>
                 <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-hairline pl-2">
                   <button
                     onClick={() => onChange({ category: s.key, folder: "__unsorted__" })}
