@@ -80,17 +80,60 @@ function LibraryPage() {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
 
-  // Reset open tabs when the active profile (individual vs team/entity) changes.
-  // Tabs are scoped to the currently-viewed profile.
+  // Persist open library tabs per profile so they survive logout / page reloads.
   const profileScopeKey = `${mode}:${activeEntityId ?? "self"}`;
+  const storageKey = `library:openNoteTabs:${profileScopeKey}`;
   const lastScopeRef = useRef<string>(profileScopeKey);
+  const hydratedRef = useRef<string | null>(null);
+
+  // Hydrate from localStorage on first mount + when profile scope changes.
   useEffect(() => {
-    if (lastScopeRef.current !== profileScopeKey) {
-      lastScopeRef.current = profileScopeKey;
+    if (hydratedRef.current === profileScopeKey) return;
+    hydratedRef.current = profileScopeKey;
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      const activeRaw = window.localStorage.getItem(`${storageKey}:active`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as OpenNoteTab[];
+        if (Array.isArray(parsed)) {
+          setOpenNoteTabs(parsed);
+          if (activeRaw && parsed.some((t) => t.id === activeRaw)) {
+            setActiveNoteId(activeRaw);
+          } else {
+            setActiveNoteId(null);
+          }
+          return;
+        }
+      }
+      setOpenNoteTabs([]);
+      setActiveNoteId(null);
+    } catch {
       setOpenNoteTabs([]);
       setActiveNoteId(null);
     }
+  }, [profileScopeKey, storageKey]);
+
+  // Reset (clear in-memory) when profile changes — hydration above repopulates.
+  useEffect(() => {
+    if (lastScopeRef.current !== profileScopeKey) {
+      lastScopeRef.current = profileScopeKey;
+      hydratedRef.current = null;
+    }
   }, [profileScopeKey]);
+
+  // Persist whenever tabs / active change.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (hydratedRef.current !== profileScopeKey) return;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(openNoteTabs));
+      if (activeNoteId) window.localStorage.setItem(`${storageKey}:active`, activeNoteId);
+      else window.localStorage.removeItem(`${storageKey}:active`);
+    } catch {
+      /* ignore quota */
+    }
+  }, [openNoteTabs, activeNoteId, storageKey, profileScopeKey]);
 
   // Chrome-like tab DnD (pointer-based, X-axis only)
   const tabStripRef = useRef<HTMLDivElement | null>(null);
