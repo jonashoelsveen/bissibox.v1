@@ -294,13 +294,22 @@ function SettingsPage() {
               Settings
             </span>
           </div>
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-ink px-4 py-2 text-xs font-medium text-background transition hover:opacity-90"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Create new entity
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-md bg-ink px-4 py-2 text-xs font-medium text-background transition hover:opacity-90"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Create new entity
+            </button>
+            <button
+              onClick={save}
+              disabled={saving}
+              className="inline-flex items-center gap-1.5 rounded-md border border-hairline bg-background px-4 py-2 text-xs font-medium text-ink transition hover:bg-secondary disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
         </div>
 
         <div className="mt-8 grid gap-10 md:grid-cols-[180px_1fr]">
