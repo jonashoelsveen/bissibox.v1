@@ -423,13 +423,13 @@ function SettingsPage() {
             )}
 
             {tab === "profiles" && !isTeamMode && (
-              <ProfilesPanel
-                profile={profile}
-                userRoles={userRoles}
-                updateProfile={updateProfile}
-                saving={saving}
-                onSave={save}
-                goToRoles={() => setTab("roles")}
+              <ProfileVisibilityPanel
+                scopeKey={`user:${user.id}`}
+                active={profile.athlete_active}
+                onActiveChange={async (v) => {
+                  updateProfile("athlete_active", v);
+                  await supabase.from("profiles").update({ athlete_active: v }).eq("id", user.id);
+                }}
               />
             )}
 
