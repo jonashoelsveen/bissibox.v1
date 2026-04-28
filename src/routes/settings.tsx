@@ -127,7 +127,10 @@ function SettingsPage() {
     if (!user) return;
     (async () => {
       const { data: p } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-      if (p) setProfile(p as Profile);
+      if (p) {
+        setProfile(p as Profile);
+        setProfileBaseline(JSON.stringify(p));
+      }
 
       const { data: r } = await supabase
         .from("registrations")
