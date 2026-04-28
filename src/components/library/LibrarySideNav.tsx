@@ -39,7 +39,7 @@ export function LibrarySideNav({
   const [noteFolders, setNoteFolders] = useState<FolderLite[]>([]);
   const [fileFolders, setFileFolders] = useState<FolderLite[]>([]);
   const [mediaAlbums, setMediaAlbums] = useState<FolderLite[]>([]);
-  const [open, setOpen] = useState<Record<Exclude<LibraryCategory, "previous">, boolean>>({
+  const [open, setOpen] = useState<Record<"notes" | "files" | "media", boolean>>({
     notes: true,
     files: true,
     media: true,
