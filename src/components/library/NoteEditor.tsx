@@ -110,6 +110,30 @@ export function NoteEditor({
     setSavedBody(body);
   };
 
+  // Autosave (debounced) when enabled
+  useEffect(() => {
+    if (!autosave || !isDirty || !note) return;
+    const t = setTimeout(() => { void saveBody(); }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autosave, body, isDirty, note?.id]);
+
+  // Register dirty-state so the host can prompt before closing the tab.
+  useEffect(() => {
+    if (!note) return;
+    return registerUnsaved(note.id, {
+      isDirty: () => body !== savedBody,
+      isNew: () => false,
+      title: () => note.title || "Untitled note",
+      save: async () => { await saveBody(); },
+      discard: async () => {
+        // revert to saved body without writing
+        setBody(savedBody);
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note?.id, body, savedBody]);
+
   const uploadAttachments = async (files: FileList) => {
     if (!note || !user) return;
     for (const file of Array.from(files)) {
