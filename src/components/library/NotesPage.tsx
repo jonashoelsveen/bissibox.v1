@@ -164,9 +164,11 @@ export function NotesPage({
 
   const [folders, setFolders] = useState<NoteFolder[]>([]);
   const [notes, setNotes] = useState<NoteRow[]>([]);
-  const [view, setView] = useState<{ type: "all" } | { type: "folder"; name: string | null }>({
+  const [internalView, setInternalView] = useState<{ type: "all" } | { type: "folder"; name: string | null }>({
     type: "all",
   });
+  const view = externalView ?? internalView;
+  const setView = setInternalView;
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [newNoteOpen, setNewNoteOpen] = useState(false);
