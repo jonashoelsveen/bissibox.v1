@@ -521,12 +521,16 @@ function DayRow(props: DayRowProps) {
             data-month-col={m.idx}
             className={`relative border-b border-r border-hairline ${
               weekend ? "bg-muted/40" : ""
-            } ${focused ? "border-l-2 border-r-2 border-l-muted-foreground/60 border-r-muted-foreground/60" : ""}`}
+            }`}
             style={{
               height: rowHeight * 2,
-              transition: `height ${DUR_MS}ms ${EASE}`,
-              willChange: "height",
+              transition: `height ${DUR_MS}ms ${EASE}, transform ${DUR_MS}ms ${EASE}, box-shadow ${DUR_MS}ms ${EASE}, opacity ${DUR_MS}ms ${EASE}`,
+              willChange: "height, transform",
               opacity: periph ? 0.55 : 1,
+              transform: focused ? `scale(${FOCUS_SCALE})` : "scale(1)",
+              transformOrigin: "center center",
+              boxShadow: focused ? FOCUS_SHADOW : "none",
+              zIndex: focused ? 5 : 1,
             }}
           >
             <DayCellPair
