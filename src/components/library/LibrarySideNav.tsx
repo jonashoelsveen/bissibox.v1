@@ -176,6 +176,7 @@ export function LibrarySideNav({
     if (section === "notes") return "note_folders";
     if (section === "files") return "file_folders";
     if (section === "media") return "media_albums";
+    if (section === "meetings") return "meeting_folders";
     return null;
   };
 
@@ -183,6 +184,7 @@ export function LibrarySideNav({
     if (section === "notes") setNoteFolders(next);
     else if (section === "files") setFileFolders(next);
     else if (section === "media") setMediaAlbums(next);
+    else if (section === "meetings") setMeetingFolders(next);
   };
 
   const persistOrder = async (section: SectionKey, next: FolderLite[]) => {
