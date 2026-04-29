@@ -547,6 +547,23 @@ export function UnifiedElasticGrid({
             <div className="text-xs text-muted-foreground">Kommer snart</div>
           </div>
         </div>
+      ) : viewMode === "week" && viewType === "type1" ? (
+        <WeekGridType1
+          calId={calId}
+          refDate={weekRef}
+          data={data}
+          onPrevWeek={() => {
+            const d = new Date(weekRef);
+            d.setDate(d.getDate() - 7);
+            setWeekRef(d);
+          }}
+          onNextWeek={() => {
+            const d = new Date(weekRef);
+            d.setDate(d.getDate() + 7);
+            setWeekRef(d);
+          }}
+          onCommitText={(k, text) => onCommitText(k, text)}
+        />
       ) : viewType === "type1" ? (
         <MonthGridType1
           calId={calId}
