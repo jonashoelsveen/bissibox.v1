@@ -478,9 +478,7 @@ function DayRow(props: DayRowProps) {
               className="border-b border-r border-hairline bg-muted/30"
               style={{
                 height: rowHeight * 2,
-                transition: `height ${DUR_MS}ms ${EASE}, filter ${DUR_MS}ms ${EASE}, opacity ${DUR_MS}ms ${EASE}`,
-                filter: periph ? "grayscale(0.9)" : undefined,
-                opacity: periph ? 0.55 : 1,
+                transition: `height ${DUR_MS}ms ${EASE}`,
                 willChange: "height",
               }}
             />
@@ -497,10 +495,8 @@ function DayRow(props: DayRowProps) {
             }`}
             style={{
               height: rowHeight * 2,
-              transition: `height ${DUR_MS}ms ${EASE}, filter ${DUR_MS}ms ${EASE}, opacity ${DUR_MS}ms ${EASE}`,
-              filter: periph ? "grayscale(0.9)" : undefined,
-              opacity: periph ? 0.55 : 1,
-              willChange: "height, transform",
+              transition: `height ${DUR_MS}ms ${EASE}`,
+              willChange: "height",
             }}
           >
             <DayCellPair
