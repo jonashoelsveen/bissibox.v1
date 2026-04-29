@@ -181,5 +181,5 @@ export function useYearStore(calId: string, defaultTitle: string) {
     [calId, data, persist],
   );
 
-  return { data, meta, upsertCell, fillRange, setMeta: persistMeta };
+  return { data, meta, upsertCell, fillRange, setMeta: persistMeta, undo, redo, canUndo, canRedo };
 }
