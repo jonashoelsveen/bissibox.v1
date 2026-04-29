@@ -97,6 +97,37 @@ export function YearGrid({
     setEditingKey(null);
   }, [editingKey, editValue, onCommitText]);
 
+  // Move selection by (dDay, dMonth) with carry across month boundaries on the same row.
+  const moveSelection = useCallback(
+    (dx: number, dy: number) => {
+      if (!selected) return;
+      let { year: y, month, day, session } = selected;
+      // Vertical: walk session-by-session, day by day, within the same month column.
+      if (dy !== 0) {
+        const dim = daysInMonth(y, month);
+        let rank = day * 2 + session + dy;
+        // clamp within month
+        const minRank = 1 * 2 + 0;
+        const maxRank = dim * 2 + 1;
+        if (rank < minRank) rank = minRank;
+        if (rank > maxRank) rank = maxRank;
+        day = Math.floor(rank / 2);
+        session = (rank % 2) as Session;
+      }
+      // Horizontal: move month, keep same day+session. If target month doesn't have that day, clamp.
+      if (dx !== 0) {
+        let m = month + dx;
+        if (m < 0) m = 0;
+        if (m > 11) m = 11;
+        month = m;
+        const dim = daysInMonth(y, month);
+        if (day > dim) day = dim;
+      }
+      onSelect({ year: y, month, day, session });
+    },
+    [selected, onSelect],
+  );
+
   // Global mouse-up to finalize drag-to-fill
   useEffect(() => {
     if (!dragRange || !dragStartRef.current) return;
@@ -163,14 +194,36 @@ export function YearGrid({
         if (e.target === e.currentTarget) onSelect(null);
       }}
       onKeyDown={(e) => {
-        // Excel-style: start typing when a cell is selected (no edit mode yet)
         if (!selected || editingKey) return;
         if (e.metaKey || e.ctrlKey || e.altKey) return;
-        // Printable single character or Enter
+        // Arrow navigation
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          moveSelection(0, 1);
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          moveSelection(0, -1);
+          return;
+        }
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          moveSelection(1, 0);
+          return;
+        }
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          moveSelection(-1, 0);
+          return;
+        }
+        // Enter → move down one session
         if (e.key === "Enter") {
           e.preventDefault();
-          beginEdit(selected);
-        } else if (e.key.length === 1) {
+          moveSelection(0, 1);
+          return;
+        }
+        if (e.key.length === 1) {
           e.preventDefault();
           const id = makeCellId(calId, selected);
           setEditValue((data[id]?.text ?? "") + e.key);
@@ -238,6 +291,7 @@ export function YearGrid({
                       onBeginEdit={beginEdit}
                       onCommitEdit={commitEdit}
                       onMouseEnter={onCellMouseEnter}
+                      onMoveAfterCommit={moveSelection}
                       isSameKey={isSameKey}
                       selected={selected}
                       inDragRange={inDragRange}
@@ -278,6 +332,7 @@ interface DayCellProps {
   onCommitEdit: () => void;
   onMouseEnter: (k: CellKey) => void;
   onHandleDown: (k: CellKey) => void;
+  onMoveAfterCommit: (dx: number, dy: number) => void;
   isSameKey: (a: CellKey | null, b: CellKey | null) => boolean;
   selected: CellKey | null;
   inDragRange: (k: CellKey) => boolean;
@@ -300,6 +355,7 @@ function DayCell(props: DayCellProps) {
     onCommitEdit,
     onMouseEnter,
     onHandleDown,
+    onMoveAfterCommit,
     selected,
     inDragRange,
   } = props;
@@ -355,6 +411,11 @@ function DayCell(props: DayCellProps) {
                   if (e.key === "Enter") {
                     e.preventDefault();
                     onCommitEdit();
+                    onMoveAfterCommit(0, 1);
+                  } else if (e.key === "Tab") {
+                    e.preventDefault();
+                    onCommitEdit();
+                    onMoveAfterCommit(e.shiftKey ? -1 : 1, 0);
                   } else if (e.key === "Escape") {
                     onCommitEdit();
                   }
