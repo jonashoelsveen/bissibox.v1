@@ -382,7 +382,19 @@ export function CourseMapEditor({
 
     mapRef.current = map;
 
+    // Force resize after first paint to handle 0×0 construction race.
+    const rafId = requestAnimationFrame(() => {
+      try { map.resize(); } catch { /* ignore */ }
+    });
+    // Keep the canvas in sync with sidebar/grid layout shifts.
+    const ro = new ResizeObserver(() => {
+      try { map.resize(); } catch { /* ignore */ }
+    });
+    if (containerRef.current) ro.observe(containerRef.current);
+
     return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
       splitMarkersRef.current = {};
