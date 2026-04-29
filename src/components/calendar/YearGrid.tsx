@@ -97,6 +97,37 @@ export function YearGrid({
     setEditingKey(null);
   }, [editingKey, editValue, onCommitText]);
 
+  // Move selection by (dDay, dMonth) with carry across month boundaries on the same row.
+  const moveSelection = useCallback(
+    (dx: number, dy: number) => {
+      if (!selected) return;
+      let { year: y, month, day, session } = selected;
+      // Vertical: walk session-by-session, day by day, within the same month column.
+      if (dy !== 0) {
+        const dim = daysInMonth(y, month);
+        let rank = day * 2 + session + dy;
+        // clamp within month
+        const minRank = 1 * 2 + 0;
+        const maxRank = dim * 2 + 1;
+        if (rank < minRank) rank = minRank;
+        if (rank > maxRank) rank = maxRank;
+        day = Math.floor(rank / 2);
+        session = (rank % 2) as Session;
+      }
+      // Horizontal: move month, keep same day+session. If target month doesn't have that day, clamp.
+      if (dx !== 0) {
+        let m = month + dx;
+        if (m < 0) m = 0;
+        if (m > 11) m = 11;
+        month = m;
+        const dim = daysInMonth(y, month);
+        if (day > dim) day = dim;
+      }
+      onSelect({ year: y, month, day, session });
+    },
+    [selected, onSelect],
+  );
+
   // Global mouse-up to finalize drag-to-fill
   useEffect(() => {
     if (!dragRange || !dragStartRef.current) return;
