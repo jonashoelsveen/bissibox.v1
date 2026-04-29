@@ -36,6 +36,7 @@ import { ChevronDown, ArrowLeft } from "lucide-react";
 import type { CellData, CellKey, Session } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { MonthGridType1 } from "./MonthGridType1";
+import { WeekGridType1 } from "./WeekGridType1";
 
 type ViewMode = "day" | "week" | "month" | "year";
 type ViewType = "type1" | "type2";
