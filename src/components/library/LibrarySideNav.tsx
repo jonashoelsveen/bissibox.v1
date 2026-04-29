@@ -227,12 +227,17 @@ export function LibrarySideNav({
       .from(table)
       .update({ name: newName })
       .eq("id", folder.id);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Renamed");
-      void load();
-      window.dispatchEvent(new Event("library:refresh"));
+    if (error) { toast.error(error.message); return; }
+    if (section === "meetings") {
+      // Cascade rename to meetings referencing this folder by name
+      await supabase
+        .from("team_board_meetings")
+        .update({ folder: newName })
+        .eq("folder", folder.name);
     }
+    toast.success("Renamed");
+    void load();
+    window.dispatchEvent(new Event("library:refresh"));
   };
 
   const doDelete = async () => {
