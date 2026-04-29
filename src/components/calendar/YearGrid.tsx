@@ -408,6 +408,11 @@ function DayCell(props: DayCellProps) {
                   if (e.key === "Enter") {
                     e.preventDefault();
                     onCommitEdit();
+                    onMoveAfterCommit(0, 1);
+                  } else if (e.key === "Tab") {
+                    e.preventDefault();
+                    onCommitEdit();
+                    onMoveAfterCommit(e.shiftKey ? -1 : 1, 0);
                   } else if (e.key === "Escape") {
                     onCommitEdit();
                   }
