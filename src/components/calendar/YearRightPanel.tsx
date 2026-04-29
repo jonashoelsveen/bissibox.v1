@@ -68,29 +68,19 @@ export interface YearRightPanelProps {
 type PanelMode = "browse" | "edit";
 
 export function YearRightPanel(props: YearRightPanelProps) {
-  // Manual override; null means "follow auto rule (selection => edit)".
-  const [override, setOverride] = useState<PanelMode | null>(null);
-  const lastSelIdRef = useRef<string | null>(null);
-
-  // Auto-switch to edit when a NEW cell is selected (click/double-click).
-  // Clear manual override so the new selection wins.
-  useEffect(() => {
-    const selId = props.selected
-      ? makeCellId(props.calId, props.selected)
-      : null;
-    if (selId && selId !== lastSelIdRef.current) {
-      setOverride(null);
-    }
-    lastSelIdRef.current = selId;
-  }, [props.selected, props.calId]);
-
-  const mode: PanelMode =
-    override ?? (props.selected ? "edit" : "browse");
+  // Tab is fully manual. Default to "browse"; user toggles to "edit".
+  // Selecting a cell does NOT automatically switch tabs.
+  const [mode, setMode] = useState<PanelMode>("browse");
 
   const canEdit = !!props.selected;
 
+  // If user is on edit but selection clears, fall back to browse.
+  useEffect(() => {
+    if (mode === "edit" && !props.selected) setMode("browse");
+  }, [mode, props.selected]);
+
   return (
-    <aside className="flex h-full w-[360px] shrink-0 flex-col gap-3 border-l border-hairline bg-card/40 p-3">
+    <aside className="flex h-full w-[300px] shrink-0 flex-col gap-3 border-l border-hairline bg-card/40 p-3">
       {/* Two-tab manual switch */}
       <div className="grid grid-cols-2 gap-1 rounded-md border border-hairline bg-background p-0.5">
         <button
