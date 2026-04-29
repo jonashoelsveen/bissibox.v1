@@ -161,6 +161,7 @@ export function LibrarySideNav({
       .on("postgres_changes", { event: "*", schema: "public", table: "note_folders" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "file_folders" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "media_albums" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "meeting_folders" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "team_board_meetings" }, () => load())
       .subscribe();
     const onLocal = () => void load();
