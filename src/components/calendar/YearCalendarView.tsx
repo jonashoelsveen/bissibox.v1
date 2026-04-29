@@ -63,8 +63,28 @@ export function YearCalendarView({ calId, defaultTitle }: { calId: string; defau
             {meta.title}
           </h1>
         )}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">{meta.year}</span>
+        <div className="flex items-center gap-1">
+          <span className="mr-2 text-xs text-muted-foreground">{meta.year}</span>
+          <button
+            type="button"
+            aria-label="Undo"
+            title="Undo (⌘Z)"
+            onClick={undo}
+            disabled={!canUndo}
+            className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+          >
+            <Undo2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Redo"
+            title="Redo (⌘⇧Z)"
+            onClick={redo}
+            disabled={!canRedo}
+            className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+          >
+            <Redo2 className="h-4 w-4" />
+          </button>
           <button
             aria-label="Calendar settings"
             className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-ink"
