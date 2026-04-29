@@ -526,7 +526,8 @@ export function WeekGridType1({
                 >
                   <AnimatePresence initial={false}>
                     {items.map((it, i) => {
-                      const cat = categorize(it.text);
+                      const { color: customColor, text: displayText } = splitColor(it.text);
+                      const cat = categorize(displayText);
                       const itemFocused = focused && focus.item === i;
                       return (
                         <motion.div
@@ -553,30 +554,49 @@ export function WeekGridType1({
                           onClick={(e) => {
                             e.stopPropagation();
                             setFocus({ col, item: i });
+                            openEditor(
+                              col,
+                              i,
+                              it.text,
+                              e.currentTarget as HTMLElement,
+                            );
                           }}
                           className={[
-                            "group/card relative flex cursor-grab items-start gap-2 rounded-[4px] border px-2 py-1.5 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition-shadow active:cursor-grabbing",
-                            cat.bg,
-                            cat.border,
+                            "group/card relative flex items-start gap-2 rounded-[4px] border px-2 py-1.5 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition-all",
+                            customColor ? "" : cat.bg,
+                            customColor ? "" : cat.border,
                             itemFocused
                               ? "outline outline-2 outline-primary outline-offset-[-2px]"
-                              : "hover:shadow-[0_2px_4px_rgba(15,23,42,0.06)]",
+                              : "hover:-translate-y-px hover:shadow-[0_3px_8px_rgba(15,23,42,0.10)] hover:border-ink/25",
                           ].join(" ")}
-                          title={it.text}
+                          style={
+                            customColor
+                              ? {
+                                  backgroundColor: `${customColor}1A`, // ~10% alpha
+                                  borderColor: `${customColor}66`,
+                                }
+                              : undefined
+                          }
+                          title={displayText}
                         >
                           <span
                             className={[
                               "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
-                              cat.dot,
+                              customColor ? "" : cat.dot,
                             ].join(" ")}
+                            style={
+                              customColor
+                                ? { backgroundColor: customColor }
+                                : undefined
+                            }
                           />
                           <span
                             className={[
                               "flex-1 truncate text-[12px] leading-snug",
-                              cat.ink,
+                              customColor ? "text-ink" : cat.ink,
                             ].join(" ")}
                           >
-                            {it.text}
+                            {displayText}
                           </span>
                         </motion.div>
                       );
@@ -586,7 +606,7 @@ export function WeekGridType1({
                   {/* Ghost preview where the dragged card will land */}
                   {isDragTarget && dragItem && (
                     <div className="pointer-events-none rounded-[4px] border border-dashed border-primary/50 bg-primary/5 px-2 py-1.5 text-[12px] text-primary/80">
-                      <span className="truncate">{dragItem.text}</span>
+                      <span className="truncate">{splitColor(dragItem.text).text}</span>
                     </div>
                   )}
 
