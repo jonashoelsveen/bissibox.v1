@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
 import { MapPin, Save, Trash2, Search, Loader2, X, Hand, Undo2, Redo2, ChevronDown } from "lucide-react";
-import { useMapbox, useMapStyle, MAP_STYLES } from "@/lib/mapbox";
+import { useMapbox, useMapStyle, MAP_STYLES, observeVisibleMapContainer } from "@/lib/mapbox";
 import { MapStylePicker } from "./MapStylePicker";
 
 type Pin = { lat: number; lng: number } | null;
@@ -40,6 +40,7 @@ export function SimplePinMap({
   hideSidebar = false,
   scopeId,
 }: Props) {
+  const containerId = useId().replace(/:/g, "-");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -162,46 +163,60 @@ export function SimplePinMap({
   // Init map
   useEffect(() => {
     if (!mapbox || !containerRef.current || mapRef.current) return;
-    const initial = pinRef.current ?? { lat: 59.9139, lng: 10.7522 };
-    let map: MapboxMap;
-    try {
-      map = new mapbox.default.Map({
-        container: containerRef.current,
-        style: MAP_STYLES[style].url,
-        center: [initial.lng, initial.lat],
-        zoom: pinRef.current ? 14 : 6,
-        attributionControl: false,
+    const container = containerRef.current;
+    let map: MapboxMap | null = null;
+    let rafId = 0;
+    let delayedResizeId = 0;
+    let ro: ResizeObserver | null = null;
+
+    const stopWatchingVisibility = observeVisibleMapContainer(container, "SimplePinMap", () => {
+      if (mapRef.current || map) return;
+      const initial = pinRef.current ?? { lat: 59.9139, lng: 10.7522 };
+      try {
+        map = new mapbox.default.Map({
+          container,
+          style: MAP_STYLES[style].url,
+          center: [initial.lng, initial.lat],
+          zoom: pinRef.current ? 14 : 6,
+          attributionControl: false,
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[mapbox] SimplePinMap constructor threw:", err);
+        return;
+      }
+
+      map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
+      map.addControl(new mapbox.default.AttributionControl({ compact: true }));
+      map.on("error", (e) => {
+        // eslint-disable-next-line no-console
+        console.error("[mapbox] SimplePinMap runtime error:", (e as any)?.error ?? e);
       });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("[mapbox] SimplePinMap constructor threw:", err);
-      return;
-    }
-    map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
-    map.addControl(new mapbox.default.AttributionControl({ compact: true }));
-    map.on("error", (e) => {
-      // eslint-disable-next-line no-console
-      console.error("[mapbox] SimplePinMap runtime error:", (e as any)?.error ?? e);
+      map.on("click", (e) => {
+        if (toolRef.current !== "pin") return;
+        const ll = { lat: e.lngLat.lat, lng: e.lngLat.lng };
+        trackedChange({ pin: ll, description: descRef.current, name: nameRef.current });
+      });
+
+      rafId = requestAnimationFrame(() => {
+        try { map?.resize(); } catch { /* ignore */ }
+      });
+      delayedResizeId = window.setTimeout(() => {
+        try { map?.resize(); } catch { /* ignore */ }
+      }, 100);
+      ro = new ResizeObserver(() => {
+        try { map?.resize(); } catch { /* ignore */ }
+      });
+      ro.observe(container);
+      mapRef.current = map;
     });
-    map.on("click", (e) => {
-      if (toolRef.current !== "pin") return;
-      const ll = { lat: e.lngLat.lat, lng: e.lngLat.lng };
-      trackedChange({ pin: ll, description: descRef.current, name: nameRef.current });
-    });
-    // Force resize after first paint to handle 0×0 construction race.
-    const rafId = requestAnimationFrame(() => {
-      try { map.resize(); } catch { /* ignore */ }
-    });
-    // Keep canvas in sync with parent layout shifts (sidebar/grid changes).
-    const ro = new ResizeObserver(() => {
-      try { map.resize(); } catch { /* ignore */ }
-    });
-    if (containerRef.current) ro.observe(containerRef.current);
-    mapRef.current = map;
+
     return () => {
+      stopWatchingVisibility();
       cancelAnimationFrame(rafId);
-      ro.disconnect();
-      map.remove();
+      window.clearTimeout(delayedResizeId);
+      ro?.disconnect();
+      map?.remove();
       mapRef.current = null;
       markerRef.current = null;
     };
@@ -252,7 +267,7 @@ export function SimplePinMap({
     <div className="flex h-full w-full flex-1">
       {/* Left: map */}
       <div className="relative min-h-[480px] flex-1">
-        <div ref={containerRef} className="absolute inset-0 z-0 bg-secondary" />
+        <div id={`simple-pin-map-${containerId}`} ref={containerRef} className="absolute inset-0 z-0 bg-secondary" />
 
         {/* Top-left: toolbar + search */}
         <div className="pointer-events-none absolute left-4 top-4 z-[400] flex flex-col gap-2">

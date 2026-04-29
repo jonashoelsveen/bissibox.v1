@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
 import type { LatLng, SplitPoint, SplitKind } from "@/components/CourseMapEditor";
-import { useMapbox, useMapStyle, MAP_STYLES } from "@/lib/mapbox";
+import { useMapbox, useMapStyle, MAP_STYLES, observeVisibleMapContainer } from "@/lib/mapbox";
 import { MapStylePicker } from "./MapStylePicker";
 
 const LINE_COLOR = "#6366F1";
@@ -72,6 +72,7 @@ function splitMarkerEl(sp: SplitPoint, isSel: boolean): HTMLDivElement {
 }
 
 export function ReadOnlyCourseMap({ path, splits, selectedSplitId, hoverPosition, scopeId }: Props) {
+  const containerId = useId().replace(/:/g, "-");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -83,47 +84,61 @@ export function ReadOnlyCourseMap({ path, splits, selectedSplitId, hoverPosition
   // Init map
   useEffect(() => {
     if (!mapbox || !containerRef.current || mapRef.current) return;
-    const center: [number, number] = path[0]
-      ? [path[0][1], path[0][0]]
-      : splits[0]
-        ? [splits[0].position[1], splits[0].position[0]]
-        : [10.7522, 59.9139];
-    let map: MapboxMap;
-    try {
-      map = new mapbox.default.Map({
-        container: containerRef.current,
-        style: MAP_STYLES[style].url,
-        center,
-        zoom: path.length ? 14 : 12,
-        attributionControl: false,
+    const container = containerRef.current;
+    let map: MapboxMap | null = null;
+    let rafId = 0;
+    let delayedResizeId = 0;
+    let ro: ResizeObserver | null = null;
+
+    const stopWatchingVisibility = observeVisibleMapContainer(container, "ReadOnlyCourseMap", () => {
+      if (mapRef.current || map) return;
+      const center: [number, number] = path[0]
+        ? [path[0][1], path[0][0]]
+        : splits[0]
+          ? [splits[0].position[1], splits[0].position[0]]
+          : [10.7522, 59.9139];
+      try {
+        map = new mapbox.default.Map({
+          container,
+          style: MAP_STYLES[style].url,
+          center,
+          zoom: path.length ? 14 : 12,
+          attributionControl: false,
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[mapbox] ReadOnlyCourseMap constructor threw:", err);
+        return;
+      }
+      map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
+      map.addControl(new mapbox.default.AttributionControl({ compact: true }));
+      map.on("error", (e) => {
+        // eslint-disable-next-line no-console
+        console.error("[mapbox] ReadOnlyCourseMap runtime error:", (e as any)?.error ?? e);
       });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("[mapbox] ReadOnlyCourseMap constructor threw:", err);
-      return;
-    }
-    map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
-    map.addControl(new mapbox.default.AttributionControl({ compact: true }));
-    map.on("error", (e) => {
-      // eslint-disable-next-line no-console
-      console.error("[mapbox] ReadOnlyCourseMap runtime error:", (e as any)?.error ?? e);
+      map.on("style.load", () => {
+        styleLoadedRef.current = true;
+        addCourseLayers(map!);
+      });
+      rafId = requestAnimationFrame(() => {
+        try { map?.resize(); } catch { /* ignore */ }
+      });
+      delayedResizeId = window.setTimeout(() => {
+        try { map?.resize(); } catch { /* ignore */ }
+      }, 100);
+      ro = new ResizeObserver(() => {
+        try { map?.resize(); } catch { /* ignore */ }
+      });
+      ro.observe(container);
+      mapRef.current = map;
     });
-    map.on("style.load", () => {
-      styleLoadedRef.current = true;
-      addCourseLayers(map);
-    });
-    const rafId = requestAnimationFrame(() => {
-      try { map.resize(); } catch { /* ignore */ }
-    });
-    const ro = new ResizeObserver(() => {
-      try { map.resize(); } catch { /* ignore */ }
-    });
-    if (containerRef.current) ro.observe(containerRef.current);
-    mapRef.current = map;
+
     return () => {
+      stopWatchingVisibility();
       cancelAnimationFrame(rafId);
-      ro.disconnect();
-      map.remove();
+      window.clearTimeout(delayedResizeId);
+      ro?.disconnect();
+      map?.remove();
       mapRef.current = null;
       markersRef.current = [];
       hoverMarkerRef.current = null;
@@ -220,7 +235,7 @@ export function ReadOnlyCourseMap({ path, splits, selectedSplitId, hoverPosition
 
   return (
     <div className="relative h-full w-full">
-      <div ref={containerRef} className="absolute inset-0 z-0 bg-secondary" />
+      <div id={`readonly-course-map-${containerId}`} ref={containerRef} className="absolute inset-0 z-0 bg-secondary" />
       <div className="absolute right-3 top-3 z-10">
         <MapStylePicker value={style} onChange={setStyle} compact />
       </div>
