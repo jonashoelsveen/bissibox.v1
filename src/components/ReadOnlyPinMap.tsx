@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
-import { useMapbox, useMapStyle, MAP_STYLES } from "@/lib/mapbox";
+import { useMapbox, useMapStyle, MAP_STYLES, observeVisibleMapContainer } from "@/lib/mapbox";
 import { MapStylePicker } from "./MapStylePicker";
 
 const PIN_COLOR = "#dc2626";
@@ -12,6 +12,7 @@ interface Props {
 }
 
 export function ReadOnlyPinMap({ pin, scopeId }: Props) {
+  const containerId = useId().replace(/:/g, "-");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -21,39 +22,53 @@ export function ReadOnlyPinMap({ pin, scopeId }: Props) {
   // Init map
   useEffect(() => {
     if (!mapbox || !containerRef.current || mapRef.current) return;
-    const center: [number, number] = pin ? [pin.lng, pin.lat] : [10.7522, 59.9139];
-    let map: MapboxMap;
-    try {
-      map = new mapbox.default.Map({
-        container: containerRef.current,
-        style: MAP_STYLES[style].url,
-        center,
-        zoom: pin ? 14 : 5,
-        attributionControl: false,
+    const container = containerRef.current;
+    let map: MapboxMap | null = null;
+    let rafId = 0;
+    let delayedResizeId = 0;
+    let ro: ResizeObserver | null = null;
+
+    const stopWatchingVisibility = observeVisibleMapContainer(container, "ReadOnlyPinMap", () => {
+      if (mapRef.current || map) return;
+      const center: [number, number] = pin ? [pin.lng, pin.lat] : [10.7522, 59.9139];
+      try {
+        map = new mapbox.default.Map({
+          container,
+          style: MAP_STYLES[style].url,
+          center,
+          zoom: pin ? 14 : 5,
+          attributionControl: false,
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[mapbox] ReadOnlyPinMap constructor threw:", err);
+        return;
+      }
+      map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
+      map.addControl(new mapbox.default.AttributionControl({ compact: true }));
+      map.on("error", (e) => {
+        // eslint-disable-next-line no-console
+        console.error("[mapbox] ReadOnlyPinMap runtime error:", (e as any)?.error ?? e);
       });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("[mapbox] ReadOnlyPinMap constructor threw:", err);
-      return;
-    }
-    map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
-    map.addControl(new mapbox.default.AttributionControl({ compact: true }));
-    map.on("error", (e) => {
-      // eslint-disable-next-line no-console
-      console.error("[mapbox] ReadOnlyPinMap runtime error:", (e as any)?.error ?? e);
+      rafId = requestAnimationFrame(() => {
+        try { map?.resize(); } catch { /* ignore */ }
+      });
+      delayedResizeId = window.setTimeout(() => {
+        try { map?.resize(); } catch { /* ignore */ }
+      }, 100);
+      ro = new ResizeObserver(() => {
+        try { map?.resize(); } catch { /* ignore */ }
+      });
+      ro.observe(container);
+      mapRef.current = map;
     });
-    const rafId = requestAnimationFrame(() => {
-      try { map.resize(); } catch { /* ignore */ }
-    });
-    const ro = new ResizeObserver(() => {
-      try { map.resize(); } catch { /* ignore */ }
-    });
-    if (containerRef.current) ro.observe(containerRef.current);
-    mapRef.current = map;
+
     return () => {
+      stopWatchingVisibility();
       cancelAnimationFrame(rafId);
-      ro.disconnect();
-      map.remove();
+      window.clearTimeout(delayedResizeId);
+      ro?.disconnect();
+      map?.remove();
       mapRef.current = null;
       markerRef.current = null;
     };
@@ -95,7 +110,7 @@ export function ReadOnlyPinMap({ pin, scopeId }: Props) {
 
   return (
     <div className="relative h-full w-full">
-      <div ref={containerRef} className="absolute inset-0 z-0 bg-secondary" />
+      <div id={`readonly-pin-map-${containerId}`} ref={containerRef} className="absolute inset-0 z-0 bg-secondary" />
       <div className="absolute right-3 top-3 z-10">
         <MapStylePicker value={style} onChange={setStyle} compact />
       </div>
