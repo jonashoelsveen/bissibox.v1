@@ -50,6 +50,7 @@ export interface YearGridProps {
   onSelect: (k: CellKey | null) => void;
   onCommitText: (k: CellKey, text: string) => void;
   onFill: (source: CellKey, targets: CellKey[]) => void;
+  onMonthHeaderDoubleClick?: (month: number) => void;
 }
 
 export function YearGrid({
@@ -60,6 +61,7 @@ export function YearGrid({
   onSelect,
   onCommitText,
   onFill,
+  onMonthHeaderDoubleClick,
 }: YearGridProps) {
   const [editingKey, setEditingKey] = useState<CellKey | null>(null);
   const [editValue, setEditValue] = useState("");
