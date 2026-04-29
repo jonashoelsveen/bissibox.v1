@@ -154,6 +154,22 @@ export function LibrarySideNav({
           list.push({ id: row.folder, name: row.folder, pinned: false });
         }
       }
+      // Merge in extra folders the user created from the meetings page that
+      // do not yet have a meeting inside them.
+      try {
+        const raw = typeof window !== "undefined"
+          ? window.localStorage.getItem(`meeting-extra-folders:${teamId}`)
+          : null;
+        const extras = raw ? (JSON.parse(raw) as string[]) : [];
+        for (const name of extras) {
+          if (name && !seen.has(name)) {
+            seen.add(name);
+            list.push({ id: name, name, pinned: false });
+          }
+        }
+      } catch {
+        /* ignore */
+      }
       list.sort((a, b) => a.name.localeCompare(b.name));
       setMeetingFolders(list);
     } else {
