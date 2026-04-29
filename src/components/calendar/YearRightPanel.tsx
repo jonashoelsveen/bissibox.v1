@@ -216,87 +216,111 @@ function LayerRow({
   );
 }
 
-function MiniYearCalendar({
+function MiniMonthCalendar({
   year,
+  month,
+  selected,
+  onMonthChange,
   onPick,
 }: {
   year: number;
+  month: number;
+  selected: { m: number; d: number } | null;
+  onMonthChange: (m: number) => void;
   onPick: (month: number, day: number) => void;
 }) {
-  const months = MONTH_LABELS.map((label, idx) => ({
-    label,
-    idx,
-    dim: new Date(year, idx + 1, 0).getDate(),
-  }));
   const today = new Date();
   const isToday = (m: number, d: number) =>
     today.getFullYear() === year && today.getMonth() === m && today.getDate() === d;
-  const isWeekend = (m: number, d: number) => {
-    const w = new Date(year, m, d).getDay();
-    return w === 0 || w === 6;
-  };
+
+  const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Monday-first
+  const dim = new Date(year, month + 1, 0).getDate();
+  const cells: ({ d: number; we: boolean } | null)[] = [
+    ...Array.from({ length: firstDow }, () => null),
+    ...Array.from({ length: dim }, (_, i) => {
+      const d = i + 1;
+      const dow = new Date(year, month, d).getDay();
+      return { d, we: dow === 0 || dow === 6 };
+    }),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const rows: typeof cells[] = [];
+  for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
 
   return (
-    <div className="rounded-md border border-hairline bg-background p-2 shadow-sm">
-      <div className="mb-1.5 px-1 text-center text-[12px] font-semibold tracking-wide text-ink">
-        {year}
+    <div className="rounded-lg border border-hairline bg-background p-3 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <button
+          onClick={() => onMonthChange((month + 11) % 12)}
+          aria-label="Previous month"
+          className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div className="text-[13px] font-semibold tracking-tight text-ink">
+          {MONTH_LABELS_FULL[month]} {year}
+        </div>
+        <button
+          onClick={() => onMonthChange((month + 1) % 12)}
+          aria-label="Next month"
+          className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
-      <table
-        className="w-full"
-        style={{ borderSpacing: 0, tableLayout: "fixed" }}
-      >
-        <thead>
-          <tr>
-            {months.map((m) => (
-              <th
-                key={m.idx}
-                className="border-b border-hairline pb-1 text-center text-[9px] font-semibold uppercase tracking-wide text-muted-foreground"
+
+      <div className="grid grid-cols-7 gap-y-1">
+        {WEEKDAY_LABELS.map((w, i) => (
+          <div
+            key={i}
+            className="grid h-6 place-items-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+          >
+            {w}
+          </div>
+        ))}
+        {rows.flat().map((c, i) => {
+          if (!c) return <div key={i} className="h-9" />;
+          const td = isToday(month, c.d);
+          const isSel = selected?.m === month && selected?.d === c.d;
+          return (
+            <div key={i} className="grid place-items-center">
+              <button
+                onClick={() => onPick(month, c.d)}
+                className={`grid h-9 w-9 place-items-center rounded-full text-[13px] font-medium transition ${
+                  isSel
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : td
+                      ? "bg-primary/15 text-ink ring-1 ring-primary/40"
+                      : c.we
+                        ? "text-muted-foreground hover:bg-secondary"
+                        : "text-ink hover:bg-secondary"
+                }`}
               >
-                {m.label[0]}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-            <tr key={day}>
-              {months.map((m) => {
-                const valid = day <= m.dim;
-                if (!valid) {
-                  return (
-                    <td
-                      key={m.idx}
-                      className="bg-muted/40"
-                      style={{ height: 20, padding: 0 }}
-                    />
-                  );
-                }
-                const we = isWeekend(m.idx, day);
-                const td = isToday(m.idx, day);
-                return (
-                  <td key={m.idx} style={{ height: 20, padding: 0 }}>
-                    <button
-                      onClick={() => onPick(m.idx, day)}
-                      className={`block h-full w-full text-center text-[9px] leading-none transition ${
-                        we ? "bg-muted/60" : ""
-                      } ${
-                        td
-                          ? "bg-primary/30 font-bold"
-                          : "hover:bg-primary/15"
-                      } text-black`}
-                    >
-                      {day}
-                    </button>
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                {c.d}
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
+
+const MONTH_LABELS_FULL = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 
 /* -------------------- State B -------------------- */
 
