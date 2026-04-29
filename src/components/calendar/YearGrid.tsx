@@ -249,7 +249,9 @@ export function YearGrid({
             {months.map((m) => (
               <th
                 key={m.idx}
-                className="border-b border-r border-hairline px-2 py-2 text-center text-[12px] font-medium uppercase tracking-wide text-muted-foreground"
+                onDoubleClick={() => onMonthHeaderDoubleClick?.(m.idx)}
+                title="Dobbeltklikk for å zoome inn"
+                className="cursor-zoom-in select-none border-b border-r border-hairline px-2 py-2 text-center text-[12px] font-medium uppercase tracking-wide text-muted-foreground hover:bg-secondary hover:text-ink"
                 style={{ width: 280, minWidth: 280 }}
               >
                 {m.label}
