@@ -368,7 +368,7 @@ export function UnifiedElasticGrid({
         ref={scrollRef}
         className="relative h-full w-full overflow-auto"
         onClick={(e) => {
-          if (e.target === e.currentTarget) onSelect(null);
+          if (e.target === e.currentTarget) handleSelect(null);
         }}
         tabIndex={0}
       >
