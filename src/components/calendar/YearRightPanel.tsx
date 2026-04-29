@@ -84,7 +84,7 @@ export function YearRightPanel(props: YearRightPanelProps) {
       {/* Two-tab manual switch */}
       <div className="grid grid-cols-2 gap-1 rounded-md border border-hairline bg-background p-0.5">
         <button
-          onClick={() => setOverride("browse")}
+          onClick={() => setMode("browse")}
           className={`rounded-sm py-1 text-[11px] font-medium transition ${
             mode === "browse"
               ? "bg-secondary text-ink"
@@ -94,7 +94,7 @@ export function YearRightPanel(props: YearRightPanelProps) {
           Browse
         </button>
         <button
-          onClick={() => canEdit && setOverride("edit")}
+          onClick={() => canEdit && setMode("edit")}
           disabled={!canEdit}
           title={canEdit ? "Edit selected cell" : "Select a cell to edit"}
           className={`rounded-sm py-1 text-[11px] font-medium transition ${
