@@ -246,6 +246,13 @@ export function LibrarySideNav({
     setConfirmDelete(null);
     const table = tableFor(section);
     if (!table) return;
+    if (section === "meetings") {
+      // Detach meetings referencing this folder before deleting it
+      await supabase
+        .from("team_board_meetings")
+        .update({ folder: null })
+        .eq("folder", folder.name);
+    }
     const { error } = await supabase.from(table).delete().eq("id", folder.id);
     if (error) toast.error(error.message);
     else {
