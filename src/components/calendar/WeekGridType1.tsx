@@ -38,6 +38,22 @@ import {
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import type { CellData, CellKey } from "./yearStore";
 import { makeCellId } from "./yearStore";
+import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
+
+/**
+ * Items can be prefixed with `[#RRGGBB] ` to encode a user-chosen color.
+ * This survives the existing newline-serialized text storage without a
+ * schema change.
+ */
+const COLOR_PREFIX_RE = /^\[(#[0-9a-fA-F]{6})\]\s*/;
+function splitColor(raw: string): { color: string | null; text: string } {
+  const m = raw.match(COLOR_PREFIX_RE);
+  if (m) return { color: m[1], text: raw.slice(m[0].length) };
+  return { color: null, text: raw };
+}
+function joinColor(color: string | null, text: string): string {
+  return color ? `[${color}] ${text}` : text;
+}
 
 const WEEKDAYS_FULL = [
   "Mandag",
