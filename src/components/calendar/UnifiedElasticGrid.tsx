@@ -523,6 +523,7 @@ function DayRow(props: DayRowProps) {
               onSelect={onSelect}
               onBeginEdit={onBeginEdit}
               onCommitEdit={onCommitEdit}
+              onCommitDuration={onCommitDuration}
               onMoveAfterCommit={onMoveAfterCommit}
               inDragRange={inDragRange}
               onCellMouseEnter={onCellMouseEnter}
