@@ -31,6 +31,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CalendarSideNav, type CalendarSideNavValue } from "./CalendarSideNav";
+import { YearCalendarView } from "./YearCalendarView";
 
 /* ------------------------------------------------------------------ */
 /* Local persistence (placeholder until backend is wired)              */
@@ -714,14 +715,7 @@ function PreviousList({ list, onOpen }: { list: Cal[]; onOpen: (c: Cal) => void 
 }
 
 function CalendarPlaceholder({ cal }: { cal: Cal }) {
-  return (
-    <div className="mt-4 flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-ink">{cal.name}</h1>
-      <div className="rounded-lg border border-dashed border-hairline p-16 text-center text-sm text-muted-foreground">
-        Calendar UI arrives with the next round of instructions.
-      </div>
-    </div>
-  );
+  return <YearCalendarView calId={cal.id} defaultTitle={cal.name} />;
 }
 
 /* ------------------------------------------------------------------ */
