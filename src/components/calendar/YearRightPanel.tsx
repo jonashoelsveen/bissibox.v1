@@ -223,60 +223,63 @@ function MiniYearCalendar({
   };
 
   return (
-    <div className="rounded-md border border-hairline bg-background p-1.5">
-      <div className="mb-1 px-1 text-center text-[11px] font-medium text-ink">{year}</div>
-      <div className="overflow-x-auto">
-        <table className="text-[8px]" style={{ borderSpacing: 0, tableLayout: "fixed" }}>
-          <thead>
-            <tr>
-              {months.map((m) => (
-                <th
-                  key={m.idx}
-                  className="border-b border-hairline px-0.5 py-0.5 text-center text-[8px] font-semibold uppercase text-muted-foreground"
-                  style={{ width: 18, minWidth: 18 }}
-                >
-                  {m.label[0]}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-              <tr key={day}>
-                {months.map((m) => {
-                  const valid = day <= m.dim;
-                  if (!valid) {
-                    return (
-                      <td
-                        key={m.idx}
-                        className="bg-muted/40"
-                        style={{ width: 18, minWidth: 18, height: 12 }}
-                      />
-                    );
-                  }
-                  const we = isWeekend(m.idx, day);
-                  const td = isToday(m.idx, day);
+    <div className="rounded-md border border-hairline bg-background p-2 shadow-sm">
+      <div className="mb-1.5 px-1 text-center text-[12px] font-semibold tracking-wide text-ink">
+        {year}
+      </div>
+      <table
+        className="w-full"
+        style={{ borderSpacing: 0, tableLayout: "fixed" }}
+      >
+        <thead>
+          <tr>
+            {months.map((m) => (
+              <th
+                key={m.idx}
+                className="border-b border-hairline pb-1 text-center text-[9px] font-semibold uppercase tracking-wide text-muted-foreground"
+              >
+                {m.label[0]}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+            <tr key={day}>
+              {months.map((m) => {
+                const valid = day <= m.dim;
+                if (!valid) {
                   return (
                     <td
                       key={m.idx}
-                      style={{ width: 18, minWidth: 18, height: 12, padding: 0 }}
-                    >
-                      <button
-                        onClick={() => onPick(m.idx, day)}
-                        className={`block h-full w-full text-center text-[8px] leading-none transition ${
-                          we ? "bg-muted/60" : ""
-                        } ${td ? "bg-primary/30 font-bold" : "hover:bg-primary/15"} text-black`}
-                      >
-                        {day}
-                      </button>
-                    </td>
+                      className="bg-muted/40"
+                      style={{ height: 20, padding: 0 }}
+                    />
                   );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                }
+                const we = isWeekend(m.idx, day);
+                const td = isToday(m.idx, day);
+                return (
+                  <td key={m.idx} style={{ height: 20, padding: 0 }}>
+                    <button
+                      onClick={() => onPick(m.idx, day)}
+                      className={`block h-full w-full text-center text-[9px] leading-none transition ${
+                        we ? "bg-muted/60" : ""
+                      } ${
+                        td
+                          ? "bg-primary/30 font-bold"
+                          : "hover:bg-primary/15"
+                      } text-black`}
+                    >
+                      {day}
+                    </button>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
