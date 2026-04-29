@@ -391,6 +391,7 @@ export function UnifiedElasticGrid({
               onSelect={onSelect}
               onBeginEdit={beginEdit}
               onCommitEdit={commitEdit}
+              onCommitDuration={onCommitDuration}
               onMoveAfterCommit={moveSelection}
               inDragRange={inDragRange}
               onCellMouseEnter={(k) => {
