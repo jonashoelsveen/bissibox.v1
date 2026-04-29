@@ -316,15 +316,27 @@ export function CourseMapEditor({
   useEffect(() => {
     if (!mapbox || !containerRef.current || mapRef.current) return;
     const center: [number, number] = path[0] ? [path[0][1], path[0][0]] : [10.7522, 59.9139];
-    const map = new mapbox.default.Map({
-      container: containerRef.current,
-      style: MAP_STYLES[style].url,
-      center,
-      zoom: path.length ? 14 : 12,
-      attributionControl: false,
-    });
+    let map: MapboxMap;
+    try {
+      map = new mapbox.default.Map({
+        container: containerRef.current,
+        style: MAP_STYLES[style].url,
+        center,
+        zoom: path.length ? 14 : 12,
+        attributionControl: false,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[mapbox] CourseMapEditor constructor threw:", err);
+      return;
+    }
     map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
     map.addControl(new mapbox.default.AttributionControl({ compact: true }));
+
+    map.on("error", (e) => {
+      // eslint-disable-next-line no-console
+      console.error("[mapbox] CourseMapEditor runtime error:", (e as any)?.error ?? e);
+    });
 
     map.on("style.load", () => {
       styleLoadedRef.current = true;
@@ -370,7 +382,19 @@ export function CourseMapEditor({
 
     mapRef.current = map;
 
+    // Force resize after first paint to handle 0×0 construction race.
+    const rafId = requestAnimationFrame(() => {
+      try { map.resize(); } catch { /* ignore */ }
+    });
+    // Keep the canvas in sync with sidebar/grid layout shifts.
+    const ro = new ResizeObserver(() => {
+      try { map.resize(); } catch { /* ignore */ }
+    });
+    if (containerRef.current) ro.observe(containerRef.current);
+
     return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
       splitMarkersRef.current = {};

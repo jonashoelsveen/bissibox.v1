@@ -88,21 +88,41 @@ export function ReadOnlyCourseMap({ path, splits, selectedSplitId, hoverPosition
       : splits[0]
         ? [splits[0].position[1], splits[0].position[0]]
         : [10.7522, 59.9139];
-    const map = new mapbox.default.Map({
-      container: containerRef.current,
-      style: MAP_STYLES[style].url,
-      center,
-      zoom: path.length ? 14 : 12,
-      attributionControl: false,
-    });
+    let map: MapboxMap;
+    try {
+      map = new mapbox.default.Map({
+        container: containerRef.current,
+        style: MAP_STYLES[style].url,
+        center,
+        zoom: path.length ? 14 : 12,
+        attributionControl: false,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[mapbox] ReadOnlyCourseMap constructor threw:", err);
+      return;
+    }
     map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
     map.addControl(new mapbox.default.AttributionControl({ compact: true }));
+    map.on("error", (e) => {
+      // eslint-disable-next-line no-console
+      console.error("[mapbox] ReadOnlyCourseMap runtime error:", (e as any)?.error ?? e);
+    });
     map.on("style.load", () => {
       styleLoadedRef.current = true;
       addCourseLayers(map);
     });
+    const rafId = requestAnimationFrame(() => {
+      try { map.resize(); } catch { /* ignore */ }
+    });
+    const ro = new ResizeObserver(() => {
+      try { map.resize(); } catch { /* ignore */ }
+    });
+    if (containerRef.current) ro.observe(containerRef.current);
     mapRef.current = map;
     return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
       markersRef.current = [];

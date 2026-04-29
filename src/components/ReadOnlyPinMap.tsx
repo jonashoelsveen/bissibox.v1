@@ -22,17 +22,37 @@ export function ReadOnlyPinMap({ pin, scopeId }: Props) {
   useEffect(() => {
     if (!mapbox || !containerRef.current || mapRef.current) return;
     const center: [number, number] = pin ? [pin.lng, pin.lat] : [10.7522, 59.9139];
-    const map = new mapbox.default.Map({
-      container: containerRef.current,
-      style: MAP_STYLES[style].url,
-      center,
-      zoom: pin ? 14 : 5,
-      attributionControl: false,
-    });
+    let map: MapboxMap;
+    try {
+      map = new mapbox.default.Map({
+        container: containerRef.current,
+        style: MAP_STYLES[style].url,
+        center,
+        zoom: pin ? 14 : 5,
+        attributionControl: false,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[mapbox] ReadOnlyPinMap constructor threw:", err);
+      return;
+    }
     map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
     map.addControl(new mapbox.default.AttributionControl({ compact: true }));
+    map.on("error", (e) => {
+      // eslint-disable-next-line no-console
+      console.error("[mapbox] ReadOnlyPinMap runtime error:", (e as any)?.error ?? e);
+    });
+    const rafId = requestAnimationFrame(() => {
+      try { map.resize(); } catch { /* ignore */ }
+    });
+    const ro = new ResizeObserver(() => {
+      try { map.resize(); } catch { /* ignore */ }
+    });
+    if (containerRef.current) ro.observe(containerRef.current);
     mapRef.current = map;
     return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
       markerRef.current = null;
