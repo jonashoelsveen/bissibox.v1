@@ -221,6 +221,19 @@ export function UnifiedElasticGrid({
     }
   };
 
+  // Switching to Type 1 requires a month context (it IS a month-only view).
+  // Switching back to Type 2 keeps whatever mode the user was in.
+  const handleViewTypeChange = (v: ViewType) => {
+    setViewType(v);
+    if (v === "type1") {
+      setMode((prev) =>
+        prev.kind === "month"
+          ? prev
+          : { kind: "month", month: lastFocusedMonthRef.current ?? new Date().getMonth() },
+      );
+    }
+  };
+
   const YEAR_COL = 220;
   const FOCUS_COL = 640;
   const ROW_YEAR = 28;
