@@ -5,14 +5,15 @@
  * the YearGrid, and the dual-state YearRightPanel side-by-side.
  */
 
-import { useState } from "react";
-import { Settings as SettingsIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Settings as SettingsIcon, Undo2, Redo2 } from "lucide-react";
 import { useYearStore, type CellKey } from "./yearStore";
 import { YearGrid } from "./YearGrid";
 import { YearRightPanel, type LayerVisibility } from "./YearRightPanel";
 
 export function YearCalendarView({ calId, defaultTitle }: { calId: string; defaultTitle: string }) {
-  const { data, meta, upsertCell, fillRange, setMeta } = useYearStore(calId, defaultTitle);
+  const { data, meta, upsertCell, fillRange, setMeta, undo, redo, canUndo, canRedo } =
+    useYearStore(calId, defaultTitle);
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
@@ -23,6 +24,29 @@ export function YearCalendarView({ calId, defaultTitle }: { calId: string; defau
     trainings: true,
     groups: {},
   });
+
+  // Keyboard shortcuts: ⌘Z / Ctrl+Z for undo, ⌘⇧Z / Ctrl+Y for redo
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        target &&
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (isTyping) return;
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((k === "z" && e.shiftKey) || k === "y") {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo]);
 
   const commitTitle = () => {
     setEditingTitle(false);
@@ -62,8 +86,28 @@ export function YearCalendarView({ calId, defaultTitle }: { calId: string; defau
             {meta.title}
           </h1>
         )}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">{meta.year}</span>
+        <div className="flex items-center gap-1">
+          <span className="mr-2 text-xs text-muted-foreground">{meta.year}</span>
+          <button
+            type="button"
+            aria-label="Undo"
+            title="Undo (⌘Z)"
+            onClick={undo}
+            disabled={!canUndo}
+            className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+          >
+            <Undo2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Redo"
+            title="Redo (⌘⇧Z)"
+            onClick={redo}
+            disabled={!canRedo}
+            className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+          >
+            <Redo2 className="h-4 w-4" />
+          </button>
           <button
             aria-label="Calendar settings"
             className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-ink"
