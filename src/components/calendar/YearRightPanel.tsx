@@ -65,10 +65,63 @@ export interface YearRightPanelProps {
   groups: { id: string; name: string }[];
 }
 
+type PanelMode = "browse" | "edit";
+
 export function YearRightPanel(props: YearRightPanelProps) {
+  // Manual override; null means "follow auto rule (selection => edit)".
+  const [override, setOverride] = useState<PanelMode | null>(null);
+  const lastSelIdRef = useRef<string | null>(null);
+
+  // Auto-switch to edit when a NEW cell is selected (click/double-click).
+  // Clear manual override so the new selection wins.
+  useEffect(() => {
+    const selId = props.selected
+      ? makeCellId(props.calId, props.selected)
+      : null;
+    if (selId && selId !== lastSelIdRef.current) {
+      setOverride(null);
+    }
+    lastSelIdRef.current = selId;
+  }, [props.selected, props.calId]);
+
+  const mode: PanelMode =
+    override ?? (props.selected ? "edit" : "browse");
+
+  const canEdit = !!props.selected;
+
   return (
-    <aside className="flex h-full w-[300px] shrink-0 flex-col gap-3 border-l border-hairline bg-card/40 p-3">
-      {props.selected ? <EditPanel {...props} /> : <BrowsePanel {...props} />}
+    <aside className="flex h-full w-[360px] shrink-0 flex-col gap-3 border-l border-hairline bg-card/40 p-3">
+      {/* Two-tab manual switch */}
+      <div className="grid grid-cols-2 gap-1 rounded-md border border-hairline bg-background p-0.5">
+        <button
+          onClick={() => setOverride("browse")}
+          className={`rounded-sm py-1 text-[11px] font-medium transition ${
+            mode === "browse"
+              ? "bg-secondary text-ink"
+              : "text-muted-foreground hover:text-ink"
+          }`}
+        >
+          Browse
+        </button>
+        <button
+          onClick={() => canEdit && setOverride("edit")}
+          disabled={!canEdit}
+          title={canEdit ? "Edit selected cell" : "Select a cell to edit"}
+          className={`rounded-sm py-1 text-[11px] font-medium transition ${
+            mode === "edit"
+              ? "bg-secondary text-ink"
+              : "text-muted-foreground hover:text-ink"
+          } disabled:cursor-not-allowed disabled:opacity-40`}
+        >
+          Edit
+        </button>
+      </div>
+
+      {mode === "edit" && props.selected ? (
+        <EditPanel {...props} />
+      ) : (
+        <BrowsePanel {...props} />
+      )}
     </aside>
   );
 }
