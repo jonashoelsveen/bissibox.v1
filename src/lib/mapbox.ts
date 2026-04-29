@@ -99,23 +99,44 @@ export function loadMapboxToken(): Promise<string> {
 
 let mapboxPromise: Promise<typeof import("mapbox-gl")> | null = null;
 
-function ensureCss(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById("mapbox-gl-css")) return;
-  const link = document.createElement("link");
-  link.id = "mapbox-gl-css";
-  link.rel = "stylesheet";
-  link.href = "https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css";
-  document.head.appendChild(link);
+let cssPromise: Promise<void> | null = null;
+function ensureCss(): Promise<void> {
+  if (typeof document === "undefined") return Promise.resolve();
+  if (cssPromise) return cssPromise;
+  const existing = document.getElementById("mapbox-gl-css") as HTMLLinkElement | null;
+  if (existing) {
+    // If the link already exists (e.g. inserted by a previous mount) treat as ready.
+    cssPromise = Promise.resolve();
+    return cssPromise;
+  }
+  cssPromise = new Promise<void>((resolve) => {
+    const link = document.createElement("link");
+    link.id = "mapbox-gl-css";
+    link.rel = "stylesheet";
+    link.href = "https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css";
+    link.onload = () => resolve();
+    link.onerror = () => {
+      // eslint-disable-next-line no-console
+      console.error("[mapbox] failed to load mapbox-gl.css");
+      resolve(); // resolve anyway so map can still try to render
+    };
+    document.head.appendChild(link);
+  });
+  return cssPromise;
 }
 
 export async function loadMapbox(): Promise<typeof import("mapbox-gl")> {
-  ensureCss();
+  // Kick off CSS + module load + token fetch in parallel; await all before returning.
+  const cssReady = ensureCss();
   if (!mapboxPromise) {
     mapboxPromise = import("mapbox-gl");
   }
-  const mod = await mapboxPromise;
-  const token = await loadMapboxToken();
+  const [mod, token] = await Promise.all([mapboxPromise, loadMapboxToken()]);
+  await cssReady;
+  if (!token) {
+    // eslint-disable-next-line no-console
+    console.error("[mapbox] no access token returned from server function — map will be blank");
+  }
   if (token && (mod as any).default.accessToken !== token) {
     (mod as any).default.accessToken = token;
   }
