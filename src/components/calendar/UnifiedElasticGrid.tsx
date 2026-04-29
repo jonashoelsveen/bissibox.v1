@@ -274,19 +274,50 @@ export function UnifiedElasticGrid({
     return () => window.removeEventListener("keydown", onKey);
   }, [mode, selected, moveSelection, exitToYear]);
 
+  // Track the focused column rect so the magnify overlay can follow it
+  // through the grid-template-columns animation.
+  const [focusRect, setFocusRect] = useState<{ left: number; width: number; height: number } | null>(null);
+
   useLayoutEffect(() => {
-    if (mode.kind !== "month") return;
     const c = scrollRef.current;
-    if (!c) return;
-    requestAnimationFrame(() => {
-      const focused = c.querySelector<HTMLElement>(
-        `[data-month-col="${mode.month}"]`,
-      );
-      if (!focused) return;
-      const target =
-        focused.offsetLeft - (c.clientWidth - focused.offsetWidth) / 2;
-      c.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
-    });
+    if (!c) {
+      setFocusRect(null);
+      return;
+    }
+    if (mode.kind !== "month") {
+      setFocusRect(null);
+      return;
+    }
+
+    const month = mode.month;
+    const start = performance.now();
+    let raf = 0;
+    let centered = false;
+
+    const tick = (now: number) => {
+      const focused = c.querySelector<HTMLElement>(`[data-month-col="${month}"]`);
+      if (focused) {
+        const width = focused.offsetWidth;
+        const left = focused.offsetLeft;
+        // Track the focused column for the overlay (use scrollHeight to span all rows)
+        setFocusRect({ left, width, height: c.scrollHeight });
+
+        // Center the focused month exactly. Re-issue during the grid
+        // transition so the column lands precisely centered when widths settle.
+        const target = Math.max(0, left - (c.clientWidth - width) / 2);
+        if (!centered) {
+          c.scrollTo({ left: target, behavior: "smooth" });
+          centered = true;
+        } else if (Math.abs(c.scrollLeft - target) > 1) {
+          c.scrollLeft = target;
+        }
+      }
+      if (now - start < DUR_MS + 80) {
+        raf = requestAnimationFrame(tick);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [mode]);
 
   const months = useMemo(
