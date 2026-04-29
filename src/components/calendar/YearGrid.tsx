@@ -186,8 +186,8 @@ export function YearGrid({
       tabIndex={0}
     >
       <table
-        className="w-full border-separate text-xs"
-        style={{ borderSpacing: 0, tableLayout: "fixed", minWidth: 1100 }}
+        className="border-separate text-xs"
+        style={{ borderSpacing: 0, tableLayout: "fixed", minWidth: 12 * 140 }}
       >
         <thead className="sticky top-0 z-10 bg-card">
           <tr>
