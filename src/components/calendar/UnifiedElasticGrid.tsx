@@ -32,8 +32,108 @@ import {
   useRef,
   useState,
 } from "react";
+import { ChevronDown, ArrowLeft } from "lucide-react";
 import type { CellData, CellKey, Session } from "./yearStore";
 import { makeCellId } from "./yearStore";
+
+type ViewMode = "day" | "week" | "month" | "year";
+type ViewType = "type1" | "type2";
+
+const VIEW_MODE_LABEL: Record<ViewMode, string> = {
+  day: "Dag",
+  week: "Uke",
+  month: "Måned",
+  year: "År",
+};
+
+const VIEW_TYPE_LABEL: Record<ViewType, string> = {
+  type1: "Type 1",
+  type2: "Type 2",
+};
+
+/**
+ * HeaderDropdown — minimal dropdown styled to match the TopBar profile
+ * switcher, but slightly more compact and friendlier (chevron rotates,
+ * subtle hover affordance, items show a check on the active row).
+ */
+function HeaderDropdown<T extends string>({
+  value,
+  options,
+  onChange,
+  width = 132,
+  ariaLabel,
+}: {
+  value: T;
+  options: { value: T; label: string; hint?: string; disabled?: boolean }[];
+  onChange: (v: T) => void;
+  width?: number;
+  ariaLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = options.find((o) => o.value === value);
+  return (
+    <div className="pointer-events-auto relative">
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        className="group flex h-8 items-center justify-between gap-1.5 rounded-md border border-hairline bg-background/90 px-2.5 text-xs font-medium text-ink shadow-sm backdrop-blur transition-colors hover:bg-secondary"
+        style={{ width }}
+      >
+        <span className="truncate">{current?.label ?? value}</span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+          strokeWidth={2.25}
+        />
+      </button>
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-30"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            className="absolute right-0 top-full z-40 mt-1 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg"
+            style={{ width }}
+          >
+            {options.map((o) => {
+              const active = o.value === value;
+              return (
+                <button
+                  key={o.value}
+                  type="button"
+                  disabled={o.disabled}
+                  onClick={() => {
+                    if (o.disabled) return;
+                    onChange(o.value);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between gap-2 border-b border-hairline/60 px-2.5 py-2 text-left text-xs transition last:border-b-0 ${
+                    o.disabled
+                      ? "cursor-not-allowed text-muted-foreground/60"
+                      : active
+                        ? "bg-secondary/60 text-ink"
+                        : "text-ink hover:bg-secondary"
+                  }`}
+                >
+                  <span className="truncate">{o.label}</span>
+                  {o.hint && (
+                    <span className="mono ml-2 shrink-0 text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                      {o.hint}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 const MONTH_LABELS_FULL = [
   "Januar",
@@ -100,10 +200,25 @@ export function UnifiedElasticGrid({
   onFill,
 }: UnifiedElasticGridProps) {
   const [mode, setMode] = useState<Mode>({ kind: "year" });
+  const [viewType, setViewType] = useState<ViewType>("type2");
   const [editingKey, setEditingKey] = useState<CellKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // The mode dropdown reflects the current grid kind. Selecting "month"
+  // while in year view enters the first month; "year" exits to year view.
+  // "Dag" / "Uke" are reserved for future view modes — surfaced as
+  // disabled rows so the IA is discoverable without breaking flow.
+  const currentViewMode: ViewMode = mode.kind === "month" ? "month" : "year";
+  const handleViewModeChange = (v: ViewMode) => {
+    if (v === "year") setMode({ kind: "year" });
+    else if (v === "month") {
+      setMode((prev) =>
+        prev.kind === "month" ? prev : { kind: "month", month: lastFocusedMonthRef.current ?? new Date().getMonth() },
+      );
+    }
+  };
 
   const YEAR_COL = 220;
   const FOCUS_COL = 640;
@@ -356,15 +471,46 @@ export function UnifiedElasticGrid({
       className="relative w-full overflow-hidden rounded-md border border-hairline bg-card"
       style={{ height: "calc(100vh - 280px)" }}
     >
-      {mode.kind === "month" && (
-        <button
-          type="button"
-          onClick={exitToYear}
-          className="absolute right-3 top-3 z-30 rounded-md border border-hairline bg-background/90 px-2 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur hover:bg-secondary hover:text-ink"
-        >
-          Esc · Tilbake til år
-        </button>
-      )}
+      {/* Top-right control cluster: [Mode ▾] [Type ▾] [← back]
+          Order matches the request: mode dropdown sits on the far left,
+          the type dropdown sits between mode and the back arrow, and the
+          back arrow remains the right-most affordance (only in month
+          view, since "back" only makes sense when zoomed in). */}
+      <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-2">
+        <HeaderDropdown<ViewMode>
+          ariaLabel="Visningsmodus"
+          value={currentViewMode}
+          onChange={handleViewModeChange}
+          width={124}
+          options={[
+            { value: "day", label: "Dag", disabled: true },
+            { value: "week", label: "Uke", disabled: true },
+            { value: "month", label: "Måned" },
+            { value: "year", label: "År" },
+          ]}
+        />
+        <HeaderDropdown<ViewType>
+          ariaLabel="Visningstype"
+          value={viewType}
+          onChange={setViewType}
+          width={148}
+          options={[
+            { value: "type1", label: "Type 1", hint: "Snart" },
+            { value: "type2", label: "Type 2", hint: "År · Måned" },
+          ]}
+        />
+        {mode.kind === "month" && (
+          <button
+            type="button"
+            onClick={exitToYear}
+            aria-label="Tilbake til år"
+            title="Esc · Tilbake til år"
+            className="pointer-events-auto grid h-8 w-8 place-items-center rounded-md border border-hairline bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-secondary hover:text-ink"
+          >
+            <ArrowLeft className="h-4 w-4" strokeWidth={2.25} />
+          </button>
+        )}
+      </div>
 
       <div
         ref={scrollRef}
