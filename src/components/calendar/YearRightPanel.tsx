@@ -37,7 +37,20 @@ export interface LayerVisibility {
   groups: Record<string, boolean>; // groupId -> visible
 }
 
-const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
 export interface YearRightPanelProps {
@@ -95,9 +108,11 @@ function BrowsePanel(props: YearRightPanelProps) {
           onToggle={() => setVisibility({ ...visibility, trainings: !visibility.trainings })}
         />
         {groups.length > 0 && (
-          <div className={`ml-5 mt-1 flex flex-col gap-0.5 border-l border-hairline pl-2 ${
-            visibility.trainings ? "" : "opacity-40 pointer-events-none"
-          }`}>
+          <div
+            className={`ml-5 mt-1 flex flex-col gap-0.5 border-l border-hairline pl-2 ${
+              visibility.trainings ? "" : "opacity-40 pointer-events-none"
+            }`}
+          >
             {groups.map((g) => (
               <LayerRow
                 key={g.id}
@@ -131,10 +146,14 @@ function LayerRow({
   small?: boolean;
 }) {
   return (
-    <div className={`group flex items-center justify-between rounded-md px-2 py-1 hover:bg-secondary/50 ${
-      small ? "text-[11px]" : "text-xs"
-    }`}>
-      <span className={visible ? "text-ink" : "text-muted-foreground/70 line-through"}>{label}</span>
+    <div
+      className={`group flex items-center justify-between rounded-md px-2 py-1 hover:bg-secondary/50 ${
+        small ? "text-[11px]" : "text-xs"
+      }`}
+    >
+      <span className={visible ? "text-ink" : "text-muted-foreground/70 line-through"}>
+        {label}
+      </span>
       <button
         onClick={onToggle}
         aria-label={visible ? "Hide" : "Show"}
@@ -317,7 +336,9 @@ function EditPanel(props: YearRightPanelProps) {
               onClick={() => onPatchCell(k, { color: c.value })}
               title={c.name}
               className={`h-6 w-6 rounded border border-black/10 transition hover:scale-110 ${
-                cell.color?.toLowerCase() === c.value.toLowerCase() ? "ring-2 ring-primary ring-offset-1" : ""
+                cell.color?.toLowerCase() === c.value.toLowerCase()
+                  ? "ring-2 ring-primary ring-offset-1"
+                  : ""
               }`}
               style={{ background: c.value }}
             />

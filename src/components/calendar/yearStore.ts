@@ -17,12 +17,12 @@ export type Session = 0 | 1; // 0 = upper / "AM", 1 = lower / "PM"
 export type CalendarLayer = "events" | "meetings" | "trainings";
 
 export interface CellData {
-  id: string;             // stable nylas-ready id
+  id: string; // stable nylas-ready id
   text: string;
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
-  color?: string;         // hex
+  color?: string; // hex
   description?: string;
   layer?: CalendarLayer;
   groupId?: string | null; // for trainings, which group/team
@@ -33,7 +33,7 @@ export interface CellData {
 export interface CellKey {
   year: number;
   month: number; // 0-11
-  day: number;   // 1-31
+  day: number; // 1-31
   session: Session;
 }
 

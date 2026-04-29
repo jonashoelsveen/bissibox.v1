@@ -19,7 +19,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CellData, CellKey, Session } from "./yearStore";
 import { makeCellId } from "./yearStore";
 
-const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 function daysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
@@ -50,14 +63,24 @@ export function YearGrid({
 }: YearGridProps) {
   const [editingKey, setEditingKey] = useState<CellKey | null>(null);
   const [editValue, setEditValue] = useState("");
-  const [dragRange, setDragRange] = useState<{ month: number; from: number; toDay: number; toSession: Session } | null>(null);
+  const [dragRange, setDragRange] = useState<{
+    month: number;
+    from: number;
+    toDay: number;
+    toSession: Session;
+  } | null>(null);
   const dragStartRef = useRef<CellKey | null>(null);
 
   const selectedId = selected ? makeCellId(calId, selected) : null;
   const editingId = editingKey ? makeCellId(calId, editingKey) : null;
 
   const isSameKey = (a: CellKey | null, b: CellKey | null) =>
-    !!a && !!b && a.year === b.year && a.month === b.month && a.day === b.day && a.session === b.session;
+    !!a &&
+    !!b &&
+    a.year === b.year &&
+    a.month === b.month &&
+    a.day === b.day &&
+    a.session === b.session;
 
   const beginEdit = useCallback(
     (k: CellKey) => {
@@ -109,7 +132,12 @@ export function YearGrid({
     if (!dragStartRef.current) return;
     const src = dragStartRef.current;
     if (k.month !== src.month) return; // vertical only
-    setDragRange({ month: src.month, from: src.day * 2 + src.session, toDay: k.day, toSession: k.session });
+    setDragRange({
+      month: src.month,
+      from: src.day * 2 + src.session,
+      toDay: k.day,
+      toSession: k.session,
+    });
   };
 
   const inDragRange = (k: CellKey): boolean => {
@@ -122,7 +150,10 @@ export function YearGrid({
     return rk >= Math.min(srcRank, endRank) && rk <= Math.max(srcRank, endRank);
   };
 
-  const months = useMemo(() => MONTH_LABELS.map((label, idx) => ({ label, idx, dim: daysInMonth(year, idx) })), [year]);
+  const months = useMemo(
+    () => MONTH_LABELS.map((label, idx) => ({ label, idx, dim: daysInMonth(year, idx) })),
+    [year],
+  );
 
   return (
     <div
@@ -189,7 +220,12 @@ export function YearGrid({
                       inDragRange={inDragRange}
                       onHandleDown={(k) => {
                         dragStartRef.current = k;
-                        setDragRange({ month: k.month, from: k.day * 2 + k.session, toDay: k.day, toSession: k.session });
+                        setDragRange({
+                          month: k.month,
+                          from: k.day * 2 + k.session,
+                          toDay: k.day,
+                          toSession: k.session,
+                        });
                       }}
                     />
                   </td>
@@ -225,8 +261,25 @@ interface DayCellProps {
 }
 
 function DayCell(props: DayCellProps) {
-  const { calId, year, month, day, weekend, data, selectedId, editingId, editValue, setEditValue,
-    onSelect, onBeginEdit, onCommitEdit, onMouseEnter, onHandleDown, selected, inDragRange } = props;
+  const {
+    calId,
+    year,
+    month,
+    day,
+    weekend,
+    data,
+    selectedId,
+    editingId,
+    editValue,
+    setEditValue,
+    onSelect,
+    onBeginEdit,
+    onCommitEdit,
+    onMouseEnter,
+    onHandleDown,
+    selected,
+    inDragRange,
+  } = props;
 
   const sessions: Session[] = [0, 1];
   return (
