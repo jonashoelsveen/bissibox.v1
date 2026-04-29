@@ -517,10 +517,13 @@ export function UnifiedElasticGrid({
             { value: "type2", label: "Type 2", hint: "Excel" },
           ]}
         />
-        {mode.kind === "month" && (
+        {isImplemented && mode.kind === "month" && viewType === "type2" && (
           <button
             type="button"
-            onClick={exitToYear}
+            onClick={() => {
+              setViewMode("year");
+              exitToYear();
+            }}
             aria-label="Tilbake til år"
             title="Esc · Tilbake til år"
             className="pointer-events-auto grid h-8 w-8 place-items-center rounded-md border border-hairline bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-secondary hover:text-ink"
@@ -530,7 +533,14 @@ export function UnifiedElasticGrid({
         )}
       </div>
 
-      {viewType === "type1" ? (
+      {!isImplemented ? (
+        <div className="flex h-full w-full items-center justify-center px-6 text-center">
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-ink">{comingSoonLabel}</div>
+            <div className="text-xs text-muted-foreground">Kommer snart</div>
+          </div>
+        </div>
+      ) : viewType === "type1" ? (
         <MonthGridType1
           calId={calId}
           year={year}
