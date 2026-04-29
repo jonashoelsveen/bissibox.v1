@@ -331,6 +331,7 @@ interface DayCellProps {
   onCommitEdit: () => void;
   onMouseEnter: (k: CellKey) => void;
   onHandleDown: (k: CellKey) => void;
+  onMoveAfterCommit: (dx: number, dy: number) => void;
   isSameKey: (a: CellKey | null, b: CellKey | null) => boolean;
   selected: CellKey | null;
   inDragRange: (k: CellKey) => boolean;
