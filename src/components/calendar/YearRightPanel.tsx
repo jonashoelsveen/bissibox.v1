@@ -120,16 +120,10 @@ export function YearRightPanel(props: YearRightPanelProps) {
 
 function BrowsePanel(props: YearRightPanelProps) {
   const { year, onJumpToDay, visibility, setVisibility, groups } = props;
-  const [month, setMonth] = useState(new Date().getMonth());
 
   return (
     <div className="flex flex-col gap-4">
-      <MiniCalendar
-        year={year}
-        month={month}
-        onMonthChange={setMonth}
-        onPick={(d) => onJumpToDay(month, d)}
-      />
+      <MiniYearCalendar year={year} onPick={(m, d) => onJumpToDay(m, d)} />
 
       <div className="flex flex-col gap-1">
         <p className="px-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -208,66 +202,80 @@ function LayerRow({
   );
 }
 
-function MiniCalendar({
+function MiniYearCalendar({
   year,
-  month,
-  onMonthChange,
   onPick,
 }: {
   year: number;
-  month: number;
-  onMonthChange: (m: number) => void;
-  onPick: (day: number) => void;
+  onPick: (month: number, day: number) => void;
 }) {
-  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
-  const lead = (firstDay + 6) % 7; // Monday-first
-  const dim = new Date(year, month + 1, 0).getDate();
-  const cells: (number | null)[] = [
-    ...Array.from({ length: lead }, () => null),
-    ...Array.from({ length: dim }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
+  const months = MONTH_LABELS.map((label, idx) => ({
+    label,
+    idx,
+    dim: new Date(year, idx + 1, 0).getDate(),
+  }));
+  const today = new Date();
+  const isToday = (m: number, d: number) =>
+    today.getFullYear() === year && today.getMonth() === m && today.getDate() === d;
+  const isWeekend = (m: number, d: number) => {
+    const w = new Date(year, m, d).getDay();
+    return w === 0 || w === 6;
+  };
 
   return (
-    <div className="rounded-md border border-hairline bg-background p-2">
-      <div className="mb-1 flex items-center justify-between px-1">
-        <button
-          onClick={() => onMonthChange((month + 11) % 12)}
-          className="grid h-5 w-5 place-items-center rounded text-muted-foreground hover:bg-secondary hover:text-ink"
-        >
-          <ChevronLeft className="h-3 w-3" />
-        </button>
-        <span className="text-[11px] font-medium text-ink">
-          {MONTH_LABELS[month]} {year}
-        </span>
-        <button
-          onClick={() => onMonthChange((month + 1) % 12)}
-          className="grid h-5 w-5 place-items-center rounded text-muted-foreground hover:bg-secondary hover:text-ink"
-        >
-          <ChevronRight className="h-3 w-3" />
-        </button>
-      </div>
-      <div className="grid grid-cols-7 gap-0.5">
-        {WEEKDAY_LABELS.map((w, i) => (
-          <span
-            key={i}
-            className="grid h-5 place-items-center text-[9px] font-medium text-muted-foreground"
-          >
-            {w}
-          </span>
-        ))}
-        {cells.map((d, i) => (
-          <button
-            key={i}
-            disabled={!d}
-            onClick={() => d && onPick(d)}
-            className={`grid h-6 place-items-center rounded text-[10px] transition ${
-              d ? "text-ink hover:bg-primary/15" : "text-transparent"
-            }`}
-          >
-            {d ?? ""}
-          </button>
-        ))}
+    <div className="rounded-md border border-hairline bg-background p-1.5">
+      <div className="mb-1 px-1 text-center text-[11px] font-medium text-ink">{year}</div>
+      <div className="overflow-x-auto">
+        <table className="text-[8px]" style={{ borderSpacing: 0, tableLayout: "fixed" }}>
+          <thead>
+            <tr>
+              {months.map((m) => (
+                <th
+                  key={m.idx}
+                  className="border-b border-hairline px-0.5 py-0.5 text-center text-[8px] font-semibold uppercase text-muted-foreground"
+                  style={{ width: 18, minWidth: 18 }}
+                >
+                  {m.label[0]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+              <tr key={day}>
+                {months.map((m) => {
+                  const valid = day <= m.dim;
+                  if (!valid) {
+                    return (
+                      <td
+                        key={m.idx}
+                        className="bg-muted/40"
+                        style={{ width: 18, minWidth: 18, height: 12 }}
+                      />
+                    );
+                  }
+                  const we = isWeekend(m.idx, day);
+                  const td = isToday(m.idx, day);
+                  return (
+                    <td
+                      key={m.idx}
+                      style={{ width: 18, minWidth: 18, height: 12, padding: 0 }}
+                    >
+                      <button
+                        onClick={() => onPick(m.idx, day)}
+                        className={`block h-full w-full text-center text-[8px] leading-none transition ${
+                          we ? "bg-muted/60" : ""
+                        } ${td ? "bg-primary/30 font-bold" : "hover:bg-primary/15"} text-black`}
+                      >
+                        {day}
+                      </button>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
