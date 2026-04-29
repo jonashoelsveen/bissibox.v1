@@ -453,7 +453,7 @@ export function UnifiedElasticGrid({
               editingId={editingId}
               editValue={editValue}
               setEditValue={setEditValue}
-              onSelect={onSelect}
+              onSelect={handleSelect}
               onBeginEdit={beginEdit}
               onCommitEdit={commitEdit}
               onCommitDuration={onCommitDuration}
