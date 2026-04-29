@@ -60,6 +60,15 @@ export function MeetingsListPage({
   const [newMeetingOpen, setNewMeetingOpen] = useState(false);
   const [newMeetingTitle, setNewMeetingTitle] = useState("");
   const [newMeetingFolder, setNewMeetingFolder] = useState("");
+  const [creatingFolderInline, setCreatingFolderInline] = useState(false);
+  const [draftFolder, setDraftFolder] = useState("");
+
+  // standalone new folder modal (from header action)
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+
+  // extra folders created without meetings yet (persisted per team)
+  const [extraFolders, setExtraFolders] = useState<string[]>([]);
 
   const view = externalView ?? { type: "all" as const };
 
