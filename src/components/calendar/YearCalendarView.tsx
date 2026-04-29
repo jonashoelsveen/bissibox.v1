@@ -126,6 +126,7 @@ export function YearCalendarView({ calId, defaultTitle }: { calId: string; defau
             selected={selected}
             onSelect={setSelected}
             onCommitText={(k, text) => upsertCell(k, { text })}
+            onCommitDuration={(k, duration) => upsertCell(k, { duration })}
             onFill={fillRange}
           />
         </div>
