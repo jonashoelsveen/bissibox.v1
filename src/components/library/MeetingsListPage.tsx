@@ -447,19 +447,66 @@ export function MeetingsListPage({
                 className="mt-1 w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
               />
             </label>
-            <label className="mb-4 block text-xs text-muted-foreground">
-              Folder (optional)
-              <input
-                value={newMeetingFolder}
-                onChange={(e) => setNewMeetingFolder(e.target.value)}
-                list="meeting-folders"
-                placeholder="No folder"
-                className="mt-1 w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-              />
-              <datalist id="meeting-folders">
-                {folders.map((f) => <option key={f} value={f} />)}
-              </datalist>
-            </label>
+            <div className="mb-4">
+              <span className="block text-xs text-muted-foreground">Folder (optional)</span>
+              {creatingFolderInline ? (
+                <div className="mt-1 flex items-center gap-2 rounded-md border border-hairline bg-background pr-1 focus-within:border-primary">
+                  <input
+                    autoFocus
+                    value={draftFolder}
+                    onChange={(e) => setDraftFolder(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (addFolder(draftFolder)) {
+                          setNewMeetingFolder(draftFolder.trim());
+                          setDraftFolder("");
+                          setCreatingFolderInline(false);
+                        }
+                      } else if (e.key === "Escape") {
+                        setDraftFolder("");
+                        setCreatingFolderInline(false);
+                      }
+                    }}
+                    placeholder="New folder name"
+                    className="flex-1 bg-transparent px-3 py-2 text-sm text-ink outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (addFolder(draftFolder)) {
+                        setNewMeetingFolder(draftFolder.trim());
+                        setDraftFolder("");
+                        setCreatingFolderInline(false);
+                      }
+                    }}
+                    className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+                  >
+                    Add folder
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-1 flex items-center gap-2">
+                  <select
+                    value={newMeetingFolder}
+                    onChange={(e) => setNewMeetingFolder(e.target.value)}
+                    className="flex-1 rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                  >
+                    <option value="">No folder</option>
+                    {folders.map((f) => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => { setDraftFolder(""); setCreatingFolderInline(true); }}
+                    title="Add folder"
+                    aria-label="Add folder"
+                    className="flex h-9 w-9 items-center justify-center rounded-md border border-hairline bg-background text-ink hover:bg-secondary"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 type="button"
