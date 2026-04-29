@@ -293,45 +293,42 @@ export function UnifiedElasticGrid({
     return () => window.removeEventListener("keydown", onKey);
   }, [mode, selected, moveSelection, exitToYear]);
 
-  // Track the focused column rect so the magnify overlay can follow it
-  // through the grid-template-columns animation.
-  const [focusRect, setFocusRect] = useState<{ left: number; width: number; height: number } | null>(null);
+  // Remember the last focused month so that zooming back to Year View can
+  // keep that month centered in the viewport — the user's spatial context
+  // is preserved through the transition in both directions.
+  const lastFocusedMonthRef = useRef<number | null>(null);
 
   useLayoutEffect(() => {
     const c = scrollRef.current;
-    if (!c) {
-      setFocusRect(null);
-      return;
-    }
-    if (mode.kind !== "month") {
-      setFocusRect(null);
-      return;
-    }
+    if (!c) return;
 
-    const month = mode.month;
+    // Determine which month to center: focused month in Month View, or the
+    // last focused month when zooming out to Year View.
+    let targetMonth: number | null = null;
+    if (mode.kind === "month") {
+      targetMonth = mode.month;
+      lastFocusedMonthRef.current = mode.month;
+    } else if (lastFocusedMonthRef.current !== null) {
+      targetMonth = lastFocusedMonthRef.current;
+    }
+    if (targetMonth === null) return;
+
     const start = performance.now();
     let raf = 0;
-    let centered = false;
 
     const tick = (now: number) => {
-      const focused = c.querySelector<HTMLElement>(`[data-month-col="${month}"]`);
+      const focused = c.querySelector<HTMLElement>(
+        `[data-month-col="${targetMonth}"]`,
+      );
       if (focused) {
         const width = focused.offsetWidth;
         const left = focused.offsetLeft;
-        // Track the focused column for the overlay (use scrollHeight to span all rows)
-        setFocusRect({ left, width, height: c.scrollHeight });
-
-        // Center the focused month exactly. Re-issue during the grid
-        // transition so the column lands precisely centered when widths settle.
         const target = Math.max(0, left - (c.clientWidth - width) / 2);
-        if (!centered) {
-          c.scrollTo({ left: target, behavior: "smooth" });
-          centered = true;
-        } else if (Math.abs(c.scrollLeft - target) > 1) {
-          c.scrollLeft = target;
-        }
+        // Drive scroll synchronously with the grid track animation for an
+        // Excel-like snap — no smooth-scroll, no lag.
+        c.scrollLeft = target;
       }
-      if (now - start < DUR_MS + 80) {
+      if (now - start < DUR_MS + 40) {
         raf = requestAnimationFrame(tick);
       }
     };
