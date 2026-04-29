@@ -74,25 +74,33 @@ export function writeMapStyle(scope: string | null, style: MapStyleId): void {
 /* ─────────────── token fetch ─────────────── */
 
 let tokenPromise: Promise<string> | null = null;
+let cachedToken = "";
 
 export function loadMapboxToken(): Promise<string> {
   if (tokenPromise) return tokenPromise;
   tokenPromise = getMapboxToken()
     .then((res) => {
       if (!res.token) {
+        cachedToken = "";
         // eslint-disable-next-line no-console
         console.error("Mapbox token unavailable:", res.error);
         return "";
       }
+      cachedToken = res.token;
       return res.token;
     })
     .catch((err) => {
       // eslint-disable-next-line no-console
       console.error("Mapbox token fetch failed:", err);
+      cachedToken = "";
       tokenPromise = null;
       return "";
     });
   return tokenPromise;
+}
+
+export function getCachedMapboxToken(): string {
+  return cachedToken;
 }
 
 /* ─────────────── module loader ─────────────── */
@@ -141,6 +149,133 @@ export async function loadMapbox(): Promise<typeof import("mapbox-gl")> {
     (mod as any).default.accessToken = token;
   }
   return mod;
+}
+
+function isMapContainerVisible(element: HTMLElement): boolean {
+  if (typeof window === "undefined") return false;
+  if (!element.isConnected) return false;
+
+  const rect = element.getBoundingClientRect();
+  if (rect.width < 8 || rect.height < 8) return false;
+
+  let current: HTMLElement | null = element;
+  while (current) {
+    const style = window.getComputedStyle(current);
+    if (
+      current.hasAttribute("hidden") ||
+      style.display === "none" ||
+      style.visibility === "hidden"
+    ) {
+      return false;
+    }
+    current = current.parentElement;
+  }
+
+  return true;
+}
+
+export function auditMapContainer(element: HTMLElement, label: string): void {
+  if (typeof window === "undefined") return;
+
+  const issues: string[] = [];
+  let current: HTMLElement | null = element;
+  let depth = 0;
+
+  while (current && depth < 6) {
+    const rect = current.getBoundingClientRect();
+    const style = window.getComputedStyle(current);
+    const name = current.id ? `#${current.id}` : current.tagName.toLowerCase();
+
+    if (rect.width === 0 || rect.height === 0) {
+      issues.push(`${name} has ${Math.round(rect.width)}×${Math.round(rect.height)} size`);
+    }
+    if (current.hasAttribute("hidden") || style.display === "none" || style.visibility === "hidden") {
+      issues.push(`${name} is hidden by CSS/attribute`);
+    }
+    if (
+      (style.overflow === "hidden" || style.overflowX === "hidden" || style.overflowY === "hidden") &&
+      (rect.width === 0 || rect.height === 0)
+    ) {
+      issues.push(`${name} clips overflow while the map area is collapsed`);
+    }
+
+    current = current.parentElement;
+    depth += 1;
+  }
+
+  if (issues.length > 0) {
+    // eslint-disable-next-line no-console
+    console.warn(`[mapbox] ${label} container audit:`, issues);
+  }
+}
+
+export function observeVisibleMapContainer(
+  element: HTMLElement,
+  label: string,
+  onVisible: () => void,
+): () => void {
+  if (typeof window === "undefined") return () => {};
+
+  let done = false;
+  let cancelled = false;
+
+  const attempt = () => {
+    if (cancelled || done) return;
+    if (isMapContainerVisible(element)) {
+      done = true;
+      onVisible();
+    }
+  };
+
+  const targets: HTMLElement[] = [];
+  let current: HTMLElement | null = element;
+  let depth = 0;
+  while (current && depth < 6) {
+    targets.push(current);
+    current = current.parentElement;
+    depth += 1;
+  }
+
+  const resizeObserver =
+    typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => {
+          attempt();
+        })
+      : null;
+  targets.forEach((target) => resizeObserver?.observe(target));
+
+  const mutationObservers =
+    typeof MutationObserver !== "undefined"
+      ? targets.map((target) => {
+          const observer = new MutationObserver(() => {
+            attempt();
+          });
+          observer.observe(target, {
+            attributes: true,
+            attributeFilter: ["class", "style", "hidden", "open"],
+          });
+          return observer;
+        })
+      : [];
+
+  const rafId = requestAnimationFrame(attempt);
+  const timeoutIds = [
+    window.setTimeout(attempt, 0),
+    window.setTimeout(attempt, 100),
+    window.setTimeout(() => {
+      attempt();
+      if (!done) auditMapContainer(element, label);
+    }, 250),
+    window.setTimeout(attempt, 500),
+  ];
+
+  return () => {
+    cancelled = true;
+    resizeObserver?.disconnect();
+    mutationObservers.forEach((observer) => observer.disconnect());
+    cancelAnimationFrame(rafId);
+    timeoutIds.forEach((id) => window.clearTimeout(id));
+  };
 }
 
 /**
