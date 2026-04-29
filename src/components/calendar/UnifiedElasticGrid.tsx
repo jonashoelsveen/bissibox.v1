@@ -74,7 +74,7 @@ function isWeekend(year: number, month: number, day: number) {
 }
 
 const EASE = "cubic-bezier(0.2, 0, 0, 1)";
-const DUR_MS = 480;
+const DUR_MS = 180;
 
 export interface UnifiedElasticGridProps {
   calId: string;
