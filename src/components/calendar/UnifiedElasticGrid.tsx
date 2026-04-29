@@ -378,12 +378,12 @@ export function UnifiedElasticGrid({
                   else if (mode.month === m.idx) exitToYear();
                   else enterMonth(m.idx);
                 }}
-                className={`sticky top-0 z-20 cursor-zoom-in select-none border-b border-r bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide transition-colors ${
+                className={`sticky top-0 z-20 cursor-zoom-in select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${
                   focused
-                    ? "border-b-2 border-b-muted-foreground/60 border-l-2 border-l-muted-foreground/60 border-r-2 border-r-muted-foreground/60 text-ink"
+                    ? "text-ink"
                     : periph
-                      ? "border-hairline text-muted-foreground/50 hover:text-ink"
-                      : "border-hairline text-muted-foreground hover:text-ink"
+                      ? "text-muted-foreground/50 hover:text-ink"
+                      : "text-muted-foreground hover:text-ink"
                 }`}
                 style={{
                   transition: `color ${DUR_MS}ms ${EASE}, background-color ${DUR_MS}ms ${EASE}`,
