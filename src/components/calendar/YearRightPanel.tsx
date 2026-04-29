@@ -227,66 +227,66 @@ function MiniYearGrid({
     today.getFullYear() === year && today.getMonth() === m && today.getDate() === d;
 
   const months = Array.from({ length: 12 }, (_, m) => {
-    const firstDow = (new Date(year, m, 1).getDay() + 6) % 7; // Mon-first
     const dim = new Date(year, m + 1, 0).getDate();
-    const cells: ({ d: number; we: boolean } | null)[] = [
-      ...Array.from({ length: firstDow }, () => null),
-      ...Array.from({ length: dim }, (_, i) => {
-        const d = i + 1;
-        const dow = new Date(year, m, d).getDay();
-        return { d, we: dow === 0 || dow === 6 };
-      }),
-    ];
-    while (cells.length % 7 !== 0) cells.push(null);
-    // Pad to 6 rows so all months are equal height
-    while (cells.length < 42) cells.push(null);
-    return cells;
+    return { m, dim };
   });
+
+  // 31 day rows; months with fewer days render void cells.
+  const dayRows = Array.from({ length: 31 }, (_, i) => i + 1);
 
   return (
     <div className="rounded-lg border border-hairline bg-background p-2 shadow-sm">
       <div className="mb-2 px-1 text-center text-[11px] font-semibold tracking-tight text-ink">
         {year}
       </div>
-      <div className="grid grid-cols-3 gap-x-2 gap-y-3">
-        {months.map((cells, m) => (
-          <div key={m} className="flex flex-col">
-            <div className="mb-1 text-center text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {MONTH_LABELS[m]}
-            </div>
-            <div className="grid grid-cols-7 gap-[1px]">
-              {WEEKDAY_LABELS.map((w, i) => (
-                <div
-                  key={`h-${i}`}
-                  className="grid h-3 place-items-center text-[7px] font-medium text-muted-foreground/60"
+
+      {/* Month header row */}
+      <div className="grid" style={{ gridTemplateColumns: "repeat(12, minmax(0, 1fr))" }}>
+        {months.map(({ m }) => (
+          <div
+            key={`mh-${m}`}
+            className="text-center text-[8px] font-semibold uppercase tracking-wider text-muted-foreground"
+          >
+            {MONTH_LABELS[m][0]}
+          </div>
+        ))}
+      </div>
+
+      {/* Day matrix: 12 columns × 31 rows */}
+      <div className="mt-1 grid gap-y-[1px]">
+        {dayRows.map((d) => (
+          <div
+            key={`r-${d}`}
+            className="grid"
+            style={{ gridTemplateColumns: "repeat(12, minmax(0, 1fr))" }}
+          >
+            {months.map(({ m, dim }) => {
+              if (d > dim) {
+                return <div key={`v-${m}-${d}`} className="h-[14px] bg-muted/30" />;
+              }
+              const dow = new Date(year, m, d).getDay();
+              const we = dow === 0 || dow === 6;
+              const td = isToday(m, d);
+              const isSel = selected?.m === m && selected?.d === d;
+              return (
+                <button
+                  key={`c-${m}-${d}`}
+                  onClick={() => onPick(m, d)}
+                  title={`${MONTH_LABELS[m]} ${d}`}
+                  className={`h-[14px] w-full text-center text-[7.5px] font-medium leading-none transition ${
+                    isSel
+                      ? "bg-primary text-primary-foreground"
+                      : td
+                        ? "bg-primary/20 text-ink ring-1 ring-primary/40"
+                        : we
+                          ? "bg-secondary/40 text-muted-foreground hover:bg-secondary"
+                          : "text-ink hover:bg-secondary"
+                  }`}
                 >
-                  {w}
-                </div>
-              ))}
-              {cells.map((c, i) => {
-                if (!c)
-                  return <div key={i} className="h-4 w-full" />;
-                const td = isToday(m, c.d);
-                const isSel = selected?.m === m && selected?.d === c.d;
-                return (
-                  <button
-                    key={i}
-                    onClick={() => onPick(m, c.d)}
-                    className={`grid h-4 w-full place-items-center rounded-[3px] text-[8px] font-medium leading-none transition ${
-                      isSel
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : td
-                          ? "bg-primary/15 text-ink ring-1 ring-primary/40"
-                          : c.we
-                            ? "text-muted-foreground hover:bg-secondary"
-                            : "text-ink hover:bg-secondary"
-                    }`}
-                  >
-                    {c.d}
-                  </button>
-                );
-              })}
-            </div>
+                  {d}
+                </button>
+              );
+            })}
           </div>
         ))}
       </div>
