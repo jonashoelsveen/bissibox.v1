@@ -354,6 +354,7 @@ function DayCell(props: DayCellProps) {
     onCommitEdit,
     onMouseEnter,
     onHandleDown,
+    onMoveAfterCommit,
     selected,
     inDragRange,
   } = props;
