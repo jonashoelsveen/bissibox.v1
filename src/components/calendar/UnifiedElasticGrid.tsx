@@ -639,6 +639,7 @@ export function UnifiedElasticGrid({
           ))}
         </div>
       </div>
+      )}
     </div>
   );
 }
