@@ -331,16 +331,16 @@ function DayCell(props: DayCellProps) {
             }}
             onMouseEnter={() => onMouseEnter(k)}
             onDoubleClick={() => onBeginEdit(k)}
-            className={`relative flex-1 cursor-cell select-none px-1 text-[11px] leading-tight ${
+            className={`relative flex-1 cursor-cell select-none text-[12px] leading-tight text-black ${
               weekend ? "bg-muted/60" : ""
             } ${isSelected ? "outline outline-2 outline-primary/80 outline-offset-[-2px] z-[2]" : ""} ${
               ranged && !isSelected ? "bg-primary/10" : ""
             } ${!isLast ? "border-b border-hairline/70" : ""}`}
-            style={{ background: bg !== "transparent" ? bg : undefined, minHeight: 22 }}
+            style={{ background: bg !== "transparent" ? bg : undefined, minHeight: 28 }}
           >
             {/* Day number — only on the first session row */}
             {session === 0 && (
-              <span className="absolute left-1 top-0 text-[9px] font-medium text-muted-foreground/80">
+              <span className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-semibold text-black/60">
                 {day}
               </span>
             )}
@@ -359,14 +359,14 @@ function DayCell(props: DayCellProps) {
                     onCommitEdit();
                   }
                 }}
-                className="absolute inset-0 ml-3 mr-1 bg-transparent text-[11px] outline-none"
+                className="absolute inset-y-0 left-7 right-1 bg-transparent text-[12px] text-black caret-black outline-none"
               />
             ) : (
               <span
-                className={`block truncate pl-3 pr-1 pt-0.5 ${
+                className={`block truncate pl-7 pr-1.5 pt-1 text-black ${
                   cell?.bold ? "font-semibold" : ""
                 } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
-                style={{ color: cell?.color ?? undefined }}
+                style={{ color: cell?.color ?? "#000" }}
               >
                 {cell?.text ?? ""}
               </span>
