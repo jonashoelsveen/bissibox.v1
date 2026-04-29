@@ -104,8 +104,7 @@ export function UnifiedElasticGrid({
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const YEAR_COL = 220;
-  const FOCUS_COL = 880;
-  const PERIPH_COL = 96;
+  const FOCUS_COL = 640;
   const ROW_YEAR = 28;
   const ROW_MONTH = 36;
 
@@ -113,10 +112,10 @@ export function UnifiedElasticGrid({
     if (mode.kind === "year") {
       return `repeat(12, minmax(${YEAR_COL}px, 1fr))`;
     }
-    const m = mode.month;
-    return Array.from({ length: 12 }, (_, i) =>
-      i === m ? `${FOCUS_COL}px` : `${PERIPH_COL}px`,
-    ).join(" ");
+    // Month view: every column gets the same width as the focused one,
+    // so prev/next months read as full-fidelity siblings of the active one.
+    // The active month is centered via horizontal scroll (see effect below).
+    return `repeat(12, ${FOCUS_COL}px)`;
   }, [mode]);
 
   const rowHeight = mode.kind === "year" ? ROW_YEAR : ROW_MONTH;
