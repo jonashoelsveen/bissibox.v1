@@ -5,8 +5,9 @@ export const Route = createFileRoute("/calendar")({
   component: CalendarPage,
   validateSearch: (
     s: Record<string, unknown>,
-  ): { calendar?: string; view?: "previous" } => ({
-    calendar: typeof s.calendar === "string" ? (s.calendar as string) : undefined,
+  ): { folder?: string; open?: string; view?: "previous" } => ({
+    folder: typeof s.folder === "string" ? (s.folder as string) : undefined,
+    open: typeof s.open === "string" ? (s.open as string) : undefined,
     view: s.view === "previous" ? "previous" : undefined,
   }),
   head: () => ({ meta: [{ title: "Calendar · Raceline" }] }),
