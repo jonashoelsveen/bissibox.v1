@@ -241,6 +241,10 @@ export function WeekGridType1({
   const [creator, setCreator] = useState<{
     col: number;
     rect: DOMRect;
+    /** index of existing item to edit; undefined for new */
+    editIdx?: number;
+    initialText?: string;
+    initialColor?: string | null;
   } | null>(null);
 
   const openCreator = useCallback(
@@ -249,16 +253,48 @@ export function WeekGridType1({
     },
     [],
   );
+  const openEditor = useCallback(
+    (col: number, idx: number, raw: string, anchor: HTMLElement) => {
+      const { color, text } = splitColor(raw);
+      setCreator({
+        col,
+        rect: anchor.getBoundingClientRect(),
+        editIdx: idx,
+        initialText: text,
+        initialColor: color,
+      });
+    },
+    [],
+  );
   const closeCreator = useCallback(() => setCreator(null), []);
 
   const appendSession = useCallback(
-    (col: number, text: string) => {
+    (col: number, text: string, color: string | null) => {
       const t = text.trim();
       if (!t) return;
       const k = dayKeys[col];
       const existing = parseItems(data[makeCellId(calId, k)]?.text);
-      const next = serializeItems([...existing, { text: t }]);
+      const next = serializeItems([...existing, { text: joinColor(color, t) }]);
       onCommitText(k, next);
+    },
+    [dayKeys, data, calId, onCommitText],
+  );
+
+  const updateSession = useCallback(
+    (col: number, idx: number, text: string, color: string | null) => {
+      const k = dayKeys[col];
+      const existing = parseItems(data[makeCellId(calId, k)]?.text);
+      const t = text.trim();
+      let next: { text: string }[];
+      if (!t) {
+        // empty → delete
+        next = existing.filter((_, i) => i !== idx);
+      } else {
+        next = existing.map((it, i) =>
+          i === idx ? { text: joinColor(color, t) } : { text: it.text },
+        );
+      }
+      onCommitText(k, serializeItems(next));
     },
     [dayKeys, data, calId, onCommitText],
   );
