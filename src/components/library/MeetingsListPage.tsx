@@ -114,12 +114,41 @@ export function MeetingsListPage({
 
   useEffect(() => { void load(); }, [load]);
 
-  // Existing folder list (derived from meetings) for the new-meeting picker
+  // Load extra folders from localStorage when team becomes available.
+  useEffect(() => {
+    if (!teamId) { setExtraFolders([]); return; }
+    try {
+      const raw = window.localStorage.getItem(`meeting-extra-folders:${teamId}`);
+      setExtraFolders(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch { setExtraFolders([]); }
+  }, [teamId]);
+
+  const persistExtras = useCallback((next: string[]) => {
+    if (!teamId) return;
+    try {
+      window.localStorage.setItem(`meeting-extra-folders:${teamId}`, JSON.stringify(next));
+    } catch { /* ignore */ }
+    setExtraFolders(next);
+    window.dispatchEvent(new Event("library:refresh"));
+  }, [teamId]);
+
+  // Existing folder list (derived from meetings + extras) for the new-meeting picker
   const folders = useMemo(() => {
     const set = new Set<string>();
     meetings.forEach((m) => m.folder && set.add(m.folder));
+    extraFolders.forEach((f) => f && set.add(f));
     return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [meetings]);
+  }, [meetings, extraFolders]);
+
+  const addFolder = useCallback((name: string): boolean => {
+    const trimmed = name.trim();
+    if (!trimmed) { toast.error("Folder name is required"); return false; }
+    if (folders.includes(trimmed)) { toast.error("A folder with that name already exists"); return false; }
+    if (!extraFolders.includes(trimmed)) {
+      persistExtras([...extraFolders, trimmed]);
+    }
+    return true;
+  }, [folders, extraFolders, persistExtras]);
 
   const filtered = useMemo(() => {
     let list = meetings;
