@@ -96,6 +96,7 @@ export function UnifiedElasticGrid({
   selected,
   onSelect,
   onCommitText,
+  onCommitDuration,
   onFill,
 }: UnifiedElasticGridProps) {
   const [mode, setMode] = useState<Mode>({ kind: "year" });
