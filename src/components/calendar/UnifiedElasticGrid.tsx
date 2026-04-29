@@ -471,15 +471,46 @@ export function UnifiedElasticGrid({
       className="relative w-full overflow-hidden rounded-md border border-hairline bg-card"
       style={{ height: "calc(100vh - 280px)" }}
     >
-      {mode.kind === "month" && (
-        <button
-          type="button"
-          onClick={exitToYear}
-          className="absolute right-3 top-3 z-30 rounded-md border border-hairline bg-background/90 px-2 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur hover:bg-secondary hover:text-ink"
-        >
-          Esc · Tilbake til år
-        </button>
-      )}
+      {/* Top-right control cluster: [Mode ▾] [Type ▾] [← back]
+          Order matches the request: mode dropdown sits on the far left,
+          the type dropdown sits between mode and the back arrow, and the
+          back arrow remains the right-most affordance (only in month
+          view, since "back" only makes sense when zoomed in). */}
+      <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-2">
+        <HeaderDropdown<ViewMode>
+          ariaLabel="Visningsmodus"
+          value={currentViewMode}
+          onChange={handleViewModeChange}
+          width={124}
+          options={[
+            { value: "day", label: "Dag", disabled: true },
+            { value: "week", label: "Uke", disabled: true },
+            { value: "month", label: "Måned" },
+            { value: "year", label: "År" },
+          ]}
+        />
+        <HeaderDropdown<ViewType>
+          ariaLabel="Visningstype"
+          value={viewType}
+          onChange={setViewType}
+          width={148}
+          options={[
+            { value: "type1", label: "Type 1", hint: "Snart" },
+            { value: "type2", label: "Type 2", hint: "År · Måned" },
+          ]}
+        />
+        {mode.kind === "month" && (
+          <button
+            type="button"
+            onClick={exitToYear}
+            aria-label="Tilbake til år"
+            title="Esc · Tilbake til år"
+            className="pointer-events-auto grid h-8 w-8 place-items-center rounded-md border border-hairline bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-secondary hover:text-ink"
+          >
+            <ArrowLeft className="h-4 w-4" strokeWidth={2.25} />
+          </button>
+        )}
+      </div>
 
       <div
         ref={scrollRef}
