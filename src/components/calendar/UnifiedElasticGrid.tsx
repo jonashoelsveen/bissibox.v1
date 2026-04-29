@@ -35,6 +35,7 @@ import {
 import { ChevronDown, ArrowLeft } from "lucide-react";
 import type { CellData, CellKey, Session } from "./yearStore";
 import { makeCellId } from "./yearStore";
+import { MonthGridType1 } from "./MonthGridType1";
 
 type ViewMode = "day" | "week" | "month" | "year";
 type ViewType = "type1" | "type2";
@@ -216,6 +217,19 @@ export function UnifiedElasticGrid({
     else if (v === "month") {
       setMode((prev) =>
         prev.kind === "month" ? prev : { kind: "month", month: lastFocusedMonthRef.current ?? new Date().getMonth() },
+      );
+    }
+  };
+
+  // Switching to Type 1 requires a month context (it IS a month-only view).
+  // Switching back to Type 2 keeps whatever mode the user was in.
+  const handleViewTypeChange = (v: ViewType) => {
+    setViewType(v);
+    if (v === "type1") {
+      setMode((prev) =>
+        prev.kind === "month"
+          ? prev
+          : { kind: "month", month: lastFocusedMonthRef.current ?? new Date().getMonth() },
       );
     }
   };
@@ -492,10 +506,10 @@ export function UnifiedElasticGrid({
         <HeaderDropdown<ViewType>
           ariaLabel="Visningstype"
           value={viewType}
-          onChange={setViewType}
+          onChange={handleViewTypeChange}
           width={148}
           options={[
-            { value: "type1", label: "Type 1", hint: "Snart" },
+            { value: "type1", label: "Type 1", hint: "Måned" },
             { value: "type2", label: "Type 2", hint: "År · Måned" },
           ]}
         />
@@ -512,6 +526,27 @@ export function UnifiedElasticGrid({
         )}
       </div>
 
+      {viewType === "type1" ? (
+        <MonthGridType1
+          calId={calId}
+          year={year}
+          month={mode.kind === "month" ? mode.month : (lastFocusedMonthRef.current ?? new Date().getMonth())}
+          data={data}
+          onPrevMonth={() => {
+            const cur = mode.kind === "month" ? mode.month : (lastFocusedMonthRef.current ?? new Date().getMonth());
+            const next = cur === 0 ? 0 : cur - 1;
+            lastFocusedMonthRef.current = next;
+            setMode({ kind: "month", month: next });
+          }}
+          onNextMonth={() => {
+            const cur = mode.kind === "month" ? mode.month : (lastFocusedMonthRef.current ?? new Date().getMonth());
+            const next = cur === 11 ? 11 : cur + 1;
+            lastFocusedMonthRef.current = next;
+            setMode({ kind: "month", month: next });
+          }}
+          onCommitText={(k, text) => onCommitText(k, text)}
+        />
+      ) : (
       <div
         ref={scrollRef}
         className="relative h-full w-full overflow-auto"
@@ -604,6 +639,7 @@ export function UnifiedElasticGrid({
           ))}
         </div>
       </div>
+      )}
     </div>
   );
 }
