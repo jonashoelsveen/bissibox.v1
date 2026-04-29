@@ -366,7 +366,7 @@ function DayCell(props: DayCellProps) {
                 className={`block truncate pl-7 pr-1.5 pt-1 text-black ${
                   cell?.bold ? "font-semibold" : ""
                 } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
-                style={{ color: cell?.color ?? "#000" }}
+                style={{ color: "#000" }}
               >
                 {cell?.text ?? ""}
               </span>
