@@ -699,6 +699,36 @@ export type Database = {
           },
         ]
       }
+      meeting_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          pinned: boolean
+          sort_order: number
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          pinned?: boolean
+          sort_order?: number
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          pinned?: boolean
+          sort_order?: number
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meeting_invites: {
         Row: {
           email: string
