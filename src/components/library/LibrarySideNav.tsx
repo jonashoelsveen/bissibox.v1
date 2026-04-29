@@ -50,7 +50,7 @@ export interface LibrarySideNavValue {
 }
 
 type SectionKey = "meetings" | "notes" | "files" | "media";
-type TableName = "note_folders" | "file_folders" | "media_albums";
+type TableName = "meeting_folders" | "note_folders" | "file_folders" | "media_albums";
 
 export function LibrarySideNav({
   value,
@@ -142,36 +142,13 @@ export function LibrarySideNav({
     setMediaAlbums((ma ?? []) as FolderLite[]);
 
     if (isTeamMode && teamId) {
-      const { data: mtgs } = await supabase
-        .from("team_board_meetings")
-        .select("folder")
-        .eq("team_id", teamId);
-      const seen = new Set<string>();
-      const list: FolderLite[] = [];
-      for (const row of (mtgs ?? []) as { folder: string | null }[]) {
-        if (row.folder && !seen.has(row.folder)) {
-          seen.add(row.folder);
-          list.push({ id: row.folder, name: row.folder, pinned: false });
-        }
-      }
-      // Merge in extra folders the user created from the meetings page that
-      // do not yet have a meeting inside them.
-      try {
-        const raw = typeof window !== "undefined"
-          ? window.localStorage.getItem(`meeting-extra-folders:${teamId}`)
-          : null;
-        const extras = raw ? (JSON.parse(raw) as string[]) : [];
-        for (const name of extras) {
-          if (name && !seen.has(name)) {
-            seen.add(name);
-            list.push({ id: name, name, pinned: false });
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-      list.sort((a, b) => a.name.localeCompare(b.name));
-      setMeetingFolders(list);
+      const { data: mf } = await supabase
+        .from("meeting_folders")
+        .select("id,name,pinned")
+        .eq("team_id", teamId)
+        .order("pinned", { ascending: false })
+        .order("sort_order", { ascending: true });
+      setMeetingFolders((mf ?? []) as FolderLite[]);
     } else {
       setMeetingFolders([]);
     }
@@ -184,6 +161,7 @@ export function LibrarySideNav({
       .on("postgres_changes", { event: "*", schema: "public", table: "note_folders" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "file_folders" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "media_albums" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "meeting_folders" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "team_board_meetings" }, () => load())
       .subscribe();
     const onLocal = () => void load();
@@ -198,6 +176,7 @@ export function LibrarySideNav({
     if (section === "notes") return "note_folders";
     if (section === "files") return "file_folders";
     if (section === "media") return "media_albums";
+    if (section === "meetings") return "meeting_folders";
     return null;
   };
 
@@ -205,6 +184,7 @@ export function LibrarySideNav({
     if (section === "notes") setNoteFolders(next);
     else if (section === "files") setFileFolders(next);
     else if (section === "media") setMediaAlbums(next);
+    else if (section === "meetings") setMeetingFolders(next);
   };
 
   const persistOrder = async (section: SectionKey, next: FolderLite[]) => {
@@ -247,12 +227,17 @@ export function LibrarySideNav({
       .from(table)
       .update({ name: newName })
       .eq("id", folder.id);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Renamed");
-      void load();
-      window.dispatchEvent(new Event("library:refresh"));
+    if (error) { toast.error(error.message); return; }
+    if (section === "meetings") {
+      // Cascade rename to meetings referencing this folder by name
+      await supabase
+        .from("team_board_meetings")
+        .update({ folder: newName })
+        .eq("folder", folder.name);
     }
+    toast.success("Renamed");
+    void load();
+    window.dispatchEvent(new Event("library:refresh"));
   };
 
   const doDelete = async () => {
@@ -261,6 +246,13 @@ export function LibrarySideNav({
     setConfirmDelete(null);
     const table = tableFor(section);
     if (!table) return;
+    if (section === "meetings") {
+      // Detach meetings referencing this folder before deleting it
+      await supabase
+        .from("team_board_meetings")
+        .update({ folder: null })
+        .eq("folder", folder.name);
+    }
     const { error } = await supabase.from(table).delete().eq("id", folder.id);
     if (error) toast.error(error.message);
     else {
@@ -288,7 +280,6 @@ export function LibrarySideNav({
       folderLabel: "Folders",
       folderKey: (f) => f.name,
       teamOnly: true,
-      derived: true,
     },
     {
       key: "notes",
