@@ -526,6 +526,27 @@ export function UnifiedElasticGrid({
         )}
       </div>
 
+      {viewType === "type1" ? (
+        <MonthGridType1
+          calId={calId}
+          year={year}
+          month={mode.kind === "month" ? mode.month : (lastFocusedMonthRef.current ?? new Date().getMonth())}
+          data={data}
+          onPrevMonth={() => {
+            const cur = mode.kind === "month" ? mode.month : (lastFocusedMonthRef.current ?? new Date().getMonth());
+            const next = cur === 0 ? 0 : cur - 1;
+            lastFocusedMonthRef.current = next;
+            setMode({ kind: "month", month: next });
+          }}
+          onNextMonth={() => {
+            const cur = mode.kind === "month" ? mode.month : (lastFocusedMonthRef.current ?? new Date().getMonth());
+            const next = cur === 11 ? 11 : cur + 1;
+            lastFocusedMonthRef.current = next;
+            setMode({ kind: "month", month: next });
+          }}
+          onCommitText={(k, text) => onCommitText(k, text)}
+        />
+      ) : (
       <div
         ref={scrollRef}
         className="relative h-full w-full overflow-auto"
