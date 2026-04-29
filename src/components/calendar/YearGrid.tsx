@@ -291,6 +291,7 @@ export function YearGrid({
                       onBeginEdit={beginEdit}
                       onCommitEdit={commitEdit}
                       onMouseEnter={onCellMouseEnter}
+                      onMoveAfterCommit={moveSelection}
                       isSameKey={isSameKey}
                       selected={selected}
                       inDragRange={inDragRange}
