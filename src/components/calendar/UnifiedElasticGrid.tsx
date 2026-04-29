@@ -459,6 +459,7 @@ function DayRow(props: DayRowProps) {
     onSelect,
     onBeginEdit,
     onCommitEdit,
+    onCommitDuration,
     onMoveAfterCommit,
     inDragRange,
     onCellMouseEnter,
