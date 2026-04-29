@@ -148,6 +148,20 @@ export function UnifiedElasticGrid({
     setMode({ kind: "year" });
   }, []);
 
+  // Wrap selection so that picking a cell in a peripheral month while in
+  // Month View instantly shifts the focused month to that cell's month.
+  // This makes focus follow user intent with zero lag — clicking a cell in
+  // the next/prev month is a navigation gesture, not just a selection.
+  const handleSelect = useCallback(
+    (k: CellKey | null) => {
+      onSelect(k);
+      if (k && mode.kind === "month" && k.month !== mode.month) {
+        setMode({ kind: "month", month: k.month });
+      }
+    },
+    [onSelect, mode],
+  );
+
   const moveSelection = useCallback(
     (dx: number, dy: number) => {
       if (!selected) return;
