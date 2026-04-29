@@ -200,10 +200,25 @@ export function UnifiedElasticGrid({
   onFill,
 }: UnifiedElasticGridProps) {
   const [mode, setMode] = useState<Mode>({ kind: "year" });
+  const [viewType, setViewType] = useState<ViewType>("type2");
   const [editingKey, setEditingKey] = useState<CellKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // The mode dropdown reflects the current grid kind. Selecting "month"
+  // while in year view enters the first month; "year" exits to year view.
+  // "Dag" / "Uke" are reserved for future view modes — surfaced as
+  // disabled rows so the IA is discoverable without breaking flow.
+  const currentViewMode: ViewMode = mode.kind === "month" ? "month" : "year";
+  const handleViewModeChange = (v: ViewMode) => {
+    if (v === "year") setMode({ kind: "year" });
+    else if (v === "month") {
+      setMode((prev) =>
+        prev.kind === "month" ? prev : { kind: "month", month: lastFocusedMonthRef.current ?? new Date().getMonth() },
+      );
+    }
+  };
 
   const YEAR_COL = 220;
   const FOCUS_COL = 640;
