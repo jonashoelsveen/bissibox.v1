@@ -194,7 +194,8 @@ export function YearGrid({
             {months.map((m) => (
               <th
                 key={m.idx}
-                className="border-b border-r border-hairline px-2 py-1.5 text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+                className="border-b border-r border-hairline px-2 py-2 text-center text-[12px] font-medium uppercase tracking-wide text-muted-foreground"
+                style={{ width: 140, minWidth: 140 }}
               >
                 {m.label}
               </th>
@@ -211,7 +212,7 @@ export function YearGrid({
                     <td
                       key={m.idx}
                       className="border-b border-r border-hairline bg-muted/40"
-                      style={{ height: 44 }}
+                      style={{ height: 56, width: 140, minWidth: 140 }}
                     />
                   );
                 }
@@ -220,7 +221,7 @@ export function YearGrid({
                   <td
                     key={m.idx}
                     className="border-b border-r border-hairline align-top"
-                    style={{ padding: 0, height: 44 }}
+                    style={{ padding: 0, height: 56, width: 140, minWidth: 140 }}
                   >
                     <DayCell
                       calId={calId}
