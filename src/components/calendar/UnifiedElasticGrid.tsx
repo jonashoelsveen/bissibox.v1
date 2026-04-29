@@ -646,9 +646,9 @@ function DayCellPair(props: DayCellPairProps) {
               <div
                 className="grid h-full w-full items-center"
                 style={{
-                  gridTemplateColumns: "84px 64px minmax(0,1fr) 96px",
+                  gridTemplateColumns: "72px 52px 84px minmax(0,1fr)",
                   transition: `opacity ${DUR_MS}ms ${EASE}`,
-                  opacity: focused ? 1 : 0,
+                  opacity: 1,
                 }}
               >
                 <div className="px-3 text-[12px] font-medium text-ink">
@@ -657,7 +657,11 @@ function DayCellPair(props: DayCellPairProps) {
                 <div className="px-2 text-[12px] text-muted-foreground">
                   {isFirst ? weekdayLabel : ""}
                 </div>
-                <div className="min-w-0 px-3 text-[13px] text-ink">
+                <DurationCell
+                  initial={cell?.duration ?? ""}
+                  onCommit={(v) => onCommitDuration?.(k, v)}
+                />
+                <div className="min-w-0 border-l border-hairline px-3 text-[13px] text-ink">
                   {isEditing ? (
                     <input
                       autoFocus
@@ -688,9 +692,6 @@ function DayCellPair(props: DayCellPairProps) {
                       {cell?.text ?? ""}
                     </span>
                   )}
-                </div>
-                <div className="px-3 text-right text-[12px] text-muted-foreground">
-                  {cell?.text ? "1t 30min" : ""}
                 </div>
               </div>
             )}
