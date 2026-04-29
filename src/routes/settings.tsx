@@ -14,6 +14,7 @@ import {
   meetingsAutosaveKey,
   useLibrarySetting,
 } from "@/lib/library-settings";
+import { MapSettingsPanel } from "@/components/settings/MapSettingsPanel";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -82,6 +83,7 @@ type Tab =
   | "profiles"
   | "appearance"
   | "library"
+  | "map"
   | "entity-profile"
   | "desk"
   | "signout"
@@ -263,8 +265,9 @@ function SettingsPage() {
         "entity-library",
         "entity-events",
         "entity-appearance",
+        "map",
       ]
-    : ["profiles", "general", "address", "roles", "library", "appearance", "desk", "races", "liked"];
+    : ["profiles", "general", "address", "roles", "library", "map", "appearance", "desk", "races", "liked"];
 
   
 
@@ -299,7 +302,9 @@ function SettingsPage() {
                                   ? "Events"
                                   : t === "library"
                                     ? "Library"
-                                    : "Sign out";
+                                    : t === "map"
+                                      ? "Map"
+                                      : "Sign out";
 
   return (
     <div className="px-4 md:px-6">
@@ -611,6 +616,8 @@ function SettingsPage() {
             {(tab === "appearance" || tab === "entity-appearance") && (
               <AppearancePanel />
             )}
+
+            {tab === "map" && <MapSettingsPanel />}
           </div>
         </div>
       </div>

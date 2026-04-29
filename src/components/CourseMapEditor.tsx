@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil, Droplet, Flag, Trash2, Save, Eraser, Hand, Timer, Undo2, Redo2, Search, Loader2, X, Wand2, Sparkles, Pencil as PencilEdit } from "lucide-react";
+import type { Map as MapboxMap, Marker, LngLatBoundsLike } from "mapbox-gl";
+import { Pencil, Droplet, Flag, Trash2, Save, Hand, Timer, Undo2, Redo2, Search, Loader2, X, Wand2, Sparkles, Pencil as PencilEdit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useMapbox, useMapStyle, MAP_STYLES } from "@/lib/mapbox";
+import { MapStylePicker } from "./MapStylePicker";
 
-export type LatLng = [number, number];
+export type LatLng = [number, number]; // [lat, lng] — Leaflet-compatible public API
 export type SplitKind = "split" | "fuel" | "start" | "finish" | "marker";
 export interface SplitPoint {
   id: string;
@@ -24,15 +27,22 @@ interface Props {
   selectedSplitId?: string | null;
   onSelectSplit?: (id: string | null) => void;
   hoverPosition?: LatLng | null;
-  /** When the path is empty, smoothly pan the map to this coordinate (does not display anything). */
   panToTarget?: LatLng | null;
+  /** Stable id so the per-instance map style survives navigation. */
+  scopeId?: string;
 }
 
 type Tool = "pan" | "draw" | "split" | "fuel" | "marker" | "start" | "finish";
 
-// Periwinkle purple for the drawing line
 const LINE_COLOR = "#6366F1";
 const LINE_CASING_COLOR = "#FFFFFF";
+
+const PATH_SOURCE = "course-path";
+const PATH_LAYER = "course-path-line";
+const CASING_LAYER = "course-path-casing";
+const AI_SOURCE = "course-ai-path";
+const AI_LAYER = "course-ai-path-line";
+const AI_CASING_LAYER = "course-ai-path-casing";
 
 const KIND_META: Record<SplitKind, { color: string; label: string }> = {
   start: { color: "#16a34a", label: "Start" },
@@ -42,9 +52,84 @@ const KIND_META: Record<SplitKind, { color: string; label: string }> = {
   marker: { color: "#7c3aed", label: "Marker" },
 };
 
-// Pen cursor — angled fountain pen, hotspot at the nib tip (bottom-left)
 const PEN_CURSOR =
   "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><defs><filter id='s' x='-20%25' y='-20%25' width='140%25' height='140%25'><feDropShadow dx='0.5' dy='1' stdDeviation='0.6' flood-opacity='0.45'/></filter></defs><g filter='url(%23s)'><path d='M22 4 L28 10 L13 25 L7 25 L7 19 Z' fill='%238B8FE8' stroke='white' stroke-width='1.2' stroke-linejoin='round'/><path d='M7 25 L4 28 L7 25 Z' fill='white' stroke='%231f2937' stroke-width='1' stroke-linejoin='round'/><circle cx='4' cy='28' r='1.2' fill='%231f2937'/><line x1='17' y1='9' x2='23' y2='15' stroke='white' stroke-width='1.2'/></g></svg>\") 4 28, crosshair";
+
+/* ─────────── helpers ─────────── */
+
+function lineFC(path: LatLng[]): GeoJSON.FeatureCollection {
+  if (path.length < 2) return { type: "FeatureCollection", features: [] };
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: { type: "LineString", coordinates: path.map((p) => [p[1], p[0]]) },
+      },
+    ],
+  };
+}
+
+function vertexEl(): HTMLDivElement {
+  const el = document.createElement("div");
+  el.style.background = "#fff";
+  el.style.border = `2px solid ${LINE_COLOR}`;
+  el.style.borderRadius = "9999px";
+  el.style.width = "12px";
+  el.style.height = "12px";
+  el.style.boxShadow = "0 1px 3px rgba(0,0,0,0.3)";
+  el.style.cursor = "grab";
+  return el;
+}
+
+function midEl(): HTMLDivElement {
+  const el = document.createElement("div");
+  el.style.background = LINE_COLOR;
+  el.style.opacity = "0.55";
+  el.style.border = "2px solid #fff";
+  el.style.borderRadius = "9999px";
+  el.style.width = "9px";
+  el.style.height = "9px";
+  el.style.cursor = "grab";
+  return el;
+}
+
+function splitEl(s: SplitPoint, isSel: boolean): HTMLDivElement {
+  const el = document.createElement("div");
+  const meta = KIND_META[s.kind];
+  if (s.kind === "start" || s.kind === "finish") {
+    el.style.width = "28px";
+    el.style.height = "34px";
+    el.style.filter = isSel
+      ? "drop-shadow(0 0 4px rgba(139,143,232,0.9))"
+      : "drop-shadow(0 1px 2px rgba(0,0,0,0.4))";
+    el.innerHTML = `<svg width="28" height="34" viewBox="0 0 28 34" xmlns="http://www.w3.org/2000/svg">
+      <line x1="6" y1="2" x2="6" y2="33" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
+      <path d="M7 3 L24 6 L20 11 L24 16 L7 13 Z" fill="${meta.color}" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>
+      <circle cx="6" cy="33" r="2" fill="#1f2937"/>
+    </svg>`;
+  } else {
+    const inner = s.label.match(/\d+/)?.[0] ?? "•";
+    el.style.background = meta.color;
+    el.style.color = "#fff";
+    el.style.border = "2px solid #fff";
+    el.style.borderRadius = "9999px";
+    el.style.width = "24px";
+    el.style.height = "24px";
+    el.style.display = "flex";
+    el.style.alignItems = "center";
+    el.style.justifyContent = "center";
+    el.style.fontSize = "11px";
+    el.style.fontWeight = "700";
+    el.style.boxShadow = isSel
+      ? "0 0 0 4px rgba(139,143,232,0.55), 0 1px 4px rgba(0,0,0,0.3)"
+      : "0 1px 4px rgba(0,0,0,0.3)";
+    el.innerText = inner;
+  }
+  el.title = `${meta.label} · ${s.label}`;
+  return el;
+}
 
 export function CourseMapEditor({
   path,
@@ -58,16 +143,19 @@ export function CourseMapEditor({
   onSelectSplit,
   hoverPosition,
   panToTarget,
+  scopeId,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<any>(null);
-  const polylineRef = useRef<any>(null);
-  const polylineCasingRef = useRef<any>(null);
-  const splitMarkersRef = useRef<Record<string, any>>({});
-  const vertexMarkersRef = useRef<any[]>([]);
-  const midMarkersRef = useRef<any[]>([]);
-  const hoverMarkerRef = useRef<any>(null);
-  const [L, setL] = useState<any>(null);
+  const mapRef = useRef<MapboxMap | null>(null);
+  const splitMarkersRef = useRef<Record<string, Marker>>({});
+  const vertexMarkersRef = useRef<Marker[]>([]);
+  const midMarkersRef = useRef<Marker[]>([]);
+  const hoverMarkerRef = useRef<Marker | null>(null);
+  const styleLoadedRef = useRef(false);
+
+  const mapbox = useMapbox();
+  const [style, setStyle] = useMapStyle(scopeId ? `course-edit:${scopeId}` : null);
+
   const [tool, setTool] = useState<Tool>("pan");
   const toolRef = useRef<Tool>("pan");
   const pathRef = useRef<LatLng[]>(path);
@@ -97,117 +185,53 @@ export function CourseMapEditor({
   const [wizardLoading, setWizardLoading] = useState(false);
   const [hasUsedWizard, setHasUsedWizard] = useState(false);
   const [aiDrawing, setAiDrawing] = useState(false);
-  const aiAnimLayersRef = useRef<any[]>([]);
 
-  const clearAiAnim = () => {
-    const map = mapRef.current;
-    if (!map) return;
-    aiAnimLayersRef.current.forEach((l) => map.removeLayer(l));
-    aiAnimLayersRef.current = [];
+  /* ─────────── refs sync ─────────── */
+  useEffect(() => { toolRef.current = tool; }, [tool]);
+  useEffect(() => { pathRef.current = path; }, [path]);
+  useEffect(() => { splitsRef.current = splits; }, [splits]);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  useEffect(() => { onSelectRef.current = onSelectSplit; }, [onSelectSplit]);
+
+  /* ─────────── history ─────────── */
+  const pushHistory = (snap: Snap) => {
+    const cur = historyRef.current[historyIdxRef.current];
+    if (cur && JSON.stringify(cur) === JSON.stringify(snap)) return;
+    const trimmed = historyRef.current.slice(0, historyIdxRef.current + 1);
+    trimmed.push(snap);
+    if (trimmed.length > 100) trimmed.shift();
+    historyRef.current = trimmed;
+    historyIdxRef.current = trimmed.length - 1;
+    forceTick((n) => n + 1);
   };
-
-  const animateDraw = (full: LatLng[], finalSplits: SplitPoint[]) => {
-    const map = mapRef.current;
-    if (!map || full.length < 2) {
-      trackedChange({ path: full, splits: finalSplits });
-      setAiDrawing(false);
+  const trackedChange = (next: Snap) => {
+    onChangeRef.current(next);
+    if (skipNextHistoryRef.current) {
+      skipNextHistoryRef.current = false;
       return;
     }
-    clearAiAnim();
-    // Fit map to the route first
-    try {
-      map.flyToBounds(full as any, { duration: 0.9, padding: [40, 40], maxZoom: 16 });
-    } catch {
-      // ignore
-    }
-    // Hide existing path during animation
-    trackedChange({ path: [], splits: [] });
-
-    setTimeout(() => {
-      const casing = (L as any).polyline([full[0]], {
-        color: LINE_CASING_COLOR, weight: 9, opacity: 0.95, lineCap: "round", lineJoin: "round", interactive: false,
-      }).addTo(map);
-      const line = (L as any).polyline([full[0]], {
-        color: LINE_COLOR, weight: 5, opacity: 1, lineCap: "round", lineJoin: "round", interactive: false,
-      }).addTo(map);
-      // Glowing leading dot
-      const head = (L as any).circleMarker(full[0], {
-        radius: 7, color: "#fff", weight: 2, fillColor: LINE_COLOR, fillOpacity: 1,
-      }).addTo(map);
-      aiAnimLayersRef.current.push(casing, line, head);
-
-      const totalMs = Math.min(2400, Math.max(900, full.length * 28));
-      const start = performance.now();
-      const step = (now: number) => {
-        const t = Math.min(1, (now - start) / totalMs);
-        const ease = 1 - Math.pow(1 - t, 3);
-        const cutIdx = Math.max(1, Math.floor(ease * (full.length - 1)));
-        const slice = full.slice(0, cutIdx + 1);
-        casing.setLatLngs(slice);
-        line.setLatLngs(slice);
-        head.setLatLng(full[cutIdx]);
-        if (t < 1) {
-          requestAnimationFrame(step);
-        } else {
-          clearAiAnim();
-          trackedChange({ path: full, splits: finalSplits });
-          setAiDrawing(false);
-          toast.success("Course drawn — feel free to refine it.");
-        }
-      };
-      requestAnimationFrame(step);
-    }, 950);
+    pushHistory(next);
   };
-
-  const runWizard = async () => {
-    const text = wizardPrompt.trim();
-    if (!text) {
-      toast.error("Describe the course you want the wizard to draw.");
-      return;
-    }
-    setWizardLoading(true);
-    try {
-      const map = mapRef.current;
-      const c = map?.getCenter?.();
-      const contextCenter = c ? { lat: c.lat, lng: c.lng } : undefined;
-      // Pass any user-placed waypoints so the wizard routes THROUGH them in order.
-      const anchors = splitsRef.current.map((s) => ({
-        kind: s.kind,
-        label: s.label,
-        position: s.position,
-      }));
-      const { data, error } = await supabase.functions.invoke("ai-draw-course", {
-        body: { prompt: text, contextCenter, anchors },
-      });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      const path: LatLng[] = ((data as any).path ?? []).map((p: number[]) => [p[0], p[1]]);
-      if (path.length < 2) throw new Error("The wizard could not build a route from that description.");
-      const startPos: LatLng | undefined = (data as any).startPosition;
-      const finishPos: LatLng | undefined = (data as any).finishPosition;
-      const aiSplits: { kind: "split" | "fuel"; label: string; position: LatLng }[] = (data as any).splits ?? [];
-      const newSplits: SplitPoint[] = [];
-      if (startPos) newSplits.push({ id: crypto.randomUUID(), kind: "start", label: "Start", position: startPos });
-      if (finishPos) newSplits.push({ id: crypto.randomUUID(), kind: "finish", label: "Finish", position: finishPos });
-      aiSplits.forEach((s, i) => newSplits.push({
-        id: crypto.randomUUID(),
-        kind: s.kind,
-        label: s.label || (s.kind === "split" ? `Split ${i + 1}` : `Fuel ${i + 1}`),
-        position: s.position,
-      }));
-      setWizardOpen(false);
-      setHasUsedWizard(true);
-      setAiDrawing(true);
-      animateDraw(path, newSplits);
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || "The wizard ran into a problem. Try a more specific description.");
-    } finally {
-      setWizardLoading(false);
-    }
+  const undo = () => {
+    if (historyIdxRef.current <= 0) return;
+    historyIdxRef.current -= 1;
+    const snap = historyRef.current[historyIdxRef.current];
+    skipNextHistoryRef.current = true;
+    onChangeRef.current(snap);
+    forceTick((n) => n + 1);
   };
+  const redo = () => {
+    if (historyIdxRef.current >= historyRef.current.length - 1) return;
+    historyIdxRef.current += 1;
+    const snap = historyRef.current[historyIdxRef.current];
+    skipNextHistoryRef.current = true;
+    onChangeRef.current(snap);
+    forceTick((n) => n + 1);
+  };
+  const canUndo = historyIdxRef.current > 0;
+  const canRedo = historyIdxRef.current < historyRef.current.length - 1;
 
-
+  /* ─────────── search ─────────── */
   useEffect(() => {
     const q = searchQuery.trim();
     if (q.length < 3) {
@@ -240,103 +264,84 @@ export function CourseMapEditor({
     if (!map) return;
     if (r.boundingbox && r.boundingbox.length === 4) {
       const [s, n, w, e] = r.boundingbox;
-      map.flyToBounds(
+      map.fitBounds(
         [
-          [parseFloat(s), parseFloat(w)],
-          [parseFloat(n), parseFloat(e)],
+          [parseFloat(w), parseFloat(s)],
+          [parseFloat(e), parseFloat(n)],
         ],
-        { duration: 0.8, maxZoom: 16 },
+        { duration: 800, maxZoom: 16 },
       );
     } else {
-      map.flyTo([parseFloat(r.lat), parseFloat(r.lon)], 14, { duration: 0.8 });
+      map.flyTo({ center: [parseFloat(r.lon), parseFloat(r.lat)], zoom: 14, duration: 800 });
     }
     setSearchQuery(r.display_name.split(",")[0] ?? "");
     setSearchOpen(false);
   };
 
-  const pushHistory = (snap: Snap) => {
-    const cur = historyRef.current[historyIdxRef.current];
-    if (cur && JSON.stringify(cur) === JSON.stringify(snap)) return;
-    const trimmed = historyRef.current.slice(0, historyIdxRef.current + 1);
-    trimmed.push(snap);
-    if (trimmed.length > 100) trimmed.shift();
-    historyRef.current = trimmed;
-    historyIdxRef.current = trimmed.length - 1;
-    forceTick((n) => n + 1);
-  };
+  /* ─────────── style/source plumbing ─────────── */
 
-  // Wrap onChange so external updates are tracked
-  const trackedChange = (next: Snap) => {
-    onChangeRef.current(next);
-    if (skipNextHistoryRef.current) {
-      skipNextHistoryRef.current = false;
-      return;
+  const ensureCourseLayers = (map: MapboxMap) => {
+    if (!map.getSource(PATH_SOURCE)) {
+      map.addSource(PATH_SOURCE, { type: "geojson", data: lineFC(pathRef.current) });
+      map.addLayer({
+        id: CASING_LAYER,
+        type: "line",
+        source: PATH_SOURCE,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": LINE_CASING_COLOR, "line-width": 9, "line-opacity": 0.95 },
+      });
+      map.addLayer({
+        id: PATH_LAYER,
+        type: "line",
+        source: PATH_SOURCE,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": LINE_COLOR, "line-width": 5 },
+      });
+      // Click-on-line in draw mode → insert vertex at click point
+      map.on("click", PATH_LAYER, (e) => {
+        if (toolRef.current !== "draw") return;
+        e.originalEvent.stopPropagation();
+        const ll: LatLng = [e.lngLat.lat, e.lngLat.lng];
+        const insertIdx = findInsertIndex(pathRef.current, ll);
+        const next = [...pathRef.current];
+        next.splice(insertIdx, 0, ll);
+        trackedChange({ path: next, splits: splitsRef.current });
+      });
+    } else {
+      (map.getSource(PATH_SOURCE) as any).setData(lineFC(pathRef.current));
     }
-    pushHistory(next);
   };
 
-  const undo = () => {
-    if (historyIdxRef.current <= 0) return;
-    historyIdxRef.current -= 1;
-    const snap = historyRef.current[historyIdxRef.current];
-    skipNextHistoryRef.current = true;
-    onChangeRef.current(snap);
-    forceTick((n) => n + 1);
-  };
-  const redo = () => {
-    if (historyIdxRef.current >= historyRef.current.length - 1) return;
-    historyIdxRef.current += 1;
-    const snap = historyRef.current[historyIdxRef.current];
-    skipNextHistoryRef.current = true;
-    onChangeRef.current(snap);
-    forceTick((n) => n + 1);
-  };
-  const canUndo = historyIdxRef.current > 0;
-  const canRedo = historyIdxRef.current < historyRef.current.length - 1;
-
-  useEffect(() => { toolRef.current = tool; }, [tool]);
-  useEffect(() => { pathRef.current = path; }, [path]);
-  useEffect(() => { splitsRef.current = splits; }, [splits]);
-  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
-  useEffect(() => { onSelectRef.current = onSelectSplit; }, [onSelectSplit]);
-
-  // Load Leaflet
+  /* ─────────── init ─────────── */
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const leaflet = await import("leaflet");
-      if (typeof document !== "undefined" && !document.getElementById("leaflet-css")) {
-        const link = document.createElement("link");
-        link.id = "leaflet-css";
-        link.rel = "stylesheet";
-        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        document.head.appendChild(link);
-      }
-      if (!cancelled) setL(leaflet);
-    })();
-    return () => { cancelled = true; };
-  }, []);
+    if (!mapbox || !containerRef.current || mapRef.current) return;
+    const center: [number, number] = path[0] ? [path[0][1], path[0][0]] : [10.7522, 59.9139];
+    const map = new mapbox.default.Map({
+      container: containerRef.current,
+      style: MAP_STYLES[style].url,
+      center,
+      zoom: path.length ? 14 : 12,
+      attributionControl: false,
+    });
+    map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
+    map.addControl(new mapbox.default.AttributionControl({ compact: true }));
 
-  // Init map
-  useEffect(() => {
-    if (!L || !containerRef.current || mapRef.current) return;
-    const center: LatLng = path[0] ?? [59.9139, 10.7522];
-    const map = L.map(containerRef.current, { zoomControl: false }).setView(center, path.length ? 14 : 12);
-    L.control.zoom({ position: "bottomright" }).addTo(map);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap",
-      maxZoom: 19,
-    }).addTo(map);
-    mapRef.current = map;
+    map.on("style.load", () => {
+      styleLoadedRef.current = true;
+      ensureCourseLayers(map);
+    });
 
-    map.on("click", (e: any) => {
+    map.on("click", (e) => {
+      // Skip if a layer click handler already swallowed it
       const t = toolRef.current;
-      const ll: LatLng = [e.latlng.lat, e.latlng.lng];
+      const ll: LatLng = [e.lngLat.lat, e.lngLat.lng];
       if (t === "draw") {
+        // Avoid double-inserting when the click was on the line layer
+        const features = map.queryRenderedFeatures(e.point, { layers: [PATH_LAYER] });
+        if (features.length > 0) return;
         trackedChange({ path: [...pathRef.current, ll], splits: splitsRef.current });
       } else if (t === "split" || t === "fuel" || t === "marker" || t === "start" || t === "finish") {
         const kind: SplitKind = t as SplitKind;
-        // Start/Finish are unique — replace existing
         if (kind === "start" || kind === "finish") {
           const filtered = splitsRef.current.filter((s) => s.kind !== kind);
           const sp: SplitPoint = {
@@ -363,196 +368,139 @@ export function CourseMapEditor({
       }
     });
 
+    mapRef.current = map;
+
     return () => {
       map.remove();
       mapRef.current = null;
-      polylineRef.current = null;
       splitMarkersRef.current = {};
       vertexMarkersRef.current = [];
       midMarkersRef.current = [];
+      hoverMarkerRef.current = null;
+      styleLoadedRef.current = false;
     };
-  }, [L]);
+  }, [mapbox]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Smoothly pan to an external target (e.g. event Location pin) ONLY on first mount,
-  // and only if the subevent has no course path or markers yet. After the user adds any
-  // component (line, start, finish, marker), the viewport stays where they left it.
+  /* ─────────── style switching ─────────── */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    styleLoadedRef.current = false;
+    map.setStyle(MAP_STYLES[style].url);
+    // Markers (vertex/mid/split/hover) survive setStyle automatically.
+    // Course line is re-added in the style.load handler above.
+  }, [style]);
+
+  /* ─────────── pan-to-target on first mount ─────────── */
   const didPanToTargetRef = useRef(false);
   useEffect(() => {
-    if (!L || !mapRef.current || !panToTarget) return;
+    if (!mapbox || !mapRef.current || !panToTarget) return;
     if (didPanToTargetRef.current) return;
     if (path.length > 0 || splits.length > 0) {
-      didPanToTargetRef.current = true; // Skip future pans for this instance.
+      didPanToTargetRef.current = true;
       return;
     }
     try {
-      mapRef.current.flyTo(panToTarget as any, 14, { duration: 0.9 });
+      mapRef.current.flyTo({ center: [panToTarget[1], panToTarget[0]], zoom: 14, duration: 900 });
       didPanToTargetRef.current = true;
     } catch {
-      // ignore
+      /* ignore */
     }
-  }, [L, panToTarget, path.length, splits.length]);
+  }, [mapbox, panToTarget, path.length, splits.length]);
 
-  // Cursor
+  /* ─────────── cursor ─────────── */
   useEffect(() => {
     if (!containerRef.current) return;
     if (tool === "draw") containerRef.current.style.cursor = PEN_CURSOR;
     else if (tool !== "pan") containerRef.current.style.cursor = "crosshair";
     else containerRef.current.style.cursor = "";
-  }, [tool, L]);
+  }, [tool, mapbox]);
 
-  // Render polyline + vertex/midpoint handles (Google My Maps style)
+  /* ─────────── path data + handles ─────────── */
   useEffect(() => {
-    if (!L || !mapRef.current) return;
     const map = mapRef.current;
+    if (!map || !mapbox) return;
+    if (styleLoadedRef.current) {
+      const src = map.getSource(PATH_SOURCE) as any;
+      if (src) src.setData(lineFC(path));
+    }
 
-    // Clear previous
-    if (polylineCasingRef.current) {
-      map.removeLayer(polylineCasingRef.current);
-      polylineCasingRef.current = null;
-    }
-    if (polylineRef.current) {
-      map.removeLayer(polylineRef.current);
-      polylineRef.current = null;
-    }
-    vertexMarkersRef.current.forEach((m) => map.removeLayer(m));
-    midMarkersRef.current.forEach((m) => map.removeLayer(m));
+    // Clear vertex/mid markers
+    vertexMarkersRef.current.forEach((m) => m.remove());
+    midMarkersRef.current.forEach((m) => m.remove());
     vertexMarkersRef.current = [];
     midMarkersRef.current = [];
 
-    if (path.length >= 2) {
-      // White casing underneath for legibility on any basemap
-      const casing = L.polyline(path, {
-        color: LINE_CASING_COLOR,
-        weight: 9,
-        opacity: 0.95,
-        lineCap: "round",
-        lineJoin: "round",
-        interactive: false,
-      }).addTo(map);
-      polylineCasingRef.current = casing;
-
-      const pl = L.polyline(path, {
-        color: LINE_COLOR,
-        weight: 5,
-        opacity: 1,
-        lineCap: "round",
-        lineJoin: "round",
-        interactive: tool === "draw",
-      }).addTo(map);
-      polylineRef.current = pl;
-
-      // Click on the line itself in draw mode → insert vertex at click location (closest segment)
-      if (tool === "draw") {
-        pl.on("click", (e: any) => {
-          (L as any).DomEvent.stopPropagation(e);
-          const ll: LatLng = [e.latlng.lat, e.latlng.lng];
-          const insertIdx = findInsertIndex(path, ll);
-          const next = [...path];
-          next.splice(insertIdx, 0, ll);
-          trackedChange({ path: next, splits: splitsRef.current });
-        });
-      }
-    } else if (path.length === 1) {
-      polylineRef.current = L.circleMarker(path[0], { radius: 5, color: LINE_COLOR }).addTo(map);
-    }
-
-    // Show drag handles only in draw mode
     if (tool === "draw" && path.length > 0) {
-      const vertexHtml = `<div style="background:#fff;border:2px solid ${LINE_COLOR};border-radius:9999px;width:12px;height:12px;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>`;
-      const vertexIcon = L.divIcon({ html: vertexHtml, className: "", iconSize: [12, 12], iconAnchor: [6, 6] });
-
       path.forEach((pt, idx) => {
-        const m = L.marker(pt, { icon: vertexIcon, draggable: true, zIndexOffset: 1000 }).addTo(map);
-        m.on("drag", (ev: any) => {
-          const ll = ev.target.getLatLng();
-          // live update polyline only (avoid React re-render flood)
-          if (polylineRef.current && polylineRef.current.setLatLngs) {
-            const live = [...pathRef.current];
-            live[idx] = [ll.lat, ll.lng];
-            polylineRef.current.setLatLngs(live);
-          }
+        const el = vertexEl();
+        const m = new mapbox.default.Marker({ element: el, draggable: true, anchor: "center" })
+          .setLngLat([pt[1], pt[0]])
+          .addTo(map);
+        m.on("drag", () => {
+          const ll = m.getLngLat();
+          // Live-update line only (avoid React thrash)
+          const live = [...pathRef.current];
+          live[idx] = [ll.lat, ll.lng];
+          const src = map.getSource(PATH_SOURCE) as any;
+          if (src) src.setData(lineFC(live));
         });
-        m.on("dragend", (ev: any) => {
-          const ll = ev.target.getLatLng();
+        m.on("dragend", () => {
+          const ll = m.getLngLat();
           const next = [...pathRef.current];
           next[idx] = [ll.lat, ll.lng];
           trackedChange({ path: next, splits: splitsRef.current });
         });
-        m.on("click", (ev: any) => {
-          (L as any).DomEvent.stopPropagation(ev);
-          // Click vertex in draw mode → delete it
+        // Click-to-delete vertex
+        el.addEventListener("click", (ev) => {
+          ev.stopPropagation();
           const next = pathRef.current.filter((_, i) => i !== idx);
           trackedChange({ path: next, splits: splitsRef.current });
         });
-        m.bindTooltip("Drag to move · click to delete", { direction: "top" });
+        el.title = "Drag to move · click to delete";
         vertexMarkersRef.current.push(m);
       });
 
-      // Midpoint ghost handles to insert vertices between existing points
       if (path.length >= 2) {
-        const midHtml = `<div style="background:${LINE_COLOR};opacity:0.55;border:2px solid #fff;border-radius:9999px;width:9px;height:9px;"></div>`;
-        const midIcon = L.divIcon({ html: midHtml, className: "", iconSize: [9, 9], iconAnchor: [4.5, 4.5] });
         for (let i = 0; i < path.length - 1; i++) {
           const a = path[i];
           const b = path[i + 1];
           const mid: LatLng = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-          const mm = L.marker(mid, { icon: midIcon, draggable: true, zIndexOffset: 900, opacity: 0.85 }).addTo(map);
-          mm.bindTooltip("Drag to insert point", { direction: "top" });
+          const el = midEl();
+          const mm = new mapbox.default.Marker({ element: el, draggable: true, anchor: "center" })
+            .setLngLat([mid[1], mid[0]])
+            .addTo(map);
+          el.title = "Drag to insert point";
           mm.on("dragstart", () => {
-            // Insert immediately on dragstart so subsequent drag updates the new vertex
-            const ll = mm.getLatLng();
+            const ll = mm.getLngLat();
             const next = [...pathRef.current];
             next.splice(i + 1, 0, [ll.lat, ll.lng]);
-            // Update synchronously and rebuild handles after React re-render
             trackedChange({ path: next, splits: splitsRef.current });
           });
           midMarkersRef.current.push(mm);
         }
       }
     }
-  }, [L, path, tool]);
+  }, [mapbox, path, tool]);
 
-  // Render split markers
+  /* ─────────── split markers ─────────── */
   useEffect(() => {
-    if (!L || !mapRef.current) return;
-    Object.values(splitMarkersRef.current).forEach((m) => mapRef.current.removeLayer(m));
+    const map = mapRef.current;
+    if (!map || !mapbox) return;
+    Object.values(splitMarkersRef.current).forEach((m) => m.remove());
     splitMarkersRef.current = {};
     splits.forEach((s) => {
-      const meta = KIND_META[s.kind];
-      const isSelected = s.id === selectedSplitId;
-      let html: string;
-      let size: [number, number];
-      let anchor: [number, number];
-
-      if (s.kind === "start" || s.kind === "finish") {
-        // Flag-pin: pole + waving flag
-        const ringFilter = isSelected
-          ? "filter:drop-shadow(0 0 4px rgba(139,143,232,0.9));"
-          : "filter:drop-shadow(0 1px 2px rgba(0,0,0,0.4));";
-        html = `<div style="position:relative;width:28px;height:34px;${ringFilter}">
-          <svg width="28" height="34" viewBox="0 0 28 34" xmlns="http://www.w3.org/2000/svg">
-            <line x1="6" y1="2" x2="6" y2="33" stroke="#1f2937" stroke-width="2" stroke-linecap="round"/>
-            <path d="M7 3 L24 6 L20 11 L24 16 L7 13 Z" fill="${meta.color}" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>
-            <circle cx="6" cy="33" r="2" fill="#1f2937"/>
-          </svg>
-        </div>`;
-        size = [28, 34];
-        anchor = [6, 33];
-      } else {
-        const ring = isSelected
-          ? "box-shadow:0 0 0 4px rgba(139,143,232,0.55), 0 1px 4px rgba(0,0,0,0.3);"
-          : "box-shadow:0 1px 4px rgba(0,0,0,0.3);";
-        const inner = s.label.match(/\d+/)?.[0] ?? "•";
-        html = `<div style="background:${meta.color};color:#fff;border:2px solid #fff;border-radius:9999px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;${ring}">${inner}</div>`;
-        size = [24, 24];
-        anchor = [12, 12];
-      }
-
-      const icon = L.divIcon({ html, className: "", iconSize: size, iconAnchor: anchor });
-      const marker = L.marker(s.position, { icon }).addTo(mapRef.current);
-      marker.bindTooltip(`${meta.label} · ${s.label}`, { direction: "top" });
-      marker.on("click", (ev: any) => {
-        ev.originalEvent?.stopPropagation?.();
+      const isSel = s.id === selectedSplitId;
+      const el = splitEl(s, isSel);
+      const isFlag = s.kind === "start" || s.kind === "finish";
+      const m = new mapbox.default.Marker({
+        element: el,
+        anchor: isFlag ? "bottom-left" : "center",
+      })
+        .setLngLat([s.position[1], s.position[0]])
+        .addTo(map);
+      el.addEventListener("click", (ev) => {
+        ev.stopPropagation();
         if (toolRef.current === "pan") {
           onSelectRef.current?.(s.id);
         } else {
@@ -562,26 +510,157 @@ export function CourseMapEditor({
           });
         }
       });
-      splitMarkersRef.current[s.id] = marker;
+      splitMarkersRef.current[s.id] = m;
     });
-  }, [L, splits, selectedSplitId]);
+  }, [mapbox, splits, selectedSplitId]);
 
-  // Hover marker — driven by elevation curve hover
+  /* ─────────── hover marker ─────────── */
   useEffect(() => {
-    if (!L || !mapRef.current) return;
     const map = mapRef.current;
+    if (!map || !mapbox) return;
     if (hoverMarkerRef.current) {
-      map.removeLayer(hoverMarkerRef.current);
+      hoverMarkerRef.current.remove();
       hoverMarkerRef.current = null;
     }
     if (hoverPosition) {
-      const html = `<div style="width:14px;height:14px;border-radius:9999px;background:#6366F1;border:2px solid #fff;box-shadow:0 0 0 3px rgba(99,102,241,0.35), 0 1px 4px rgba(0,0,0,0.3);"></div>`;
-      const icon = L.divIcon({ html, className: "", iconSize: [14, 14], iconAnchor: [7, 7] });
-      hoverMarkerRef.current = L.marker(hoverPosition, { icon, interactive: false, zIndexOffset: 2000 }).addTo(map);
+      const el = document.createElement("div");
+      el.style.width = "14px";
+      el.style.height = "14px";
+      el.style.borderRadius = "9999px";
+      el.style.background = "#6366F1";
+      el.style.border = "2px solid #fff";
+      el.style.boxShadow = "0 0 0 3px rgba(99,102,241,0.35), 0 1px 4px rgba(0,0,0,0.3)";
+      el.style.pointerEvents = "none";
+      hoverMarkerRef.current = new mapbox.default.Marker({ element: el, anchor: "center" })
+        .setLngLat([hoverPosition[1], hoverPosition[0]])
+        .addTo(map);
     }
-  }, [L, hoverPosition]);
+  }, [mapbox, hoverPosition]);
 
-  const clearAll = () => trackedChange({ path: [], splits: [] });
+  /* ─────────── AI wizard ─────────── */
+  const animateDraw = (full: LatLng[], finalSplits: SplitPoint[]) => {
+    const map = mapRef.current;
+    if (!map || !mapbox || full.length < 2) {
+      trackedChange({ path: full, splits: finalSplits });
+      setAiDrawing(false);
+      return;
+    }
+    try {
+      const bounds = new (mapbox as any).default.LngLatBounds();
+      full.forEach((p) => bounds.extend([p[1], p[0]]));
+      map.fitBounds(bounds as LngLatBoundsLike, { padding: 40, maxZoom: 16, duration: 900 });
+    } catch {
+      /* ignore */
+    }
+    // Hide existing path during animation
+    trackedChange({ path: [], splits: [] });
+
+    setTimeout(() => {
+      // Add an ephemeral source/layer for the animation
+      if (!map.getSource(AI_SOURCE)) {
+        map.addSource(AI_SOURCE, {
+          type: "geojson",
+          data: lineFC([full[0], full[0]]),
+        });
+        map.addLayer({
+          id: AI_CASING_LAYER,
+          type: "line",
+          source: AI_SOURCE,
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": LINE_CASING_COLOR, "line-width": 9, "line-opacity": 0.95 },
+        });
+        map.addLayer({
+          id: AI_LAYER,
+          type: "line",
+          source: AI_SOURCE,
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: { "line-color": LINE_COLOR, "line-width": 5 },
+        });
+      }
+      const headEl = document.createElement("div");
+      headEl.style.width = "14px";
+      headEl.style.height = "14px";
+      headEl.style.borderRadius = "9999px";
+      headEl.style.background = LINE_COLOR;
+      headEl.style.border = "2px solid #fff";
+      headEl.style.pointerEvents = "none";
+      const headMarker = new mapbox.default.Marker({ element: headEl, anchor: "center" })
+        .setLngLat([full[0][1], full[0][0]])
+        .addTo(map);
+
+      const totalMs = Math.min(2400, Math.max(900, full.length * 28));
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / totalMs);
+        const ease = 1 - Math.pow(1 - t, 3);
+        const cutIdx = Math.max(1, Math.floor(ease * (full.length - 1)));
+        const slice = full.slice(0, cutIdx + 1);
+        const src = map.getSource(AI_SOURCE) as any;
+        if (src) src.setData(lineFC(slice));
+        headMarker.setLngLat([full[cutIdx][1], full[cutIdx][0]]);
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else {
+          // Cleanup ephemeral animation layers/source
+          if (map.getLayer(AI_LAYER)) map.removeLayer(AI_LAYER);
+          if (map.getLayer(AI_CASING_LAYER)) map.removeLayer(AI_CASING_LAYER);
+          if (map.getSource(AI_SOURCE)) map.removeSource(AI_SOURCE);
+          headMarker.remove();
+          trackedChange({ path: full, splits: finalSplits });
+          setAiDrawing(false);
+          toast.success("Course drawn — feel free to refine it.");
+        }
+      };
+      requestAnimationFrame(step);
+    }, 950);
+  };
+
+  const runWizard = async () => {
+    const text = wizardPrompt.trim();
+    if (!text) {
+      toast.error("Describe the course you want the wizard to draw.");
+      return;
+    }
+    setWizardLoading(true);
+    try {
+      const map = mapRef.current;
+      const c = map?.getCenter?.();
+      const contextCenter = c ? { lat: c.lat, lng: c.lng } : undefined;
+      const anchors = splitsRef.current.map((s) => ({
+        kind: s.kind,
+        label: s.label,
+        position: s.position,
+      }));
+      const { data, error } = await supabase.functions.invoke("ai-draw-course", {
+        body: { prompt: text, contextCenter, anchors },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const aiPath: LatLng[] = ((data as any).path ?? []).map((p: number[]) => [p[0], p[1]]);
+      if (aiPath.length < 2) throw new Error("The wizard could not build a route from that description.");
+      const startPos: LatLng | undefined = (data as any).startPosition;
+      const finishPos: LatLng | undefined = (data as any).finishPosition;
+      const aiSplits: { kind: "split" | "fuel"; label: string; position: LatLng }[] = (data as any).splits ?? [];
+      const newSplits: SplitPoint[] = [];
+      if (startPos) newSplits.push({ id: crypto.randomUUID(), kind: "start", label: "Start", position: startPos });
+      if (finishPos) newSplits.push({ id: crypto.randomUUID(), kind: "finish", label: "Finish", position: finishPos });
+      aiSplits.forEach((s, i) => newSplits.push({
+        id: crypto.randomUUID(),
+        kind: s.kind,
+        label: s.label || (s.kind === "split" ? `Split ${i + 1}` : `Fuel ${i + 1}`),
+        position: s.position,
+      }));
+      setWizardOpen(false);
+      setHasUsedWizard(true);
+      setAiDrawing(true);
+      animateDraw(aiPath, newSplits);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "The wizard ran into a problem. Try a more specific description.");
+    } finally {
+      setWizardLoading(false);
+    }
+  };
 
   return (
     <div className="relative h-full w-full">
@@ -797,29 +876,29 @@ export function CourseMapEditor({
         )}
       </div>
 
-      {(onSave || onDelete) && (
-        <div className="pointer-events-none absolute right-4 top-4 z-[400] flex gap-2">
-          {onDelete && (path.length > 0 || splits.length > 0) && (
-            <button
-              onClick={onDelete}
-              className="pointer-events-auto inline-flex items-center gap-1.5 rounded-md border border-hairline bg-card/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur hover:text-destructive"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> Delete map
-            </button>
-          )}
-          {onSave && (
-            <button
-              onClick={onSave}
-              disabled={saving}
-              className="pointer-events-auto inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm hover:opacity-90 disabled:opacity-50"
-            >
-              <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save map"}
-            </button>
-          )}
-        </div>
-      )}
+      {/* Top-right: style picker + Save / Delete */}
+      <div className="pointer-events-none absolute right-4 top-4 z-[400] flex items-center gap-2">
+        <MapStylePicker value={style} onChange={setStyle} />
+        {onDelete && (path.length > 0 || splits.length > 0) && (
+          <button
+            onClick={onDelete}
+            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-md border border-hairline bg-card/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Delete map
+          </button>
+        )}
+        {onSave && (
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm hover:opacity-90 disabled:opacity-50"
+          >
+            <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save map"}
+          </button>
+        )}
+      </div>
 
-      {!L && (
+      {!mapbox && (
         <div className="absolute inset-0 z-[500] flex items-center justify-center bg-secondary text-sm text-muted-foreground">
           Loading map…
         </div>
@@ -880,5 +959,3 @@ function pointToSegmentDist(p: LatLng, a: LatLng, b: LatLng): number {
 export function emptySplit(): SplitPoint {
   return { id: crypto.randomUUID(), kind: "marker", label: "Marker", position: [0, 0] };
 }
-
-

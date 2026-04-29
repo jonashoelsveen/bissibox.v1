@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import type { Map as MapboxMap, Marker } from "mapbox-gl";
 import { MapPin, Save, Trash2, Search, Loader2, X, Hand, Undo2, Redo2, ChevronDown } from "lucide-react";
+import { useMapbox, useMapStyle, MAP_STYLES } from "@/lib/mapbox";
+import { MapStylePicker } from "./MapStylePicker";
 
 type Pin = { lat: number; lng: number } | null;
 
@@ -11,21 +14,17 @@ interface Props {
   onSave?: () => void;
   saving?: boolean;
   title?: string;
-  /** When true, shows the description textarea in the right sidebar. */
   showDescription?: boolean;
-  /** When true, shows the pin name input (e.g. "Meeting room 3D"). */
   showName?: boolean;
-  /** Label noun for the location: "Meeting" or "Event". */
   kindLabel?: string;
-  /** When true, hides the internal right sidebar (caller renders its own). */
   hideSidebar?: boolean;
+  /** Stable id so the per-instance map style survives navigation. */
+  scopeId?: string;
 }
 
 export const PIN_COLOR = "#dc2626";
 
 type Tool = "pan" | "pin";
-
-// Single-pin map for Meeting / Event types and Race location mode.
 
 export function SimplePinMap({
   pin,
@@ -36,14 +35,17 @@ export function SimplePinMap({
   saving,
   title,
   showDescription = true,
-  showName = false,
+  showName: _showName = false,
   kindLabel = "location",
   hideSidebar = false,
+  scopeId,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
-  const [L, setL] = useState<any>(null);
+  const mapRef = useRef<MapboxMap | null>(null);
+  const markerRef = useRef<Marker | null>(null);
+  const mapbox = useMapbox();
+  const [style, setStyle] = useMapStyle(scopeId ? `simple-pin:${scopeId}` : null);
+
   const [tool, setTool] = useState<Tool>("pan");
   const toolRef = useRef<Tool>("pan");
 
@@ -103,7 +105,7 @@ export function SimplePinMap({
   const canUndo = historyIdxRef.current > 0;
   const canRedo = historyIdxRef.current < historyRef.current.length - 1;
 
-  // Location search
+  // Location search (still uses Nominatim — provider-independent)
   type GeoResult = { display_name: string; lat: string; lon: string; boundingbox?: [string, string, string, string]; place_id: number };
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<GeoResult[]>([]);
@@ -143,94 +145,81 @@ export function SimplePinMap({
     if (!map) return;
     if (r.boundingbox && r.boundingbox.length === 4) {
       const [s, n, w, e] = r.boundingbox;
-      map.flyToBounds(
+      map.fitBounds(
         [
-          [parseFloat(s), parseFloat(w)],
-          [parseFloat(n), parseFloat(e)],
+          [parseFloat(w), parseFloat(s)],
+          [parseFloat(e), parseFloat(n)],
         ],
-        { duration: 0.8, maxZoom: 16 },
+        { duration: 800, maxZoom: 16 },
       );
     } else {
-      map.flyTo([parseFloat(r.lat), parseFloat(r.lon)], 14, { duration: 0.8 });
+      map.flyTo({ center: [parseFloat(r.lon), parseFloat(r.lat)], zoom: 14, duration: 800 });
     }
     setSearchQuery(r.display_name.split(",")[0] ?? "");
     setSearchOpen(false);
   };
 
-  // Load Leaflet
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const leaflet = await import("leaflet");
-      if (typeof document !== "undefined" && !document.getElementById("leaflet-css")) {
-        const link = document.createElement("link");
-        link.id = "leaflet-css";
-        link.rel = "stylesheet";
-        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        document.head.appendChild(link);
-      }
-      if (!cancelled) setL(leaflet);
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
   // Init map
   useEffect(() => {
-    if (!L || !containerRef.current || mapRef.current) return;
+    if (!mapbox || !containerRef.current || mapRef.current) return;
     const initial = pinRef.current ?? { lat: 59.9139, lng: 10.7522 };
-    const map = L.map(containerRef.current, { zoomControl: false }).setView(
-      [initial.lat, initial.lng],
-      pinRef.current ? 14 : 6,
-    );
-    L.control.zoom({ position: "bottomright" }).addTo(map);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap",
-      maxZoom: 19,
-    }).addTo(map);
-
-    map.on("click", (e: any) => {
+    const map = new mapbox.default.Map({
+      container: containerRef.current,
+      style: MAP_STYLES[style].url,
+      center: [initial.lng, initial.lat],
+      zoom: pinRef.current ? 14 : 6,
+      attributionControl: false,
+    });
+    map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
+    map.addControl(new mapbox.default.AttributionControl({ compact: true }));
+    map.on("click", (e) => {
       if (toolRef.current !== "pin") return;
-      const ll = { lat: e.latlng.lat, lng: e.latlng.lng };
+      const ll = { lat: e.lngLat.lat, lng: e.lngLat.lng };
       trackedChange({ pin: ll, description: descRef.current, name: nameRef.current });
     });
-
     mapRef.current = map;
-
     return () => {
       map.remove();
       mapRef.current = null;
       markerRef.current = null;
     };
-  }, [L]);
+  }, [mapbox]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Style switching — Markers persist across setStyle, no re-add needed.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.setStyle(MAP_STYLES[style].url);
+  }, [style]);
 
   // Cursor
   useEffect(() => {
     if (!containerRef.current) return;
     containerRef.current.style.cursor = tool === "pin" ? "crosshair" : "";
-  }, [tool, L]);
+  }, [tool]);
 
-  // Sync marker
+  // Sync marker (draggable)
   useEffect(() => {
-    if (!L || !mapRef.current) return;
+    if (!mapbox || !mapRef.current) return;
     if (markerRef.current) {
-      mapRef.current.removeLayer(markerRef.current);
+      markerRef.current.remove();
       markerRef.current = null;
     }
     if (pin) {
-      const icon = L.divIcon({
-        className: "",
-        html: `<div style="width:28px;height:32px;"><svg viewBox='0 0 24 32' width='28' height='32' xmlns='http://www.w3.org/2000/svg'><path d='M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0z' fill='${PIN_COLOR}' stroke='white' stroke-width='1.5'/><circle cx='12' cy='12' r='4' fill='white'/></svg></div>`,
-        iconSize: [28, 32],
-        iconAnchor: [14, 32],
-      });
-      const m = L.marker([pin.lat, pin.lng], { icon, draggable: true }).addTo(mapRef.current);
+      const el = document.createElement("div");
+      el.style.width = "28px";
+      el.style.height = "32px";
+      el.innerHTML = `<svg viewBox='0 0 24 32' width='28' height='32' xmlns='http://www.w3.org/2000/svg'><path d='M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0z' fill='${PIN_COLOR}' stroke='white' stroke-width='1.5'/><circle cx='12' cy='12' r='4' fill='white'/></svg>`;
+      const m = new mapbox.default.Marker({ element: el, draggable: true, anchor: "bottom" })
+        .setLngLat([pin.lng, pin.lat])
+        .addTo(mapRef.current);
       m.on("dragend", () => {
-        const ll = m.getLatLng();
+        const ll = m.getLngLat();
         trackedChange({ pin: { lat: ll.lat, lng: ll.lng }, description: descRef.current, name: nameRef.current });
       });
       markerRef.current = m;
     }
-  }, [L, pin]);
+  }, [mapbox, pin]);
 
   const clearPin = () => trackedChange({ pin: null, description: descRef.current, name: nameRef.current });
 
@@ -243,7 +232,7 @@ export function SimplePinMap({
       <div className="relative min-h-[480px] flex-1">
         <div ref={containerRef} className="absolute inset-0 z-0 bg-secondary" />
 
-        {/* Top-left: toolbar + search (mirrors CourseMapEditor) */}
+        {/* Top-left: toolbar + search */}
         <div className="pointer-events-none absolute left-4 top-4 z-[400] flex flex-col gap-2">
           <div className="pointer-events-auto inline-flex items-center gap-0.5 self-start rounded-xl border border-hairline bg-card/95 p-1 shadow-md backdrop-blur">
             <ToolBtn active={tool === "pan"} onClick={() => setTool("pan")} title="Pan & select">
@@ -325,7 +314,29 @@ export function SimplePinMap({
           </div>
         </div>
 
-        {/* Bottom-left: status (mirrors CourseMapEditor) */}
+        {/* Top-right: style picker + actions */}
+        <div className="pointer-events-none absolute right-4 top-4 z-[400] flex items-center gap-2">
+          <MapStylePicker value={style} onChange={setStyle} />
+          {pin && (
+            <button
+              onClick={clearPin}
+              className="pointer-events-auto inline-flex items-center gap-1.5 rounded-md border border-hairline bg-card/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur hover:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete pin
+            </button>
+          )}
+          {onSave && (
+            <button
+              onClick={onSave}
+              disabled={saving}
+              className="pointer-events-auto inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm hover:opacity-90 disabled:opacity-50"
+            >
+              <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save map"}
+            </button>
+          )}
+        </div>
+
+        {/* Bottom-left: status */}
         <div className="pointer-events-none absolute bottom-4 left-4 z-[400] rounded-md border border-hairline bg-card/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
           <span className="text-ink">{sidebarTitle} · </span>
           <span className="num">{pin ? 1 : 0}</span> pin
@@ -334,37 +345,14 @@ export function SimplePinMap({
           )}
         </div>
 
-        {/* Top-right: Save / Delete (mirrors CourseMapEditor) */}
-        {(onSave || pin) && (
-          <div className="pointer-events-none absolute right-4 top-4 z-[400] flex gap-2">
-            {pin && (
-              <button
-                onClick={clearPin}
-                className="pointer-events-auto inline-flex items-center gap-1.5 rounded-md border border-hairline bg-card/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur hover:text-destructive"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Delete pin
-              </button>
-            )}
-            {onSave && (
-              <button
-                onClick={onSave}
-                disabled={saving}
-                className="pointer-events-auto inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm hover:opacity-90 disabled:opacity-50"
-              >
-                <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save map"}
-              </button>
-            )}
-          </div>
-        )}
-
-        {!L && (
+        {!mapbox && (
           <div className="absolute inset-0 z-[500] flex items-center justify-center bg-secondary text-sm text-muted-foreground">
             Loading map…
           </div>
         )}
       </div>
 
-      {/* Right sidebar — mirrors CourseMapEditor sidebar */}
+      {/* Right sidebar */}
       {!hideSidebar && (
         <aside className="w-96 shrink-0 overflow-y-auto border-l border-hairline bg-background px-3 py-3">
           <div className="border-b border-hairline px-1 pb-3">
