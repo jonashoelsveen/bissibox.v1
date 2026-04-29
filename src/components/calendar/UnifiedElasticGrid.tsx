@@ -581,6 +581,7 @@ function DayCellPair(props: DayCellPairProps) {
     onSelect,
     onBeginEdit,
     onCommitEdit,
+    onCommitDuration,
     onMoveAfterCommit,
     inDragRange,
     onCellMouseEnter,
