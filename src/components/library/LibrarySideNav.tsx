@@ -280,7 +280,6 @@ export function LibrarySideNav({
       folderLabel: "Folders",
       folderKey: (f) => f.name,
       teamOnly: true,
-      derived: true,
     },
     {
       key: "notes",
