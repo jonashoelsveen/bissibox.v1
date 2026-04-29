@@ -158,7 +158,7 @@ export function YearGrid({
   return (
     <div
       className="relative w-full overflow-auto rounded-md border border-hairline bg-card"
-      style={{ maxHeight: "calc(100vh - 220px)" }}
+      style={{ maxHeight: "calc(100vh - 280px)" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onSelect(null);
       }}
@@ -187,7 +187,7 @@ export function YearGrid({
     >
       <table
         className="border-separate text-xs"
-        style={{ borderSpacing: 0, tableLayout: "fixed", minWidth: 12 * 220 }}
+        style={{ borderSpacing: 0, tableLayout: "fixed", minWidth: 12 * 280 }}
       >
         <thead className="sticky top-0 z-10 bg-card">
           <tr>
@@ -195,7 +195,7 @@ export function YearGrid({
               <th
                 key={m.idx}
                 className="border-b border-r border-hairline px-2 py-2 text-center text-[12px] font-medium uppercase tracking-wide text-muted-foreground"
-                style={{ width: 220, minWidth: 220 }}
+                style={{ width: 280, minWidth: 280 }}
               >
                 {m.label}
               </th>
@@ -212,7 +212,7 @@ export function YearGrid({
                     <td
                       key={m.idx}
                       className="border-b border-r border-hairline bg-muted/40"
-                      style={{ height: 56, width: 220, minWidth: 220 }}
+                      style={{ height: 56, width: 280, minWidth: 280 }}
                     />
                   );
                 }
@@ -221,7 +221,7 @@ export function YearGrid({
                   <td
                     key={m.idx}
                     className="border-b border-r border-hairline align-top"
-                    style={{ padding: 0, height: 56, width: 220, minWidth: 220 }}
+                    style={{ padding: 0, height: 56, width: 280, minWidth: 280 }}
                   >
                     <DayCell
                       calId={calId}
