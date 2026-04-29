@@ -10,7 +10,7 @@
  * Supabase-backed version will expose later.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type Session = 0 | 1; // 0 = upper / "AM", 1 = lower / "PM"
 
