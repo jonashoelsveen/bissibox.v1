@@ -501,8 +501,8 @@ export function UnifiedElasticGrid({
           onChange={handleViewModeChange}
           width={124}
           options={[
-            { value: "day", label: "Dag", disabled: true },
-            { value: "week", label: "Uke", disabled: true },
+            { value: "day", label: "Dag" },
+            { value: "week", label: "Uke" },
             { value: "month", label: "Måned" },
             { value: "year", label: "År" },
           ]}
@@ -513,8 +513,8 @@ export function UnifiedElasticGrid({
           onChange={handleViewTypeChange}
           width={148}
           options={[
-            { value: "type1", label: "Type 1", hint: "Måned" },
-            { value: "type2", label: "Type 2", hint: "År · Måned" },
+            { value: "type1", label: "Type 1", hint: "Notion" },
+            { value: "type2", label: "Type 2", hint: "Excel" },
           ]}
         />
         {mode.kind === "month" && (
