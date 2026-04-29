@@ -1,63 +1,52 @@
 /**
- * Calendar — UI shell only.
+ * Calendar — UI shell that mirrors the Library page (/media) exactly.
  *
- * Mirrors the structure of the Library page (/media):
- *   - Top main tab "Calendar" with right-aligned actions: Search, New folder, New calendar
- *   - Left side nav: Previous (top), then folders + calendars. In team mode, the
- *     team's "global" calendar is pinned at the top of the calendar list.
- *   - Top-right view picker (Day / Week / Month / Year) — last-used view persists
- *     per-calendar in localStorage.
- *   - Settings icon opens a wide settings dialog with collapsible sections
- *     (Year timeframe, Access, Autosave, Sync) — placeholders for now.
+ * Structure (identical to /media):
+ *   - Sticky horizontal top tab bar:
+ *       * Left: "Calendar" main tab (220px wide, same style as Library tab)
+ *       * Middle: open calendar tabs (drag/close — same component pattern as note tabs)
+ *       * Right: actionsMount portal where the inner page renders
+ *         Search / New folder / New calendar pills.
+ *   - Below: grid [220px _ 1fr]
+ *       * Left: CalendarSideNav — Previous + collapsible "Calendars" section
+ *         with folders (DnD + pin/rename/delete menu).
+ *       * Right: page body (Previous list rows or open calendar view).
  *
- * NO backend wiring yet for calendars, folders, sync or grid. Folders and
- * calendars are persisted locally so the shell behaves naturally while we
- * wait for backend / UI-style instructions.
+ * Backend wiring, the calendar grid itself, and Outlook/Gmail/iCloud sync are
+ * intentionally NOT implemented here — they arrive with the next round of
+ * instructions. Folders + calendars are persisted to localStorage as a
+ * placeholder so the shell behaves naturally.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   CalendarDays,
-  ChevronDown,
-  ChevronRight,
-  History,
-  MoreHorizontal,
-  Pencil,
-  Pin,
-  PinOff,
   Plus,
-  Search,
-  Settings as SettingsIcon,
-  Trash2,
+  Search as SearchIcon,
   X,
-  FolderClosed,
-  Copy,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CalendarSideNav, type CalendarSideNavValue } from "./CalendarSideNav";
 
 /* ------------------------------------------------------------------ */
 /* Local persistence (placeholder until backend is wired)              */
 /* ------------------------------------------------------------------ */
 
-type Cal = {
+export type Cal = {
   id: string;
   name: string;
   pinned: boolean;
   folder: string | null;
-  isTeamGlobal?: boolean; // synthesized from team
+  isTeamGlobal?: boolean;
 };
-type Folder = { id: string; name: string; pinned: boolean };
+export type CalFolder = { id: string; name: string; pinned: boolean; sort_order: number };
 
-const calsKey = (scope: string) => `calendar:cals:${scope}`;
-const foldersKey = (scope: string) => `calendar:folders:${scope}`;
-const viewKey = (calId: string) => `calendar:view:${calId}`;
-const settingsKey = (calId: string) => `calendar:settings:${calId}`;
-
-type ViewMode = "day" | "week" | "month" | "year";
+export const calsKey = (scope: string) => `calendar:cals:${scope}`;
+export const foldersKey = (scope: string) => `calendar:folders:${scope}`;
 
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -71,11 +60,20 @@ function readJSON<T>(key: string, fallback: T): T {
 function writeJSON<T>(key: string, value: T) {
   if (typeof window === "undefined") return;
   localStorage.setItem(key, JSON.stringify(value));
+  window.dispatchEvent(new CustomEvent("calendar:refresh"));
 }
 
 /* ------------------------------------------------------------------ */
 /* Page                                                                */
 /* ------------------------------------------------------------------ */
+
+interface OpenCalTab {
+  id: string;
+  name: string;
+  folder: string | null;
+}
+
+const MAX_CAL_TABS = 10;
 
 export function CalendarPage() {
   const navigate = useNavigate();
@@ -83,15 +81,13 @@ export function CalendarPage() {
   const { user, mode, activeEntityId } = useAuth();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
 
-  // scope for localStorage – per user / per team
+  /* ----- team scope (for the auto team-global calendar) ----- */
   const [teamId, setTeamId] = useState<string | null>(null);
-  const [teamName, setTeamName] = useState<string>("");
-
+  const [teamName, setTeamName] = useState("");
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!user) return;
-      if (!isTeamMode) {
+      if (!user || !isTeamMode) {
         setTeamId(null);
         setTeamName("");
         return;
@@ -113,25 +109,23 @@ export function CalendarPage() {
     return isTeamMode ? `team:${teamId ?? "none"}` : `user:${user.id}`;
   }, [user, isTeamMode, teamId]);
 
-  /* ----- folders + calendars (local) ----- */
-  const [folders, setFolders] = useState<Folder[]>([]);
+  /* ----- persisted folders + calendars ----- */
+  const [folders, setFolders] = useState<CalFolder[]>([]);
   const [cals, setCals] = useState<Cal[]>([]);
 
-  useEffect(() => {
-    setFolders(readJSON<Folder[]>(foldersKey(scope), []));
+  const reload = useCallback(() => {
+    setFolders(readJSON<CalFolder[]>(foldersKey(scope), []));
     setCals(readJSON<Cal[]>(calsKey(scope), []));
   }, [scope]);
 
-  const persistFolders = (next: Folder[]) => {
-    setFolders(next);
-    writeJSON(foldersKey(scope), next);
-  };
-  const persistCals = (next: Cal[]) => {
-    setCals(next);
-    writeJSON(calsKey(scope), next);
-  };
+  useEffect(() => {
+    reload();
+    const fn = () => reload();
+    window.addEventListener("calendar:refresh", fn);
+    return () => window.removeEventListener("calendar:refresh", fn);
+  }, [reload]);
 
-  // Synthesize team-global calendar (always top, not deletable)
+  // Synthesized team-global calendar (always present in team mode)
   const teamGlobal: Cal | null =
     isTeamMode && teamId
       ? {
@@ -142,188 +136,377 @@ export function CalendarPage() {
           isTeamGlobal: true,
         }
       : null;
-
   const allCals: Cal[] = teamGlobal ? [teamGlobal, ...cals] : cals;
 
-  /* ----- selection ----- */
-  const [selected, setSelected] = useState<{ kind: "previous" } | { kind: "cal"; id: string }>(
-    () => {
-      if (search.view === "previous") return { kind: "previous" };
-      if (search.calendar) return { kind: "cal", id: search.calendar };
-      return { kind: "previous" };
-    },
-  );
+  /* ----- open tabs (replica of /media) ----- */
+  const [openTabs, setOpenTabs] = useState<OpenCalTab[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Keep URL in sync (shareable)
+  // Persist open tabs per profile scope
+  const profileScopeKey = `${mode}:${activeEntityId ?? "self"}`;
+  const storageKey = `calendar:openTabs:${profileScopeKey}`;
+  const hydratedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (selected.kind === "previous") {
-      navigate({
-        to: "/calendar",
-        search: { view: "previous" },
-        replace: true,
+    if (hydratedRef.current === profileScopeKey) return;
+    hydratedRef.current = profileScopeKey;
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      const activeRaw = window.localStorage.getItem(`${storageKey}:active`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as OpenCalTab[];
+        if (Array.isArray(parsed)) {
+          setOpenTabs(parsed);
+          setActiveId(activeRaw && parsed.some((t) => t.id === activeRaw) ? activeRaw : null);
+          return;
+        }
+      }
+      setOpenTabs([]);
+      setActiveId(null);
+    } catch {
+      setOpenTabs([]);
+      setActiveId(null);
+    }
+  }, [profileScopeKey, storageKey]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (hydratedRef.current !== profileScopeKey) return;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(openTabs));
+      if (activeId) window.localStorage.setItem(`${storageKey}:active`, activeId);
+      else window.localStorage.removeItem(`${storageKey}:active`);
+    } catch {
+      /* ignore */
+    }
+  }, [openTabs, activeId, storageKey, profileScopeKey]);
+
+  const openCalendar = useCallback(
+    (c: Cal) => {
+      setOpenTabs((prev) => {
+        if (prev.some((t) => t.id === c.id)) return prev;
+        if (prev.length >= MAX_CAL_TABS) {
+          toast.error(`You can have at most ${MAX_CAL_TABS} calendar tabs open at once.`);
+          return prev;
+        }
+        return [...prev, { id: c.id, name: c.name, folder: c.folder }];
       });
-    } else {
-      navigate({
-        to: "/calendar",
-        search: { calendar: selected.id },
-        replace: true,
-      });
+      setActiveId(c.id);
+    },
+    [],
+  );
+  const closeTab = (id: string) => {
+    setOpenTabs((prev) => prev.filter((t) => t.id !== id));
+    if (activeId === id) setActiveId(null);
+  };
+
+  // Auto-open via ?open=<id>
+  useEffect(() => {
+    if (search.open) {
+      const c = allCals.find((x) => x.id === search.open);
+      if (c) openCalendar(c);
+      navigate({ to: "/calendar", search: {}, replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected]);
+  }, [search.open, allCals.length]);
 
-  /* ----- open tabs (like notes/meetings horizontal tab bar) ----- */
-  const [openTabs, setOpenTabs] = useState<{ id: string; name: string }[]>([]);
-  const openCalendar = (c: Cal) => {
-    setOpenTabs((tabs) =>
-      tabs.find((t) => t.id === c.id) ? tabs : [...tabs, { id: c.id, name: c.name }],
-    );
-    setSelected({ kind: "cal", id: c.id });
+  /* ----- side nav state mirrors /media ----- */
+  const showingPrevious = search.view === "previous" || (!search.folder && !activeId);
+  const sideValue: CalendarSideNavValue = {
+    category: showingPrevious ? "previous" : "calendars",
+    folder: showingPrevious ? "" : (search.folder ?? ""),
   };
-  const closeTab = (id: string) => {
-    setOpenTabs((tabs) => tabs.filter((t) => t.id !== id));
-    if (selected.kind === "cal" && selected.id === id) {
-      setSelected({ kind: "previous" });
+  const onSideChange = (v: CalendarSideNavValue) => {
+    setActiveId(null);
+    if (v.category === "previous") {
+      navigate({ to: "/calendar", search: { view: "previous" }, replace: true });
+      return;
     }
+    navigate({
+      to: "/calendar",
+      search: { folder: v.folder || undefined },
+      replace: true,
+    });
   };
 
-  /* ----- view per calendar ----- */
-  const activeCal = selected.kind === "cal" ? allCals.find((c) => c.id === selected.id) : null;
-  const [view, setView] = useState<ViewMode>("month");
+  /* ----- chrome-style tab DnD (replica of /media) ----- */
+  const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
+  const tabStripRef = useRef<HTMLDivElement | null>(null);
+  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragDx, setDragDx] = useState(0);
+  const dragStateRef = useRef<{
+    id: string;
+    startX: number;
+    startIndex: number;
+    currentIndex: number;
+    width: number;
+    offsets: number[];
+    moved: boolean;
+  } | null>(null);
+  const flipRef = useRef<{ id: string; fromLeft: number } | null>(null);
+  const [edgeFade, setEdgeFade] = useState({ left: false, right: false });
+  const updateEdgeFade = useCallback(() => {
+    const el = tabStripRef.current;
+    if (!el) return;
+    setEdgeFade({
+      left: el.scrollLeft > 2,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 2,
+    });
+  }, []);
   useEffect(() => {
-    if (!activeCal) return;
-    setView(readJSON<ViewMode>(viewKey(activeCal.id), "month"));
-  }, [activeCal?.id]);
-  const updateView = (v: ViewMode) => {
-    setView(v);
-    if (activeCal) writeJSON(viewKey(activeCal.id), v);
+    updateEdgeFade();
+  }, [openTabs, updateEdgeFade]);
+  useLayoutEffect(() => {
+    const flip = flipRef.current;
+    if (!flip) return;
+    flipRef.current = null;
+    const el = tabRefs.current.get(flip.id);
+    if (!el) return;
+    const newLeft = el.getBoundingClientRect().left;
+    const delta = flip.fromLeft - newLeft;
+    if (Math.abs(delta) < 0.5) return;
+    el.style.transition = "none";
+    el.style.transform = `translate3d(${delta}px,0,0)`;
+    void el.offsetWidth;
+    el.style.transition = "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)";
+    el.style.transform = "translate3d(0,0,0)";
+    const cleanup = () => {
+      el.style.transition = "";
+      el.style.transform = "";
+      el.removeEventListener("transitionend", cleanup);
+    };
+    el.addEventListener("transitionend", cleanup);
+  });
+
+  const onTabPointerDown = (e: React.PointerEvent<HTMLButtonElement>, id: string) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("[data-tab-close]")) return;
+    setActiveId(id);
+    const strip = tabStripRef.current;
+    if (!strip) return;
+    const arr = openTabs;
+    const startIndex = arr.findIndex((t) => t.id === id);
+    if (startIndex < 0) return;
+    const buttons = arr
+      .map((t) => tabRefs.current.get(t.id))
+      .filter((b): b is HTMLButtonElement => !!b);
+    if (buttons.length !== arr.length) return;
+    const stripRect = strip.getBoundingClientRect();
+    const offsets = buttons.map(
+      (b) => b.getBoundingClientRect().left - stripRect.left + strip.scrollLeft,
+    );
+    const width = buttons[startIndex].getBoundingClientRect().width;
+    dragStateRef.current = {
+      id,
+      startX: e.clientX,
+      startIndex,
+      currentIndex: startIndex,
+      width,
+      offsets,
+      moved: false,
+    };
+    const onMove = (ev: PointerEvent) => {
+      const st = dragStateRef.current;
+      if (!st) return;
+      const dx = ev.clientX - st.startX;
+      if (!st.moved && Math.abs(dx) < 4) return;
+      st.moved = true;
+      if (dragId !== st.id) setDragId(st.id);
+      setDragDx(dx);
+      const stripEl = tabStripRef.current;
+      if (!stripEl) return;
+      const pointerX = ev.clientX - stripEl.getBoundingClientRect().left + stripEl.scrollLeft;
+      let newIdx = 0;
+      for (let i = 0; i < st.offsets.length; i++) {
+        const mid = st.offsets[i] + st.width / 2;
+        if (pointerX < mid) {
+          newIdx = i;
+          break;
+        }
+        newIdx = i;
+      }
+      if (newIdx !== st.currentIndex) st.currentIndex = newIdx;
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      const st = dragStateRef.current;
+      dragStateRef.current = null;
+      const willReorder = !!(st && st.moved && st.currentIndex !== st.startIndex);
+      if (willReorder && st) {
+        const el = tabRefs.current.get(st.id);
+        if (el) flipRef.current = { id: st.id, fromLeft: el.getBoundingClientRect().left };
+        setOpenTabs((prev) => {
+          const next = prev.slice();
+          const [m] = next.splice(st.startIndex, 1);
+          next.splice(st.currentIndex, 0, m);
+          return next;
+        });
+      }
+      setDragId(null);
+      setDragDx(0);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
   };
 
-  /* ----- top-right actions ----- */
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
+  /* ----- dialogs ----- */
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newCalOpen, setNewCalOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  /* ------------------------------------------------------------ */
-  /* Render                                                       */
-  /* ------------------------------------------------------------ */
+  const persistFolders = (next: CalFolder[]) => {
+    writeJSON(foldersKey(scope), next);
+    setFolders(next);
+  };
+  const persistCals = (next: Cal[]) => {
+    writeJSON(calsKey(scope), next);
+    setCals(next);
+  };
+
+  const showingCalendar = activeId !== null;
+  const activeCal = showingCalendar ? allCals.find((c) => c.id === activeId) ?? null : null;
+
+  /* ----- filter for the Previous list ----- */
+  const folderFilter = sideValue.folder;
+  const previousList = useMemo<Cal[]>(() => {
+    if (folderFilter === "__unsorted__") return allCals.filter((c) => !c.folder);
+    if (folderFilter && folderFilter !== "") {
+      const folderName = folders.find((f) => f.id === folderFilter)?.name;
+      return allCals.filter((c) => c.folder === folderName);
+    }
+    return allCals;
+  }, [allCals, folderFilter, folders]);
+
   return (
-    <div className="min-h-screen pl-[88px]">
-      <div className="mx-auto flex max-w-[1600px] gap-6 px-6 py-8">
-        {/* Left side nav */}
-        <aside className="w-[260px] shrink-0">
+    <div className="px-4 md:px-6">
+      {/* Top-level horizontal tab bar — replica of /media */}
+      <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
+        <button
+          onClick={() => setActiveId(null)}
+          className={`-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 py-2.5 pl-0 pr-4 text-sm font-medium ${
+            showingCalendar
+              ? "border-transparent text-muted-foreground hover:text-ink"
+              : "border-primary text-ink"
+          }`}
+          style={{ width: 220, justifyContent: "flex-start" }}
+          title="Calendar"
+        >
+          <CalendarDays className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
+          <span>Calendar</span>
+        </button>
+        <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
+          {openTabs.length > 0 && (
+            <div className="relative min-w-0 flex-1">
+              {edgeFade.left && (
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent" />
+              )}
+              {edgeFade.right && (
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent" />
+              )}
+              <div
+                ref={tabStripRef}
+                onScroll={updateEdgeFade}
+                className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                style={{ scrollBehavior: "smooth" }}
+              >
+                {openTabs.map((t, idx) => {
+                  const isActive = activeId === t.id;
+                  const colorActive = "border-muted-foreground text-ink";
+                  const colorIdle = "border-transparent text-muted-foreground hover:text-ink";
+                  const isDragging = dragId === t.id;
+                  let translateX = 0;
+                  if (dragId && !isDragging) {
+                    const st = dragStateRef.current;
+                    if (st) {
+                      const from = st.startIndex;
+                      const to = st.currentIndex;
+                      if (to > from && idx > from && idx <= to) translateX = -st.width;
+                      else if (to < from && idx >= to && idx < from) translateX = st.width;
+                    }
+                  }
+                  const dragStyle: React.CSSProperties = isDragging
+                    ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
+                    : { transform: `translate3d(${translateX}px,0,0)` };
+                  return (
+                    <button
+                      key={t.id}
+                      ref={(el) => {
+                        if (el) tabRefs.current.set(t.id, el);
+                        else tabRefs.current.delete(t.id);
+                      }}
+                      onPointerDown={(e) => onTabPointerDown(e, t.id)}
+                      onClick={() => setActiveId(t.id)}
+                      style={{
+                        flex: "1 1 200px",
+                        minWidth: 140,
+                        maxWidth: 240,
+                        touchAction: "pan-y",
+                        ...dragStyle,
+                        transition: isDragging
+                          ? "none"
+                          : dragId
+                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
+                            : "color 150ms, border-color 150ms",
+                      }}
+                      className={`group -mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
+                        isActive ? colorActive : colorIdle
+                      }`}
+                      title={t.name}
+                    >
+                      <CalendarDays className="h-3 w-3 shrink-0 opacity-70" />
+                      <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/60" />
+                      <span className="min-w-0 flex-1 truncate text-left">
+                        {t.folder ? `${t.folder} · ${t.name}` : t.name}
+                      </span>
+                      <span
+                        data-tab-close
+                        role="button"
+                        tabIndex={0}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeTab(t.id);
+                        }}
+                        className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                      >
+                        ✕
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </nav>
+        <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5 pl-2" />
+      </div>
+
+      <div className="grid gap-6 pt-4 md:grid-cols-[220px_1fr]">
+        <aside className="md:sticky md:top-28 md:self-start">
           <CalendarSideNav
-            selected={selected}
-            onSelect={(s) => {
-              if (s.kind === "cal") {
-                const c = allCals.find((x) => x.id === s.id);
-                if (c) openCalendar(c);
-              } else setSelected(s);
-            }}
+            value={sideValue}
+            onChange={onSideChange}
             folders={folders}
-            cals={allCals}
-            onPersistFolders={persistFolders}
-            onPersistCals={persistCals}
+            onFoldersChange={persistFolders}
           />
         </aside>
 
-        {/* Main */}
-        <main className="min-w-0 flex-1">
-          {/* Top tab bar */}
-          <div className="mb-4 flex items-center gap-2 border-b border-hairline pb-3">
-            <div className="inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-1.5 text-sm font-medium text-ink">
-              <CalendarDays className="h-4 w-4" strokeWidth={2.25} />
-              Calendar
-            </div>
-
-            {/* Open tabs */}
-            <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-              {openTabs.map((t) => {
-                const isActive = selected.kind === "cal" && selected.id === t.id;
-                return (
-                  <div
-                    key={t.id}
-                    className={`group inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs transition ${
-                      isActive
-                        ? "bg-secondary text-ink"
-                        : "text-muted-foreground hover:bg-secondary/60"
-                    }`}
-                  >
-                    <button onClick={() => setSelected({ kind: "cal", id: t.id })}>
-                      {t.name}
-                    </button>
-                    <button
-                      onClick={() => closeTab(t.id)}
-                      className="opacity-60 hover:opacity-100"
-                      aria-label="Close tab"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Right actions */}
-            <div className="flex items-center gap-1">
-              {searchOpen ? (
-                <div className="flex items-center gap-1 rounded-md border border-hairline bg-background px-2 py-1">
-                  <Search className="h-3.5 w-3.5 text-muted-foreground" />
-                  <input
-                    autoFocus
-                    value={searchValue}
-                    onChange={(e) => setSearchValue(e.target.value)}
-                    placeholder="Search calendars…"
-                    className="w-44 bg-transparent text-xs outline-none"
-                  />
-                  <button
-                    onClick={() => {
-                      setSearchOpen(false);
-                      setSearchValue("");
-                    }}
-                  >
-                    <X className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-                </div>
-              ) : (
-                <IconBtn label="Search" onClick={() => setSearchOpen(true)}>
-                  <Search className="h-4 w-4" strokeWidth={2.25} />
-                </IconBtn>
-              )}
-              <IconBtn label="New folder" onClick={() => setNewFolderOpen(true)}>
-                <FolderClosed className="h-4 w-4" strokeWidth={2.25} />
-              </IconBtn>
-              <IconBtn label="New calendar" onClick={() => setNewCalOpen(true)}>
-                <Plus className="h-4 w-4" strokeWidth={2.25} />
-              </IconBtn>
-            </div>
-          </div>
-
-          {/* Body */}
-          {selected.kind === "previous" ? (
-            <PreviousList
-              cals={allCals}
-              onOpen={openCalendar}
-              filter={searchValue}
-            />
-          ) : activeCal ? (
-            <CalendarView
-              cal={activeCal}
-              view={view}
-              onChangeView={updateView}
-              onOpenSettings={() => setSettingsOpen(true)}
-            />
-          ) : (
-            <div className="rounded-lg border border-hairline p-12 text-center text-sm text-muted-foreground">
-              This calendar no longer exists.
-            </div>
-          )}
-        </main>
+        <div className="min-w-0">
+          <CalendarBody
+            actionsMount={actionsMount}
+            showingCalendar={showingCalendar}
+            activeCal={activeCal}
+            previousList={previousList}
+            onOpenCalendar={openCalendar}
+            onNewFolder={() => setNewFolderOpen(true)}
+            onNewCalendar={() => setNewCalOpen(true)}
+          />
+        </div>
       </div>
 
-      {/* Dialogs */}
       {newFolderOpen && (
         <NewItemDialog
           title="New folder"
@@ -338,7 +521,12 @@ export function CalendarPage() {
             }
             persistFolders([
               ...folders,
-              { id: crypto.randomUUID(), name: trimmed, pinned: false },
+              {
+                id: crypto.randomUUID(),
+                name: trimmed,
+                pinned: false,
+                sort_order: folders.length,
+              },
             ]);
             setNewFolderOpen(false);
             toast.success("Folder created");
@@ -356,7 +544,12 @@ export function CalendarPage() {
               toast.error("A folder with this name already exists");
               return null;
             }
-            const f: Folder = { id: crypto.randomUUID(), name: trimmed, pinned: false };
+            const f: CalFolder = {
+              id: crypto.randomUUID(),
+              name: trimmed,
+              pinned: false,
+              sort_order: folders.length,
+            };
             persistFolders([...folders, f]);
             return f;
           }}
@@ -373,412 +566,132 @@ export function CalendarPage() {
           }}
         />
       )}
-      {settingsOpen && activeCal && (
-        <CalendarSettingsDialog
-          cal={activeCal}
-          allCals={allCals}
-          folders={folders}
-          onClose={() => setSettingsOpen(false)}
-          onSelectCal={(id) => setSelected({ kind: "cal", id })}
-          onDuplicate={(c) => {
-            const copy: Cal = {
-              ...c,
-              id: crypto.randomUUID(),
-              name: `${c.name} (copy)`,
-              isTeamGlobal: false,
-              pinned: false,
-            };
-            persistCals([...cals, copy]);
-            openCalendar(copy);
-            toast.success("Calendar duplicated");
-          }}
-        />
-      )}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Side nav                                                            */
+/* Body — renders Previous list (rows) or the open calendar.           */
+/* The action pills (Search / New folder / New calendar) live here     */
+/* and are portaled into actionsMount, exactly like NotesPage.         */
 /* ------------------------------------------------------------------ */
 
-type Selected = { kind: "previous" } | { kind: "cal"; id: string };
-
-function CalendarSideNav({
-  selected,
-  onSelect,
-  folders,
-  cals,
-  onPersistFolders,
-  onPersistCals,
+function CalendarBody({
+  actionsMount,
+  showingCalendar,
+  activeCal,
+  previousList,
+  onOpenCalendar,
+  onNewFolder,
+  onNewCalendar,
 }: {
-  selected: Selected;
-  onSelect: (s: Selected) => void;
-  folders: Folder[];
-  cals: Cal[];
-  onPersistFolders: (f: Folder[]) => void;
-  onPersistCals: (c: Cal[]) => void;
+  actionsMount: HTMLDivElement | null;
+  showingCalendar: boolean;
+  activeCal: Cal | null;
+  previousList: Cal[];
+  onOpenCalendar: (c: Cal) => void;
+  onNewFolder: () => void;
+  onNewCalendar: () => void;
 }) {
-  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
-  const [menuFor, setMenuFor] = useState<string | null>(null);
-  const [renameId, setRenameId] = useState<string | null>(null);
-  const [renameVal, setRenameVal] = useState("");
-
-  const isPrev = selected.kind === "previous";
-
-  const calsByFolder: Record<string, Cal[]> = {};
-  const looseCals: Cal[] = [];
-  for (const c of cals) {
-    if (c.folder) {
-      (calsByFolder[c.folder] ??= []).push(c);
-    } else {
-      looseCals.push(c);
-    }
-  }
-
-  const togglePinCal = (c: Cal) => {
-    setMenuFor(null);
-    onPersistCals(cals.map((x) => (x.id === c.id ? { ...x, pinned: !x.pinned } : x)));
-  };
-  const deleteCal = (c: Cal) => {
-    setMenuFor(null);
-    onPersistCals(cals.filter((x) => x.id !== c.id));
-  };
-  const renameItem = (id: string, name: string) => {
-    setRenameId(id);
-    setRenameVal(name);
-    setMenuFor(null);
-  };
-  const commitRename = () => {
-    if (!renameId) return;
-    const v = renameVal.trim();
-    if (!v) {
-      setRenameId(null);
-      return;
-    }
-    if (folders.some((f) => f.id === renameId)) {
-      const old = folders.find((f) => f.id === renameId)!;
-      onPersistFolders(folders.map((f) => (f.id === renameId ? { ...f, name: v } : f)));
-      // re-link cals
-      onPersistCals(cals.map((c) => (c.folder === old.name ? { ...c, folder: v } : c)));
-    } else {
-      onPersistCals(cals.map((c) => (c.id === renameId ? { ...c, name: v } : c)));
-    }
-    setRenameId(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery("");
   };
 
-  const sortCals = (arr: Cal[]) =>
-    [...arr].sort((a, b) => Number(b.pinned) - Number(a.pinned) || a.name.localeCompare(b.name));
-
-  return (
-    <nav className="flex flex-col gap-1">
-      {/* Previous */}
-      <button
-        onClick={() => onSelect({ kind: "previous" })}
-        className={`group flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition ${
-          isPrev ? "bg-secondary font-medium text-ink" : "text-ink hover:bg-secondary/60"
+  const actions = (
+    <>
+      <div
+        className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
+          searchOpen
+            ? "w-64 border-hairline bg-card pl-3 pr-1"
+            : "w-9 hover:border-hairline hover:bg-card"
         }`}
       >
-        <span className="grid h-5 w-5 shrink-0 place-items-center text-muted-foreground">
-          <History className="h-3.5 w-3.5" strokeWidth={2.25} />
-        </span>
-        <span className="ml-2 min-w-0 flex-1 truncate">Previous</span>
-      </button>
-
-      {/* Folders */}
-      {folders.map((f) => {
-        const list = sortCals(calsByFolder[f.name] ?? []);
-        const isOpen = openFolders[f.id] ?? true;
-        return (
-          <div key={f.id} className="flex flex-col">
-            <div className="group flex items-center rounded-md px-1 py-1 hover:bg-secondary/60">
-              <button
-                onClick={() => setOpenFolders((o) => ({ ...o, [f.id]: !isOpen }))}
-                className="flex min-w-0 flex-1 items-center px-2 py-1 text-left text-sm text-ink"
-              >
-                <span className="grid h-5 w-5 shrink-0 place-items-center text-muted-foreground">
-                  <FolderClosed className="h-3.5 w-3.5" strokeWidth={2.25} />
-                </span>
-                <span className="ml-2 min-w-0 flex-1 truncate">
-                  {renameId === f.id ? (
-                    <input
-                      autoFocus
-                      value={renameVal}
-                      onChange={(e) => setRenameVal(e.target.value)}
-                      onBlur={commitRename}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") commitRename();
-                        if (e.key === "Escape") setRenameId(null);
-                      }}
-                      className="w-full rounded border border-hairline bg-background px-1 text-sm"
-                    />
-                  ) : (
-                    f.name
-                  )}
-                </span>
-                <ChevronRight
-                  className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${
-                    isOpen ? "rotate-90" : ""
-                  }`}
-                />
-              </button>
-              <FolderMenu
-                open={menuFor === f.id}
-                onOpenChange={(v) => setMenuFor(v ? f.id : null)}
-                onRename={() => renameItem(f.id, f.name)}
-                onDelete={() => {
-                  setMenuFor(null);
-                  // detach cals + remove folder
-                  onPersistCals(
-                    cals.map((c) => (c.folder === f.name ? { ...c, folder: null } : c)),
-                  );
-                  onPersistFolders(folders.filter((x) => x.id !== f.id));
-                }}
-              />
-            </div>
-            <AnimatePresence initial={false}>
-              {isOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.18, ease: "easeOut" }}
-                  style={{ overflow: "hidden" }}
-                >
-                  <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-hairline pl-2">
-                    {list.length === 0 && (
-                      <div className="px-2 py-1 text-xs text-muted-foreground">
-                        No calendars
-                      </div>
-                    )}
-                    {list.map((c) => (
-                      <CalRow
-                        key={c.id}
-                        cal={c}
-                        active={selected.kind === "cal" && selected.id === c.id}
-                        onSelect={() => onSelect({ kind: "cal", id: c.id })}
-                        menuOpen={menuFor === c.id}
-                        onMenuChange={(v) => setMenuFor(v ? c.id : null)}
-                        onRename={() => renameItem(c.id, c.name)}
-                        onTogglePin={() => togglePinCal(c)}
-                        onDelete={() => deleteCal(c)}
-                        renaming={renameId === c.id}
-                        renameVal={renameVal}
-                        onRenameValChange={setRenameVal}
-                        onCommitRename={commitRename}
-                        onCancelRename={() => setRenameId(null)}
-                      />
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        );
-      })}
-
-      {/* Loose calendars */}
-      {sortCals(looseCals).map((c) => (
-        <CalRow
-          key={c.id}
-          cal={c}
-          active={selected.kind === "cal" && selected.id === c.id}
-          onSelect={() => onSelect({ kind: "cal", id: c.id })}
-          menuOpen={menuFor === c.id}
-          onMenuChange={(v) => setMenuFor(v ? c.id : null)}
-          onRename={() => renameItem(c.id, c.name)}
-          onTogglePin={() => togglePinCal(c)}
-          onDelete={() => deleteCal(c)}
-          renaming={renameId === c.id}
-          renameVal={renameVal}
-          onRenameValChange={setRenameVal}
-          onCommitRename={commitRename}
-          onCancelRename={() => setRenameId(null)}
+        <button
+          type="button"
+          onClick={() => {
+            if (!searchOpen) setSearchOpen(true);
+            else searchInputRef.current?.focus();
+          }}
+          aria-label="Search calendars"
+          className="grid h-9 w-9 shrink-0 place-items-center text-muted-foreground transition hover:text-ink"
+        >
+          <SearchIcon className="h-4 w-4" />
+        </button>
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") closeSearch();
+          }}
+          placeholder="Search in calendars"
+          className={`min-w-0 flex-1 border-b border-hairline bg-transparent py-1 text-xs text-ink outline-none transition placeholder:text-muted-foreground/70 focus:border-ink/40 ${
+            searchOpen ? "opacity-100" : "pointer-events-none w-0 opacity-0"
+          }`}
         />
-      ))}
-    </nav>
-  );
-}
-
-function CalRow({
-  cal,
-  active,
-  onSelect,
-  menuOpen,
-  onMenuChange,
-  onRename,
-  onTogglePin,
-  onDelete,
-  renaming,
-  renameVal,
-  onRenameValChange,
-  onCommitRename,
-  onCancelRename,
-}: {
-  cal: Cal;
-  active: boolean;
-  onSelect: () => void;
-  menuOpen: boolean;
-  onMenuChange: (v: boolean) => void;
-  onRename: () => void;
-  onTogglePin: () => void;
-  onDelete: () => void;
-  renaming: boolean;
-  renameVal: string;
-  onRenameValChange: (v: string) => void;
-  onCommitRename: () => void;
-  onCancelRename: () => void;
-}) {
-  return (
-    <div
-      className={`group flex items-center rounded-md px-1 py-1 transition ${
-        active ? "bg-secondary" : "hover:bg-secondary/60"
-      }`}
-    >
+        {searchOpen && (
+          <button
+            type="button"
+            onClick={closeSearch}
+            aria-label="Clear search"
+            className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-ink ${
+              searchQuery ? "opacity-100" : "opacity-60"
+            }`}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
       <button
-        onClick={onSelect}
-        className="flex min-w-0 flex-1 items-center px-2 py-1 text-left text-sm text-ink"
+        onClick={onNewFolder}
+        className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
       >
-        <span className="grid h-5 w-5 shrink-0 place-items-center text-muted-foreground">
-          <CalendarDays className="h-3.5 w-3.5" strokeWidth={2.25} />
-        </span>
-        <span className="ml-2 min-w-0 flex-1 truncate">
-          {renaming ? (
-            <input
-              autoFocus
-              value={renameVal}
-              onChange={(e) => onRenameValChange(e.target.value)}
-              onBlur={onCommitRename}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") onCommitRename();
-                if (e.key === "Escape") onCancelRename();
-              }}
-              className="w-full rounded border border-hairline bg-background px-1 text-sm"
-            />
-          ) : (
-            cal.name
-          )}
-        </span>
-        {cal.pinned && <Pin className="ml-1 h-3 w-3 text-muted-foreground" />}
+        <Plus className="h-3.5 w-3.5" /> New folder
       </button>
-      {!cal.isTeamGlobal && (
-        <FolderMenu
-          open={menuOpen}
-          onOpenChange={onMenuChange}
-          onRename={onRename}
-          onDelete={onDelete}
-          onTogglePin={onTogglePin}
-          pinned={cal.pinned}
-        />
+      <button
+        onClick={onNewCalendar}
+        className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
+      >
+        <Plus className="h-3.5 w-3.5" /> New calendar
+      </button>
+    </>
+  );
+
+  const filtered = searchQuery.trim()
+    ? previousList.filter((c) =>
+        c.name.toLowerCase().includes(searchQuery.trim().toLowerCase()),
+      )
+    : previousList;
+
+  return (
+    <div>
+      {actionsMount && createPortal(actions, actionsMount)}
+
+      {showingCalendar && activeCal ? (
+        <CalendarPlaceholder cal={activeCal} />
+      ) : (
+        <PreviousList list={filtered} onOpen={onOpenCalendar} />
       )}
     </div>
   );
 }
 
-function FolderMenu({
-  open,
-  onOpenChange,
-  onRename,
-  onDelete,
-  onTogglePin,
-  pinned,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  onRename: () => void;
-  onDelete: () => void;
-  onTogglePin?: () => void;
-  pinned?: boolean;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) onOpenChange(false);
-    };
-    window.addEventListener("mousedown", onClick);
-    return () => window.removeEventListener("mousedown", onClick);
-  }, [open, onOpenChange]);
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onOpenChange(!open);
-        }}
-        className="opacity-0 transition group-hover:opacity-100 hover:bg-secondary rounded p-1"
-        aria-label="More"
-      >
-        <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-md border border-hairline bg-popover py-1 shadow-md">
-          {onTogglePin && (
-            <MenuItem onClick={onTogglePin} icon={pinned ? PinOff : Pin}>
-              {pinned ? "Unpin" : "Pin"}
-            </MenuItem>
-          )}
-          <MenuItem onClick={onRename} icon={Pencil}>
-            Rename
-          </MenuItem>
-          <MenuItem onClick={onDelete} icon={Trash2} destructive>
-            Delete
-          </MenuItem>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MenuItem({
-  onClick,
-  icon: Icon,
-  destructive,
-  children,
-}: {
-  onClick: () => void;
-  icon: React.ComponentType<{ className?: string }>;
-  destructive?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition hover:bg-secondary ${
-        destructive ? "text-destructive" : "text-ink"
-      }`}
-    >
-      <Icon className="h-3.5 w-3.5" />
-      {children}
-    </button>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Previous list (rows)                                                */
-/* ------------------------------------------------------------------ */
-
-function PreviousList({
-  cals,
-  onOpen,
-  filter,
-}: {
-  cals: Cal[];
-  onOpen: (c: Cal) => void;
-  filter: string;
-}) {
-  const f = filter.trim().toLowerCase();
-  const list = f ? cals.filter((c) => c.name.toLowerCase().includes(f)) : cals;
+function PreviousList({ list, onOpen }: { list: Cal[]; onOpen: (c: Cal) => void }) {
   if (list.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-hairline p-12 text-center text-sm text-muted-foreground">
+      <div className="mt-6 rounded-lg border border-dashed border-hairline p-12 text-center text-sm text-muted-foreground">
         No calendars yet. Click <span className="font-medium text-ink">New calendar</span> to
         create one.
       </div>
     );
   }
   return (
-    <div className="flex flex-col divide-y divide-hairline rounded-lg border border-hairline">
+    <div className="mt-4 flex flex-col divide-y divide-hairline rounded-lg border border-hairline">
       {list.map((c) => (
         <button
           key={c.id}
@@ -786,7 +699,9 @@ function PreviousList({
           className="flex items-center gap-3 px-4 py-3 text-left transition hover:bg-secondary/40"
         >
           <CalendarDays className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
-          <span className="flex-1 text-sm text-ink">{c.name}</span>
+          <span className="flex-1 text-sm text-ink">
+            {c.folder ? `${c.folder} · ${c.name}` : c.name}
+          </span>
           {c.isTeamGlobal && (
             <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
               Team
@@ -798,108 +713,14 @@ function PreviousList({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Calendar view (placeholder grid)                                    */
-/* ------------------------------------------------------------------ */
-
-function CalendarView({
-  cal,
-  view,
-  onChangeView,
-  onOpenSettings,
-}: {
-  cal: Cal;
-  view: ViewMode;
-  onChangeView: (v: ViewMode) => void;
-  onOpenSettings: () => void;
-}) {
+function CalendarPlaceholder({ cal }: { cal: Cal }) {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-ink">{cal.name}</h1>
-        <div className="flex items-center gap-2">
-          <ViewPicker value={view} onChange={onChangeView} />
-          <IconBtn label="Calendar settings" onClick={onOpenSettings}>
-            <SettingsIcon className="h-4 w-4" strokeWidth={2.25} />
-          </IconBtn>
-        </div>
-      </div>
+    <div className="mt-4 flex flex-col gap-4">
+      <h1 className="text-xl font-semibold text-ink">{cal.name}</h1>
       <div className="rounded-lg border border-dashed border-hairline p-16 text-center text-sm text-muted-foreground">
-        {view.charAt(0).toUpperCase() + view.slice(1)} view will appear here.
-        <br />
-        <span className="text-xs">
-          UI styles and grid arrive with the next round of instructions.
-        </span>
+        Calendar UI arrives with the next round of instructions.
       </div>
     </div>
-  );
-}
-
-function ViewPicker({ value, onChange }: { value: ViewMode; onChange: (v: ViewMode) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const fn = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    window.addEventListener("mousedown", fn);
-    return () => window.removeEventListener("mousedown", fn);
-  }, [open]);
-  const opts: ViewMode[] = ["day", "week", "month", "year"];
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 rounded-md border border-hairline bg-background px-3 py-1.5 text-xs font-medium text-ink hover:bg-secondary/60"
-      >
-        {value.charAt(0).toUpperCase() + value.slice(1)}
-        <ChevronDown className="h-3.5 w-3.5" />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-32 rounded-md border border-hairline bg-popover py-1 shadow-md">
-          {opts.map((o) => (
-            <button
-              key={o}
-              onClick={() => {
-                onChange(o);
-                setOpen(false);
-              }}
-              className={`flex w-full px-3 py-1.5 text-left text-xs hover:bg-secondary ${
-                o === value ? "font-medium text-ink" : "text-muted-foreground"
-              }`}
-            >
-              {o.charAt(0).toUpperCase() + o.slice(1)}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Reusable bits                                                       */
-/* ------------------------------------------------------------------ */
-
-function IconBtn({
-  label,
-  onClick,
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
-    >
-      {children}
-    </button>
   );
 }
 
@@ -941,7 +762,7 @@ function NewItemDialog({
         </button>
         <button
           onClick={() => onSubmit(val)}
-          className="rounded-md bg-ink px-3 py-1.5 text-xs font-medium text-background hover:opacity-90"
+          className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
         >
           Create
         </button>
@@ -956,10 +777,10 @@ function NewCalendarDialog({
   onSubmit,
   onCreateFolder,
 }: {
-  folders: Folder[];
+  folders: CalFolder[];
   onClose: () => void;
   onSubmit: (name: string, folder: string | null) => void;
-  onCreateFolder: (name: string) => Folder | null;
+  onCreateFolder: (name: string) => CalFolder | null;
 }) {
   const [name, setName] = useState("");
   const [folder, setFolder] = useState<string>("");
@@ -998,7 +819,7 @@ function NewCalendarDialog({
                     setNewFolderName("");
                   }
                 }}
-                className="rounded-md bg-ink px-3 py-2 text-xs text-background"
+                className="rounded-md bg-primary px-3 py-2 text-xs text-primary-foreground"
               >
                 Add
               </button>
@@ -1046,7 +867,7 @@ function NewCalendarDialog({
         </button>
         <button
           onClick={() => onSubmit(name, folder || null)}
-          className="rounded-md bg-ink px-3 py-1.5 text-xs font-medium text-background hover:opacity-90"
+          className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
         >
           Create
         </button>
@@ -1066,7 +887,7 @@ function Modal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-lg border border-hairline bg-background p-5 shadow-xl">
+      <div className="w-full max-w-md rounded-lg border border-hairline bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-ink">{title}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-ink">
@@ -1076,399 +897,5 @@ function Modal({
         {children}
       </div>
     </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Settings dialog                                                     */
-/* ------------------------------------------------------------------ */
-
-type CalSettings = {
-  yearStart: string;
-  yearEnd: string;
-  autosave: boolean;
-  access: { email: string }[];
-  syncOutlook: boolean;
-  syncGmail: boolean;
-  syncIcloud: boolean;
-  sessionsPerDay: 1 | 2 | 3 | 4;
-  showFullLastWeek: boolean;
-  categoryColors: Record<string, string>;
-};
-const defaultSettings: CalSettings = {
-  yearStart: "",
-  yearEnd: "",
-  autosave: false,
-  access: [],
-  syncOutlook: false,
-  syncGmail: false,
-  syncIcloud: false,
-  sessionsPerDay: 1,
-  showFullLastWeek: true,
-  categoryColors: { Meetings: "#3B82F6", Event: "#10B981", Race: "#F59E0B" },
-};
-
-function CalendarSettingsDialog({
-  cal,
-  allCals,
-  folders,
-  onClose,
-  onSelectCal,
-  onDuplicate,
-}: {
-  cal: Cal;
-  allCals: Cal[];
-  folders: Folder[];
-  onClose: () => void;
-  onSelectCal: (id: string) => void;
-  onDuplicate: (c: Cal) => void;
-}) {
-  const [s, setS] = useState<CalSettings>(() =>
-    readJSON<CalSettings>(settingsKey(cal.id), defaultSettings),
-  );
-  useEffect(() => {
-    setS(readJSON<CalSettings>(settingsKey(cal.id), defaultSettings));
-  }, [cal.id]);
-  const update = (patch: Partial<CalSettings>) => {
-    const next = { ...s, ...patch };
-    setS(next);
-    writeJSON(settingsKey(cal.id), next);
-  };
-  const [inviteEmail, setInviteEmail] = useState("");
-
-  const calsByFolder: Record<string, Cal[]> = {};
-  const loose: Cal[] = [];
-  for (const c of allCals) {
-    if (c.folder) (calsByFolder[c.folder] ??= []).push(c);
-    else loose.push(c);
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="flex h-[85vh] w-full max-w-5xl overflow-hidden rounded-lg border border-hairline bg-background shadow-xl">
-        {/* Inner left menu */}
-        <aside className="w-[260px] shrink-0 border-r border-hairline p-4">
-          <div className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Calendars
-          </div>
-          <div className="flex flex-col gap-0.5">
-            {folders.map((f) => (
-              <div key={f.id} className="flex flex-col">
-                <div className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground">
-                  <FolderClosed className="h-3 w-3" />
-                  {f.name}
-                </div>
-                <div className="ml-3 flex flex-col gap-0.5 border-l border-hairline pl-2">
-                  {(calsByFolder[f.name] ?? []).map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => onSelectCal(c.id)}
-                      className={`flex items-center gap-2 rounded px-2 py-1 text-left text-xs ${
-                        c.id === cal.id ? "bg-secondary text-ink" : "text-ink hover:bg-secondary/60"
-                      }`}
-                    >
-                      <CalendarDays className="h-3 w-3 text-muted-foreground" />
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-            {loose.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => onSelectCal(c.id)}
-                className={`flex items-center gap-2 rounded px-2 py-1 text-left text-xs ${
-                  c.id === cal.id ? "bg-secondary text-ink" : "text-ink hover:bg-secondary/60"
-                }`}
-              >
-                <CalendarDays className="h-3 w-3 text-muted-foreground" />
-                {c.name}
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        {/* Main */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
-            <div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Settings</div>
-              <h2 className="text-lg font-semibold text-ink">{cal.name}</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onDuplicate(cal)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-hairline px-3 py-1.5 text-xs text-ink hover:bg-secondary"
-              >
-                <Copy className="h-3.5 w-3.5" /> Duplicate
-              </button>
-              <button onClick={onClose} className="text-muted-foreground hover:text-ink">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="flex flex-col gap-2">
-              <SettingSection title="Year timeframe" summary={`${s.yearStart || "—"} → ${s.yearEnd || "—"}`}>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Start date">
-                    <input
-                      type="date"
-                      value={s.yearStart}
-                      onChange={(e) => update({ yearStart: e.target.value })}
-                      className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm"
-                    />
-                  </Field>
-                  <Field label="End date">
-                    <input
-                      type="date"
-                      value={s.yearEnd}
-                      onChange={(e) => update({ yearEnd: e.target.value })}
-                      className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm"
-                    />
-                  </Field>
-                </div>
-              </SettingSection>
-
-              <SettingSection
-                title="Access"
-                summary={`${s.access.length} invited`}
-              >
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <input
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      placeholder="email@example.com"
-                      className="flex-1 rounded-md border border-hairline bg-background px-3 py-2 text-sm"
-                    />
-                    <button
-                      onClick={() => {
-                        const v = inviteEmail.trim();
-                        if (!v) return;
-                        update({ access: [...s.access, { email: v }] });
-                        setInviteEmail("");
-                        toast.success("Invitation prepared (sending wired with backend)");
-                      }}
-                      className="rounded-md bg-ink px-3 py-2 text-xs font-medium text-background"
-                    >
-                      Invite
-                    </button>
-                  </div>
-                  {s.access.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      No one else has access yet. Invitees receive an email and the calendar
-                      appears under their folder header on accept.
-                    </p>
-                  ) : (
-                    <ul className="flex flex-col divide-y divide-hairline rounded-md border border-hairline">
-                      {s.access.map((a, i) => (
-                        <li
-                          key={i}
-                          className="flex items-center justify-between px-3 py-2 text-sm"
-                        >
-                          <span>{a.email}</span>
-                          <button
-                            onClick={() =>
-                              update({ access: s.access.filter((_, j) => j !== i) })
-                            }
-                            className="text-muted-foreground hover:text-destructive"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </SettingSection>
-
-              <SettingSection title="Autosave" summary={s.autosave ? "On" : "Off"}>
-                <label className="flex items-center justify-between">
-                  <span className="text-sm">Autosave changes</span>
-                  <Switch
-                    checked={s.autosave}
-                    onChange={(v) => update({ autosave: v })}
-                  />
-                </label>
-              </SettingSection>
-
-              <SettingSection
-                title="Sync with other calendar"
-                summary={
-                  [
-                    s.syncOutlook && "Outlook",
-                    s.syncGmail && "Gmail",
-                    s.syncIcloud && "iCloud",
-                  ]
-                    .filter(Boolean)
-                    .join(", ") || "Not connected"
-                }
-              >
-                <p className="mb-3 text-xs text-muted-foreground">
-                  Detailed integration arrives with the next instructions. Toggles below are UI
-                  placeholders.
-                </p>
-                <div className="flex flex-col gap-2">
-                  {(["Outlook", "Gmail", "iCloud"] as const).map((p) => {
-                    const k =
-                      p === "Outlook"
-                        ? "syncOutlook"
-                        : p === "Gmail"
-                          ? "syncGmail"
-                          : "syncIcloud";
-                    return (
-                      <label key={p} className="flex items-center justify-between">
-                        <span className="text-sm">{p}</span>
-                        <Switch
-                          checked={s[k] as boolean}
-                          onChange={(v) => update({ [k]: v } as Partial<CalSettings>)}
-                        />
-                      </label>
-                    );
-                  })}
-                </div>
-              </SettingSection>
-
-              <SettingSection title="Sessions per day" summary={String(s.sessionsPerDay)}>
-                <div className="flex gap-2">
-                  {([1, 2, 3, 4] as const).map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => update({ sessionsPerDay: n })}
-                      className={`h-9 w-9 rounded-md border text-sm ${
-                        s.sessionsPerDay === n
-                          ? "border-ink bg-ink text-background"
-                          : "border-hairline text-ink hover:bg-secondary"
-                      }`}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              </SettingSection>
-
-              <SettingSection
-                title="Category color"
-                summary={Object.keys(s.categoryColors).join(", ")}
-              >
-                <div className="flex flex-col gap-2">
-                  {Object.entries(s.categoryColors).map(([cat, color]) => (
-                    <div key={cat} className="flex items-center justify-between">
-                      <span className="text-sm">{cat}</span>
-                      <input
-                        type="color"
-                        value={color}
-                        onChange={(e) =>
-                          update({
-                            categoryColors: { ...s.categoryColors, [cat]: e.target.value },
-                          })
-                        }
-                        className="h-8 w-14 cursor-pointer rounded border border-hairline bg-transparent"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </SettingSection>
-
-              <SettingSection
-                title="Show full last week in month view"
-                summary={s.showFullLastWeek ? "On" : "Off"}
-              >
-                <label className="flex items-center justify-between">
-                  <span className="text-sm">
-                    Always show through Sunday in the last week of the month
-                  </span>
-                  <Switch
-                    checked={s.showFullLastWeek}
-                    onChange={(v) => update({ showFullLastWeek: v })}
-                  />
-                </label>
-              </SettingSection>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SettingSection({
-  title,
-  summary,
-  children,
-}: {
-  title: string;
-  summary?: string;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="rounded-lg border border-hairline">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left"
-      >
-        <div className="flex flex-col">
-          <span className="text-sm font-medium text-ink">{title}</span>
-          {summary && !open && (
-            <span className="text-xs text-muted-foreground">{summary}</span>
-          )}
-        </div>
-        <ChevronDown
-          className={`h-4 w-4 text-muted-foreground transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
-        />
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            style={{ overflow: "hidden" }}
-          >
-            <div className="border-t border-hairline px-4 py-4">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="mb-1 block text-xs text-muted-foreground">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function Switch({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      className={`relative h-5 w-9 rounded-full transition ${
-        checked ? "bg-ink" : "bg-hairline"
-      }`}
-      aria-pressed={checked}
-    >
-      <span
-        className={`absolute top-0.5 h-4 w-4 rounded-full bg-background transition ${
-          checked ? "left-4" : "left-0.5"
-        }`}
-      />
-    </button>
   );
 }
