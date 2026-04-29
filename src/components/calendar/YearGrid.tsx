@@ -162,6 +162,28 @@ export function YearGrid({
       onClick={(e) => {
         if (e.target === e.currentTarget) onSelect(null);
       }}
+      onKeyDown={(e) => {
+        // Excel-style: start typing when a cell is selected (no edit mode yet)
+        if (!selected || editingKey) return;
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        // Printable single character or Enter
+        if (e.key === "Enter") {
+          e.preventDefault();
+          beginEdit(selected);
+        } else if (e.key.length === 1) {
+          e.preventDefault();
+          const id = makeCellId(calId, selected);
+          setEditValue((data[id]?.text ?? "") + e.key);
+          setEditingKey(selected);
+          onSelect(selected);
+        } else if (e.key === "Backspace") {
+          e.preventDefault();
+          setEditValue("");
+          setEditingKey(selected);
+          onSelect(selected);
+        }
+      }}
+      tabIndex={0}
     >
       <table
         className="w-full border-separate text-xs"
