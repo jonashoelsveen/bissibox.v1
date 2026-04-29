@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Map as MapboxMap, Marker, LngLatBoundsLike } from "mapbox-gl";
 import { Pencil, Droplet, Flag, Trash2, Save, Hand, Timer, Undo2, Redo2, Search, Loader2, X, Wand2, Sparkles, Pencil as PencilEdit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useMapbox, useMapStyle, MAP_STYLES } from "@/lib/mapbox";
+import { useMapbox, useMapStyle, MAP_STYLES, getCachedMapboxToken, observeVisibleMapContainer } from "@/lib/mapbox";
 import { MapStylePicker } from "./MapStylePicker";
 
 export type LatLng = [number, number]; // [lat, lng] — Leaflet-compatible public API
@@ -145,6 +145,7 @@ export function CourseMapEditor({
   panToTarget,
   scopeId,
 }: Props) {
+  const containerId = useId().replace(/:/g, "-");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const splitMarkersRef = useRef<Record<string, Marker>>({});
@@ -315,87 +316,98 @@ export function CourseMapEditor({
   /* ─────────── init ─────────── */
   useEffect(() => {
     if (!mapbox || !containerRef.current || mapRef.current) return;
-    const center: [number, number] = path[0] ? [path[0][1], path[0][0]] : [10.7522, 59.9139];
-    let map: MapboxMap;
-    try {
-      map = new mapbox.default.Map({
-        container: containerRef.current,
-        style: MAP_STYLES[style].url,
-        center,
-        zoom: path.length ? 14 : 12,
-        attributionControl: false,
-      });
-    } catch (err) {
+    const container = containerRef.current;
+    let map: MapboxMap | null = null;
+    let rafId = 0;
+    let delayedResizeId = 0;
+    let ro: ResizeObserver | null = null;
+
+    const stopWatchingVisibility = observeVisibleMapContainer(container, "CourseMapEditor", () => {
+      if (mapRef.current || map) return;
+      const center: [number, number] = path[0] ? [path[0][1], path[0][0]] : [10.7522, 59.9139];
+      const token = getCachedMapboxToken();
       // eslint-disable-next-line no-console
-      console.error("[mapbox] CourseMapEditor constructor threw:", err);
-      return;
-    }
-    map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
-    map.addControl(new mapbox.default.AttributionControl({ compact: true }));
-
-    map.on("error", (e) => {
-      // eslint-disable-next-line no-console
-      console.error("[mapbox] CourseMapEditor runtime error:", (e as any)?.error ?? e);
-    });
-
-    map.on("style.load", () => {
-      styleLoadedRef.current = true;
-      ensureCourseLayers(map);
-    });
-
-    map.on("click", (e) => {
-      // Skip if a layer click handler already swallowed it
-      const t = toolRef.current;
-      const ll: LatLng = [e.lngLat.lat, e.lngLat.lng];
-      if (t === "draw") {
-        // Avoid double-inserting when the click was on the line layer
-        const features = map.queryRenderedFeatures(e.point, { layers: [PATH_LAYER] });
-        if (features.length > 0) return;
-        trackedChange({ path: [...pathRef.current, ll], splits: splitsRef.current });
-      } else if (t === "split" || t === "fuel" || t === "marker" || t === "start" || t === "finish") {
-        const kind: SplitKind = t as SplitKind;
-        if (kind === "start" || kind === "finish") {
-          const filtered = splitsRef.current.filter((s) => s.kind !== kind);
-          const sp: SplitPoint = {
-            id: crypto.randomUUID(),
-            kind,
-            label: kind === "start" ? "Start" : "Finish",
-            position: ll,
-          };
-          trackedChange({ path: pathRef.current, splits: [...filtered, sp] });
-        } else {
-          const same = splitsRef.current.filter((s) => s.kind === kind).length;
-          const sp: SplitPoint = {
-            id: crypto.randomUUID(),
-            kind,
-            label:
-              kind === "split" ? `Split ${same + 1}` : kind === "fuel" ? `Fuel ${same + 1}` : `Marker ${same + 1}`,
-            position: ll,
-          };
-          trackedChange({ path: pathRef.current, splits: [...splitsRef.current, sp] });
-          onSelectRef.current?.(sp.id);
-        }
-      } else {
-        onSelectRef.current?.(null);
+      console.log("Mapbox Token Status:", !!token);
+      try {
+        map = new mapbox.default.Map({
+          container,
+          style: MAP_STYLES[style].url,
+          center,
+          zoom: path.length ? 14 : 12,
+          attributionControl: false,
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[mapbox] CourseMapEditor constructor threw:", err);
+        return;
       }
-    });
+      map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
+      map.addControl(new mapbox.default.AttributionControl({ compact: true }));
 
-    mapRef.current = map;
+      map.on("error", (e) => {
+        // eslint-disable-next-line no-console
+        console.error("[mapbox] CourseMapEditor runtime error:", (e as any)?.error ?? e);
+      });
 
-    // Force resize after first paint to handle 0×0 construction race.
-    const rafId = requestAnimationFrame(() => {
-      try { map.resize(); } catch { /* ignore */ }
+      map.on("style.load", () => {
+        styleLoadedRef.current = true;
+        ensureCourseLayers(map!);
+      });
+
+      map.on("click", (e) => {
+        const t = toolRef.current;
+        const ll: LatLng = [e.lngLat.lat, e.lngLat.lng];
+        if (t === "draw") {
+          const features = map!.queryRenderedFeatures(e.point, { layers: [PATH_LAYER] });
+          if (features.length > 0) return;
+          trackedChange({ path: [...pathRef.current, ll], splits: splitsRef.current });
+        } else if (t === "split" || t === "fuel" || t === "marker" || t === "start" || t === "finish") {
+          const kind: SplitKind = t as SplitKind;
+          if (kind === "start" || kind === "finish") {
+            const filtered = splitsRef.current.filter((s) => s.kind !== kind);
+            const sp: SplitPoint = {
+              id: crypto.randomUUID(),
+              kind,
+              label: kind === "start" ? "Start" : "Finish",
+              position: ll,
+            };
+            trackedChange({ path: pathRef.current, splits: [...filtered, sp] });
+          } else {
+            const same = splitsRef.current.filter((s) => s.kind === kind).length;
+            const sp: SplitPoint = {
+              id: crypto.randomUUID(),
+              kind,
+              label:
+                kind === "split" ? `Split ${same + 1}` : kind === "fuel" ? `Fuel ${same + 1}` : `Marker ${same + 1}`,
+              position: ll,
+            };
+            trackedChange({ path: pathRef.current, splits: [...splitsRef.current, sp] });
+            onSelectRef.current?.(sp.id);
+          }
+        } else {
+          onSelectRef.current?.(null);
+        }
+      });
+
+      mapRef.current = map;
+      rafId = requestAnimationFrame(() => {
+        try { map?.resize(); } catch { /* ignore */ }
+      });
+      delayedResizeId = window.setTimeout(() => {
+        try { map?.resize(); } catch { /* ignore */ }
+      }, 100);
+      ro = new ResizeObserver(() => {
+        try { map?.resize(); } catch { /* ignore */ }
+      });
+      ro.observe(container);
     });
-    // Keep the canvas in sync with sidebar/grid layout shifts.
-    const ro = new ResizeObserver(() => {
-      try { map.resize(); } catch { /* ignore */ }
-    });
-    if (containerRef.current) ro.observe(containerRef.current);
 
     return () => {
+      stopWatchingVisibility();
       cancelAnimationFrame(rafId);
-      ro.disconnect();
-      map.remove();
+      window.clearTimeout(delayedResizeId);
+      ro?.disconnect();
+      map?.remove();
       mapRef.current = null;
       splitMarkersRef.current = {};
       vertexMarkersRef.current = [];
@@ -688,7 +700,7 @@ export function CourseMapEditor({
 
   return (
     <div className="relative h-full w-full">
-      <div ref={containerRef} className="absolute inset-0 z-0 bg-secondary" />
+      <div id={`course-map-editor-${containerId}`} ref={containerRef} className="absolute inset-0 z-0 bg-secondary" />
 
       <div className="pointer-events-none absolute left-4 top-4 z-[400] flex flex-col gap-2">
         <div className="pointer-events-auto flex flex-wrap items-center gap-1 rounded-xl border border-hairline bg-card/95 p-1.5 shadow-md backdrop-blur">
