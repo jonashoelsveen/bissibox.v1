@@ -180,27 +180,39 @@ export function MonthGridType1({
   const [popover, setPopover] = useState<{
     pos: CellPos;
     rect: DOMRect;
-    initial: string;
+    /** -1 = create new; >=0 = edit existing item index */
+    editIdx: number;
+    initialText: string;
+    initialColor: string | null;
   } | null>(null);
 
   const openPopoverAt = useCallback(
     (pos: CellPos, anchor: HTMLElement) => {
       const cell = days.find((d) => d.row === pos.row && d.col === pos.col);
       if (!cell || !cell.inMonth) return;
-      const k: CellKey = {
-        year: cell.date.getFullYear(),
-        month: cell.date.getMonth(),
-        day: cell.date.getDate(),
-        session: 0,
-      };
-      const id = makeCellId(calId, k);
       setPopover({
         pos,
         rect: anchor.getBoundingClientRect(),
-        initial: data[id]?.text ?? "",
+        editIdx: -1,
+        initialText: "",
+        initialColor: null,
       });
     },
-    [calId, data, days],
+    [days],
+  );
+
+  const openItemEditor = useCallback(
+    (pos: CellPos, idx: number, raw: string, anchor: HTMLElement) => {
+      const { color, text } = splitColor(raw);
+      setPopover({
+        pos,
+        rect: anchor.getBoundingClientRect(),
+        editIdx: idx,
+        initialText: text,
+        initialColor: color,
+      });
+    },
+    [],
   );
 
   const closePopover = useCallback(() => setPopover(null), []);
