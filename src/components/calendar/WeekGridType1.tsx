@@ -639,9 +639,16 @@ export function WeekGridType1({
         {creator && (
           <CreatorPopover
             anchor={creator.rect}
+            initialText={creator.initialText ?? ""}
+            initialColor={creator.initialColor ?? null}
+            isEdit={creator.editIdx !== undefined}
             onClose={closeCreator}
-            onCommit={(text) => {
-              appendSession(creator.col, text);
+            onCommit={(text, color) => {
+              if (creator.editIdx !== undefined) {
+                updateSession(creator.col, creator.editIdx, text, color);
+              } else {
+                appendSession(creator.col, text, color);
+              }
               closeCreator();
             }}
           />
@@ -653,12 +660,23 @@ export function WeekGridType1({
 
 interface CreatorPopoverProps {
   anchor: DOMRect;
+  initialText: string;
+  initialColor: string | null;
+  isEdit: boolean;
   onClose: () => void;
-  onCommit: (text: string) => void;
+  onCommit: (text: string, color: string | null) => void;
 }
 
-function CreatorPopover({ anchor, onClose, onCommit }: CreatorPopoverProps) {
-  const [value, setValue] = useState("");
+function CreatorPopover({
+  anchor,
+  initialText,
+  initialColor,
+  isEdit,
+  onClose,
+  onCommit,
+}: CreatorPopoverProps) {
+  const [value, setValue] = useState(initialText);
+  const [color, setColor] = useState<string | null>(initialColor);
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -666,7 +684,7 @@ function CreatorPopover({ anchor, onClose, onCommit }: CreatorPopoverProps) {
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
         const t = value.trim();
-        if (t) onCommit(t);
+        if (t) onCommit(t, color);
         else onClose();
       }
     };
@@ -677,7 +695,7 @@ function CreatorPopover({ anchor, onClose, onCommit }: CreatorPopoverProps) {
       } else if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         const t = value.trim();
-        if (t) onCommit(t);
+        if (t) onCommit(t, color);
       }
     };
     window.addEventListener("mousedown", onDown);
@@ -686,10 +704,10 @@ function CreatorPopover({ anchor, onClose, onCommit }: CreatorPopoverProps) {
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("keydown", onKey);
     };
-  }, [value, onCommit, onClose]);
+  }, [value, color, onCommit, onClose]);
 
   const POPOVER_W = 280;
-  const POPOVER_H = 130;
+  const POPOVER_H = 180;
   const margin = 8;
   let top = anchor.bottom + margin;
   let left = anchor.left;
@@ -707,7 +725,7 @@ function CreatorPopover({ anchor, onClose, onCommit }: CreatorPopoverProps) {
       style={{ top, left, width: POPOVER_W }}
     >
       <div className="border-b border-hairline px-3 py-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-        Ny økt
+        {isEdit ? "Rediger økt" : "Ny økt"}
       </div>
       <input
         autoFocus
@@ -716,18 +734,67 @@ function CreatorPopover({ anchor, onClose, onCommit }: CreatorPopoverProps) {
         placeholder="f.eks. Intervaller 5×4min"
         className="block w-full bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
       />
+      {/* Color row — 8 platform colors, mac-OS-style dots, 4×2 */}
+      <ColorDotRow value={color} onChange={setColor} />
       <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
-        <span className="mono tabular-nums">⏎ for å lagre</span>
+        <span className="mono tabular-nums">
+          {isEdit ? "⏎ for å lagre · tøm for å slette" : "⏎ for å lagre"}
+        </span>
         <button
           type="button"
           onClick={() => {
             const t = value.trim();
-            if (t) onCommit(t);
+            if (t) onCommit(t, color);
+            else if (isEdit) onCommit("", color);
           }}
           className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
         >
-          Legg til
+          {isEdit ? "Lagre" : "Legg til"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Compact color picker row used in the session creator/editor.
+ * Renders the 8 platform colors as macOS-style dots (4 × 2).
+ */
+function ColorDotRow({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (c: string | null) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-2">
+      <span className="mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+        Farge
+      </span>
+      <div className="grid grid-cols-4 gap-1.5">
+        {GROUP_COLOR_PALETTE.map((c) => {
+          const selected = value?.toLowerCase() === c.value.toLowerCase();
+          return (
+            <button
+              key={c.value}
+              type="button"
+              title={c.name}
+              onClick={() =>
+                onChange(selected ? null : c.value)
+              }
+              aria-label={c.name}
+              aria-pressed={selected}
+              className={[
+                "h-3 w-3 rounded-full border transition-transform hover:scale-125",
+                selected
+                  ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
+                  : "border-black/15",
+              ].join(" ")}
+              style={{ background: c.value }}
+            />
+          );
+        })}
       </div>
     </div>
   );
