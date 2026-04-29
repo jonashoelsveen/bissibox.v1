@@ -235,8 +235,14 @@ export function UnifiedElasticGrid({
   // Implemented combinations. Everything else renders a "coming soon" panel.
   const isImplemented =
     (viewMode === "month" && (viewType === "type1" || viewType === "type2")) ||
+    (viewMode === "week" && viewType === "type1") ||
     (viewMode === "year" && viewType === "type2");
   const comingSoonLabel = `${VIEW_MODE_LABEL[viewMode]} · ${VIEW_TYPE_LABEL[viewType]}`;
+
+  // Week View navigation state — anchor date inside the visible week. Kept
+  // here (not inside WeekGridType1) so prev/next clicks don't unmount the
+  // component on each navigation.
+  const [weekRef, setWeekRef] = useState<Date>(() => new Date());
 
   const YEAR_COL = 220;
   const FOCUS_COL = 640;
