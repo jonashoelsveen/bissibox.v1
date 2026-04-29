@@ -3,7 +3,6 @@ import { ChevronDown } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { AppLauncher } from "@/components/AppLauncher";
 
 type Entity = { id: string; name: string; entity_type: "team" | "company" | "cooperation" };
 
@@ -165,11 +164,6 @@ export function TopBar() {
             </div>
           </>
         )}
-      </div>
-
-      {/* Right cluster: app launcher (waffle) */}
-      <div className="pointer-events-auto ml-auto flex items-center gap-2 pr-1">
-        <AppLauncher />
       </div>
     </div>
   );
