@@ -119,7 +119,7 @@ export function YearCalendarView({ calId, defaultTitle }: { calId: string; defau
 
       <div className="flex min-h-[60vh] gap-0">
         <div className="min-w-0 flex-1">
-          <YearGrid
+          <ZoomableCalendar
             calId={calId}
             year={meta.year}
             data={data}
