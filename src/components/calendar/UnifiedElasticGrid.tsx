@@ -506,10 +506,10 @@ export function UnifiedElasticGrid({
         <HeaderDropdown<ViewType>
           ariaLabel="Visningstype"
           value={viewType}
-          onChange={setViewType}
+          onChange={handleViewTypeChange}
           width={148}
           options={[
-            { value: "type1", label: "Type 1", hint: "Snart" },
+            { value: "type1", label: "Type 1", hint: "Måned" },
             { value: "type2", label: "Type 2", hint: "År · Måned" },
           ]}
         />
