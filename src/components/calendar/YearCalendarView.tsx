@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import { Settings as SettingsIcon, Undo2, Redo2 } from "lucide-react";
 import { useYearStore, type CellKey } from "./yearStore";
-import { YearGrid } from "./YearGrid";
+import { ZoomableCalendar } from "./ZoomableCalendar";
 import { YearRightPanel, type LayerVisibility } from "./YearRightPanel";
 
 export function YearCalendarView({ calId, defaultTitle }: { calId: string; defaultTitle: string }) {
@@ -119,7 +119,7 @@ export function YearCalendarView({ calId, defaultTitle }: { calId: string; defau
 
       <div className="flex min-h-[60vh] gap-0">
         <div className="min-w-0 flex-1">
-          <YearGrid
+          <ZoomableCalendar
             calId={calId}
             year={meta.year}
             data={data}
