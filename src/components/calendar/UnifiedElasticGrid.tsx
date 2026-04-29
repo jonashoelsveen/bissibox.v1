@@ -352,12 +352,34 @@ export function UnifiedElasticGrid({
 
       <div
         ref={scrollRef}
-        className="h-full w-full overflow-auto"
+        className="relative h-full w-full overflow-auto"
         onClick={(e) => {
           if (e.target === e.currentTarget) onSelect(null);
         }}
         tabIndex={0}
       >
+        {/* Magnify overlay — sits over the focused month column to give a
+            unified "card lift" effect (subtle scale + shadow) without
+            distorting the underlying grid layout. Non-interactive. */}
+        {mode.kind === "month" && focusRect && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute z-10 rounded-md ring-1 ring-black/5"
+            style={{
+              left: focusRect.left,
+              top: 0,
+              width: focusRect.width,
+              height: focusRect.height,
+              transform: "scale(1.02)",
+              transformOrigin: "center top",
+              boxShadow:
+                "0 12px 28px -10px rgba(0,0,0,0.22), 0 4px 10px -4px rgba(0,0,0,0.12)",
+              transition: `left ${DUR_MS}ms ${EASE}, width ${DUR_MS}ms ${EASE}, opacity ${DUR_MS}ms ${EASE}`,
+              willChange: "left, width, transform",
+              background: "transparent",
+            }}
+          />
+        )}
         <div
           className="grid"
           style={{
