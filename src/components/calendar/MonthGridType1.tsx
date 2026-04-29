@@ -35,6 +35,17 @@ import {
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import type { CellData, CellKey } from "./yearStore";
 import { makeCellId } from "./yearStore";
+import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
+
+const COLOR_PREFIX_RE = /^\[(#[0-9a-fA-F]{6})\]\s*/;
+function splitColor(raw: string): { color: string | null; text: string } {
+  const m = raw.match(COLOR_PREFIX_RE);
+  if (m) return { color: m[1], text: raw.slice(m[0].length) };
+  return { color: null, text: raw };
+}
+function joinColor(color: string | null, text: string): string {
+  return color ? `[${color}] ${text}` : text;
+}
 
 const WEEKDAYS = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"];
 const MONTHS_FULL = [
@@ -169,27 +180,39 @@ export function MonthGridType1({
   const [popover, setPopover] = useState<{
     pos: CellPos;
     rect: DOMRect;
-    initial: string;
+    /** -1 = create new; >=0 = edit existing item index */
+    editIdx: number;
+    initialText: string;
+    initialColor: string | null;
   } | null>(null);
 
   const openPopoverAt = useCallback(
     (pos: CellPos, anchor: HTMLElement) => {
       const cell = days.find((d) => d.row === pos.row && d.col === pos.col);
       if (!cell || !cell.inMonth) return;
-      const k: CellKey = {
-        year: cell.date.getFullYear(),
-        month: cell.date.getMonth(),
-        day: cell.date.getDate(),
-        session: 0,
-      };
-      const id = makeCellId(calId, k);
       setPopover({
         pos,
         rect: anchor.getBoundingClientRect(),
-        initial: data[id]?.text ?? "",
+        editIdx: -1,
+        initialText: "",
+        initialColor: null,
       });
     },
-    [calId, data, days],
+    [days],
+  );
+
+  const openItemEditor = useCallback(
+    (pos: CellPos, idx: number, raw: string, anchor: HTMLElement) => {
+      const { color, text } = splitColor(raw);
+      setPopover({
+        pos,
+        rect: anchor.getBoundingClientRect(),
+        editIdx: idx,
+        initialText: text,
+        initialColor: color,
+      });
+    },
+    [],
   );
 
   const closePopover = useCallback(() => setPopover(null), []);
@@ -422,35 +445,65 @@ export function MonthGridType1({
                   {/* Items list */}
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
                     <AnimatePresence initial={false}>
-                      {visible.map((it) => (
-                        <motion.div
-                          key={`${id}-${it.idx}-${it.text}`}
-                          layout
-                          initial={{ opacity: 0, y: -2 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -2 }}
-                          transition={{
-                            duration: 0.14,
-                            ease: [0.2, 0, 0, 1],
-                          }}
-                          data-role="item"
-                          draggable
-                          onDragStart={(e) => {
-                            // Use HTML5 dragstart only to set ghost; track via state
-                            const ev = e as unknown as DragEvent;
-                            if (ev.dataTransfer) {
-                              ev.dataTransfer.effectAllowed = "move";
-                              ev.dataTransfer.setData("text/plain", it.text);
+                      {visible.map((it) => {
+                        const { color: customColor, text: displayText } = splitColor(it.text);
+                        return (
+                          <motion.div
+                            key={`${id}-${it.idx}-${it.text}`}
+                            layout
+                            initial={{ opacity: 0, y: -2 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -2 }}
+                            transition={{
+                              duration: 0.14,
+                              ease: [0.2, 0, 0, 1],
+                            }}
+                            data-role="item"
+                            draggable
+                            onDragStart={(e) => {
+                              const ev = e as unknown as DragEvent;
+                              if (ev.dataTransfer) {
+                                ev.dataTransfer.effectAllowed = "move";
+                                ev.dataTransfer.setData("text/plain", it.text);
+                              }
+                              setDragItem({ fromKey: k, text: it.text });
+                            }}
+                            onDragEnd={() => setDragItem(null)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openItemEditor(
+                                pos,
+                                it.idx,
+                                it.text,
+                                e.currentTarget as HTMLElement,
+                              );
+                            }}
+                            className={[
+                              "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink transition-all",
+                              customColor ? "" : "bg-secondary/70",
+                              "hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
+                              customColor ? "" : "hover:bg-secondary",
+                            ].join(" ")}
+                            style={
+                              customColor
+                                ? {
+                                    backgroundColor: `${customColor}1F`,
+                                    boxShadow: `inset 2px 0 0 ${customColor}`,
+                                  }
+                                : undefined
                             }
-                            setDragItem({ fromKey: k, text: it.text });
-                          }}
-                          onDragEnd={() => setDragItem(null)}
-                          className="cursor-grab truncate rounded-[3px] bg-secondary/70 px-1.5 py-0.5 text-[11.5px] text-ink hover:bg-secondary active:cursor-grabbing"
-                          title={it.text}
-                        >
-                          {it.text}
-                        </motion.div>
-                      ))}
+                            title={displayText}
+                          >
+                            {customColor && (
+                              <span
+                                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                                style={{ background: customColor }}
+                              />
+                            )}
+                            <span className="truncate">{displayText}</span>
+                          </motion.div>
+                        );
+                      })}
                     </AnimatePresence>
                     {overflow > 0 && (
                       <button
@@ -484,26 +537,48 @@ export function MonthGridType1({
           </div>
         </LayoutGroup>
 
-        {/* Inline popover */}
+        {/* Inline popover (per-item create or edit) */}
         {popover && (
           <PopoverEditor
-            initial={popover.initial}
+            initialText={popover.initialText}
+            initialColor={popover.initialColor}
+            isEdit={popover.editIdx >= 0}
             anchor={popover.rect}
             onClose={closePopover}
-            onCommit={(text) => {
+            onCommit={(text, color) => {
               const cell = days.find(
                 (d) => d.row === popover.pos.row && d.col === popover.pos.col,
               );
               if (cell) {
-                onCommitText(
-                  {
-                    year: cell.date.getFullYear(),
-                    month: cell.date.getMonth(),
-                    day: cell.date.getDate(),
-                    session: 0,
-                  },
-                  text,
-                );
+                const cellKey: CellKey = {
+                  year: cell.date.getFullYear(),
+                  month: cell.date.getMonth(),
+                  day: cell.date.getDate(),
+                  session: 0,
+                };
+                const id = makeCellId(calId, cellKey);
+                const existing = parseItems(data[id]?.text);
+                const t = text.trim();
+                let next: DayItem[];
+                if (popover.editIdx >= 0) {
+                  if (!t) {
+                    next = existing.filter((it) => it.idx !== popover.editIdx);
+                  } else {
+                    next = existing.map((it) =>
+                      it.idx === popover.editIdx
+                        ? { idx: it.idx, text: joinColor(color, t) }
+                        : it,
+                    );
+                  }
+                } else {
+                  next = t
+                    ? [
+                        ...existing,
+                        { idx: existing.length, text: joinColor(color, t) },
+                      ]
+                    : existing;
+                }
+                onCommitText(cellKey, serializeItems(next));
               }
               closePopover();
             }}
@@ -515,34 +590,44 @@ export function MonthGridType1({
 }
 
 interface PopoverEditorProps {
-  initial: string;
+  initialText: string;
+  initialColor: string | null;
+  isEdit: boolean;
   anchor: DOMRect;
   onClose: () => void;
-  onCommit: (text: string) => void;
+  onCommit: (text: string, color: string | null) => void;
 }
 
 /**
- * Notion-style inline popover. Allows the user to add/edit the day's items.
- * Items are stored as newline-separated text lines (one item per line).
+ * Notion-style inline popover for adding/editing a single session item.
+ * Includes the platform color row (8 dots, 4×2) so users can colorize sessions.
  */
-function PopoverEditor({ initial, anchor, onClose, onCommit }: PopoverEditorProps) {
-  const [value, setValue] = useState(initial);
+function PopoverEditor({
+  initialText,
+  initialColor,
+  isEdit,
+  anchor,
+  onClose,
+  onCommit,
+}: PopoverEditorProps) {
+  const [value, setValue] = useState(initialText);
+  const [color, setColor] = useState<string | null>(initialColor);
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
-        onCommit(value.trim());
+        onCommit(value.trim(), color);
       }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
-      } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      } else if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        onCommit(value.trim());
+        onCommit(value.trim(), color);
       }
     };
     window.addEventListener("mousedown", onDown);
@@ -551,11 +636,10 @@ function PopoverEditor({ initial, anchor, onClose, onCommit }: PopoverEditorProp
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("keydown", onKey);
     };
-  }, [value, onCommit, onClose]);
+  }, [value, color, onCommit, onClose]);
 
-  // Position: prefer below the cell; flip above if not enough room.
   const POPOVER_W = 280;
-  const POPOVER_H = 180;
+  const POPOVER_H = 170;
   const margin = 8;
   let top = anchor.bottom + margin;
   let left = anchor.left;
@@ -573,23 +657,53 @@ function PopoverEditor({ initial, anchor, onClose, onCommit }: PopoverEditorProp
       style={{ top, left, width: POPOVER_W }}
     >
       <div className="border-b border-hairline px-3 py-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-        Legg til økt
+        {isEdit ? "Rediger økt" : "Legg til økt"}
       </div>
-      <textarea
+      <input
         autoFocus
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder={"Skriv én økt per linje\nf.eks. Intervaller 5×4min"}
-        className="block h-[120px] w-full resize-none bg-transparent px-3 py-2 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
+        placeholder="f.eks. Intervaller 5×4min"
+        className="block w-full bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
       />
+      {/* Color row — 8 platform colors as macOS-style dots, 4 × 2 */}
+      <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-2">
+        <span className="mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+          Farge
+        </span>
+        <div className="grid grid-cols-4 gap-1.5">
+          {GROUP_COLOR_PALETTE.map((c) => {
+            const selected = color?.toLowerCase() === c.value.toLowerCase();
+            return (
+              <button
+                key={c.value}
+                type="button"
+                title={c.name}
+                aria-label={c.name}
+                aria-pressed={selected}
+                onClick={() => setColor(selected ? null : c.value)}
+                className={[
+                  "h-3 w-3 rounded-full border transition-transform hover:scale-125",
+                  selected
+                    ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
+                    : "border-black/15",
+                ].join(" ")}
+                style={{ background: c.value }}
+              />
+            );
+          })}
+        </div>
+      </div>
       <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
-        <span className="mono tabular-nums">⌘ + ⏎ for å lagre</span>
+        <span className="mono tabular-nums">
+          {isEdit ? "⏎ for å lagre · tøm for å slette" : "⏎ for å lagre"}
+        </span>
         <button
           type="button"
-          onClick={() => onCommit(value.trim())}
+          onClick={() => onCommit(value.trim(), color)}
           className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
         >
-          Lagre
+          {isEdit ? "Lagre" : "Legg til"}
         </button>
       </div>
     </div>

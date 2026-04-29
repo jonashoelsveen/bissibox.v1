@@ -38,6 +38,22 @@ import {
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import type { CellData, CellKey } from "./yearStore";
 import { makeCellId } from "./yearStore";
+import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
+
+/**
+ * Items can be prefixed with `[#RRGGBB] ` to encode a user-chosen color.
+ * This survives the existing newline-serialized text storage without a
+ * schema change.
+ */
+const COLOR_PREFIX_RE = /^\[(#[0-9a-fA-F]{6})\]\s*/;
+function splitColor(raw: string): { color: string | null; text: string } {
+  const m = raw.match(COLOR_PREFIX_RE);
+  if (m) return { color: m[1], text: raw.slice(m[0].length) };
+  return { color: null, text: raw };
+}
+function joinColor(color: string | null, text: string): string {
+  return color ? `[${color}] ${text}` : text;
+}
 
 const WEEKDAYS_FULL = [
   "Mandag",
@@ -225,6 +241,10 @@ export function WeekGridType1({
   const [creator, setCreator] = useState<{
     col: number;
     rect: DOMRect;
+    /** index of existing item to edit; undefined for new */
+    editIdx?: number;
+    initialText?: string;
+    initialColor?: string | null;
   } | null>(null);
 
   const openCreator = useCallback(
@@ -233,16 +253,48 @@ export function WeekGridType1({
     },
     [],
   );
+  const openEditor = useCallback(
+    (col: number, idx: number, raw: string, anchor: HTMLElement) => {
+      const { color, text } = splitColor(raw);
+      setCreator({
+        col,
+        rect: anchor.getBoundingClientRect(),
+        editIdx: idx,
+        initialText: text,
+        initialColor: color,
+      });
+    },
+    [],
+  );
   const closeCreator = useCallback(() => setCreator(null), []);
 
   const appendSession = useCallback(
-    (col: number, text: string) => {
+    (col: number, text: string, color: string | null) => {
       const t = text.trim();
       if (!t) return;
       const k = dayKeys[col];
       const existing = parseItems(data[makeCellId(calId, k)]?.text);
-      const next = serializeItems([...existing, { text: t }]);
+      const next = serializeItems([...existing, { text: joinColor(color, t) }]);
       onCommitText(k, next);
+    },
+    [dayKeys, data, calId, onCommitText],
+  );
+
+  const updateSession = useCallback(
+    (col: number, idx: number, text: string, color: string | null) => {
+      const k = dayKeys[col];
+      const existing = parseItems(data[makeCellId(calId, k)]?.text);
+      const t = text.trim();
+      let next: { text: string }[];
+      if (!t) {
+        // empty → delete
+        next = existing.filter((_, i) => i !== idx);
+      } else {
+        next = existing.map((it, i) =>
+          i === idx ? { text: joinColor(color, t) } : { text: it.text },
+        );
+      }
+      onCommitText(k, serializeItems(next));
     },
     [dayKeys, data, calId, onCommitText],
   );
@@ -474,7 +526,8 @@ export function WeekGridType1({
                 >
                   <AnimatePresence initial={false}>
                     {items.map((it, i) => {
-                      const cat = categorize(it.text);
+                      const { color: customColor, text: displayText } = splitColor(it.text);
+                      const cat = categorize(displayText);
                       const itemFocused = focused && focus.item === i;
                       return (
                         <motion.div
@@ -501,30 +554,49 @@ export function WeekGridType1({
                           onClick={(e) => {
                             e.stopPropagation();
                             setFocus({ col, item: i });
+                            openEditor(
+                              col,
+                              i,
+                              it.text,
+                              e.currentTarget as HTMLElement,
+                            );
                           }}
                           className={[
-                            "group/card relative flex cursor-grab items-start gap-2 rounded-[4px] border px-2 py-1.5 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition-shadow active:cursor-grabbing",
-                            cat.bg,
-                            cat.border,
+                            "group/card relative flex items-start gap-2 rounded-[4px] border px-2 py-1.5 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition-all",
+                            customColor ? "" : cat.bg,
+                            customColor ? "" : cat.border,
                             itemFocused
                               ? "outline outline-2 outline-primary outline-offset-[-2px]"
-                              : "hover:shadow-[0_2px_4px_rgba(15,23,42,0.06)]",
+                              : "hover:-translate-y-px hover:shadow-[0_3px_8px_rgba(15,23,42,0.10)] hover:border-ink/25",
                           ].join(" ")}
-                          title={it.text}
+                          style={
+                            customColor
+                              ? {
+                                  backgroundColor: `${customColor}1A`, // ~10% alpha
+                                  borderColor: `${customColor}66`,
+                                }
+                              : undefined
+                          }
+                          title={displayText}
                         >
                           <span
                             className={[
                               "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
-                              cat.dot,
+                              customColor ? "" : cat.dot,
                             ].join(" ")}
+                            style={
+                              customColor
+                                ? { backgroundColor: customColor }
+                                : undefined
+                            }
                           />
                           <span
                             className={[
                               "flex-1 truncate text-[12px] leading-snug",
-                              cat.ink,
+                              customColor ? "text-ink" : cat.ink,
                             ].join(" ")}
                           >
-                            {it.text}
+                            {displayText}
                           </span>
                         </motion.div>
                       );
@@ -534,7 +606,7 @@ export function WeekGridType1({
                   {/* Ghost preview where the dragged card will land */}
                   {isDragTarget && dragItem && (
                     <div className="pointer-events-none rounded-[4px] border border-dashed border-primary/50 bg-primary/5 px-2 py-1.5 text-[12px] text-primary/80">
-                      <span className="truncate">{dragItem.text}</span>
+                      <span className="truncate">{splitColor(dragItem.text).text}</span>
                     </div>
                   )}
 
@@ -567,9 +639,16 @@ export function WeekGridType1({
         {creator && (
           <CreatorPopover
             anchor={creator.rect}
+            initialText={creator.initialText ?? ""}
+            initialColor={creator.initialColor ?? null}
+            isEdit={creator.editIdx !== undefined}
             onClose={closeCreator}
-            onCommit={(text) => {
-              appendSession(creator.col, text);
+            onCommit={(text, color) => {
+              if (creator.editIdx !== undefined) {
+                updateSession(creator.col, creator.editIdx, text, color);
+              } else {
+                appendSession(creator.col, text, color);
+              }
               closeCreator();
             }}
           />
@@ -581,12 +660,23 @@ export function WeekGridType1({
 
 interface CreatorPopoverProps {
   anchor: DOMRect;
+  initialText: string;
+  initialColor: string | null;
+  isEdit: boolean;
   onClose: () => void;
-  onCommit: (text: string) => void;
+  onCommit: (text: string, color: string | null) => void;
 }
 
-function CreatorPopover({ anchor, onClose, onCommit }: CreatorPopoverProps) {
-  const [value, setValue] = useState("");
+function CreatorPopover({
+  anchor,
+  initialText,
+  initialColor,
+  isEdit,
+  onClose,
+  onCommit,
+}: CreatorPopoverProps) {
+  const [value, setValue] = useState(initialText);
+  const [color, setColor] = useState<string | null>(initialColor);
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -594,7 +684,7 @@ function CreatorPopover({ anchor, onClose, onCommit }: CreatorPopoverProps) {
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
         const t = value.trim();
-        if (t) onCommit(t);
+        if (t) onCommit(t, color);
         else onClose();
       }
     };
@@ -605,7 +695,7 @@ function CreatorPopover({ anchor, onClose, onCommit }: CreatorPopoverProps) {
       } else if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         const t = value.trim();
-        if (t) onCommit(t);
+        if (t) onCommit(t, color);
       }
     };
     window.addEventListener("mousedown", onDown);
@@ -614,10 +704,10 @@ function CreatorPopover({ anchor, onClose, onCommit }: CreatorPopoverProps) {
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("keydown", onKey);
     };
-  }, [value, onCommit, onClose]);
+  }, [value, color, onCommit, onClose]);
 
   const POPOVER_W = 280;
-  const POPOVER_H = 130;
+  const POPOVER_H = 180;
   const margin = 8;
   let top = anchor.bottom + margin;
   let left = anchor.left;
@@ -635,7 +725,7 @@ function CreatorPopover({ anchor, onClose, onCommit }: CreatorPopoverProps) {
       style={{ top, left, width: POPOVER_W }}
     >
       <div className="border-b border-hairline px-3 py-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-        Ny økt
+        {isEdit ? "Rediger økt" : "Ny økt"}
       </div>
       <input
         autoFocus
@@ -644,18 +734,67 @@ function CreatorPopover({ anchor, onClose, onCommit }: CreatorPopoverProps) {
         placeholder="f.eks. Intervaller 5×4min"
         className="block w-full bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
       />
+      {/* Color row — 8 platform colors, mac-OS-style dots, 4×2 */}
+      <ColorDotRow value={color} onChange={setColor} />
       <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
-        <span className="mono tabular-nums">⏎ for å lagre</span>
+        <span className="mono tabular-nums">
+          {isEdit ? "⏎ for å lagre · tøm for å slette" : "⏎ for å lagre"}
+        </span>
         <button
           type="button"
           onClick={() => {
             const t = value.trim();
-            if (t) onCommit(t);
+            if (t) onCommit(t, color);
+            else if (isEdit) onCommit("", color);
           }}
           className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
         >
-          Legg til
+          {isEdit ? "Lagre" : "Legg til"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Compact color picker row used in the session creator/editor.
+ * Renders the 8 platform colors as macOS-style dots (4 × 2).
+ */
+function ColorDotRow({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (c: string | null) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-2">
+      <span className="mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+        Farge
+      </span>
+      <div className="grid grid-cols-4 gap-1.5">
+        {GROUP_COLOR_PALETTE.map((c) => {
+          const selected = value?.toLowerCase() === c.value.toLowerCase();
+          return (
+            <button
+              key={c.value}
+              type="button"
+              title={c.name}
+              onClick={() =>
+                onChange(selected ? null : c.value)
+              }
+              aria-label={c.name}
+              aria-pressed={selected}
+              className={[
+                "h-3 w-3 rounded-full border transition-transform hover:scale-125",
+                selected
+                  ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
+                  : "border-black/15",
+              ].join(" ")}
+              style={{ background: c.value }}
+            />
+          );
+        })}
       </div>
     </div>
   );
