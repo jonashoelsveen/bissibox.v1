@@ -73,8 +73,11 @@ function isWeekend(year: number, month: number, day: number) {
   return d === 0 || d === 6;
 }
 
-const EASE = "cubic-bezier(0.2, 0, 0, 1)";
-const DUR_MS = 480;
+const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
+const DUR_MS = 420;
+const FOCUS_SCALE = 1.04;
+const FOCUS_SHADOW =
+  "0 18px 40px -12px rgba(15, 23, 42, 0.22), 0 6px 14px -6px rgba(15, 23, 42, 0.14)";
 
 export interface UnifiedElasticGridProps {
   calId: string;
@@ -274,10 +277,19 @@ export function UnifiedElasticGrid({
     return () => window.removeEventListener("keydown", onKey);
   }, [mode, selected, moveSelection, exitToYear]);
 
+  const prevModeKindRef = useRef<Mode["kind"]>(mode.kind);
   useLayoutEffect(() => {
-    if (mode.kind !== "month") return;
+    if (mode.kind !== "month") {
+      prevModeKindRef.current = mode.kind;
+      return;
+    }
     const c = scrollRef.current;
     if (!c) return;
+    // When entering month view from year view, snap instantly so the focus
+    // lands precisely on the clicked column (no drift from previous state).
+    // When already in month view (lateral navigation), use smooth scroll.
+    const wasYear = prevModeKindRef.current === "year";
+    prevModeKindRef.current = mode.kind;
     requestAnimationFrame(() => {
       const focused = c.querySelector<HTMLElement>(
         `[data-month-col="${mode.month}"]`,
@@ -285,7 +297,10 @@ export function UnifiedElasticGrid({
       if (!focused) return;
       const target =
         focused.offsetLeft - (c.clientWidth - focused.offsetWidth) / 2;
-      c.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
+      c.scrollTo({
+        left: Math.max(0, target),
+        behavior: wasYear ? "auto" : "smooth",
+      });
     });
   }, [mode]);
 
@@ -347,16 +362,21 @@ export function UnifiedElasticGrid({
                   else if (mode.month === m.idx) exitToYear();
                   else enterMonth(m.idx);
                 }}
-                className={`sticky top-0 z-20 cursor-zoom-in select-none border-b border-r bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide transition-colors ${
+                className={`sticky top-0 z-20 cursor-zoom-in select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${
                   focused
-                    ? "border-b-2 border-b-muted-foreground/60 border-l-2 border-l-muted-foreground/60 border-r-2 border-r-muted-foreground/60 text-ink"
+                    ? "text-ink"
                     : periph
-                      ? "border-hairline text-muted-foreground/50 hover:text-ink"
-                      : "border-hairline text-muted-foreground hover:text-ink"
+                      ? "text-muted-foreground/60 hover:text-ink"
+                      : "text-muted-foreground hover:text-ink"
                 }`}
                 style={{
-                  transition: `color ${DUR_MS}ms ${EASE}, background-color ${DUR_MS}ms ${EASE}`,
-                  opacity: periph ? 0.6 : 1,
+                  transition: `transform ${DUR_MS}ms ${EASE}, box-shadow ${DUR_MS}ms ${EASE}, color ${DUR_MS}ms ${EASE}, opacity ${DUR_MS}ms ${EASE}`,
+                  opacity: periph ? 0.7 : 1,
+                  transform: focused ? `scale(${FOCUS_SCALE})` : "scale(1)",
+                  transformOrigin: "center bottom",
+                  boxShadow: focused ? FOCUS_SHADOW : "none",
+                  zIndex: focused ? 25 : 20,
+                  willChange: "transform",
                 }}
                 title={
                   mode.kind === "year"
@@ -478,14 +498,17 @@ function DayRow(props: DayRowProps) {
             <div
               key={`v-${m.idx}-${day}`}
               data-month-col={m.idx}
-              className={`border-b border-r border-hairline bg-muted/30 ${
-                focused ? "border-l-2 border-r-2 border-l-muted-foreground/60 border-r-muted-foreground/60" : ""
-              }`}
+              className="border-b border-r border-hairline bg-muted/30"
               style={{
                 height: rowHeight * 2,
-                transition: `height ${DUR_MS}ms ${EASE}`,
-                willChange: "height",
+                transition: `height ${DUR_MS}ms ${EASE}, transform ${DUR_MS}ms ${EASE}, box-shadow ${DUR_MS}ms ${EASE}, opacity ${DUR_MS}ms ${EASE}`,
+                willChange: "height, transform",
                 opacity: periph ? 0.55 : 1,
+                transform: focused ? `scale(${FOCUS_SCALE})` : "scale(1)",
+                transformOrigin: "center center",
+                boxShadow: focused ? FOCUS_SHADOW : "none",
+                position: "relative",
+                zIndex: focused ? 5 : 1,
               }}
             />
           );
@@ -498,12 +521,16 @@ function DayRow(props: DayRowProps) {
             data-month-col={m.idx}
             className={`relative border-b border-r border-hairline ${
               weekend ? "bg-muted/40" : ""
-            } ${focused ? "border-l-2 border-r-2 border-l-muted-foreground/60 border-r-muted-foreground/60" : ""}`}
+            }`}
             style={{
               height: rowHeight * 2,
-              transition: `height ${DUR_MS}ms ${EASE}`,
-              willChange: "height",
+              transition: `height ${DUR_MS}ms ${EASE}, transform ${DUR_MS}ms ${EASE}, box-shadow ${DUR_MS}ms ${EASE}, opacity ${DUR_MS}ms ${EASE}`,
+              willChange: "height, transform",
               opacity: periph ? 0.55 : 1,
+              transform: focused ? `scale(${FOCUS_SCALE})` : "scale(1)",
+              transformOrigin: "center center",
+              boxShadow: focused ? FOCUS_SHADOW : "none",
+              zIndex: focused ? 5 : 1,
             }}
           >
             <DayCellPair
