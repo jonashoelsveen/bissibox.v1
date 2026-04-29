@@ -187,7 +187,7 @@ export function YearGrid({
     >
       <table
         className="border-separate text-xs"
-        style={{ borderSpacing: 0, tableLayout: "fixed", minWidth: 12 * 140 }}
+        style={{ borderSpacing: 0, tableLayout: "fixed", minWidth: 12 * 220 }}
       >
         <thead className="sticky top-0 z-10 bg-card">
           <tr>
@@ -195,7 +195,7 @@ export function YearGrid({
               <th
                 key={m.idx}
                 className="border-b border-r border-hairline px-2 py-2 text-center text-[12px] font-medium uppercase tracking-wide text-muted-foreground"
-                style={{ width: 140, minWidth: 140 }}
+                style={{ width: 220, minWidth: 220 }}
               >
                 {m.label}
               </th>
@@ -212,7 +212,7 @@ export function YearGrid({
                     <td
                       key={m.idx}
                       className="border-b border-r border-hairline bg-muted/40"
-                      style={{ height: 56, width: 140, minWidth: 140 }}
+                      style={{ height: 56, width: 220, minWidth: 220 }}
                     />
                   );
                 }
@@ -221,7 +221,7 @@ export function YearGrid({
                   <td
                     key={m.idx}
                     className="border-b border-r border-hairline align-top"
-                    style={{ padding: 0, height: 56, width: 140, minWidth: 140 }}
+                    style={{ padding: 0, height: 56, width: 220, minWidth: 220 }}
                   >
                     <DayCell
                       calId={calId}
@@ -366,7 +366,7 @@ function DayCell(props: DayCellProps) {
                 className={`block truncate pl-7 pr-1.5 pt-1 text-black ${
                   cell?.bold ? "font-semibold" : ""
                 } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
-                style={{ color: cell?.color ?? "#000" }}
+                style={{ color: "#000" }}
               >
                 {cell?.text ?? ""}
               </span>
