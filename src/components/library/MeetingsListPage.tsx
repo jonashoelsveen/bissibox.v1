@@ -458,11 +458,14 @@ export function MeetingsListPage({
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        if (addFolder(draftFolder)) {
-                          setNewMeetingFolder(draftFolder.trim());
-                          setDraftFolder("");
-                          setCreatingFolderInline(false);
-                        }
+                        const name = draftFolder.trim();
+                        void addFolder(name).then((ok) => {
+                          if (ok) {
+                            setNewMeetingFolder(name);
+                            setDraftFolder("");
+                            setCreatingFolderInline(false);
+                          }
+                        });
                       } else if (e.key === "Escape") {
                         setDraftFolder("");
                         setCreatingFolderInline(false);
@@ -474,11 +477,14 @@ export function MeetingsListPage({
                   <button
                     type="button"
                     onClick={() => {
-                      if (addFolder(draftFolder)) {
-                        setNewMeetingFolder(draftFolder.trim());
-                        setDraftFolder("");
-                        setCreatingFolderInline(false);
-                      }
+                      const name = draftFolder.trim();
+                      void addFolder(name).then((ok) => {
+                        if (ok) {
+                          setNewMeetingFolder(name);
+                          setDraftFolder("");
+                          setCreatingFolderInline(false);
+                        }
+                      });
                     }}
                     className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
                   >
