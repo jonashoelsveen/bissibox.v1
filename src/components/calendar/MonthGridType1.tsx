@@ -537,26 +537,48 @@ export function MonthGridType1({
           </div>
         </LayoutGroup>
 
-        {/* Inline popover */}
+        {/* Inline popover (per-item create or edit) */}
         {popover && (
           <PopoverEditor
-            initial={popover.initial}
+            initialText={popover.initialText}
+            initialColor={popover.initialColor}
+            isEdit={popover.editIdx >= 0}
             anchor={popover.rect}
             onClose={closePopover}
-            onCommit={(text) => {
+            onCommit={(text, color) => {
               const cell = days.find(
                 (d) => d.row === popover.pos.row && d.col === popover.pos.col,
               );
               if (cell) {
-                onCommitText(
-                  {
-                    year: cell.date.getFullYear(),
-                    month: cell.date.getMonth(),
-                    day: cell.date.getDate(),
-                    session: 0,
-                  },
-                  text,
-                );
+                const cellKey: CellKey = {
+                  year: cell.date.getFullYear(),
+                  month: cell.date.getMonth(),
+                  day: cell.date.getDate(),
+                  session: 0,
+                };
+                const id = makeCellId(calId, cellKey);
+                const existing = parseItems(data[id]?.text);
+                const t = text.trim();
+                let next: DayItem[];
+                if (popover.editIdx >= 0) {
+                  if (!t) {
+                    next = existing.filter((it) => it.idx !== popover.editIdx);
+                  } else {
+                    next = existing.map((it) =>
+                      it.idx === popover.editIdx
+                        ? { idx: it.idx, text: joinColor(color, t) }
+                        : it,
+                    );
+                  }
+                } else {
+                  next = t
+                    ? [
+                        ...existing,
+                        { idx: existing.length, text: joinColor(color, t) },
+                      ]
+                    : existing;
+                }
+                onCommitText(cellKey, serializeItems(next));
               }
               closePopover();
             }}
@@ -568,34 +590,44 @@ export function MonthGridType1({
 }
 
 interface PopoverEditorProps {
-  initial: string;
+  initialText: string;
+  initialColor: string | null;
+  isEdit: boolean;
   anchor: DOMRect;
   onClose: () => void;
-  onCommit: (text: string) => void;
+  onCommit: (text: string, color: string | null) => void;
 }
 
 /**
- * Notion-style inline popover. Allows the user to add/edit the day's items.
- * Items are stored as newline-separated text lines (one item per line).
+ * Notion-style inline popover for adding/editing a single session item.
+ * Includes the platform color row (8 dots, 4×2) so users can colorize sessions.
  */
-function PopoverEditor({ initial, anchor, onClose, onCommit }: PopoverEditorProps) {
-  const [value, setValue] = useState(initial);
+function PopoverEditor({
+  initialText,
+  initialColor,
+  isEdit,
+  anchor,
+  onClose,
+  onCommit,
+}: PopoverEditorProps) {
+  const [value, setValue] = useState(initialText);
+  const [color, setColor] = useState<string | null>(initialColor);
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
-        onCommit(value.trim());
+        onCommit(value.trim(), color);
       }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
-      } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      } else if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        onCommit(value.trim());
+        onCommit(value.trim(), color);
       }
     };
     window.addEventListener("mousedown", onDown);
@@ -604,11 +636,10 @@ function PopoverEditor({ initial, anchor, onClose, onCommit }: PopoverEditorProp
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("keydown", onKey);
     };
-  }, [value, onCommit, onClose]);
+  }, [value, color, onCommit, onClose]);
 
-  // Position: prefer below the cell; flip above if not enough room.
   const POPOVER_W = 280;
-  const POPOVER_H = 180;
+  const POPOVER_H = 170;
   const margin = 8;
   let top = anchor.bottom + margin;
   let left = anchor.left;
@@ -626,23 +657,53 @@ function PopoverEditor({ initial, anchor, onClose, onCommit }: PopoverEditorProp
       style={{ top, left, width: POPOVER_W }}
     >
       <div className="border-b border-hairline px-3 py-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-        Legg til økt
+        {isEdit ? "Rediger økt" : "Legg til økt"}
       </div>
-      <textarea
+      <input
         autoFocus
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder={"Skriv én økt per linje\nf.eks. Intervaller 5×4min"}
-        className="block h-[120px] w-full resize-none bg-transparent px-3 py-2 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
+        placeholder="f.eks. Intervaller 5×4min"
+        className="block w-full bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
       />
+      {/* Color row — 8 platform colors as macOS-style dots, 4 × 2 */}
+      <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-2">
+        <span className="mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+          Farge
+        </span>
+        <div className="grid grid-cols-4 gap-1.5">
+          {GROUP_COLOR_PALETTE.map((c) => {
+            const selected = color?.toLowerCase() === c.value.toLowerCase();
+            return (
+              <button
+                key={c.value}
+                type="button"
+                title={c.name}
+                aria-label={c.name}
+                aria-pressed={selected}
+                onClick={() => setColor(selected ? null : c.value)}
+                className={[
+                  "h-3 w-3 rounded-full border transition-transform hover:scale-125",
+                  selected
+                    ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
+                    : "border-black/15",
+                ].join(" ")}
+                style={{ background: c.value }}
+              />
+            );
+          })}
+        </div>
+      </div>
       <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
-        <span className="mono tabular-nums">⌘ + ⏎ for å lagre</span>
+        <span className="mono tabular-nums">
+          {isEdit ? "⏎ for å lagre · tøm for å slette" : "⏎ for å lagre"}
+        </span>
         <button
           type="button"
-          onClick={() => onCommit(value.trim())}
+          onClick={() => onCommit(value.trim(), color)}
           className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
         >
-          Lagre
+          {isEdit ? "Lagre" : "Legg til"}
         </button>
       </div>
     </div>
