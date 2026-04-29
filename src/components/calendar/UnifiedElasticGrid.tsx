@@ -584,7 +584,7 @@ function DayCellPair(props: DayCellPairProps) {
   const dow = new Date(year, month, day).getDay();
   const weekdayLabel = WEEKDAYS_NB[dow];
 
-  const showRich = focused;
+  const showRich = mode.kind === "month";
   const showCompact = mode.kind === "year";
 
   return (
