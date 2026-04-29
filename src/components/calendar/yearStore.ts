@@ -23,6 +23,7 @@ export interface CellData {
   italic?: boolean;
   underline?: boolean;
   color?: string; // hex
+  duration?: string; // free-form session length (e.g. "1t 30min")
   description?: string;
   layer?: CalendarLayer;
   groupId?: string | null; // for trainings, which group/team
@@ -147,6 +148,7 @@ export function useYearStore(calId: string, defaultTitle: string) {
         !merged.italic &&
         !merged.underline &&
         !merged.color &&
+        !merged.duration &&
         !merged.description &&
         !merged.locationId &&
         !merged.courseId

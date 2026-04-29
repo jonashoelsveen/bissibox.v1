@@ -83,6 +83,7 @@ export interface UnifiedElasticGridProps {
   selected: CellKey | null;
   onSelect: (k: CellKey | null) => void;
   onCommitText: (k: CellKey, text: string) => void;
+  onCommitDuration?: (k: CellKey, duration: string) => void;
   onFill: (source: CellKey, targets: CellKey[]) => void;
 }
 
@@ -95,6 +96,7 @@ export function UnifiedElasticGrid({
   selected,
   onSelect,
   onCommitText,
+  onCommitDuration,
   onFill,
 }: UnifiedElasticGridProps) {
   const [mode, setMode] = useState<Mode>({ kind: "year" });
@@ -104,8 +106,7 @@ export function UnifiedElasticGrid({
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const YEAR_COL = 220;
-  const FOCUS_COL = 880;
-  const PERIPH_COL = 96;
+  const FOCUS_COL = 640;
   const ROW_YEAR = 28;
   const ROW_MONTH = 36;
 
@@ -113,10 +114,10 @@ export function UnifiedElasticGrid({
     if (mode.kind === "year") {
       return `repeat(12, minmax(${YEAR_COL}px, 1fr))`;
     }
-    const m = mode.month;
-    return Array.from({ length: 12 }, (_, i) =>
-      i === m ? `${FOCUS_COL}px` : `${PERIPH_COL}px`,
-    ).join(" ");
+    // Month view: every column gets the same width as the focused one,
+    // so prev/next months read as full-fidelity siblings of the active one.
+    // The active month is centered via horizontal scroll (see effect below).
+    return `repeat(12, ${FOCUS_COL}px)`;
   }, [mode]);
 
   const rowHeight = mode.kind === "year" ? ROW_YEAR : ROW_MONTH;
@@ -390,6 +391,7 @@ export function UnifiedElasticGrid({
               onSelect={onSelect}
               onBeginEdit={beginEdit}
               onCommitEdit={commitEdit}
+              onCommitDuration={onCommitDuration}
               onMoveAfterCommit={moveSelection}
               inDragRange={inDragRange}
               onCellMouseEnter={(k) => {
@@ -431,6 +433,7 @@ interface DayRowProps {
   onSelect: (k: CellKey | null) => void;
   onBeginEdit: (k: CellKey) => void;
   onCommitEdit: () => void;
+  onCommitDuration?: (k: CellKey, duration: string) => void;
   onMoveAfterCommit: (dx: number, dy: number) => void;
   inDragRange: (k: CellKey) => boolean;
   onCellMouseEnter: (k: CellKey) => void;
@@ -456,6 +459,7 @@ function DayRow(props: DayRowProps) {
     onSelect,
     onBeginEdit,
     onCommitEdit,
+    onCommitDuration,
     onMoveAfterCommit,
     inDragRange,
     onCellMouseEnter,
@@ -479,9 +483,7 @@ function DayRow(props: DayRowProps) {
               className="border-b border-r border-hairline bg-muted/30"
               style={{
                 height: rowHeight * 2,
-                transition: `height ${DUR_MS}ms ${EASE}, filter ${DUR_MS}ms ${EASE}, opacity ${DUR_MS}ms ${EASE}`,
-                filter: periph ? "grayscale(0.9)" : undefined,
-                opacity: periph ? 0.55 : 1,
+                transition: `height ${DUR_MS}ms ${EASE}`,
                 willChange: "height",
               }}
             />
@@ -498,10 +500,8 @@ function DayRow(props: DayRowProps) {
             }`}
             style={{
               height: rowHeight * 2,
-              transition: `height ${DUR_MS}ms ${EASE}, filter ${DUR_MS}ms ${EASE}, opacity ${DUR_MS}ms ${EASE}`,
-              filter: periph ? "grayscale(0.9)" : undefined,
-              opacity: periph ? 0.55 : 1,
-              willChange: "height, transform",
+              transition: `height ${DUR_MS}ms ${EASE}`,
+              willChange: "height",
             }}
           >
             <DayCellPair
@@ -523,6 +523,7 @@ function DayRow(props: DayRowProps) {
               onSelect={onSelect}
               onBeginEdit={onBeginEdit}
               onCommitEdit={onCommitEdit}
+              onCommitDuration={onCommitDuration}
               onMoveAfterCommit={onMoveAfterCommit}
               inDragRange={inDragRange}
               onCellMouseEnter={onCellMouseEnter}
@@ -554,6 +555,7 @@ interface DayCellPairProps {
   onSelect: (k: CellKey | null) => void;
   onBeginEdit: (k: CellKey) => void;
   onCommitEdit: () => void;
+  onCommitDuration?: (k: CellKey, duration: string) => void;
   onMoveAfterCommit: (dx: number, dy: number) => void;
   inDragRange: (k: CellKey) => boolean;
   onCellMouseEnter: (k: CellKey) => void;
@@ -579,6 +581,7 @@ function DayCellPair(props: DayCellPairProps) {
     onSelect,
     onBeginEdit,
     onCommitEdit,
+    onCommitDuration,
     onMoveAfterCommit,
     inDragRange,
     onCellMouseEnter,
@@ -589,7 +592,7 @@ function DayCellPair(props: DayCellPairProps) {
   const dow = new Date(year, month, day).getDay();
   const weekdayLabel = WEEKDAYS_NB[dow];
 
-  const showRich = focused;
+  const showRich = mode.kind === "month";
   const showCompact = mode.kind === "year";
 
   return (
@@ -643,9 +646,9 @@ function DayCellPair(props: DayCellPairProps) {
               <div
                 className="grid h-full w-full items-center"
                 style={{
-                  gridTemplateColumns: "84px 64px minmax(0,1fr) 96px",
+                  gridTemplateColumns: "72px 52px 84px minmax(0,1fr)",
                   transition: `opacity ${DUR_MS}ms ${EASE}`,
-                  opacity: focused ? 1 : 0,
+                  opacity: 1,
                 }}
               >
                 <div className="px-3 text-[12px] font-medium text-ink">
@@ -654,7 +657,11 @@ function DayCellPair(props: DayCellPairProps) {
                 <div className="px-2 text-[12px] text-muted-foreground">
                   {isFirst ? weekdayLabel : ""}
                 </div>
-                <div className="min-w-0 px-3 text-[13px] text-ink">
+                <DurationCell
+                  initial={cell?.duration ?? ""}
+                  onCommit={(v) => onCommitDuration?.(k, v)}
+                />
+                <div className="min-w-0 border-l border-hairline px-3 text-[13px] text-ink">
                   {isEditing ? (
                     <input
                       autoFocus
@@ -685,9 +692,6 @@ function DayCellPair(props: DayCellPairProps) {
                       {cell?.text ?? ""}
                     </span>
                   )}
-                </div>
-                <div className="px-3 text-right text-[12px] text-muted-foreground">
-                  {cell?.text ? "1t 30min" : ""}
                 </div>
               </div>
             )}
@@ -748,6 +752,62 @@ function DayCellPair(props: DayCellPairProps) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+interface DurationCellProps {
+  initial: string;
+  onCommit: (v: string) => void;
+}
+
+function DurationCell({ initial, onCommit }: DurationCellProps) {
+  const [v, setV] = useState(initial);
+  const [editing, setEditing] = useState(false);
+
+  // Re-sync when the underlying cell changes from outside.
+  useEffect(() => {
+    if (!editing) setV(initial);
+  }, [initial, editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const t = v.trim();
+    if (t !== initial) onCommit(t);
+  };
+
+  return (
+    <div
+      className="px-3 text-[12px] text-muted-foreground"
+      onMouseDown={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        setEditing(true);
+      }}
+    >
+      {editing ? (
+        <input
+          autoFocus
+          value={v}
+          onChange={(e) => setV(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === "Tab") {
+              e.preventDefault();
+              commit();
+            } else if (e.key === "Escape") {
+              setV(initial);
+              setEditing(false);
+            }
+          }}
+          placeholder="1t 30min"
+          className="w-full bg-transparent text-[12px] text-ink caret-ink outline-none"
+        />
+      ) : (
+        <span className="block truncate">
+          {v || <span className="text-muted-foreground/50">—</span>}
+        </span>
+      )}
     </div>
   );
 }
