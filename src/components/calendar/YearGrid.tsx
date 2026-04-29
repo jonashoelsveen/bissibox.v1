@@ -194,14 +194,36 @@ export function YearGrid({
         if (e.target === e.currentTarget) onSelect(null);
       }}
       onKeyDown={(e) => {
-        // Excel-style: start typing when a cell is selected (no edit mode yet)
         if (!selected || editingKey) return;
         if (e.metaKey || e.ctrlKey || e.altKey) return;
-        // Printable single character or Enter
+        // Arrow navigation
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          moveSelection(0, 1);
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          moveSelection(0, -1);
+          return;
+        }
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          moveSelection(1, 0);
+          return;
+        }
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          moveSelection(-1, 0);
+          return;
+        }
+        // Enter → move down one session
         if (e.key === "Enter") {
           e.preventDefault();
-          beginEdit(selected);
-        } else if (e.key.length === 1) {
+          moveSelection(0, 1);
+          return;
+        }
+        if (e.key.length === 1) {
           e.preventDefault();
           const id = makeCellId(calId, selected);
           setEditValue((data[id]?.text ?? "") + e.key);
