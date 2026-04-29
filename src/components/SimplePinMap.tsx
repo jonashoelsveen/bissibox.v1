@@ -267,7 +267,12 @@ export function SimplePinMap({
     <div className="flex h-full w-full flex-1">
       {/* Left: map */}
       <div className="relative min-h-[480px] flex-1">
-        <div id={`simple-pin-map-${containerId}`} ref={containerRef} className="absolute inset-0 z-0 bg-secondary" />
+        <div
+          id={`simple-pin-map-${containerId}`}
+          ref={containerRef}
+          className="absolute inset-0 bg-secondary"
+          style={{ zIndex: 1, minHeight: 400, width: "100%", height: "100%" }}
+        />
 
         {/* Top-left: toolbar + search */}
         <div className="pointer-events-none absolute left-4 top-4 z-[400] flex flex-col gap-2">

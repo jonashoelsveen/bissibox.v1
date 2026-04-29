@@ -699,8 +699,13 @@ export function CourseMapEditor({
   };
 
   return (
-    <div className="relative h-full w-full">
-      <div id={`course-map-editor-${containerId}`} ref={containerRef} className="absolute inset-0 z-0 bg-secondary" />
+    <div className="relative h-full w-full" style={{ minHeight: 400 }}>
+      <div
+        id={`course-map-editor-${containerId}`}
+        ref={containerRef}
+        className="absolute inset-0 bg-secondary"
+        style={{ zIndex: 1, minHeight: 400, width: "100%", height: "100%" }}
+      />
 
       <div className="pointer-events-none absolute left-4 top-4 z-[400] flex flex-col gap-2">
         <div className="pointer-events-auto flex flex-wrap items-center gap-1 rounded-xl border border-hairline bg-card/95 p-1.5 shadow-md backdrop-blur">

@@ -234,8 +234,13 @@ export function ReadOnlyCourseMap({ path, splits, selectedSplitId, hoverPosition
   }, [mapbox, hoverPosition]);
 
   return (
-    <div className="relative h-full w-full">
-      <div id={`readonly-course-map-${containerId}`} ref={containerRef} className="absolute inset-0 z-0 bg-secondary" />
+    <div className="relative h-full w-full" style={{ minHeight: 400 }}>
+      <div
+        id={`readonly-course-map-${containerId}`}
+        ref={containerRef}
+        className="absolute inset-0 bg-secondary"
+        style={{ zIndex: 1, minHeight: 400, width: "100%", height: "100%" }}
+      />
       <div className="absolute right-3 top-3 z-10">
         <MapStylePicker value={style} onChange={setStyle} compact />
       </div>
