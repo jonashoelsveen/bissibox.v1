@@ -213,111 +213,86 @@ function LayerRow({
   );
 }
 
-function MiniMonthCalendar({
+function MiniYearGrid({
   year,
-  month,
   selected,
-  onMonthChange,
   onPick,
 }: {
   year: number;
-  month: number;
   selected: { m: number; d: number } | null;
-  onMonthChange: (m: number) => void;
   onPick: (month: number, day: number) => void;
 }) {
   const today = new Date();
   const isToday = (m: number, d: number) =>
     today.getFullYear() === year && today.getMonth() === m && today.getDate() === d;
 
-  const firstDow = (new Date(year, month, 1).getDay() + 6) % 7; // Monday-first
-  const dim = new Date(year, month + 1, 0).getDate();
-  const cells: ({ d: number; we: boolean } | null)[] = [
-    ...Array.from({ length: firstDow }, () => null),
-    ...Array.from({ length: dim }, (_, i) => {
-      const d = i + 1;
-      const dow = new Date(year, month, d).getDay();
-      return { d, we: dow === 0 || dow === 6 };
-    }),
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
-  const rows: typeof cells[] = [];
-  for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+  const months = Array.from({ length: 12 }, (_, m) => {
+    const firstDow = (new Date(year, m, 1).getDay() + 6) % 7; // Mon-first
+    const dim = new Date(year, m + 1, 0).getDate();
+    const cells: ({ d: number; we: boolean } | null)[] = [
+      ...Array.from({ length: firstDow }, () => null),
+      ...Array.from({ length: dim }, (_, i) => {
+        const d = i + 1;
+        const dow = new Date(year, m, d).getDay();
+        return { d, we: dow === 0 || dow === 6 };
+      }),
+    ];
+    while (cells.length % 7 !== 0) cells.push(null);
+    // Pad to 6 rows so all months are equal height
+    while (cells.length < 42) cells.push(null);
+    return cells;
+  });
 
   return (
-    <div className="rounded-lg border border-hairline bg-background p-3 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <button
-          onClick={() => onMonthChange((month + 11) % 12)}
-          aria-label="Previous month"
-          className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <div className="text-[13px] font-semibold tracking-tight text-ink">
-          {MONTH_LABELS_FULL[month]} {year}
-        </div>
-        <button
-          onClick={() => onMonthChange((month + 1) % 12)}
-          aria-label="Next month"
-          className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+    <div className="rounded-lg border border-hairline bg-background p-2 shadow-sm">
+      <div className="mb-2 px-1 text-center text-[11px] font-semibold tracking-tight text-ink">
+        {year}
       </div>
-
-      <div className="grid grid-cols-7 gap-y-1">
-        {WEEKDAY_LABELS.map((w, i) => (
-          <div
-            key={i}
-            className="grid h-6 place-items-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
-          >
-            {w}
+      <div className="grid grid-cols-3 gap-x-2 gap-y-3">
+        {months.map((cells, m) => (
+          <div key={m} className="flex flex-col">
+            <div className="mb-1 text-center text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {MONTH_LABELS[m]}
+            </div>
+            <div className="grid grid-cols-7 gap-[1px]">
+              {WEEKDAY_LABELS.map((w, i) => (
+                <div
+                  key={`h-${i}`}
+                  className="grid h-3 place-items-center text-[7px] font-medium text-muted-foreground/60"
+                >
+                  {w}
+                </div>
+              ))}
+              {cells.map((c, i) => {
+                if (!c)
+                  return <div key={i} className="h-4 w-full" />;
+                const td = isToday(m, c.d);
+                const isSel = selected?.m === m && selected?.d === c.d;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => onPick(m, c.d)}
+                    className={`grid h-4 w-full place-items-center rounded-[3px] text-[8px] font-medium leading-none transition ${
+                      isSel
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : td
+                          ? "bg-primary/15 text-ink ring-1 ring-primary/40"
+                          : c.we
+                            ? "text-muted-foreground hover:bg-secondary"
+                            : "text-ink hover:bg-secondary"
+                    }`}
+                  >
+                    {c.d}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ))}
-        {rows.flat().map((c, i) => {
-          if (!c) return <div key={i} className="h-9" />;
-          const td = isToday(month, c.d);
-          const isSel = selected?.m === month && selected?.d === c.d;
-          return (
-            <div key={i} className="grid place-items-center">
-              <button
-                onClick={() => onPick(month, c.d)}
-                className={`grid h-9 w-9 place-items-center rounded-full text-[13px] font-medium transition ${
-                  isSel
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : td
-                      ? "bg-primary/15 text-ink ring-1 ring-primary/40"
-                      : c.we
-                        ? "text-muted-foreground hover:bg-secondary"
-                        : "text-ink hover:bg-secondary"
-                }`}
-              >
-                {c.d}
-              </button>
-            </div>
-          );
-        })}
       </div>
     </div>
   );
 }
-
-const MONTH_LABELS_FULL = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
 
 /* -------------------- State B -------------------- */
 
