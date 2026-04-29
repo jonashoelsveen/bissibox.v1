@@ -1,0 +1,753 @@
+/**
+ * UnifiedElasticGrid — a single continuous spreadsheet that morphs between
+ * Year View and Month View by animating CSS Grid track sizes.
+ *
+ * Architecture:
+ *   - One source of truth: 12 month columns × 31 days × 2 sessions (rows).
+ *   - Zoom is achieved by animating `grid-template-columns` and per-row
+ *     heights. No unmounting, no shared-element trickery — the same DOM
+ *     nodes resize in place. This guarantees zero "popping" of the
+ *     selection ring or cell content.
+ *   - Session text is always rendered. In Year View it is clipped/faded by
+ *     the narrow column width and a CSS opacity bound to the column's
+ *     active state. In Month View the focused column expands and the text
+ *     fades in cleanly.
+ *   - Sticky month headers stay pinned while the user scrolls vertically
+ *     through a month's sessions.
+ *   - Keyboard: arrow keys move the selection cell-by-cell. Crossing a
+ *     month boundary in Month View pans the focused month.
+ *
+ * Spec compliance:
+ *   - FLIP-style smooth transitions via CSS `transition` on grid tracks.
+ *   - `will-change: transform, width, height` on cells.
+ *   - Easing: cubic-bezier(0.2, 0, 0, 1).
+ *   - Crisp 1px borders, desaturation of peripheral columns in Month View.
+ */
+
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { CellData, CellKey, Session } from "./yearStore";
+import { makeCellId } from "./yearStore";
+
+const MONTH_LABELS_FULL = [
+  "Januar",
+  "Februar",
+  "Mars",
+  "April",
+  "Mai",
+  "Juni",
+  "Juli",
+  "August",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+const MONTH_LABELS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Des",
+];
+const WEEKDAYS_NB = ["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"];
+
+function daysInMonth(y: number, m: number) {
+  return new Date(y, m + 1, 0).getDate();
+}
+function isWeekend(year: number, month: number, day: number) {
+  const d = new Date(year, month, day).getDay();
+  return d === 0 || d === 6;
+}
+
+const EASE = "cubic-bezier(0.2, 0, 0, 1)";
+const DUR_MS = 480;
+
+export interface UnifiedElasticGridProps {
+  calId: string;
+  year: number;
+  data: Record<string, CellData>;
+  selected: CellKey | null;
+  onSelect: (k: CellKey | null) => void;
+  onCommitText: (k: CellKey, text: string) => void;
+  onFill: (source: CellKey, targets: CellKey[]) => void;
+}
+
+type Mode = { kind: "year" } | { kind: "month"; month: number };
+
+export function UnifiedElasticGrid({
+  calId,
+  year,
+  data,
+  selected,
+  onSelect,
+  onCommitText,
+  onFill,
+}: UnifiedElasticGridProps) {
+  const [mode, setMode] = useState<Mode>({ kind: "year" });
+  const [editingKey, setEditingKey] = useState<CellKey | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const YEAR_COL = 220;
+  const FOCUS_COL = 880;
+  const PERIPH_COL = 96;
+  const ROW_YEAR = 28;
+  const ROW_MONTH = 36;
+
+  const gridTemplateColumns = useMemo(() => {
+    if (mode.kind === "year") {
+      return `repeat(12, minmax(${YEAR_COL}px, 1fr))`;
+    }
+    const m = mode.month;
+    return Array.from({ length: 12 }, (_, i) =>
+      i === m ? `${FOCUS_COL}px` : `${PERIPH_COL}px`,
+    ).join(" ");
+  }, [mode]);
+
+  const rowHeight = mode.kind === "year" ? ROW_YEAR : ROW_MONTH;
+
+  const selectedId = selected ? makeCellId(calId, selected) : null;
+  const editingId = editingKey ? makeCellId(calId, editingKey) : null;
+
+  const beginEdit = useCallback(
+    (k: CellKey) => {
+      const id = makeCellId(calId, k);
+      setEditValue(data[id]?.text ?? "");
+      setEditingKey(k);
+      onSelect(k);
+    },
+    [calId, data, onSelect],
+  );
+
+  const commitEdit = useCallback(() => {
+    if (editingKey) onCommitText(editingKey, editValue.trim());
+    setEditingKey(null);
+  }, [editingKey, editValue, onCommitText]);
+
+  const enterMonth = useCallback((month: number) => {
+    setMode({ kind: "month", month });
+  }, []);
+
+  const exitToYear = useCallback(() => {
+    setMode({ kind: "year" });
+  }, []);
+
+  const moveSelection = useCallback(
+    (dx: number, dy: number) => {
+      if (!selected) return;
+      let { year: y, month, day, session } = selected;
+      if (dy !== 0) {
+        let rank = day * 2 + session + dy;
+        const dim = daysInMonth(y, month);
+        const minRank = 1 * 2 + 0;
+        const maxRank = dim * 2 + 1;
+        if (rank > maxRank) {
+          if (mode.kind === "month" && month < 11) {
+            month += 1;
+            rank = minRank;
+          } else {
+            rank = maxRank;
+          }
+        } else if (rank < minRank) {
+          if (mode.kind === "month" && month > 0) {
+            month -= 1;
+            const nDim = daysInMonth(y, month);
+            rank = nDim * 2 + 1;
+          } else {
+            rank = minRank;
+          }
+        }
+        day = Math.floor(rank / 2);
+        session = (rank % 2) as Session;
+      }
+      if (dx !== 0) {
+        const m = Math.max(0, Math.min(11, month + dx));
+        month = m;
+        const nDim = daysInMonth(y, month);
+        if (day > nDim) day = nDim;
+      }
+      onSelect({ year: y, month, day, session });
+      if (mode.kind === "month" && month !== mode.month) {
+        setMode({ kind: "month", month });
+      }
+    },
+    [selected, onSelect, mode],
+  );
+
+  const dragStartRef = useRef<CellKey | null>(null);
+  const [dragRange, setDragRange] = useState<{
+    month: number;
+    toDay: number;
+    toSession: Session;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!dragRange || !dragStartRef.current) return;
+    const onUp = () => {
+      const src = dragStartRef.current!;
+      const r = dragRange;
+      const targets: CellKey[] = [];
+      const dim = daysInMonth(year, r.month);
+      const srcRank = src.day * 2 + src.session;
+      const endRank = r.toDay * 2 + r.toSession;
+      const lo = Math.min(srcRank, endRank);
+      const hi = Math.max(srcRank, endRank);
+      for (let rk = lo; rk <= hi; rk++) {
+        const day = Math.floor(rk / 2);
+        const session = (rk % 2) as Session;
+        if (day < 1 || day > dim) continue;
+        if (day === src.day && session === src.session) continue;
+        targets.push({ year, month: r.month, day, session });
+      }
+      if (targets.length > 0) onFill(src, targets);
+      setDragRange(null);
+      dragStartRef.current = null;
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+  }, [dragRange, year, onFill]);
+
+  const inDragRange = useCallback(
+    (k: CellKey) => {
+      if (!dragRange || !dragStartRef.current) return false;
+      if (k.month !== dragRange.month) return false;
+      const src = dragStartRef.current;
+      const a = src.day * 2 + src.session;
+      const b = dragRange.toDay * 2 + dragRange.toSession;
+      const r = k.day * 2 + k.session;
+      return r >= Math.min(a, b) && r <= Math.max(a, b);
+    },
+    [dragRange],
+  );
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+      if (isTyping) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "Escape" && mode.kind === "month") {
+        e.preventDefault();
+        exitToYear();
+        return;
+      }
+      if (!selected) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        moveSelection(0, 1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        moveSelection(0, -1);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        moveSelection(1, 0);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        moveSelection(-1, 0);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        moveSelection(0, 1);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mode, selected, moveSelection, exitToYear]);
+
+  useLayoutEffect(() => {
+    if (mode.kind !== "month") return;
+    const c = scrollRef.current;
+    if (!c) return;
+    requestAnimationFrame(() => {
+      const focused = c.querySelector<HTMLElement>(
+        `[data-month-col="${mode.month}"]`,
+      );
+      if (!focused) return;
+      const target =
+        focused.offsetLeft - (c.clientWidth - focused.offsetWidth) / 2;
+      c.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
+    });
+  }, [mode]);
+
+  const months = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, idx) => ({
+        idx,
+        label: MONTH_LABELS_SHORT[idx],
+        full: MONTH_LABELS_FULL[idx],
+        dim: daysInMonth(year, idx),
+      })),
+    [year],
+  );
+
+  const isMonthFocused = (m: number) => mode.kind === "month" && mode.month === m;
+  const isMonthPeriph = (m: number) => mode.kind === "month" && mode.month !== m;
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative w-full overflow-hidden rounded-md border border-hairline bg-card"
+      style={{ height: "calc(100vh - 280px)" }}
+    >
+      {mode.kind === "month" && (
+        <button
+          type="button"
+          onClick={exitToYear}
+          className="absolute right-3 top-3 z-30 rounded-md border border-hairline bg-background/90 px-2 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur hover:bg-secondary hover:text-ink"
+        >
+          Esc · Tilbake til år
+        </button>
+      )}
+
+      <div
+        ref={scrollRef}
+        className="h-full w-full overflow-auto"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onSelect(null);
+        }}
+        tabIndex={0}
+      >
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns,
+            transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
+            willChange: "grid-template-columns",
+          }}
+        >
+          {months.map((m) => {
+            const focused = isMonthFocused(m.idx);
+            const periph = isMonthPeriph(m.idx);
+            return (
+              <div
+                key={`h-${m.idx}`}
+                data-month-col={m.idx}
+                onDoubleClick={() => {
+                  if (mode.kind === "year") enterMonth(m.idx);
+                  else if (mode.month === m.idx) exitToYear();
+                  else enterMonth(m.idx);
+                }}
+                onClick={() => {
+                  if (periph) enterMonth(m.idx);
+                }}
+                className={`sticky top-0 z-20 cursor-zoom-in select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide transition-colors ${
+                  focused
+                    ? "text-ink"
+                    : periph
+                      ? "text-muted-foreground/80 hover:text-ink"
+                      : "text-muted-foreground hover:text-ink"
+                }`}
+                style={{
+                  transition: `color ${DUR_MS}ms ${EASE}, background-color ${DUR_MS}ms ${EASE}`,
+                }}
+                title={
+                  mode.kind === "year"
+                    ? "Dobbeltklikk for å zoome inn"
+                    : focused
+                      ? "Dobbeltklikk for å gå tilbake"
+                      : "Klikk for å fokusere"
+                }
+              >
+                {focused ? `${m.full} ${year}` : m.label}
+              </div>
+            );
+          })}
+
+          {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+            <DayRow
+              key={day}
+              day={day}
+              months={months}
+              year={year}
+              calId={calId}
+              data={data}
+              mode={mode}
+              rowHeight={rowHeight}
+              selected={selected}
+              selectedId={selectedId}
+              editingId={editingId}
+              editValue={editValue}
+              setEditValue={setEditValue}
+              onSelect={onSelect}
+              onBeginEdit={beginEdit}
+              onCommitEdit={commitEdit}
+              onMoveAfterCommit={moveSelection}
+              inDragRange={inDragRange}
+              onCellMouseEnter={(k) => {
+                if (!dragStartRef.current) return;
+                if (k.month !== dragStartRef.current.month) return;
+                setDragRange({
+                  month: dragStartRef.current.month,
+                  toDay: k.day,
+                  toSession: k.session,
+                });
+              }}
+              onHandleDown={(k) => {
+                dragStartRef.current = k;
+                setDragRange({ month: k.month, toDay: k.day, toSession: k.session });
+              }}
+              isMonthFocused={isMonthFocused}
+              isMonthPeriph={isMonthPeriph}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface DayRowProps {
+  day: number;
+  year: number;
+  months: { idx: number; label: string; full: string; dim: number }[];
+  calId: string;
+  data: Record<string, CellData>;
+  mode: Mode;
+  rowHeight: number;
+  selected: CellKey | null;
+  selectedId: string | null;
+  editingId: string | null;
+  editValue: string;
+  setEditValue: (v: string) => void;
+  onSelect: (k: CellKey | null) => void;
+  onBeginEdit: (k: CellKey) => void;
+  onCommitEdit: () => void;
+  onMoveAfterCommit: (dx: number, dy: number) => void;
+  inDragRange: (k: CellKey) => boolean;
+  onCellMouseEnter: (k: CellKey) => void;
+  onHandleDown: (k: CellKey) => void;
+  isMonthFocused: (m: number) => boolean;
+  isMonthPeriph: (m: number) => boolean;
+}
+
+function DayRow(props: DayRowProps) {
+  const {
+    day,
+    year,
+    months,
+    calId,
+    data,
+    mode,
+    rowHeight,
+    selected,
+    selectedId,
+    editingId,
+    editValue,
+    setEditValue,
+    onSelect,
+    onBeginEdit,
+    onCommitEdit,
+    onMoveAfterCommit,
+    inDragRange,
+    onCellMouseEnter,
+    onHandleDown,
+    isMonthFocused,
+    isMonthPeriph,
+  } = props;
+
+  return (
+    <>
+      {months.map((m) => {
+        const valid = day <= m.dim;
+        const focused = isMonthFocused(m.idx);
+        const periph = isMonthPeriph(m.idx);
+
+        if (!valid) {
+          return (
+            <div
+              key={`v-${m.idx}-${day}`}
+              data-month-col={m.idx}
+              className="border-b border-r border-hairline bg-muted/30"
+              style={{
+                height: rowHeight * 2,
+                transition: `height ${DUR_MS}ms ${EASE}, filter ${DUR_MS}ms ${EASE}, opacity ${DUR_MS}ms ${EASE}`,
+                filter: periph ? "grayscale(0.9)" : undefined,
+                opacity: periph ? 0.55 : 1,
+                willChange: "height",
+              }}
+            />
+          );
+        }
+
+        const weekend = isWeekend(year, m.idx, day);
+        return (
+          <div
+            key={`c-${m.idx}-${day}`}
+            data-month-col={m.idx}
+            className={`relative border-b border-r border-hairline ${
+              weekend ? "bg-muted/40" : ""
+            }`}
+            style={{
+              height: rowHeight * 2,
+              transition: `height ${DUR_MS}ms ${EASE}, filter ${DUR_MS}ms ${EASE}, opacity ${DUR_MS}ms ${EASE}`,
+              filter: periph ? "grayscale(0.9)" : undefined,
+              opacity: periph ? 0.55 : 1,
+              willChange: "height, transform",
+            }}
+          >
+            <DayCellPair
+              calId={calId}
+              year={year}
+              month={m.idx}
+              day={day}
+              weekend={weekend}
+              data={data}
+              focused={focused}
+              periph={periph}
+              mode={mode}
+              rowHeight={rowHeight}
+              selectedId={selectedId}
+              selected={selected}
+              editingId={editingId}
+              editValue={editValue}
+              setEditValue={setEditValue}
+              onSelect={onSelect}
+              onBeginEdit={onBeginEdit}
+              onCommitEdit={onCommitEdit}
+              onMoveAfterCommit={onMoveAfterCommit}
+              inDragRange={inDragRange}
+              onCellMouseEnter={onCellMouseEnter}
+              onHandleDown={onHandleDown}
+            />
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+interface DayCellPairProps {
+  calId: string;
+  year: number;
+  month: number;
+  day: number;
+  weekend: boolean;
+  data: Record<string, CellData>;
+  focused: boolean;
+  periph: boolean;
+  mode: Mode;
+  rowHeight: number;
+  selectedId: string | null;
+  selected: CellKey | null;
+  editingId: string | null;
+  editValue: string;
+  setEditValue: (v: string) => void;
+  onSelect: (k: CellKey | null) => void;
+  onBeginEdit: (k: CellKey) => void;
+  onCommitEdit: () => void;
+  onMoveAfterCommit: (dx: number, dy: number) => void;
+  inDragRange: (k: CellKey) => boolean;
+  onCellMouseEnter: (k: CellKey) => void;
+  onHandleDown: (k: CellKey) => void;
+}
+
+function DayCellPair(props: DayCellPairProps) {
+  const {
+    calId,
+    year,
+    month,
+    day,
+    weekend,
+    data,
+    focused,
+    periph,
+    mode,
+    rowHeight,
+    selectedId,
+    editingId,
+    editValue,
+    setEditValue,
+    onSelect,
+    onBeginEdit,
+    onCommitEdit,
+    onMoveAfterCommit,
+    inDragRange,
+    onCellMouseEnter,
+    onHandleDown,
+  } = props;
+
+  const sessions: Session[] = [0, 1];
+  const dow = new Date(year, month, day).getDay();
+  const weekdayLabel = WEEKDAYS_NB[dow];
+
+  const showRich = focused;
+  const showCompact = mode.kind === "year";
+
+  return (
+    <div className="flex h-full w-full flex-col">
+      {sessions.map((session) => {
+        const k: CellKey = { year, month, day, session };
+        const id = makeCellId(calId, k);
+        const cell = data[id];
+        const isSelected = selectedId === id;
+        const isEditing = editingId === id;
+        const isFirst = session === 0;
+        const ranged = inDragRange(k);
+
+        const bg = cell?.color ? cell.color + "33" : undefined;
+
+        return (
+          <div
+            key={session}
+            onMouseDown={(e) => {
+              if ((e.target as HTMLElement).dataset.role === "fill-handle") return;
+              onSelect(k);
+            }}
+            onMouseEnter={() => onCellMouseEnter(k)}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              onBeginEdit(k);
+            }}
+            className={`relative flex-1 cursor-cell select-none text-[12px] leading-tight ${
+              !isFirst ? "border-t border-hairline/60" : ""
+            } ${ranged && !isSelected ? "bg-primary/10" : ""}`}
+            style={{
+              background: bg,
+              minHeight: rowHeight,
+              transition: `min-height ${DUR_MS}ms ${EASE}`,
+              willChange: "min-height",
+            }}
+          >
+            {isSelected && (
+              <span
+                className="pointer-events-none absolute inset-0 z-[2] rounded-[2px] outline outline-2 outline-primary outline-offset-[-2px]"
+              />
+            )}
+
+            {showCompact && isFirst && (
+              <span className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-semibold text-ink/60">
+                {day}
+              </span>
+            )}
+
+            {showRich && (
+              <div
+                className="grid h-full w-full items-center"
+                style={{
+                  gridTemplateColumns: "84px 64px minmax(0,1fr) 96px",
+                  transition: `opacity ${DUR_MS}ms ${EASE}`,
+                  opacity: focused ? 1 : 0,
+                }}
+              >
+                <div className="px-3 text-[12px] font-medium text-ink">
+                  {isFirst ? `${String(day).padStart(2, "0")}.${MONTH_LABELS_SHORT[month].toLowerCase()}` : ""}
+                </div>
+                <div className="px-2 text-[12px] text-muted-foreground">
+                  {isFirst ? weekdayLabel : ""}
+                </div>
+                <div className="min-w-0 px-3 text-[13px] text-ink">
+                  {isEditing ? (
+                    <input
+                      autoFocus
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onBlur={onCommitEdit}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          onCommitEdit();
+                          onMoveAfterCommit(0, 1);
+                        } else if (e.key === "Tab") {
+                          e.preventDefault();
+                          onCommitEdit();
+                          onMoveAfterCommit(e.shiftKey ? -1 : 1, 0);
+                        } else if (e.key === "Escape") {
+                          onCommitEdit();
+                        }
+                      }}
+                      className="w-full bg-transparent text-[13px] text-ink outline-none"
+                    />
+                  ) : (
+                    <span
+                      className={`block truncate ${
+                        cell?.bold ? "font-semibold" : ""
+                      } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
+                    >
+                      {cell?.text ?? ""}
+                    </span>
+                  )}
+                </div>
+                <div className="px-3 text-right text-[12px] text-muted-foreground">
+                  {cell?.text ? "1t 30min" : ""}
+                </div>
+              </div>
+            )}
+
+            {showCompact && !isEditing && (
+              <span
+                className={`pointer-events-none absolute inset-y-0 left-7 right-1.5 flex items-center truncate text-[12px] text-ink ${
+                  cell?.bold ? "font-semibold" : ""
+                } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
+                style={{
+                  opacity: focused ? 0 : 1,
+                  transition: `opacity ${DUR_MS}ms ${EASE}`,
+                }}
+              >
+                {cell?.text ?? ""}
+              </span>
+            )}
+
+            {showCompact && isEditing && (
+              <input
+                autoFocus
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={onCommitEdit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onCommitEdit();
+                    onMoveAfterCommit(0, 1);
+                  } else if (e.key === "Tab") {
+                    e.preventDefault();
+                    onCommitEdit();
+                    onMoveAfterCommit(e.shiftKey ? -1 : 1, 0);
+                  } else if (e.key === "Escape") {
+                    onCommitEdit();
+                  }
+                }}
+                className="absolute inset-y-0 left-7 right-1.5 bg-transparent text-[12px] text-ink caret-ink outline-none"
+              />
+            )}
+
+            {isSelected && !isEditing && !periph && (
+              <span
+                data-role="fill-handle"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  onHandleDown(k);
+                }}
+                className="absolute -bottom-[3px] -right-[3px] z-[3] h-2 w-2 cursor-ns-resize rounded-[1px] border border-background bg-primary"
+                title="Dra ned for å fylle"
+              />
+            )}
+
+            {weekend && !cell?.color && (
+              <span className="pointer-events-none absolute inset-0 bg-muted/20" />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
