@@ -433,6 +433,7 @@ interface DayRowProps {
   onSelect: (k: CellKey | null) => void;
   onBeginEdit: (k: CellKey) => void;
   onCommitEdit: () => void;
+  onCommitDuration?: (k: CellKey, duration: string) => void;
   onMoveAfterCommit: (dx: number, dy: number) => void;
   inDragRange: (k: CellKey) => boolean;
   onCellMouseEnter: (k: CellKey) => void;
