@@ -83,6 +83,7 @@ export interface UnifiedElasticGridProps {
   selected: CellKey | null;
   onSelect: (k: CellKey | null) => void;
   onCommitText: (k: CellKey, text: string) => void;
+  onCommitDuration?: (k: CellKey, duration: string) => void;
   onFill: (source: CellKey, targets: CellKey[]) => void;
 }
 
