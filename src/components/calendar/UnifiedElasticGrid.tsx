@@ -274,10 +274,19 @@ export function UnifiedElasticGrid({
     return () => window.removeEventListener("keydown", onKey);
   }, [mode, selected, moveSelection, exitToYear]);
 
+  const prevModeKindRef = useRef<Mode["kind"]>(mode.kind);
   useLayoutEffect(() => {
-    if (mode.kind !== "month") return;
+    if (mode.kind !== "month") {
+      prevModeKindRef.current = mode.kind;
+      return;
+    }
     const c = scrollRef.current;
     if (!c) return;
+    // When entering month view from year view, snap instantly so the focus
+    // lands precisely on the clicked column (no drift from previous state).
+    // When already in month view (lateral navigation), use smooth scroll.
+    const wasYear = prevModeKindRef.current === "year";
+    prevModeKindRef.current = mode.kind;
     requestAnimationFrame(() => {
       const focused = c.querySelector<HTMLElement>(
         `[data-month-col="${mode.month}"]`,
@@ -285,7 +294,10 @@ export function UnifiedElasticGrid({
       if (!focused) return;
       const target =
         focused.offsetLeft - (c.clientWidth - focused.offsetWidth) / 2;
-      c.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
+      c.scrollTo({
+        left: Math.max(0, target),
+        behavior: wasYear ? "auto" : "smooth",
+      });
     });
   }, [mode]);
 
