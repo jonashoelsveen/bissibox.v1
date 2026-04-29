@@ -73,6 +73,11 @@ export function useYearStore(calId: string, defaultTitle: string) {
     title: defaultTitle,
     year: new Date().getFullYear(),
   });
+  // History stacks for undo/redo. Each entry is a full data snapshot.
+  const pastRef = useRef<Record<string, CellData>[]>([]);
+  const futureRef = useRef<Record<string, CellData>[]>([]);
+  const [, forceTick] = useState(0);
+  const bumpHistory = () => forceTick((n) => n + 1);
 
   // Load on calendar switch
   useEffect(() => {
@@ -83,15 +88,45 @@ export function useYearStore(calId: string, defaultTitle: string) {
         year: new Date().getFullYear(),
       }),
     );
+    pastRef.current = [];
+    futureRef.current = [];
+    bumpHistory();
   }, [calId, defaultTitle]);
 
   const persist = useCallback(
-    (next: Record<string, CellData>) => {
+    (next: Record<string, CellData>, opts?: { history?: boolean; prev?: Record<string, CellData> }) => {
+      if (opts?.history !== false) {
+        pastRef.current.push(opts?.prev ?? data);
+        if (pastRef.current.length > 100) pastRef.current.shift();
+        futureRef.current = [];
+        bumpHistory();
+      }
       setData(next);
       writeJSON(dataKey(calId), next);
     },
-    [calId],
+    [calId, data],
   );
+
+  const undo = useCallback(() => {
+    const prev = pastRef.current.pop();
+    if (!prev) return;
+    futureRef.current.push(data);
+    setData(prev);
+    writeJSON(dataKey(calId), prev);
+    bumpHistory();
+  }, [calId, data]);
+
+  const redo = useCallback(() => {
+    const next = futureRef.current.pop();
+    if (!next) return;
+    pastRef.current.push(data);
+    setData(next);
+    writeJSON(dataKey(calId), next);
+    bumpHistory();
+  }, [calId, data]);
+
+  const canUndo = pastRef.current.length > 0;
+  const canRedo = futureRef.current.length > 0;
   const persistMeta = useCallback(
     (next: YearMeta) => {
       setMeta(next);
