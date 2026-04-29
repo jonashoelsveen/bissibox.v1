@@ -163,22 +163,44 @@ export function SimplePinMap({
   useEffect(() => {
     if (!mapbox || !containerRef.current || mapRef.current) return;
     const initial = pinRef.current ?? { lat: 59.9139, lng: 10.7522 };
-    const map = new mapbox.default.Map({
-      container: containerRef.current,
-      style: MAP_STYLES[style].url,
-      center: [initial.lng, initial.lat],
-      zoom: pinRef.current ? 14 : 6,
-      attributionControl: false,
-    });
+    let map: MapboxMap;
+    try {
+      map = new mapbox.default.Map({
+        container: containerRef.current,
+        style: MAP_STYLES[style].url,
+        center: [initial.lng, initial.lat],
+        zoom: pinRef.current ? 14 : 6,
+        attributionControl: false,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[mapbox] SimplePinMap constructor threw:", err);
+      return;
+    }
     map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
     map.addControl(new mapbox.default.AttributionControl({ compact: true }));
+    map.on("error", (e) => {
+      // eslint-disable-next-line no-console
+      console.error("[mapbox] SimplePinMap runtime error:", (e as any)?.error ?? e);
+    });
     map.on("click", (e) => {
       if (toolRef.current !== "pin") return;
       const ll = { lat: e.lngLat.lat, lng: e.lngLat.lng };
       trackedChange({ pin: ll, description: descRef.current, name: nameRef.current });
     });
+    // Force resize after first paint to handle 0×0 construction race.
+    const rafId = requestAnimationFrame(() => {
+      try { map.resize(); } catch { /* ignore */ }
+    });
+    // Keep canvas in sync with parent layout shifts (sidebar/grid changes).
+    const ro = new ResizeObserver(() => {
+      try { map.resize(); } catch { /* ignore */ }
+    });
+    if (containerRef.current) ro.observe(containerRef.current);
     mapRef.current = map;
     return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
       markerRef.current = null;

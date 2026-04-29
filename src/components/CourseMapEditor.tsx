@@ -316,15 +316,27 @@ export function CourseMapEditor({
   useEffect(() => {
     if (!mapbox || !containerRef.current || mapRef.current) return;
     const center: [number, number] = path[0] ? [path[0][1], path[0][0]] : [10.7522, 59.9139];
-    const map = new mapbox.default.Map({
-      container: containerRef.current,
-      style: MAP_STYLES[style].url,
-      center,
-      zoom: path.length ? 14 : 12,
-      attributionControl: false,
-    });
+    let map: MapboxMap;
+    try {
+      map = new mapbox.default.Map({
+        container: containerRef.current,
+        style: MAP_STYLES[style].url,
+        center,
+        zoom: path.length ? 14 : 12,
+        attributionControl: false,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[mapbox] CourseMapEditor constructor threw:", err);
+      return;
+    }
     map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
     map.addControl(new mapbox.default.AttributionControl({ compact: true }));
+
+    map.on("error", (e) => {
+      // eslint-disable-next-line no-console
+      console.error("[mapbox] CourseMapEditor runtime error:", (e as any)?.error ?? e);
+    });
 
     map.on("style.load", () => {
       styleLoadedRef.current = true;
