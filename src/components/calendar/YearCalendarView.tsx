@@ -5,14 +5,15 @@
  * the YearGrid, and the dual-state YearRightPanel side-by-side.
  */
 
-import { useState } from "react";
-import { Settings as SettingsIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Settings as SettingsIcon, Undo2, Redo2 } from "lucide-react";
 import { useYearStore, type CellKey } from "./yearStore";
 import { YearGrid } from "./YearGrid";
 import { YearRightPanel, type LayerVisibility } from "./YearRightPanel";
 
 export function YearCalendarView({ calId, defaultTitle }: { calId: string; defaultTitle: string }) {
-  const { data, meta, upsertCell, fillRange, setMeta } = useYearStore(calId, defaultTitle);
+  const { data, meta, upsertCell, fillRange, setMeta, undo, redo, canUndo, canRedo } =
+    useYearStore(calId, defaultTitle);
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
