@@ -73,8 +73,11 @@ function isWeekend(year: number, month: number, day: number) {
   return d === 0 || d === 6;
 }
 
-const EASE = "cubic-bezier(0.2, 0, 0, 1)";
-const DUR_MS = 480;
+const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
+const DUR_MS = 420;
+const FOCUS_SCALE = 1.04;
+const FOCUS_SHADOW =
+  "0 18px 40px -12px rgba(15, 23, 42, 0.22), 0 6px 14px -6px rgba(15, 23, 42, 0.14)";
 
 export interface UnifiedElasticGridProps {
   calId: string;
