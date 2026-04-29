@@ -211,21 +211,15 @@ export function UnifiedElasticGrid({
   // while in year view enters the first month; "year" exits to year view.
   // "Dag" / "Uke" are reserved for future view modes — surfaced as
   // disabled rows so the IA is discoverable without breaking flow.
-  const currentViewMode: ViewMode = mode.kind === "month" ? "month" : "year";
+  // The view-mode is independent of the type. We track day/week explicitly
+  // (they have no implementation yet, so they fall through to the
+  // "coming soon" placeholder regardless of the chosen type).
+  const [viewMode, setViewMode] = useState<ViewMode>("year");
+  const currentViewMode: ViewMode = viewMode;
   const handleViewModeChange = (v: ViewMode) => {
+    setViewMode(v);
     if (v === "year") setMode({ kind: "year" });
     else if (v === "month") {
-      setMode((prev) =>
-        prev.kind === "month" ? prev : { kind: "month", month: lastFocusedMonthRef.current ?? new Date().getMonth() },
-      );
-    }
-  };
-
-  // Switching to Type 1 requires a month context (it IS a month-only view).
-  // Switching back to Type 2 keeps whatever mode the user was in.
-  const handleViewTypeChange = (v: ViewType) => {
-    setViewType(v);
-    if (v === "type1") {
       setMode((prev) =>
         prev.kind === "month"
           ? prev
@@ -233,6 +227,16 @@ export function UnifiedElasticGrid({
       );
     }
   };
+
+  const handleViewTypeChange = (v: ViewType) => {
+    setViewType(v);
+  };
+
+  // Implemented combinations. Everything else renders a "coming soon" panel.
+  const isImplemented =
+    (viewMode === "month" && (viewType === "type1" || viewType === "type2")) ||
+    (viewMode === "year" && viewType === "type2");
+  const comingSoonLabel = `${VIEW_MODE_LABEL[viewMode]} · ${VIEW_TYPE_LABEL[viewType]}`;
 
   const YEAR_COL = 220;
   const FOCUS_COL = 640;
