@@ -755,3 +755,59 @@ function DayCellPair(props: DayCellPairProps) {
     </div>
   );
 }
+
+interface DurationCellProps {
+  initial: string;
+  onCommit: (v: string) => void;
+}
+
+function DurationCell({ initial, onCommit }: DurationCellProps) {
+  const [v, setV] = useState(initial);
+  const [editing, setEditing] = useState(false);
+
+  // Re-sync when the underlying cell changes from outside.
+  useEffect(() => {
+    if (!editing) setV(initial);
+  }, [initial, editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const t = v.trim();
+    if (t !== initial) onCommit(t);
+  };
+
+  return (
+    <div
+      className="px-3 text-[12px] text-muted-foreground"
+      onMouseDown={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        setEditing(true);
+      }}
+    >
+      {editing ? (
+        <input
+          autoFocus
+          value={v}
+          onChange={(e) => setV(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === "Tab") {
+              e.preventDefault();
+              commit();
+            } else if (e.key === "Escape") {
+              setV(initial);
+              setEditing(false);
+            }
+          }}
+          placeholder="1t 30min"
+          className="w-full bg-transparent text-[12px] text-ink caret-ink outline-none"
+        />
+      ) : (
+        <span className="block truncate">
+          {v || <span className="text-muted-foreground/50">—</span>}
+        </span>
+      )}
+    </div>
+  );
+}
