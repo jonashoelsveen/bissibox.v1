@@ -50,7 +50,7 @@ export interface LibrarySideNavValue {
 }
 
 type SectionKey = "meetings" | "notes" | "files" | "media";
-type TableName = "note_folders" | "file_folders" | "media_albums";
+type TableName = "meeting_folders" | "note_folders" | "file_folders" | "media_albums";
 
 export function LibrarySideNav({
   value,
