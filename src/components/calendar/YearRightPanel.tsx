@@ -120,16 +120,10 @@ export function YearRightPanel(props: YearRightPanelProps) {
 
 function BrowsePanel(props: YearRightPanelProps) {
   const { year, onJumpToDay, visibility, setVisibility, groups } = props;
-  const [month, setMonth] = useState(new Date().getMonth());
 
   return (
     <div className="flex flex-col gap-4">
-      <MiniCalendar
-        year={year}
-        month={month}
-        onMonthChange={setMonth}
-        onPick={(d) => onJumpToDay(month, d)}
-      />
+      <MiniYearCalendar year={year} onPick={(m, d) => onJumpToDay(m, d)} />
 
       <div className="flex flex-col gap-1">
         <p className="px-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
