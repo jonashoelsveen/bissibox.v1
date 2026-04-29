@@ -445,35 +445,65 @@ export function MonthGridType1({
                   {/* Items list */}
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
                     <AnimatePresence initial={false}>
-                      {visible.map((it) => (
-                        <motion.div
-                          key={`${id}-${it.idx}-${it.text}`}
-                          layout
-                          initial={{ opacity: 0, y: -2 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -2 }}
-                          transition={{
-                            duration: 0.14,
-                            ease: [0.2, 0, 0, 1],
-                          }}
-                          data-role="item"
-                          draggable
-                          onDragStart={(e) => {
-                            // Use HTML5 dragstart only to set ghost; track via state
-                            const ev = e as unknown as DragEvent;
-                            if (ev.dataTransfer) {
-                              ev.dataTransfer.effectAllowed = "move";
-                              ev.dataTransfer.setData("text/plain", it.text);
+                      {visible.map((it) => {
+                        const { color: customColor, text: displayText } = splitColor(it.text);
+                        return (
+                          <motion.div
+                            key={`${id}-${it.idx}-${it.text}`}
+                            layout
+                            initial={{ opacity: 0, y: -2 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -2 }}
+                            transition={{
+                              duration: 0.14,
+                              ease: [0.2, 0, 0, 1],
+                            }}
+                            data-role="item"
+                            draggable
+                            onDragStart={(e) => {
+                              const ev = e as unknown as DragEvent;
+                              if (ev.dataTransfer) {
+                                ev.dataTransfer.effectAllowed = "move";
+                                ev.dataTransfer.setData("text/plain", it.text);
+                              }
+                              setDragItem({ fromKey: k, text: it.text });
+                            }}
+                            onDragEnd={() => setDragItem(null)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openItemEditor(
+                                pos,
+                                it.idx,
+                                it.text,
+                                e.currentTarget as HTMLElement,
+                              );
+                            }}
+                            className={[
+                              "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink transition-all",
+                              customColor ? "" : "bg-secondary/70",
+                              "hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
+                              customColor ? "" : "hover:bg-secondary",
+                            ].join(" ")}
+                            style={
+                              customColor
+                                ? {
+                                    backgroundColor: `${customColor}1F`,
+                                    boxShadow: `inset 2px 0 0 ${customColor}`,
+                                  }
+                                : undefined
                             }
-                            setDragItem({ fromKey: k, text: it.text });
-                          }}
-                          onDragEnd={() => setDragItem(null)}
-                          className="cursor-grab truncate rounded-[3px] bg-secondary/70 px-1.5 py-0.5 text-[11.5px] text-ink hover:bg-secondary active:cursor-grabbing"
-                          title={it.text}
-                        >
-                          {it.text}
-                        </motion.div>
-                      ))}
+                            title={displayText}
+                          >
+                            {customColor && (
+                              <span
+                                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                                style={{ background: customColor }}
+                              />
+                            )}
+                            <span className="truncate">{displayText}</span>
+                          </motion.div>
+                        );
+                      })}
                     </AnimatePresence>
                     {overflow > 0 && (
                       <button
