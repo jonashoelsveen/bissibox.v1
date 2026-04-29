@@ -131,6 +131,11 @@ export function UnifiedElasticGrid({
       setEditValue(data[id]?.text ?? "");
       setEditingKey(k);
       onSelect(k);
+      setMode((prev) =>
+        prev.kind === "month" && prev.month !== k.month
+          ? { kind: "month", month: k.month }
+          : prev,
+      );
     },
     [calId, data, onSelect],
   );
