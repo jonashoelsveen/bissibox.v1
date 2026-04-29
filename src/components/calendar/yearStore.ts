@@ -148,6 +148,7 @@ export function useYearStore(calId: string, defaultTitle: string) {
         !merged.italic &&
         !merged.underline &&
         !merged.color &&
+        !merged.duration &&
         !merged.description &&
         !merged.locationId &&
         !merged.courseId
