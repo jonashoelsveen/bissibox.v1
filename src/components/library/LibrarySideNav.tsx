@@ -142,36 +142,13 @@ export function LibrarySideNav({
     setMediaAlbums((ma ?? []) as FolderLite[]);
 
     if (isTeamMode && teamId) {
-      const { data: mtgs } = await supabase
-        .from("team_board_meetings")
-        .select("folder")
-        .eq("team_id", teamId);
-      const seen = new Set<string>();
-      const list: FolderLite[] = [];
-      for (const row of (mtgs ?? []) as { folder: string | null }[]) {
-        if (row.folder && !seen.has(row.folder)) {
-          seen.add(row.folder);
-          list.push({ id: row.folder, name: row.folder, pinned: false });
-        }
-      }
-      // Merge in extra folders the user created from the meetings page that
-      // do not yet have a meeting inside them.
-      try {
-        const raw = typeof window !== "undefined"
-          ? window.localStorage.getItem(`meeting-extra-folders:${teamId}`)
-          : null;
-        const extras = raw ? (JSON.parse(raw) as string[]) : [];
-        for (const name of extras) {
-          if (name && !seen.has(name)) {
-            seen.add(name);
-            list.push({ id: name, name, pinned: false });
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-      list.sort((a, b) => a.name.localeCompare(b.name));
-      setMeetingFolders(list);
+      const { data: mf } = await supabase
+        .from("meeting_folders")
+        .select("id,name,pinned")
+        .eq("team_id", teamId)
+        .order("pinned", { ascending: false })
+        .order("sort_order", { ascending: true });
+      setMeetingFolders((mf ?? []) as FolderLite[]);
     } else {
       setMeetingFolders([]);
     }
