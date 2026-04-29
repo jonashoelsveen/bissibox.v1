@@ -342,29 +342,27 @@ export function UnifiedElasticGrid({
               <div
                 key={`h-${m.idx}`}
                 data-month-col={m.idx}
-                onDoubleClick={() => {
+                onClick={() => {
                   if (mode.kind === "year") enterMonth(m.idx);
                   else if (mode.month === m.idx) exitToYear();
                   else enterMonth(m.idx);
                 }}
-                onClick={() => {
-                  if (periph) enterMonth(m.idx);
-                }}
-                className={`sticky top-0 z-20 cursor-zoom-in select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide transition-colors ${
+                className={`sticky top-0 z-20 cursor-zoom-in select-none border-b border-r bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide transition-colors ${
                   focused
-                    ? "text-ink"
+                    ? "border-b-2 border-b-muted-foreground/60 border-l-2 border-l-muted-foreground/60 border-r-2 border-r-muted-foreground/60 text-ink"
                     : periph
-                      ? "text-muted-foreground/80 hover:text-ink"
-                      : "text-muted-foreground hover:text-ink"
+                      ? "border-hairline text-muted-foreground/50 hover:text-ink"
+                      : "border-hairline text-muted-foreground hover:text-ink"
                 }`}
                 style={{
                   transition: `color ${DUR_MS}ms ${EASE}, background-color ${DUR_MS}ms ${EASE}`,
+                  opacity: periph ? 0.6 : 1,
                 }}
                 title={
                   mode.kind === "year"
-                    ? "Dobbeltklikk for å zoome inn"
+                    ? "Klikk for å zoome inn"
                     : focused
-                      ? "Dobbeltklikk for å gå tilbake"
+                      ? "Klikk for å gå tilbake"
                       : "Klikk for å fokusere"
                 }
               >
@@ -480,11 +478,14 @@ function DayRow(props: DayRowProps) {
             <div
               key={`v-${m.idx}-${day}`}
               data-month-col={m.idx}
-              className="border-b border-r border-hairline bg-muted/30"
+              className={`border-b border-r border-hairline bg-muted/30 ${
+                focused ? "border-l-2 border-r-2 border-l-muted-foreground/60 border-r-muted-foreground/60" : ""
+              }`}
               style={{
                 height: rowHeight * 2,
                 transition: `height ${DUR_MS}ms ${EASE}`,
                 willChange: "height",
+                opacity: periph ? 0.55 : 1,
               }}
             />
           );
@@ -497,11 +498,12 @@ function DayRow(props: DayRowProps) {
             data-month-col={m.idx}
             className={`relative border-b border-r border-hairline ${
               weekend ? "bg-muted/40" : ""
-            }`}
+            } ${focused ? "border-l-2 border-r-2 border-l-muted-foreground/60 border-r-muted-foreground/60" : ""}`}
             style={{
               height: rowHeight * 2,
               transition: `height ${DUR_MS}ms ${EASE}`,
               willChange: "height",
+              opacity: periph ? 0.55 : 1,
             }}
           >
             <DayCellPair
@@ -646,7 +648,7 @@ function DayCellPair(props: DayCellPairProps) {
               <div
                 className="grid h-full w-full items-center"
                 style={{
-                  gridTemplateColumns: "72px 52px 84px minmax(0,1fr)",
+                  gridTemplateColumns: "72px 52px minmax(0,1fr) 96px",
                   transition: `opacity ${DUR_MS}ms ${EASE}`,
                   opacity: 1,
                 }}
@@ -657,10 +659,6 @@ function DayCellPair(props: DayCellPairProps) {
                 <div className="px-2 text-[12px] text-muted-foreground">
                   {isFirst ? weekdayLabel : ""}
                 </div>
-                <DurationCell
-                  initial={cell?.duration ?? ""}
-                  onCommit={(v) => onCommitDuration?.(k, v)}
-                />
                 <div className="min-w-0 border-l border-hairline px-3 text-[13px] text-ink">
                   {isEditing ? (
                     <input
@@ -692,6 +690,12 @@ function DayCellPair(props: DayCellPairProps) {
                       {cell?.text ?? ""}
                     </span>
                   )}
+                </div>
+                <div className="border-l border-hairline">
+                  <DurationCell
+                    initial={cell?.duration ?? ""}
+                    onCommit={(v) => onCommitDuration?.(k, v)}
+                  />
                 </div>
               </div>
             )}
