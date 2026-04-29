@@ -280,10 +280,6 @@ function MiniYearCalendar({
     </div>
   );
 }
-      </div>
-    </div>
-  );
-}
 
 /* -------------------- State B -------------------- */
 
