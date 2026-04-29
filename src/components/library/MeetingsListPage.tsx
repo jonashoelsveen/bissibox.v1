@@ -525,6 +525,54 @@ export function MeetingsListPage({
           </form>
         </div>
       )}
+
+      {newFolderOpen && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4"
+          onClick={() => setNewFolderOpen(false)}
+        >
+          <form
+            className="w-full max-w-md rounded-xl border border-hairline bg-popover p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (addFolder(newFolderName)) {
+                toast.success(`Folder "${newFolderName.trim()}" created`);
+                setNewFolderOpen(false);
+                setNewFolderName("");
+              }
+            }}
+          >
+            <h2 className="mb-4 text-lg text-ink">New folder</h2>
+            <label className="mb-4 block text-xs text-muted-foreground">
+              Name
+              <input
+                autoFocus
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="Folder name"
+                className="mt-1 w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+              />
+            </label>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setNewFolderOpen(false)}
+                className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!newFolderName.trim()}
+                className="rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                Create
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
