@@ -162,17 +162,40 @@ export function YearGrid({
       onClick={(e) => {
         if (e.target === e.currentTarget) onSelect(null);
       }}
+      onKeyDown={(e) => {
+        // Excel-style: start typing when a cell is selected (no edit mode yet)
+        if (!selected || editingKey) return;
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        // Printable single character or Enter
+        if (e.key === "Enter") {
+          e.preventDefault();
+          beginEdit(selected);
+        } else if (e.key.length === 1) {
+          e.preventDefault();
+          const id = makeCellId(calId, selected);
+          setEditValue((data[id]?.text ?? "") + e.key);
+          setEditingKey(selected);
+          onSelect(selected);
+        } else if (e.key === "Backspace") {
+          e.preventDefault();
+          setEditValue("");
+          setEditingKey(selected);
+          onSelect(selected);
+        }
+      }}
+      tabIndex={0}
     >
       <table
-        className="w-full border-separate text-xs"
-        style={{ borderSpacing: 0, tableLayout: "fixed", minWidth: 1100 }}
+        className="border-separate text-xs"
+        style={{ borderSpacing: 0, tableLayout: "fixed", minWidth: 12 * 140 }}
       >
         <thead className="sticky top-0 z-10 bg-card">
           <tr>
             {months.map((m) => (
               <th
                 key={m.idx}
-                className="border-b border-r border-hairline px-2 py-1.5 text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+                className="border-b border-r border-hairline px-2 py-2 text-center text-[12px] font-medium uppercase tracking-wide text-muted-foreground"
+                style={{ width: 140, minWidth: 140 }}
               >
                 {m.label}
               </th>
@@ -189,7 +212,7 @@ export function YearGrid({
                     <td
                       key={m.idx}
                       className="border-b border-r border-hairline bg-muted/40"
-                      style={{ height: 44 }}
+                      style={{ height: 56, width: 140, minWidth: 140 }}
                     />
                   );
                 }
@@ -198,7 +221,7 @@ export function YearGrid({
                   <td
                     key={m.idx}
                     className="border-b border-r border-hairline align-top"
-                    style={{ padding: 0, height: 44 }}
+                    style={{ padding: 0, height: 56, width: 140, minWidth: 140 }}
                   >
                     <DayCell
                       calId={calId}
@@ -308,16 +331,16 @@ function DayCell(props: DayCellProps) {
             }}
             onMouseEnter={() => onMouseEnter(k)}
             onDoubleClick={() => onBeginEdit(k)}
-            className={`relative flex-1 cursor-cell select-none px-1 text-[11px] leading-tight ${
+            className={`relative flex-1 cursor-cell select-none text-[12px] leading-tight text-black ${
               weekend ? "bg-muted/60" : ""
             } ${isSelected ? "outline outline-2 outline-primary/80 outline-offset-[-2px] z-[2]" : ""} ${
               ranged && !isSelected ? "bg-primary/10" : ""
             } ${!isLast ? "border-b border-hairline/70" : ""}`}
-            style={{ background: bg !== "transparent" ? bg : undefined, minHeight: 22 }}
+            style={{ background: bg !== "transparent" ? bg : undefined, minHeight: 28 }}
           >
             {/* Day number — only on the first session row */}
             {session === 0 && (
-              <span className="absolute left-1 top-0 text-[9px] font-medium text-muted-foreground/80">
+              <span className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-semibold text-black/60">
                 {day}
               </span>
             )}
@@ -336,14 +359,14 @@ function DayCell(props: DayCellProps) {
                     onCommitEdit();
                   }
                 }}
-                className="absolute inset-0 ml-3 mr-1 bg-transparent text-[11px] outline-none"
+                className="absolute inset-y-0 left-7 right-1 bg-transparent text-[12px] text-black caret-black outline-none"
               />
             ) : (
               <span
-                className={`block truncate pl-3 pr-1 pt-0.5 ${
+                className={`block truncate pl-7 pr-1.5 pt-1 text-black ${
                   cell?.bold ? "font-semibold" : ""
                 } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
-                style={{ color: cell?.color ?? undefined }}
+                style={{ color: cell?.color ?? "#000" }}
               >
                 {cell?.text ?? ""}
               </span>
