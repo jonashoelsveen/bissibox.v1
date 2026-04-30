@@ -2,14 +2,18 @@
  * YearCalendarView — full year view orchestrator.
  *
  * Wraps the editable title (H1, double-click to rename), a settings gear,
- * the YearGrid, and the dual-state YearRightPanel side-by-side.
+ * and the unified elastic grid. The right-side overview panel was removed —
+ * the grid now expands fully to the right edge of the page.
+ *
+ * Owns the shared `currentDate` (and `currentRange`) state so the mini
+ * calendar in the grid header and the main view stay in lockstep.
  */
 
 import { useEffect, useState } from "react";
 import { Settings as SettingsIcon, Undo2, Redo2 } from "lucide-react";
 import { useYearStore, type CellKey } from "./yearStore";
 import { UnifiedElasticGrid } from "./UnifiedElasticGrid";
-import { YearRightPanel, type LayerVisibility } from "./YearRightPanel";
+import type { DateRange } from "./MiniCalendar";
 
 export type CalendarSeat = "admin" | "individual";
 
@@ -28,11 +32,12 @@ export function YearCalendarView({
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
 
-  const [visibility, setVisibility] = useState<LayerVisibility>({
-    events: true,
-    meetings: true,
-    trainings: true,
-    groups: {},
+  // Shared "what is the calendar showing?" state — drives both the main grid
+  // and the mini-calendar navigator at the top-right of the grid.
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+  const [currentRange, setCurrentRange] = useState<DateRange>(() => {
+    const t = new Date();
+    return { start: t, end: t };
   });
 
   // Keyboard shortcuts: ⌘Z / Ctrl+Z for undo, ⌘⇧Z / Ctrl+Y for redo
@@ -127,33 +132,24 @@ export function YearCalendarView({
         </div>
       </div>
 
-      <div className="flex min-h-[60vh] gap-0">
-        <div className="min-w-0 flex-1">
-          <UnifiedElasticGrid
-            calId={calId}
-            year={meta.year}
-            data={data}
-            selected={selected}
-            onSelect={setSelected}
-            onCommitText={(k, text) => upsertCell(k, { text })}
-            onCommitDuration={(k, duration) => upsertCell(k, { duration })}
-            onFill={fillRange}
-            seat={seat}
-          />
-        </div>
-        <YearRightPanel
+      <div className="min-h-[60vh]">
+        <UnifiedElasticGrid
           calId={calId}
           year={meta.year}
-          selected={selected}
           data={data}
-          onPatchCell={(k, patch) => upsertCell(k, patch)}
-          onJumpToDay={(month, day) => {
-            // Selecting via mini-cal selects the upper session of that day
-            setSelected({ year: meta.year, month, day, session: 0 });
+          selected={selected}
+          onSelect={setSelected}
+          onCommitText={(k, text) => upsertCell(k, { text })}
+          onCommitDuration={(k, duration) => upsertCell(k, { duration })}
+          onFill={fillRange}
+          seat={seat}
+          currentDate={currentDate}
+          currentRange={currentRange}
+          onCurrentDateChange={(d, r) => {
+            setCurrentDate(d);
+            if (r) setCurrentRange(r);
+            else setCurrentRange({ start: d, end: d });
           }}
-          visibility={visibility}
-          setVisibility={setVisibility}
-          groups={[]}
         />
       </div>
     </div>
