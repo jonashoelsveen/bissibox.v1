@@ -39,32 +39,20 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import type { CellData, CellKey } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
-import { parseSession, formatSession, formatDuration } from "./sessionFormat";
 
 /**
- * Items can be prefixed with `[meta] text` to encode color, start time and
- * duration. Parsing is delegated to `sessionFormat` so all Type-1 views read
- * and write the same shape.
+ * Items can be prefixed with `[#RRGGBB] ` to encode a user-chosen color.
+ * This survives the existing newline-serialized text storage without a
+ * schema change.
  */
+const COLOR_PREFIX_RE = /^\[(#[0-9a-fA-F]{6})\]\s*/;
 function splitColor(raw: string): { color: string | null; text: string } {
-  const m = parseSession(raw);
-  return { color: m.color, text: m.text };
+  const m = raw.match(COLOR_PREFIX_RE);
+  if (m) return { color: m[1], text: raw.slice(m[0].length) };
+  return { color: null, text: raw };
 }
 function joinColor(color: string | null, text: string): string {
-  // Preserves color only — used by drag/edit paths that don't change time.
-  return color ? formatSession({ color, text }) : text;
-}
-function parseFull(raw: string) {
-  return parseSession(raw);
-}
-function reformatPreservingTime(raw: string, color: string | null, text: string): string {
-  const m = parseSession(raw);
-  return formatSession({
-    color,
-    startMin: m.startMin,
-    durationMin: m.durationMin,
-    text,
-  });
+  return color ? `[${color}] ${text}` : text;
 }
 
 const WEEKDAYS_FULL = [
@@ -303,9 +291,7 @@ export function WeekGridType1({
         next = existing.filter((_, i) => i !== idx);
       } else {
         next = existing.map((it, i) =>
-          i === idx
-            ? { text: reformatPreservingTime(it.text, color, t) }
-            : { text: it.text },
+          i === idx ? { text: joinColor(color, t) } : { text: it.text },
         );
       }
       onCommitText(k, serializeItems(next));
@@ -540,15 +526,9 @@ export function WeekGridType1({
                 >
                   <AnimatePresence initial={false}>
                     {items.map((it, i) => {
-                      const meta = parseFull(it.text);
-                      const customColor = meta.color;
-                      const displayText = meta.text;
+                      const { color: customColor, text: displayText } = splitColor(it.text);
                       const cat = categorize(displayText);
                       const itemFocused = focused && focus.item === i;
-                      // Proportional height: 0.5px per minute (so 60min ≈ 30px
-                      // body, 120min ≈ 60px). Default 30min when unspecified.
-                      const dur = meta.durationMin ?? 30;
-                      const minH = Math.max(28, Math.min(220, Math.round(dur * 0.5) + 18));
                       return (
                         <motion.div
                           key={`${col}-${it.idx}-${it.text}`}
@@ -582,51 +562,42 @@ export function WeekGridType1({
                             );
                           }}
                           className={[
-                            "group/card relative flex flex-col gap-0.5 rounded-[4px] border px-2 py-1.5 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition-all",
+                            "group/card relative flex items-start gap-2 rounded-[4px] border px-2 py-1.5 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition-all",
                             customColor ? "" : cat.bg,
                             customColor ? "" : cat.border,
                             itemFocused
                               ? "outline outline-2 outline-primary outline-offset-[-2px]"
                               : "hover:-translate-y-px hover:shadow-[0_3px_8px_rgba(15,23,42,0.10)] hover:border-ink/25",
                           ].join(" ")}
-                          style={{
-                            minHeight: `${minH}px`,
-                            ...(customColor
+                          style={
+                            customColor
                               ? {
-                                  backgroundColor: `${customColor}1A`,
+                                  backgroundColor: `${customColor}1A`, // ~10% alpha
                                   borderColor: `${customColor}66`,
-                                  boxShadow: `inset 3px 0 0 ${customColor}`,
                                 }
-                              : {}),
-                          }}
+                              : undefined
+                          }
                           title={displayText}
                         >
-                          <div className="flex items-start gap-2">
-                            <span
-                              className={[
-                                "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
-                                customColor ? "" : cat.dot,
-                              ].join(" ")}
-                              style={
-                                customColor
-                                  ? { backgroundColor: customColor }
-                                  : undefined
-                              }
-                            />
-                            <span
-                              className={[
-                                "flex-1 truncate text-[12px] leading-snug",
-                                customColor ? "text-ink" : cat.ink,
-                              ].join(" ")}
-                            >
-                              {displayText}
-                            </span>
-                          </div>
-                          {meta.durationMin != null && (
-                            <span className="ml-3.5 mono text-[10px] tabular-nums text-muted-foreground">
-                              {formatDuration(meta.durationMin)}
-                            </span>
-                          )}
+                          <span
+                            className={[
+                              "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
+                              customColor ? "" : cat.dot,
+                            ].join(" ")}
+                            style={
+                              customColor
+                                ? { backgroundColor: customColor }
+                                : undefined
+                            }
+                          />
+                          <span
+                            className={[
+                              "flex-1 truncate text-[12px] leading-snug",
+                              customColor ? "text-ink" : cat.ink,
+                            ].join(" ")}
+                          >
+                            {displayText}
+                          </span>
                         </motion.div>
                       );
                     })}
@@ -797,27 +768,34 @@ function ColorDotRow({
   onChange: (c: string | null) => void;
 }) {
   return (
-    <div className="flex items-center justify-center gap-2.5 border-t border-hairline px-3 py-2.5">
-      {GROUP_COLOR_PALETTE.map((c) => {
-        const selected = value?.toLowerCase() === c.value.toLowerCase();
-        return (
-          <button
-            key={c.value}
-            type="button"
-            title={c.name}
-            onClick={() => onChange(selected ? null : c.value)}
-            aria-label={c.name}
-            aria-pressed={selected}
-            className={[
-              "h-3 w-3 rounded-full border transition-transform hover:scale-125",
-              selected
-                ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
-                : "border-black/15",
-            ].join(" ")}
-            style={{ background: c.value }}
-          />
-        );
-      })}
+    <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-2">
+      <span className="mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+        Farge
+      </span>
+      <div className="grid grid-cols-4 gap-1.5">
+        {GROUP_COLOR_PALETTE.map((c) => {
+          const selected = value?.toLowerCase() === c.value.toLowerCase();
+          return (
+            <button
+              key={c.value}
+              type="button"
+              title={c.name}
+              onClick={() =>
+                onChange(selected ? null : c.value)
+              }
+              aria-label={c.name}
+              aria-pressed={selected}
+              className={[
+                "h-3 w-3 rounded-full border transition-transform hover:scale-125",
+                selected
+                  ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
+                  : "border-black/15",
+              ].join(" ")}
+              style={{ background: c.value }}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }

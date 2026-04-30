@@ -37,7 +37,6 @@ import type { CellData, CellKey, Session } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { MonthGridType1 } from "./MonthGridType1";
 import { WeekGridType1 } from "./WeekGridType1";
-import { DayGridType1 } from "./DayGridType1";
 
 type ViewMode = "day" | "week" | "month" | "year";
 type ViewType = "type1" | "type2";
@@ -238,15 +237,13 @@ export function UnifiedElasticGrid({
   const isImplemented =
     (viewMode === "month" && (viewType === "type1" || viewType === "type2")) ||
     (viewMode === "week" && viewType === "type1") ||
-    (viewMode === "day" && viewType === "type1") ||
     (viewMode === "year" && viewType === "type2");
   const comingSoonLabel = `${VIEW_MODE_LABEL[viewMode]} · ${VIEW_TYPE_LABEL[viewType]}`;
 
-  // Week / Day View navigation state — anchor date inside the visible week
-  // or day. Kept here (not inside the child) so prev/next clicks don't
-  // unmount the component on each navigation.
+  // Week View navigation state — anchor date inside the visible week. Kept
+  // here (not inside WeekGridType1) so prev/next clicks don't unmount the
+  // component on each navigation.
   const [weekRef, setWeekRef] = useState<Date>(() => new Date());
-  const [dayRef, setDayRef] = useState<Date>(() => new Date());
 
   const YEAR_COL = 220;
   const FOCUS_COL = 640;
@@ -550,23 +547,6 @@ export function UnifiedElasticGrid({
             <div className="text-xs text-muted-foreground">Kommer snart</div>
           </div>
         </div>
-      ) : viewMode === "day" && viewType === "type1" ? (
-        <DayGridType1
-          calId={calId}
-          refDate={dayRef}
-          data={data}
-          onPrevDay={() => {
-            const d = new Date(dayRef);
-            d.setDate(d.getDate() - 1);
-            setDayRef(d);
-          }}
-          onNextDay={() => {
-            const d = new Date(dayRef);
-            d.setDate(d.getDate() + 1);
-            setDayRef(d);
-          }}
-          onCommitText={(k, text) => onCommitText(k, text)}
-        />
       ) : viewMode === "week" && viewType === "type1" ? (
         <WeekGridType1
           calId={calId}
