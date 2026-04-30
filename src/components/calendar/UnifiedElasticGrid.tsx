@@ -946,11 +946,23 @@ function DayCellPair(props: DayCellPairProps) {
               />
             )}
 
-            {showCompact && isFirst && (
-              <span className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-semibold text-ink/60">
-                {day}
-              </span>
-            )}
+            {showCompact && (() => {
+              // Year view (Week Type 2) cell badge — show a 30-minute
+              // time stamp starting at 06:00 in row-1/session-0 and
+              // advancing one cell at a time, ending at 23:30 (one cell
+              // below 23:00). Cells past 23:30 render no label.
+              const cellIndex = (day - 1) * 2 + session;
+              const totalMin = 6 * 60 + cellIndex * 30;
+              if (totalMin > 23 * 60 + 30) return null;
+              const hh = Math.floor(totalMin / 60);
+              const mm = totalMin % 60;
+              const label = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+              return (
+                <span className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+                  {label}
+                </span>
+              );
+            })()}
 
             {showRich && (
               <div
