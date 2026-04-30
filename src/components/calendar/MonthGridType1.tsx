@@ -36,15 +36,23 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import type { CellData, CellKey } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
+import { parseSession, formatSession } from "./sessionFormat";
 
-const COLOR_PREFIX_RE = /^\[(#[0-9a-fA-F]{6})\]\s*/;
 function splitColor(raw: string): { color: string | null; text: string } {
-  const m = raw.match(COLOR_PREFIX_RE);
-  if (m) return { color: m[1], text: raw.slice(m[0].length) };
-  return { color: null, text: raw };
+  const m = parseSession(raw);
+  return { color: m.color, text: m.text };
 }
 function joinColor(color: string | null, text: string): string {
-  return color ? `[${color}] ${text}` : text;
+  return color ? formatSession({ color, text }) : text;
+}
+function reformatPreservingTime(raw: string, color: string | null, text: string): string {
+  const m = parseSession(raw);
+  return formatSession({
+    color,
+    startMin: m.startMin,
+    durationMin: m.durationMin,
+    text,
+  });
 }
 
 const WEEKDAYS = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"];
@@ -446,7 +454,13 @@ export function MonthGridType1({
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
                     <AnimatePresence initial={false}>
                       {visible.map((it) => {
-                        const { color: customColor, text: displayText } = splitColor(it.text);
+                        const meta = parseSession(it.text);
+                        const customColor = meta.color;
+                        const displayText = meta.text;
+                        // Proportional chip height — defaults to 30 min when
+                        // no duration is encoded.
+                        const dur = meta.durationMin ?? 30;
+                        const minH = Math.max(20, Math.min(56, Math.round(dur * 0.25) + 14));
                         return (
                           <motion.div
                             key={`${id}-${it.idx}-${it.text}`}
@@ -484,14 +498,15 @@ export function MonthGridType1({
                               "hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                               customColor ? "" : "hover:bg-secondary",
                             ].join(" ")}
-                            style={
-                              customColor
+                            style={{
+                              minHeight: `${minH}px`,
+                              ...(customColor
                                 ? {
                                     backgroundColor: `${customColor}1F`,
                                     boxShadow: `inset 2px 0 0 ${customColor}`,
                                   }
-                                : undefined
-                            }
+                                : {}),
+                            }}
                             title={displayText}
                           >
                             {customColor && (
@@ -566,7 +581,7 @@ export function MonthGridType1({
                   } else {
                     next = existing.map((it) =>
                       it.idx === popover.editIdx
-                        ? { idx: it.idx, text: joinColor(color, t) }
+                        ? { idx: it.idx, text: reformatPreservingTime(it.text, color, t) }
                         : it,
                     );
                   }
@@ -666,33 +681,28 @@ function PopoverEditor({
         placeholder="f.eks. Intervaller 5×4min"
         className="block w-full bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
       />
-      {/* Color row — 8 platform colors as macOS-style dots, 4 × 2 */}
-      <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-2">
-        <span className="mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-          Farge
-        </span>
-        <div className="grid grid-cols-4 gap-1.5">
-          {GROUP_COLOR_PALETTE.map((c) => {
-            const selected = color?.toLowerCase() === c.value.toLowerCase();
-            return (
-              <button
-                key={c.value}
-                type="button"
-                title={c.name}
-                aria-label={c.name}
-                aria-pressed={selected}
-                onClick={() => setColor(selected ? null : c.value)}
-                className={[
-                  "h-3 w-3 rounded-full border transition-transform hover:scale-125",
-                  selected
-                    ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
-                    : "border-black/15",
-                ].join(" ")}
-                style={{ background: c.value }}
-              />
-            );
-          })}
-        </div>
+      {/* Color row — 8 platform colors as macOS-style dots, centered */}
+      <div className="flex items-center justify-center gap-2.5 border-t border-hairline px-3 py-2.5">
+        {GROUP_COLOR_PALETTE.map((c) => {
+          const selected = color?.toLowerCase() === c.value.toLowerCase();
+          return (
+            <button
+              key={c.value}
+              type="button"
+              title={c.name}
+              aria-label={c.name}
+              aria-pressed={selected}
+              onClick={() => setColor(selected ? null : c.value)}
+              className={[
+                "h-3 w-3 rounded-full border transition-transform hover:scale-125",
+                selected
+                  ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
+                  : "border-black/15",
+              ].join(" ")}
+              style={{ background: c.value }}
+            />
+          );
+        })}
       </div>
       <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
         <span className="mono tabular-nums">
