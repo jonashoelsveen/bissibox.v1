@@ -37,9 +37,11 @@ import type { CellData, CellKey, Session } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { MonthGridType1 } from "./MonthGridType1";
 import { WeekGridType1 } from "./WeekGridType1";
+import { DayGridType3 } from "./DayGridType3";
+import { WeekGridType3 } from "./WeekGridType3";
 
 type ViewMode = "day" | "week" | "month" | "year";
-type ViewType = "type1" | "type2";
+type ViewType = "type1" | "type2" | "type3";
 
 const VIEW_MODE_LABEL: Record<ViewMode, string> = {
   day: "Dag",
@@ -51,6 +53,7 @@ const VIEW_MODE_LABEL: Record<ViewMode, string> = {
 const VIEW_TYPE_LABEL: Record<ViewType, string> = {
   type1: "Type 1",
   type2: "Type 2",
+  type3: "Type 3",
 };
 
 /**
@@ -235,15 +238,16 @@ export function UnifiedElasticGrid({
 
   // Implemented combinations. Everything else renders a "coming soon" panel.
   const isImplemented =
-    (viewMode === "month" && (viewType === "type1" || viewType === "type2")) ||
-    (viewMode === "week" && viewType === "type1") ||
+    (viewMode === "month" && (viewType === "type1" || viewType === "type2" || viewType === "type3")) ||
+    (viewMode === "week" && (viewType === "type1" || viewType === "type3")) ||
+    (viewMode === "day" && viewType === "type3") ||
     (viewMode === "year" && viewType === "type2");
   const comingSoonLabel = `${VIEW_MODE_LABEL[viewMode]} · ${VIEW_TYPE_LABEL[viewType]}`;
 
-  // Week View navigation state — anchor date inside the visible week. Kept
-  // here (not inside WeekGridType1) so prev/next clicks don't unmount the
-  // component on each navigation.
+  // Week / Day navigation state — anchor dates kept here (not inside the
+  // grid components) so prev/next clicks don't unmount on each navigation.
   const [weekRef, setWeekRef] = useState<Date>(() => new Date());
+  const [dayRef, setDayRef] = useState<Date>(() => new Date());
 
   const YEAR_COL = 220;
   const FOCUS_COL = 640;
@@ -522,6 +526,7 @@ export function UnifiedElasticGrid({
           options={[
             { value: "type1", label: "Type 1", hint: "Notion" },
             { value: "type2", label: "Type 2", hint: "Excel" },
+            { value: "type3", label: "Type 3", hint: "Tid" },
           ]}
         />
         {isImplemented && mode.kind === "month" && viewType === "type2" && (
@@ -547,6 +552,40 @@ export function UnifiedElasticGrid({
             <div className="text-xs text-muted-foreground">Kommer snart</div>
           </div>
         </div>
+      ) : viewMode === "day" && viewType === "type3" ? (
+        <DayGridType3
+          calId={calId}
+          refDate={dayRef}
+          data={data}
+          onPrevDay={() => {
+            const d = new Date(dayRef);
+            d.setDate(d.getDate() - 1);
+            setDayRef(d);
+          }}
+          onNextDay={() => {
+            const d = new Date(dayRef);
+            d.setDate(d.getDate() + 1);
+            setDayRef(d);
+          }}
+          onCommitText={(k, text) => onCommitText(k, text)}
+        />
+      ) : viewMode === "week" && viewType === "type3" ? (
+        <WeekGridType3
+          calId={calId}
+          refDate={weekRef}
+          data={data}
+          onPrevWeek={() => {
+            const d = new Date(weekRef);
+            d.setDate(d.getDate() - 7);
+            setWeekRef(d);
+          }}
+          onNextWeek={() => {
+            const d = new Date(weekRef);
+            d.setDate(d.getDate() + 7);
+            setWeekRef(d);
+          }}
+          onCommitText={(k, text) => onCommitText(k, text)}
+        />
       ) : viewMode === "week" && viewType === "type1" ? (
         <WeekGridType1
           calId={calId}
@@ -564,7 +603,7 @@ export function UnifiedElasticGrid({
           }}
           onCommitText={(k, text) => onCommitText(k, text)}
         />
-      ) : viewType === "type1" ? (
+      ) : viewMode === "month" && (viewType === "type1" || viewType === "type3") ? (
         <MonthGridType1
           calId={calId}
           year={year}
