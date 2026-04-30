@@ -486,7 +486,10 @@ export function UnifiedElasticGrid({
 
   const months = useMemo(
     () =>
-      Array.from({ length: 12 }, (_, idx) => ({
+      // Type 2 spreadsheet renders 7 weekday columns (Mon–Sun) instead of
+      // the full 12-month axis. The underlying data model still keys on
+      // month index 0–6, but only 7 of the 12 slots are rendered.
+      Array.from({ length: 7 }, (_, idx) => ({
         idx,
         label: MONTH_LABELS_SHORT[idx],
         full: MONTH_LABELS_FULL[idx],
@@ -947,16 +950,16 @@ function DayCellPair(props: DayCellPairProps) {
             )}
 
             {showCompact && (() => {
-              // Year view (Week Type 2) cell badge — show a 30-minute
-              // time stamp starting at 06:00 in row-1/session-0 and
-              // advancing one cell at a time, ending at 23:30 (one cell
-              // below 23:00). Cells past 23:30 render no label.
+              // Year view (Week Type 2) cell badge — show a time stamp on
+              // every full hour only (every second cell), starting at
+              // 06:00 in row-1/session-0 and ending at 23:00 (one cell
+              // below 23:00 so the 23:30 slot exists but is unlabelled).
               const cellIndex = (day - 1) * 2 + session;
               const totalMin = 6 * 60 + cellIndex * 30;
               if (totalMin > 23 * 60 + 30) return null;
+              if (totalMin % 60 !== 0) return null;
               const hh = Math.floor(totalMin / 60);
-              const mm = totalMin % 60;
-              const label = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+              const label = `${String(hh).padStart(2, "0")}:00`;
               return (
                 <span className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
                   {label}
