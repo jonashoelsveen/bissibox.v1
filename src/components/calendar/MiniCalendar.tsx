@@ -1,0 +1,207 @@
+/**
+ * MiniCalendar — compact Notion-style month navigator.
+ *
+ * Specs:
+ *  - 7-column grid, single-letter weekday headers (M T W T F S S).
+ *  - 12px sans-serif; padded prev/next-month days at lower contrast.
+ *  - Today: subtle highlight (light gray circle); selected day:
+ *    high-contrast circular background (primary color).
+ *  - Hover: subtle rounded ghost background.
+ *  - Click-and-drag range selection.
+ *  - Header: "Month Year" with chevron prev/next.
+ *  - No borders between cells.
+ *
+ *  Calls onSelectRange whenever selection changes (single click → 1-day range).
+ *  When `selectedRange` changes from outside, the active month auto-advances.
+ */
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+const MONTHS_FULL = [
+  "Januar","Februar","Mars","April","Mai","Juni",
+  "Juli","August","September","Oktober","November","Desember",
+];
+const WEEKDAY_LETTERS = ["M", "T", "O", "T", "F", "L", "S"]; // Norwegian single letters
+
+function dowMon0(date: Date) {
+  const d = date.getDay();
+  return d === 0 ? 6 : d - 1;
+}
+function daysInMonth(y: number, m: number) {
+  return new Date(y, m + 1, 0).getDate();
+}
+function sameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+function dateKey(d: Date) {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+export interface DateRange {
+  start: Date;
+  end: Date;
+}
+
+export interface MiniCalendarProps {
+  /** The day that drives the displayed month + selection. */
+  selectedRange: DateRange;
+  /** Called continuously during drag, and on click. */
+  onSelectRange: (range: DateRange) => void;
+}
+
+export function MiniCalendar({ selectedRange, onSelectRange }: MiniCalendarProps) {
+  // Displayed month (independent from selection so user can browse)
+  const [view, setView] = useState(() => ({
+    year: selectedRange.start.getFullYear(),
+    month: selectedRange.start.getMonth(),
+  }));
+
+  // When external selection jumps to a different month, follow it.
+  useEffect(() => {
+    setView({
+      year: selectedRange.start.getFullYear(),
+      month: selectedRange.start.getMonth(),
+    });
+  }, [selectedRange.start.getTime()]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const dim = daysInMonth(view.year, view.month);
+  const firstDow = dowMon0(new Date(view.year, view.month, 1));
+  const totalCells = Math.ceil((firstDow + dim) / 7) * 7;
+
+  const days = useMemo(() => {
+    const arr: { date: Date; inMonth: boolean }[] = [];
+    for (let i = 0; i < totalCells; i++) {
+      const dayNumber = i - firstDow + 1;
+      const date = new Date(view.year, view.month, dayNumber);
+      arr.push({ date, inMonth: dayNumber >= 1 && dayNumber <= dim });
+    }
+    return arr;
+  }, [view.year, view.month, dim, firstDow, totalCells]);
+
+  const today = new Date();
+  const dragStartRef = useRef<Date | null>(null);
+
+  const inSelectedRange = (d: Date) => {
+    const t = d.getTime();
+    const lo = Math.min(selectedRange.start.getTime(), selectedRange.end.getTime());
+    const hi = Math.max(selectedRange.start.getTime(), selectedRange.end.getTime());
+    // Only compare by Y-M-D
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const sLo = new Date(
+      new Date(lo).getFullYear(),
+      new Date(lo).getMonth(),
+      new Date(lo).getDate(),
+    ).getTime();
+    const sHi = new Date(
+      new Date(hi).getFullYear(),
+      new Date(hi).getMonth(),
+      new Date(hi).getDate(),
+    ).getTime();
+    return day >= sLo && day <= sHi;
+    void t;
+  };
+
+  useEffect(() => {
+    const onUp = () => {
+      dragStartRef.current = null;
+    };
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+  }, []);
+
+  const prevMonth = () =>
+    setView((v) =>
+      v.month === 0 ? { year: v.year - 1, month: 11 } : { year: v.year, month: v.month - 1 },
+    );
+  const nextMonth = () =>
+    setView((v) =>
+      v.month === 11 ? { year: v.year + 1, month: 0 } : { year: v.year, month: v.month + 1 },
+    );
+
+  return (
+    <div
+      className="select-none rounded-md bg-card p-2.5"
+      style={{ width: 240, fontSize: 12 }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="mb-2 flex items-center justify-between px-1">
+        <span className="text-[12px] font-medium text-ink">
+          {MONTHS_FULL[view.month]} {view.year}
+        </span>
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={prevMonth}
+            aria-label="Forrige måned"
+            className="grid h-5 w-5 place-items-center rounded text-muted-foreground hover:bg-secondary hover:text-ink"
+          >
+            <ChevronLeft className="h-3 w-3" strokeWidth={2.25} />
+          </button>
+          <button
+            type="button"
+            onClick={nextMonth}
+            aria-label="Neste måned"
+            className="grid h-5 w-5 place-items-center rounded text-muted-foreground hover:bg-secondary hover:text-ink"
+          >
+            <ChevronRight className="h-3 w-3" strokeWidth={2.25} />
+          </button>
+        </div>
+      </div>
+
+      {/* Weekday letters */}
+      <div className="mb-1 grid grid-cols-7 gap-y-1">
+        {WEEKDAY_LETTERS.map((w, i) => (
+          <div
+            key={i}
+            className="grid h-6 place-items-center text-[10.5px] font-normal text-muted-foreground/70"
+          >
+            {w}
+          </div>
+        ))}
+      </div>
+
+      {/* Day grid */}
+      <div className="grid grid-cols-7 gap-y-0.5">
+        {days.map(({ date, inMonth }) => {
+          const isToday = sameDay(date, today);
+          const isSelected = inSelectedRange(date);
+
+          return (
+            <button
+              type="button"
+              key={dateKey(date)}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                dragStartRef.current = date;
+                onSelectRange({ start: date, end: date });
+              }}
+              onMouseEnter={() => {
+                if (dragStartRef.current) {
+                  onSelectRange({ start: dragStartRef.current, end: date });
+                }
+              }}
+              className={[
+                "relative grid h-6 w-full place-items-center rounded-full text-[12px] tabular-nums transition-colors",
+                isSelected
+                  ? "bg-primary text-primary-foreground"
+                  : isToday
+                    ? "bg-secondary text-ink"
+                    : inMonth
+                      ? "text-ink hover:bg-secondary"
+                      : "text-muted-foreground/40 hover:bg-secondary/60",
+              ].join(" ")}
+            >
+              {date.getDate()}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

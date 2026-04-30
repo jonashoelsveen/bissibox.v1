@@ -29,6 +29,8 @@ import { ChevronDown } from "lucide-react";
 import type { CellData, CellKey, Session } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { MonthGridType1 } from "./MonthGridType1";
+import { MonthNavControl } from "./MonthNavControl";
+import type { DateRange } from "./MiniCalendar";
 
 type ViewMode = "day" | "week" | "month";
 
@@ -174,6 +176,12 @@ export interface UnifiedElasticGridProps {
   onCommitDuration?: (k: CellKey, duration: string) => void;
   onFill: (source: CellKey, targets: CellKey[]) => void;
   seat?: "admin" | "individual";
+  /** Shared "what is the calendar showing?" anchor date. */
+  currentDate: Date;
+  /** Optional drag-selected range from the mini-calendar. */
+  currentRange: DateRange;
+  /** Notify parent so the mini-cal & main view stay in sync. */
+  onCurrentDateChange: (date: Date, range?: DateRange) => void;
 }
 
 type Mode = { kind: "year" } | { kind: "month"; month: number };
@@ -188,6 +196,9 @@ export function UnifiedElasticGrid({
   onCommitDuration,
   onFill,
   seat = "individual",
+  currentDate,
+  currentRange,
+  onCurrentDateChange,
 }: UnifiedElasticGridProps) {
   // viewMode is the only user-facing toggle now. There are no "types".
   //   - "day"   → 7-column rich spreadsheet (one row per 30-min slot)
@@ -420,12 +431,8 @@ export function UnifiedElasticGrid({
       className="relative w-full overflow-hidden rounded-md border border-hairline bg-card"
       style={{ height: "calc(100vh - 280px)" }}
     >
-      {/* Top-right control cluster: [Mode ▾] [Type ▾] [← back]
-          Order matches the request: mode dropdown sits on the far left,
-          the type dropdown sits between mode and the back arrow, and the
-          back arrow remains the right-most affordance (only in month
-          view, since "back" only makes sense when zoomed in). */}
-      <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-2">
+      {/* Top-right control cluster: [Mode ▾] [‹ 📅 ›] */}
+      <div className="pointer-events-auto absolute right-3 top-3 z-30 flex items-center gap-2">
         <HeaderDropdown<ViewMode>
           ariaLabel="Visningsmodus"
           value={viewMode}
@@ -437,22 +444,28 @@ export function UnifiedElasticGrid({
             { value: "month", label: "Måned" },
           ]}
         />
+        <MonthNavControl
+          unit={viewMode}
+          currentDate={currentDate}
+          selectedRange={currentRange}
+          onChange={onCurrentDateChange}
+        />
       </div>
 
       {viewMode === "month" ? (
         <MonthGridType1
           calId={calId}
-          year={year}
-          month={lastFocusedMonthRef.current ?? new Date().getMonth()}
+          year={currentDate.getFullYear()}
+          month={currentDate.getMonth()}
           data={data}
           seat={seat}
           onPrevMonth={() => {
-            const cur = lastFocusedMonthRef.current ?? new Date().getMonth();
-            lastFocusedMonthRef.current = cur === 0 ? 0 : cur - 1;
+            const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+            onCurrentDateChange(d, { start: d, end: d });
           }}
           onNextMonth={() => {
-            const cur = lastFocusedMonthRef.current ?? new Date().getMonth();
-            lastFocusedMonthRef.current = cur === 11 ? 11 : cur + 1;
+            const d = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+            onCurrentDateChange(d, { start: d, end: d });
           }}
           onCommitText={(k, text) => onCommitText(k, text)}
         />
@@ -774,16 +787,15 @@ function DayCellPair(props: DayCellPairProps) {
                 }}
               >
                 {/* Time gutter — every row is 30 minutes, starting at 06:00.
-                    Row 0 = 06:00, row 1 = 06:30, row 2 = 07:00, … Rendered
-                    in muted grey so it reads as a passive axis label. */}
+                    Only every second row (full hours) is labelled. */}
                 <div className="px-3 text-[12px] font-medium tabular-nums text-muted-foreground">
                   {(() => {
                     const cellIndex = (day - 1) * 2 + session;
                     const totalMin = 6 * 60 + cellIndex * 30;
                     if (totalMin > 23 * 60 + 30) return "";
+                    if (totalMin % 60 !== 0) return "";
                     const hh = Math.floor(totalMin / 60);
-                    const mm = totalMin % 60;
-                    return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+                    return `${String(hh).padStart(2, "0")}:00`;
                   })()}
                 </div>
                 <div className="min-w-0 border-l border-hairline px-3 text-[13px] text-ink">

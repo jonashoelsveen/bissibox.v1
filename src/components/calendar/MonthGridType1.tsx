@@ -32,7 +32,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { CellData, CellKey } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
@@ -311,29 +311,13 @@ export function MonthGridType1({
       className="relative flex h-full w-full flex-col bg-card"
       tabIndex={0}
     >
-      {/* Minimalist month header (Notion-style) */}
+      {/* Minimalist month header (Notion-style). Navigation chevrons live
+          in the grid's top-right control cluster; here we only show the
+          month/year label so users always see what's in view. */}
       <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
         <h2 className="text-[15px] font-semibold tracking-tight text-ink">
           {headerLabel}
         </h2>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={onPrevMonth}
-            aria-label="Forrige måned"
-            className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
-          >
-            <ChevronLeft className="h-4 w-4" strokeWidth={2.25} />
-          </button>
-          <button
-            type="button"
-            onClick={onNextMonth}
-            aria-label="Neste måned"
-            className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
-          >
-            <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
-          </button>
-        </div>
       </div>
 
       {/* Weekday strip */}
