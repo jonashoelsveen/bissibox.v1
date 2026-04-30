@@ -440,41 +440,15 @@ export function UnifiedElasticGrid({
       <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-2">
         <HeaderDropdown<ViewMode>
           ariaLabel="Visningsmodus"
-          value={currentViewMode}
+          value={viewMode}
           onChange={handleViewModeChange}
           width={124}
           options={[
             { value: "day", label: "Dag" },
             { value: "week", label: "Uke" },
             { value: "month", label: "Måned" },
-            { value: "year", label: "År" },
           ]}
         />
-        <HeaderDropdown<ViewType>
-          ariaLabel="Visningstype"
-          value={viewType}
-          onChange={handleViewTypeChange}
-          width={148}
-          options={[
-            { value: "type1", label: "Type 1", hint: "Notion" },
-            { value: "type2", label: "Type 2", hint: viewMode === "year" ? "Uke" : "Dag" },
-            { value: "type3", label: "Type 3", hint: "Tid" },
-          ]}
-        />
-        {isImplemented && mode.kind === "month" && viewType === "type2" && (
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode("year");
-              exitToYear();
-            }}
-            aria-label="Tilbake til år"
-            title="Esc · Tilbake til år"
-            className="pointer-events-auto grid h-8 w-8 place-items-center rounded-md border border-hairline bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-secondary hover:text-ink"
-          >
-            <ArrowLeft className="h-4 w-4" strokeWidth={2.25} />
-          </button>
-        )}
       </div>
 
       {!isImplemented ? (
