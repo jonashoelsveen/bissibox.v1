@@ -62,11 +62,14 @@ function daysInMonth(y: number, m: number) {
   return new Date(y, m + 1, 0).getDate();
 }
 
+export type CalendarSeat = "admin" | "individual";
+
 export interface MonthGridType1Props {
   calId: string;
   year: number;
   month: number;
   data: Record<string, CellData>;
+  seat?: CalendarSeat;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onCommitText: (k: CellKey, text: string) => void;
@@ -100,6 +103,7 @@ export function MonthGridType1({
   year,
   month,
   data,
+  seat = "individual",
   onPrevMonth,
   onNextMonth,
   onCommitText,
