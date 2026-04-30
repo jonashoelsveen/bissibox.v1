@@ -956,16 +956,23 @@ function DayCellPair(props: DayCellPairProps) {
               <div
                 className="grid h-full w-full items-center"
                 style={{
-                  gridTemplateColumns: "72px 52px minmax(0,1fr) 96px",
+                  gridTemplateColumns: "72px minmax(0,1fr) 96px",
                   transition: `opacity ${DUR_MS}ms ${EASE}`,
                   opacity: 1,
                 }}
               >
-                <div className="px-3 text-[12px] font-medium text-ink">
-                  {isFirst ? `${String(day).padStart(2, "0")}.${MONTH_LABELS_SHORT[month].toLowerCase()}` : ""}
-                </div>
-                <div className="px-2 text-[12px] text-muted-foreground">
-                  {isFirst ? weekdayLabel : ""}
+                {/* Time gutter — every row is 30 minutes, starting at 06:00.
+                    Row 0 = 06:00, row 1 = 06:30, row 2 = 07:00, … Rendered
+                    in muted grey so it reads as a passive axis label. */}
+                <div className="px-3 text-[12px] font-medium tabular-nums text-muted-foreground">
+                  {isFirst
+                    ? (() => {
+                        const totalMin = 6 * 60 + (day - 1) * 30;
+                        const hh = Math.floor(totalMin / 60) % 24;
+                        const mm = totalMin % 60;
+                        return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+                      })()
+                    : ""}
                 </div>
                 <div className="min-w-0 border-l border-hairline px-3 text-[13px] text-ink">
                   {isEditing ? (
