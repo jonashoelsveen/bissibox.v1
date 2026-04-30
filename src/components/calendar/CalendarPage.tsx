@@ -715,7 +715,13 @@ function PreviousList({ list, onOpen }: { list: Cal[]; onOpen: (c: Cal) => void 
 }
 
 function CalendarPlaceholder({ cal }: { cal: Cal }) {
-  return <YearCalendarView calId={cal.id} defaultTitle={cal.name} />;
+  return (
+    <YearCalendarView
+      calId={cal.id}
+      defaultTitle={cal.name}
+      seat={isTeamMode ? "admin" : "individual"}
+    />
+  );
 }
 
 /* ------------------------------------------------------------------ */

@@ -173,6 +173,7 @@ export interface UnifiedElasticGridProps {
   onCommitText: (k: CellKey, text: string) => void;
   onCommitDuration?: (k: CellKey, duration: string) => void;
   onFill: (source: CellKey, targets: CellKey[]) => void;
+  seat?: "admin" | "individual";
 }
 
 type Mode = { kind: "year" } | { kind: "month"; month: number };
@@ -186,6 +187,7 @@ export function UnifiedElasticGrid({
   onCommitText,
   onCommitDuration,
   onFill,
+  seat = "individual",
 }: UnifiedElasticGridProps) {
   // viewMode is the only user-facing toggle now. There are no "types".
   //   - "day"   → 7-column rich spreadsheet (one row per 30-min slot)
@@ -443,6 +445,7 @@ export function UnifiedElasticGrid({
           year={year}
           month={lastFocusedMonthRef.current ?? new Date().getMonth()}
           data={data}
+          seat={seat}
           onPrevMonth={() => {
             const cur = lastFocusedMonthRef.current ?? new Date().getMonth();
             lastFocusedMonthRef.current = cur === 0 ? 0 : cur - 1;
