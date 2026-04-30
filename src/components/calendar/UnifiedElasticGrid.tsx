@@ -24,14 +24,7 @@
  *   - Crisp 1px borders, desaturation of peripheral columns in Month View.
  */
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { CellData, CellKey, Session } from "./yearStore";
 import { makeCellId } from "./yearStore";
@@ -85,10 +78,7 @@ function HeaderDropdown<T extends string>({
       </button>
       {open && (
         <>
-          <div
-            className="fixed inset-0 z-30"
-            onClick={() => setOpen(false)}
-          />
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div
             className="absolute right-0 top-full z-40 mt-1 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg"
             style={{ width }}
@@ -339,9 +329,7 @@ export function UnifiedElasticGrid({
       const target = e.target as HTMLElement | null;
       const isTyping =
         target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable);
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
       if (isTyping) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (!selected) return;
@@ -390,9 +378,7 @@ export function UnifiedElasticGrid({
     let raf = 0;
 
     const tick = (now: number) => {
-      const focused = c.querySelector<HTMLElement>(
-        `[data-month-col="${targetMonth}"]`,
-      );
+      const focused = c.querySelector<HTMLElement>(`[data-month-col="${targetMonth}"]`);
       if (focused) {
         const width = focused.offsetWidth;
         const left = focused.offsetLeft;
@@ -468,72 +454,72 @@ export function UnifiedElasticGrid({
           onCommitText={(k, text) => onCommitText(k, text)}
         />
       ) : (
-      <div
-        ref={scrollRef}
-        className="relative h-full w-full overflow-auto"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) handleSelect(null);
-        }}
-        tabIndex={0}
-      >
         <div
-          className="grid"
-          style={{
-            gridTemplateColumns,
-            transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
-            willChange: "grid-template-columns",
+          ref={scrollRef}
+          className="relative h-full w-full overflow-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleSelect(null);
           }}
+          tabIndex={0}
         >
-          {months.map((m) => (
-            <div
-              key={`h-${m.idx}`}
-              data-month-col={m.idx}
-              className="sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide text-muted-foreground"
-            >
-              {m.label}
-            </div>
-          ))}
+          <div
+            className="grid"
+            style={{
+              gridTemplateColumns,
+              transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
+              willChange: "grid-template-columns",
+            }}
+          >
+            {months.map((m) => (
+              <div
+                key={`h-${m.idx}`}
+                data-month-col={m.idx}
+                className="sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide text-muted-foreground"
+              >
+                {m.label}
+              </div>
+            ))}
 
-          {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-            <DayRow
-              key={day}
-              day={day}
-              months={months}
-              year={year}
-              calId={calId}
-              data={data}
-              mode={mode}
-              rowHeight={rowHeight}
-              selected={selected}
-              selectedId={selectedId}
-              editingId={editingId}
-              editValue={editValue}
-              setEditValue={setEditValue}
-              onSelect={handleSelect}
-              onBeginEdit={beginEdit}
-              onCommitEdit={commitEdit}
-              onCommitDuration={onCommitDuration}
-              onMoveAfterCommit={moveSelection}
-              inDragRange={inDragRange}
-              onCellMouseEnter={(k) => {
-                if (!dragStartRef.current) return;
-                if (k.month !== dragStartRef.current.month) return;
-                setDragRange({
-                  month: dragStartRef.current.month,
-                  toDay: k.day,
-                  toSession: k.session,
-                });
-              }}
-              onHandleDown={(k) => {
-                dragStartRef.current = k;
-                setDragRange({ month: k.month, toDay: k.day, toSession: k.session });
-              }}
-              isMonthFocused={isMonthFocused}
-              isMonthPeriph={isMonthPeriph}
-            />
-          ))}
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+              <DayRow
+                key={day}
+                day={day}
+                months={months}
+                year={year}
+                calId={calId}
+                data={data}
+                mode={mode}
+                rowHeight={rowHeight}
+                selected={selected}
+                selectedId={selectedId}
+                editingId={editingId}
+                editValue={editValue}
+                setEditValue={setEditValue}
+                onSelect={handleSelect}
+                onBeginEdit={beginEdit}
+                onCommitEdit={commitEdit}
+                onCommitDuration={onCommitDuration}
+                onMoveAfterCommit={moveSelection}
+                inDragRange={inDragRange}
+                onCellMouseEnter={(k) => {
+                  if (!dragStartRef.current) return;
+                  if (k.month !== dragStartRef.current.month) return;
+                  setDragRange({
+                    month: dragStartRef.current.month,
+                    toDay: k.day,
+                    toSession: k.session,
+                  });
+                }}
+                onHandleDown={(k) => {
+                  dragStartRef.current = k;
+                  setDragRange({ month: k.month, toDay: k.day, toSession: k.session });
+                }}
+                isMonthFocused={isMonthFocused}
+                isMonthPeriph={isMonthPeriph}
+              />
+            ))}
+          </div>
         </div>
-      </div>
       )}
     </div>
   );
@@ -618,9 +604,7 @@ function DayRow(props: DayRowProps) {
           <div
             key={`c-${m.idx}-${day}`}
             data-month-col={m.idx}
-            className={`relative border-b border-r border-hairline ${
-              weekend ? "bg-muted/40" : ""
-            }`}
+            className={`relative border-b border-r border-hairline ${weekend ? "bg-muted/40" : ""}`}
             style={{
               height: rowHeight * 2,
               transition: `height ${DUR_MS}ms ${EASE}`,
@@ -755,28 +739,27 @@ function DayCellPair(props: DayCellPairProps) {
             }}
           >
             {isSelected && (
-              <span
-                className="pointer-events-none absolute inset-0 z-[2] rounded-[2px] outline outline-2 outline-primary outline-offset-[-2px]"
-              />
+              <span className="pointer-events-none absolute inset-0 z-[2] rounded-[2px] outline outline-2 outline-primary outline-offset-[-2px]" />
             )}
 
-            {showCompact && (() => {
-              // Year view (Week Type 2) cell badge — show a time stamp on
-              // every full hour only (every second cell), starting at
-              // 06:00 in row-1/session-0 and ending at 23:00 (one cell
-              // below 23:00 so the 23:30 slot exists but is unlabelled).
-              const cellIndex = (day - 1) * 2 + session;
-              const totalMin = 6 * 60 + cellIndex * 30;
-              if (totalMin > 23 * 60 + 30) return null;
-              if (totalMin % 60 !== 0) return null;
-              const hh = Math.floor(totalMin / 60);
-              const label = `${String(hh).padStart(2, "0")}:00`;
-              return (
-                <span className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
-                  {label}
-                </span>
-              );
-            })()}
+            {showCompact &&
+              (() => {
+                // Year view (Week Type 2) cell badge — show a time stamp on
+                // every full hour only (every second cell), starting at
+                // 06:00 in row-1/session-0 and ending at 23:00 (one cell
+                // below 23:00 so the 23:30 slot exists but is unlabelled).
+                const cellIndex = (day - 1) * 2 + session;
+                const totalMin = 6 * 60 + cellIndex * 30;
+                if (totalMin > 23 * 60 + 30) return null;
+                if (totalMin % 60 !== 0) return null;
+                const hh = Math.floor(totalMin / 60);
+                const label = `${String(hh).padStart(2, "0")}:00`;
+                return (
+                  <span className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+                    {label}
+                  </span>
+                );
+              })()}
 
             {showRich && (
               <div
