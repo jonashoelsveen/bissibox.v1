@@ -768,34 +768,27 @@ function ColorDotRow({
   onChange: (c: string | null) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-2">
-      <span className="mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-        Farge
-      </span>
-      <div className="grid grid-cols-4 gap-1.5">
-        {GROUP_COLOR_PALETTE.map((c) => {
-          const selected = value?.toLowerCase() === c.value.toLowerCase();
-          return (
-            <button
-              key={c.value}
-              type="button"
-              title={c.name}
-              onClick={() =>
-                onChange(selected ? null : c.value)
-              }
-              aria-label={c.name}
-              aria-pressed={selected}
-              className={[
-                "h-3 w-3 rounded-full border transition-transform hover:scale-125",
-                selected
-                  ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
-                  : "border-black/15",
-              ].join(" ")}
-              style={{ background: c.value }}
-            />
-          );
-        })}
-      </div>
+    <div className="flex items-center justify-center gap-2.5 border-t border-hairline px-3 py-2.5">
+      {GROUP_COLOR_PALETTE.map((c) => {
+        const selected = value?.toLowerCase() === c.value.toLowerCase();
+        return (
+          <button
+            key={c.value}
+            type="button"
+            title={c.name}
+            onClick={() => onChange(selected ? null : c.value)}
+            aria-label={c.name}
+            aria-pressed={selected}
+            className={[
+              "h-3 w-3 rounded-full border transition-transform hover:scale-125",
+              selected
+                ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
+                : "border-black/15",
+            ].join(" ")}
+            style={{ background: c.value }}
+          />
+        );
+      })}
     </div>
   );
 }
