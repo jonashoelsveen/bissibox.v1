@@ -24,36 +24,18 @@
  *   - Crisp 1px borders, desaturation of peripheral columns in Month View.
  */
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { ChevronDown, ArrowLeft } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import type { CellData, CellKey, Session } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { MonthGridType1 } from "./MonthGridType1";
-import { WeekGridType1 } from "./WeekGridType1";
-import { DayGridType3 } from "./DayGridType3";
-import { WeekGridType3 } from "./WeekGridType3";
 
-type ViewMode = "day" | "week" | "month" | "year";
-type ViewType = "type1" | "type2" | "type3";
+type ViewMode = "day" | "week" | "month";
 
 const VIEW_MODE_LABEL: Record<ViewMode, string> = {
   day: "Dag",
   week: "Uke",
   month: "Måned",
-  year: "År",
-};
-
-const VIEW_TYPE_LABEL: Record<ViewType, string> = {
-  type1: "Type 1",
-  type2: "Type 2",
-  type3: "Type 3",
 };
 
 /**
@@ -96,10 +78,7 @@ function HeaderDropdown<T extends string>({
       </button>
       {open && (
         <>
-          <div
-            className="fixed inset-0 z-30"
-            onClick={() => setOpen(false)}
-          />
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div
             className="absolute right-0 top-full z-40 mt-1 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg"
             style={{ width }}
@@ -208,50 +187,27 @@ export function UnifiedElasticGrid({
   onCommitDuration,
   onFill,
 }: UnifiedElasticGridProps) {
-  const [mode, setMode] = useState<Mode>({ kind: "year" });
-  const [viewType, setViewType] = useState<ViewType>("type2");
+  // viewMode is the only user-facing toggle now. There are no "types".
+  //   - "day"   → 7-column rich spreadsheet (one row per 30-min slot)
+  //   - "week"  → 7-column compact spreadsheet (hourly time labels)
+  //   - "month" → MonthGridType1 (full month grid)
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [editingKey, setEditingKey] = useState<CellKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // The mode dropdown reflects the current grid kind. Selecting "month"
-  // while in year view enters the first month; "year" exits to year view.
-  // "Dag" / "Uke" are reserved for future view modes — surfaced as
-  // disabled rows so the IA is discoverable without breaking flow.
-  // The view-mode is independent of the type. We track day/week explicitly
-  // (they have no implementation yet, so they fall through to the
-  // "coming soon" placeholder regardless of the chosen type).
-  const [viewMode, setViewMode] = useState<ViewMode>("year");
-  const currentViewMode: ViewMode = viewMode;
+  // Internal grid mode for the elastic spreadsheet (shared by Day & Week
+  // views). Day view uses the "rich" per-row layout (kind: "month"); Week
+  // view uses the "compact" hourly-label layout (kind: "year").
+  const mode: Mode = viewMode === "day" ? { kind: "month", month: 0 } : { kind: "year" };
+
   const handleViewModeChange = (v: ViewMode) => {
     setViewMode(v);
-    if (v === "year") setMode({ kind: "year" });
-    else if (v === "month") {
-      setMode((prev) =>
-        prev.kind === "month"
-          ? prev
-          : { kind: "month", month: lastFocusedMonthRef.current ?? new Date().getMonth() },
-      );
-    }
   };
 
-  const handleViewTypeChange = (v: ViewType) => {
-    setViewType(v);
-  };
-
-  // Implemented combinations. Everything else renders a "coming soon" panel.
-  const isImplemented =
-    (viewMode === "month" && (viewType === "type1" || viewType === "type2" || viewType === "type3")) ||
-    (viewMode === "week" && (viewType === "type1" || viewType === "type3")) ||
-    (viewMode === "day" && viewType === "type3") ||
-    (viewMode === "year" && viewType === "type2");
-  const comingSoonLabel = `${VIEW_MODE_LABEL[viewMode]} · ${VIEW_TYPE_LABEL[viewType]}`;
-
-  // Week / Day navigation state — anchor dates kept here (not inside the
-  // grid components) so prev/next clicks don't unmount on each navigation.
-  const [weekRef, setWeekRef] = useState<Date>(() => new Date());
-  const [dayRef, setDayRef] = useState<Date>(() => new Date());
+  // Both spreadsheet sub-views are always implemented; "month" routes to
+  // MonthGridType1. There are no other combinations to gate on.
 
   const YEAR_COL = 220;
   const FOCUS_COL = 640;
@@ -279,11 +235,6 @@ export function UnifiedElasticGrid({
       setEditValue(data[id]?.text ?? "");
       setEditingKey(k);
       onSelect(k);
-      setMode((prev) =>
-        prev.kind === "month" && prev.month !== k.month
-          ? { kind: "month", month: k.month }
-          : prev,
-      );
     },
     [calId, data, onSelect],
   );
@@ -293,26 +244,12 @@ export function UnifiedElasticGrid({
     setEditingKey(null);
   }, [editingKey, editValue, onCommitText]);
 
-  const enterMonth = useCallback((month: number) => {
-    setMode({ kind: "month", month });
-  }, []);
-
-  const exitToYear = useCallback(() => {
-    setMode({ kind: "year" });
-  }, []);
-
-  // Wrap selection so that picking a cell in a peripheral month while in
-  // Month View instantly shifts the focused month to that cell's month.
-  // This makes focus follow user intent with zero lag — clicking a cell in
-  // the next/prev month is a navigation gesture, not just a selection.
+  // Selection passes straight through — no month-zoom side effect.
   const handleSelect = useCallback(
     (k: CellKey | null) => {
       onSelect(k);
-      if (k && mode.kind === "month" && k.month !== mode.month) {
-        setMode({ kind: "month", month: k.month });
-      }
     },
-    [onSelect, mode],
+    [onSelect],
   );
 
   const moveSelection = useCallback(
@@ -324,22 +261,8 @@ export function UnifiedElasticGrid({
         const dim = daysInMonth(y, month);
         const minRank = 1 * 2 + 0;
         const maxRank = dim * 2 + 1;
-        if (rank > maxRank) {
-          if (mode.kind === "month" && month < 11) {
-            month += 1;
-            rank = minRank;
-          } else {
-            rank = maxRank;
-          }
-        } else if (rank < minRank) {
-          if (mode.kind === "month" && month > 0) {
-            month -= 1;
-            const nDim = daysInMonth(y, month);
-            rank = nDim * 2 + 1;
-          } else {
-            rank = minRank;
-          }
-        }
+        if (rank > maxRank) rank = maxRank;
+        else if (rank < minRank) rank = minRank;
         day = Math.floor(rank / 2);
         session = (rank % 2) as Session;
       }
@@ -350,11 +273,8 @@ export function UnifiedElasticGrid({
         if (day > nDim) day = nDim;
       }
       onSelect({ year: y, month, day, session });
-      if (mode.kind === "month" && month !== mode.month) {
-        setMode({ kind: "month", month });
-      }
     },
-    [selected, onSelect, mode],
+    [selected, onSelect],
   );
 
   const dragStartRef = useRef<CellKey | null>(null);
@@ -409,16 +329,9 @@ export function UnifiedElasticGrid({
       const target = e.target as HTMLElement | null;
       const isTyping =
         target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable);
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
       if (isTyping) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === "Escape" && mode.kind === "month") {
-        e.preventDefault();
-        exitToYear();
-        return;
-      }
       if (!selected) return;
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -439,7 +352,7 @@ export function UnifiedElasticGrid({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, selected, moveSelection, exitToYear]);
+  }, [selected, moveSelection]);
 
   // Remember the last focused month so that zooming back to Year View can
   // keep that month centered in the viewport — the user's spatial context
@@ -465,9 +378,7 @@ export function UnifiedElasticGrid({
     let raf = 0;
 
     const tick = (now: number) => {
-      const focused = c.querySelector<HTMLElement>(
-        `[data-month-col="${targetMonth}"]`,
-      );
+      const focused = c.querySelector<HTMLElement>(`[data-month-col="${targetMonth}"]`);
       if (focused) {
         const width = focused.offsetWidth;
         const left = focused.offsetLeft;
@@ -515,214 +426,100 @@ export function UnifiedElasticGrid({
       <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-2">
         <HeaderDropdown<ViewMode>
           ariaLabel="Visningsmodus"
-          value={currentViewMode}
+          value={viewMode}
           onChange={handleViewModeChange}
           width={124}
           options={[
             { value: "day", label: "Dag" },
             { value: "week", label: "Uke" },
             { value: "month", label: "Måned" },
-            { value: "year", label: "År" },
           ]}
         />
-        <HeaderDropdown<ViewType>
-          ariaLabel="Visningstype"
-          value={viewType}
-          onChange={handleViewTypeChange}
-          width={148}
-          options={[
-            { value: "type1", label: "Type 1", hint: "Notion" },
-            { value: "type2", label: "Type 2", hint: viewMode === "year" ? "Uke" : "Dag" },
-            { value: "type3", label: "Type 3", hint: "Tid" },
-          ]}
-        />
-        {isImplemented && mode.kind === "month" && viewType === "type2" && (
-          <button
-            type="button"
-            onClick={() => {
-              setViewMode("year");
-              exitToYear();
-            }}
-            aria-label="Tilbake til år"
-            title="Esc · Tilbake til år"
-            className="pointer-events-auto grid h-8 w-8 place-items-center rounded-md border border-hairline bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-secondary hover:text-ink"
-          >
-            <ArrowLeft className="h-4 w-4" strokeWidth={2.25} />
-          </button>
-        )}
       </div>
 
-      {!isImplemented ? (
-        <div className="flex h-full w-full items-center justify-center px-6 text-center">
-          <div className="space-y-2">
-            <div className="text-sm font-medium text-ink">{comingSoonLabel}</div>
-            <div className="text-xs text-muted-foreground">Kommer snart</div>
-          </div>
-        </div>
-      ) : viewMode === "day" && viewType === "type3" ? (
-        <DayGridType3
-          calId={calId}
-          refDate={dayRef}
-          data={data}
-          onPrevDay={() => {
-            const d = new Date(dayRef);
-            d.setDate(d.getDate() - 1);
-            setDayRef(d);
-          }}
-          onNextDay={() => {
-            const d = new Date(dayRef);
-            d.setDate(d.getDate() + 1);
-            setDayRef(d);
-          }}
-          onCommitText={(k, text) => onCommitText(k, text)}
-        />
-      ) : viewMode === "week" && viewType === "type3" ? (
-        <WeekGridType3
-          calId={calId}
-          refDate={weekRef}
-          data={data}
-          onPrevWeek={() => {
-            const d = new Date(weekRef);
-            d.setDate(d.getDate() - 7);
-            setWeekRef(d);
-          }}
-          onNextWeek={() => {
-            const d = new Date(weekRef);
-            d.setDate(d.getDate() + 7);
-            setWeekRef(d);
-          }}
-          onCommitText={(k, text) => onCommitText(k, text)}
-        />
-      ) : viewMode === "week" && viewType === "type1" ? (
-        <WeekGridType1
-          calId={calId}
-          refDate={weekRef}
-          data={data}
-          onPrevWeek={() => {
-            const d = new Date(weekRef);
-            d.setDate(d.getDate() - 7);
-            setWeekRef(d);
-          }}
-          onNextWeek={() => {
-            const d = new Date(weekRef);
-            d.setDate(d.getDate() + 7);
-            setWeekRef(d);
-          }}
-          onCommitText={(k, text) => onCommitText(k, text)}
-        />
-      ) : viewMode === "month" && (viewType === "type1" || viewType === "type3") ? (
+      {viewMode === "month" ? (
         <MonthGridType1
           calId={calId}
           year={year}
-          month={mode.kind === "month" ? mode.month : (lastFocusedMonthRef.current ?? new Date().getMonth())}
+          month={lastFocusedMonthRef.current ?? new Date().getMonth()}
           data={data}
           onPrevMonth={() => {
-            const cur = mode.kind === "month" ? mode.month : (lastFocusedMonthRef.current ?? new Date().getMonth());
-            const next = cur === 0 ? 0 : cur - 1;
-            lastFocusedMonthRef.current = next;
-            setMode({ kind: "month", month: next });
+            const cur = lastFocusedMonthRef.current ?? new Date().getMonth();
+            lastFocusedMonthRef.current = cur === 0 ? 0 : cur - 1;
           }}
           onNextMonth={() => {
-            const cur = mode.kind === "month" ? mode.month : (lastFocusedMonthRef.current ?? new Date().getMonth());
-            const next = cur === 11 ? 11 : cur + 1;
-            lastFocusedMonthRef.current = next;
-            setMode({ kind: "month", month: next });
+            const cur = lastFocusedMonthRef.current ?? new Date().getMonth();
+            lastFocusedMonthRef.current = cur === 11 ? 11 : cur + 1;
           }}
           onCommitText={(k, text) => onCommitText(k, text)}
         />
       ) : (
-      <div
-        ref={scrollRef}
-        className="relative h-full w-full overflow-auto"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) handleSelect(null);
-        }}
-        tabIndex={0}
-      >
         <div
-          className="grid"
-          style={{
-            gridTemplateColumns,
-            transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
-            willChange: "grid-template-columns",
+          ref={scrollRef}
+          className="relative h-full w-full overflow-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleSelect(null);
           }}
+          tabIndex={0}
         >
-          {months.map((m) => {
-            const focused = isMonthFocused(m.idx);
-            const periph = isMonthPeriph(m.idx);
-            return (
+          <div
+            className="grid"
+            style={{
+              gridTemplateColumns,
+              transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
+              willChange: "grid-template-columns",
+            }}
+          >
+            {months.map((m) => (
               <div
                 key={`h-${m.idx}`}
                 data-month-col={m.idx}
-                onClick={() => {
-                  if (mode.kind === "year") enterMonth(m.idx);
-                  else if (mode.month === m.idx) exitToYear();
-                  else enterMonth(m.idx);
-                }}
-                className={`sticky top-0 z-20 cursor-zoom-in select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${
-                  focused
-                    ? "text-ink"
-                    : periph
-                      ? "text-muted-foreground/50 hover:text-ink"
-                      : "text-muted-foreground hover:text-ink"
-                }`}
-                style={{
-                  transition: `color ${DUR_MS}ms ${EASE}, background-color ${DUR_MS}ms ${EASE}`,
-                  opacity: periph ? 0.6 : 1,
-                }}
-                title={
-                  mode.kind === "year"
-                    ? "Klikk for å zoome inn"
-                    : focused
-                      ? "Klikk for å gå tilbake"
-                      : "Klikk for å fokusere"
-                }
+                className="sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide text-muted-foreground"
               >
-                {focused ? `${m.full} ${year}` : m.label}
+                {m.label}
               </div>
-            );
-          })}
+            ))}
 
-          {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-            <DayRow
-              key={day}
-              day={day}
-              months={months}
-              year={year}
-              calId={calId}
-              data={data}
-              mode={mode}
-              rowHeight={rowHeight}
-              selected={selected}
-              selectedId={selectedId}
-              editingId={editingId}
-              editValue={editValue}
-              setEditValue={setEditValue}
-              onSelect={handleSelect}
-              onBeginEdit={beginEdit}
-              onCommitEdit={commitEdit}
-              onCommitDuration={onCommitDuration}
-              onMoveAfterCommit={moveSelection}
-              inDragRange={inDragRange}
-              onCellMouseEnter={(k) => {
-                if (!dragStartRef.current) return;
-                if (k.month !== dragStartRef.current.month) return;
-                setDragRange({
-                  month: dragStartRef.current.month,
-                  toDay: k.day,
-                  toSession: k.session,
-                });
-              }}
-              onHandleDown={(k) => {
-                dragStartRef.current = k;
-                setDragRange({ month: k.month, toDay: k.day, toSession: k.session });
-              }}
-              isMonthFocused={isMonthFocused}
-              isMonthPeriph={isMonthPeriph}
-            />
-          ))}
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+              <DayRow
+                key={day}
+                day={day}
+                months={months}
+                year={year}
+                calId={calId}
+                data={data}
+                mode={mode}
+                rowHeight={rowHeight}
+                selected={selected}
+                selectedId={selectedId}
+                editingId={editingId}
+                editValue={editValue}
+                setEditValue={setEditValue}
+                onSelect={handleSelect}
+                onBeginEdit={beginEdit}
+                onCommitEdit={commitEdit}
+                onCommitDuration={onCommitDuration}
+                onMoveAfterCommit={moveSelection}
+                inDragRange={inDragRange}
+                onCellMouseEnter={(k) => {
+                  if (!dragStartRef.current) return;
+                  if (k.month !== dragStartRef.current.month) return;
+                  setDragRange({
+                    month: dragStartRef.current.month,
+                    toDay: k.day,
+                    toSession: k.session,
+                  });
+                }}
+                onHandleDown={(k) => {
+                  dragStartRef.current = k;
+                  setDragRange({ month: k.month, toDay: k.day, toSession: k.session });
+                }}
+                isMonthFocused={isMonthFocused}
+                isMonthPeriph={isMonthPeriph}
+              />
+            ))}
+          </div>
         </div>
-      </div>
       )}
     </div>
   );
@@ -807,9 +604,7 @@ function DayRow(props: DayRowProps) {
           <div
             key={`c-${m.idx}-${day}`}
             data-month-col={m.idx}
-            className={`relative border-b border-r border-hairline ${
-              weekend ? "bg-muted/40" : ""
-            }`}
+            className={`relative border-b border-r border-hairline ${weekend ? "bg-muted/40" : ""}`}
             style={{
               height: rowHeight * 2,
               transition: `height ${DUR_MS}ms ${EASE}`,
@@ -944,28 +739,27 @@ function DayCellPair(props: DayCellPairProps) {
             }}
           >
             {isSelected && (
-              <span
-                className="pointer-events-none absolute inset-0 z-[2] rounded-[2px] outline outline-2 outline-primary outline-offset-[-2px]"
-              />
+              <span className="pointer-events-none absolute inset-0 z-[2] rounded-[2px] outline outline-2 outline-primary outline-offset-[-2px]" />
             )}
 
-            {showCompact && (() => {
-              // Year view (Week Type 2) cell badge — show a time stamp on
-              // every full hour only (every second cell), starting at
-              // 06:00 in row-1/session-0 and ending at 23:00 (one cell
-              // below 23:00 so the 23:30 slot exists but is unlabelled).
-              const cellIndex = (day - 1) * 2 + session;
-              const totalMin = 6 * 60 + cellIndex * 30;
-              if (totalMin > 23 * 60 + 30) return null;
-              if (totalMin % 60 !== 0) return null;
-              const hh = Math.floor(totalMin / 60);
-              const label = `${String(hh).padStart(2, "0")}:00`;
-              return (
-                <span className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
-                  {label}
-                </span>
-              );
-            })()}
+            {showCompact &&
+              (() => {
+                // Year view (Week Type 2) cell badge — show a time stamp on
+                // every full hour only (every second cell), starting at
+                // 06:00 in row-1/session-0 and ending at 23:00 (one cell
+                // below 23:00 so the 23:30 slot exists but is unlabelled).
+                const cellIndex = (day - 1) * 2 + session;
+                const totalMin = 6 * 60 + cellIndex * 30;
+                if (totalMin > 23 * 60 + 30) return null;
+                if (totalMin % 60 !== 0) return null;
+                const hh = Math.floor(totalMin / 60);
+                const label = `${String(hh).padStart(2, "0")}:00`;
+                return (
+                  <span className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+                    {label}
+                  </span>
+                );
+              })()}
 
             {showRich && (
               <div
@@ -980,14 +774,14 @@ function DayCellPair(props: DayCellPairProps) {
                     Row 0 = 06:00, row 1 = 06:30, row 2 = 07:00, … Rendered
                     in muted grey so it reads as a passive axis label. */}
                 <div className="px-3 text-[12px] font-medium tabular-nums text-muted-foreground">
-                  {isFirst
-                    ? (() => {
-                        const totalMin = 6 * 60 + (day - 1) * 30;
-                        const hh = Math.floor(totalMin / 60) % 24;
-                        const mm = totalMin % 60;
-                        return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-                      })()
-                    : ""}
+                  {(() => {
+                    const cellIndex = (day - 1) * 2 + session;
+                    const totalMin = 6 * 60 + cellIndex * 30;
+                    if (totalMin > 23 * 60 + 30) return "";
+                    const hh = Math.floor(totalMin / 60);
+                    const mm = totalMin % 60;
+                    return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+                  })()}
                 </div>
                 <div className="min-w-0 border-l border-hairline px-3 text-[13px] text-ink">
                   {isEditing ? (
