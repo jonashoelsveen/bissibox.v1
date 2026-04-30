@@ -140,33 +140,37 @@ function HeaderDropdown<T extends string>({
   );
 }
 
+// Type 2 spreadsheet column headers — weekday names cycling across the
+// 12 underlying month columns. The user requested the headers be relabelled
+// from month names to weekday names (Monday → Sunday). The data model still
+// has 12 column slots, so weekdays repeat after Sunday.
 const MONTH_LABELS_FULL = [
-  "Januar",
-  "Februar",
-  "Mars",
-  "April",
-  "Mai",
-  "Juni",
-  "Juli",
-  "August",
-  "September",
-  "Oktober",
-  "November",
-  "Desember",
+  "Mandag",
+  "Tirsdag",
+  "Onsdag",
+  "Torsdag",
+  "Fredag",
+  "Lørdag",
+  "Søndag",
+  "Mandag",
+  "Tirsdag",
+  "Onsdag",
+  "Torsdag",
+  "Fredag",
 ];
 const MONTH_LABELS_SHORT = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "Mai",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Okt",
-  "Nov",
-  "Des",
+  "Man",
+  "Tir",
+  "Ons",
+  "Tor",
+  "Fre",
+  "Lør",
+  "Søn",
+  "Man",
+  "Tir",
+  "Ons",
+  "Tor",
+  "Fre",
 ];
 const WEEKDAYS_NB = ["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"];
 
@@ -525,7 +529,7 @@ export function UnifiedElasticGrid({
           width={148}
           options={[
             { value: "type1", label: "Type 1", hint: "Notion" },
-            { value: "type2", label: "Type 2", hint: "Excel" },
+            { value: "type2", label: "Type 2", hint: viewMode === "year" ? "Uke" : "Dag" },
             { value: "type3", label: "Type 3", hint: "Tid" },
           ]}
         />
