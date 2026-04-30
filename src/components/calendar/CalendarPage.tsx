@@ -715,6 +715,8 @@ function PreviousList({ list, onOpen }: { list: Cal[]; onOpen: (c: Cal) => void 
 }
 
 function CalendarPlaceholder({ cal }: { cal: Cal }) {
+  const { mode, activeEntityId } = useAuth();
+  const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
   return (
     <YearCalendarView
       calId={cal.id}
