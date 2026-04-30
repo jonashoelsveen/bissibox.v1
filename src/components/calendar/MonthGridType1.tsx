@@ -574,7 +574,7 @@ export function MonthGridType1({
                   } else {
                     next = existing.map((it) =>
                       it.idx === popover.editIdx
-                        ? { idx: it.idx, text: joinColor(color, t) }
+                        ? { idx: it.idx, text: reformatPreservingTime(it.text, color, t) }
                         : it,
                     );
                   }
