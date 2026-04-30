@@ -37,9 +37,11 @@ import type { CellData, CellKey, Session } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { MonthGridType1 } from "./MonthGridType1";
 import { WeekGridType1 } from "./WeekGridType1";
+import { DayGridType3 } from "./DayGridType3";
+import { WeekGridType3 } from "./WeekGridType3";
 
 type ViewMode = "day" | "week" | "month" | "year";
-type ViewType = "type1" | "type2";
+type ViewType = "type1" | "type2" | "type3";
 
 const VIEW_MODE_LABEL: Record<ViewMode, string> = {
   day: "Dag",
@@ -51,6 +53,7 @@ const VIEW_MODE_LABEL: Record<ViewMode, string> = {
 const VIEW_TYPE_LABEL: Record<ViewType, string> = {
   type1: "Type 1",
   type2: "Type 2",
+  type3: "Type 3",
 };
 
 /**
