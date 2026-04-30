@@ -197,50 +197,27 @@ export function UnifiedElasticGrid({
   onCommitDuration,
   onFill,
 }: UnifiedElasticGridProps) {
-  const [mode, setMode] = useState<Mode>({ kind: "year" });
-  const [viewType, setViewType] = useState<ViewType>("type2");
+  // viewMode is the only user-facing toggle now. There are no "types".
+  //   - "day"   → 7-column rich spreadsheet (one row per 30-min slot)
+  //   - "week"  → 7-column compact spreadsheet (hourly time labels)
+  //   - "month" → MonthGridType1 (full month grid)
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [editingKey, setEditingKey] = useState<CellKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // The mode dropdown reflects the current grid kind. Selecting "month"
-  // while in year view enters the first month; "year" exits to year view.
-  // "Dag" / "Uke" are reserved for future view modes — surfaced as
-  // disabled rows so the IA is discoverable without breaking flow.
-  // The view-mode is independent of the type. We track day/week explicitly
-  // (they have no implementation yet, so they fall through to the
-  // "coming soon" placeholder regardless of the chosen type).
-  const [viewMode, setViewMode] = useState<ViewMode>("year");
-  const currentViewMode: ViewMode = viewMode;
+  // Internal grid mode for the elastic spreadsheet (shared by Day & Week
+  // views). Day view uses the "rich" per-row layout (kind: "month"); Week
+  // view uses the "compact" hourly-label layout (kind: "year").
+  const mode: Mode = viewMode === "day" ? { kind: "month", month: 0 } : { kind: "year" };
+
   const handleViewModeChange = (v: ViewMode) => {
     setViewMode(v);
-    if (v === "year") setMode({ kind: "year" });
-    else if (v === "month") {
-      setMode((prev) =>
-        prev.kind === "month"
-          ? prev
-          : { kind: "month", month: lastFocusedMonthRef.current ?? new Date().getMonth() },
-      );
-    }
   };
 
-  const handleViewTypeChange = (v: ViewType) => {
-    setViewType(v);
-  };
-
-  // Implemented combinations. Everything else renders a "coming soon" panel.
-  const isImplemented =
-    (viewMode === "month" && (viewType === "type1" || viewType === "type2" || viewType === "type3")) ||
-    (viewMode === "week" && (viewType === "type1" || viewType === "type3")) ||
-    (viewMode === "day" && viewType === "type3") ||
-    (viewMode === "year" && viewType === "type2");
-  const comingSoonLabel = `${VIEW_MODE_LABEL[viewMode]} · ${VIEW_TYPE_LABEL[viewType]}`;
-
-  // Week / Day navigation state — anchor dates kept here (not inside the
-  // grid components) so prev/next clicks don't unmount on each navigation.
-  const [weekRef, setWeekRef] = useState<Date>(() => new Date());
-  const [dayRef, setDayRef] = useState<Date>(() => new Date());
+  // Both spreadsheet sub-views are always implemented; "month" routes to
+  // MonthGridType1. There are no other combinations to gate on.
 
   const YEAR_COL = 220;
   const FOCUS_COL = 640;
