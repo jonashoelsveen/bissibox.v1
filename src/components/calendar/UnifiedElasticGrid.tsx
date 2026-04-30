@@ -526,6 +526,7 @@ export function UnifiedElasticGrid({
           options={[
             { value: "type1", label: "Type 1", hint: "Notion" },
             { value: "type2", label: "Type 2", hint: "Excel" },
+            { value: "type3", label: "Type 3", hint: "Tid" },
           ]}
         />
         {isImplemented && mode.kind === "month" && viewType === "type2" && (
