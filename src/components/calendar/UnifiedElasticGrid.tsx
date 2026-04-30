@@ -552,6 +552,40 @@ export function UnifiedElasticGrid({
             <div className="text-xs text-muted-foreground">Kommer snart</div>
           </div>
         </div>
+      ) : viewMode === "day" && viewType === "type3" ? (
+        <DayGridType3
+          calId={calId}
+          refDate={dayRef}
+          data={data}
+          onPrevDay={() => {
+            const d = new Date(dayRef);
+            d.setDate(d.getDate() - 1);
+            setDayRef(d);
+          }}
+          onNextDay={() => {
+            const d = new Date(dayRef);
+            d.setDate(d.getDate() + 1);
+            setDayRef(d);
+          }}
+          onCommitText={(k, text) => onCommitText(k, text)}
+        />
+      ) : viewMode === "week" && viewType === "type3" ? (
+        <WeekGridType3
+          calId={calId}
+          refDate={weekRef}
+          data={data}
+          onPrevWeek={() => {
+            const d = new Date(weekRef);
+            d.setDate(d.getDate() - 7);
+            setWeekRef(d);
+          }}
+          onNextWeek={() => {
+            const d = new Date(weekRef);
+            d.setDate(d.getDate() + 7);
+            setWeekRef(d);
+          }}
+          onCommitText={(k, text) => onCommitText(k, text)}
+        />
       ) : viewMode === "week" && viewType === "type1" ? (
         <WeekGridType1
           calId={calId}
@@ -569,7 +603,7 @@ export function UnifiedElasticGrid({
           }}
           onCommitText={(k, text) => onCommitText(k, text)}
         />
-      ) : viewType === "type1" ? (
+      ) : viewMode === "month" && (viewType === "type1" || viewType === "type3") ? (
         <MonthGridType1
           calId={calId}
           year={year}
