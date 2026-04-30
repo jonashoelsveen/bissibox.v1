@@ -791,14 +791,14 @@ function DayCellPair(props: DayCellPairProps) {
                     Row 0 = 06:00, row 1 = 06:30, row 2 = 07:00, … Rendered
                     in muted grey so it reads as a passive axis label. */}
                 <div className="px-3 text-[12px] font-medium tabular-nums text-muted-foreground">
-                  {isFirst
-                    ? (() => {
-                        const totalMin = 6 * 60 + (day - 1) * 30;
-                        const hh = Math.floor(totalMin / 60) % 24;
-                        const mm = totalMin % 60;
-                        return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-                      })()
-                    : ""}
+                  {(() => {
+                    const cellIndex = (day - 1) * 2 + session;
+                    const totalMin = 6 * 60 + cellIndex * 30;
+                    if (totalMin > 23 * 60 + 30) return "";
+                    const hh = Math.floor(totalMin / 60);
+                    const mm = totalMin % 60;
+                    return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+                  })()}
                 </div>
                 <div className="min-w-0 border-l border-hairline px-3 text-[13px] text-ink">
                   {isEditing ? (
