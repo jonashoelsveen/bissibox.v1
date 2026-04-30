@@ -11,7 +11,17 @@ import { useYearStore, type CellKey } from "./yearStore";
 import { UnifiedElasticGrid } from "./UnifiedElasticGrid";
 import { YearRightPanel, type LayerVisibility } from "./YearRightPanel";
 
-export function YearCalendarView({ calId, defaultTitle }: { calId: string; defaultTitle: string }) {
+export type CalendarSeat = "admin" | "individual";
+
+export function YearCalendarView({
+  calId,
+  defaultTitle,
+  seat = "individual",
+}: {
+  calId: string;
+  defaultTitle: string;
+  seat?: CalendarSeat;
+}) {
   const { data, meta, upsertCell, fillRange, setMeta, undo, redo, canUndo, canRedo } =
     useYearStore(calId, defaultTitle);
   const [selected, setSelected] = useState<CellKey | null>(null);
@@ -128,6 +138,7 @@ export function YearCalendarView({ calId, defaultTitle }: { calId: string; defau
             onCommitText={(k, text) => upsertCell(k, { text })}
             onCommitDuration={(k, duration) => upsertCell(k, { duration })}
             onFill={fillRange}
+            seat={seat}
           />
         </div>
         <YearRightPanel

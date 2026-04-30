@@ -62,11 +62,14 @@ function daysInMonth(y: number, m: number) {
   return new Date(y, m + 1, 0).getDate();
 }
 
+export type CalendarSeat = "admin" | "individual";
+
 export interface MonthGridType1Props {
   calId: string;
   year: number;
   month: number;
   data: Record<string, CellData>;
+  seat?: CalendarSeat;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onCommitText: (k: CellKey, text: string) => void;
@@ -100,6 +103,7 @@ export function MonthGridType1({
   year,
   month,
   data,
+  seat = "individual",
   onPrevMonth,
   onNextMonth,
   onCommitText,
@@ -540,6 +544,7 @@ export function MonthGridType1({
         {/* Inline popover (per-item create or edit) */}
         {popover && (
           <PopoverEditor
+            seat={seat}
             initialText={popover.initialText}
             initialColor={popover.initialColor}
             isEdit={popover.editIdx >= 0}
@@ -590,6 +595,7 @@ export function MonthGridType1({
 }
 
 interface PopoverEditorProps {
+  seat: CalendarSeat;
   initialText: string;
   initialColor: string | null;
   isEdit: boolean;
@@ -598,11 +604,37 @@ interface PopoverEditorProps {
   onCommit: (text: string, color: string | null) => void;
 }
 
+// Category defaults — color is the source of truth.
+const CAT_MEETING = "#E63337"; // red
+const CAT_EVENT = "#F09B0A"; // orange
+const CAT_RACE = "#26B270"; // green
+const CAT_TRAINING = "#17A4E0"; // light blue (entity training, locked)
+
+type AdminCategory = "meeting" | "event" | "race";
+const ADMIN_CATEGORIES: { value: AdminCategory; label: string; color: string }[] = [
+  { value: "meeting", label: "Møte", color: CAT_MEETING },
+  { value: "event", label: "Event", color: CAT_EVENT },
+  { value: "race", label: "Løp", color: CAT_RACE },
+];
+
+// Individual color choices for Training: all 8 except entity-training light blue → 7 colors.
+const INDIVIDUAL_TRAINING_COLORS = GROUP_COLOR_PALETTE.filter(
+  (c) => c.value.toLowerCase() !== CAT_TRAINING.toLowerCase(),
+);
+
+function adminCategoryFromColor(color: string | null): AdminCategory {
+  const c = (color ?? "").toLowerCase();
+  if (c === CAT_EVENT.toLowerCase()) return "event";
+  if (c === CAT_RACE.toLowerCase()) return "race";
+  return "meeting";
+}
+
 /**
  * Notion-style inline popover for adding/editing a single session item.
- * Includes the platform color row (8 dots, 4×2) so users can colorize sessions.
+ * Category dropdown + (individual only) 7-color row.
  */
 function PopoverEditor({
+  seat,
   initialText,
   initialColor,
   isEdit,
@@ -611,14 +643,33 @@ function PopoverEditor({
   onCommit,
 }: PopoverEditorProps) {
   const [value, setValue] = useState(initialText);
-  const [color, setColor] = useState<string | null>(initialColor);
+  // Resolve initial color according to seat
+  const resolvedInitial =
+    seat === "admin"
+      ? initialColor && [CAT_MEETING, CAT_EVENT, CAT_RACE]
+          .map((c) => c.toLowerCase())
+          .includes(initialColor.toLowerCase())
+        ? initialColor
+        : CAT_MEETING
+      : initialColor && initialColor.toLowerCase() !== CAT_TRAINING.toLowerCase()
+        ? initialColor
+        : INDIVIDUAL_TRAINING_COLORS[0].value;
+  const [color, setColor] = useState<string | null>(resolvedInitial);
   const ref = useRef<HTMLDivElement | null>(null);
+
+  // Keep latest values for the unmount-time autosave to avoid stale captures.
+  const valueRef = useRef(value);
+  const colorRef = useRef(color);
+  useEffect(() => {
+    valueRef.current = value;
+    colorRef.current = color;
+  }, [value, color]);
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
-        onCommit(value.trim(), color);
+        onCommit(valueRef.current.trim(), colorRef.current);
       }
     };
     const onKey = (e: KeyboardEvent) => {
@@ -627,7 +678,7 @@ function PopoverEditor({
         onClose();
       } else if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        onCommit(value.trim(), color);
+        onCommit(valueRef.current.trim(), colorRef.current);
       }
     };
     window.addEventListener("mousedown", onDown);
@@ -636,10 +687,10 @@ function PopoverEditor({
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("keydown", onKey);
     };
-  }, [value, color, onCommit, onClose]);
+  }, [onCommit, onClose]);
 
   const POPOVER_W = 280;
-  const POPOVER_H = 170;
+  const POPOVER_H = seat === "individual" ? 220 : 190;
   const margin = 8;
   let top = anchor.bottom + margin;
   let left = anchor.left;
@@ -650,6 +701,8 @@ function PopoverEditor({
     left = Math.max(margin, window.innerWidth - POPOVER_W - margin);
   }
 
+  const adminCategory = adminCategoryFromColor(color);
+
   return (
     <div
       ref={ref}
@@ -659,6 +712,8 @@ function PopoverEditor({
       <div className="border-b border-hairline px-3 py-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
         {isEdit ? "Rediger økt" : "Legg til økt"}
       </div>
+
+      {/* Session name */}
       <input
         autoFocus
         value={value}
@@ -666,13 +721,54 @@ function PopoverEditor({
         placeholder="f.eks. Intervaller 5×4min"
         className="block w-full bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
       />
-      {/* Color row — 8 platform colors as macOS-style dots, 4 × 2 */}
-      <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-2">
+
+      {/* Category dropdown — native select for true OS-native feel */}
+      <div className="flex items-center gap-2 border-t border-hairline px-3 py-2">
         <span className="mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-          Farge
+          Kategori
         </span>
-        <div className="grid grid-cols-4 gap-1.5">
-          {GROUP_COLOR_PALETTE.map((c) => {
+        <div className="relative ml-auto flex items-center gap-1.5">
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full border border-black/10"
+            style={{
+              background:
+                seat === "admin"
+                  ? ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!.color
+                  : color ?? CAT_TRAINING,
+            }}
+          />
+          {seat === "admin" ? (
+            <select
+              value={adminCategory}
+              onChange={(e) => {
+                const next = e.target.value as AdminCategory;
+                const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
+                setColor(cat.color);
+              }}
+              className="rounded-md border border-hairline bg-background px-2 py-1 text-[12px] text-ink outline-none focus:border-primary"
+            >
+              {ADMIN_CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <select
+              value="training"
+              disabled
+              className="rounded-md border border-hairline bg-background px-2 py-1 text-[12px] text-ink outline-none disabled:opacity-100"
+            >
+              <option value="training">Trening</option>
+            </select>
+          )}
+        </div>
+      </div>
+
+      {/* Individual-only: 7-color picker, spread end to end */}
+      {seat === "individual" && (
+        <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-3">
+          {INDIVIDUAL_TRAINING_COLORS.map((c) => {
             const selected = color?.toLowerCase() === c.value.toLowerCase();
             return (
               <button
@@ -681,9 +777,9 @@ function PopoverEditor({
                 title={c.name}
                 aria-label={c.name}
                 aria-pressed={selected}
-                onClick={() => setColor(selected ? null : c.value)}
+                onClick={() => setColor(c.value)}
                 className={[
-                  "h-3 w-3 rounded-full border transition-transform hover:scale-125",
+                  "h-3.5 w-3.5 rounded-full border transition-transform hover:scale-125",
                   selected
                     ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
                     : "border-black/15",
@@ -693,7 +789,8 @@ function PopoverEditor({
             );
           })}
         </div>
-      </div>
+      )}
+
       <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
         <span className="mono tabular-nums">
           {isEdit ? "⏎ for å lagre · tøm for å slette" : "⏎ for å lagre"}
