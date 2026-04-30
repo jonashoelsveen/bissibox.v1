@@ -451,81 +451,19 @@ export function UnifiedElasticGrid({
         />
       </div>
 
-      {!isImplemented ? (
-        <div className="flex h-full w-full items-center justify-center px-6 text-center">
-          <div className="space-y-2">
-            <div className="text-sm font-medium text-ink">{comingSoonLabel}</div>
-            <div className="text-xs text-muted-foreground">Kommer snart</div>
-          </div>
-        </div>
-      ) : viewMode === "day" && viewType === "type3" ? (
-        <DayGridType3
-          calId={calId}
-          refDate={dayRef}
-          data={data}
-          onPrevDay={() => {
-            const d = new Date(dayRef);
-            d.setDate(d.getDate() - 1);
-            setDayRef(d);
-          }}
-          onNextDay={() => {
-            const d = new Date(dayRef);
-            d.setDate(d.getDate() + 1);
-            setDayRef(d);
-          }}
-          onCommitText={(k, text) => onCommitText(k, text)}
-        />
-      ) : viewMode === "week" && viewType === "type3" ? (
-        <WeekGridType3
-          calId={calId}
-          refDate={weekRef}
-          data={data}
-          onPrevWeek={() => {
-            const d = new Date(weekRef);
-            d.setDate(d.getDate() - 7);
-            setWeekRef(d);
-          }}
-          onNextWeek={() => {
-            const d = new Date(weekRef);
-            d.setDate(d.getDate() + 7);
-            setWeekRef(d);
-          }}
-          onCommitText={(k, text) => onCommitText(k, text)}
-        />
-      ) : viewMode === "week" && viewType === "type1" ? (
-        <WeekGridType1
-          calId={calId}
-          refDate={weekRef}
-          data={data}
-          onPrevWeek={() => {
-            const d = new Date(weekRef);
-            d.setDate(d.getDate() - 7);
-            setWeekRef(d);
-          }}
-          onNextWeek={() => {
-            const d = new Date(weekRef);
-            d.setDate(d.getDate() + 7);
-            setWeekRef(d);
-          }}
-          onCommitText={(k, text) => onCommitText(k, text)}
-        />
-      ) : viewMode === "month" && (viewType === "type1" || viewType === "type3") ? (
+      {viewMode === "month" ? (
         <MonthGridType1
           calId={calId}
           year={year}
-          month={mode.kind === "month" ? mode.month : (lastFocusedMonthRef.current ?? new Date().getMonth())}
+          month={lastFocusedMonthRef.current ?? new Date().getMonth()}
           data={data}
           onPrevMonth={() => {
-            const cur = mode.kind === "month" ? mode.month : (lastFocusedMonthRef.current ?? new Date().getMonth());
-            const next = cur === 0 ? 0 : cur - 1;
-            lastFocusedMonthRef.current = next;
-            setMode({ kind: "month", month: next });
+            const cur = lastFocusedMonthRef.current ?? new Date().getMonth();
+            lastFocusedMonthRef.current = cur === 0 ? 0 : cur - 1;
           }}
           onNextMonth={() => {
-            const cur = mode.kind === "month" ? mode.month : (lastFocusedMonthRef.current ?? new Date().getMonth());
-            const next = cur === 11 ? 11 : cur + 1;
-            lastFocusedMonthRef.current = next;
-            setMode({ kind: "month", month: next });
+            const cur = lastFocusedMonthRef.current ?? new Date().getMonth();
+            lastFocusedMonthRef.current = cur === 11 ? 11 : cur + 1;
           }}
           onCommitText={(k, text) => onCommitText(k, text)}
         />
@@ -546,41 +484,15 @@ export function UnifiedElasticGrid({
             willChange: "grid-template-columns",
           }}
         >
-          {months.map((m) => {
-            const focused = isMonthFocused(m.idx);
-            const periph = isMonthPeriph(m.idx);
-            return (
-              <div
-                key={`h-${m.idx}`}
-                data-month-col={m.idx}
-                onClick={() => {
-                  if (mode.kind === "year") enterMonth(m.idx);
-                  else if (mode.month === m.idx) exitToYear();
-                  else enterMonth(m.idx);
-                }}
-                className={`sticky top-0 z-20 cursor-zoom-in select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${
-                  focused
-                    ? "text-ink"
-                    : periph
-                      ? "text-muted-foreground/50 hover:text-ink"
-                      : "text-muted-foreground hover:text-ink"
-                }`}
-                style={{
-                  transition: `color ${DUR_MS}ms ${EASE}, background-color ${DUR_MS}ms ${EASE}`,
-                  opacity: periph ? 0.6 : 1,
-                }}
-                title={
-                  mode.kind === "year"
-                    ? "Klikk for å zoome inn"
-                    : focused
-                      ? "Klikk for å gå tilbake"
-                      : "Klikk for å fokusere"
-                }
-              >
-                {focused ? `${m.full} ${year}` : m.label}
-              </div>
-            );
-          })}
+          {months.map((m) => (
+            <div
+              key={`h-${m.idx}`}
+              data-month-col={m.idx}
+              className="sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide text-muted-foreground"
+            >
+              {m.label}
+            </div>
+          ))}
 
           {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
             <DayRow
