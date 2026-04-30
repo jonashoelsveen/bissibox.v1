@@ -245,11 +245,6 @@ export function UnifiedElasticGrid({
       setEditValue(data[id]?.text ?? "");
       setEditingKey(k);
       onSelect(k);
-      setMode((prev) =>
-        prev.kind === "month" && prev.month !== k.month
-          ? { kind: "month", month: k.month }
-          : prev,
-      );
     },
     [calId, data, onSelect],
   );
@@ -259,26 +254,12 @@ export function UnifiedElasticGrid({
     setEditingKey(null);
   }, [editingKey, editValue, onCommitText]);
 
-  const enterMonth = useCallback((month: number) => {
-    setMode({ kind: "month", month });
-  }, []);
-
-  const exitToYear = useCallback(() => {
-    setMode({ kind: "year" });
-  }, []);
-
-  // Wrap selection so that picking a cell in a peripheral month while in
-  // Month View instantly shifts the focused month to that cell's month.
-  // This makes focus follow user intent with zero lag — clicking a cell in
-  // the next/prev month is a navigation gesture, not just a selection.
+  // Selection passes straight through — no month-zoom side effect.
   const handleSelect = useCallback(
     (k: CellKey | null) => {
       onSelect(k);
-      if (k && mode.kind === "month" && k.month !== mode.month) {
-        setMode({ kind: "month", month: k.month });
-      }
     },
-    [onSelect, mode],
+    [onSelect],
   );
 
   const moveSelection = useCallback(
@@ -290,22 +271,8 @@ export function UnifiedElasticGrid({
         const dim = daysInMonth(y, month);
         const minRank = 1 * 2 + 0;
         const maxRank = dim * 2 + 1;
-        if (rank > maxRank) {
-          if (mode.kind === "month" && month < 11) {
-            month += 1;
-            rank = minRank;
-          } else {
-            rank = maxRank;
-          }
-        } else if (rank < minRank) {
-          if (mode.kind === "month" && month > 0) {
-            month -= 1;
-            const nDim = daysInMonth(y, month);
-            rank = nDim * 2 + 1;
-          } else {
-            rank = minRank;
-          }
-        }
+        if (rank > maxRank) rank = maxRank;
+        else if (rank < minRank) rank = minRank;
         day = Math.floor(rank / 2);
         session = (rank % 2) as Session;
       }
@@ -316,11 +283,8 @@ export function UnifiedElasticGrid({
         if (day > nDim) day = nDim;
       }
       onSelect({ year: y, month, day, session });
-      if (mode.kind === "month" && month !== mode.month) {
-        setMode({ kind: "month", month });
-      }
     },
-    [selected, onSelect, mode],
+    [selected, onSelect],
   );
 
   const dragStartRef = useRef<CellKey | null>(null);
