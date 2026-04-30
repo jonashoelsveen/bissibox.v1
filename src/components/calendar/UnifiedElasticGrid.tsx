@@ -344,11 +344,6 @@ export function UnifiedElasticGrid({
           target.isContentEditable);
       if (isTyping) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === "Escape" && mode.kind === "month") {
-        e.preventDefault();
-        exitToYear();
-        return;
-      }
       if (!selected) return;
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -369,7 +364,7 @@ export function UnifiedElasticGrid({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, selected, moveSelection, exitToYear]);
+  }, [selected, moveSelection]);
 
   // Remember the last focused month so that zooming back to Year View can
   // keep that month centered in the viewport — the user's spatial context
