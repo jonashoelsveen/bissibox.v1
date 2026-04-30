@@ -540,9 +540,15 @@ export function WeekGridType1({
                 >
                   <AnimatePresence initial={false}>
                     {items.map((it, i) => {
-                      const { color: customColor, text: displayText } = splitColor(it.text);
+                      const meta = parseFull(it.text);
+                      const customColor = meta.color;
+                      const displayText = meta.text;
                       const cat = categorize(displayText);
                       const itemFocused = focused && focus.item === i;
+                      // Proportional height: 0.5px per minute (so 60min ≈ 30px
+                      // body, 120min ≈ 60px). Default 30min when unspecified.
+                      const dur = meta.durationMin ?? 30;
+                      const minH = Math.max(28, Math.min(220, Math.round(dur * 0.5) + 18));
                       return (
                         <motion.div
                           key={`${col}-${it.idx}-${it.text}`}
@@ -576,42 +582,51 @@ export function WeekGridType1({
                             );
                           }}
                           className={[
-                            "group/card relative flex items-start gap-2 rounded-[4px] border px-2 py-1.5 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition-all",
+                            "group/card relative flex flex-col gap-0.5 rounded-[4px] border px-2 py-1.5 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition-all",
                             customColor ? "" : cat.bg,
                             customColor ? "" : cat.border,
                             itemFocused
                               ? "outline outline-2 outline-primary outline-offset-[-2px]"
                               : "hover:-translate-y-px hover:shadow-[0_3px_8px_rgba(15,23,42,0.10)] hover:border-ink/25",
                           ].join(" ")}
-                          style={
-                            customColor
+                          style={{
+                            minHeight: `${minH}px`,
+                            ...(customColor
                               ? {
-                                  backgroundColor: `${customColor}1A`, // ~10% alpha
+                                  backgroundColor: `${customColor}1A`,
                                   borderColor: `${customColor}66`,
+                                  boxShadow: `inset 3px 0 0 ${customColor}`,
                                 }
-                              : undefined
-                          }
+                              : {}),
+                          }}
                           title={displayText}
                         >
-                          <span
-                            className={[
-                              "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
-                              customColor ? "" : cat.dot,
-                            ].join(" ")}
-                            style={
-                              customColor
-                                ? { backgroundColor: customColor }
-                                : undefined
-                            }
-                          />
-                          <span
-                            className={[
-                              "flex-1 truncate text-[12px] leading-snug",
-                              customColor ? "text-ink" : cat.ink,
-                            ].join(" ")}
-                          >
-                            {displayText}
-                          </span>
+                          <div className="flex items-start gap-2">
+                            <span
+                              className={[
+                                "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
+                                customColor ? "" : cat.dot,
+                              ].join(" ")}
+                              style={
+                                customColor
+                                  ? { backgroundColor: customColor }
+                                  : undefined
+                              }
+                            />
+                            <span
+                              className={[
+                                "flex-1 truncate text-[12px] leading-snug",
+                                customColor ? "text-ink" : cat.ink,
+                              ].join(" ")}
+                            >
+                              {displayText}
+                            </span>
+                          </div>
+                          {meta.durationMin != null && (
+                            <span className="ml-3.5 mono text-[10px] tabular-nums text-muted-foreground">
+                              {formatDuration(meta.durationMin)}
+                            </span>
+                          )}
                         </motion.div>
                       );
                     })}
