@@ -303,7 +303,9 @@ export function WeekGridType1({
         next = existing.filter((_, i) => i !== idx);
       } else {
         next = existing.map((it, i) =>
-          i === idx ? { text: joinColor(color, t) } : { text: it.text },
+          i === idx
+            ? { text: reformatPreservingTime(it.text, color, t) }
+            : { text: it.text },
         );
       }
       onCommitText(k, serializeItems(next));
