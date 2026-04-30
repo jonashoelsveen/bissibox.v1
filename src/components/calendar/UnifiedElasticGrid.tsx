@@ -787,16 +787,15 @@ function DayCellPair(props: DayCellPairProps) {
                 }}
               >
                 {/* Time gutter — every row is 30 minutes, starting at 06:00.
-                    Row 0 = 06:00, row 1 = 06:30, row 2 = 07:00, … Rendered
-                    in muted grey so it reads as a passive axis label. */}
+                    Only every second row (full hours) is labelled. */}
                 <div className="px-3 text-[12px] font-medium tabular-nums text-muted-foreground">
                   {(() => {
                     const cellIndex = (day - 1) * 2 + session;
                     const totalMin = 6 * 60 + cellIndex * 30;
                     if (totalMin > 23 * 60 + 30) return "";
+                    if (totalMin % 60 !== 0) return "";
                     const hh = Math.floor(totalMin / 60);
-                    const mm = totalMin % 60;
-                    return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+                    return `${String(hh).padStart(2, "0")}:00`;
                   })()}
                 </div>
                 <div className="min-w-0 border-l border-hairline px-3 text-[13px] text-ink">
