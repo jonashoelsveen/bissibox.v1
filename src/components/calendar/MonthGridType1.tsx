@@ -454,7 +454,13 @@ export function MonthGridType1({
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
                     <AnimatePresence initial={false}>
                       {visible.map((it) => {
-                        const { color: customColor, text: displayText } = splitColor(it.text);
+                        const meta = parseSession(it.text);
+                        const customColor = meta.color;
+                        const displayText = meta.text;
+                        // Proportional chip height — defaults to 30 min when
+                        // no duration is encoded.
+                        const dur = meta.durationMin ?? 30;
+                        const minH = Math.max(20, Math.min(56, Math.round(dur * 0.25) + 14));
                         return (
                           <motion.div
                             key={`${id}-${it.idx}-${it.text}`}
@@ -492,14 +498,15 @@ export function MonthGridType1({
                               "hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                               customColor ? "" : "hover:bg-secondary",
                             ].join(" ")}
-                            style={
-                              customColor
+                            style={{
+                              minHeight: `${minH}px`,
+                              ...(customColor
                                 ? {
                                     backgroundColor: `${customColor}1F`,
                                     boxShadow: `inset 2px 0 0 ${customColor}`,
                                   }
-                                : undefined
-                            }
+                                : {}),
+                            }}
                             title={displayText}
                           >
                             {customColor && (
