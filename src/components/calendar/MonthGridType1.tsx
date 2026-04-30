@@ -36,15 +36,23 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import type { CellData, CellKey } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
+import { parseSession, formatSession } from "./sessionFormat";
 
-const COLOR_PREFIX_RE = /^\[(#[0-9a-fA-F]{6})\]\s*/;
 function splitColor(raw: string): { color: string | null; text: string } {
-  const m = raw.match(COLOR_PREFIX_RE);
-  if (m) return { color: m[1], text: raw.slice(m[0].length) };
-  return { color: null, text: raw };
+  const m = parseSession(raw);
+  return { color: m.color, text: m.text };
 }
 function joinColor(color: string | null, text: string): string {
-  return color ? `[${color}] ${text}` : text;
+  return color ? formatSession({ color, text }) : text;
+}
+function reformatPreservingTime(raw: string, color: string | null, text: string): string {
+  const m = parseSession(raw);
+  return formatSession({
+    color,
+    startMin: m.startMin,
+    durationMin: m.durationMin,
+    text,
+  });
 }
 
 const WEEKDAYS = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"];
