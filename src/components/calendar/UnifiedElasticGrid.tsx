@@ -529,7 +529,7 @@ export function UnifiedElasticGrid({
           width={148}
           options={[
             { value: "type1", label: "Type 1", hint: "Notion" },
-            { value: "type2", label: "Type 2", hint: "Excel" },
+            { value: "type2", label: "Type 2", hint: viewMode === "year" ? "Uke" : "Dag" },
             { value: "type3", label: "Type 3", hint: "Tid" },
           ]}
         />
