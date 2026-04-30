@@ -29,6 +29,8 @@ import { ChevronDown } from "lucide-react";
 import type { CellData, CellKey, Session } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { MonthGridType1 } from "./MonthGridType1";
+import { MonthNavControl } from "./MonthNavControl";
+import type { DateRange } from "./MiniCalendar";
 
 type ViewMode = "day" | "week" | "month";
 
@@ -174,6 +176,12 @@ export interface UnifiedElasticGridProps {
   onCommitDuration?: (k: CellKey, duration: string) => void;
   onFill: (source: CellKey, targets: CellKey[]) => void;
   seat?: "admin" | "individual";
+  /** Shared "what is the calendar showing?" anchor date. */
+  currentDate: Date;
+  /** Optional drag-selected range from the mini-calendar. */
+  currentRange: DateRange;
+  /** Notify parent so the mini-cal & main view stay in sync. */
+  onCurrentDateChange: (date: Date, range?: DateRange) => void;
 }
 
 type Mode = { kind: "year" } | { kind: "month"; month: number };
@@ -188,6 +196,9 @@ export function UnifiedElasticGrid({
   onCommitDuration,
   onFill,
   seat = "individual",
+  currentDate,
+  currentRange,
+  onCurrentDateChange,
 }: UnifiedElasticGridProps) {
   // viewMode is the only user-facing toggle now. There are no "types".
   //   - "day"   → 7-column rich spreadsheet (one row per 30-min slot)
