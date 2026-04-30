@@ -39,20 +39,32 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import type { CellData, CellKey } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
+import { parseSession, formatSession, formatDuration } from "./sessionFormat";
 
 /**
- * Items can be prefixed with `[#RRGGBB] ` to encode a user-chosen color.
- * This survives the existing newline-serialized text storage without a
- * schema change.
+ * Items can be prefixed with `[meta] text` to encode color, start time and
+ * duration. Parsing is delegated to `sessionFormat` so all Type-1 views read
+ * and write the same shape.
  */
-const COLOR_PREFIX_RE = /^\[(#[0-9a-fA-F]{6})\]\s*/;
 function splitColor(raw: string): { color: string | null; text: string } {
-  const m = raw.match(COLOR_PREFIX_RE);
-  if (m) return { color: m[1], text: raw.slice(m[0].length) };
-  return { color: null, text: raw };
+  const m = parseSession(raw);
+  return { color: m.color, text: m.text };
 }
 function joinColor(color: string | null, text: string): string {
-  return color ? `[${color}] ${text}` : text;
+  // Preserves color only — used by drag/edit paths that don't change time.
+  return color ? formatSession({ color, text }) : text;
+}
+function parseFull(raw: string) {
+  return parseSession(raw);
+}
+function reformatPreservingTime(raw: string, color: string | null, text: string): string {
+  const m = parseSession(raw);
+  return formatSession({
+    color,
+    startMin: m.startMin,
+    durationMin: m.durationMin,
+    text,
+  });
 }
 
 const WEEKDAYS_FULL = [
