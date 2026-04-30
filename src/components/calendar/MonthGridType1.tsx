@@ -544,6 +544,7 @@ export function MonthGridType1({
         {/* Inline popover (per-item create or edit) */}
         {popover && (
           <PopoverEditor
+            seat={seat}
             initialText={popover.initialText}
             initialColor={popover.initialColor}
             isEdit={popover.editIdx >= 0}
