@@ -431,12 +431,8 @@ export function UnifiedElasticGrid({
       className="relative w-full overflow-hidden rounded-md border border-hairline bg-card"
       style={{ height: "calc(100vh - 280px)" }}
     >
-      {/* Top-right control cluster: [Mode ▾] [Type ▾] [← back]
-          Order matches the request: mode dropdown sits on the far left,
-          the type dropdown sits between mode and the back arrow, and the
-          back arrow remains the right-most affordance (only in month
-          view, since "back" only makes sense when zoomed in). */}
-      <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-2">
+      {/* Top-right control cluster: [Mode ▾] [‹ 📅 ›] */}
+      <div className="pointer-events-auto absolute right-3 top-3 z-30 flex items-center gap-2">
         <HeaderDropdown<ViewMode>
           ariaLabel="Visningsmodus"
           value={viewMode}
@@ -448,22 +444,28 @@ export function UnifiedElasticGrid({
             { value: "month", label: "Måned" },
           ]}
         />
+        <MonthNavControl
+          unit={viewMode}
+          currentDate={currentDate}
+          selectedRange={currentRange}
+          onChange={onCurrentDateChange}
+        />
       </div>
 
       {viewMode === "month" ? (
         <MonthGridType1
           calId={calId}
-          year={year}
-          month={lastFocusedMonthRef.current ?? new Date().getMonth()}
+          year={currentDate.getFullYear()}
+          month={currentDate.getMonth()}
           data={data}
           seat={seat}
           onPrevMonth={() => {
-            const cur = lastFocusedMonthRef.current ?? new Date().getMonth();
-            lastFocusedMonthRef.current = cur === 0 ? 0 : cur - 1;
+            const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+            onCurrentDateChange(d, { start: d, end: d });
           }}
           onNextMonth={() => {
-            const cur = lastFocusedMonthRef.current ?? new Date().getMonth();
-            lastFocusedMonthRef.current = cur === 11 ? 11 : cur + 1;
+            const d = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+            onCurrentDateChange(d, { start: d, end: d });
           }}
           onCommitText={(k, text) => onCommitText(k, text)}
         />
