@@ -486,7 +486,10 @@ export function UnifiedElasticGrid({
 
   const months = useMemo(
     () =>
-      Array.from({ length: 12 }, (_, idx) => ({
+      // Type 2 spreadsheet renders 7 weekday columns (Mon–Sun) instead of
+      // the full 12-month axis. The underlying data model still keys on
+      // month index 0–6, but only 7 of the 12 slots are rendered.
+      Array.from({ length: 7 }, (_, idx) => ({
         idx,
         label: MONTH_LABELS_SHORT[idx],
         full: MONTH_LABELS_FULL[idx],
