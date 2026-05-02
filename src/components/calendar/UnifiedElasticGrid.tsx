@@ -25,10 +25,10 @@
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import type { CellData, CellKey, Session } from "./yearStore";
 import { makeCellId } from "./yearStore";
-import { MonthGridType1, PopoverEditor, type CalendarSeat } from "./MonthGridType1";
+import { MonthGridType1 } from "./MonthGridType1";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
 
@@ -337,68 +337,6 @@ export function UnifiedElasticGrid({
     [dragRange],
   );
 
-  // === Excel-style vertical selection drag (Week/Day views) ===
-  // Click-and-drag on empty cells to highlight a duration; on mouseup
-  // the selection is confirmed and rendered as a merged grey block with
-  // a centered "+" affordance that opens the new-session popover.
-  type RangeSel = { month: number; fromRank: number; toRank: number };
-  const [selDrag, setSelDrag] = useState<RangeSel | null>(null);
-  const [confirmedSel, setConfirmedSel] = useState<RangeSel | null>(null);
-  const selDragRef = useRef<RangeSel | null>(null);
-  selDragRef.current = selDrag;
-
-  useEffect(() => {
-    if (!selDrag) return;
-    const onUp = () => {
-      const cur = selDragRef.current;
-      if (cur) {
-        const lo = Math.min(cur.fromRank, cur.toRank);
-        const hi = Math.max(cur.fromRank, cur.toRank);
-        setConfirmedSel({ month: cur.month, fromRank: lo, toRank: hi });
-      }
-      setSelDrag(null);
-    };
-    window.addEventListener("mouseup", onUp);
-    return () => window.removeEventListener("mouseup", onUp);
-  }, [selDrag]);
-
-  const startSelDrag = useCallback((k: CellKey) => {
-    const rank = k.day * 2 + k.session;
-    setConfirmedSel(null);
-    setSelDrag({ month: k.month, fromRank: rank, toRank: rank });
-  }, []);
-  const extendSelDrag = useCallback((k: CellKey) => {
-    setSelDrag((prev) => {
-      if (!prev || prev.month !== k.month) return prev;
-      const rank = k.day * 2 + k.session;
-      if (rank === prev.toRank) return prev;
-      return { ...prev, toRank: rank };
-    });
-  }, []);
-
-  const inSelRange = useCallback(
-    (k: CellKey): { inRange: boolean; isFirst: boolean; isLast: boolean; mid: boolean } => {
-      const cur = selDrag ?? confirmedSel;
-      if (!cur || k.month !== cur.month) {
-        return { inRange: false, isFirst: false, isLast: false, mid: false };
-      }
-      const lo = Math.min(cur.fromRank, cur.toRank);
-      const hi = Math.max(cur.fromRank, cur.toRank);
-      const r = k.day * 2 + k.session;
-      const inRange = r >= lo && r <= hi;
-      const midR = Math.floor((lo + hi) / 2);
-      return { inRange, isFirst: r === lo, isLast: r === hi, mid: r === midR };
-    },
-    [selDrag, confirmedSel],
-  );
-
-  // Popover for the "+" click on a confirmed selection.
-  const [rangePopover, setRangePopover] = useState<{
-    rect: DOMRect;
-    sel: RangeSel;
-  } | null>(null);
-
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -599,47 +537,11 @@ export function UnifiedElasticGrid({
                   dragStartRef.current = k;
                   setDragRange({ month: k.month, toDay: k.day, toSession: k.session });
                 }}
-                onSelDragStart={startSelDrag}
-                onSelDragExtend={extendSelDrag}
-                inSelRange={inSelRange}
-                onPlusClick={(rect, k) => {
-                  const cur = confirmedSel;
-                  if (!cur) return;
-                  setRangePopover({ rect, sel: cur });
-                }}
                 isMonthFocused={isMonthFocused}
                 isMonthPeriph={isMonthPeriph}
               />
             ))}
           </div>
-          {rangePopover && (
-            <PopoverEditor
-              seat={(seat as CalendarSeat) ?? "individual"}
-              initialText=""
-              initialColor={null}
-              isEdit={false}
-              anchor={rangePopover.rect}
-              onClose={() => {
-                setRangePopover(null);
-                setConfirmedSel(null);
-              }}
-              onCommit={(text, color) => {
-                const t = text.trim();
-                if (t) {
-                  const sel = rangePopover.sel;
-                  const day = Math.floor(sel.fromRank / 2);
-                  const session = (sel.fromRank % 2) as Session;
-                  const k: CellKey = { year, month: sel.month, day, session };
-                  // Encode color prefix on the text for compatibility with
-                  // the rest of the system.
-                  const stored = color ? `[${color}] ${t}` : t;
-                  onCommitText(k, stored);
-                }
-                setRangePopover(null);
-                setConfirmedSel(null);
-              }}
-            />
-          )}
         </div>
       )}
     </div>
@@ -667,10 +569,6 @@ interface DayRowProps {
   inDragRange: (k: CellKey) => boolean;
   onCellMouseEnter: (k: CellKey) => void;
   onHandleDown: (k: CellKey) => void;
-  onSelDragStart: (k: CellKey) => void;
-  onSelDragExtend: (k: CellKey) => void;
-  inSelRange: (k: CellKey) => { inRange: boolean; isFirst: boolean; isLast: boolean; mid: boolean };
-  onPlusClick: (rect: DOMRect, k: CellKey) => void;
   isMonthFocused: (m: number) => boolean;
   isMonthPeriph: (m: number) => boolean;
 }
@@ -697,10 +595,6 @@ function DayRow(props: DayRowProps) {
     inDragRange,
     onCellMouseEnter,
     onHandleDown,
-    onSelDragStart,
-    onSelDragExtend,
-    inSelRange,
-    onPlusClick,
     isMonthFocused,
     isMonthPeriph,
   } = props;
@@ -765,10 +659,6 @@ function DayRow(props: DayRowProps) {
               inDragRange={inDragRange}
               onCellMouseEnter={onCellMouseEnter}
               onHandleDown={onHandleDown}
-              onSelDragStart={onSelDragStart}
-              onSelDragExtend={onSelDragExtend}
-              inSelRange={inSelRange}
-              onPlusClick={onPlusClick}
             />
           </div>
         );
@@ -801,10 +691,6 @@ interface DayCellPairProps {
   inDragRange: (k: CellKey) => boolean;
   onCellMouseEnter: (k: CellKey) => void;
   onHandleDown: (k: CellKey) => void;
-  onSelDragStart: (k: CellKey) => void;
-  onSelDragExtend: (k: CellKey) => void;
-  inSelRange: (k: CellKey) => { inRange: boolean; isFirst: boolean; isLast: boolean; mid: boolean };
-  onPlusClick: (rect: DOMRect, k: CellKey) => void;
 }
 
 function DayCellPair(props: DayCellPairProps) {
@@ -831,10 +717,6 @@ function DayCellPair(props: DayCellPairProps) {
     inDragRange,
     onCellMouseEnter,
     onHandleDown,
-    onSelDragStart,
-    onSelDragExtend,
-    inSelRange,
-    onPlusClick,
   } = props;
 
   const sessions: Session[] = [0, 1];
@@ -854,84 +736,36 @@ function DayCellPair(props: DayCellPairProps) {
         const isEditing = editingId === id;
         const isFirst = session === 0;
         const ranged = inDragRange(k);
-        const sel = inSelRange(k);
 
         const bg = cell?.color ? cell.color + "33" : undefined;
-
-        // For week/day compact view, suppress the inner top divider when
-        // the cell directly above is in the same selection range —
-        // visually merging them into a continuous block.
-        const prevK: CellKey =
-          session === 1
-            ? { year, month, day, session: 0 }
-            : { year, month, day: day - 1, session: 1 };
-        const prevInRange =
-          showCompact && !isFirst && inSelRange(prevK).inRange && sel.inRange;
-        const showTopBorder = !isFirst && !prevInRange;
 
         return (
           <div
             key={session}
             onMouseDown={(e) => {
               if ((e.target as HTMLElement).dataset.role === "fill-handle") return;
-              if ((e.target as HTMLElement).dataset.role === "range-plus") return;
               onSelect(k);
-              if (showCompact && !cell?.text) {
-                e.preventDefault();
-                onSelDragStart(k);
-              }
             }}
-            onMouseEnter={() => {
-              onCellMouseEnter(k);
-              onSelDragExtend(k);
-            }}
+            onMouseEnter={() => onCellMouseEnter(k)}
             onDoubleClick={(e) => {
               e.stopPropagation();
               onBeginEdit(k);
             }}
             className={`relative flex-1 cursor-cell select-none text-[12px] leading-tight ${
-              showTopBorder ? "border-t border-hairline/60" : ""
+              !isFirst ? "border-t border-hairline/60" : ""
             } ${ranged && !isSelected ? "bg-primary/10" : ""}`}
             style={{
-              background: sel.inRange ? "hsl(var(--muted))" : bg,
+              background: bg,
               minHeight: rowHeight,
               transition: `min-height ${DUR_MS}ms ${EASE}`,
               willChange: "min-height",
             }}
           >
-            {/* Mask the day-wrapper's bottom border when the next session
-                belongs to the same selection range, producing a single
-                continuous grey block. */}
-            {sel.inRange && session === 1 &&
-              inSelRange({ year, month, day: day + 1, session: 0 }).inRange && (
-                <span
-                  className="pointer-events-none absolute left-0 right-0 -bottom-px h-[2px] z-[3]"
-                  style={{ background: "hsl(var(--muted))" }}
-                />
-              )}
-
-            {isSelected && !sel.inRange && (
+            {isSelected && (
               <span className="pointer-events-none absolute inset-0 z-[2] rounded-[2px] outline outline-2 outline-primary outline-offset-[-2px]" />
             )}
 
-            {sel.mid && (
-              <button
-                type="button"
-                data-role="range-plus"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                  onPlusClick(rect, k);
-                }}
-                className="absolute left-1/2 top-1/2 z-[5] -translate-x-1/2 -translate-y-1/2 rounded-full bg-background/80 p-1 text-muted-foreground shadow-sm transition-transform duration-150 hover:scale-[1.15] hover:text-ink"
-                aria-label="Legg til økt"
-              >
-                <Plus className="h-4 w-4" strokeWidth={2.25} />
-              </button>
-            )}
-
-            {showCompact && !sel.inRange &&
+            {showCompact &&
               (() => {
                 // Week view cell badge — show a time stamp on every full
                 // hour only (every second cell), starting at 06:00 in
