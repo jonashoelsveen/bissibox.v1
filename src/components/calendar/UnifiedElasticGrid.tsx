@@ -496,7 +496,14 @@ export function UnifiedElasticGrid({
               </div>
             ))}
 
-            {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+            {Array.from(
+              // Week view (compact / kind:"year") renders hour-rows of a
+              // single weekday: 06:00 → 24:30 in 30-min slots = 38 rows
+              // = 19 "days" × 2 sessions. Day view keeps the original
+              // 31-day envelope.
+              { length: mode.kind === "year" ? 19 : 31 },
+              (_, i) => i + 1,
+            ).map((day) => (
               <DayRow
                 key={day}
                 day={day}
