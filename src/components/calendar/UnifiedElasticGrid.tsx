@@ -229,12 +229,12 @@ export function UnifiedElasticGrid({
 
   const gridTemplateColumns = useMemo(() => {
     if (mode.kind === "year") {
-      return `repeat(12, minmax(${YEAR_COL}px, 1fr))`;
+      // Week view: 7 weekday columns (Mon–Sun).
+      return `repeat(7, minmax(${YEAR_COL}px, 1fr))`;
     }
-    // Month view: every column gets the same width as the focused one,
-    // so prev/next months read as full-fidelity siblings of the active one.
-    // The active month is centered via horizontal scroll (see effect below).
-    return `repeat(12, ${FOCUS_COL}px)`;
+    // Day view: render the focused day at full FOCUS_COL width across the
+    // 7-column envelope so the active column is centered horizontally.
+    return `repeat(7, ${FOCUS_COL}px)`;
   }, [mode]);
 
   const rowHeight = mode.kind === "year" ? ROW_YEAR : ROW_MONTH;
