@@ -667,6 +667,10 @@ interface DayRowProps {
   inDragRange: (k: CellKey) => boolean;
   onCellMouseEnter: (k: CellKey) => void;
   onHandleDown: (k: CellKey) => void;
+  onSelDragStart: (k: CellKey) => void;
+  onSelDragExtend: (k: CellKey) => void;
+  inSelRange: (k: CellKey) => { inRange: boolean; isFirst: boolean; isLast: boolean; mid: boolean };
+  onPlusClick: (rect: DOMRect, k: CellKey) => void;
   isMonthFocused: (m: number) => boolean;
   isMonthPeriph: (m: number) => boolean;
 }
