@@ -767,13 +767,13 @@ function DayCellPair(props: DayCellPairProps) {
 
             {showCompact &&
               (() => {
-                // Year view (Week Type 2) cell badge — show a time stamp on
-                // every full hour only (every second cell), starting at
-                // 06:00 in row-1/session-0 and ending at 23:00 (one cell
-                // below 23:00 so the 23:30 slot exists but is unlabelled).
+                // Week view cell badge — show a time stamp on every full
+                // hour only (every second cell), starting at 06:00 in
+                // row-1/session-0 and ending at 24:00 (one row before the
+                // bottom row, which holds the unlabelled 24:30 slot).
                 const cellIndex = (day - 1) * 2 + session;
                 const totalMin = 6 * 60 + cellIndex * 30;
-                if (totalMin > 23 * 60 + 30) return null;
+                if (totalMin > 24 * 60) return null;
                 if (totalMin % 60 !== 0) return null;
                 const hh = Math.floor(totalMin / 60);
                 const label = `${String(hh).padStart(2, "0")}:00`;
