@@ -229,12 +229,12 @@ export function UnifiedElasticGrid({
 
   const gridTemplateColumns = useMemo(() => {
     if (mode.kind === "year") {
-      return `repeat(12, minmax(${YEAR_COL}px, 1fr))`;
+      // Week view: 7 weekday columns (Mon–Sun).
+      return `repeat(7, minmax(${YEAR_COL}px, 1fr))`;
     }
-    // Month view: every column gets the same width as the focused one,
-    // so prev/next months read as full-fidelity siblings of the active one.
-    // The active month is centered via horizontal scroll (see effect below).
-    return `repeat(12, ${FOCUS_COL}px)`;
+    // Day view: render the focused day at full FOCUS_COL width across the
+    // 7-column envelope so the active column is centered horizontally.
+    return `repeat(7, ${FOCUS_COL}px)`;
   }, [mode]);
 
   const rowHeight = mode.kind === "year" ? ROW_YEAR : ROW_MONTH;
@@ -496,7 +496,14 @@ export function UnifiedElasticGrid({
               </div>
             ))}
 
-            {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+            {Array.from(
+              // Week view (compact / kind:"year") renders hour-rows of a
+              // single weekday: 06:00 → 24:30 in 30-min slots = 38 rows
+              // = 19 "days" × 2 sessions. Day view keeps the original
+              // 31-day envelope.
+              { length: mode.kind === "year" ? 19 : 31 },
+              (_, i) => i + 1,
+            ).map((day) => (
               <DayRow
                 key={day}
                 day={day}
@@ -760,13 +767,13 @@ function DayCellPair(props: DayCellPairProps) {
 
             {showCompact &&
               (() => {
-                // Year view (Week Type 2) cell badge — show a time stamp on
-                // every full hour only (every second cell), starting at
-                // 06:00 in row-1/session-0 and ending at 23:00 (one cell
-                // below 23:00 so the 23:30 slot exists but is unlabelled).
+                // Week view cell badge — show a time stamp on every full
+                // hour only (every second cell), starting at 06:00 in
+                // row-1/session-0 and ending at 24:00 (one row before the
+                // bottom row, which holds the unlabelled 24:30 slot).
                 const cellIndex = (day - 1) * 2 + session;
                 const totalMin = 6 * 60 + cellIndex * 30;
-                if (totalMin > 23 * 60 + 30) return null;
+                if (totalMin > 24 * 60) return null;
                 if (totalMin % 60 !== 0) return null;
                 const hh = Math.floor(totalMin / 60);
                 const label = `${String(hh).padStart(2, "0")}:00`;
