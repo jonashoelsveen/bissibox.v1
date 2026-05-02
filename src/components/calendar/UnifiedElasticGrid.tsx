@@ -765,6 +765,10 @@ function DayRow(props: DayRowProps) {
               inDragRange={inDragRange}
               onCellMouseEnter={onCellMouseEnter}
               onHandleDown={onHandleDown}
+              onSelDragStart={onSelDragStart}
+              onSelDragExtend={onSelDragExtend}
+              inSelRange={inSelRange}
+              onPlusClick={onPlusClick}
             />
           </div>
         );
