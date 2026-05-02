@@ -599,11 +599,47 @@ export function UnifiedElasticGrid({
                   dragStartRef.current = k;
                   setDragRange({ month: k.month, toDay: k.day, toSession: k.session });
                 }}
+                onSelDragStart={startSelDrag}
+                onSelDragExtend={extendSelDrag}
+                inSelRange={inSelRange}
+                onPlusClick={(rect, k) => {
+                  const cur = confirmedSel;
+                  if (!cur) return;
+                  setRangePopover({ rect, sel: cur });
+                }}
                 isMonthFocused={isMonthFocused}
                 isMonthPeriph={isMonthPeriph}
               />
             ))}
           </div>
+          {rangePopover && (
+            <PopoverEditor
+              seat={(seat as CalendarSeat) ?? "individual"}
+              initialText=""
+              initialColor={null}
+              isEdit={false}
+              anchor={rangePopover.rect}
+              onClose={() => {
+                setRangePopover(null);
+                setConfirmedSel(null);
+              }}
+              onCommit={(text, color) => {
+                const t = text.trim();
+                if (t) {
+                  const sel = rangePopover.sel;
+                  const day = Math.floor(sel.fromRank / 2);
+                  const session = (sel.fromRank % 2) as Session;
+                  const k: CellKey = { year, month: sel.month, day, session };
+                  // Encode color prefix on the text for compatibility with
+                  // the rest of the system.
+                  const stored = color ? `[${color}] ${t}` : t;
+                  onCommitText(k, stored);
+                }
+                setRangePopover(null);
+                setConfirmedSel(null);
+              }}
+            />
+          )}
         </div>
       )}
     </div>
