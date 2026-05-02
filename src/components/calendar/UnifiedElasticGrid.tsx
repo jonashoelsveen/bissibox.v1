@@ -337,6 +337,68 @@ export function UnifiedElasticGrid({
     [dragRange],
   );
 
+  // === Excel-style vertical selection drag (Week/Day views) ===
+  // Click-and-drag on empty cells to highlight a duration; on mouseup
+  // the selection is confirmed and rendered as a merged grey block with
+  // a centered "+" affordance that opens the new-session popover.
+  type RangeSel = { month: number; fromRank: number; toRank: number };
+  const [selDrag, setSelDrag] = useState<RangeSel | null>(null);
+  const [confirmedSel, setConfirmedSel] = useState<RangeSel | null>(null);
+  const selDragRef = useRef<RangeSel | null>(null);
+  selDragRef.current = selDrag;
+
+  useEffect(() => {
+    if (!selDrag) return;
+    const onUp = () => {
+      const cur = selDragRef.current;
+      if (cur) {
+        const lo = Math.min(cur.fromRank, cur.toRank);
+        const hi = Math.max(cur.fromRank, cur.toRank);
+        setConfirmedSel({ month: cur.month, fromRank: lo, toRank: hi });
+      }
+      setSelDrag(null);
+    };
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+  }, [selDrag]);
+
+  const startSelDrag = useCallback((k: CellKey) => {
+    const rank = k.day * 2 + k.session;
+    setConfirmedSel(null);
+    setSelDrag({ month: k.month, fromRank: rank, toRank: rank });
+  }, []);
+  const extendSelDrag = useCallback((k: CellKey) => {
+    setSelDrag((prev) => {
+      if (!prev || prev.month !== k.month) return prev;
+      const rank = k.day * 2 + k.session;
+      if (rank === prev.toRank) return prev;
+      return { ...prev, toRank: rank };
+    });
+  }, []);
+
+  const inSelRange = useCallback(
+    (k: CellKey): { inRange: boolean; isFirst: boolean; isLast: boolean; mid: boolean } => {
+      const cur = selDrag ?? confirmedSel;
+      if (!cur || k.month !== cur.month) {
+        return { inRange: false, isFirst: false, isLast: false, mid: false };
+      }
+      const lo = Math.min(cur.fromRank, cur.toRank);
+      const hi = Math.max(cur.fromRank, cur.toRank);
+      const r = k.day * 2 + k.session;
+      const inRange = r >= lo && r <= hi;
+      const midR = Math.floor((lo + hi) / 2);
+      return { inRange, isFirst: r === lo, isLast: r === hi, mid: r === midR };
+    },
+    [selDrag, confirmedSel],
+  );
+
+  // Popover for the "+" click on a confirmed selection.
+  const [rangePopover, setRangePopover] = useState<{
+    rect: DOMRect;
+    sel: RangeSel;
+  } | null>(null);
+
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
