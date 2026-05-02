@@ -854,36 +854,70 @@ function DayCellPair(props: DayCellPairProps) {
         const isEditing = editingId === id;
         const isFirst = session === 0;
         const ranged = inDragRange(k);
+        const sel = inSelRange(k);
 
         const bg = cell?.color ? cell.color + "33" : undefined;
+
+        // For week/day compact view, suppress the inner top divider when
+        // the cell above is in the same selection range — visually merging
+        // them into a continuous block.
+        const prevK: CellKey = { year, month, day, session: 0 };
+        const prevInRange =
+          showCompact && !isFirst && inSelRange(prevK).inRange && sel.inRange;
+        const showTopBorder = !isFirst && !prevInRange;
 
         return (
           <div
             key={session}
             onMouseDown={(e) => {
               if ((e.target as HTMLElement).dataset.role === "fill-handle") return;
+              if ((e.target as HTMLElement).dataset.role === "range-plus") return;
               onSelect(k);
+              if (showCompact && !cell?.text) {
+                e.preventDefault();
+                onSelDragStart(k);
+              }
             }}
-            onMouseEnter={() => onCellMouseEnter(k)}
+            onMouseEnter={() => {
+              onCellMouseEnter(k);
+              onSelDragExtend(k);
+            }}
             onDoubleClick={(e) => {
               e.stopPropagation();
               onBeginEdit(k);
             }}
             className={`relative flex-1 cursor-cell select-none text-[12px] leading-tight ${
-              !isFirst ? "border-t border-hairline/60" : ""
+              showTopBorder ? "border-t border-hairline/60" : ""
             } ${ranged && !isSelected ? "bg-primary/10" : ""}`}
             style={{
-              background: bg,
+              background: sel.inRange ? "hsl(var(--muted))" : bg,
               minHeight: rowHeight,
               transition: `min-height ${DUR_MS}ms ${EASE}`,
               willChange: "min-height",
             }}
           >
-            {isSelected && (
+            {isSelected && !sel.inRange && (
               <span className="pointer-events-none absolute inset-0 z-[2] rounded-[2px] outline outline-2 outline-primary outline-offset-[-2px]" />
             )}
 
-            {showCompact &&
+            {sel.mid && (
+              <button
+                type="button"
+                data-role="range-plus"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  onPlusClick(rect, k);
+                }}
+                className="absolute left-1/2 top-1/2 z-[5] -translate-x-1/2 -translate-y-1/2 rounded-full bg-background/80 p-1 text-muted-foreground shadow-sm transition-transform duration-150 hover:scale-[1.15] hover:text-ink"
+                aria-label="Legg til økt"
+              >
+                <Plus className="h-4 w-4" strokeWidth={2.25} />
+              </button>
+            )}
+
+            {showCompact && !sel.inRange &&
               (() => {
                 // Week view cell badge — show a time stamp on every full
                 // hour only (every second cell), starting at 06:00 in
