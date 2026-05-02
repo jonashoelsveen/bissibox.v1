@@ -32,7 +32,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import type { CellData, CellKey } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
@@ -772,9 +772,19 @@ function PopoverEditor({
       )}
 
       <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
-        <span className="mono tabular-nums">
-          {isEdit ? "⏎ for å lagre · tøm for å slette" : "⏎ for å lagre"}
-        </span>
+        {isEdit ? (
+          <button
+            type="button"
+            aria-label="Slett"
+            title="Slett"
+            onClick={() => onCommit("", color)}
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        ) : (
+          <span className="mono tabular-nums">⏎ for å lagre</span>
+        )}
         <button
           type="button"
           onClick={() => onCommit(value.trim(), color)}
