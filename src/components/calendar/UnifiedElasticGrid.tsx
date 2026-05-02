@@ -831,6 +831,10 @@ function DayCellPair(props: DayCellPairProps) {
     inDragRange,
     onCellMouseEnter,
     onHandleDown,
+    onSelDragStart,
+    onSelDragExtend,
+    inSelRange,
+    onPlusClick,
   } = props;
 
   const sessions: Session[] = [0, 1];
