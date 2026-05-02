@@ -578,7 +578,7 @@ export function MonthGridType1({
   );
 }
 
-interface PopoverEditorProps {
+export interface PopoverEditorProps {
   seat: CalendarSeat;
   initialText: string;
   initialColor: string | null;
@@ -617,7 +617,7 @@ function adminCategoryFromColor(color: string | null): AdminCategory {
  * Notion-style inline popover for adding/editing a single session item.
  * Category dropdown + (individual only) 7-color row.
  */
-function PopoverEditor({
+export function PopoverEditor({
   seat,
   initialText,
   initialColor,
