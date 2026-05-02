@@ -697,6 +697,10 @@ function DayRow(props: DayRowProps) {
     inDragRange,
     onCellMouseEnter,
     onHandleDown,
+    onSelDragStart,
+    onSelDragExtend,
+    inSelRange,
+    onPlusClick,
     isMonthFocused,
     isMonthPeriph,
   } = props;
