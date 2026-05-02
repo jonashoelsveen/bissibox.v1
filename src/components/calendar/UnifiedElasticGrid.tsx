@@ -899,6 +899,17 @@ function DayCellPair(props: DayCellPairProps) {
               willChange: "min-height",
             }}
           >
+            {/* Mask the day-wrapper's bottom border when the next session
+                belongs to the same selection range, producing a single
+                continuous grey block. */}
+            {sel.inRange && session === 1 &&
+              inSelRange({ year, month, day: day + 1, session: 0 }).inRange && (
+                <span
+                  className="pointer-events-none absolute left-0 right-0 -bottom-px h-[2px] z-[3]"
+                  style={{ background: "hsl(var(--muted))" }}
+                />
+              )}
+
             {isSelected && !sel.inRange && (
               <span className="pointer-events-none absolute inset-0 z-[2] rounded-[2px] outline outline-2 outline-primary outline-offset-[-2px]" />
             )}
