@@ -706,47 +706,43 @@ function PopoverEditor({
         className="block w-full bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
       />
 
-      {/* Category dropdown — native select for true OS-native feel */}
-      <div className="flex items-center gap-2 border-t border-hairline px-3 py-2">
-        <span className="mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-          Kategori
-        </span>
-        <div className="relative ml-auto flex items-center gap-1.5">
-          <span
-            className="h-2.5 w-2.5 shrink-0 rounded-full border border-black/10"
-            style={{
-              background:
-                seat === "admin"
-                  ? ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!.color
-                  : color ?? CAT_TRAINING,
+      {/* Category dropdown — full-width with vertical color bar at left */}
+      <div className="relative border-t border-hairline">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
+          style={{
+            background:
+              seat === "admin"
+                ? ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!.color
+                : color ?? CAT_TRAINING,
+          }}
+        />
+        {seat === "admin" ? (
+          <select
+            value={adminCategory}
+            onChange={(e) => {
+              const next = e.target.value as AdminCategory;
+              const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
+              setColor(cat.color);
             }}
-          />
-          {seat === "admin" ? (
-            <select
-              value={adminCategory}
-              onChange={(e) => {
-                const next = e.target.value as AdminCategory;
-                const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
-                setColor(cat.color);
-              }}
-              className="rounded-md border border-hairline bg-background px-2 py-1 text-[12px] text-ink outline-none focus:border-primary"
-            >
-              {ADMIN_CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <select
-              value="training"
-              disabled
-              className="rounded-md border border-hairline bg-background px-2 py-1 text-[12px] text-ink outline-none disabled:opacity-100"
-            >
-              <option value="training">Trening</option>
-            </select>
-          )}
-        </div>
+            className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
+          >
+            {ADMIN_CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <select
+            value="training"
+            disabled
+            className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none disabled:opacity-100"
+          >
+            <option value="training">Trening</option>
+          </select>
+        )}
       </div>
 
       {/* Individual-only: 7-color picker, spread end to end */}
