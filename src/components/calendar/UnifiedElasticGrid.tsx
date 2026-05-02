@@ -859,9 +859,12 @@ function DayCellPair(props: DayCellPairProps) {
         const bg = cell?.color ? cell.color + "33" : undefined;
 
         // For week/day compact view, suppress the inner top divider when
-        // the cell above is in the same selection range — visually merging
-        // them into a continuous block.
-        const prevK: CellKey = { year, month, day, session: 0 };
+        // the cell directly above is in the same selection range —
+        // visually merging them into a continuous block.
+        const prevK: CellKey =
+          session === 1
+            ? { year, month, day, session: 0 }
+            : { year, month, day: day - 1, session: 1 };
         const prevInRange =
           showCompact && !isFirst && inSelRange(prevK).inRange && sel.inRange;
         const showTopBorder = !isFirst && !prevInRange;
