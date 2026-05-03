@@ -869,15 +869,21 @@ function DayCellPair(props: DayCellPairProps) {
         const ranged = inDragRange(k);
         const mk = markInfo(k);
 
+        // Parse `[#hex] text` storage format used by the popover editor.
+        const parsed = splitColor(cell?.text ?? "");
+        const cellColor = parsed.color ?? cell?.color ?? null;
+        const cellLabel = parsed.text;
+
         // Vivid full-opacity fill when a session has a color.
-        const bg = cell?.color ? cell.color : undefined;
+        const bg = cellColor ?? undefined;
 
         // Merge with neighbouring sessions of the same color so a multi-cell
         // session reads as one continuous block (no inner divider lines).
-        const prevColor = isFirst
-          ? (day > 1 ? data[makeCellId(calId, { year, month, day: day - 1, session: 1 })]?.color ?? null : null)
-          : data[makeCellId(calId, { year, month, day, session: 0 })]?.color ?? null;
-        const sameAbove = !!cell?.color && cell.color === prevColor;
+        const prevRaw = isFirst
+          ? (day > 1 ? data[makeCellId(calId, { year, month, day: day - 1, session: 1 })]?.text ?? "" : "")
+          : data[makeCellId(calId, { year, month, day, session: 0 })]?.text ?? "";
+        const prevColor = splitColor(prevRaw).color;
+        const sameAbove = !!cellColor && cellColor === prevColor;
 
         // Hide the top divider when this cell continues a mark range OR
         // continues a same-color session block.
