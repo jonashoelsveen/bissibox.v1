@@ -714,6 +714,7 @@ interface DayRowProps {
   onMarkBegin: (k: CellKey) => void;
   onOpenPopover: (k: CellKey, anchor: HTMLElement) => void;
   allowMark: boolean;
+  markReleased: boolean;
 }
 
 function DayRow(props: DayRowProps) {
@@ -825,6 +826,7 @@ interface DayCellPairProps {
   onMarkBegin: (k: CellKey) => void;
   onOpenPopover: (k: CellKey, anchor: HTMLElement) => void;
   allowMark: boolean;
+  markReleased: boolean;
 }
 
 function DayCellPair(props: DayCellPairProps) {
