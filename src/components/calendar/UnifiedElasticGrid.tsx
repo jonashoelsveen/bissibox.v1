@@ -24,6 +24,7 @@
  *   - Crisp 1px borders, desaturation of peripheral columns in Month View.
  */
 
+import type React from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus } from "lucide-react";
 import type { CellData, CellKey, Session } from "./yearStore";
