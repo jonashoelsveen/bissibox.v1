@@ -549,6 +549,47 @@ export function UnifiedElasticGrid({
   const isMonthFocused = (m: number) => mode.kind === "month" && mode.month === m;
   const isMonthPeriph = (m: number) => mode.kind === "month" && mode.month !== m;
 
+  // Live clock — updated every 30s so the "now" line and today highlight
+  // stay in sync without burning frames.
+  const [now, setNow] = useState<Date>(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Date for each of the 7 visible weekday columns, anchored to the week
+  // containing currentDate (Monday-first).
+  const weekDates = useMemo(() => {
+    const start = startOfWeekMon(currentDate);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+  }, [currentDate]);
+
+  // Index of today inside the visible week, -1 if not in view.
+  const todayColIdx = useMemo(() => {
+    for (let i = 0; i < 7; i++) if (isSameDay(weekDates[i], now)) return i;
+    return -1;
+  }, [weekDates, now]);
+
+  // Header height + now-line vertical offset for week view.
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const [headerH, setHeaderH] = useState(0);
+  useLayoutEffect(() => {
+    if (!headerRef.current) return;
+    setHeaderH(headerRef.current.offsetHeight);
+  }, [viewMode]);
+
+  const nowOffset = useMemo(() => {
+    if (mode.kind !== "year") return null;
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    const since6 = minutes - 6 * 60;
+    if (since6 < 0 || since6 > 19 * 60) return null;
+    return (since6 / 30) * rowHeight;
+  }, [now, mode, rowHeight]);
+
   return (
     <div
       ref={containerRef}
