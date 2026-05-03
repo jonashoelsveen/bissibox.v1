@@ -427,6 +427,8 @@ export function UnifiedElasticGrid({
     const r = k.day * 2 + k.session;
     markStartRef.current = { month: k.month, rank: r };
     markActiveRef.current = true;
+    setMarkReleased(false);
+    setMarkRange(null);
   }, []);
 
   const extendMark = useCallback((k: CellKey) => {
