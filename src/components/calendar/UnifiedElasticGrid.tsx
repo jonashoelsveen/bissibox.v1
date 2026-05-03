@@ -750,11 +750,19 @@ function DayRow(props: DayRowProps) {
         }
 
         const weekend = isWeekend(year, m.idx, day);
+        // If the last session of this day shares a color with the first
+        // session of the next day in the same column, hide the bottom
+        // border so the session block reads as a single continuous fill.
+        const lastSessionColor = data[makeCellId(calId, { year, month: m.idx, day, session: 1 })]?.color ?? null;
+        const nextDayFirstColor = day < m.dim
+          ? data[makeCellId(calId, { year, month: m.idx, day: day + 1, session: 0 })]?.color ?? null
+          : null;
+        const mergeBelow = !!lastSessionColor && lastSessionColor === nextDayFirstColor;
         return (
           <div
             key={`c-${m.idx}-${day}`}
             data-month-col={m.idx}
-            className={`relative border-b border-r border-hairline ${weekend ? "bg-muted/40" : ""}`}
+            className={`relative border-r border-hairline ${mergeBelow ? "" : "border-b"} ${weekend ? "bg-muted/40" : ""}`}
             style={{
               height: rowHeight * 2,
               transition: `height ${DUR_MS}ms ${EASE}`,
