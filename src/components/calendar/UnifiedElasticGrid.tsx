@@ -764,7 +764,9 @@ function DayRow(props: DayRowProps) {
           : "";
         const lastSessionColor = splitColor(lastSessionRaw).color;
         const nextDayFirstColor = splitColor(nextDayFirstRaw).color;
-        const mergeBelow = !!lastSessionColor && lastSessionColor === nextDayFirstColor;
+        const lastMarked = markInfo({ year, month: m.idx, day, session: 1 }).in;
+        const nextMarked = day < m.dim ? markInfo({ year, month: m.idx, day: day + 1, session: 0 }).in : false;
+        const mergeBelow = (!!lastSessionColor && lastSessionColor === nextDayFirstColor) || (lastMarked && nextMarked);
         return (
           <div
             key={`c-${m.idx}-${day}`}
@@ -1038,7 +1040,7 @@ function DayCellPair(props: DayCellPairProps) {
 
             {showCompact && !isEditing && (
               <span
-                className={`pointer-events-none absolute inset-y-0 left-7 right-1.5 flex items-center truncate text-[12px] text-ink ${
+                className={`pointer-events-none absolute left-7 right-1.5 top-0.5 truncate text-[12px] text-ink ${
                   cell?.bold ? "font-semibold" : ""
                 } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
                 style={{
