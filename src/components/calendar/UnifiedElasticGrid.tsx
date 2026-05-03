@@ -670,7 +670,7 @@ export function UnifiedElasticGrid({
             const t = text.trim();
             const next = t ? joinColor(color, t) : "";
             // If a multi-cell range is marked, apply to all cells in it.
-            if (markRange && t) {
+            if (markRange) {
               const updates: Array<{ key: CellKey; text: string }> = [];
               for (let r = markRange.lo; r <= markRange.hi; r++) {
                 const day = Math.floor(r / 2);
@@ -1040,7 +1040,7 @@ function DayCellPair(props: DayCellPairProps) {
 
             {showCompact && !isEditing && (
               <span
-                className={`pointer-events-none absolute left-7 right-1.5 top-0.5 truncate text-[12px] text-ink ${
+                className={`pointer-events-none absolute left-9 right-1.5 top-0.5 truncate text-[12px] text-ink ${
                   cell?.bold ? "font-semibold" : ""
                 } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
                 style={{
