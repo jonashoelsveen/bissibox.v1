@@ -667,8 +667,18 @@ export function UnifiedElasticGrid({
           onCommit={(text, color) => {
             const t = text.trim();
             const next = t ? joinColor(color, t) : "";
-            onCommitText(popover.key, next);
+            // If a multi-cell range is marked, apply to all cells in it.
+            if (markRange && t) {
+              for (let r = markRange.lo; r <= markRange.hi; r++) {
+                const day = Math.floor(r / 2);
+                const session = (r % 2) as Session;
+                onCommitText({ year, month: markRange.month, day, session }, next);
+              }
+            } else {
+              onCommitText(popover.key, next);
+            }
             setMarkRange(null);
+            setMarkReleased(false);
             closePopover();
           }}
         />
