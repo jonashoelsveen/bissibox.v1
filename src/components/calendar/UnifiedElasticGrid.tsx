@@ -1240,3 +1240,59 @@ function DurationCell({ initial, onCommit }: DurationCellProps) {
     </div>
   );
 }
+
+/**
+ * NowLine — a thin horizontal indicator showing the current time inside
+ * the week-view's day column. Mirrors Notion/Outlook calendar UX.
+ *
+ * Renders an absolute positioned rule across the active day column only,
+ * with a small dot anchor on the left edge. Position is computed from the
+ * column's offsetLeft/Width so it stays accurate through grid track
+ * animations.
+ */
+function NowLine({
+  scrollRef,
+  colIdx,
+  top,
+}: {
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  colIdx: number;
+  top: number;
+}) {
+  const [box, setBox] = useState<{ left: number; width: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const c = scrollRef.current;
+      if (!c) return;
+      const cell = c.querySelector<HTMLElement>(`[data-month-col="${colIdx}"]`);
+      if (!cell) return;
+      setBox({ left: cell.offsetLeft, width: cell.offsetWidth });
+    };
+    measure();
+    const id = window.setInterval(measure, 500);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("resize", measure);
+    };
+  }, [colIdx, scrollRef]);
+
+  if (!box) return null;
+  return (
+    <div
+      className="pointer-events-none absolute z-[15]"
+      style={{ top, left: box.left, width: box.width, height: 0 }}
+      aria-hidden
+    >
+      <div
+        className="absolute left-0 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full"
+        style={{ background: "hsl(var(--primary))" }}
+      />
+      <div
+        className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2"
+        style={{ background: "hsl(var(--primary))" }}
+      />
+    </div>
+  );
+}
