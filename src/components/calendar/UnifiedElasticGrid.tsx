@@ -620,13 +620,14 @@ export function UnifiedElasticGrid({
                 onMoveAfterCommit={moveSelection}
                 inDragRange={inDragRange}
                 onCellMouseEnter={(k) => {
-                  if (!dragStartRef.current) return;
-                  if (k.month !== dragStartRef.current.month) return;
-                  setDragRange({
-                    month: dragStartRef.current.month,
-                    toDay: k.day,
-                    toSession: k.session,
-                  });
+                  if (dragStartRef.current && k.month === dragStartRef.current.month) {
+                    setDragRange({
+                      month: dragStartRef.current.month,
+                      toDay: k.day,
+                      toSession: k.session,
+                    });
+                  }
+                  extendMark(k);
                 }}
                 onHandleDown={(k) => {
                   dragStartRef.current = k;
@@ -634,10 +635,32 @@ export function UnifiedElasticGrid({
                 }}
                 isMonthFocused={isMonthFocused}
                 isMonthPeriph={isMonthPeriph}
+                markInfo={markInfo}
+                onMarkBegin={beginMark}
+                onOpenPopover={openPopover}
+                allowMark={mode.kind === "year"}
               />
             ))}
           </div>
         </div>
+      )}
+
+      {popover && (
+        <PopoverEditor
+          seat={seat}
+          initialText={popover.initialText}
+          initialColor={popover.initialColor}
+          isEdit={popover.isEdit}
+          anchor={popover.rect}
+          onClose={closePopover}
+          onCommit={(text, color) => {
+            const t = text.trim();
+            const next = t ? joinColor(color, t) : "";
+            onCommitText(popover.key, next);
+            setMarkRange(null);
+            closePopover();
+          }}
+        />
       )}
     </div>
   );
