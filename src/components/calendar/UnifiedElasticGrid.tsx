@@ -867,10 +867,19 @@ function DayCellPair(props: DayCellPairProps) {
         const ranged = inDragRange(k);
         const mk = markInfo(k);
 
-        const bg = cell?.color ? cell.color + "33" : undefined;
+        // Vivid full-opacity fill when a session has a color.
+        const bg = cell?.color ? cell.color : undefined;
 
-        // Hide the top divider when this cell continues a mark range.
-        const hideTopDivider = mk.in && !mk.isFirst;
+        // Merge with neighbouring sessions of the same color so a multi-cell
+        // session reads as one continuous block (no inner divider lines).
+        const prevColor = isFirst
+          ? (day > 1 ? data[makeCellId(calId, { year, month, day: day - 1, session: 1 })]?.color ?? null : null)
+          : data[makeCellId(calId, { year, month, day, session: 0 })]?.color ?? null;
+        const sameAbove = !!cell?.color && cell.color === prevColor;
+
+        // Hide the top divider when this cell continues a mark range OR
+        // continues a same-color session block.
+        const hideTopDivider = (mk.in && !mk.isFirst) || sameAbove;
 
         return (
           <div
