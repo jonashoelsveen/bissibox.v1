@@ -24,6 +24,7 @@
  *   - Crisp 1px borders, desaturation of peripheral columns in Month View.
  */
 
+import type React from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus } from "lucide-react";
 import type { CellData, CellKey, Session } from "./yearStore";
@@ -161,6 +162,23 @@ function daysInMonth(y: number, m: number) {
 function isWeekend(year: number, month: number, day: number) {
   const d = new Date(year, month, day).getDay();
   return d === 0 || d === 6;
+}
+
+// Monday-anchored start-of-week for a given date.
+function startOfWeekMon(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dow = x.getDay(); // 0=Sun..6=Sat
+  const delta = dow === 0 ? -6 : 1 - dow;
+  x.setDate(x.getDate() + delta);
+  return x;
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
 }
 
 const EASE = "cubic-bezier(0.2, 0, 0, 1)";
@@ -532,6 +550,47 @@ export function UnifiedElasticGrid({
   const isMonthFocused = (m: number) => mode.kind === "month" && mode.month === m;
   const isMonthPeriph = (m: number) => mode.kind === "month" && mode.month !== m;
 
+  // Live clock — updated every 30s so the "now" line and today highlight
+  // stay in sync without burning frames.
+  const [now, setNow] = useState<Date>(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Date for each of the 7 visible weekday columns, anchored to the week
+  // containing currentDate (Monday-first).
+  const weekDates = useMemo(() => {
+    const start = startOfWeekMon(currentDate);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+  }, [currentDate]);
+
+  // Index of today inside the visible week, -1 if not in view.
+  const todayColIdx = useMemo(() => {
+    for (let i = 0; i < 7; i++) if (isSameDay(weekDates[i], now)) return i;
+    return -1;
+  }, [weekDates, now]);
+
+  // Header height + now-line vertical offset for week view.
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const [headerH, setHeaderH] = useState(0);
+  useLayoutEffect(() => {
+    if (!headerRef.current) return;
+    setHeaderH(headerRef.current.offsetHeight);
+  }, [viewMode]);
+
+  const nowOffset = useMemo(() => {
+    if (mode.kind !== "year") return null;
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    const since6 = minutes - 6 * 60;
+    if (since6 < 0 || since6 > 19 * 60) return null;
+    return (since6 / 30) * rowHeight;
+  }, [now, mode, rowHeight]);
+
   return (
     <div
       ref={containerRef}
@@ -593,15 +652,25 @@ export function UnifiedElasticGrid({
               willChange: "grid-template-columns",
             }}
           >
-            {months.map((m) => (
-              <div
-                key={`h-${m.idx}`}
-                data-month-col={m.idx}
-                className="sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide text-muted-foreground"
-              >
-                {m.label}
-              </div>
-            ))}
+            {months.map((m) => {
+              const colDate = weekDates[m.idx];
+              const isToday = mode.kind === "year" && colDate && isSameDay(colDate, now);
+              return (
+                <div
+                  key={`h-${m.idx}`}
+                  data-month-col={m.idx}
+                  ref={m.idx === 0 ? headerRef : undefined}
+                  className={`sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${isToday ? "text-primary" : "text-muted-foreground"}`}
+                >
+                  <span>{m.label}</span>
+                  {mode.kind === "year" && colDate && (
+                    <span className={`ml-1.5 font-light normal-case tracking-normal tabular-nums ${isToday ? "text-primary" : "text-muted-foreground/70"}`}>
+                      {colDate.getDate()}.{colDate.getMonth() + 1}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
 
             {Array.from(
               // Week view (compact / kind:"year") renders hour-rows of a
@@ -655,6 +724,13 @@ export function UnifiedElasticGrid({
               />
             ))}
           </div>
+          {mode.kind === "year" && todayColIdx >= 0 && nowOffset !== null && (
+            <NowLine
+              scrollRef={scrollRef}
+              colIdx={todayColIdx}
+              top={headerH + nowOffset}
+            />
+          )}
         </div>
       )}
 
@@ -1162,6 +1238,62 @@ function DurationCell({ initial, onCommit }: DurationCellProps) {
           {v || <span className="text-muted-foreground/50">—</span>}
         </span>
       )}
+    </div>
+  );
+}
+
+/**
+ * NowLine — a thin horizontal indicator showing the current time inside
+ * the week-view's day column. Mirrors Notion/Outlook calendar UX.
+ *
+ * Renders an absolute positioned rule across the active day column only,
+ * with a small dot anchor on the left edge. Position is computed from the
+ * column's offsetLeft/Width so it stays accurate through grid track
+ * animations.
+ */
+function NowLine({
+  scrollRef,
+  colIdx,
+  top,
+}: {
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  colIdx: number;
+  top: number;
+}) {
+  const [box, setBox] = useState<{ left: number; width: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const c = scrollRef.current;
+      if (!c) return;
+      const cell = c.querySelector<HTMLElement>(`[data-month-col="${colIdx}"]`);
+      if (!cell) return;
+      setBox({ left: cell.offsetLeft, width: cell.offsetWidth });
+    };
+    measure();
+    const id = window.setInterval(measure, 500);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("resize", measure);
+    };
+  }, [colIdx, scrollRef]);
+
+  if (!box) return null;
+  return (
+    <div
+      className="pointer-events-none absolute z-[15]"
+      style={{ top, left: box.left, width: box.width, height: 0 }}
+      aria-hidden
+    >
+      <div
+        className="absolute left-0 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full"
+        style={{ background: "hsl(var(--primary))" }}
+      />
+      <div
+        className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2"
+        style={{ background: "hsl(var(--primary))" }}
+      />
     </div>
   );
 }
