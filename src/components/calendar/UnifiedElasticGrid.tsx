@@ -1081,7 +1081,7 @@ function DayCellPair(props: DayCellPairProps) {
               />
             )}
 
-            {weekend && !cell?.color && (
+            {weekend && !cellColor && (
               <span className="pointer-events-none absolute inset-0 bg-muted/20" />
             )}
           </div>
