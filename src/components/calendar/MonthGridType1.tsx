@@ -578,7 +578,7 @@ export function MonthGridType1({
   );
 }
 
-interface PopoverEditorProps {
+export interface PopoverEditorProps {
   seat: CalendarSeat;
   initialText: string;
   initialColor: string | null;
