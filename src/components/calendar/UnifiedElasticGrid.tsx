@@ -697,28 +697,11 @@ interface DayRowProps {
 
 function DayRow(props: DayRowProps) {
   const {
-    day,
-    year,
-    months,
-    calId,
-    data,
-    mode,
-    rowHeight,
-    selected,
-    selectedId,
-    editingId,
-    editValue,
-    setEditValue,
-    onSelect,
-    onBeginEdit,
-    onCommitEdit,
-    onCommitDuration,
-    onMoveAfterCommit,
-    inDragRange,
-    onCellMouseEnter,
-    onHandleDown,
-    isMonthFocused,
-    isMonthPeriph,
+    day, year, months, calId, data, mode, rowHeight,
+    selected, selectedId, editingId, editValue, setEditValue,
+    onSelect, onBeginEdit, onCommitEdit, onCommitDuration, onMoveAfterCommit,
+    inDragRange, onCellMouseEnter, onHandleDown, isMonthFocused, isMonthPeriph,
+    markInfo, onMarkBegin, onOpenPopover, allowMark,
   } = props;
 
   return (
@@ -781,6 +764,10 @@ function DayRow(props: DayRowProps) {
               inDragRange={inDragRange}
               onCellMouseEnter={onCellMouseEnter}
               onHandleDown={onHandleDown}
+              markInfo={markInfo}
+              onMarkBegin={onMarkBegin}
+              onOpenPopover={onOpenPopover}
+              allowMark={allowMark}
             />
           </div>
         );
