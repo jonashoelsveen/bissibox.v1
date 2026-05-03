@@ -753,10 +753,12 @@ function DayRow(props: DayRowProps) {
         // If the last session of this day shares a color with the first
         // session of the next day in the same column, hide the bottom
         // border so the session block reads as a single continuous fill.
-        const lastSessionColor = data[makeCellId(calId, { year, month: m.idx, day, session: 1 })]?.color ?? null;
-        const nextDayFirstColor = day < m.dim
-          ? data[makeCellId(calId, { year, month: m.idx, day: day + 1, session: 0 })]?.color ?? null
-          : null;
+        const lastSessionRaw = data[makeCellId(calId, { year, month: m.idx, day, session: 1 })]?.text ?? "";
+        const nextDayFirstRaw = day < m.dim
+          ? data[makeCellId(calId, { year, month: m.idx, day: day + 1, session: 0 })]?.text ?? ""
+          : "";
+        const lastSessionColor = splitColor(lastSessionRaw).color;
+        const nextDayFirstColor = splitColor(nextDayFirstRaw).color;
         const mergeBelow = !!lastSessionColor && lastSessionColor === nextDayFirstColor;
         return (
           <div
