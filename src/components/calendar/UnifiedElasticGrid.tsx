@@ -969,8 +969,12 @@ function DayCellPair(props: DayCellPairProps) {
                 if (totalMin % 60 !== 0) return null;
                 const hh = Math.floor(totalMin / 60);
                 const label = `${String(hh).padStart(2, "0")}:00`;
+                const hourColor = cellColor ? contrastTextOn(cellColor) : undefined;
                 return (
-                  <span className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+                  <span
+                    className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-medium tabular-nums"
+                    style={{ color: hourColor ?? "hsl(var(--muted-foreground))" }}
+                  >
                     {label}
                   </span>
                 );
