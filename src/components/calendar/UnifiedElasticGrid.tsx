@@ -649,6 +649,7 @@ export function UnifiedElasticGrid({
                 onMarkBegin={beginMark}
                 onOpenPopover={openPopover}
                 allowMark={mode.kind === "year"}
+                markReleased={markReleased}
               />
             ))}
           </div>
