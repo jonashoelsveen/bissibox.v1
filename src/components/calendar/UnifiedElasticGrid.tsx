@@ -348,6 +348,7 @@ export function UnifiedElasticGrid({
       if (t.closest("[data-role='mark-plus']")) return;
       if (t.closest("[data-role='popover']")) return;
       setMarkRange(null);
+      setMarkReleased(false);
     };
     window.addEventListener("mousedown", onDown);
     return () => window.removeEventListener("mousedown", onDown);
