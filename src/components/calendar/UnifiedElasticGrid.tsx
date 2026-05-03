@@ -307,6 +307,8 @@ export function UnifiedElasticGrid({
     lo: number; // rank = day*2+session
     hi: number;
   } | null>(null);
+  // Plus icon only shows after the user has released the mouse.
+  const [markReleased, setMarkReleased] = useState(false);
 
   // Inline editor popover (shared with month view)
   const [popover, setPopover] = useState<{
@@ -346,6 +348,7 @@ export function UnifiedElasticGrid({
       if (t.closest("[data-role='mark-plus']")) return;
       if (t.closest("[data-role='popover']")) return;
       setMarkRange(null);
+      setMarkReleased(false);
     };
     window.addEventListener("mousedown", onDown);
     return () => window.removeEventListener("mousedown", onDown);
@@ -381,6 +384,9 @@ export function UnifiedElasticGrid({
   // Global mouseup ends the mark drag (range stays visible).
   useEffect(() => {
     const onUp = () => {
+      if (markActiveRef.current) {
+        setMarkReleased(true);
+      }
       markActiveRef.current = false;
       markStartRef.current = null;
     };
@@ -402,15 +408,17 @@ export function UnifiedElasticGrid({
   );
 
   const markInfo = useCallback(
-    (k: CellKey): { in: boolean; isFirst: boolean; isLast: boolean; size: number } => {
+    (k: CellKey): { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number } => {
       if (!markRange || k.month !== markRange.month)
-        return { in: false, isFirst: false, isLast: false, size: 0 };
+        return { in: false, isFirst: false, isLast: false, isPlus: false, size: 0 };
       const r = k.day * 2 + k.session;
       const inR = r >= markRange.lo && r <= markRange.hi;
+      const mid = Math.floor((markRange.lo + markRange.hi) / 2);
       return {
         in: inR,
         isFirst: r === markRange.lo,
         isLast: r === markRange.hi,
+        isPlus: inR && r === mid,
         size: markRange.hi - markRange.lo + 1,
       };
     },
@@ -421,6 +429,8 @@ export function UnifiedElasticGrid({
     const r = k.day * 2 + k.session;
     markStartRef.current = { month: k.month, rank: r };
     markActiveRef.current = true;
+    setMarkReleased(false);
+    setMarkRange(null);
   }, []);
 
   const extendMark = useCallback((k: CellKey) => {
@@ -639,6 +649,7 @@ export function UnifiedElasticGrid({
                 onMarkBegin={beginMark}
                 onOpenPopover={openPopover}
                 allowMark={mode.kind === "year"}
+                markReleased={markReleased}
               />
             ))}
           </div>
@@ -656,8 +667,18 @@ export function UnifiedElasticGrid({
           onCommit={(text, color) => {
             const t = text.trim();
             const next = t ? joinColor(color, t) : "";
-            onCommitText(popover.key, next);
+            // If a multi-cell range is marked, apply to all cells in it.
+            if (markRange && t) {
+              for (let r = markRange.lo; r <= markRange.hi; r++) {
+                const day = Math.floor(r / 2);
+                const session = (r % 2) as Session;
+                onCommitText({ year, month: markRange.month, day, session }, next);
+              }
+            } else {
+              onCommitText(popover.key, next);
+            }
             setMarkRange(null);
+            setMarkReleased(false);
             closePopover();
           }}
         />
@@ -689,10 +710,11 @@ interface DayRowProps {
   onHandleDown: (k: CellKey) => void;
   isMonthFocused: (m: number) => boolean;
   isMonthPeriph: (m: number) => boolean;
-  markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; size: number };
+  markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number };
   onMarkBegin: (k: CellKey) => void;
   onOpenPopover: (k: CellKey, anchor: HTMLElement) => void;
   allowMark: boolean;
+  markReleased: boolean;
 }
 
 function DayRow(props: DayRowProps) {
@@ -701,7 +723,7 @@ function DayRow(props: DayRowProps) {
     selected, selectedId, editingId, editValue, setEditValue,
     onSelect, onBeginEdit, onCommitEdit, onCommitDuration, onMoveAfterCommit,
     inDragRange, onCellMouseEnter, onHandleDown, isMonthFocused, isMonthPeriph,
-    markInfo, onMarkBegin, onOpenPopover, allowMark,
+    markInfo, onMarkBegin, onOpenPopover, allowMark, markReleased,
   } = props;
 
   return (
@@ -768,6 +790,7 @@ function DayRow(props: DayRowProps) {
               onMarkBegin={onMarkBegin}
               onOpenPopover={onOpenPopover}
               allowMark={allowMark}
+              markReleased={markReleased}
             />
           </div>
         );
@@ -800,10 +823,11 @@ interface DayCellPairProps {
   inDragRange: (k: CellKey) => boolean;
   onCellMouseEnter: (k: CellKey) => void;
   onHandleDown: (k: CellKey) => void;
-  markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; size: number };
+  markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number };
   onMarkBegin: (k: CellKey) => void;
   onOpenPopover: (k: CellKey, anchor: HTMLElement) => void;
   allowMark: boolean;
+  markReleased: boolean;
 }
 
 function DayCellPair(props: DayCellPairProps) {
@@ -813,7 +837,7 @@ function DayCellPair(props: DayCellPairProps) {
     editingId, editValue, setEditValue,
     onSelect, onBeginEdit, onCommitEdit, onCommitDuration, onMoveAfterCommit,
     inDragRange, onCellMouseEnter, onHandleDown,
-    markInfo, onMarkBegin, onOpenPopover, allowMark,
+    markInfo, onMarkBegin, onOpenPopover, allowMark, markReleased,
   } = props;
 
   const sessions: Session[] = [0, 1];
@@ -879,16 +903,18 @@ function DayCellPair(props: DayCellPairProps) {
               />
             )}
 
-            {mk.isLast && mk.size > 1 && (
+            {mk.isPlus && markReleased && mk.size > 1 && (
               <button
                 type="button"
                 data-role="mark-plus"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
+                  // Anchor the popover to the full marked range by using
+                  // the cell that was clicked.
                   onOpenPopover(k, e.currentTarget.parentElement as HTMLElement);
                 }}
-                className="pointer-events-auto absolute left-1/2 top-0 z-[5] -translate-x-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-ink"
+                className="pointer-events-auto absolute left-1/2 top-1/2 z-[5] -translate-x-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-ink"
                 style={{ padding: 0, lineHeight: 0 }}
                 aria-label="Legg til økt"
               >
