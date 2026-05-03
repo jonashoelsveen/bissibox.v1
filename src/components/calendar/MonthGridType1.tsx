@@ -650,10 +650,6 @@ const ADMIN_CATEGORIES: { value: AdminCategory; label: string; color: string }[]
   { value: "race", label: "Løp", color: CAT_RACE },
 ];
 
-// Individual color choices for Training: all 8 except entity-training light blue → 7 colors.
-const INDIVIDUAL_TRAINING_COLORS = GROUP_COLOR_PALETTE.filter(
-  (c) => c.value.toLowerCase() !== CAT_TRAINING.toLowerCase(),
-);
 
 function adminCategoryFromColor(color: string | null): AdminCategory {
   const c = (color ?? "").toLowerCase();
