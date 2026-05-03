@@ -170,6 +170,40 @@ export function useYearStore(calId: string, defaultTitle: string) {
     [calId, persist],
   );
 
+  const upsertCells = useCallback(
+    (updates: Array<{ key: CellKey; patch: Partial<CellData> }>) => {
+      if (updates.length === 0) return;
+      const current = dataRef.current;
+      let next = current;
+
+      for (const { key, patch } of updates) {
+        const id = makeCellId(calId, key);
+        const prev = next[id] ?? { id, text: "" };
+        const merged: CellData = { ...prev, ...patch, id };
+
+        if (
+          !merged.text &&
+          !merged.bold &&
+          !merged.italic &&
+          !merged.underline &&
+          !merged.color &&
+          !merged.duration &&
+          !merged.description &&
+          !merged.locationId &&
+          !merged.courseId
+        ) {
+          const { [id]: _drop, ...rest } = next;
+          next = rest;
+        } else {
+          next = { ...next, [id]: merged };
+        }
+      }
+
+      if (next !== current) persist(next, { prev: current });
+    },
+    [calId, persist],
+  );
+
   const fillRange = useCallback(
     (source: CellKey, targets: CellKey[]) => {
       const current = dataRef.current;
@@ -192,5 +226,5 @@ export function useYearStore(calId: string, defaultTitle: string) {
     [calId, persist],
   );
 
-  return { data, meta, upsertCell, fillRange, setMeta: persistMeta, undo, redo, canUndo, canRedo };
+  return { data, meta, upsertCell, upsertCells, fillRange, setMeta: persistMeta, undo, redo, canUndo, canRedo };
 }
