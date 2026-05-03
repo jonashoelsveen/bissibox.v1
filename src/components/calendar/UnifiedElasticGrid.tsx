@@ -297,6 +297,60 @@ export function UnifiedElasticGrid({
     toSession: Session;
   } | null>(null);
 
+  // Week-view "Excel-like" vertical mark range (a contiguous selection of
+  // 30-min slots within a single day column). Distinct from the fill-handle
+  // drag above.
+  const markStartRef = useRef<{ month: number; rank: number } | null>(null);
+  const markActiveRef = useRef(false);
+  const [markRange, setMarkRange] = useState<{
+    month: number;
+    lo: number; // rank = day*2+session
+    hi: number;
+  } | null>(null);
+
+  // Inline editor popover (shared with month view)
+  const [popover, setPopover] = useState<{
+    key: CellKey;
+    rect: DOMRect;
+    initialText: string;
+    initialColor: string | null;
+    isEdit: boolean;
+  } | null>(null);
+
+  const openPopover = useCallback(
+    (k: CellKey, anchor: HTMLElement) => {
+      const id = makeCellId(calId, k);
+      const raw = data[id]?.text ?? "";
+      const { color, text } = splitColor(raw);
+      setPopover({
+        key: k,
+        rect: anchor.getBoundingClientRect(),
+        initialText: text,
+        initialColor: color,
+        isEdit: !!raw.trim(),
+      });
+    },
+    [calId, data],
+  );
+
+  const closePopover = useCallback(() => setPopover(null), []);
+
+  // Clear the mark-range when mousing down anywhere that is not a marked
+  // cell, not the plus button, and not the popover itself.
+  useEffect(() => {
+    if (!markRange) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+      if (t.closest("[data-mark-cell='1']")) return;
+      if (t.closest("[data-role='mark-plus']")) return;
+      if (t.closest("[data-role='popover']")) return;
+      setMarkRange(null);
+    };
+    window.addEventListener("mousedown", onDown);
+    return () => window.removeEventListener("mousedown", onDown);
+  }, [markRange]);
+
   useEffect(() => {
     if (!dragRange || !dragStartRef.current) return;
     const onUp = () => {
@@ -324,6 +378,16 @@ export function UnifiedElasticGrid({
     return () => window.removeEventListener("mouseup", onUp);
   }, [dragRange, year, onFill]);
 
+  // Global mouseup ends the mark drag (range stays visible).
+  useEffect(() => {
+    const onUp = () => {
+      markActiveRef.current = false;
+      markStartRef.current = null;
+    };
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+  }, []);
+
   const inDragRange = useCallback(
     (k: CellKey) => {
       if (!dragRange || !dragStartRef.current) return false;
@@ -336,6 +400,37 @@ export function UnifiedElasticGrid({
     },
     [dragRange],
   );
+
+  const markInfo = useCallback(
+    (k: CellKey): { in: boolean; isFirst: boolean; isLast: boolean; size: number } => {
+      if (!markRange || k.month !== markRange.month)
+        return { in: false, isFirst: false, isLast: false, size: 0 };
+      const r = k.day * 2 + k.session;
+      const inR = r >= markRange.lo && r <= markRange.hi;
+      return {
+        in: inR,
+        isFirst: r === markRange.lo,
+        isLast: r === markRange.hi,
+        size: markRange.hi - markRange.lo + 1,
+      };
+    },
+    [markRange],
+  );
+
+  const beginMark = useCallback((k: CellKey) => {
+    const r = k.day * 2 + k.session;
+    markStartRef.current = { month: k.month, rank: r };
+    markActiveRef.current = true;
+  }, []);
+
+  const extendMark = useCallback((k: CellKey) => {
+    if (!markActiveRef.current || !markStartRef.current) return;
+    if (k.month !== markStartRef.current.month) return;
+    const r = k.day * 2 + k.session;
+    const a = markStartRef.current.rank;
+    if (r === a) return; // single cell — don't show mark yet
+    setMarkRange({ month: k.month, lo: Math.min(a, r), hi: Math.max(a, r) });
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
