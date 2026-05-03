@@ -750,11 +750,19 @@ function DayRow(props: DayRowProps) {
         }
 
         const weekend = isWeekend(year, m.idx, day);
+        // If the last session of this day shares a color with the first
+        // session of the next day in the same column, hide the bottom
+        // border so the session block reads as a single continuous fill.
+        const lastSessionColor = data[makeCellId(calId, { year, month: m.idx, day, session: 1 })]?.color ?? null;
+        const nextDayFirstColor = day < m.dim
+          ? data[makeCellId(calId, { year, month: m.idx, day: day + 1, session: 0 })]?.color ?? null
+          : null;
+        const mergeBelow = !!lastSessionColor && lastSessionColor === nextDayFirstColor;
         return (
           <div
             key={`c-${m.idx}-${day}`}
             data-month-col={m.idx}
-            className={`relative border-b border-r border-hairline ${weekend ? "bg-muted/40" : ""}`}
+            className={`relative border-r border-hairline ${mergeBelow ? "" : "border-b"} ${weekend ? "bg-muted/40" : ""}`}
             style={{
               height: rowHeight * 2,
               transition: `height ${DUR_MS}ms ${EASE}`,
@@ -859,10 +867,19 @@ function DayCellPair(props: DayCellPairProps) {
         const ranged = inDragRange(k);
         const mk = markInfo(k);
 
-        const bg = cell?.color ? cell.color + "33" : undefined;
+        // Vivid full-opacity fill when a session has a color.
+        const bg = cell?.color ? cell.color : undefined;
 
-        // Hide the top divider when this cell continues a mark range.
-        const hideTopDivider = mk.in && !mk.isFirst;
+        // Merge with neighbouring sessions of the same color so a multi-cell
+        // session reads as one continuous block (no inner divider lines).
+        const prevColor = isFirst
+          ? (day > 1 ? data[makeCellId(calId, { year, month, day: day - 1, session: 1 })]?.color ?? null : null)
+          : data[makeCellId(calId, { year, month, day, session: 0 })]?.color ?? null;
+        const sameAbove = !!cell?.color && cell.color === prevColor;
+
+        // Hide the top divider when this cell continues a mark range OR
+        // continues a same-color session block.
+        const hideTopDivider = (mk.in && !mk.isFirst) || sameAbove;
 
         return (
           <div
