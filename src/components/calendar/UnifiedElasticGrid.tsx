@@ -689,6 +689,10 @@ interface DayRowProps {
   onHandleDown: (k: CellKey) => void;
   isMonthFocused: (m: number) => boolean;
   isMonthPeriph: (m: number) => boolean;
+  markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; size: number };
+  onMarkBegin: (k: CellKey) => void;
+  onOpenPopover: (k: CellKey, anchor: HTMLElement) => void;
+  allowMark: boolean;
 }
 
 function DayRow(props: DayRowProps) {
