@@ -651,15 +651,25 @@ export function UnifiedElasticGrid({
               willChange: "grid-template-columns",
             }}
           >
-            {months.map((m) => (
-              <div
-                key={`h-${m.idx}`}
-                data-month-col={m.idx}
-                className="sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide text-muted-foreground"
-              >
-                {m.label}
-              </div>
-            ))}
+            {months.map((m) => {
+              const colDate = weekDates[m.idx];
+              const isToday = mode.kind === "year" && colDate && isSameDay(colDate, now);
+              return (
+                <div
+                  key={`h-${m.idx}`}
+                  data-month-col={m.idx}
+                  ref={m.idx === 0 ? headerRef : undefined}
+                  className={`sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${isToday ? "text-primary" : "text-muted-foreground"}`}
+                >
+                  <span>{m.label}</span>
+                  {mode.kind === "year" && colDate && (
+                    <span className={`ml-1.5 font-light normal-case tracking-normal tabular-nums ${isToday ? "text-primary" : "text-muted-foreground/70"}`}>
+                      {colDate.getDate()}.{colDate.getMonth() + 1}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
 
             {Array.from(
               // Week view (compact / kind:"year") renders hour-rows of a
