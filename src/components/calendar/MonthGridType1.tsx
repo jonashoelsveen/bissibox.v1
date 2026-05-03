@@ -531,12 +531,21 @@ export function MonthGridType1({
                             }
                             title={displayText}
                           >
-                            {customColor && (
-                              <span
-                                className="h-1.5 w-1.5 shrink-0 rounded-full"
-                                style={{ background: customColor }}
-                              />
-                            )}
+                            {(() => {
+                              const Icon = iconForColor(customColor);
+                              return Icon ? (
+                                <Icon
+                                  className="h-3 w-3 shrink-0"
+                                  style={{ color: customColor ?? "currentColor" }}
+                                  strokeWidth={2.25}
+                                />
+                              ) : customColor ? (
+                                <span
+                                  className="h-1.5 w-1.5 shrink-0 rounded-full"
+                                  style={{ background: customColor }}
+                                />
+                              ) : null;
+                            })()}
                             <span className="truncate">{displayText}</span>
                           </motion.div>
                         );
