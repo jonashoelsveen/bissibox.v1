@@ -903,16 +903,18 @@ function DayCellPair(props: DayCellPairProps) {
               />
             )}
 
-            {mk.isLast && mk.size > 1 && (
+            {mk.isPlus && markReleased && mk.size > 1 && (
               <button
                 type="button"
                 data-role="mark-plus"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
+                  // Anchor the popover to the full marked range by using
+                  // the cell that was clicked.
                   onOpenPopover(k, e.currentTarget.parentElement as HTMLElement);
                 }}
-                className="pointer-events-auto absolute left-1/2 top-0 z-[5] -translate-x-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-ink"
+                className="pointer-events-auto absolute left-1/2 top-1/2 z-[5] -translate-x-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-ink"
                 style={{ padding: 0, lineHeight: 0 }}
                 aria-label="Legg til økt"
               >
