@@ -699,7 +699,7 @@ interface DayRowProps {
   onHandleDown: (k: CellKey) => void;
   isMonthFocused: (m: number) => boolean;
   isMonthPeriph: (m: number) => boolean;
-  markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; size: number };
+  markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number };
   onMarkBegin: (k: CellKey) => void;
   onOpenPopover: (k: CellKey, anchor: HTMLElement) => void;
   allowMark: boolean;
@@ -810,7 +810,7 @@ interface DayCellPairProps {
   inDragRange: (k: CellKey) => boolean;
   onCellMouseEnter: (k: CellKey) => void;
   onHandleDown: (k: CellKey) => void;
-  markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; size: number };
+  markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number };
   onMarkBegin: (k: CellKey) => void;
   onOpenPopover: (k: CellKey, anchor: HTMLElement) => void;
   allowMark: boolean;
