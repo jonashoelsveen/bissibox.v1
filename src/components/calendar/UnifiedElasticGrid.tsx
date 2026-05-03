@@ -1041,7 +1041,7 @@ function DayCellPair(props: DayCellPairProps) {
                   transition: `opacity ${DUR_MS}ms ${EASE}`,
                 }}
               >
-                {cell?.text ?? ""}
+                {sameAbove ? "" : cellLabel}
               </span>
             )}
 
