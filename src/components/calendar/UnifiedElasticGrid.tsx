@@ -408,15 +408,17 @@ export function UnifiedElasticGrid({
   );
 
   const markInfo = useCallback(
-    (k: CellKey): { in: boolean; isFirst: boolean; isLast: boolean; size: number } => {
+    (k: CellKey): { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number } => {
       if (!markRange || k.month !== markRange.month)
-        return { in: false, isFirst: false, isLast: false, size: 0 };
+        return { in: false, isFirst: false, isLast: false, isPlus: false, size: 0 };
       const r = k.day * 2 + k.session;
       const inR = r >= markRange.lo && r <= markRange.hi;
+      const mid = Math.floor((markRange.lo + markRange.hi) / 2);
       return {
         in: inR,
         isFirst: r === markRange.lo,
         isLast: r === markRange.hi,
+        isPlus: inR && r === mid,
         size: markRange.hi - markRange.lo + 1,
       };
     },
