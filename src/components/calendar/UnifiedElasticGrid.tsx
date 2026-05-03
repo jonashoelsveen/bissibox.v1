@@ -28,7 +28,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { ChevronDown, Plus } from "lucide-react";
 import type { CellData, CellKey, Session } from "./yearStore";
 import { makeCellId } from "./yearStore";
-import { MonthGridType1, PopoverEditor, splitColor, joinColor } from "./MonthGridType1";
+import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, contrastTextOn } from "./MonthGridType1";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
 
@@ -969,8 +969,12 @@ function DayCellPair(props: DayCellPairProps) {
                 if (totalMin % 60 !== 0) return null;
                 const hh = Math.floor(totalMin / 60);
                 const label = `${String(hh).padStart(2, "0")}:00`;
+                const hourColor = cellColor ? contrastTextOn(cellColor) : undefined;
                 return (
-                  <span className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+                  <span
+                    className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-medium tabular-nums"
+                    style={{ color: hourColor ?? "hsl(var(--muted-foreground))" }}
+                  >
                     {label}
                   </span>
                 );
@@ -1038,19 +1042,27 @@ function DayCellPair(props: DayCellPairProps) {
               </div>
             )}
 
-            {showCompact && !isEditing && (
-              <span
-                className={`pointer-events-none absolute left-9 right-1.5 top-0.5 truncate text-[12px] text-ink ${
-                  cell?.bold ? "font-semibold" : ""
-                } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
-                style={{
-                  opacity: focused ? 0 : 1,
-                  transition: `opacity ${DUR_MS}ms ${EASE}`,
-                }}
-              >
-                {sameAbove ? "" : cellLabel}
-              </span>
-            )}
+            {showCompact && !isEditing && (() => {
+              const Icon = iconForColor(cellColor);
+              const labelColor = cellColor ? contrastTextOn(cellColor) : undefined;
+              return (
+                <span
+                  className={`pointer-events-none absolute left-14 right-1.5 top-0.5 flex items-center gap-1 truncate text-[12px] ${
+                    cell?.bold ? "font-semibold" : ""
+                  } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
+                  style={{
+                    opacity: focused ? 0 : 1,
+                    transition: `opacity ${DUR_MS}ms ${EASE}`,
+                    color: labelColor ?? "hsl(var(--ink, 220 13% 13%))",
+                  }}
+                >
+                  {!sameAbove && Icon && cellColor && (
+                    <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: labelColor }} />
+                  )}
+                  <span className="truncate">{sameAbove ? "" : cellLabel}</span>
+                </span>
+              );
+            })()}
 
             {showCompact && isEditing && (
               <input

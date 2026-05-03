@@ -32,10 +32,59 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, PersonStanding, GraduationCap, Briefcase, Sparkles } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
+
+// Individual session categories. Three have fixed colors + icons for
+// consistent UX across the platform; "Else" lets the user pick from the 8
+// platform colors.
+export const CAT_TRAINING_COLOR = "#B8B8FF"; // Periwinkle
+export const CAT_SCHOOL_COLOR = "#ADD8E6";   // Light Blue
+export const CAT_WORK_COLOR = "#C19A6B";     // Camel Brown
+
+export type IndividualCategory = "training" | "school" | "work" | "else";
+
+export const INDIVIDUAL_CATEGORIES: {
+  value: IndividualCategory;
+  label: string;
+  color: string | null;
+  Icon: LucideIcon;
+}[] = [
+  { value: "training", label: "Trening", color: CAT_TRAINING_COLOR, Icon: PersonStanding },
+  { value: "school",   label: "Skole",   color: CAT_SCHOOL_COLOR,   Icon: GraduationCap },
+  { value: "work",     label: "Jobb",    color: CAT_WORK_COLOR,     Icon: Briefcase },
+  { value: "else",     label: "Annet",   color: null,               Icon: Sparkles },
+];
+
+export function categoryFromColor(color: string | null): IndividualCategory {
+  const c = (color ?? "").toLowerCase();
+  if (c === CAT_TRAINING_COLOR.toLowerCase()) return "training";
+  if (c === CAT_SCHOOL_COLOR.toLowerCase()) return "school";
+  if (c === CAT_WORK_COLOR.toLowerCase()) return "work";
+  return "else";
+}
+
+export function iconForColor(color: string | null): LucideIcon | null {
+  const cat = categoryFromColor(color);
+  return INDIVIDUAL_CATEGORIES.find((c) => c.value === cat)!.Icon;
+}
+
+/** Pick black or white text for best contrast against a hex background. */
+export function contrastTextOn(hex: string | null | undefined): string {
+  if (!hex) return "hsl(var(--ink, 0 0% 10%))";
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex);
+  if (!m) return "hsl(var(--ink, 0 0% 10%))";
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  // Relative luminance (sRGB)
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.6 ? "#0b1220" : "#ffffff";
+}
 
 const COLOR_PREFIX_RE = /^\[(#[0-9a-fA-F]{6})\]\s*/;
 export function splitColor(raw: string): { color: string | null; text: string } {
@@ -482,12 +531,21 @@ export function MonthGridType1({
                             }
                             title={displayText}
                           >
-                            {customColor && (
-                              <span
-                                className="h-1.5 w-1.5 shrink-0 rounded-full"
-                                style={{ background: customColor }}
-                              />
-                            )}
+                            {(() => {
+                              const Icon = iconForColor(customColor);
+                              return Icon ? (
+                                <Icon
+                                  className="h-3 w-3 shrink-0"
+                                  style={{ color: customColor ?? "currentColor" }}
+                                  strokeWidth={2.25}
+                                />
+                              ) : customColor ? (
+                                <span
+                                  className="h-1.5 w-1.5 shrink-0 rounded-full"
+                                  style={{ background: customColor }}
+                                />
+                              ) : null;
+                            })()}
                             <span className="truncate">{displayText}</span>
                           </motion.div>
                         );
@@ -601,10 +659,6 @@ const ADMIN_CATEGORIES: { value: AdminCategory; label: string; color: string }[]
   { value: "race", label: "Løp", color: CAT_RACE },
 ];
 
-// Individual color choices for Training: all 8 except entity-training light blue → 7 colors.
-const INDIVIDUAL_TRAINING_COLORS = GROUP_COLOR_PALETTE.filter(
-  (c) => c.value.toLowerCase() !== CAT_TRAINING.toLowerCase(),
-);
 
 function adminCategoryFromColor(color: string | null): AdminCategory {
   const c = (color ?? "").toLowerCase();
@@ -635,9 +689,7 @@ export function PopoverEditor({
           .includes(initialColor.toLowerCase())
         ? initialColor
         : CAT_MEETING
-      : initialColor && initialColor.toLowerCase() !== CAT_TRAINING.toLowerCase()
-        ? initialColor
-        : INDIVIDUAL_TRAINING_COLORS[0].value;
+      : initialColor ?? CAT_TRAINING_COLOR;
   const [color, setColor] = useState<string | null>(resolvedInitial);
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -708,48 +760,75 @@ export function PopoverEditor({
       />
 
       {/* Category dropdown — full-width with vertical color bar at left */}
-      <div className="relative border-t border-hairline">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
-          style={{
-            background:
-              seat === "admin"
-                ? ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!.color
-                : color ?? CAT_TRAINING,
-          }}
-        />
-        {seat === "admin" ? (
-          <select
-            value={adminCategory}
-            onChange={(e) => {
-              const next = e.target.value as AdminCategory;
-              const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
-              setColor(cat.color);
-            }}
-            className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
-          >
-            {ADMIN_CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <select
-            value="training"
-            disabled
-            className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none disabled:opacity-100"
-          >
-            <option value="training">Trening</option>
-          </select>
-        )}
-      </div>
+      {(() => {
+        const indCat = categoryFromColor(color);
+        const indEntry = INDIVIDUAL_CATEGORIES.find((c) => c.value === indCat)!;
+        const sideColor =
+          seat === "admin"
+            ? ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!.color
+            : indEntry.color ?? color ?? "transparent";
+        return (
+          <div className="relative border-t border-hairline">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
+              style={{ background: sideColor }}
+            />
+            {seat === "admin" ? (
+              <select
+                value={adminCategory}
+                onChange={(e) => {
+                  const next = e.target.value as AdminCategory;
+                  const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
+                  setColor(cat.color);
+                }}
+                className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
+              >
+                {ADMIN_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex items-center gap-2 pl-4 pr-2 py-1.5">
+                <indEntry.Icon className="h-4 w-4 shrink-0" style={{ color: indEntry.color ?? "currentColor" }} />
+                <select
+                  value={indCat}
+                  onChange={(e) => {
+                    const next = e.target.value as IndividualCategory;
+                    const cat = INDIVIDUAL_CATEGORIES.find((c) => c.value === next)!;
+                    if (next === "else") {
+                      // Default to first palette color if none chosen yet,
+                      // otherwise keep the existing custom color if it's not
+                      // one of the fixed category colors.
+                      const fixed = [CAT_TRAINING_COLOR, CAT_SCHOOL_COLOR, CAT_WORK_COLOR]
+                        .map((c) => c.toLowerCase());
+                      if (!color || fixed.includes(color.toLowerCase())) {
+                        setColor(GROUP_COLOR_PALETTE[0].value);
+                      }
+                    } else {
+                      setColor(cat.color);
+                    }
+                  }}
+                  className="block flex-1 bg-transparent py-1 pr-3 text-[12px] text-ink outline-none"
+                >
+                  {INDIVIDUAL_CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
-      {/* Individual-only: 7-color picker, spread end to end */}
-      {seat === "individual" && (
+      {/* Individual + "Else" only: 8-color picker */}
+      {seat === "individual" && categoryFromColor(color) === "else" && (
         <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-3">
-          {INDIVIDUAL_TRAINING_COLORS.map((c) => {
+          {GROUP_COLOR_PALETTE.map((c) => {
             const selected = color?.toLowerCase() === c.value.toLowerCase();
             return (
               <button
