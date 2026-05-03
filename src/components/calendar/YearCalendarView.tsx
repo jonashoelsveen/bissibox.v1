@@ -26,7 +26,7 @@ export function YearCalendarView({
   defaultTitle: string;
   seat?: CalendarSeat;
 }) {
-  const { data, meta, upsertCell, fillRange, setMeta, undo, redo, canUndo, canRedo } =
+  const { data, meta, upsertCell, upsertCells, fillRange, setMeta, undo, redo, canUndo, canRedo } =
     useYearStore(calId, defaultTitle);
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -140,6 +140,7 @@ export function YearCalendarView({
           selected={selected}
           onSelect={setSelected}
           onCommitText={(k, text) => upsertCell(k, { text })}
+          onCommitTexts={(updates) => upsertCells(updates.map(({ key, text }) => ({ key, patch: { text } })))}
           onCommitDuration={(k, duration) => upsertCell(k, { duration })}
           onFill={fillRange}
           seat={seat}

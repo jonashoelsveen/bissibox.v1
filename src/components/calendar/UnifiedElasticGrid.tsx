@@ -173,6 +173,7 @@ export interface UnifiedElasticGridProps {
   selected: CellKey | null;
   onSelect: (k: CellKey | null) => void;
   onCommitText: (k: CellKey, text: string) => void;
+  onCommitTexts?: (updates: Array<{ key: CellKey; text: string }>) => void;
   onCommitDuration?: (k: CellKey, duration: string) => void;
   onFill: (source: CellKey, targets: CellKey[]) => void;
   seat?: "admin" | "individual";
@@ -193,6 +194,7 @@ export function UnifiedElasticGrid({
   selected,
   onSelect,
   onCommitText,
+  onCommitTexts,
   onCommitDuration,
   onFill,
   seat = "individual",
@@ -669,11 +671,14 @@ export function UnifiedElasticGrid({
             const next = t ? joinColor(color, t) : "";
             // If a multi-cell range is marked, apply to all cells in it.
             if (markRange && t) {
+              const updates: Array<{ key: CellKey; text: string }> = [];
               for (let r = markRange.lo; r <= markRange.hi; r++) {
                 const day = Math.floor(r / 2);
                 const session = (r % 2) as Session;
-                onCommitText({ year, month: markRange.month, day, session }, next);
+                updates.push({ key: { year, month: markRange.month, day, session }, text: next });
               }
+              if (onCommitTexts) onCommitTexts(updates);
+              else for (const update of updates) onCommitText(update.key, update.text);
             } else {
               onCommitText(popover.key, next);
             }
@@ -759,7 +764,9 @@ function DayRow(props: DayRowProps) {
           : "";
         const lastSessionColor = splitColor(lastSessionRaw).color;
         const nextDayFirstColor = splitColor(nextDayFirstRaw).color;
-        const mergeBelow = !!lastSessionColor && lastSessionColor === nextDayFirstColor;
+        const lastMarked = markInfo({ year, month: m.idx, day, session: 1 }).in;
+        const nextMarked = day < m.dim ? markInfo({ year, month: m.idx, day: day + 1, session: 0 }).in : false;
+        const mergeBelow = (!!lastSessionColor && lastSessionColor === nextDayFirstColor) || (lastMarked && nextMarked);
         return (
           <div
             key={`c-${m.idx}-${day}`}
@@ -1033,7 +1040,7 @@ function DayCellPair(props: DayCellPairProps) {
 
             {showCompact && !isEditing && (
               <span
-                className={`pointer-events-none absolute inset-y-0 left-7 right-1.5 flex items-center truncate text-[12px] text-ink ${
+                className={`pointer-events-none absolute left-7 right-1.5 top-0.5 truncate text-[12px] text-ink ${
                   cell?.bold ? "font-semibold" : ""
                 } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
                 style={{

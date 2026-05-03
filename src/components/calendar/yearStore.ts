@@ -74,6 +74,7 @@ export function useYearStore(calId: string, defaultTitle: string) {
     title: defaultTitle,
     year: new Date().getFullYear(),
   });
+  const dataRef = useRef<Record<string, CellData>>({});
   // History stacks for undo/redo. Each entry is a full data snapshot.
   const pastRef = useRef<Record<string, CellData>[]>([]);
   const futureRef = useRef<Record<string, CellData>[]>([]);
@@ -82,7 +83,9 @@ export function useYearStore(calId: string, defaultTitle: string) {
 
   // Load on calendar switch
   useEffect(() => {
-    setData(readJSON<Record<string, CellData>>(dataKey(calId), {}));
+    const loaded = readJSON<Record<string, CellData>>(dataKey(calId), {});
+    dataRef.current = loaded;
+    setData(loaded);
     setMeta(
       readJSON<YearMeta>(metaKey(calId), {
         title: defaultTitle,
@@ -96,35 +99,39 @@ export function useYearStore(calId: string, defaultTitle: string) {
 
   const persist = useCallback(
     (next: Record<string, CellData>, opts?: { history?: boolean; prev?: Record<string, CellData> }) => {
+      const prevSnapshot = opts?.prev ?? dataRef.current;
       if (opts?.history !== false) {
-        pastRef.current.push(opts?.prev ?? data);
+        pastRef.current.push(prevSnapshot);
         if (pastRef.current.length > 100) pastRef.current.shift();
         futureRef.current = [];
         bumpHistory();
       }
+      dataRef.current = next;
       setData(next);
       writeJSON(dataKey(calId), next);
     },
-    [calId, data],
+    [calId],
   );
 
   const undo = useCallback(() => {
     const prev = pastRef.current.pop();
     if (!prev) return;
-    futureRef.current.push(data);
+    futureRef.current.push(dataRef.current);
+    dataRef.current = prev;
     setData(prev);
     writeJSON(dataKey(calId), prev);
     bumpHistory();
-  }, [calId, data]);
+  }, [calId]);
 
   const redo = useCallback(() => {
     const next = futureRef.current.pop();
     if (!next) return;
-    pastRef.current.push(data);
+    pastRef.current.push(dataRef.current);
+    dataRef.current = next;
     setData(next);
     writeJSON(dataKey(calId), next);
     bumpHistory();
-  }, [calId, data]);
+  }, [calId]);
 
   const canUndo = pastRef.current.length > 0;
   const canRedo = futureRef.current.length > 0;
@@ -139,7 +146,8 @@ export function useYearStore(calId: string, defaultTitle: string) {
   const upsertCell = useCallback(
     (k: CellKey, patch: Partial<CellData>) => {
       const id = makeCellId(calId, k);
-      const prev = data[id] ?? { id, text: "" };
+      const current = dataRef.current;
+      const prev = current[id] ?? { id, text: "" };
       const merged: CellData = { ...prev, ...patch, id };
       // Strip empties so the store stays small
       if (
@@ -153,35 +161,70 @@ export function useYearStore(calId: string, defaultTitle: string) {
         !merged.locationId &&
         !merged.courseId
       ) {
-        const { [id]: _drop, ...rest } = data;
-        persist(rest);
+        const { [id]: _drop, ...rest } = current;
+        persist(rest, { prev: current });
         return;
       }
-      persist({ ...data, [id]: merged });
+      persist({ ...current, [id]: merged }, { prev: current });
     },
-    [calId, data, persist],
+    [calId, persist],
+  );
+
+  const upsertCells = useCallback(
+    (updates: Array<{ key: CellKey; patch: Partial<CellData> }>) => {
+      if (updates.length === 0) return;
+      const current = dataRef.current;
+      let next = current;
+
+      for (const { key, patch } of updates) {
+        const id = makeCellId(calId, key);
+        const prev = next[id] ?? { id, text: "" };
+        const merged: CellData = { ...prev, ...patch, id };
+
+        if (
+          !merged.text &&
+          !merged.bold &&
+          !merged.italic &&
+          !merged.underline &&
+          !merged.color &&
+          !merged.duration &&
+          !merged.description &&
+          !merged.locationId &&
+          !merged.courseId
+        ) {
+          const { [id]: _drop, ...rest } = next;
+          next = rest;
+        } else {
+          next = { ...next, [id]: merged };
+        }
+      }
+
+      if (next !== current) persist(next, { prev: current });
+    },
+    [calId, persist],
   );
 
   const fillRange = useCallback(
     (source: CellKey, targets: CellKey[]) => {
+      const current = dataRef.current;
       const sid = makeCellId(calId, source);
-      const src = data[sid];
+      const src = current[sid];
       if (!src) {
         // Clear the targets if the source is empty
-        const next = { ...data };
+        const next = { ...current };
         for (const t of targets) delete next[makeCellId(calId, t)];
-        persist(next);
+        persist(next, { prev: current });
         return;
       }
-      const next = { ...data };
+      const next = { ...current };
       for (const t of targets) {
         const id = makeCellId(calId, t);
         next[id] = { ...src, id };
       }
-      persist(next);
+      persist(next, { prev: current });
     },
-    [calId, data, persist],
+    [calId, persist],
   );
 
-  return { data, meta, upsertCell, fillRange, setMeta: persistMeta, undo, redo, canUndo, canRedo };
+  return { data, meta, upsertCell, upsertCells, fillRange, setMeta: persistMeta, undo, redo, canUndo, canRedo };
 }
