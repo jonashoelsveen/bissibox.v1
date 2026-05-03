@@ -808,28 +808,12 @@ interface DayCellPairProps {
 
 function DayCellPair(props: DayCellPairProps) {
   const {
-    calId,
-    year,
-    month,
-    day,
-    weekend,
-    data,
-    focused,
-    periph,
-    mode,
-    rowHeight,
-    selectedId,
-    editingId,
-    editValue,
-    setEditValue,
-    onSelect,
-    onBeginEdit,
-    onCommitEdit,
-    onCommitDuration,
-    onMoveAfterCommit,
-    inDragRange,
-    onCellMouseEnter,
-    onHandleDown,
+    calId, year, month, day, weekend, data,
+    focused, periph, mode, rowHeight, selectedId,
+    editingId, editValue, setEditValue,
+    onSelect, onBeginEdit, onCommitEdit, onCommitDuration, onMoveAfterCommit,
+    inDragRange, onCellMouseEnter, onHandleDown,
+    markInfo, onMarkBegin, onOpenPopover, allowMark,
   } = props;
 
   const sessions: Session[] = [0, 1];
@@ -849,31 +833,68 @@ function DayCellPair(props: DayCellPairProps) {
         const isEditing = editingId === id;
         const isFirst = session === 0;
         const ranged = inDragRange(k);
+        const mk = markInfo(k);
 
         const bg = cell?.color ? cell.color + "33" : undefined;
+
+        // Hide the top divider when this cell continues a mark range.
+        const hideTopDivider = mk.in && !mk.isFirst;
 
         return (
           <div
             key={session}
+            data-mark-cell={mk.in ? "1" : undefined}
             onMouseDown={(e) => {
               if ((e.target as HTMLElement).dataset.role === "fill-handle") return;
+              if ((e.target as HTMLElement).dataset.role === "mark-plus") return;
               onSelect(k);
+              if (allowMark) onMarkBegin(k);
             }}
             onMouseEnter={() => onCellMouseEnter(k)}
             onDoubleClick={(e) => {
               e.stopPropagation();
-              onBeginEdit(k);
+              if (allowMark) {
+                onOpenPopover(k, e.currentTarget as HTMLElement);
+              } else {
+                onBeginEdit(k);
+              }
             }}
             className={`relative flex-1 cursor-cell select-none text-[12px] leading-tight ${
-              !isFirst ? "border-t border-hairline/60" : ""
+              !isFirst && !hideTopDivider ? "border-t border-hairline/60" : ""
             } ${ranged && !isSelected ? "bg-primary/10" : ""}`}
             style={{
-              background: bg,
+              background: mk.in ? undefined : bg,
               minHeight: rowHeight,
               transition: `min-height ${DUR_MS}ms ${EASE}`,
               willChange: "min-height",
             }}
           >
+            {mk.in && (
+              <span
+                className="pointer-events-none absolute inset-x-0 z-[1] bg-muted-foreground/15"
+                style={{
+                  top: mk.isFirst ? 0 : -1,
+                  bottom: mk.isLast ? 0 : -1,
+                }}
+              />
+            )}
+
+            {mk.isLast && mk.size > 1 && (
+              <button
+                type="button"
+                data-role="mark-plus"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenPopover(k, e.currentTarget.parentElement as HTMLElement);
+                }}
+                className="pointer-events-auto absolute left-1/2 top-0 z-[5] -translate-x-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-ink"
+                style={{ padding: 0, lineHeight: 0 }}
+                aria-label="Legg til økt"
+              >
+                <Plus className="h-4 w-4" strokeWidth={1.5} />
+              </button>
+            )}
             {isSelected && (
               <span className="pointer-events-none absolute inset-0 z-[2] rounded-[2px] outline outline-2 outline-primary outline-offset-[-2px]" />
             )}
