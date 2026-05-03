@@ -755,48 +755,75 @@ export function PopoverEditor({
       />
 
       {/* Category dropdown — full-width with vertical color bar at left */}
-      <div className="relative border-t border-hairline">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
-          style={{
-            background:
-              seat === "admin"
-                ? ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!.color
-                : color ?? CAT_TRAINING,
-          }}
-        />
-        {seat === "admin" ? (
-          <select
-            value={adminCategory}
-            onChange={(e) => {
-              const next = e.target.value as AdminCategory;
-              const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
-              setColor(cat.color);
-            }}
-            className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
-          >
-            {ADMIN_CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <select
-            value="training"
-            disabled
-            className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none disabled:opacity-100"
-          >
-            <option value="training">Trening</option>
-          </select>
-        )}
-      </div>
+      {(() => {
+        const indCat = categoryFromColor(color);
+        const indEntry = INDIVIDUAL_CATEGORIES.find((c) => c.value === indCat)!;
+        const sideColor =
+          seat === "admin"
+            ? ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!.color
+            : indEntry.color ?? color ?? "transparent";
+        return (
+          <div className="relative border-t border-hairline">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
+              style={{ background: sideColor }}
+            />
+            {seat === "admin" ? (
+              <select
+                value={adminCategory}
+                onChange={(e) => {
+                  const next = e.target.value as AdminCategory;
+                  const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
+                  setColor(cat.color);
+                }}
+                className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
+              >
+                {ADMIN_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex items-center gap-2 pl-4 pr-2 py-1.5">
+                <indEntry.Icon className="h-4 w-4 shrink-0" style={{ color: indEntry.color ?? "currentColor" }} />
+                <select
+                  value={indCat}
+                  onChange={(e) => {
+                    const next = e.target.value as IndividualCategory;
+                    const cat = INDIVIDUAL_CATEGORIES.find((c) => c.value === next)!;
+                    if (next === "else") {
+                      // Default to first palette color if none chosen yet,
+                      // otherwise keep the existing custom color if it's not
+                      // one of the fixed category colors.
+                      const fixed = [CAT_TRAINING_COLOR, CAT_SCHOOL_COLOR, CAT_WORK_COLOR]
+                        .map((c) => c.toLowerCase());
+                      if (!color || fixed.includes(color.toLowerCase())) {
+                        setColor(GROUP_COLOR_PALETTE[0].value);
+                      }
+                    } else {
+                      setColor(cat.color);
+                    }
+                  }}
+                  className="block flex-1 bg-transparent py-1 pr-3 text-[12px] text-ink outline-none"
+                >
+                  {INDIVIDUAL_CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
-      {/* Individual-only: 7-color picker, spread end to end */}
-      {seat === "individual" && (
+      {/* Individual + "Else" only: 8-color picker */}
+      {seat === "individual" && categoryFromColor(color) === "else" && (
         <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-3">
-          {INDIVIDUAL_TRAINING_COLORS.map((c) => {
+          {GROUP_COLOR_PALETTE.map((c) => {
             const selected = color?.toLowerCase() === c.value.toLowerCase();
             return (
               <button
