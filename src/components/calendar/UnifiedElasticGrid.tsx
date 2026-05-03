@@ -163,6 +163,23 @@ function isWeekend(year: number, month: number, day: number) {
   return d === 0 || d === 6;
 }
 
+// Monday-anchored start-of-week for a given date.
+function startOfWeekMon(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dow = x.getDay(); // 0=Sun..6=Sat
+  const delta = dow === 0 ? -6 : 1 - dow;
+  x.setDate(x.getDate() + delta);
+  return x;
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
 const EASE = "cubic-bezier(0.2, 0, 0, 1)";
 const DUR_MS = 180;
 
