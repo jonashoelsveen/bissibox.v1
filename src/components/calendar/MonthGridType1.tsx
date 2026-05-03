@@ -690,6 +690,7 @@ export function PopoverEditor({
   return (
     <div
       ref={ref}
+      data-role="popover"
       className="fixed z-50 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg"
       style={{ top, left, width: POPOVER_W }}
     >
