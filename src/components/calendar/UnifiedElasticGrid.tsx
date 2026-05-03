@@ -307,6 +307,8 @@ export function UnifiedElasticGrid({
     lo: number; // rank = day*2+session
     hi: number;
   } | null>(null);
+  // Plus icon only shows after the user has released the mouse.
+  const [markReleased, setMarkReleased] = useState(false);
 
   // Inline editor popover (shared with month view)
   const [popover, setPopover] = useState<{
