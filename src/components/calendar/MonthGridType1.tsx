@@ -684,9 +684,7 @@ export function PopoverEditor({
           .includes(initialColor.toLowerCase())
         ? initialColor
         : CAT_MEETING
-      : initialColor && initialColor.toLowerCase() !== CAT_TRAINING.toLowerCase()
-        ? initialColor
-        : INDIVIDUAL_TRAINING_COLORS[0].value;
+      : initialColor ?? CAT_TRAINING_COLOR;
   const [color, setColor] = useState<string | null>(resolvedInitial);
   const ref = useRef<HTMLDivElement | null>(null);
 
