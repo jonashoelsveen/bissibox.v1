@@ -1018,7 +1018,7 @@ function DayCellPair(props: DayCellPairProps) {
                         cell?.bold ? "font-semibold" : ""
                       } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
                     >
-                      {cell?.text ?? ""}
+                      {sameAbove ? "" : cellLabel}
                     </span>
                   )}
                 </div>
