@@ -32,10 +32,59 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, PersonStanding, GraduationCap, Briefcase, Sparkles } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
+
+// Individual session categories. Three have fixed colors + icons for
+// consistent UX across the platform; "Else" lets the user pick from the 8
+// platform colors.
+export const CAT_TRAINING_COLOR = "#B8B8FF"; // Periwinkle
+export const CAT_SCHOOL_COLOR = "#ADD8E6";   // Light Blue
+export const CAT_WORK_COLOR = "#C19A6B";     // Camel Brown
+
+export type IndividualCategory = "training" | "school" | "work" | "else";
+
+export const INDIVIDUAL_CATEGORIES: {
+  value: IndividualCategory;
+  label: string;
+  color: string | null;
+  Icon: LucideIcon;
+}[] = [
+  { value: "training", label: "Trening", color: CAT_TRAINING_COLOR, Icon: PersonStanding },
+  { value: "school",   label: "Skole",   color: CAT_SCHOOL_COLOR,   Icon: GraduationCap },
+  { value: "work",     label: "Jobb",    color: CAT_WORK_COLOR,     Icon: Briefcase },
+  { value: "else",     label: "Annet",   color: null,               Icon: Sparkles },
+];
+
+export function categoryFromColor(color: string | null): IndividualCategory {
+  const c = (color ?? "").toLowerCase();
+  if (c === CAT_TRAINING_COLOR.toLowerCase()) return "training";
+  if (c === CAT_SCHOOL_COLOR.toLowerCase()) return "school";
+  if (c === CAT_WORK_COLOR.toLowerCase()) return "work";
+  return "else";
+}
+
+export function iconForColor(color: string | null): LucideIcon | null {
+  const cat = categoryFromColor(color);
+  return INDIVIDUAL_CATEGORIES.find((c) => c.value === cat)!.Icon;
+}
+
+/** Pick black or white text for best contrast against a hex background. */
+export function contrastTextOn(hex: string | null | undefined): string {
+  if (!hex) return "hsl(var(--ink, 0 0% 10%))";
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex);
+  if (!m) return "hsl(var(--ink, 0 0% 10%))";
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  // Relative luminance (sRGB)
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.6 ? "#0b1220" : "#ffffff";
+}
 
 const COLOR_PREFIX_RE = /^\[(#[0-9a-fA-F]{6})\]\s*/;
 export function splitColor(raw: string): { color: string | null; text: string } {
