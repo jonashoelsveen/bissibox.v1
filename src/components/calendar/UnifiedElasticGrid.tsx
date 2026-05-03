@@ -790,6 +790,7 @@ function DayRow(props: DayRowProps) {
               onMarkBegin={onMarkBegin}
               onOpenPopover={onOpenPopover}
               allowMark={allowMark}
+              markReleased={markReleased}
             />
           </div>
         );
