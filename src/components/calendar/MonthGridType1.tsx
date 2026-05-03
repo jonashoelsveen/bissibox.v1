@@ -617,7 +617,7 @@ function adminCategoryFromColor(color: string | null): AdminCategory {
  * Notion-style inline popover for adding/editing a single session item.
  * Category dropdown + (individual only) 7-color row.
  */
-function PopoverEditor({
+export function PopoverEditor({
   seat,
   initialText,
   initialColor,
