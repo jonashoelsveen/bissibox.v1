@@ -384,6 +384,9 @@ export function UnifiedElasticGrid({
   // Global mouseup ends the mark drag (range stays visible).
   useEffect(() => {
     const onUp = () => {
+      if (markActiveRef.current) {
+        setMarkReleased(true);
+      }
       markActiveRef.current = false;
       markStartRef.current = null;
     };
