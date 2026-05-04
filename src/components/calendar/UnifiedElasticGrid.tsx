@@ -866,7 +866,12 @@ export function UnifiedElasticGrid({
                     isToday ? "bg-secondary text-ink" : "bg-card text-muted-foreground"
                   }`}
                 >
-                  <span>{m.label}</span>
+                  <span>
+                    {m.label}
+                    {mode.kind === "year" && colDate && (
+                      <span className="ml-1.5 text-ink">{colDate.getDate()}</span>
+                    )}
+                  </span>
                 </div>
               );
             })}
