@@ -1177,7 +1177,7 @@ function DayRow(props: DayRowProps) {
               year={year}
               month={m.idx}
               day={day}
-              weekend={weekend}
+              weekend={weekend && mode.kind !== "year"}
               data={data}
               focused={focused}
               periph={periph}
