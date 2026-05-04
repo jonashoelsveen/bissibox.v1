@@ -1741,18 +1741,24 @@ function WeekEventsOverlay({
 }) {
   type Box = { left: number; width: number };
   const [cols, setCols] = useState<Box[]>([]);
+  const [headerBottom, setHeaderBottom] = useState(0);
 
   useLayoutEffect(() => {
     const measure = () => {
       const c = scrollRef.current;
       if (!c) return;
       const next: Box[] = [];
+      let hb = 0;
       for (let i = 0; i < 7; i++) {
-        // Pick any cell from this column; the header is always present.
+        // First match for data-month-col is the sticky header for that column.
         const cell = c.querySelector<HTMLElement>(`[data-month-col="${i}"]`);
-        if (cell) next.push({ left: cell.offsetLeft, width: cell.offsetWidth });
+        if (cell) {
+          next.push({ left: cell.offsetLeft, width: cell.offsetWidth });
+          hb = Math.max(hb, cell.offsetTop + cell.offsetHeight);
+        }
       }
       if (next.length === 7) setCols(next);
+      setHeaderBottom(hb);
     };
     measure();
     const id = window.setInterval(measure, 500);
