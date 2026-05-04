@@ -1633,21 +1633,31 @@ function DurationCell({ initial, onCommit }: DurationCellProps) {
 function NowLine({
   scrollRef,
   colIdx,
-  top,
+  nowMinutesSinceStart,
+  rowHeight,
 }: {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   colIdx: number;
-  top: number;
+  /** Minutes elapsed since the grid's start hour (e.g. 06:00). */
+  nowMinutesSinceStart: number;
+  rowHeight: number;
 }) {
-  const [box, setBox] = useState<{ left: number; width: number } | null>(null);
+  const [box, setBox] = useState<{ left: number; width: number; headerBottom: number } | null>(
+    null,
+  );
 
   useLayoutEffect(() => {
     const measure = () => {
       const c = scrollRef.current;
       if (!c) return;
-      const cell = c.querySelector<HTMLElement>(`[data-month-col="${colIdx}"]`);
-      if (!cell) return;
-      setBox({ left: cell.offsetLeft, width: cell.offsetWidth });
+      // First match for data-month-col is the sticky day-column header.
+      const header = c.querySelector<HTMLElement>(`[data-month-col="${colIdx}"]`);
+      if (!header) return;
+      setBox({
+        left: header.offsetLeft,
+        width: header.offsetWidth,
+        headerBottom: header.offsetTop + header.offsetHeight,
+      });
     };
     measure();
     const id = window.setInterval(measure, 500);
@@ -1659,18 +1669,20 @@ function NowLine({
   }, [colIdx, scrollRef]);
 
   if (!box) return null;
+  // 30-min slot maps to one rowHeight; convert minutes precisely.
+  const top = box.headerBottom + (nowMinutesSinceStart / 30) * rowHeight;
   const NOW_COLOR = "#FF4F4F";
   return (
     <>
       {/* Past-time dim: subtle shading above the indicator inside today's column */}
-      {top > 0 && (
+      {top > box.headerBottom && (
         <div
           className="pointer-events-none absolute z-[14]"
           style={{
-            top: 0,
+            top: box.headerBottom,
             left: box.left,
             width: box.width,
-            height: top,
+            height: top - box.headerBottom,
             background: "rgba(15, 23, 42, 0.04)",
           }}
           aria-hidden
