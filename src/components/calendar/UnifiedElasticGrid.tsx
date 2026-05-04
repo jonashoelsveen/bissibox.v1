@@ -668,7 +668,7 @@ export function UnifiedElasticGrid({
   }, [weekDates, now]);
 
   // Header height + now-line vertical offset for week view.
-  const headerRef = useRef<HTMLDivElement | null>(null);
+  const headerRef = useRef<HTMLElement | null>(null);
   const [headerH, setHeaderH] = useState(0);
   useLayoutEffect(() => {
     if (!headerRef.current) return;
@@ -803,7 +803,9 @@ export function UnifiedElasticGrid({
                 onClick={() => handleViewModeChange("month")}
                 title={`Uke ${isoWeekNumber(weekDates[0] ?? new Date())} — klikk for å zoome ut`}
                 className="sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-1 py-2 text-center text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
-                ref={headerRef}
+                ref={(el) => {
+                  headerRef.current = el;
+                }}
               >
                 {isoWeekNumber(weekDates[0] ?? new Date())}
               </button>
