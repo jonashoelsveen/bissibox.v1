@@ -115,6 +115,9 @@ export function ImportButton({
         total_events_found: highConfEvents.length,
         detected_categories,
         events: highConfEvents,
+        past_status: raw.past_status,
+        past_events_count: raw.past_events_count,
+        future_events_count: raw.future_events_count,
       };
       const colors: Record<string, string> = {};
       parsed.detected_categories.forEach((c, i) => {
