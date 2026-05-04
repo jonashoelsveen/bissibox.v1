@@ -15,7 +15,7 @@ interface FileLite {
   file_size: number | null;
 }
 
-const VALID_EXT = /\.(xlsx|xls|csv|pdf|txt)$/i;
+const VALID_EXT = /\.(xlsx|xls|csv)$/i;
 
 export function LibraryPickerStep({
   onPick,
