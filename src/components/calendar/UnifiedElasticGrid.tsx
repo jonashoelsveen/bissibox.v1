@@ -193,7 +193,9 @@ export interface UnifiedElasticGridProps {
   /** Unified event store — single source of truth for both views. */
   events: CalendarEvent[];
   onUpsertEvent: (
-    patch: Partial<CalendarEvent> & Pick<CalendarEvent, "startISO" | "endISO" | "title">,
+    patch:
+      | (Partial<CalendarEvent> & Pick<CalendarEvent, "startISO" | "endISO" | "title">)
+      | (Partial<CalendarEvent> & { id: string }),
   ) => CalendarEvent;
   onMoveEvent: (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => void;
   onDeleteEvent: (id: string) => void;
