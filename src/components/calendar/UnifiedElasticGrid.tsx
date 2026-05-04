@@ -1817,8 +1817,11 @@ function WeekEventsOverlay({
         const isDragging = drag?.id === ev.id && drag.moved;
         const dragDx = isDragging ? drag.delta.dx : 0;
         const dragDy = isDragging ? drag.delta.dy : 0;
-        const bg = ev.color ?? "hsl(var(--primary))";
-        const fg = ev.color ? contrastTextOn(ev.color) : "hsl(var(--primary-foreground))";
+        const accent = ev.color ?? "hsl(var(--primary))";
+        const bg = ev.color
+          ? `color-mix(in srgb, ${ev.color} 18%, white)`
+          : "hsl(var(--primary) / 0.15)";
+        const fg = "hsl(var(--ink, 220 13% 13%))";
         const Icon = iconForColor(ev.color);
         return (
           <div
