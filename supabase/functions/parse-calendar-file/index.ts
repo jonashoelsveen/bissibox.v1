@@ -36,12 +36,11 @@ function base64ToUint8Array(b64: string): Uint8Array {
   return out;
 }
 
-function classifyMime(name: string, mime: string): "spreadsheet" | "csv" | "pdf" | "text" {
+function classifyMime(name: string, mime: string): "spreadsheet" | "csv" | "text" {
   const n = name.toLowerCase();
   if (n.endsWith(".xlsx") || n.endsWith(".xls") || mime.includes("spreadsheet") || mime.includes("excel"))
     return "spreadsheet";
   if (n.endsWith(".csv") || mime.includes("csv")) return "csv";
-  if (n.endsWith(".pdf") || mime.includes("pdf")) return "pdf";
   return "text";
 }
 
