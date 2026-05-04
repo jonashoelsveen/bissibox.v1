@@ -338,6 +338,16 @@ export function UnifiedElasticGrid({
   // Plus icon only shows after the user has released the mouse.
   const [markReleased, setMarkReleased] = useState(false);
 
+  // Drag-to-move the existing marked range. Active while the user holds
+  // a pointer down on the mark overlay (not the plus, not the edge band).
+  const markDragRef = useRef<{
+    grabRank: number; // rank of the cell where the user grabbed
+    grabMonth: number; // column of the grabbed cell
+    size: number;
+    offset: number; // grabRank - origLo
+  } | null>(null);
+  const [isDraggingMark, setIsDraggingMark] = useState(false);
+
   // Inline editor popover (shared with month view)
   const [popover, setPopover] = useState<{
     key: CellKey;
