@@ -593,6 +593,7 @@ function LibraryPage() {
               onMeetingOpened={(m) =>
                 openMeetingTab({ id: m.id, title: m.title, folder: m.folder }, m.kind)
               }
+              onMeetingDeleted={(id) => finalizeClose(id)}
             />
           ) : showingNote && activeNoteId ? (
             <NoteEditor
