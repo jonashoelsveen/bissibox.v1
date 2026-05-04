@@ -948,7 +948,10 @@ export function UnifiedElasticGrid({
             />
           )}
         </div>
+        </motion.div>
       )}
+      </AnimatePresence>
+      </LayoutGroup>
 
       {popover && (
         <PopoverEditor
