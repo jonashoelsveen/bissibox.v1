@@ -795,7 +795,17 @@ export function UnifiedElasticGrid({
             handleViewModeChange("week");
           }}
         />
+        </motion.div>
       ) : (
+        <motion.div
+          key="week"
+          className="h-full w-full"
+          initial={{ opacity: 0, scaleY: 0.85 }}
+          animate={{ opacity: 1, scaleY: 1 }}
+          exit={{ opacity: 0, scaleY: 0.85 }}
+          transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+          style={{ originY: 0 }}
+        >
         <div
           ref={scrollRef}
           className="relative h-full w-full overflow-auto"
