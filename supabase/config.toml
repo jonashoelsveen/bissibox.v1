@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.note-cover-worker]
 verify_jwt = false
+
+[functions.parse-calendar-file]
+verify_jwt = true
