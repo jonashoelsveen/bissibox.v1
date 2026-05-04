@@ -21,6 +21,40 @@ import {
 } from "./ImportCalendar/PreviewOverlayContext";
 import { ImportButton } from "./ImportCalendar/ImportButton";
 import { buildGhostEvents } from "./ImportCalendar/ghost";
+import { isoWeekNumber } from "./dateUtils";
+
+const MONTHS_NB = [
+  "Januar", "Februar", "Mars", "April", "Mai", "Juni",
+  "Juli", "August", "September", "Oktober", "November", "Desember",
+];
+
+function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate: Date }) {
+  const month = MONTHS_NB[currentDate.getMonth()];
+  const year = currentDate.getFullYear();
+  if (viewMode === "week") {
+    const wk = isoWeekNumber(currentDate);
+    return (
+      <h1 className="truncate text-xl text-ink">
+        <span className="font-semibold">Uke {wk} {month}</span>{" "}
+        <span className="font-normal">{year}</span>
+      </h1>
+    );
+  }
+  if (viewMode === "day") {
+    return (
+      <h1 className="truncate text-xl text-ink">
+        <span className="font-semibold">{currentDate.getDate()}. {month}</span>{" "}
+        <span className="font-normal">{year}</span>
+      </h1>
+    );
+  }
+  return (
+    <h1 className="truncate text-xl text-ink">
+      <span className="font-semibold">{month}</span>{" "}
+      <span className="font-normal">{year}</span>
+    </h1>
+  );
+}
 
 export type CalendarSeat = "admin" | "individual";
 
