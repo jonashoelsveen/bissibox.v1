@@ -1278,8 +1278,10 @@ function DayCellPair(props: DayCellPairProps) {
         const cellColor = parsed.color ?? cell?.color ?? null;
         const cellLabel = parsed.text;
 
-        // Vivid full-opacity fill when a session has a color.
-        const bg = cellColor ?? undefined;
+        // Outlook/Motion style: soft tinted body, bright left edge accent.
+        const bg = cellColor
+          ? `color-mix(in srgb, ${cellColor} 18%, white)`
+          : undefined;
 
         // Merge with neighbouring sessions of the same color so a multi-cell
         // session reads as one continuous block (no inner divider lines).
