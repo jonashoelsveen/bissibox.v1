@@ -1287,7 +1287,7 @@ export function TeamBoardPage({
 
       {editMeetingOpen && (
         <MeetingDialog
-          title="Edit meeting"
+          title="About this meeting"
           name={editMeetingTitle}
           folder={editMeetingFolder}
           folders={folders}
