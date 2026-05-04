@@ -28,6 +28,16 @@ export function YearCalendarView({
 }) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta, undo, redo, canUndo, canRedo } =
     useYearStore(calId, defaultTitle);
+  const {
+    events,
+    upsertEvent,
+    moveEvent,
+    deleteEvent,
+    undoEvents,
+    redoEvents,
+    canUndoEvents,
+    canRedoEvents,
+  } = useEventStore(calId);
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
