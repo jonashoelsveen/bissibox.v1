@@ -50,52 +50,27 @@ function extractFromSpreadsheet(bytes: Uint8Array): string {
   for (const sheetName of wb.SheetNames) {
     const ws = wb.Sheets[sheetName];
     if (!ws) continue;
-    out.push(`### Sheet: ${sheetName}`);
-    // CSV-like rendering preserves row/column structure for the LLM.
-    const csv = XLSX.utils.sheet_to_csv(ws, { blankrows: false, FS: " | " });
-    out.push(csv);
+    // Extract raw structural data rows (array-of-arrays) — preserves the
+    // exact column layout of the source so the LLM never has to guess.
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false });
+    out.push(`[SHEET: ${sheetName}]`);
+    out.push(JSON.stringify(rows, null, 2));
   }
-  return out.join("\n\n").slice(0, 50_000);
+  return out.join("\n\n").slice(0, 60_000);
 }
 
 function extractFromCsv(bytes: Uint8Array): string {
-  return new TextDecoder().decode(bytes).slice(0, 50_000);
+  return new TextDecoder().decode(bytes).slice(0, 60_000);
 }
 
 function extractFromText(bytes: Uint8Array): string {
-  return new TextDecoder().decode(bytes).slice(0, 50_000);
-}
-
-// Best-effort PDF text extraction without heavy deps. Falls back to
-// returning a stub that signals to the AI that only the filename is
-// available — the model can still produce something usable in many cases.
-function extractFromPdf(bytes: Uint8Array, fileName: string): string {
-  const text = new TextDecoder("latin1").decode(bytes);
-  const chunks: string[] = [];
-  // Naive parenthesised string extraction from PDF content streams.
-  const re = /\(((?:[^()\\]|\\.)*)\)/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    const s = m[1].replace(/\\(\d{3}|.)/g, (_, esc) => {
-      if (esc.length === 3) return String.fromCharCode(parseInt(esc, 8));
-      const map: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f" };
-      return map[esc] ?? esc;
-    });
-    if (/[\p{L}\d]/u.test(s)) chunks.push(s);
-    if (chunks.join(" ").length > 50_000) break;
-  }
-  const joined = chunks.join(" ").trim();
-  if (joined.length < 50) {
-    return `[PDF: ${fileName}]\nUnable to extract text reliably. Use the filename and any inferred season-schedule context to produce events.`;
-  }
-  return joined.slice(0, 50_000);
+  return new TextDecoder().decode(bytes).slice(0, 60_000);
 }
 
 function extractContent(bytes: Uint8Array, fileName: string, mime: string): string {
   const kind = classifyMime(fileName, mime);
   if (kind === "spreadsheet") return extractFromSpreadsheet(bytes);
   if (kind === "csv") return extractFromCsv(bytes);
-  if (kind === "pdf") return extractFromPdf(bytes, fileName);
   return extractFromText(bytes);
 }
 
