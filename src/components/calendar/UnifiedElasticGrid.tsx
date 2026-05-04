@@ -599,6 +599,51 @@ export function UnifiedElasticGrid({
     return (since6 / 30) * rowHeight;
   }, [now, mode, rowHeight]);
 
+  // ─── Week view ↔ time helpers ────────────────────────────────────────
+  // Cell layout: row 1 (day=1) starts at 06:00 and each (day, session)
+  // pair is one 30-min slot. cellIndex = (day - 1) * 2 + session.
+  const WEEK_START_HOUR = 6;
+  const rankToMinutes = (rank: number) => WEEK_START_HOUR * 60 + rank * 30;
+  const cellKeyToDate = useCallback(
+    (k: CellKey): Date | null => {
+      if (mode.kind !== "year") return null;
+      const date = weekDates[k.month];
+      if (!date) return null;
+      const cellIndex = (k.day - 1) * 2 + k.session;
+      const minutes = rankToMinutes(cellIndex);
+      return setHM(date, Math.floor(minutes / 60), minutes % 60);
+    },
+    [mode, weekDates],
+  );
+
+  // Events visible in the current week (week view) or month (month view).
+  const weekEvents = useMemo(() => {
+    if (mode.kind !== "year") return [];
+    return events.filter((e) => {
+      const d = fromISOLocal(e.startISO);
+      return weekDates.some((wd) => sameDay(wd, d));
+    });
+  }, [events, weekDates, mode]);
+
+  // Find an event under a cell click in week view, if any (for editing).
+  const eventAtCell = useCallback(
+    (k: CellKey): CalendarEvent | null => {
+      const at = cellKeyToDate(k);
+      if (!at) return null;
+      const atMin = at.getHours() * 60 + at.getMinutes();
+      const target = weekEvents.find((e) => {
+        const s = fromISOLocal(e.startISO);
+        const en = fromISOLocal(e.endISO);
+        if (!sameDay(s, at)) return false;
+        const sMin = s.getHours() * 60 + s.getMinutes();
+        const eMin = en.getHours() * 60 + en.getMinutes();
+        return atMin >= sMin && atMin < eMin;
+      });
+      return target ?? null;
+    },
+    [cellKeyToDate, weekEvents],
+  );
+
   return (
     <div
       ref={containerRef}
