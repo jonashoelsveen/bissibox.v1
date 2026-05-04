@@ -347,11 +347,15 @@ export function UnifiedElasticGrid({
     eventId?: string;
   } | null>(null);
 
+  // Refs assigned later in render so openPopover can reach the latest
+  // week-events lookup without forward-declaration issues.
+  const eventAtCellRef = useRef<((k: CellKey) => CalendarEvent | null) | null>(null);
+
   const openPopover = useCallback(
     (k: CellKey, anchor: HTMLElement) => {
       // Week view: prefer editing the existing event under this cell.
-      if (mode.kind === "year") {
-        const ev = eventAtCell(k);
+      if (mode.kind === "year" && eventAtCellRef.current) {
+        const ev = eventAtCellRef.current(k);
         if (ev) {
           setPopover({
             key: k,
@@ -375,7 +379,7 @@ export function UnifiedElasticGrid({
         isEdit: !!raw.trim(),
       });
     },
-    [calId, data, mode, eventAtCell],
+    [calId, data, mode],
   );
 
   const closePopover = useCallback(() => setPopover(null), []);
