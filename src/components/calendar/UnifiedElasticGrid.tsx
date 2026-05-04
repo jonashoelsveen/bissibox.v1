@@ -25,7 +25,7 @@
  */
 
 import type React from "react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus } from "lucide-react";
 import type { CellData, CellKey, Session, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
