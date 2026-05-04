@@ -908,8 +908,35 @@ export function UnifiedElasticGrid({
           initialColor={popover.initialColor}
           isEdit={popover.isEdit}
           anchor={popover.rect}
+          enableDuration={mode.kind === "year"}
+          initialTime={(() => {
+            if (mode.kind !== "year") return null;
+            // Editing an existing event → use its real time.
+            if (popover.eventId) {
+              const ev = events.find((e) => e.id === popover.eventId);
+              if (ev && !ev.allDay) {
+                const s = fromISOLocal(ev.startISO);
+                const e = fromISOLocal(ev.endISO);
+                return {
+                  startMin: s.getHours() * 60 + s.getMinutes(),
+                  endMin: e.getHours() * 60 + e.getMinutes(),
+                };
+              }
+              return null;
+            }
+            // New event from a marked range → derive time from the range.
+            if (markRange) {
+              const startMin = WEEK_START_HOUR * 60 + (markRange.lo - 2) * 30;
+              const endMin = WEEK_START_HOUR * 60 + (markRange.hi - 2 + 1) * 30;
+              return { startMin, endMin };
+            }
+            // Fallback: anchor cell (single slot).
+            const lo = popover.key.day * 2 + popover.key.session;
+            const startMin = WEEK_START_HOUR * 60 + (lo - 2) * 30;
+            return { startMin, endMin: startMin + 30 };
+          })()}
           onClose={closePopover}
-          onCommit={(text, color) => {
+          onCommit={(text, color, time) => {
             const t = text.trim();
 
             // ── Week view: write/edit a CalendarEvent (real datetime). ──
@@ -917,15 +944,18 @@ export function UnifiedElasticGrid({
               const colIdx = markRange ? markRange.month : popover.key.month;
               const date = weekDates[colIdx];
               if (date) {
-                // Determine slot range: marked range > popover anchor cell.
+                // Determine slot range: explicit `time` from clock picker >
+                // marked range > popover anchor cell.
                 // Note: rank = day*2 + session uses day starting at 1, while
                 // the visual cellIndex used for time mapping is
                 // (day-1)*2 + session — so subtract 2 from the rank when
                 // converting to minutes.
                 const lo = markRange ? markRange.lo : popover.key.day * 2 + popover.key.session;
                 const hi = markRange ? markRange.hi : lo;
-                const startMin = WEEK_START_HOUR * 60 + (lo - 2) * 30;
-                const endMin = WEEK_START_HOUR * 60 + (hi - 2 + 1) * 30;
+                const rangeStartMin = WEEK_START_HOUR * 60 + (lo - 2) * 30;
+                const rangeEndMin = WEEK_START_HOUR * 60 + (hi - 2 + 1) * 30;
+                const startMin = time ? time.startMin : rangeStartMin;
+                const endMin = time ? time.endMin : rangeEndMin;
                 const startISO = toISOLocal(setHM(date, Math.floor(startMin / 60), startMin % 60));
                 const endISO = toISOLocal(setHM(date, Math.floor(endMin / 60), endMin % 60));
 
@@ -938,8 +968,9 @@ export function UnifiedElasticGrid({
                       id: popover.eventId,
                       title: t,
                       color,
-                      // Preserve the original times unless the user marked a new range.
-                      ...(markRange ? { startISO, endISO } : {}),
+                      // Update times if the user marked a new range OR
+                      // adjusted the time via the clock picker.
+                      ...(markRange || time ? { startISO, endISO } : {}),
                       allDay: false,
                     });
                   }
