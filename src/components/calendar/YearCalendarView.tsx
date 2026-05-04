@@ -120,10 +120,11 @@ function YearCalendarViewInner({
     [overlay.events, overlay.visibleCategoryIds, overlay.categoryColors, overlay.categories],
   );
   const previewActive = overlay.events !== null;
-  const mergedEvents = useMemo(
-    () => (previewActive ? [...events, ...ghostEvents] : events),
-    [previewActive, events, ghostEvents],
-  );
+  const mergedEvents = useMemo(() => {
+    const base = previewActive ? [...events, ...ghostEvents] : events;
+    if (!visibleCategories) return base;
+    return base.filter((e) => visibleCategories.has(categoryKeyFromColor(e.color)));
+  }, [previewActive, events, ghostEvents, visibleCategories]);
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
