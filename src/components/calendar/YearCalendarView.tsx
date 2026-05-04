@@ -57,6 +57,26 @@ function YearCalendarViewInner({
     canUndoEvents,
     canRedoEvents,
   } = useEventStore(calId);
+
+  // Preview overlay (Import Calendar). When active, ghost events are merged
+  // into the events list so the existing month/week renderers display them
+  // without bespoke overlay layers. Real events are dimmed via wrapper class.
+  const overlay = usePreviewOverlay();
+  const ghostEvents = useMemo(
+    () =>
+      buildGhostEvents(
+        overlay.events,
+        overlay.visibleCategoryIds,
+        overlay.categoryColors,
+        overlay.categories,
+      ),
+    [overlay.events, overlay.visibleCategoryIds, overlay.categoryColors, overlay.categories],
+  );
+  const previewActive = overlay.events !== null;
+  const mergedEvents = useMemo(
+    () => (previewActive ? [...events, ...ghostEvents] : events),
+    [previewActive, events, ghostEvents],
+  );
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
