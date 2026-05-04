@@ -501,6 +501,56 @@ export function UnifiedElasticGrid({
     setMarkRange({ month: k.month, lo: Math.min(a, r), hi: Math.max(a, r) });
   }, []);
 
+  const beginMarkDrag = useCallback((k: CellKey) => {
+    if (!markRange) return;
+    const grabRank = k.day * 2 + k.session;
+    markDragRef.current = {
+      grabRank,
+      grabMonth: k.month,
+      size: markRange.hi - markRange.lo + 1,
+      offset: grabRank - markRange.lo,
+    };
+    setIsDraggingMark(true);
+  }, [markRange]);
+
+  // While dragging the marked range, hover-over cells determine the new
+  // column + rank position. Reuses the existing mark-cell hover via a global
+  // mousemove + elementFromPoint lookup so we cover quick pointer movement.
+  useEffect(() => {
+    if (!isDraggingMark) return;
+    const onMove = (e: MouseEvent) => {
+      const drag = markDragRef.current;
+      if (!drag) return;
+      const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const cellEl = el?.closest("[data-cell-key]") as HTMLElement | null;
+      if (!cellEl) return;
+      const raw = cellEl.dataset.cellKey;
+      if (!raw) return;
+      const [mStr, dStr, sStr] = raw.split(":");
+      const newMonth = Number(mStr);
+      const newDay = Number(dStr);
+      const newSession = Number(sStr);
+      const hoverRank = newDay * 2 + newSession;
+      let newLo = hoverRank - drag.offset;
+      let newHi = newLo + drag.size - 1;
+      // Clamp to slot range. In week view rows = 19 days × 2 sessions = 38.
+      const maxRank = 19 * 2 - 1;
+      if (newLo < 0) { newHi -= newLo; newLo = 0; }
+      if (newHi > maxRank) { newLo -= (newHi - maxRank); newHi = maxRank; }
+      setMarkRange({ month: newMonth, lo: newLo, hi: newHi });
+    };
+    const onUp = () => {
+      markDragRef.current = null;
+      setIsDraggingMark(false);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [isDraggingMark]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
