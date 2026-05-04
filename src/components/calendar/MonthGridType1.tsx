@@ -679,10 +679,28 @@ export function MonthGridType1({
             seat={seat}
             initialText={popover.initialText}
             initialColor={popover.initialColor}
-            isEdit={popover.editIdx >= 0}
+            isEdit={popover.editIdx >= 0 || !!popover.eventId}
             anchor={popover.rect}
+            enableDuration={!!onUpsertEvent}
+            initialTime={(() => {
+              if (popover.eventId) {
+                const ev = events.find((e) => e.id === popover.eventId);
+                if (ev) {
+                  const s = fromISOLocal(ev.startISO);
+                  const e = fromISOLocal(ev.endISO);
+                  // Only show as a duration if it isn't an all-day event.
+                  if (!ev.allDay) {
+                    return {
+                      startMin: s.getHours() * 60 + s.getMinutes(),
+                      endMin: e.getHours() * 60 + e.getMinutes(),
+                    };
+                  }
+                }
+              }
+              return null;
+            })()}
             onClose={closePopover}
-            onCommit={(text, color) => {
+            onCommit={(text, color, time) => {
               const cell = days.find(
                 (d) => d.row === popover.pos.row && d.col === popover.pos.col,
               );
@@ -697,7 +715,29 @@ export function MonthGridType1({
                 if (!t) {
                   onDeleteEvent?.(popover.eventId);
                 } else {
-                  onUpsertEvent?.({ id: popover.eventId, title: t, color });
+                  const patch: Parameters<NonNullable<typeof onUpsertEvent>>[0] = {
+                    id: popover.eventId,
+                    title: t,
+                    color,
+                  };
+                  if (time) {
+                    const start = setHM(
+                      cell.date,
+                      Math.floor(time.startMin / 60),
+                      time.startMin % 60,
+                    );
+                    const end = setHM(
+                      cell.date,
+                      Math.floor(time.endMin / 60),
+                      time.endMin % 60,
+                    );
+                    Object.assign(patch, {
+                      startISO: toISOLocal(start),
+                      endISO: toISOLocal(end),
+                      allDay: false,
+                    });
+                  }
+                  onUpsertEvent?.(patch);
                 }
                 closePopover();
                 return;
@@ -707,14 +747,20 @@ export function MonthGridType1({
               // Default to the unified event store so it appears in week view too.
               if (popover.editIdx < 0 && onUpsertEvent) {
                 if (t) {
-                  const start = setHM(cell.date, 9, 0);
-                  const end = addMinutes(start, 60);
+                  const startH = time ? Math.floor(time.startMin / 60) : 9;
+                  const startM = time ? time.startMin % 60 : 0;
+                  const endH = time ? Math.floor(time.endMin / 60) : 10;
+                  const endM = time ? time.endMin % 60 : 0;
+                  const start = setHM(cell.date, startH, startM);
+                  const end = setHM(cell.date, endH, endM);
                   onUpsertEvent({
                     title: t,
                     color,
                     startISO: toISOLocal(start),
                     endISO: toISOLocal(end),
-                    allDay: true,
+                    // If the user explicitly set a time, treat as a timed
+                    // event (so it appears in week view at that slot).
+                    allDay: !time,
                     category: categoryFromColor(color),
                   });
                 }
