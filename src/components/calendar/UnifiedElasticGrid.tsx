@@ -566,7 +566,7 @@ export function UnifiedElasticGrid({
 
   // Index of today inside the visible week, -1 if not in view.
   const todayColIdx = useMemo(() => {
-    for (let i = 0; i < 7; i++) if (isSameDay(weekDates[i], now)) return i;
+    for (let i = 0; i < 7; i++) if (sameDay(weekDates[i], now)) return i;
     return -1;
   }, [weekDates, now]);
 
@@ -649,7 +649,7 @@ export function UnifiedElasticGrid({
           >
             {months.map((m) => {
               const colDate = weekDates[m.idx];
-              const isToday = mode.kind === "year" && colDate && isSameDay(colDate, now);
+              const isToday = mode.kind === "year" && colDate && sameDay(colDate, now);
               return (
                 <div
                   key={`h-${m.idx}`}
