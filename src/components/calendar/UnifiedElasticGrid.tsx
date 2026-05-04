@@ -1826,7 +1826,7 @@ function WeekEventsOverlay({
         const since = startMin - startHour * 60;
         const dur = Math.max(30, endMin - startMin);
         if (since < 0 || since >= 19 * 60) return null;
-        const top = headerH + (since / 30) * rowHeight;
+        const top = headerBottom + (since / 30) * rowHeight;
         const height = (dur / 30) * rowHeight;
         const box = cols[colIdx];
         const isDragging = drag?.id === ev.id && drag.moved;
