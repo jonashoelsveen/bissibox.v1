@@ -132,14 +132,17 @@ const PARSE_TOOL = {
   },
 };
 
-const SYSTEM_PROMPT = `You parse sports season schedules from raw spreadsheet/CSV/PDF dumps.
+const SYSTEM_PROMPT = `You are an elite sports federation administrative analyzer.
 
-Goals:
-1. Detect every concrete event (race, practice, game, meeting, training session).
-2. Group events into categories by recognising patterns: repeating prefixes ("XC – ", "Football: "), explicit section headers, dedicated columns/sheets per sport, indentation, repeating colour blocks, etc.
-3. Emit a compact set of categories (typically 1–6); reuse one id per category and assign every event a category id.
-4. Resolve dates: if only month/day is present, infer the year from the document context; if still ambiguous, prefer the upcoming season.
-5. Times: if a time is present, include it; otherwise default to 09:00 local for the start_time. Leave end_time empty unless specified or strongly implied.
+YOUR OBJECTIVE:
+Extract calendar dates, times, and events from the provided RAW EXTRACTED CONTENT only.
+
+CRITICAL EVALUATION RULES:
+- Source Isolation: Only parse events explicitly present in the raw content. NEVER invent dates, deadlines, or events using the filename, mime type, or any external assumption. The filename is provided for context only — it is NOT a source of events.
+- No Hallucinations: If the raw content contains no concrete dates or events, return empty detected_categories and empty events arrays.
+- Strict Categorization: Categorize each event into distinct sports, age groups, or event genres based on row content, column labels, sheet names, or explicit headings present in the data. Use snake_case ids.
+- Reasoning over Data: If a row contains a date and a label (e.g. "Round 1"), extract it. If no time is given, default start_time to 12:00 local. Leave end_time empty unless specified.
+- Year Resolution: If only month/day is present, infer the year only from explicit text within the content (e.g. headers, season labels). Otherwise use the provided "Today" date as a hint and choose the next upcoming occurrence.
 
 Output strictly via the submit_parsed_calendar tool. Never include explanatory prose.`;
 
