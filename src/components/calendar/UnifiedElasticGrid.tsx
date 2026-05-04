@@ -834,50 +834,58 @@ export function UnifiedElasticGrid({
               { length: mode.kind === "year" ? 19 : 31 },
               (_, i) => i + 1,
             ).map((day) => (
-              <DayRow
-                key={day}
-                day={day}
-                months={months}
-                year={year}
-                calId={calId}
-                data={data}
-                mode={mode}
-                rowHeight={rowHeight}
-                selected={selected}
-                selectedId={selectedId}
-                editingId={editingId}
-                editValue={editValue}
-                setEditValue={setEditValue}
-                onSelect={handleSelect}
-                onBeginEdit={beginEdit}
-                onCommitEdit={commitEdit}
-                onCommitDuration={onCommitDuration}
-                onMoveAfterCommit={moveSelection}
-                inDragRange={inDragRange}
-                onCellMouseEnter={(k) => {
-                  if (dragStartRef.current && k.month === dragStartRef.current.month) {
-                    setDragRange({
-                      month: dragStartRef.current.month,
-                      toDay: k.day,
-                      toSession: k.session,
-                    });
-                  }
-                  extendMark(k);
-                }}
-                onHandleDown={(k) => {
-                  dragStartRef.current = k;
-                  setDragRange({ month: k.month, toDay: k.day, toSession: k.session });
-                }}
-                isMonthFocused={isMonthFocused}
-                isMonthPeriph={isMonthPeriph}
-                markInfo={markInfo}
-                onMarkBegin={beginMark}
-                onMarkDragBegin={beginMarkDrag}
-                isDraggingMark={isDraggingMark}
-                onOpenPopover={openPopover}
-                allowMark={mode.kind === "year"}
-                markReleased={markReleased}
-              />
+              <Fragment key={day}>
+                {mode.kind === "year" && (
+                  <div
+                    className="border-b border-r border-hairline bg-card"
+                    style={{ height: rowHeight * 2 }}
+                    aria-hidden
+                  />
+                )}
+                <DayRow
+                  day={day}
+                  months={months}
+                  year={year}
+                  calId={calId}
+                  data={data}
+                  mode={mode}
+                  rowHeight={rowHeight}
+                  selected={selected}
+                  selectedId={selectedId}
+                  editingId={editingId}
+                  editValue={editValue}
+                  setEditValue={setEditValue}
+                  onSelect={handleSelect}
+                  onBeginEdit={beginEdit}
+                  onCommitEdit={commitEdit}
+                  onCommitDuration={onCommitDuration}
+                  onMoveAfterCommit={moveSelection}
+                  inDragRange={inDragRange}
+                  onCellMouseEnter={(k) => {
+                    if (dragStartRef.current && k.month === dragStartRef.current.month) {
+                      setDragRange({
+                        month: dragStartRef.current.month,
+                        toDay: k.day,
+                        toSession: k.session,
+                      });
+                    }
+                    extendMark(k);
+                  }}
+                  onHandleDown={(k) => {
+                    dragStartRef.current = k;
+                    setDragRange({ month: k.month, toDay: k.day, toSession: k.session });
+                  }}
+                  isMonthFocused={isMonthFocused}
+                  isMonthPeriph={isMonthPeriph}
+                  markInfo={markInfo}
+                  onMarkBegin={beginMark}
+                  onMarkDragBegin={beginMarkDrag}
+                  isDraggingMark={isDraggingMark}
+                  onOpenPopover={openPopover}
+                  allowMark={mode.kind === "year"}
+                  markReleased={markReleased}
+                />
+              </Fragment>
             ))}
           </div>
           {mode.kind === "year" && (
