@@ -902,14 +902,65 @@ function MiniDurationColumn({
     setRange({ lo: Math.min(a, rank), hi: Math.max(a, rank) });
   };
 
+  // Auto-scroll while dragging near the edges (Excel-style).
+  const autoScrollRef = useRef<{ raf: number | null; dy: number; clientY: number }>({
+    raf: null,
+    dy: 0,
+    clientY: 0,
+  });
+  const stopAutoScroll = () => {
+    if (autoScrollRef.current.raf != null) {
+      cancelAnimationFrame(autoScrollRef.current.raf);
+      autoScrollRef.current.raf = null;
+    }
+    autoScrollRef.current.dy = 0;
+  };
+  const tickAutoScroll = () => {
+    const el = gridRef.current;
+    if (!el || !dragRef.current) {
+      stopAutoScroll();
+      return;
+    }
+    const { dy, clientY } = autoScrollRef.current;
+    if (dy !== 0) {
+      el.scrollTop = Math.max(
+        0,
+        Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + dy),
+      );
+      const r = rankFromClientY(clientY);
+      if (r != null) extendTo(r);
+    }
+    autoScrollRef.current.raf = requestAnimationFrame(tickAutoScroll);
+  };
+
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       if (!dragRef.current) return;
       const r = rankFromClientY(e.clientY);
       if (r != null) extendTo(r);
+      // Edge auto-scroll.
+      const el = gridRef.current;
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const edge = 24;
+        let dy = 0;
+        if (e.clientY < rect.top + edge) {
+          dy = -Math.max(4, Math.ceil((rect.top + edge - e.clientY) / 2));
+        } else if (e.clientY > rect.bottom - edge) {
+          dy = Math.max(4, Math.ceil((e.clientY - (rect.bottom - edge)) / 2));
+        }
+        autoScrollRef.current.dy = dy;
+        autoScrollRef.current.clientY = e.clientY;
+        if (dy !== 0 && autoScrollRef.current.raf == null) {
+          autoScrollRef.current.raf = requestAnimationFrame(tickAutoScroll);
+        } else if (dy === 0) {
+          stopAutoScroll();
+        }
+      }
     };
     const onUp = () => {
       dragRef.current = null;
+      stopAutoScroll();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter" && range) {
@@ -931,6 +982,7 @@ function MiniDurationColumn({
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
       window.removeEventListener("keydown", onKey, true);
+      stopAutoScroll();
     };
   }, [range, onCommit, onClose, startHour, rows, rowHeight]);
 
