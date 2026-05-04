@@ -530,10 +530,13 @@ export function MonthGridType1({
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
                     <AnimatePresence initial={false}>
                       {visible.map((it) => {
-                        const { color: customColor, text: displayText } = splitColor(it.text);
+                        const raw = it.kind === "legacy" ? it.raw : it.event.title;
+                        const itemColor = it.kind === "legacy" ? splitColor(it.raw).color : it.event.color;
+                        const displayText = it.kind === "legacy" ? splitColor(it.raw).text : it.event.title;
+                        const itemKey = it.kind === "legacy" ? `legacy-${it.idx}` : `event-${it.event.id}`;
                         return (
                           <motion.div
-                            key={`${id}-${it.idx}-${it.text}`}
+                            key={`${id}-${itemKey}`}
                             layout
                             initial={{ opacity: 0, y: -2 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -545,51 +548,54 @@ export function MonthGridType1({
                             data-role="item"
                             draggable
                             onDragStart={(e) => {
-                              const ev = e as unknown as DragEvent;
-                              if (ev.dataTransfer) {
-                                ev.dataTransfer.effectAllowed = "move";
-                                ev.dataTransfer.setData("text/plain", it.text);
+                              const dev = e as unknown as DragEvent;
+                              if (dev.dataTransfer) {
+                                dev.dataTransfer.effectAllowed = "move";
+                                dev.dataTransfer.setData("text/plain", raw);
                               }
-                              setDragItem({ fromKey: k, text: it.text });
+                              if (it.kind === "legacy") {
+                                setDragItem({ fromKey: k, text: it.raw, source: "legacy" });
+                              } else {
+                                setDragItem({ fromKey: k, text: it.event.title, source: "event", eventId: it.event.id });
+                              }
                             }}
                             onDragEnd={() => setDragItem(null)}
                             onClick={(e) => {
                               e.stopPropagation();
-                              openItemEditor(
-                                pos,
-                                it.idx,
-                                it.text,
-                                e.currentTarget as HTMLElement,
-                              );
+                              if (it.kind === "legacy") {
+                                openItemEditor(pos, it.idx, it.raw, e.currentTarget as HTMLElement);
+                              } else {
+                                openEventEditor(pos, it.event, e.currentTarget as HTMLElement);
+                              }
                             }}
                             className={[
                               "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink transition-all",
-                              customColor ? "" : "bg-secondary/70",
+                              itemColor ? "" : "bg-secondary/70",
                               "hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
-                              customColor ? "" : "hover:bg-secondary",
+                              itemColor ? "" : "hover:bg-secondary",
                             ].join(" ")}
                             style={
-                              customColor
+                              itemColor
                                 ? {
-                                    backgroundColor: `${customColor}1F`,
-                                    boxShadow: `inset 2px 0 0 ${customColor}`,
+                                    backgroundColor: `${itemColor}1F`,
+                                    boxShadow: `inset 2px 0 0 ${itemColor}`,
                                   }
                                 : undefined
                             }
                             title={displayText}
                           >
                             {(() => {
-                              const Icon = iconForColor(customColor);
+                              const Icon = iconForColor(itemColor);
                               return Icon ? (
                                 <Icon
                                   className="h-3 w-3 shrink-0"
-                                  style={{ color: customColor ?? "currentColor" }}
+                                  style={{ color: itemColor ?? "currentColor" }}
                                   strokeWidth={2.25}
                                 />
-                              ) : customColor ? (
+                              ) : itemColor ? (
                                 <span
                                   className="h-1.5 w-1.5 shrink-0 rounded-full"
-                                  style={{ background: customColor }}
+                                  style={{ background: itemColor }}
                                 />
                               ) : null;
                             })()}
@@ -614,7 +620,7 @@ export function MonthGridType1({
                   </div>
 
                   {/* Hover "+" affordance — visible only when cell is empty + in month */}
-                  {d.inMonth && items.length === 0 && (
+                  {d.inMonth && allItems.length === 0 && (
                     <span className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover/cell:opacity-100">
                       <Plus className="h-3.5 w-3.5 text-muted-foreground/60" strokeWidth={2.25} />
                     </span>
