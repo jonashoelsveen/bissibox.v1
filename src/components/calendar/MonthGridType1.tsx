@@ -421,12 +421,29 @@ export function MonthGridType1({
                 session: 0,
               };
               const id = makeCellId(calId, k);
-              const items = parseItems(data[id]?.text);
+              const legacyItems = parseItems(data[id]?.text);
+              // Events whose start day is this calendar cell.
+              const dayEvents = events.filter((e) => sameDay(fromISOLocal(e.startISO), d.date));
+
+              type UnifiedItem =
+                | { kind: "legacy"; idx: number; raw: string }
+                | { kind: "event"; event: CalendarEvent };
+              const allItems: UnifiedItem[] = [
+                ...dayEvents
+                  .slice()
+                  .sort((a, b) => a.startISO.localeCompare(b.startISO))
+                  .map<UnifiedItem>((event) => ({ kind: "event", event })),
+                ...legacyItems.map<UnifiedItem>((it) => ({
+                  kind: "legacy",
+                  idx: it.idx,
+                  raw: it.text,
+                })),
+              ];
 
               // Strict row alignment: limit visible items, show "+N more"
               const MAX_VISIBLE = 3;
-              const visible = items.slice(0, MAX_VISIBLE);
-              const overflow = Math.max(0, items.length - MAX_VISIBLE);
+              const visible = allItems.slice(0, MAX_VISIBLE);
+              const overflow = Math.max(0, allItems.length - MAX_VISIBLE);
 
               return (
                 <div
