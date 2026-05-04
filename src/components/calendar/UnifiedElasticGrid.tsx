@@ -32,7 +32,8 @@ import { makeCellId } from "./yearStore";
 import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, contrastTextOn, categoryFromColor } from "./MonthGridType1";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
-import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes } from "./dateUtils";
+import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoWeekNumber } from "./dateUtils";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 
 type ViewMode = "day" | "week" | "month";
 
