@@ -21,6 +21,9 @@ export interface ParsedImport {
   total_events_found: number;
   detected_categories: DetectedCategory[];
   events: ParsedEvent[];
+  past_status?: "all_past" | "partly_past" | "none";
+  past_events_count?: number;
+  future_events_count?: number;
 }
 
 export type ImportStep = "source" | "library" | "loading" | "preview";

@@ -17,8 +17,19 @@ export function PreviewStep({
   categoryColors: Record<string, string>;
 }) {
   const visibleCount = data.events.filter((e) => visible.has(e.category)).length;
+  const pastStatus = data.past_status ?? "none";
   return (
     <div>
+      {pastStatus === "all_past" && (
+        <div className="mb-3 rounded-md border border-amber-300/40 bg-amber-50/60 px-3 py-2 text-xs text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-200">
+          This file appears to contain only past events ({data.past_events_count ?? 0} dated before today). Review carefully before importing.
+        </div>
+      )}
+      {pastStatus === "partly_past" && (
+        <div className="mb-3 rounded-md border border-amber-300/40 bg-amber-50/60 px-3 py-2 text-xs text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-200">
+          {data.past_events_count ?? 0} past event{(data.past_events_count ?? 0) === 1 ? "" : "s"} from this file were hidden. Showing {data.future_events_count ?? data.total_events_found} upcoming event{(data.future_events_count ?? data.total_events_found) === 1 ? "" : "s"} only.
+        </div>
+      )}
       <div className="mb-3 text-sm text-ink">
         <span className="font-medium">{data.total_events_found}</span> events found,{" "}
         <span className="font-medium">{data.detected_categories.length}</span> categories detected.
