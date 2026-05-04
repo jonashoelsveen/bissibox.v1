@@ -1373,6 +1373,7 @@ export function TeamBoardPage({
                     setConfirmDeleteMeetingId(null);
                     toast.success("Meeting deleted");
                     window.dispatchEvent(new Event("library:refresh"));
+                    onMeetingDeleted?.(id);
                   }}
                   disabled={deletingMeeting}
                   className="rounded-full bg-destructive px-5 py-2 text-xs text-destructive-foreground hover:opacity-90 disabled:opacity-50"
