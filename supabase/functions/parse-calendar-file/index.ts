@@ -289,17 +289,36 @@ serve(async (req) => {
         });
       }
     }
+    // Past-event detection. Only count events with high confidence (>= 80) so
+    // the signal is trustworthy. "Past" means start_time strictly before today.
+    const now = Date.now();
+    const highConf = events.filter((e) => (e.reasoning_confidence ?? 0) >= 80);
+    const pastHigh = highConf.filter((e) => Date.parse(e.start_time) < now);
+    const futureHigh = highConf.filter((e) => Date.parse(e.start_time) >= now);
+    const pastRatio = highConf.length > 0 ? pastHigh.length / highConf.length : 0;
+    let past_status: "all_past" | "partly_past" | "none" = "none";
+    if (highConf.length > 0 && pastRatio >= 0.8) past_status = "all_past";
+    else if (pastHigh.length > 0 && futureHigh.length > 0) past_status = "partly_past";
+
+    // Filter events visible to the UI: if the file is mostly past, keep all so
+    // user sees what was detected; otherwise hide individual past events and
+    // only surface upcoming ones.
+    const visibleEvents = past_status === "all_past" ? events : events.filter((e) => Date.parse(e.start_time) >= now);
+
     const counts = new Map<string, number>();
-    for (const e of events) counts.set(e.category, (counts.get(e.category) ?? 0) + 1);
+    for (const e of visibleEvents) counts.set(e.category, (counts.get(e.category) ?? 0) + 1);
     const detected_categories = parsed.detected_categories
       .filter((c) => (counts.get(c.id) ?? 0) > 0)
       .map((c) => ({ ...c, count: counts.get(c.id) ?? 0 }));
 
     return new Response(
       JSON.stringify({
-        total_events_found: events.length,
+        total_events_found: visibleEvents.length,
         detected_categories,
-        events,
+        events: visibleEvents,
+        past_status,
+        past_events_count: pastHigh.length,
+        future_events_count: futureHigh.length,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
