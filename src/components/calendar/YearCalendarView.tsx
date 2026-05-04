@@ -196,6 +196,8 @@ export function YearCalendarView({
             if (r) setCurrentRange(r);
             else setCurrentRange({ start: d, end: d });
           }}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
       </div>
     </div>
