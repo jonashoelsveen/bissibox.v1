@@ -119,7 +119,31 @@ export function YearCalendarView({
           </h1>
         )}
         <div className="flex items-center gap-1">
-          <span className="mr-2 text-xs text-muted-foreground">{meta.year}</span>
+          {/* Mode dropdown + prev/next/mini-cal arrows. Sit to the LEFT of
+              the year + undo/redo cluster so all navigation lives above the
+              calendar window instead of floating on top of it. */}
+          <HeaderDropdown<ViewMode>
+            ariaLabel="Visningsmodus"
+            value={viewMode}
+            onChange={setViewMode}
+            width={108}
+            options={[
+              { value: "day", label: "Dag" },
+              { value: "week", label: "Uke" },
+              { value: "month", label: "Måned" },
+            ]}
+          />
+          <MonthNavControl
+            unit={viewMode}
+            currentDate={currentDate}
+            selectedRange={currentRange}
+            onChange={(d, r) => {
+              setCurrentDate(d);
+              if (r) setCurrentRange(r);
+              else setCurrentRange({ start: d, end: d });
+            }}
+          />
+          <span className="ml-2 mr-2 text-xs text-muted-foreground">{meta.year}</span>
           <button
             type="button"
             aria-label="Undo"
