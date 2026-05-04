@@ -206,6 +206,11 @@ export interface UnifiedElasticGridProps {
   currentRange: DateRange;
   /** Notify parent so the mini-cal & main view stay in sync. */
   onCurrentDateChange: (date: Date, range?: DateRange) => void;
+  /** Optional controlled view mode — when provided, the grid reads from
+   *  the parent. The internal dropdown is hidden in that case so the parent
+   *  can render its own controls in the header strip. */
+  viewMode?: ViewMode;
+  onViewModeChange?: (v: ViewMode) => void;
 }
 
 type Mode = { kind: "year" } | { kind: "month"; month: number };
