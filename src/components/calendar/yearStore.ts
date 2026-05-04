@@ -293,13 +293,20 @@ export function useEventStore(calId: string) {
   );
 
   const upsertEvent = useCallback(
-    (patch: Partial<CalendarEvent> & Pick<CalendarEvent, "startISO" | "endISO" | "title">) => {
+    (
+      patch:
+        | (Partial<CalendarEvent> & Pick<CalendarEvent, "startISO" | "endISO" | "title">)
+        | (Partial<CalendarEvent> & { id: string }),
+    ) => {
       const current = eventsRef.current;
-      const id = patch.id ?? makeEventId();
+      const id = (patch as { id?: string }).id ?? makeEventId();
       const existing = current.find((e) => e.id === id);
       const merged: CalendarEvent = {
         allDay: false,
         color: null,
+        title: "",
+        startISO: "",
+        endISO: "",
         ...existing,
         ...patch,
         id,
