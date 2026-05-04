@@ -231,7 +231,7 @@ export function ImportButton({
             {step === "loading" && (
               <div className="flex flex-col items-center gap-3 py-10 text-sm text-muted-foreground">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                AI is scanning the document for events…
+                Extracting schedule data from the file…
               </div>
             )}
 
