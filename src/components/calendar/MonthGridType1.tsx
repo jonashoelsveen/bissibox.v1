@@ -1099,12 +1099,12 @@ export function PopoverEditor({
   }
 
   // Mini duration column geometry.
-  const DUR_W = 116;
+  const DUR_W = 184;
   const DUR_GAP = 8;
-  const DUR_H = 320;
+  const DUR_ROW_H = 36; // matches week-view ROW_MONTH
   const DUR_START_HOUR = 6;
   const DUR_ROWS = 36; // 06:00 → 24:00 in 30-min slots
-  const DUR_ROW_H = 14;
+  const DUR_H = 360;
 
   const adminCategory = adminCategoryFromColor(color);
 
