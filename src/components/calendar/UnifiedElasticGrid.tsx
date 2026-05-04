@@ -1650,21 +1650,38 @@ function NowLine({
   }, [colIdx, scrollRef]);
 
   if (!box) return null;
+  const NOW_COLOR = "#FF4F4F";
   return (
-    <div
-      className="pointer-events-none absolute z-[15]"
-      style={{ top, left: box.left, width: box.width, height: 0 }}
-      aria-hidden
-    >
+    <>
+      {/* Past-time dim: subtle shading above the indicator inside today's column */}
+      {top > 0 && (
+        <div
+          className="pointer-events-none absolute z-[14]"
+          style={{
+            top: 0,
+            left: box.left,
+            width: box.width,
+            height: top,
+            background: "rgba(15, 23, 42, 0.04)",
+          }}
+          aria-hidden
+        />
+      )}
       <div
-        className="absolute left-0 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full"
-        style={{ background: "hsl(var(--primary))" }}
-      />
-      <div
-        className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2"
-        style={{ background: "hsl(var(--primary))" }}
-      />
-    </div>
+        className="pointer-events-none absolute z-[15]"
+        style={{ top, left: box.left, width: box.width, height: 0 }}
+        aria-hidden
+      >
+        <div
+          className="absolute -left-[3px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full shadow-[0_0_0_2px_rgba(255,79,79,0.18)]"
+          style={{ background: NOW_COLOR }}
+        />
+        <div
+          className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 rounded-full"
+          style={{ background: NOW_COLOR }}
+        />
+      </div>
+    </>
   );
 }
 
