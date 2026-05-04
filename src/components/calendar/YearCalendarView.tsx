@@ -156,6 +156,10 @@ export function YearCalendarView({
           onCommitDuration={(k, duration) => upsertCell(k, { duration })}
           onFill={fillRange}
           seat={seat}
+          events={events}
+          onUpsertEvent={upsertEvent}
+          onMoveEvent={moveEvent}
+          onDeleteEvent={deleteEvent}
           currentDate={currentDate}
           currentRange={currentRange}
           onCurrentDateChange={(d, r) => {
