@@ -12,7 +12,8 @@
 import { useEffect, useState } from "react";
 import { Settings as SettingsIcon, Undo2, Redo2 } from "lucide-react";
 import { useYearStore, useEventStore, type CellKey } from "./yearStore";
-import { UnifiedElasticGrid } from "./UnifiedElasticGrid";
+import { UnifiedElasticGrid, HeaderDropdown, type ViewMode } from "./UnifiedElasticGrid";
+import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
 
 export type CalendarSeat = "admin" | "individual";
