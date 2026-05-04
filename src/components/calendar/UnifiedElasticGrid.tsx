@@ -1017,8 +1017,18 @@ export function UnifiedElasticGrid({
 
             // ── Week view: write/edit a CalendarEvent (real datetime). ──
             if (mode.kind === "year") {
-              const colIdx = markRange ? markRange.month : popover.key.month;
-              const date = weekDates[colIdx];
+              // For edits without a fresh marked range, anchor to the EVENT's
+              // current day so saving doesn't jump the event to Monday
+              // (popover.key is a synthetic placeholder for event edits).
+              let date: Date | undefined;
+              if (markRange) {
+                date = weekDates[markRange.month];
+              } else if (popover.eventId) {
+                const ev = events.find((e) => e.id === popover.eventId);
+                date = ev ? fromISOLocal(ev.startISO) : undefined;
+              } else {
+                date = weekDates[popover.key.month];
+              }
               if (date) {
                 // Determine slot range: explicit `time` from clock picker >
                 // marked range > popover anchor cell.
