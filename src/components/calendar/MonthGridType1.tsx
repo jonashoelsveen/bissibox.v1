@@ -1048,8 +1048,7 @@ function MiniDurationColumn({
           })}
         </div>
       </div>
-      <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
-        <span className="mono tabular-nums">⏎ for å sette tid</span>
+      <div className="border-t border-hairline p-2">
         <button
           type="button"
           disabled={!range}
@@ -1059,7 +1058,7 @@ function MiniDurationColumn({
             const endMin = startHour * 60 + (range.hi + 1) * 30;
             onCommit({ startMin, endMin });
           }}
-          className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          className="w-full rounded-md bg-primary px-2.5 py-1.5 text-[11.5px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
           Sett tid
         </button>
