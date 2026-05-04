@@ -684,13 +684,16 @@ export function UnifiedElasticGrid({
     setHeaderH(headerRef.current.offsetHeight);
   }, [viewMode]);
 
-  const nowOffset = useMemo(() => {
+  // Minutes elapsed since the week-view start (06:00). Includes seconds for
+  // sub-minute precision so the indicator advances smoothly between ticks.
+  const nowMinutesSinceStart = useMemo(() => {
     if (mode.kind !== "year") return null;
-    const minutes = now.getHours() * 60 + now.getMinutes();
+    const minutes =
+      now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
     const since6 = minutes - 6 * 60;
     if (since6 < 0 || since6 > 19 * 60) return null;
-    return (since6 / 30) * rowHeight;
-  }, [now, mode, rowHeight]);
+    return since6;
+  }, [now, mode]);
 
   // ─── Week view ↔ time helpers ────────────────────────────────────────
   // Cell layout: row 1 (day=1) starts at 06:00 and each (day, session)
