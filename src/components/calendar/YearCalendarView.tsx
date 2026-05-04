@@ -50,6 +50,10 @@ export function YearCalendarView({
     const t = new Date();
     return { start: t, end: t };
   });
+  // Lifted from UnifiedElasticGrid so the prev/next + mini-cal arrows can
+  // live in the page header (left of the year + undo cluster) instead of
+  // floating on top of the grid.
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
 
   // Keyboard shortcuts: ⌘Z / Ctrl+Z for undo, ⌘⇧Z / Ctrl+Y for redo
   useEffect(() => {
