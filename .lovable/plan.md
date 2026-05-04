@@ -1,67 +1,97 @@
-# Zoomable Year ↔ Month View Transition
+## Problem
+
+The Month and Week views in the calendar share the same key namespace but use it to mean two completely different things:
+
+- **Month view** writes `{year: Y, month: 0–11, day: 1–31, session: 0}` — one cell per real calendar day, multiple items packed as newline‑separated text.
+- **Week view** writes `{year: Y, month: weekdayColIdx 0–6, day: halfHourSlotRank 1–19, session: 0|1}` — `month` is hijacked as the column index of the visible week and `day` as a 30‑minute slot rank starting at 06:00.
+
+This is why:
+- Events in week view never appear in month view (and vice versa).
+- The same week-view event "moves" when you change weeks (the column index always rewrites to the same `month` slot).
+- Multi-cell drag selections get attached to one column only, and timezone/date math is impossible because there is no actual datetime stored.
 
 ## Goal
 
-Add a Month View that opens by **double-clicking a month column header** in the Year Grid. The transition is a shared-element zoom: the narrow column expands to full width, day rows grow to reveal session details, and prev/next months sit desaturated on the edges as a horizontal carousel.
+Both views read and write a single source of truth keyed by **real datetime**, just like Outlook/Google. UI/visual design is preserved exactly — only data model, event handlers, and date math change.
 
-## UX flow
+## New data model
 
-1. User double-clicks "Jun" header (or presses `Z` on a selected cell) → Year Grid morphs into Month View focused on June.
-2. Month View shows a vertical list of days: `dato` · `weekday` · `1. økt` text · `Duration` (matches the screenshot reference).
-3. Faded previews of May (left) and Jul (right) are visible at the edges; clicking either pans horizontally to that month.
-4. Currently selected cell remains highlighted across the morph.
-5. Pressing `Esc`, double-clicking the month header again, or clicking the "back to year" affordance morphs back to the Year Grid.
-6. Arrow keys still navigate. Moving past the last day of June with `↓` or past the right edge with `→` triggers a smooth horizontal slide to July.
+Add a parallel **events store** alongside the legacy cell store (kept for backwards-compat for existing saved cells in localStorage). One typed event per session:
 
-## Files
-
-**New**
-- `src/components/calendar/MonthView.tsx` — single-month vertical list with sticky header, two sessions per day, selection + edit reuse.
-- `src/components/calendar/MonthCarousel.tsx` — horizontal carousel of MonthView panes (prev / current / next), framer-motion driven panning.
-- `src/components/calendar/ZoomableCalendar.tsx` — orchestrator that owns view mode (`"year" | "month"`), focused month, and runs the shared-element morph using framer-motion `layoutId`.
-
-**Edited**
-- `src/components/calendar/YearGrid.tsx` — add `onMonthHeaderDoubleClick(month)` prop; tag each `<th>` and each cell with `layoutId={\`cell-${calId}-${y}-${m}-${d}-${s}\`}` so framer-motion can morph them. Extend keyboard handler so `↓` past day 31 and `→` past month 11 emit an `onCrossMonth` callback.
-- `src/components/calendar/YearCalendarView.tsx` — replace direct `<YearGrid>` mount with `<ZoomableCalendar>`; keep title/undo/redo/settings header untouched.
-
-**Dependencies**
-- Already installed: `framer-motion` (verify in `package.json`; `bun add framer-motion` if missing).
-
-## Technical details
-
-### Shared-element morph
-- Wrap both Year cells and Month rows in `motion.div` with the same `layoutId`. framer-motion's `LayoutGroup` interpolates width/height/position automatically.
-- Use `transition={{ type: "spring", stiffness: 300, damping: 30 }}` per spec.
-- Apply `style={{ willChange: "transform" }}` on morphing nodes.
-- Selected cell uses a separate `motion.div layoutId="selection-ring"` so the ring smoothly travels into the new layout.
-
-### View state
 ```ts
-type ViewMode = { kind: "year" } | { kind: "month"; month: number };
+interface CalendarEvent {
+  id: string;             // stable uuid
+  startISO: string;       // "2026-05-04T09:30:00" (local, no Z)
+  endISO: string;         // "2026-05-04T10:30:00"
+  allDay: boolean;        // month-view items default to true
+  title: string;
+  color: string | null;   // hex
+  category?: "training" | "school" | "work" | "else";
+  description?: string;
+}
 ```
-Lifted into `ZoomableCalendar`. Selection (`CellKey | null`) lives here too so it survives the mode switch.
 
-### Month View layout
-Vertical CSS grid: `grid-template-columns: 64px 64px 1fr 96px` (date, weekday, session text, duration). Two rows per day (one per session) matching `Session = 0 | 1`. Sticky `<header>` with month + year, expands from column width to full container via shared `layoutId={\`month-header-${m}\`}`.
+Persisted under `calendar:events:{calId}` in localStorage with the same shape & API as `useYearStore`. New hook: `useEventStore(calId)` exposing `events`, `upsertEvent`, `deleteEvent`, `moveEvent`, `undo`, `redo`.
 
-### Carousel
-`MonthCarousel` renders three `MonthView` panes side-by-side inside an `overflow-hidden` container; an outer `motion.div` translates by `-100% * focusedIndex`. Prev/next panes get `filter: grayscale(1) opacity(0.4)` and `pointer-events-none` until they become focused. Click on a faded pane animates focus to it.
+Both views derive their visible items from `events` filtered by date range:
 
-### Keyboard
-Reuse existing `moveSelection` logic. New cross-month behavior:
-- `↓` on last day's lower session → advance to next month, day 1, session 0, and trigger carousel pan.
-- `↑` on day 1 upper session → previous month, last day, session 1.
-- `→` already crosses months horizontally; in Month View it triggers the carousel pan instead of column hop.
-- `Esc` exits Month View back to Year View.
-- `Enter` in Month View: same as Year — moves selection down (commits edit if editing).
+```text
+Month view  → events where startISO date ∈ [monthStart, monthEnd]
+Week view   → events where startISO date ∈ [weekStart, weekEnd]
+```
 
-### Performance
-- Only three MonthView panes mounted at once (prev/current/next); others unmounted.
-- `LayoutGroup` scoped to the morphing region only, so unrelated nodes don't recompute.
-- Avoid layout thrash: container has fixed `min-h-[60vh]`, panes are absolutely sized within the carousel track.
+## Week view changes (`UnifiedElasticGrid.tsx`)
 
-## Out of scope
-- Persisting view mode across reloads.
-- Touch/swipe gestures on the carousel (keyboard + click only for this pass).
-- Restructuring `yearStore` — Month View reads/writes the same `data` map keyed by `CellKey`.
+1. Compute the visible week from `currentDate` (already done with `weekDates`).
+2. When the user mark-drags a vertical range in column `c` from slot `loRank` to `hiRank`:
+   - `date = weekDates[c]` (real `Date`)
+   - `start = setHM(date, 6 + Math.floor(loRank/2), (loRank%2)*30)`
+   - `end   = setHM(date, 6 + Math.floor((hiRank+1)/2), ((hiRank+1)%2)*30)`
+   - Open the popover; on commit call `upsertEvent({ startISO, endISO, allDay: false, title, color })`.
+3. Existing event rendering: instead of reading per-cell text, project each `event` into the column for `event.startISO`'s date, positioned absolutely between its start and end pixel offsets. Re-uses the existing color/contrast/icon visuals.
+4. Drag-and-drop a session block:
+   - Vertical drag → `moveEvent(id, { startISO, endISO })` shifting time only.
+   - Horizontal drag → shifts date only (column → `weekDates[newCol]`).
+5. Delete the legacy `markRange → onCommitTexts` path that writes into hijacked `{month,day,session}` keys.
 
+## Month view changes (`MonthGridType1.tsx`)
+
+1. Read items per day cell from `events.filter(e => sameDay(e.startISO, d.date))` instead of parsing `data[id].text` lines.
+2. Add an item via popover → `upsertEvent({ startISO: d.date@09:00, endISO: +1h, allDay: true, title, color, category })`. (Default 1 h duration so it shows correctly when switched to week view.)
+3. Drag-an-item between days → `moveEvent(id, { startISO: newDate@sameTime })` keeping time-of-day intact.
+4. Keep the legacy text-cell read path as a fallback for any pre-existing data so users don't lose what they had.
+
+## View synchronization
+
+`YearCalendarView` already owns `currentDate`. Confirm:
+- Switching from Month → Week keeps `currentDate` so the week containing it is shown.
+- Switching from Week → Month focuses the month containing `currentDate`.
+- All write paths funnel through `useEventStore`, so React state updates re-render both views (the inactive one re-renders on next switch with no extra plumbing).
+
+## Date utilities
+
+Add `src/components/calendar/dateUtils.ts`:
+```ts
+export const sameDay  = (a: Date, b: Date) => /* y/m/d compare */;
+export const startOfDay = (d: Date) => /* 00:00 local */;
+export const setHM    = (d: Date, h: number, m: number) => /* new Date */;
+export const toISOLocal = (d: Date) => /* "YYYY-MM-DDTHH:mm:00" */;
+export const fromISOLocal = (s: string) => /* parse w/o TZ shift */;
+```
+
+All datetime conversions go through these helpers — no `toISOString()` (which forces UTC and shifts the date across timezones).
+
+## Files touched
+
+- `src/components/calendar/yearStore.ts` — add `useEventStore`, `CalendarEvent` type, persistence + undo/redo (mirrors `useYearStore` pattern). Keep `useYearStore` intact.
+- `src/components/calendar/dateUtils.ts` — **new**, helpers above.
+- `src/components/calendar/YearCalendarView.tsx` — wire `useEventStore`, pass `events`, `upsertEvent`, `moveEvent`, `deleteEvent` down. Keep undo/redo working across both stores.
+- `src/components/calendar/UnifiedElasticGrid.tsx` — replace per-cell text writes in week mode with event creation; render events as absolutely-positioned blocks within day columns; drag-and-drop translates pixel offsets back to datetimes.
+- `src/components/calendar/MonthGridType1.tsx` — read items from `events` for the rendered month; popover commit + drag-between-days call `upsertEvent` / `moveEvent`. Keep the visual cell layout, fonts, and animations untouched.
+
+## Out of scope (kept exactly as-is)
+
+- Tailwind classes, layout, colors, icons, popover styling.
+- The `MonthNavControl`, `MiniCalendar`, header dropdown, undo/redo shortcuts.
+- The "Else" 8-color palette, category fixed colors, dynamic contrast.
+- The "now" line and today highlighting.
