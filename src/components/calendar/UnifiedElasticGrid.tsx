@@ -1148,7 +1148,7 @@ function DayCellPair(props: DayCellPairProps) {
     editingId, editValue, setEditValue,
     onSelect, onBeginEdit, onCommitEdit, onCommitDuration, onMoveAfterCommit,
     inDragRange, onCellMouseEnter, onHandleDown,
-    markInfo, onMarkBegin, onOpenPopover, allowMark, markReleased,
+    markInfo, onMarkBegin, onMarkDragBegin, isDraggingMark, onOpenPopover, allowMark, markReleased,
   } = props;
 
   const sessions: Session[] = [0, 1];
