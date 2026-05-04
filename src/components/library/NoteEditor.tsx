@@ -35,10 +35,12 @@ export function NoteEditor({
   noteId,
   actionsMount: _actionsMount,
   onChanged,
+  onDeleted,
 }: {
   noteId: string;
   actionsMount?: HTMLDivElement | null;
   onChanged?: (patch: { id: string; title?: string; folder?: string | null }) => void;
+  onDeleted?: (id: string) => void;
 }) {
   const { user, activeEntityId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
