@@ -1327,13 +1327,7 @@ function DayCellPair(props: DayCellPairProps) {
               willChange: "min-height",
             }}
           >
-            {cellColor && !sameAbove && (
-              <span
-                className="pointer-events-none absolute left-0 top-0 bottom-0 z-[1] w-[3px]"
-                style={{ background: cellColor }}
-              />
-            )}
-            {cellColor && sameAbove && (
+            {cellColor && (
               <span
                 className="pointer-events-none absolute left-0 top-0 bottom-0 z-[1] w-[3px]"
                 style={{ background: cellColor }}
