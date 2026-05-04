@@ -902,14 +902,65 @@ function MiniDurationColumn({
     setRange({ lo: Math.min(a, rank), hi: Math.max(a, rank) });
   };
 
+  // Auto-scroll while dragging near the edges (Excel-style).
+  const autoScrollRef = useRef<{ raf: number | null; dy: number; clientY: number }>({
+    raf: null,
+    dy: 0,
+    clientY: 0,
+  });
+  const stopAutoScroll = () => {
+    if (autoScrollRef.current.raf != null) {
+      cancelAnimationFrame(autoScrollRef.current.raf);
+      autoScrollRef.current.raf = null;
+    }
+    autoScrollRef.current.dy = 0;
+  };
+  const tickAutoScroll = () => {
+    const el = gridRef.current;
+    if (!el || !dragRef.current) {
+      stopAutoScroll();
+      return;
+    }
+    const { dy, clientY } = autoScrollRef.current;
+    if (dy !== 0) {
+      el.scrollTop = Math.max(
+        0,
+        Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + dy),
+      );
+      const r = rankFromClientY(clientY);
+      if (r != null) extendTo(r);
+    }
+    autoScrollRef.current.raf = requestAnimationFrame(tickAutoScroll);
+  };
+
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       if (!dragRef.current) return;
       const r = rankFromClientY(e.clientY);
       if (r != null) extendTo(r);
+      // Edge auto-scroll.
+      const el = gridRef.current;
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const edge = 24;
+        let dy = 0;
+        if (e.clientY < rect.top + edge) {
+          dy = -Math.max(4, Math.ceil((rect.top + edge - e.clientY) / 2));
+        } else if (e.clientY > rect.bottom - edge) {
+          dy = Math.max(4, Math.ceil((e.clientY - (rect.bottom - edge)) / 2));
+        }
+        autoScrollRef.current.dy = dy;
+        autoScrollRef.current.clientY = e.clientY;
+        if (dy !== 0 && autoScrollRef.current.raf == null) {
+          autoScrollRef.current.raf = requestAnimationFrame(tickAutoScroll);
+        } else if (dy === 0) {
+          stopAutoScroll();
+        }
+      }
     };
     const onUp = () => {
       dragRef.current = null;
+      stopAutoScroll();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Enter" && range) {
@@ -931,6 +982,7 @@ function MiniDurationColumn({
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
       window.removeEventListener("keydown", onKey, true);
+      stopAutoScroll();
     };
   }, [range, onCommit, onClose, startHour, rows, rowHeight]);
 
@@ -939,12 +991,9 @@ function MiniDurationColumn({
       className="flex h-full flex-col overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg"
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {/* Header row — matches the main popover header height/typography */}
-      <div className="flex items-center justify-between border-b border-hairline px-3 py-2">
-        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-          Varighet
-        </span>
-        <span className="mono text-[10.5px] tabular-nums text-ink/70">
+      {/* Header — centered duration time, no label. */}
+      <div className="flex items-center justify-center border-b border-hairline px-3 py-2">
+        <span className="mono text-[12px] tabular-nums text-ink/80">
           {range
             ? `${fmtMin(startHour * 60 + range.lo * 30)} – ${fmtMin(startHour * 60 + (range.hi + 1) * 30)}`
             : "—"}
@@ -999,8 +1048,7 @@ function MiniDurationColumn({
           })}
         </div>
       </div>
-      <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
-        <span className="mono tabular-nums">⏎ for å sette tid</span>
+      <div className="border-t border-hairline p-2">
         <button
           type="button"
           disabled={!range}
@@ -1010,7 +1058,7 @@ function MiniDurationColumn({
             const endMin = startHour * 60 + (range.hi + 1) * 30;
             onCommit({ startMin, endMin });
           }}
-          className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          className="w-full rounded-md bg-primary px-2.5 py-1.5 text-[11.5px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
           Sett tid
         </button>
@@ -1099,7 +1147,7 @@ export function PopoverEditor({
   }
 
   // Mini duration column geometry.
-  const DUR_W = 184;
+  const DUR_W = 220;
   const DUR_GAP = 8;
   const DUR_ROW_H = 36; // matches week-view ROW_MONTH
   const DUR_START_HOUR = 6;
