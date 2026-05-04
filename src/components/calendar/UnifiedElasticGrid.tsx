@@ -1845,7 +1845,7 @@ function WeekEventsOverlay({
               e.stopPropagation();
               onEventClick(ev, e.currentTarget as HTMLElement);
             }}
-            className="absolute z-[8] cursor-grab overflow-hidden rounded-[3px] px-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md"
+            className="absolute z-[8] cursor-grab overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md"
             style={{
               left: box.left + 2 + dragDx,
               width: box.width - 4,
@@ -1857,8 +1857,12 @@ function WeekEventsOverlay({
             }}
             title={ev.title}
           >
+            <span
+              className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]"
+              style={{ background: accent }}
+            />
             <div className="flex items-center gap-1 truncate">
-              {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} />}
+              {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: accent }} />}
               <span className="truncate font-medium">{ev.title}</span>
             </div>
           </div>
