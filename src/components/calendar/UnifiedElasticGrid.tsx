@@ -824,6 +824,7 @@ export function UnifiedElasticGrid({
         <div
           ref={scrollRef}
           className="relative h-full w-full overflow-auto"
+          style={{ scrollbarGutter: "stable" }}
           onClick={(e) => {
             if (e.target === e.currentTarget) handleSelect(null);
           }}
