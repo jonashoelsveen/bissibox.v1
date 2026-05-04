@@ -34,8 +34,9 @@ import {
 } from "react";
 import { Plus, Trash2, PersonStanding, GraduationCap, Briefcase, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { CellData, CellKey } from "./yearStore";
+import type { CellData, CellKey, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
+import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal } from "./dateUtils";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
 
 // Individual session categories. Three have fixed colors + icons for
