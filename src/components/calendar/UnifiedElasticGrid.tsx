@@ -35,7 +35,7 @@ import type { DateRange } from "./MiniCalendar";
 import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoWeekNumber } from "./dateUtils";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 
-type ViewMode = "day" | "week" | "month";
+export type ViewMode = "day" | "week" | "month";
 
 const VIEW_MODE_LABEL: Record<ViewMode, string> = {
   day: "Dag",
@@ -48,7 +48,7 @@ const VIEW_MODE_LABEL: Record<ViewMode, string> = {
  * switcher, but slightly more compact and friendlier (chevron rotates,
  * subtle hover affordance, items show a check on the active row).
  */
-function HeaderDropdown<T extends string>({
+export function HeaderDropdown<T extends string>({
   value,
   options,
   onChange,
