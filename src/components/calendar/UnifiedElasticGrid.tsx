@@ -1095,6 +1095,8 @@ function DayRow(props: DayRowProps) {
               onHandleDown={onHandleDown}
               markInfo={markInfo}
               onMarkBegin={onMarkBegin}
+              onMarkDragBegin={onMarkDragBegin}
+              isDraggingMark={isDraggingMark}
               onOpenPopover={onOpenPopover}
               allowMark={allowMark}
               markReleased={markReleased}
