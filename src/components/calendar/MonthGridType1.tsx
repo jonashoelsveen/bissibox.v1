@@ -607,6 +607,7 @@ export function MonthGridType1({
                           <motion.div
                             key={`${id}-${itemKey}`}
                             layout
+                            layoutId={it.kind === "event" ? `evt-${it.event.id}` : undefined}
                             initial={{ opacity: 0, y: -2 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -2 }}
