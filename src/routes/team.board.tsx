@@ -68,6 +68,7 @@ export function TeamBoardPage({
   hideOwnTabBar,
   forceMeetingId,
   onMeetingOpened,
+  onMeetingDeleted,
 }: {
   embedded?: boolean;
   newMeetingSignal?: number;
@@ -77,6 +78,8 @@ export function TeamBoardPage({
   forceMeetingId?: string | null;
   /** Notify parent when a meeting is opened (e.g. after creation via newMeetingSignal). */
   onMeetingOpened?: (meeting: { id: string; title: string; folder: string | null; kind: "new" | "earlier" }) => void;
+  /** Notify parent when a meeting is deleted from this view. */
+  onMeetingDeleted?: (id: string) => void;
 } = {}) {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
