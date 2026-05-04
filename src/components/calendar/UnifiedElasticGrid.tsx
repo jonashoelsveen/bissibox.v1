@@ -818,8 +818,53 @@ export function UnifiedElasticGrid({
           onClose={closePopover}
           onCommit={(text, color) => {
             const t = text.trim();
+
+            // ── Week view: write/edit a CalendarEvent (real datetime). ──
+            if (mode.kind === "year") {
+              const colIdx = markRange ? markRange.month : popover.key.month;
+              const date = weekDates[colIdx];
+              if (date) {
+                // Determine slot range: marked range > popover anchor cell.
+                const lo = markRange ? markRange.lo : popover.key.day * 2 + popover.key.session;
+                const hi = markRange ? markRange.hi : lo;
+                const startMin = WEEK_START_HOUR * 60 + lo * 30;
+                const endMin = WEEK_START_HOUR * 60 + (hi + 1) * 30;
+                const startISO = toISOLocal(setHM(date, Math.floor(startMin / 60), startMin % 60));
+                const endISO = toISOLocal(setHM(date, Math.floor(endMin / 60), endMin % 60));
+
+                if (popover.eventId) {
+                  // Edit existing event.
+                  if (!t) {
+                    onDeleteEvent(popover.eventId);
+                  } else {
+                    onUpsertEvent({
+                      id: popover.eventId,
+                      title: t,
+                      color,
+                      // Preserve the original times unless the user marked a new range.
+                      ...(markRange ? { startISO, endISO } : {}),
+                      allDay: false,
+                    });
+                  }
+                } else if (t) {
+                  onUpsertEvent({
+                    title: t,
+                    color,
+                    startISO,
+                    endISO,
+                    allDay: false,
+                    category: categoryFromColor(color),
+                  });
+                }
+              }
+              setMarkRange(null);
+              setMarkReleased(false);
+              closePopover();
+              return;
+            }
+
+            // ── Day view fallback: legacy per-cell text storage. ──
             const next = t ? joinColor(color, t) : "";
-            // If a multi-cell range is marked, apply to all cells in it.
             if (markRange) {
               const updates: Array<{ key: CellKey; text: string }> = [];
               for (let r = markRange.lo; r <= markRange.hi; r++) {
