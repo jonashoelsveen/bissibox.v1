@@ -800,6 +800,31 @@ export function UnifiedElasticGrid({
               />
             ))}
           </div>
+          {mode.kind === "year" && (
+            <WeekEventsOverlay
+              scrollRef={scrollRef}
+              events={weekEvents}
+              weekDates={weekDates}
+              headerH={headerH}
+              rowHeight={rowHeight}
+              startHour={WEEK_START_HOUR}
+              onEventClick={(ev, anchor) => {
+                setPopover({
+                  key: { year, month: 0, day: 1, session: 0 }, // unused for events
+                  rect: anchor.getBoundingClientRect(),
+                  initialText: ev.title,
+                  initialColor: ev.color,
+                  isEdit: true,
+                  eventId: ev.id,
+                });
+              }}
+              onEventDrop={(id, newDate, newStartMin, durationMin) => {
+                const startISO = toISOLocal(setHM(newDate, Math.floor(newStartMin / 60), newStartMin % 60));
+                const endISO = toISOLocal(addMinutes(fromISOLocal(startISO), durationMin));
+                onMoveEvent(id, { startISO, endISO, allDay: false });
+              }}
+            />
+          )}
           {mode.kind === "year" && todayColIdx >= 0 && nowOffset !== null && (
             <NowLine
               scrollRef={scrollRef}
