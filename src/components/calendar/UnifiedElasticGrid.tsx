@@ -338,6 +338,16 @@ export function UnifiedElasticGrid({
   // Plus icon only shows after the user has released the mouse.
   const [markReleased, setMarkReleased] = useState(false);
 
+  // Drag-to-move the existing marked range. Active while the user holds
+  // a pointer down on the mark overlay (not the plus, not the edge band).
+  const markDragRef = useRef<{
+    grabRank: number; // rank of the cell where the user grabbed
+    grabMonth: number; // column of the grabbed cell
+    size: number;
+    offset: number; // grabRank - origLo
+  } | null>(null);
+  const [isDraggingMark, setIsDraggingMark] = useState(false);
+
   // Inline editor popover (shared with month view)
   const [popover, setPopover] = useState<{
     key: CellKey;
@@ -490,6 +500,56 @@ export function UnifiedElasticGrid({
     if (r === a) return; // single cell — don't show mark yet
     setMarkRange({ month: k.month, lo: Math.min(a, r), hi: Math.max(a, r) });
   }, []);
+
+  const beginMarkDrag = useCallback((k: CellKey) => {
+    if (!markRange) return;
+    const grabRank = k.day * 2 + k.session;
+    markDragRef.current = {
+      grabRank,
+      grabMonth: k.month,
+      size: markRange.hi - markRange.lo + 1,
+      offset: grabRank - markRange.lo,
+    };
+    setIsDraggingMark(true);
+  }, [markRange]);
+
+  // While dragging the marked range, hover-over cells determine the new
+  // column + rank position. Reuses the existing mark-cell hover via a global
+  // mousemove + elementFromPoint lookup so we cover quick pointer movement.
+  useEffect(() => {
+    if (!isDraggingMark) return;
+    const onMove = (e: MouseEvent) => {
+      const drag = markDragRef.current;
+      if (!drag) return;
+      const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const cellEl = el?.closest("[data-cell-key]") as HTMLElement | null;
+      if (!cellEl) return;
+      const raw = cellEl.dataset.cellKey;
+      if (!raw) return;
+      const [mStr, dStr, sStr] = raw.split(":");
+      const newMonth = Number(mStr);
+      const newDay = Number(dStr);
+      const newSession = Number(sStr);
+      const hoverRank = newDay * 2 + newSession;
+      let newLo = hoverRank - drag.offset;
+      let newHi = newLo + drag.size - 1;
+      // Clamp to slot range. In week view rows = 19 days × 2 sessions = 38.
+      const maxRank = 19 * 2 - 1;
+      if (newLo < 0) { newHi -= newLo; newLo = 0; }
+      if (newHi > maxRank) { newLo -= (newHi - maxRank); newHi = maxRank; }
+      setMarkRange({ month: newMonth, lo: newLo, hi: newHi });
+    };
+    const onUp = () => {
+      markDragRef.current = null;
+      setIsDraggingMark(false);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [isDraggingMark]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -798,6 +858,8 @@ export function UnifiedElasticGrid({
                 isMonthPeriph={isMonthPeriph}
                 markInfo={markInfo}
                 onMarkBegin={beginMark}
+                onMarkDragBegin={beginMarkDrag}
+                isDraggingMark={isDraggingMark}
                 onOpenPopover={openPopover}
                 allowMark={mode.kind === "year"}
                 markReleased={markReleased}
@@ -943,6 +1005,8 @@ interface DayRowProps {
   isMonthPeriph: (m: number) => boolean;
   markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number };
   onMarkBegin: (k: CellKey) => void;
+  onMarkDragBegin: (k: CellKey) => void;
+  isDraggingMark: boolean;
   onOpenPopover: (k: CellKey, anchor: HTMLElement) => void;
   allowMark: boolean;
   markReleased: boolean;
@@ -954,7 +1018,7 @@ function DayRow(props: DayRowProps) {
     selected, selectedId, editingId, editValue, setEditValue,
     onSelect, onBeginEdit, onCommitEdit, onCommitDuration, onMoveAfterCommit,
     inDragRange, onCellMouseEnter, onHandleDown, isMonthFocused, isMonthPeriph,
-    markInfo, onMarkBegin, onOpenPopover, allowMark, markReleased,
+    markInfo, onMarkBegin, onMarkDragBegin, isDraggingMark, onOpenPopover, allowMark, markReleased,
   } = props;
 
   return (
@@ -1031,6 +1095,8 @@ function DayRow(props: DayRowProps) {
               onHandleDown={onHandleDown}
               markInfo={markInfo}
               onMarkBegin={onMarkBegin}
+              onMarkDragBegin={onMarkDragBegin}
+              isDraggingMark={isDraggingMark}
               onOpenPopover={onOpenPopover}
               allowMark={allowMark}
               markReleased={markReleased}
@@ -1068,6 +1134,8 @@ interface DayCellPairProps {
   onHandleDown: (k: CellKey) => void;
   markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number };
   onMarkBegin: (k: CellKey) => void;
+  onMarkDragBegin: (k: CellKey) => void;
+  isDraggingMark: boolean;
   onOpenPopover: (k: CellKey, anchor: HTMLElement) => void;
   allowMark: boolean;
   markReleased: boolean;
@@ -1080,7 +1148,7 @@ function DayCellPair(props: DayCellPairProps) {
     editingId, editValue, setEditValue,
     onSelect, onBeginEdit, onCommitEdit, onCommitDuration, onMoveAfterCommit,
     inDragRange, onCellMouseEnter, onHandleDown,
-    markInfo, onMarkBegin, onOpenPopover, allowMark, markReleased,
+    markInfo, onMarkBegin, onMarkDragBegin, isDraggingMark, onOpenPopover, allowMark, markReleased,
   } = props;
 
   const sessions: Session[] = [0, 1];
@@ -1126,9 +1194,12 @@ function DayCellPair(props: DayCellPairProps) {
           <div
             key={session}
             data-mark-cell={mk.in ? "1" : undefined}
+            data-cell-key={allowMark ? `${month}:${day}:${session}` : undefined}
             onMouseDown={(e) => {
-              if ((e.target as HTMLElement).dataset.role === "fill-handle") return;
-              if ((e.target as HTMLElement).dataset.role === "mark-plus") return;
+              const t = e.target as HTMLElement;
+              if (t.dataset.role === "fill-handle") return;
+              if (t.dataset.role === "mark-plus") return;
+              if (t.dataset.role === "mark-drag") return;
               onSelect(k);
               if (allowMark) onMarkBegin(k);
             }}
@@ -1161,7 +1232,53 @@ function DayCellPair(props: DayCellPairProps) {
               />
             )}
 
-            {mk.isPlus && markReleased && mk.size > 1 && (
+            {/* Drag handle: covers the marked cell so the user can grab and
+                move the whole selection. Excludes a thin band at the very
+                top of the first cell and the very bottom of the last cell
+                (so resize-style edges feel intentional), and leaves the
+                center plus icon untouched via a CSS cutout (two stacked
+                regions). markReleased gates this so we never hijack the
+                initial drag-to-mark gesture. */}
+            {mk.in && markReleased && mk.size > 1 && (
+              <>
+                <div
+                  data-role="mark-drag"
+                  onMouseDown={(e) => {
+                    if (e.button !== 0) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onMarkDragBegin(k);
+                  }}
+                  className="absolute inset-x-0 z-[3]"
+                  style={{
+                    top: mk.isFirst ? 3 : 0,
+                    // If this is the plus cell, leave a 28px gap in the
+                    // middle for the icon — render only the upper band.
+                    bottom: mk.isPlus ? "calc(50% + 14px)" : (mk.isLast ? 3 : 0),
+                    cursor: isDraggingMark ? "grabbing" : "grab",
+                  }}
+                />
+                {mk.isPlus && (
+                  <div
+                    data-role="mark-drag"
+                    onMouseDown={(e) => {
+                      if (e.button !== 0) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onMarkDragBegin(k);
+                    }}
+                    className="absolute inset-x-0 z-[3]"
+                    style={{
+                      top: "calc(50% + 14px)",
+                      bottom: mk.isLast ? 3 : 0,
+                      cursor: isDraggingMark ? "grabbing" : "grab",
+                    }}
+                  />
+                )}
+              </>
+            )}
+
+            {mk.isPlus && markReleased && mk.size > 1 && !isDraggingMark && (
               <button
                 type="button"
                 data-role="mark-plus"
@@ -1172,11 +1289,11 @@ function DayCellPair(props: DayCellPairProps) {
                   // the cell that was clicked.
                   onOpenPopover(k, e.currentTarget.parentElement as HTMLElement);
                 }}
-                className="pointer-events-auto absolute left-1/2 top-1/2 z-[5] -translate-x-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-ink"
+                className="pointer-events-auto absolute left-1/2 top-1/2 z-[5] flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-muted-foreground/80 shadow-sm ring-1 ring-hairline hover:text-ink"
                 style={{ padding: 0, lineHeight: 0 }}
                 aria-label="Legg til økt"
               >
-                <Plus className="h-4 w-4" strokeWidth={1.5} />
+                <Plus className="h-5 w-5" strokeWidth={1.75} />
               </button>
             )}
             {isSelected && (
