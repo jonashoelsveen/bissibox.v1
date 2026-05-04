@@ -190,6 +190,13 @@ export interface UnifiedElasticGridProps {
   onCommitDuration?: (k: CellKey, duration: string) => void;
   onFill: (source: CellKey, targets: CellKey[]) => void;
   seat?: "admin" | "individual";
+  /** Unified event store — single source of truth for both views. */
+  events: CalendarEvent[];
+  onUpsertEvent: (
+    patch: Partial<CalendarEvent> & Pick<CalendarEvent, "startISO" | "endISO" | "title">,
+  ) => CalendarEvent;
+  onMoveEvent: (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => void;
+  onDeleteEvent: (id: string) => void;
   /** Shared "what is the calendar showing?" anchor date. */
   currentDate: Date;
   /** Optional drag-selected range from the mini-calendar. */
