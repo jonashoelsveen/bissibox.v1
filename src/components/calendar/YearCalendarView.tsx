@@ -9,16 +9,34 @@
  * calendar in the grid header and the main view stay in lockstep.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Settings as SettingsIcon, Undo2, Redo2 } from "lucide-react";
 import { useYearStore, useEventStore, type CellKey } from "./yearStore";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode } from "./UnifiedElasticGrid";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
+import {
+  PreviewOverlayProvider,
+  usePreviewOverlay,
+} from "./ImportCalendar/PreviewOverlayContext";
+import { ImportButton } from "./ImportCalendar/ImportButton";
+import { buildGhostEvents } from "./ImportCalendar/ghost";
 
 export type CalendarSeat = "admin" | "individual";
 
-export function YearCalendarView({
+export function YearCalendarView(props: {
+  calId: string;
+  defaultTitle: string;
+  seat?: CalendarSeat;
+}) {
+  return (
+    <PreviewOverlayProvider>
+      <YearCalendarViewInner {...props} />
+    </PreviewOverlayProvider>
+  );
+}
+
+function YearCalendarViewInner({
   calId,
   defaultTitle,
   seat = "individual",
@@ -39,6 +57,26 @@ export function YearCalendarView({
     canUndoEvents,
     canRedoEvents,
   } = useEventStore(calId);
+
+  // Preview overlay (Import Calendar). When active, ghost events are merged
+  // into the events list so the existing month/week renderers display them
+  // without bespoke overlay layers. Real events are dimmed via wrapper class.
+  const overlay = usePreviewOverlay();
+  const ghostEvents = useMemo(
+    () =>
+      buildGhostEvents(
+        overlay.events,
+        overlay.visibleCategoryIds,
+        overlay.categoryColors,
+        overlay.categories,
+      ),
+    [overlay.events, overlay.visibleCategoryIds, overlay.categoryColors, overlay.categories],
+  );
+  const previewActive = overlay.events !== null;
+  const mergedEvents = useMemo(
+    () => (previewActive ? [...events, ...ghostEvents] : events),
+    [previewActive, events, ghostEvents],
+  );
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
@@ -170,10 +208,11 @@ export function YearCalendarView({
           >
             <SettingsIcon className="h-4 w-4" />
           </button>
+          <ImportButton onCommit={(patch) => upsertEvent(patch)} />
         </div>
       </div>
 
-      <div className="min-h-[60vh]">
+      <div className="min-h-[60vh]" data-preview-active={previewActive ? "true" : "false"}>
         <UnifiedElasticGrid
           calId={calId}
           year={meta.year}
@@ -185,7 +224,7 @@ export function YearCalendarView({
           onCommitDuration={(k, duration) => upsertCell(k, { duration })}
           onFill={fillRange}
           seat={seat}
-          events={events}
+          events={mergedEvents}
           onUpsertEvent={upsertEvent}
           onMoveEvent={moveEvent}
           onDeleteEvent={deleteEvent}

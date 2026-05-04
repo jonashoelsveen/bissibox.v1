@@ -1817,11 +1817,15 @@ function WeekEventsOverlay({
           : "hsl(var(--primary) / 0.15)";
         const fg = "hsl(var(--ink, 220 13% 13%))";
         const Icon = iconForColor(ev.color);
+        const isGhost = ev.id.startsWith("__ghost__:");
         return (
           <div
             key={ev.id}
             data-mark-cell="1"
+            data-real-event={isGhost ? undefined : "1"}
+            data-ghost-event={isGhost ? "1" : undefined}
             onPointerDown={(e) => {
+              if (isGhost) return;
               e.stopPropagation();
               (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
               setDrag({
@@ -1835,11 +1839,12 @@ function WeekEventsOverlay({
               });
             }}
             onClick={(e) => {
+              if (isGhost) return;
               if (drag?.moved) return;
               e.stopPropagation();
               onEventClick(ev, e.currentTarget as HTMLElement);
             }}
-            className="absolute z-[8] cursor-grab overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md"
+            className={`absolute z-[8] ${isGhost ? "cursor-default" : "cursor-grab"} overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
             style={{
               left: box.left + 2 + dragDx,
               width: box.width - 4,

@@ -616,7 +616,9 @@ export function MonthGridType1({
                               ease: [0.2, 0, 0, 1],
                             }}
                             data-role="item"
-                            draggable
+                            data-real-event={it.kind === "event" && !it.event.id.startsWith("__ghost__:") ? "1" : undefined}
+                            data-ghost-event={it.kind === "event" && it.event.id.startsWith("__ghost__:") ? "1" : undefined}
+                            draggable={!(it.kind === "event" && it.event.id.startsWith("__ghost__:"))}
                             onDragStart={(e) => {
                               const dev = e as unknown as DragEvent;
                               if (dev.dataTransfer) {
@@ -632,6 +634,10 @@ export function MonthGridType1({
                             onDragEnd={() => setDragItem(null)}
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (it.kind === "event" && it.event.id.startsWith("__ghost__:")) {
+                                // Ghost preview events are not editable.
+                                return;
+                              }
                               if (it.kind === "legacy") {
                                 openItemEditor(pos, it.idx, it.raw, e.currentTarget as HTMLElement);
                               } else {
