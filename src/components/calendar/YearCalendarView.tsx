@@ -224,7 +224,7 @@ function YearCalendarViewInner({
           onCommitDuration={(k, duration) => upsertCell(k, { duration })}
           onFill={fillRange}
           seat={seat}
-          events={events}
+          events={mergedEvents}
           onUpsertEvent={upsertEvent}
           onMoveEvent={moveEvent}
           onDeleteEvent={deleteEvent}
