@@ -686,37 +686,68 @@ export function MonthGridType1({
               const cell = days.find(
                 (d) => d.row === popover.pos.row && d.col === popover.pos.col,
               );
-              if (cell) {
-                const cellKey: CellKey = {
-                  year: cell.date.getFullYear(),
-                  month: cell.date.getMonth(),
-                  day: cell.date.getDate(),
-                  session: 0,
-                };
-                const id = makeCellId(calId, cellKey);
-                const existing = parseItems(data[id]?.text);
-                const t = text.trim();
-                let next: DayItem[];
-                if (popover.editIdx >= 0) {
-                  if (!t) {
-                    next = existing.filter((it) => it.idx !== popover.editIdx);
-                  } else {
-                    next = existing.map((it) =>
-                      it.idx === popover.editIdx
-                        ? { idx: it.idx, text: joinColor(color, t) }
-                        : it,
-                    );
-                  }
-                } else {
-                  next = t
-                    ? [
-                        ...existing,
-                        { idx: existing.length, text: joinColor(color, t) },
-                      ]
-                    : existing;
-                }
-                onCommitText(cellKey, serializeItems(next));
+              if (!cell) {
+                closePopover();
+                return;
               }
+              const t = text.trim();
+
+              // ── Editing an existing unified event. ──
+              if (popover.eventId) {
+                if (!t) {
+                  onDeleteEvent?.(popover.eventId);
+                } else {
+                  onUpsertEvent?.({ id: popover.eventId, title: t, color });
+                }
+                closePopover();
+                return;
+              }
+
+              // ── Creating a new item from month view. ──
+              // Default to the unified event store so it appears in week view too.
+              if (popover.editIdx < 0 && onUpsertEvent) {
+                if (t) {
+                  const start = setHM(cell.date, 9, 0);
+                  const end = addMinutes(start, 60);
+                  onUpsertEvent({
+                    title: t,
+                    color,
+                    startISO: toISOLocal(start),
+                    endISO: toISOLocal(end),
+                    allDay: true,
+                    category: categoryFromColor(color),
+                  });
+                }
+                closePopover();
+                return;
+              }
+
+              // ── Legacy text-cell edit fallback (for pre-existing data). ──
+              const cellKey: CellKey = {
+                year: cell.date.getFullYear(),
+                month: cell.date.getMonth(),
+                day: cell.date.getDate(),
+                session: 0,
+              };
+              const id = makeCellId(calId, cellKey);
+              const existing = parseItems(data[id]?.text);
+              let next: DayItem[];
+              if (popover.editIdx >= 0) {
+                if (!t) {
+                  next = existing.filter((it) => it.idx !== popover.editIdx);
+                } else {
+                  next = existing.map((it) =>
+                    it.idx === popover.editIdx
+                      ? { idx: it.idx, text: joinColor(color, t) }
+                      : it,
+                  );
+                }
+              } else {
+                next = t
+                  ? [...existing, { idx: existing.length, text: joinColor(color, t) }]
+                  : existing;
+              }
+              onCommitText(cellKey, serializeItems(next));
               closePopover();
             }}
           />
