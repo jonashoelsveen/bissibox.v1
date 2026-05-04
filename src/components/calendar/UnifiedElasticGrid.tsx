@@ -349,6 +349,21 @@ export function UnifiedElasticGrid({
 
   const openPopover = useCallback(
     (k: CellKey, anchor: HTMLElement) => {
+      // Week view: prefer editing the existing event under this cell.
+      if (mode.kind === "year") {
+        const ev = eventAtCell(k);
+        if (ev) {
+          setPopover({
+            key: k,
+            rect: anchor.getBoundingClientRect(),
+            initialText: ev.title,
+            initialColor: ev.color,
+            isEdit: true,
+            eventId: ev.id,
+          });
+          return;
+        }
+      }
       const id = makeCellId(calId, k);
       const raw = data[id]?.text ?? "";
       const { color, text } = splitColor(raw);
@@ -360,7 +375,7 @@ export function UnifiedElasticGrid({
         isEdit: !!raw.trim(),
       });
     },
-    [calId, data],
+    [calId, data, mode, eventAtCell],
   );
 
   const closePopover = useCallback(() => setPopover(null), []);
