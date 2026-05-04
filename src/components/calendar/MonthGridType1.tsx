@@ -1147,7 +1147,7 @@ export function PopoverEditor({
   }
 
   // Mini duration column geometry.
-  const DUR_W = 184;
+  const DUR_W = 220;
   const DUR_GAP = 8;
   const DUR_ROW_H = 36; // matches week-view ROW_MONTH
   const DUR_START_HOUR = 6;
