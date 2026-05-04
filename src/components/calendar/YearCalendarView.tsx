@@ -129,16 +129,28 @@ function YearCalendarViewInner({
   const [titleDraft, setTitleDraft] = useState(meta.title);
 
   // Shared "what is the calendar showing?" state — drives both the main grid
-  // and the mini-calendar navigator at the top-right of the grid.
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
-  const [currentRange, setCurrentRange] = useState<DateRange>(() => {
+  // and the mini-calendar navigator at the top-right of the grid. Falls back
+  // to internal state when no controlled value is supplied (legacy usage).
+  const [internalDate, setInternalDate] = useState<Date>(() => new Date());
+  const [internalRange, setInternalRange] = useState<DateRange>(() => {
     const t = new Date();
     return { start: t, end: t };
   });
-  // Lifted from UnifiedElasticGrid so the prev/next + mini-cal arrows can
-  // live in the page header (left of the year + undo cluster) instead of
-  // floating on top of the grid.
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const currentDate = currentDateProp ?? internalDate;
+  const currentRange = currentRangeProp ?? internalRange;
+  const updateCurrent = (d: Date, r?: DateRange) => {
+    if (onCurrentDateChange) onCurrentDateChange(d, r);
+    else {
+      setInternalDate(d);
+      setInternalRange(r ?? { start: d, end: d });
+    }
+  };
+  const [internalViewMode, setInternalViewMode] = useState<ViewMode>("month");
+  const viewMode = viewModeProp ?? internalViewMode;
+  const setViewMode = (v: ViewMode) => {
+    if (onViewModeChange) onViewModeChange(v);
+    else setInternalViewMode(v);
+  };
 
   // Keyboard shortcuts: ⌘Z / Ctrl+Z for undo, ⌘⇧Z / Ctrl+Y for redo
   useEffect(() => {
