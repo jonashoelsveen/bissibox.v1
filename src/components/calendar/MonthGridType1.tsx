@@ -166,6 +166,10 @@ export function MonthGridType1({
   onPrevMonth,
   onNextMonth,
   onCommitText,
+  events = [],
+  onUpsertEvent,
+  onMoveEvent,
+  onDeleteEvent,
 }: MonthGridType1Props) {
   const dim = daysInMonth(year, month);
   const firstDow = dowMon0(new Date(year, month, 1));
