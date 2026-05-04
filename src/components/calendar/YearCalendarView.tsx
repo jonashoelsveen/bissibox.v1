@@ -21,6 +21,40 @@ import {
 } from "./ImportCalendar/PreviewOverlayContext";
 import { ImportButton } from "./ImportCalendar/ImportButton";
 import { buildGhostEvents } from "./ImportCalendar/ghost";
+import { isoWeekNumber } from "./dateUtils";
+
+const MONTHS_NB = [
+  "Januar", "Februar", "Mars", "April", "Mai", "Juni",
+  "Juli", "August", "September", "Oktober", "November", "Desember",
+];
+
+function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate: Date }) {
+  const month = MONTHS_NB[currentDate.getMonth()];
+  const year = currentDate.getFullYear();
+  if (viewMode === "week") {
+    const wk = isoWeekNumber(currentDate);
+    return (
+      <h1 className="truncate text-xl text-ink">
+        <span className="font-semibold">Uke {wk} {month}</span>{" "}
+        <span className="font-normal">{year}</span>
+      </h1>
+    );
+  }
+  if (viewMode === "day") {
+    return (
+      <h1 className="truncate text-xl text-ink">
+        <span className="font-semibold">{currentDate.getDate()}. {month}</span>{" "}
+        <span className="font-normal">{year}</span>
+      </h1>
+    );
+  }
+  return (
+    <h1 className="truncate text-xl text-ink">
+      <span className="font-semibold">{month}</span>{" "}
+      <span className="font-normal">{year}</span>
+    </h1>
+  );
+}
 
 export type CalendarSeat = "admin" | "individual";
 
@@ -129,33 +163,8 @@ function YearCalendarViewInner({
     <div className="mt-3 flex flex-col">
       {/* Header — inline-editable title + gear */}
       <div className="mb-3 flex items-center justify-between gap-3 px-0.5">
-        {editingTitle ? (
-          <input
-            autoFocus
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onBlur={commitTitle}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitTitle();
-              if (e.key === "Escape") {
-                setEditingTitle(false);
-                setTitleDraft(meta.title);
-              }
-            }}
-            className="min-w-0 flex-1 rounded-md border border-hairline bg-background px-2 py-1 text-xl font-semibold text-ink outline-none focus:border-primary"
-          />
-        ) : (
-          <h1
-            onDoubleClick={() => {
-              setTitleDraft(meta.title);
-              setEditingTitle(true);
-            }}
-            className="cursor-text truncate text-xl font-semibold text-ink"
-            title="Double-click to rename"
-          >
-            {meta.title}
-          </h1>
-        )}
+        <ViewTitle viewMode={viewMode} currentDate={currentDate} />
+
         <div className="flex items-center gap-1">
           {/* Mode dropdown + prev/next/mini-cal arrows. Sit to the LEFT of
               the year + undo/redo cluster so all navigation lives above the
