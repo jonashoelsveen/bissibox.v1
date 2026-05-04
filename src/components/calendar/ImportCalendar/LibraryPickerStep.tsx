@@ -108,7 +108,7 @@ export function LibraryPickerStep({
           <div className="p-6 text-center text-xs text-muted-foreground">Loading…</div>
         ) : visible.length === 0 ? (
           <div className="p-6 text-center text-xs text-muted-foreground">
-            No .xlsx, .csv or .pdf files found here.
+            No .xlsx, .xls or .csv files found here.
           </div>
         ) : (
           <ul className="flex flex-col">
