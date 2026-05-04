@@ -260,11 +260,7 @@ function YearCalendarViewInner({
           onDeleteEvent={deleteEvent}
           currentDate={currentDate}
           currentRange={currentRange}
-          onCurrentDateChange={(d, r) => {
-            setCurrentDate(d);
-            if (r) setCurrentRange(r);
-            else setCurrentRange({ start: d, end: d });
-          }}
+          onCurrentDateChange={(d, r) => updateCurrent(d, r)}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
         />
