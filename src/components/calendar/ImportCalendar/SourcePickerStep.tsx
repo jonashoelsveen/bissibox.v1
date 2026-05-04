@@ -14,12 +14,12 @@ export function SourcePickerStep({
         <div>
           <div className="text-sm font-medium text-ink">From Device</div>
           <div className="mt-1 text-[11px] text-muted-foreground">
-            Upload .xlsx, .xls or .csv
+            Upload .pdf, .xlsx, .xls or .csv
           </div>
         </div>
         <input
           type="file"
-          accept=".xlsx,.xls,.csv"
+          accept=".pdf,.xlsx,.xls,.csv,application/pdf"
           className="sr-only"
           onChange={(e) => {
             const f = e.target.files?.[0];

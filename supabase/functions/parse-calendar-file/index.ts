@@ -1,20 +1,15 @@
 // parse-calendar-file
 //
-// Accepts a base64-encoded file (xlsx / xls / csv / pdf / txt) plus its
-// filename + mime type, extracts a structured text representation, then
-// asks Lovable AI to detect categories + events using tool calling for
-// strict JSON output.
-//
-// Returns:
-//   {
-//     total_events_found: number,
-//     detected_categories: { id, name, count }[],
-//     events: { title, start_time, end_time, category, description }[]
-//   }
+// Accepts a base64-encoded file (pdf / xlsx / xls / csv / txt), converts it
+// to highly-legible text (Markdown tables for CSV, raw row arrays for sheets,
+// extracted text for PDFs via unpdf), then asks Lovable AI to detect
+// categories + events using strict tool-calling JSON output. Each event
+// includes a reasoning_confidence (1-100). The frontend filters >= 80.
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
+import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,12 +18,11 @@ const corsHeaders = {
 };
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const MODEL = "google/gemini-2.5-pro";
 
 // --- helpers --------------------------------------------------------------
 
 function base64ToUint8Array(b64: string): Uint8Array {
-  // Strip data: URL prefix if present.
   const stripped = b64.includes(",") ? b64.split(",", 2)[1] : b64;
   const bin = atob(stripped);
   const out = new Uint8Array(bin.length);
@@ -36,42 +30,62 @@ function base64ToUint8Array(b64: string): Uint8Array {
   return out;
 }
 
-function classifyMime(name: string, mime: string): "spreadsheet" | "csv" | "text" {
+type Kind = "pdf" | "spreadsheet" | "csv" | "text";
+
+function classify(name: string, mime: string): Kind {
   const n = name.toLowerCase();
+  if (n.endsWith(".pdf") || mime.includes("pdf")) return "pdf";
   if (n.endsWith(".xlsx") || n.endsWith(".xls") || mime.includes("spreadsheet") || mime.includes("excel"))
     return "spreadsheet";
   if (n.endsWith(".csv") || mime.includes("csv")) return "csv";
   return "text";
 }
 
-function extractFromSpreadsheet(bytes: Uint8Array): string {
+function fromSpreadsheet(bytes: Uint8Array): string {
   const wb = XLSX.read(bytes, { type: "array", cellDates: true });
   const out: string[] = [];
   for (const sheetName of wb.SheetNames) {
     const ws = wb.Sheets[sheetName];
     if (!ws) continue;
-    // Extract raw structural data rows (array-of-arrays) — preserves the
-    // exact column layout of the source so the LLM never has to guess.
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false });
-    out.push(`[SHEET: ${sheetName}]`);
+    out.push(`Sheet: ${sheetName}`);
     out.push(JSON.stringify(rows, null, 2));
   }
-  return out.join("\n\n").slice(0, 60_000);
+  return out.join("\n\n");
 }
 
-function extractFromCsv(bytes: Uint8Array): string {
-  return new TextDecoder().decode(bytes).slice(0, 60_000);
+/** Convert CSV into a Markdown table — gives the LLM clear column structure. */
+function fromCsv(bytes: Uint8Array): string {
+  const text = new TextDecoder().decode(bytes);
+  const rows = text
+    .split(/\r?\n/)
+    .filter((r) => r.trim().length > 0)
+    .map((row) => row.split(",").map((cell) => cell.trim()));
+  if (rows.length === 0) return "";
+  const header = rows[0];
+  const sep = header.map(() => "---");
+  const lines = [
+    `| ${header.join(" | ")} |`,
+    `| ${sep.join(" | ")} |`,
+    ...rows.slice(1).map((cols) => `| ${cols.join(" | ")} |`),
+  ];
+  return lines.join("\n");
 }
 
-function extractFromText(bytes: Uint8Array): string {
-  return new TextDecoder().decode(bytes).slice(0, 60_000);
+async function fromPdf(bytes: Uint8Array): Promise<string> {
+  const pdf = await getDocumentProxy(bytes);
+  const { text } = await extractText(pdf, { mergePages: true });
+  return Array.isArray(text) ? text.join("\n") : (text as string);
 }
 
-function extractContent(bytes: Uint8Array, fileName: string, mime: string): string {
-  const kind = classifyMime(fileName, mime);
-  if (kind === "spreadsheet") return extractFromSpreadsheet(bytes);
-  if (kind === "csv") return extractFromCsv(bytes);
-  return extractFromText(bytes);
+async function extractContent(bytes: Uint8Array, name: string, mime: string): Promise<string> {
+  const kind = classify(name, mime);
+  let out = "";
+  if (kind === "pdf") out = await fromPdf(bytes);
+  else if (kind === "spreadsheet") out = fromSpreadsheet(bytes);
+  else if (kind === "csv") out = fromCsv(bytes);
+  else out = new TextDecoder().decode(bytes);
+  return out.slice(0, 80_000);
 }
 
 // --- AI tool schema -------------------------------------------------------
@@ -80,20 +94,17 @@ const PARSE_TOOL = {
   type: "function" as const,
   function: {
     name: "submit_parsed_calendar",
-    description:
-      "Submit the structured list of categories and events detected in the uploaded sports schedule.",
+    description: "Submit categories and events extracted from a sports schedule document.",
     parameters: {
       type: "object",
       properties: {
         detected_categories: {
           type: "array",
-          description:
-            "Distinct event categories found in the file. Use snake_case ids and human-readable names.",
           items: {
             type: "object",
             properties: {
               id: { type: "string", description: "snake_case identifier, e.g. xc_skiing" },
-              name: { type: "string", description: "Human-friendly label, e.g. XC Skiing" },
+              name: { type: "string" },
             },
             required: ["id", "name"],
             additionalProperties: false,
@@ -101,27 +112,24 @@ const PARSE_TOOL = {
         },
         events: {
           type: "array",
-          description: "Every event detected in the file.",
           items: {
             type: "object",
             properties: {
               title: { type: "string" },
               start_time: {
                 type: "string",
+                description: "ISO 8601 local datetime, e.g. 2026-11-20T10:00:00.",
+              },
+              end_time: { type: "string", description: "ISO 8601 local datetime, optional." },
+              category: { type: "string", description: "Must reference a detected_categories id." },
+              description: { type: "string" },
+              reasoning_confidence: {
+                type: "number",
                 description:
-                  "ISO 8601 local datetime, e.g. 2026-11-20T10:00:00. Use the year hinted by the document; default to the current upcoming season if ambiguous.",
+                  "Integer 1-100. How confident you are this event is real and the date/time is correct, based ONLY on explicit content in the source.",
               },
-              end_time: {
-                type: "string",
-                description: "ISO 8601 local datetime. Optional — leave empty if not specified.",
-              },
-              category: {
-                type: "string",
-                description: "Must reference one of the detected_categories ids.",
-              },
-              description: { type: "string", description: "Optional longer description." },
             },
-            required: ["title", "start_time", "category"],
+            required: ["title", "start_time", "category", "reasoning_confidence"],
             additionalProperties: false,
           },
         },
@@ -132,17 +140,16 @@ const PARSE_TOOL = {
   },
 };
 
-const SYSTEM_PROMPT = `You are an elite sports federation administrative analyzer.
+const SYSTEM_PROMPT = `You are an advanced administrative sports assistant in Scandinavia. Your task is to extract exact calendar events and deadlines from the provided file content.
 
-YOUR OBJECTIVE:
-Extract calendar dates, times, and events from the provided RAW EXTRACTED CONTENT only.
-
-CRITICAL EVALUATION RULES:
-- Source Isolation: Only parse events explicitly present in the raw content. NEVER invent dates, deadlines, or events using the filename, mime type, or any external assumption. The filename is provided for context only — it is NOT a source of events.
-- No Hallucinations: If the raw content contains no concrete dates or events, return empty detected_categories and empty events arrays.
-- Strict Categorization: Categorize each event into distinct sports, age groups, or event genres based on row content, column labels, sheet names, or explicit headings present in the data. Use snake_case ids.
-- Reasoning over Data: If a row contains a date and a label (e.g. "Round 1"), extract it. If no time is given, default start_time to 12:00 local. Leave end_time empty unless specified.
-- Year Resolution: If only month/day is present, infer the year only from explicit text within the content (e.g. headers, season labels). Otherwise use the provided "Today" date as a hint and choose the next upcoming occurrence.
+EVALUATION DIRECTIVES:
+- Analyze the raw text/table only. Extract exact dates, event titles, descriptions, and deduce categories based on row labels, section headers, sheet names, or repeating prefixes (e.g., XC Skiing, Football).
+- Do NOT infer, guess, or invent events based on the file name, mime type, or external assumptions. The filename is provided for context only.
+- Focus heavily on visual table alignments (Markdown tables or array-of-array rows).
+- Each extracted event REQUIRES a "reasoning_confidence" integer between 1 and 100. Use 90+ only when both the date AND the title are explicitly present in the source. Use 80-89 when small inference is needed (e.g., year resolved from a season header). Use <80 when guessing.
+- If an event lacks an explicit or clearly deducible date in the text, OMIT it entirely. Never fabricate dates.
+- If the content has no concrete dates, return empty arrays.
+- Use snake_case category ids. Default start_time to 12:00 local if a time is not given. Leave end_time unset unless specified.
 
 Output strictly via the submit_parsed_calendar tool. Never include explanatory prose.`;
 
@@ -174,7 +181,7 @@ serve(async (req) => {
     }
 
     const bytes = base64ToUint8Array(base64);
-    const content = extractContent(bytes, fileName, mimeType ?? "");
+    const content = await extractContent(bytes, fileName, mimeType ?? "");
     if (!content || content.trim().length < 10) {
       return new Response(
         JSON.stringify({ error: "Could not extract text from the file." }),
@@ -186,7 +193,7 @@ serve(async (req) => {
       `Filename (CONTEXT ONLY — do not derive events from this): ${fileName}`,
       `Today: ${new Date().toISOString().slice(0, 10)}`,
       ``,
-      `Analyze this RAW EXTRACTED DOCUMENT CONTENT and return data via the submit_parsed_calendar tool. Only events explicitly present below are valid.`,
+      `Process this extracted document content. Return data via the submit_parsed_calendar tool. Only events explicitly present below are valid.`,
       ``,
       `"""`,
       content,
@@ -220,8 +227,7 @@ serve(async (req) => {
       if (aiRes.status === 402) {
         return new Response(
           JSON.stringify({
-            error:
-              "AI credits exhausted. Add credits in Settings → Workspace → Usage to continue.",
+            error: "AI credits exhausted. Add credits in Settings → Workspace → Usage to continue.",
           }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
@@ -252,6 +258,7 @@ serve(async (req) => {
         end_time?: string;
         category: string;
         description?: string;
+        reasoning_confidence: number;
       }[];
     };
     try {
@@ -264,12 +271,15 @@ serve(async (req) => {
       });
     }
 
-    // Normalise: drop events with bad dates, count categories, dedupe ids.
+    // Normalise: drop events with bad dates, ensure categories exist, count.
     const events = (parsed.events ?? []).filter(
-      (e) => e && typeof e.title === "string" && Number.isFinite(Date.parse(e.start_time)),
+      (e) =>
+        e &&
+        typeof e.title === "string" &&
+        Number.isFinite(Date.parse(e.start_time)) &&
+        typeof e.reasoning_confidence === "number",
     );
     const categoryIds = new Set(parsed.detected_categories?.map((c) => c.id) ?? []);
-    // Ensure every event's category exists.
     for (const e of events) {
       if (!categoryIds.has(e.category)) {
         categoryIds.add(e.category);
@@ -282,7 +292,7 @@ serve(async (req) => {
     const counts = new Map<string, number>();
     for (const e of events) counts.set(e.category, (counts.get(e.category) ?? 0) + 1);
     const detected_categories = parsed.detected_categories
-      .filter((c) => counts.get(c.id) ?? 0)
+      .filter((c) => (counts.get(c.id) ?? 0) > 0)
       .map((c) => ({ ...c, count: counts.get(c.id) ?? 0 }));
 
     return new Response(

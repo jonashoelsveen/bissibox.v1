@@ -12,7 +12,10 @@ export interface ParsedEvent {
   end_time?: string; // ISO 8601 local
   category: string;
   description?: string;
+  reasoning_confidence?: number; // 1-100
 }
+
+export const MIN_CONFIDENCE = 80;
 
 export interface ParsedImport {
   total_events_found: number;
