@@ -64,14 +64,16 @@ export function YearCalendarView({
       if (k === "z" && !e.shiftKey) {
         e.preventDefault();
         undo();
+        undoEvents();
       } else if ((k === "z" && e.shiftKey) || k === "y") {
         e.preventDefault();
         redo();
+        redoEvents();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [undo, redo]);
+  }, [undo, redo, undoEvents, redoEvents]);
 
   const commitTitle = () => {
     setEditingTitle(false);
