@@ -1278,8 +1278,10 @@ function DayCellPair(props: DayCellPairProps) {
         const cellColor = parsed.color ?? cell?.color ?? null;
         const cellLabel = parsed.text;
 
-        // Vivid full-opacity fill when a session has a color.
-        const bg = cellColor ?? undefined;
+        // Outlook/Motion style: soft tinted body, bright left edge accent.
+        const bg = cellColor
+          ? `color-mix(in srgb, ${cellColor} 18%, white)`
+          : undefined;
 
         // Merge with neighbouring sessions of the same color so a multi-cell
         // session reads as one continuous block (no inner divider lines).
@@ -1325,6 +1327,12 @@ function DayCellPair(props: DayCellPairProps) {
               willChange: "min-height",
             }}
           >
+            {cellColor && (
+              <span
+                className="pointer-events-none absolute left-0 top-0 bottom-0 z-[1] w-[3px]"
+                style={{ background: cellColor }}
+              />
+            )}
             {mk.in && (
               <span
                 className="pointer-events-none absolute inset-x-0 z-[1] bg-muted-foreground/15"
@@ -1415,7 +1423,7 @@ function DayCellPair(props: DayCellPairProps) {
                 if (totalMin % 60 !== 0) return null;
                 const hh = Math.floor(totalMin / 60);
                 const label = `${String(hh).padStart(2, "0")}:00`;
-                const hourColor = cellColor ? contrastTextOn(cellColor) : undefined;
+                const hourColor = cellColor ?? undefined;
                 return (
                   <span
                     className="pointer-events-none absolute left-1.5 top-0.5 text-[10px] font-medium tabular-nums"
@@ -1490,7 +1498,8 @@ function DayCellPair(props: DayCellPairProps) {
 
             {showCompact && !isEditing && (() => {
               const Icon = iconForColor(cellColor);
-              const labelColor = cellColor ? contrastTextOn(cellColor) : undefined;
+              const labelColor = "hsl(var(--ink, 220 13% 13%))";
+              const iconColor = cellColor ?? labelColor;
               return (
                 <span
                   className={`pointer-events-none absolute left-14 right-1.5 top-0.5 flex items-center gap-1 truncate text-[12px] ${
@@ -1499,11 +1508,11 @@ function DayCellPair(props: DayCellPairProps) {
                   style={{
                     opacity: focused ? 0 : 1,
                     transition: `opacity ${DUR_MS}ms ${EASE}`,
-                    color: labelColor ?? "hsl(var(--ink, 220 13% 13%))",
+                    color: labelColor,
                   }}
                 >
                   {!sameAbove && Icon && cellColor && (
-                    <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: labelColor }} />
+                    <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: iconColor }} />
                   )}
                   <span className="truncate">{sameAbove ? "" : cellLabel}</span>
                 </span>
@@ -1802,8 +1811,11 @@ function WeekEventsOverlay({
         const isDragging = drag?.id === ev.id && drag.moved;
         const dragDx = isDragging ? drag.delta.dx : 0;
         const dragDy = isDragging ? drag.delta.dy : 0;
-        const bg = ev.color ?? "hsl(var(--primary))";
-        const fg = ev.color ? contrastTextOn(ev.color) : "hsl(var(--primary-foreground))";
+        const accent = ev.color ?? "hsl(var(--primary))";
+        const bg = ev.color
+          ? `color-mix(in srgb, ${ev.color} 18%, white)`
+          : "hsl(var(--primary) / 0.15)";
+        const fg = "hsl(var(--ink, 220 13% 13%))";
         const Icon = iconForColor(ev.color);
         return (
           <div
@@ -1827,7 +1839,7 @@ function WeekEventsOverlay({
               e.stopPropagation();
               onEventClick(ev, e.currentTarget as HTMLElement);
             }}
-            className="absolute z-[8] cursor-grab overflow-hidden rounded-[3px] px-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md"
+            className="absolute z-[8] cursor-grab overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md"
             style={{
               left: box.left + 2 + dragDx,
               width: box.width - 4,
@@ -1839,8 +1851,12 @@ function WeekEventsOverlay({
             }}
             title={ev.title}
           >
+            <span
+              className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]"
+              style={{ background: accent }}
+            />
             <div className="flex items-center gap-1 truncate">
-              {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} />}
+              {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: accent }} />}
               <span className="truncate font-medium">{ev.title}</span>
             </div>
           </div>
