@@ -68,6 +68,7 @@ export function TeamBoardPage({
   hideOwnTabBar,
   forceMeetingId,
   onMeetingOpened,
+  onMeetingDeleted,
 }: {
   embedded?: boolean;
   newMeetingSignal?: number;
@@ -77,6 +78,8 @@ export function TeamBoardPage({
   forceMeetingId?: string | null;
   /** Notify parent when a meeting is opened (e.g. after creation via newMeetingSignal). */
   onMeetingOpened?: (meeting: { id: string; title: string; folder: string | null; kind: "new" | "earlier" }) => void;
+  /** Notify parent when a meeting is deleted from this view. */
+  onMeetingDeleted?: (id: string) => void;
 } = {}) {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
@@ -1370,6 +1373,7 @@ export function TeamBoardPage({
                     setConfirmDeleteMeetingId(null);
                     toast.success("Meeting deleted");
                     window.dispatchEvent(new Event("library:refresh"));
+                    onMeetingDeleted?.(id);
                   }}
                   disabled={deletingMeeting}
                   className="rounded-full bg-destructive px-5 py-2 text-xs text-destructive-foreground hover:opacity-90 disabled:opacity-50"

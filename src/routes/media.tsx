@@ -259,8 +259,19 @@ function LibraryPage() {
   } | null>(null);
 
   const finalizeClose = (id: string) => {
-    setOpenNoteTabs((prev) => prev.filter((t) => t.id !== id));
-    if (activeNoteId === id) setActiveNoteId(null);
+    setOpenNoteTabs((prev) => {
+      const idx = prev.findIndex((t) => t.id === id);
+      const next = prev.filter((t) => t.id !== id);
+      if (activeNoteId === id) {
+        if (next.length === 0) {
+          setActiveNoteId(null);
+        } else {
+          const leftIdx = Math.max(0, (idx === -1 ? 0 : idx) - 1);
+          setActiveNoteId(next[leftIdx].id);
+        }
+      }
+      return next;
+    });
   };
 
   const closeNoteTab = (id: string) => {
@@ -582,6 +593,7 @@ function LibraryPage() {
               onMeetingOpened={(m) =>
                 openMeetingTab({ id: m.id, title: m.title, folder: m.folder }, m.kind)
               }
+              onMeetingDeleted={(id) => finalizeClose(id)}
             />
           ) : showingNote && activeNoteId ? (
             <NoteEditor
