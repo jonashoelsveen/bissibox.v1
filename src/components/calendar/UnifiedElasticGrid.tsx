@@ -958,11 +958,12 @@ export function UnifiedElasticGrid({
               }}
             />
           )}
-          {mode.kind === "year" && todayColIdx >= 0 && nowOffset !== null && (
+          {mode.kind === "year" && todayColIdx >= 0 && nowMinutesSinceStart !== null && (
             <NowLine
               scrollRef={scrollRef}
               colIdx={todayColIdx}
-              top={headerH + nowOffset}
+              nowMinutesSinceStart={nowMinutesSinceStart}
+              rowHeight={rowHeight}
             />
           )}
         </div>
