@@ -589,6 +589,7 @@ function LibraryPage() {
               noteId={activeNoteId}
               actionsMount={actionsMount}
               onChanged={updateNoteTab}
+              onDeleted={(id) => finalizeClose(id)}
             />
           ) : showingPrevious ? (
             <PreviousPage

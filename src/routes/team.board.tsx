@@ -103,6 +103,8 @@ export function TeamBoardPage({
   const [editMeetingOpen, setEditMeetingOpen] = useState(false);
   const [editMeetingTitle, setEditMeetingTitle] = useState("");
   const [editMeetingFolder, setEditMeetingFolder] = useState<string>("");
+  const [confirmDeleteMeetingId, setConfirmDeleteMeetingId] = useState<string | null>(null);
+  const [deletingMeeting, setDeletingMeeting] = useState(false);
   const [meetingSearch, setMeetingSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -1057,6 +1059,13 @@ export function TeamBoardPage({
             >
               <FolderIcon className="h-4 w-4" />
             </button>
+            <button
+              onClick={() => setConfirmDeleteMeetingId(ongoing.meeting.id)}
+              title="Delete meeting"
+              className="rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
             {meetingsAutosave ? (
               <span
                 title="Autosave is on. Edits are saved automatically."
@@ -1302,6 +1311,76 @@ export function TeamBoardPage({
           confirmLabel="Save"
         />
       )}
+
+      {confirmDeleteMeetingId && (() => {
+        const m = openTabs.find((t) => t.meeting.id === confirmDeleteMeetingId)?.meeting
+          ?? meetings.find((x) => x.id === confirmDeleteMeetingId);
+        const title = m?.title || "Untitled meeting";
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in"
+            onClick={() => !deletingMeeting && setConfirmDeleteMeetingId(null)}
+          >
+            <div className="absolute inset-0 bg-black/60" />
+            <div
+              className="relative z-10 w-full max-w-md rounded-2xl border border-hairline bg-card p-6 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-2 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg text-ink">Delete meeting?</h2>
+                <button
+                  onClick={() => setConfirmDeleteMeetingId(null)}
+                  className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-ink">"{title}"</span> will be permanently removed. This cannot be undone.
+              </p>
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  onClick={() => setConfirmDeleteMeetingId(null)}
+                  className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
+                >Cancel</button>
+                <button
+                  onClick={async () => {
+                    const id = confirmDeleteMeetingId;
+                    if (!id) return;
+                    setDeletingMeeting(true);
+                    const tab = openTabs.find((t) => t.meeting.id === id);
+                    const atts = tab?.attachments ?? [];
+                    if (atts.length) {
+                      await supabase.storage.from("board-attachments").remove(atts.map((a) => a.storage_path));
+                    } else {
+                      const { data } = await supabase
+                        .from("team_board_meeting_attachments")
+                        .select("storage_path").eq("meeting_id", id);
+                      if (data && data.length) {
+                        await supabase.storage.from("board-attachments")
+                          .remove(data.map((a) => a.storage_path));
+                      }
+                    }
+                    await supabase.from("team_board_meeting_attachments").delete().eq("meeting_id", id);
+                    const { error } = await supabase.from("team_board_meetings").delete().eq("id", id);
+                    setDeletingMeeting(false);
+                    if (error) { toast.error(error.message); return; }
+                    setMeetings((prev) => prev.filter((x) => x.id !== id));
+                    removeTabFromOpen(id);
+                    setConfirmDeleteMeetingId(null);
+                    toast.success("Meeting deleted");
+                    window.dispatchEvent(new Event("library:refresh"));
+                  }}
+                  disabled={deletingMeeting}
+                  className="rounded-full bg-destructive px-5 py-2 text-xs text-destructive-foreground hover:opacity-90 disabled:opacity-50"
+                >
+                  {deletingMeeting ? "Deleting…" : "Delete meeting"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

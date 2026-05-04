@@ -35,10 +35,12 @@ export function NoteEditor({
   noteId,
   actionsMount: _actionsMount,
   onChanged,
+  onDeleted,
 }: {
   noteId: string;
   actionsMount?: HTMLDivElement | null;
   onChanged?: (patch: { id: string; title?: string; folder?: string | null }) => void;
+  onDeleted?: (id: string) => void;
 }) {
   const { user, activeEntityId } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +55,8 @@ export function NoteEditor({
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editFolder, setEditFolder] = useState("");
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const isDirty = body !== savedBody;
   const scopeKey = activeEntityId
@@ -197,6 +201,26 @@ export function NoteEditor({
     toast.success("Saved");
   };
 
+  const deleteNote = async () => {
+    if (!note) return;
+    setDeleting(true);
+    // Remove attachments from storage
+    if (attachments.length) {
+      await supabase.storage
+        .from("note-attachments")
+        .remove(attachments.map((a) => a.storage_path));
+    }
+    await supabase.from("note_attachments").delete().eq("note_id", note.id);
+    const { error } = await supabase.from("notes").delete().eq("id", note.id);
+    setDeleting(false);
+    if (error) { toast.error(error.message); return; }
+    setConfirmDeleteOpen(false);
+    toast.success("Note deleted");
+    window.dispatchEvent(new Event("library:refresh"));
+    onDeleted?.(note.id);
+  };
+
+
   const headerLabel = useMemo(() => {
     if (!note) return "";
     return note.folder ? `${note.folder} · ${note.title}` : note.title;
@@ -228,6 +252,13 @@ export function NoteEditor({
             className="ml-auto rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-ink"
           >
             <FolderIcon className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setConfirmDeleteOpen(true)}
+            title="Delete note"
+            className="rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
           </button>
           {autosave ? (
             <span
@@ -328,6 +359,36 @@ export function NoteEditor({
           onClose={() => setEditOpen(false)}
           onConfirm={() => void saveEdit()}
         />
+      )}
+
+      {confirmDeleteOpen && note && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in" onClick={() => !deleting && setConfirmDeleteOpen(false)}>
+          <div className="absolute inset-0 bg-black/60" />
+          <div
+            className="relative z-10 w-full max-w-md rounded-2xl border border-hairline bg-card p-6 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-2 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg text-ink">Delete note?</h2>
+              <button onClick={() => setConfirmDeleteOpen(false)} className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-ink">"{note.title || "Untitled note"}"</span> will be permanently removed. This cannot be undone.
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button onClick={() => setConfirmDeleteOpen(false)} className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink">Cancel</button>
+              <button
+                onClick={() => void deleteNote()}
+                disabled={deleting}
+                className="rounded-full bg-destructive px-5 py-2 text-xs text-destructive-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {deleting ? "Deleting…" : "Delete note"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
