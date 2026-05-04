@@ -32,7 +32,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { Plus, Trash2, PersonStanding, GraduationCap, Briefcase, Sparkles } from "lucide-react";
+import { Plus, Trash2, PersonStanding, GraduationCap, Briefcase, Sparkles, Clock } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
