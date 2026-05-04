@@ -208,10 +208,11 @@ function YearCalendarViewInner({
           >
             <SettingsIcon className="h-4 w-4" />
           </button>
+          <ImportButton onCommit={(patch) => upsertEvent(patch)} />
         </div>
       </div>
 
-      <div className="min-h-[60vh]">
+      <div className="min-h-[60vh]" data-preview-active={previewActive ? "true" : "false"}>
         <UnifiedElasticGrid
           calId={calId}
           year={meta.year}
