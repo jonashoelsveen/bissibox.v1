@@ -35,7 +35,7 @@ import type { DateRange } from "./MiniCalendar";
 import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoWeekNumber } from "./dateUtils";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 
-type ViewMode = "day" | "week" | "month";
+export type ViewMode = "day" | "week" | "month";
 
 const VIEW_MODE_LABEL: Record<ViewMode, string> = {
   day: "Dag",
@@ -48,7 +48,7 @@ const VIEW_MODE_LABEL: Record<ViewMode, string> = {
  * switcher, but slightly more compact and friendlier (chevron rotates,
  * subtle hover affordance, items show a check on the active row).
  */
-function HeaderDropdown<T extends string>({
+export function HeaderDropdown<T extends string>({
   value,
   options,
   onChange,
@@ -206,6 +206,11 @@ export interface UnifiedElasticGridProps {
   currentRange: DateRange;
   /** Notify parent so the mini-cal & main view stay in sync. */
   onCurrentDateChange: (date: Date, range?: DateRange) => void;
+  /** Optional controlled view mode — when provided, the grid reads from
+   *  the parent. The internal dropdown is hidden in that case so the parent
+   *  can render its own controls in the header strip. */
+  viewMode?: ViewMode;
+  onViewModeChange?: (v: ViewMode) => void;
 }
 
 type Mode = { kind: "year" } | { kind: "month"; month: number };
@@ -228,12 +233,16 @@ export function UnifiedElasticGrid({
   currentDate,
   currentRange,
   onCurrentDateChange,
+  viewMode: viewModeProp,
+  onViewModeChange,
 }: UnifiedElasticGridProps) {
   // viewMode is the only user-facing toggle now. There are no "types".
   //   - "day"   → 7-column rich spreadsheet (one row per 30-min slot)
   //   - "week"  → 7-column compact spreadsheet (hourly time labels)
   //   - "month" → MonthGridType1 (full month grid)
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [viewModeInternal, setViewModeInternal] = useState<ViewMode>("month");
+  const viewMode = viewModeProp ?? viewModeInternal;
+  const isControlled = viewModeProp !== undefined;
   const [editingKey, setEditingKey] = useState<CellKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -245,7 +254,8 @@ export function UnifiedElasticGrid({
   const mode: Mode = viewMode === "day" ? { kind: "month", month: 0 } : { kind: "year" };
 
   const handleViewModeChange = (v: ViewMode) => {
-    setViewMode(v);
+    if (!isControlled) setViewModeInternal(v);
+    onViewModeChange?.(v);
   };
 
   // Both spreadsheet sub-views are always implemented; "month" routes to
@@ -736,26 +746,31 @@ export function UnifiedElasticGrid({
       className="relative w-full overflow-hidden rounded-md border border-hairline bg-card"
       style={{ height: "calc(100vh - 280px)" }}
     >
-      {/* Top-right control cluster: [Mode ▾] [‹ 📅 ›] */}
-      <div className="pointer-events-auto absolute right-3 top-3 z-30 flex items-center gap-2">
-        <HeaderDropdown<ViewMode>
-          ariaLabel="Visningsmodus"
-          value={viewMode}
-          onChange={handleViewModeChange}
-          width={124}
-          options={[
-            { value: "day", label: "Dag" },
-            { value: "week", label: "Uke" },
-            { value: "month", label: "Måned" },
-          ]}
-        />
-        <MonthNavControl
-          unit={viewMode}
-          currentDate={currentDate}
-          selectedRange={currentRange}
-          onChange={onCurrentDateChange}
-        />
-      </div>
+      {/* Top-right control cluster: [Mode ▾] [‹ 📅 ›].
+          When the parent controls viewMode it also renders these controls
+          itself (in the page header), so we hide the in-grid cluster to
+          avoid duplication. */}
+      {!isControlled && (
+        <div className="pointer-events-auto absolute right-3 top-3 z-30 flex items-center gap-2">
+          <HeaderDropdown<ViewMode>
+            ariaLabel="Visningsmodus"
+            value={viewMode}
+            onChange={handleViewModeChange}
+            width={124}
+            options={[
+              { value: "day", label: "Dag" },
+              { value: "week", label: "Uke" },
+              { value: "month", label: "Måned" },
+            ]}
+          />
+          <MonthNavControl
+            unit={viewMode}
+            currentDate={currentDate}
+            selectedRange={currentRange}
+            onChange={onCurrentDateChange}
+          />
+        </div>
+      )}
 
       <LayoutGroup id="cal-zoom">
       <AnimatePresence mode="wait" initial={false}>
@@ -809,6 +824,7 @@ export function UnifiedElasticGrid({
         <div
           ref={scrollRef}
           className="relative h-full w-full overflow-auto"
+          style={{ scrollbarGutter: "stable" }}
           onClick={(e) => {
             if (e.target === e.currentTarget) handleSelect(null);
           }}

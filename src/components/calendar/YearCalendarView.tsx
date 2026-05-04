@@ -12,7 +12,8 @@
 import { useEffect, useState } from "react";
 import { Settings as SettingsIcon, Undo2, Redo2 } from "lucide-react";
 import { useYearStore, useEventStore, type CellKey } from "./yearStore";
-import { UnifiedElasticGrid } from "./UnifiedElasticGrid";
+import { UnifiedElasticGrid, HeaderDropdown, type ViewMode } from "./UnifiedElasticGrid";
+import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
 
 export type CalendarSeat = "admin" | "individual";
@@ -49,6 +50,10 @@ export function YearCalendarView({
     const t = new Date();
     return { start: t, end: t };
   });
+  // Lifted from UnifiedElasticGrid so the prev/next + mini-cal arrows can
+  // live in the page header (left of the year + undo cluster) instead of
+  // floating on top of the grid.
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
 
   // Keyboard shortcuts: ⌘Z / Ctrl+Z for undo, ⌘⇧Z / Ctrl+Y for redo
   useEffect(() => {
@@ -114,7 +119,31 @@ export function YearCalendarView({
           </h1>
         )}
         <div className="flex items-center gap-1">
-          <span className="mr-2 text-xs text-muted-foreground">{meta.year}</span>
+          {/* Mode dropdown + prev/next/mini-cal arrows. Sit to the LEFT of
+              the year + undo/redo cluster so all navigation lives above the
+              calendar window instead of floating on top of it. */}
+          <HeaderDropdown<ViewMode>
+            ariaLabel="Visningsmodus"
+            value={viewMode}
+            onChange={setViewMode}
+            width={108}
+            options={[
+              { value: "day", label: "Dag" },
+              { value: "week", label: "Uke" },
+              { value: "month", label: "Måned" },
+            ]}
+          />
+          <MonthNavControl
+            unit={viewMode}
+            currentDate={currentDate}
+            selectedRange={currentRange}
+            onChange={(d, r) => {
+              setCurrentDate(d);
+              if (r) setCurrentRange(r);
+              else setCurrentRange({ start: d, end: d });
+            }}
+          />
+          <span className="ml-2 mr-2 text-xs text-muted-foreground">{meta.year}</span>
           <button
             type="button"
             aria-label="Undo"
@@ -167,6 +196,8 @@ export function YearCalendarView({
             if (r) setCurrentRange(r);
             else setCurrentRange({ start: d, end: d });
           }}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
       </div>
     </div>
