@@ -207,3 +207,18 @@
     background: color-mix(in oklab, var(--ink) 32%, transparent);
   }
 }
+
+@layer utilities {
+  /* Import-calendar preview overlay: dim the real events so the imported
+     "ghost" events (rendered with a dashed green outline) stand out. */
+  [data-preview-active="true"] [data-real-event="1"] {
+    opacity: 0.3;
+    filter: grayscale(0.2);
+    transition: opacity 180ms ease, filter 180ms ease;
+  }
+  [data-preview-active="true"] [data-ghost-event="1"] {
+    outline: 2px dashed #22C55E;
+    outline-offset: -2px;
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25), 0 4px 14px -6px rgba(34, 197, 94, 0.55);
+  }
+}
