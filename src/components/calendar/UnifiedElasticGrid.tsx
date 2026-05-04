@@ -1136,7 +1136,7 @@ function DayRow(props: DayRowProps) {
             <div
               key={`v-${m.idx}-${day}`}
               data-month-col={m.idx}
-              className="border-b border-r border-hairline bg-muted/30"
+              className={`border-b border-r border-hairline ${mode.kind === "year" ? "bg-card" : "bg-muted/30"}`}
               style={{
                 height: rowHeight * 2,
                 transition: `height ${DUR_MS}ms ${EASE}`,
