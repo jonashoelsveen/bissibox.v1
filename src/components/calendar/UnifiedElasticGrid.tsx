@@ -746,26 +746,31 @@ export function UnifiedElasticGrid({
       className="relative w-full overflow-hidden rounded-md border border-hairline bg-card"
       style={{ height: "calc(100vh - 280px)" }}
     >
-      {/* Top-right control cluster: [Mode ▾] [‹ 📅 ›] */}
-      <div className="pointer-events-auto absolute right-3 top-3 z-30 flex items-center gap-2">
-        <HeaderDropdown<ViewMode>
-          ariaLabel="Visningsmodus"
-          value={viewMode}
-          onChange={handleViewModeChange}
-          width={124}
-          options={[
-            { value: "day", label: "Dag" },
-            { value: "week", label: "Uke" },
-            { value: "month", label: "Måned" },
-          ]}
-        />
-        <MonthNavControl
-          unit={viewMode}
-          currentDate={currentDate}
-          selectedRange={currentRange}
-          onChange={onCurrentDateChange}
-        />
-      </div>
+      {/* Top-right control cluster: [Mode ▾] [‹ 📅 ›].
+          When the parent controls viewMode it also renders these controls
+          itself (in the page header), so we hide the in-grid cluster to
+          avoid duplication. */}
+      {!isControlled && (
+        <div className="pointer-events-auto absolute right-3 top-3 z-30 flex items-center gap-2">
+          <HeaderDropdown<ViewMode>
+            ariaLabel="Visningsmodus"
+            value={viewMode}
+            onChange={handleViewModeChange}
+            width={124}
+            options={[
+              { value: "day", label: "Dag" },
+              { value: "week", label: "Uke" },
+              { value: "month", label: "Måned" },
+            ]}
+          />
+          <MonthNavControl
+            unit={viewMode}
+            currentDate={currentDate}
+            selectedRange={currentRange}
+            onChange={onCurrentDateChange}
+          />
+        </div>
+      )}
 
       <LayoutGroup id="cal-zoom">
       <AnimatePresence mode="wait" initial={false}>
