@@ -777,6 +777,12 @@ export function UnifiedElasticGrid({
             onCurrentDateChange(d, { start: d, end: d });
           }}
           onCommitText={(k, text) => onCommitText(k, text)}
+          onWeekClick={(anchor) => {
+            // Update the anchor date so Week view lands on the clicked week,
+            // then morph the visible mode.
+            onCurrentDateChange(anchor, { start: anchor, end: anchor });
+            handleViewModeChange("week");
+          }}
         />
       ) : (
         <div
