@@ -511,7 +511,14 @@ export function MonthGridType1({
                   }}
                   onMouseUp={(e) => {
                     if (dragItem && d.inMonth) {
-                      moveItem(dragItem.fromKey, k, dragItem.text);
+                      moveItem(
+                        dragItem.fromKey,
+                        k,
+                        dragItem.text,
+                        dragItem.source === "event"
+                          ? { source: "event", eventId: dragItem.eventId }
+                          : { source: "legacy" },
+                      );
                       setDragItem(null);
                     }
                     // If user clicked without dragging, collapse range to focus
