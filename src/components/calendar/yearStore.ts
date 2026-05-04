@@ -68,6 +68,71 @@ function writeJSON<T>(key: string, value: T) {
   }
 }
 
+function hasCellPayload(cell: Partial<CellData>) {
+  return Boolean(
+    cell.text ||
+      cell.bold ||
+      cell.italic ||
+      cell.underline ||
+      cell.color ||
+      cell.duration ||
+      cell.description ||
+      cell.layer ||
+      cell.groupId ||
+      cell.locationId ||
+      cell.courseId,
+  );
+}
+
+function sanitizeLoadedCells(raw: Record<string, CellData> | unknown) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { cleaned: {} as Record<string, CellData>, changed: true };
+  }
+
+  let changed = false;
+  const cleaned: Record<string, CellData> = {};
+
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      changed = true;
+      continue;
+    }
+
+    const cell = value as Partial<CellData>;
+    const legacyText = typeof cell.text === "string" ? cell.text.trim() : "";
+    const stripLegacySession = legacyText.length > 0;
+
+    const next: CellData = {
+      id: typeof cell.id === "string" && cell.id ? cell.id : key,
+      text: stripLegacySession ? "" : typeof cell.text === "string" ? cell.text : "",
+      bold: stripLegacySession ? undefined : cell.bold,
+      italic: stripLegacySession ? undefined : cell.italic,
+      underline: stripLegacySession ? undefined : cell.underline,
+      color: stripLegacySession ? undefined : cell.color,
+      duration: typeof cell.duration === "string" ? cell.duration : undefined,
+      description: typeof cell.description === "string" ? cell.description : undefined,
+      layer:
+        cell.layer === "events" || cell.layer === "meetings" || cell.layer === "trainings"
+          ? cell.layer
+          : undefined,
+      groupId: typeof cell.groupId === "string" || cell.groupId === null ? cell.groupId : undefined,
+      locationId:
+        typeof cell.locationId === "string" || cell.locationId === null ? cell.locationId : undefined,
+      courseId: typeof cell.courseId === "string" || cell.courseId === null ? cell.courseId : undefined,
+    };
+
+    if (stripLegacySession || next.id !== cell.id) changed = true;
+    if (!hasCellPayload(next)) {
+      changed = true;
+      continue;
+    }
+
+    cleaned[key] = next;
+  }
+
+  return { cleaned, changed };
+}
+
 export function useYearStore(calId: string, defaultTitle: string) {
   const [data, setData] = useState<Record<string, CellData>>({});
   const [meta, setMeta] = useState<YearMeta>({
@@ -84,8 +149,10 @@ export function useYearStore(calId: string, defaultTitle: string) {
   // Load on calendar switch
   useEffect(() => {
     const loaded = readJSON<Record<string, CellData>>(dataKey(calId), {});
-    dataRef.current = loaded;
-    setData(loaded);
+    const { cleaned, changed } = sanitizeLoadedCells(loaded);
+    dataRef.current = cleaned;
+    setData(cleaned);
+    if (changed) writeJSON(dataKey(calId), cleaned);
     setMeta(
       readJSON<YearMeta>(metaKey(calId), {
         title: defaultTitle,
