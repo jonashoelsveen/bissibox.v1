@@ -36,7 +36,7 @@ import { Plus, Trash2, PersonStanding, GraduationCap, Briefcase, Sparkles, Clock
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
-import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal } from "./dateUtils";
+import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, isoWeekNumber } from "./dateUtils";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
 
 // Individual session categories. Three have fixed colors + icons for
@@ -132,6 +132,8 @@ export interface MonthGridType1Props {
   ) => CalendarEvent;
   onMoveEvent?: (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => void;
   onDeleteEvent?: (id: string) => void;
+  /** When the user clicks a week-number cell, zoom into that week. */
+  onWeekClick?: (anchorDate: Date) => void;
 }
 
 interface DayItem {
@@ -170,6 +172,7 @@ export function MonthGridType1({
   onUpsertEvent,
   onMoveEvent,
   onDeleteEvent,
+  onWeekClick,
 }: MonthGridType1Props) {
   const dim = daysInMonth(year, month);
   const firstDow = dowMon0(new Date(year, month, 1));
@@ -412,7 +415,20 @@ export function MonthGridType1({
   // Standard row-height target so all weeks stay perfectly aligned.
   const rowMinHeight = 132;
 
-  const headerLabel = `${MONTHS_FULL[month]} ${year}`;
+  // 28px leading column for week numbers; remaining 7 day columns share the
+  // rest of the width equally. Mirrors Week-view layout exactly so a zoom
+  // animation between the two doesn't shift column widths.
+  const GRID_TEMPLATE = "28px repeat(7, minmax(0, 1fr))";
+
+  // Date for the first day in each rendered row → ISO week number.
+  const weekRows = useMemo(() => {
+    const out: { row: number; weekNo: number; firstDate: Date }[] = [];
+    for (let r = 0; r < rows; r++) {
+      const first = days[r * 7].date;
+      out.push({ row: r, weekNo: isoWeekNumber(first), firstDate: first });
+    }
+    return out;
+  }, [days, rows]);
 
   return (
     <div
@@ -420,25 +436,29 @@ export function MonthGridType1({
       className="relative flex h-full w-full flex-col bg-card"
       tabIndex={0}
     >
-      {/* Minimalist month header (Notion-style). Navigation chevrons live
-          in the grid's top-right control cluster; here we only show the
-          month/year label so users always see what's in view. */}
-      <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
-        <h2 className="text-[15px] font-semibold tracking-tight text-ink">
-          {headerLabel}
-        </h2>
-      </div>
-
-      {/* Weekday strip */}
-      <div className="grid grid-cols-7 border-b border-hairline bg-card">
-        {WEEKDAYS.map((w) => (
-          <div
-            key={w}
-            className="px-3 py-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground"
-          >
-            {w}
-          </div>
-        ))}
+      {/* Weekday strip — mirrors the Week view: 28px week-number gutter + 7
+          weekday columns. Today's column gets the dark-grey highlight. */}
+      <div
+        className="grid border-b border-hairline bg-card"
+        style={{ gridTemplateColumns: GRID_TEMPLATE }}
+      >
+        <div className="border-r border-hairline" />
+        {WEEKDAYS.map((w, idx) => {
+          // The first row of `days` represents this week's Mon..Sun, so we
+          // can read each column's date from row 0.
+          const colDate = days[idx]?.date;
+          const isTodayCol = colDate && isToday(colDate);
+          return (
+            <div
+              key={w}
+              className={`px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.08em] ${
+                isTodayCol ? "bg-secondary text-ink" : "text-muted-foreground"
+              }`}
+            >
+              {w}
+            </div>
+          );
+        })}
       </div>
 
       {/* The grid */}
@@ -448,11 +468,23 @@ export function MonthGridType1({
             className="grid h-full w-full"
             style={
               {
-                gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+                gridTemplateColumns: GRID_TEMPLATE,
                 gridAutoRows: `minmax(${rowMinHeight}px, 1fr)`,
               } as CSSProperties
             }
           >
+            {weekRows.map((wr) => (
+              <button
+                key={`wn-${wr.row}`}
+                type="button"
+                onClick={() => onWeekClick?.(wr.firstDate)}
+                title={`Uke ${wr.weekNo} — klikk for å zoome inn`}
+                style={{ gridColumn: 1, gridRow: wr.row + 1 }}
+                className="flex items-start justify-center border-b border-r border-hairline pt-2 text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+              >
+                {wr.weekNo}
+              </button>
+            ))}
             {days.map((d) => {
               const pos: CellPos = { row: d.row, col: d.col };
               const focused = focus.row === d.row && focus.col === d.col;
@@ -575,6 +607,7 @@ export function MonthGridType1({
                           <motion.div
                             key={`${id}-${itemKey}`}
                             layout
+                            layoutId={it.kind === "event" ? `evt-${it.event.id}` : undefined}
                             initial={{ opacity: 0, y: -2 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -2 }}

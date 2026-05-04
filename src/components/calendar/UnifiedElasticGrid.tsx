@@ -25,14 +25,15 @@
  */
 
 import type React from "react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus } from "lucide-react";
 import type { CellData, CellKey, Session, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, contrastTextOn, categoryFromColor } from "./MonthGridType1";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
-import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes } from "./dateUtils";
+import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoWeekNumber } from "./dateUtils";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 
 type ViewMode = "day" | "week" | "month";
 
@@ -257,8 +258,10 @@ export function UnifiedElasticGrid({
 
   const gridTemplateColumns = useMemo(() => {
     if (mode.kind === "year") {
-      // Week view: 7 weekday columns (Mon–Sun).
-      return `repeat(7, minmax(${YEAR_COL}px, 1fr))`;
+      // Week view: 28px week-number gutter + 7 weekday columns. Mirrors the
+      // Month view exactly so a zoom animation between the two doesn't
+      // shift column widths.
+      return `28px repeat(7, minmax(0, 1fr))`;
     }
     // Day view: render the focused day at full FOCUS_COL width across the
     // 7-column envelope so the active column is centered horizontally.
@@ -665,7 +668,7 @@ export function UnifiedElasticGrid({
   }, [weekDates, now]);
 
   // Header height + now-line vertical offset for week view.
-  const headerRef = useRef<HTMLDivElement | null>(null);
+  const headerRef = useRef<HTMLElement | null>(null);
   const [headerH, setHeaderH] = useState(0);
   useLayoutEffect(() => {
     if (!headerRef.current) return;
@@ -754,7 +757,18 @@ export function UnifiedElasticGrid({
         />
       </div>
 
+      <LayoutGroup id="cal-zoom">
+      <AnimatePresence mode="wait" initial={false}>
       {viewMode === "month" ? (
+        <motion.div
+          key="month"
+          className="h-full w-full"
+          initial={{ opacity: 0, scaleY: 0.85 }}
+          animate={{ opacity: 1, scaleY: 1 }}
+          exit={{ opacity: 0, scaleY: 0.85 }}
+          transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+          style={{ originY: 0 }}
+        >
         <MonthGridType1
           calId={calId}
           year={currentDate.getFullYear()}
@@ -774,8 +788,24 @@ export function UnifiedElasticGrid({
             onCurrentDateChange(d, { start: d, end: d });
           }}
           onCommitText={(k, text) => onCommitText(k, text)}
+          onWeekClick={(anchor) => {
+            // Update the anchor date so Week view lands on the clicked week,
+            // then morph the visible mode.
+            onCurrentDateChange(anchor, { start: anchor, end: anchor });
+            handleViewModeChange("week");
+          }}
         />
+        </motion.div>
       ) : (
+        <motion.div
+          key="week"
+          className="h-full w-full"
+          initial={{ opacity: 0, scaleY: 0.85 }}
+          animate={{ opacity: 1, scaleY: 1 }}
+          exit={{ opacity: 0, scaleY: 0.85 }}
+          transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+          style={{ originY: 0 }}
+        >
         <div
           ref={scrollRef}
           className="relative h-full w-full overflow-auto"
@@ -792,6 +822,21 @@ export function UnifiedElasticGrid({
               willChange: "grid-template-columns",
             }}
           >
+            {/* Week-number gutter header (clickable to zoom OUT to month). */}
+            {mode.kind === "year" && (
+              <button
+                key="wn-header"
+                type="button"
+                onClick={() => handleViewModeChange("month")}
+                title={`Uke ${isoWeekNumber(weekDates[0] ?? new Date())} — klikk for å zoome ut`}
+                className="sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-1 py-2 text-center text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+                ref={(el) => {
+                  headerRef.current = el;
+                }}
+              >
+                {isoWeekNumber(weekDates[0] ?? new Date())}
+              </button>
+            )}
             {months.map((m) => {
               const colDate = weekDates[m.idx];
               const isToday = mode.kind === "year" && colDate && sameDay(colDate, now);
@@ -799,15 +844,11 @@ export function UnifiedElasticGrid({
                 <div
                   key={`h-${m.idx}`}
                   data-month-col={m.idx}
-                  ref={m.idx === 0 ? headerRef : undefined}
-                  className={`sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${isToday ? "text-primary" : "text-muted-foreground"}`}
+                  className={`sticky top-0 z-20 select-none border-b border-r border-hairline px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${
+                    isToday ? "bg-secondary text-ink" : "bg-card text-muted-foreground"
+                  }`}
                 >
                   <span>{m.label}</span>
-                  {mode.kind === "year" && colDate && (
-                    <span className={`ml-1.5 font-light normal-case tracking-normal tabular-nums ${isToday ? "text-primary" : "text-muted-foreground/70"}`}>
-                      {colDate.getDate()}.{colDate.getMonth() + 1}
-                    </span>
-                  )}
                 </div>
               );
             })}
@@ -820,50 +861,58 @@ export function UnifiedElasticGrid({
               { length: mode.kind === "year" ? 19 : 31 },
               (_, i) => i + 1,
             ).map((day) => (
-              <DayRow
-                key={day}
-                day={day}
-                months={months}
-                year={year}
-                calId={calId}
-                data={data}
-                mode={mode}
-                rowHeight={rowHeight}
-                selected={selected}
-                selectedId={selectedId}
-                editingId={editingId}
-                editValue={editValue}
-                setEditValue={setEditValue}
-                onSelect={handleSelect}
-                onBeginEdit={beginEdit}
-                onCommitEdit={commitEdit}
-                onCommitDuration={onCommitDuration}
-                onMoveAfterCommit={moveSelection}
-                inDragRange={inDragRange}
-                onCellMouseEnter={(k) => {
-                  if (dragStartRef.current && k.month === dragStartRef.current.month) {
-                    setDragRange({
-                      month: dragStartRef.current.month,
-                      toDay: k.day,
-                      toSession: k.session,
-                    });
-                  }
-                  extendMark(k);
-                }}
-                onHandleDown={(k) => {
-                  dragStartRef.current = k;
-                  setDragRange({ month: k.month, toDay: k.day, toSession: k.session });
-                }}
-                isMonthFocused={isMonthFocused}
-                isMonthPeriph={isMonthPeriph}
-                markInfo={markInfo}
-                onMarkBegin={beginMark}
-                onMarkDragBegin={beginMarkDrag}
-                isDraggingMark={isDraggingMark}
-                onOpenPopover={openPopover}
-                allowMark={mode.kind === "year"}
-                markReleased={markReleased}
-              />
+              <Fragment key={day}>
+                {mode.kind === "year" && (
+                  <div
+                    className="border-b border-r border-hairline bg-card"
+                    style={{ height: rowHeight * 2 }}
+                    aria-hidden
+                  />
+                )}
+                <DayRow
+                  day={day}
+                  months={months}
+                  year={year}
+                  calId={calId}
+                  data={data}
+                  mode={mode}
+                  rowHeight={rowHeight}
+                  selected={selected}
+                  selectedId={selectedId}
+                  editingId={editingId}
+                  editValue={editValue}
+                  setEditValue={setEditValue}
+                  onSelect={handleSelect}
+                  onBeginEdit={beginEdit}
+                  onCommitEdit={commitEdit}
+                  onCommitDuration={onCommitDuration}
+                  onMoveAfterCommit={moveSelection}
+                  inDragRange={inDragRange}
+                  onCellMouseEnter={(k) => {
+                    if (dragStartRef.current && k.month === dragStartRef.current.month) {
+                      setDragRange({
+                        month: dragStartRef.current.month,
+                        toDay: k.day,
+                        toSession: k.session,
+                      });
+                    }
+                    extendMark(k);
+                  }}
+                  onHandleDown={(k) => {
+                    dragStartRef.current = k;
+                    setDragRange({ month: k.month, toDay: k.day, toSession: k.session });
+                  }}
+                  isMonthFocused={isMonthFocused}
+                  isMonthPeriph={isMonthPeriph}
+                  markInfo={markInfo}
+                  onMarkBegin={beginMark}
+                  onMarkDragBegin={beginMarkDrag}
+                  isDraggingMark={isDraggingMark}
+                  onOpenPopover={openPopover}
+                  allowMark={mode.kind === "year"}
+                  markReleased={markReleased}
+                />
+              </Fragment>
             ))}
           </div>
           {mode.kind === "year" && (
@@ -899,7 +948,10 @@ export function UnifiedElasticGrid({
             />
           )}
         </div>
+        </motion.div>
       )}
+      </AnimatePresence>
+      </LayoutGroup>
 
       {popover && (
         <PopoverEditor
