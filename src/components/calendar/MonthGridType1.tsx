@@ -132,6 +132,8 @@ export interface MonthGridType1Props {
   ) => CalendarEvent;
   onMoveEvent?: (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => void;
   onDeleteEvent?: (id: string) => void;
+  /** When the user clicks a week-number cell, zoom into that week. */
+  onWeekClick?: (anchorDate: Date) => void;
 }
 
 interface DayItem {
@@ -170,6 +172,7 @@ export function MonthGridType1({
   onUpsertEvent,
   onMoveEvent,
   onDeleteEvent,
+  onWeekClick,
 }: MonthGridType1Props) {
   const dim = daysInMonth(year, month);
   const firstDow = dowMon0(new Date(year, month, 1));
