@@ -22,6 +22,7 @@ import {
 import { ImportButton } from "./ImportCalendar/ImportButton";
 import { buildGhostEvents } from "./ImportCalendar/ghost";
 import { isoWeekNumber } from "./dateUtils";
+import { categoryKeyFromColor, type CategoryKey } from "./CalendarSideNav";
 
 const MONTHS_NB = [
   "Januar", "Februar", "Mars", "April", "Mai", "Juni",
