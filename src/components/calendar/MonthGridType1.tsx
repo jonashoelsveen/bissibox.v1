@@ -123,6 +123,15 @@ export interface MonthGridType1Props {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onCommitText: (k: CellKey, text: string) => void;
+  /** Unified event store — events created here will appear in week view too. */
+  events?: CalendarEvent[];
+  onUpsertEvent?: (
+    patch:
+      | (Partial<CalendarEvent> & Pick<CalendarEvent, "startISO" | "endISO" | "title">)
+      | (Partial<CalendarEvent> & { id: string }),
+  ) => CalendarEvent;
+  onMoveEvent?: (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => void;
+  onDeleteEvent?: (id: string) => void;
 }
 
 interface DayItem {
