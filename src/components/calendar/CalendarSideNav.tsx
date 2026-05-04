@@ -86,8 +86,34 @@ export function CalendarSideNav({
   seat,
   entities = [],
 }: CalendarSideNavProps) {
+  // Per-entity visibility state (independent across entities).
+  const [entityHidden, setEntityHidden] = useState<Record<string, Set<AdminCatKey>>>({});
+  const [entityAllHidden, setEntityAllHidden] = useState<Set<string>>(new Set());
+
+  const toggleEntityCat = (eid: string, k: AdminCatKey) => {
+    setEntityHidden((prev) => {
+      const cur = new Set(prev[eid] ?? []);
+      if (cur.has(k)) cur.delete(k);
+      else cur.add(k);
+      return { ...prev, [eid]: cur };
+    });
+    setEntityAllHidden((prev) => {
+      if (!prev.has(eid)) return prev;
+      const next = new Set(prev);
+      next.delete(eid);
+      return next;
+    });
+  };
+  const toggleEntityAll = (eid: string) =>
+    setEntityAllHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(eid)) next.delete(eid);
+      else next.add(eid);
+      return next;
+    });
+
   return (
-    <nav className="flex flex-col gap-3">
+    <nav className="flex max-h-[calc(100vh-8rem)] flex-col gap-3 overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
       {/* Mini-calendar pinned to the top of the rail */}
       <div className="rounded-lg border border-hairline bg-card">
         <MiniCalendar
@@ -97,7 +123,7 @@ export function CalendarSideNav({
       </div>
 
       {/* Category filters */}
-      <div className="flex flex-col gap-0.5">
+      <div className="flex flex-col gap-0.5 pb-4">
         <div className="px-3 pb-1 pt-1 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted-foreground/80">
           Kategorier
         </div>
@@ -128,8 +154,10 @@ export function CalendarSideNav({
               <EntityGroup
                 key={e.id}
                 entity={e}
-                visible={visibleCategories}
-                onToggle={onToggleCategory}
+                allHidden={entityAllHidden.has(e.id)}
+                hiddenCats={entityHidden[e.id] ?? new Set()}
+                onToggleAll={() => toggleEntityAll(e.id)}
+                onToggleCat={(k) => toggleEntityCat(e.id, k)}
               />
             ))}
           </>
