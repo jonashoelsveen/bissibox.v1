@@ -201,6 +201,26 @@ export function NoteEditor({
     toast.success("Saved");
   };
 
+  const deleteNote = async () => {
+    if (!note) return;
+    setDeleting(true);
+    // Remove attachments from storage
+    if (attachments.length) {
+      await supabase.storage
+        .from("note-attachments")
+        .remove(attachments.map((a) => a.storage_path));
+    }
+    await supabase.from("note_attachments").delete().eq("note_id", note.id);
+    const { error } = await supabase.from("notes").delete().eq("id", note.id);
+    setDeleting(false);
+    if (error) { toast.error(error.message); return; }
+    setConfirmDeleteOpen(false);
+    toast.success("Note deleted");
+    window.dispatchEvent(new Event("library:refresh"));
+    onDeleted?.(note.id);
+  };
+
+
   const headerLabel = useMemo(() => {
     if (!note) return "";
     return note.folder ? `${note.folder} · ${note.title}` : note.title;
