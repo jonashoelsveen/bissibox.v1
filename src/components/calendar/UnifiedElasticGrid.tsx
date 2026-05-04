@@ -652,11 +652,10 @@ export function UnifiedElasticGrid({
   const isMonthFocused = (m: number) => mode.kind === "month" && mode.month === m;
   const isMonthPeriph = (m: number) => mode.kind === "month" && mode.month !== m;
 
-  // Live clock — updated every 30s so the "now" line and today highlight
-  // stay in sync without burning frames.
+  // Live clock — updated every 15s so the "now" line stays accurate.
   const [now, setNow] = useState<Date>(() => new Date());
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 30_000);
+    const id = setInterval(() => setNow(new Date()), 15_000);
     return () => clearInterval(id);
   }, []);
 
