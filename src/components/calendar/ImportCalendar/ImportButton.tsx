@@ -16,7 +16,7 @@ import { SourcePickerStep } from "./SourcePickerStep";
 import { LibraryPickerStep } from "./LibraryPickerStep";
 import { PreviewStep } from "./PreviewStep";
 import { usePreviewOverlay } from "./PreviewOverlayContext";
-import { PREVIEW_PALETTE, type ImportStep, type ParsedImport } from "./types";
+import { MIN_CONFIDENCE, PREVIEW_PALETTE, type ImportStep, type ParsedImport } from "./types";
 import {
   CAT_TRAINING_COLOR,
   CAT_SCHOOL_COLOR,
@@ -95,13 +95,27 @@ export function ImportButton({
         body: { fileName: name, mimeType: mime, base64: bytesToBase64(bytes) },
       });
       if (error) throw error;
-      const parsed = res as ParsedImport;
-      if (!parsed?.events?.length) {
-        toast.error("No events detected in this file.");
+      const raw = res as ParsedImport;
+      // Strict accuracy gate: only show events with reasoning_confidence >= 80.
+      const highConfEvents = (raw?.events ?? []).filter(
+        (e) => typeof e.reasoning_confidence === "number" && e.reasoning_confidence >= MIN_CONFIDENCE,
+      );
+      if (!highConfEvents.length) {
+        toast.error("No high-confidence events could be extracted from this file.");
         setStep("source");
         return;
       }
-      // Assign a stable color per category.
+      // Recompute category counts after filtering.
+      const counts = new Map<string, number>();
+      for (const ev of highConfEvents) counts.set(ev.category, (counts.get(ev.category) ?? 0) + 1);
+      const detected_categories = (raw.detected_categories ?? [])
+        .filter((c) => (counts.get(c.id) ?? 0) > 0)
+        .map((c) => ({ ...c, count: counts.get(c.id) ?? 0 }));
+      const parsed: ParsedImport = {
+        total_events_found: highConfEvents.length,
+        detected_categories,
+        events: highConfEvents,
+      };
       const colors: Record<string, string> = {};
       parsed.detected_categories.forEach((c, i) => {
         colors[c.id] = PREVIEW_PALETTE[i % PREVIEW_PALETTE.length];
