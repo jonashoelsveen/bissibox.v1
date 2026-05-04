@@ -353,19 +353,49 @@ export function MonthGridType1({
 
   // ───────────────────────── Drag-and-drop items ─────────────────────────
 
-  const [dragItem, setDragItem] = useState<{
-    fromKey: CellKey;
-    text: string;
-  } | null>(null);
+  const [dragItem, setDragItem] = useState<
+    | { fromKey: CellKey; text: string; source: "legacy" }
+    | { fromKey: CellKey; text: string; source: "event"; eventId: string }
+    | null
+  >(null);
 
   const moveItem = useCallback(
-    (from: CellKey, toKey: CellKey, text: string) => {
+    (
+      from: CellKey,
+      toKey: CellKey,
+      text: string,
+      payload?:
+        | { source: "legacy" }
+        | { source: "event"; eventId: string },
+    ) => {
       if (
         from.year === toKey.year &&
         from.month === toKey.month &&
         from.day === toKey.day
       )
         return;
+
+      // ── Unified event drag: keep time-of-day, change date. ──
+      if (payload?.source === "event" && onMoveEvent) {
+        const ev = events.find((e) => e.id === payload.eventId);
+        if (ev) {
+          const start = fromISOLocal(ev.startISO);
+          const end = fromISOLocal(ev.endISO);
+          const durMin = Math.max(30, Math.round((end.getTime() - start.getTime()) / 60000));
+          const newStart = setHM(
+            new Date(toKey.year, toKey.month, toKey.day),
+            start.getHours(),
+            start.getMinutes(),
+          );
+          onMoveEvent(ev.id, {
+            startISO: toISOLocal(newStart),
+            endISO: toISOLocal(addMinutes(newStart, durMin)),
+          });
+        }
+        return;
+      }
+
+      // ── Legacy text-cell drag (preserved for old data). ──
       const fromId = makeCellId(calId, from);
       const toId = makeCellId(calId, toKey);
       const fromItems = parseItems(data[fromId]?.text);
@@ -374,7 +404,7 @@ export function MonthGridType1({
       onCommitText(from, serializeItems(next));
       onCommitText(toKey, serializeItems([...toItems, { idx: toItems.length, text }]));
     },
-    [calId, data, onCommitText],
+    [calId, data, onCommitText, events, onMoveEvent],
   );
 
   // ───────────────────────── Render ─────────────────────────
