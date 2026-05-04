@@ -701,6 +701,10 @@ export function UnifiedElasticGrid({
           month={currentDate.getMonth()}
           data={data}
           seat={seat}
+          events={events}
+          onUpsertEvent={onUpsertEvent}
+          onMoveEvent={onMoveEvent}
+          onDeleteEvent={onDeleteEvent}
           onPrevMonth={() => {
             const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
             onCurrentDateChange(d, { start: d, end: d });
