@@ -258,8 +258,10 @@ export function UnifiedElasticGrid({
 
   const gridTemplateColumns = useMemo(() => {
     if (mode.kind === "year") {
-      // Week view: 7 weekday columns (Mon–Sun).
-      return `repeat(7, minmax(${YEAR_COL}px, 1fr))`;
+      // Week view: 28px week-number gutter + 7 weekday columns. Mirrors the
+      // Month view exactly so a zoom animation between the two doesn't
+      // shift column widths.
+      return `28px repeat(7, minmax(0, 1fr))`;
     }
     // Day view: render the focused day at full FOCUS_COL width across the
     // 7-column envelope so the active column is centered horizontally.
