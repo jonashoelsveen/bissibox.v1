@@ -230,26 +230,49 @@ function CategoryRow({
 
 function EntityGroup({
   entity,
-  visible,
-  onToggle,
+  allHidden,
+  hiddenCats,
+  onToggleAll,
+  onToggleCat,
 }: {
   entity: SideNavEntity;
-  visible: Set<CategoryKey>;
-  onToggle: (k: CategoryKey) => void;
+  allHidden: boolean;
+  hiddenCats: Set<AdminCatKey>;
+  onToggleAll: () => void;
+  onToggleCat: (k: AdminCatKey) => void;
 }) {
   const [open, setOpen] = useState(true);
   const items = useMemo(() => ADMIN_SIDENAV_CATEGORIES, []);
   return (
     <div className="mt-1 flex flex-col">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-1.5 rounded-md px-3 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80 hover:bg-secondary/60"
-      >
-        <ChevronRight
-          className={`h-3 w-3 shrink-0 transition-transform ${open ? "rotate-90" : ""}`}
-        />
-        <span className="min-w-0 flex-1 truncate">{entity.name}</span>
-      </button>
+      <div className="group flex w-full items-center gap-1.5 rounded-md px-3 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80 hover:bg-secondary/60">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="flex min-w-0 flex-1 items-center gap-1.5"
+          aria-expanded={open}
+        >
+          <ChevronRight
+            className={`h-3 w-3 shrink-0 transition-transform ${open ? "rotate-90" : ""}`}
+          />
+          <span className="min-w-0 flex-1 truncate text-left">{entity.name}</span>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleAll();
+          }}
+          aria-label={allHidden ? "Vis alle" : "Skjul alle"}
+          className="grid h-5 w-5 shrink-0 place-items-center rounded hover:bg-secondary"
+        >
+          {allHidden ? (
+            <EyeOff className="h-3 w-3 text-muted-foreground/70" />
+          ) : (
+            <Eye className="h-3 w-3 text-muted-foreground/60" />
+          )}
+        </button>
+      </div>
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -260,19 +283,25 @@ function EntityGroup({
             style={{ overflow: "hidden" }}
           >
             <div className="ml-3 border-l border-hairline pl-1">
-              {items.map((c) => (
-                <CategoryRow
-                  key={`${entity.id}:${c.key}`}
-                  label={c.label}
-                  color={c.color}
-                  on={visible.has(c.key)}
-                  onClick={() => onToggle(c.key)}
-                />
-              ))}
+              {items.map((c) => {
+                const on = !allHidden && !hiddenCats.has(c.key);
+                return (
+                  <CategoryRow
+                    key={`${entity.id}:${c.key}`}
+                    label={c.label}
+                    color={c.color}
+                    on={on}
+                    onClick={() => onToggleCat(c.key)}
+                  />
+                );
+              })}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
     </div>
   );
 }
