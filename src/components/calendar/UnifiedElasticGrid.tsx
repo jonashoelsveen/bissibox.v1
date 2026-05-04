@@ -1289,11 +1289,11 @@ function DayCellPair(props: DayCellPairProps) {
                   // the cell that was clicked.
                   onOpenPopover(k, e.currentTarget.parentElement as HTMLElement);
                 }}
-                className="pointer-events-auto absolute left-1/2 top-1/2 z-[5] flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-muted-foreground/80 shadow-sm ring-1 ring-hairline hover:text-ink"
-                style={{ padding: 0, lineHeight: 0 }}
+                className="pointer-events-auto absolute left-1/2 top-1/2 z-[5] flex -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-transparent text-muted-foreground/80 hover:text-ink"
+                style={{ padding: 0, lineHeight: 0, border: "none" }}
                 aria-label="Legg til økt"
               >
-                <Plus className="h-5 w-5" strokeWidth={1.75} />
+                <Plus className="h-5 w-5" strokeWidth={2} />
               </button>
             )}
             {isSelected && (
