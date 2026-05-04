@@ -861,7 +861,6 @@ function MiniDurationColumn({
   initial,
   onCommit,
   onClose,
-  color,
 }: {
   startHour: number;
   rows: number;
@@ -869,7 +868,7 @@ function MiniDurationColumn({
   initial: { startMin: number; endMin: number } | null;
   onCommit: (range: { startMin: number; endMin: number }) => void;
   onClose: () => void;
-  color: string | null;
+  color?: string | null;
 }) {
   // Convert initial time → slot ranks (lo/hi inclusive).
   const initRange = (() => {
@@ -881,6 +880,17 @@ function MiniDurationColumn({
 
   const [range, setRange] = useState<{ lo: number; hi: number } | null>(initRange);
   const dragRef = useRef<{ anchor: number } | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
+
+  const rankFromClientY = (clientY: number): number | null => {
+    const el = gridRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const y = clientY - rect.top + el.scrollTop;
+    const r = Math.floor(y / rowHeight);
+    if (r < 0 || r >= rows) return Math.max(0, Math.min(rows - 1, r));
+    return r;
+  };
 
   const beginAt = (rank: number) => {
     dragRef.current = { anchor: rank };
@@ -893,6 +903,11 @@ function MiniDurationColumn({
   };
 
   useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragRef.current) return;
+      const r = rankFromClientY(e.clientY);
+      if (r != null) extendTo(r);
+    };
     const onUp = () => {
       dragRef.current = null;
     };
@@ -909,15 +924,15 @@ function MiniDurationColumn({
         onClose();
       }
     };
+    window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
     window.addEventListener("keydown", onKey, true);
     return () => {
+      window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
       window.removeEventListener("keydown", onKey, true);
     };
-  }, [range, onCommit, onClose, startHour]);
-
-  const tint = color ?? "hsl(var(--primary))";
+  }, [range, onCommit, onClose, startHour, rows, rowHeight]);
 
   return (
     <div
@@ -935,13 +950,18 @@ function MiniDurationColumn({
             : "—"}
         </span>
       </div>
-      {/* Slot column */}
-      <div className="relative flex-1 overflow-y-auto">
+      {/* Slot column — replica of the week-view day column. */}
+      <div ref={gridRef} className="relative flex-1 overflow-y-auto mini-dur-scroll">
         <div className="relative" style={{ height: rows * rowHeight }}>
           {Array.from({ length: rows }, (_, i) => {
             const minutes = startHour * 60 + i * 30;
             const isHour = minutes % 60 === 0;
-            const inRange = range && i >= range.lo && i <= range.hi;
+            const inRange = !!range && i >= range.lo && i <= range.hi;
+            const isFirstInRange = !!range && i === range.lo;
+            const isLastInRange = !!range && i === range.hi;
+            const hourLabel = isHour
+              ? `${String(Math.floor(minutes / 60)).padStart(2, "0")}:00`
+              : "";
             return (
               <div
                 key={i}
@@ -950,19 +970,30 @@ function MiniDurationColumn({
                   beginAt(i);
                 }}
                 onMouseEnter={() => extendTo(i)}
-                className="relative cursor-row-resize select-none"
+                className={`relative grid h-full cursor-cell select-none ${
+                  i > 0 ? "border-t border-hairline/60" : ""
+                }`}
                 style={{
                   height: rowHeight,
-                  borderTop: isHour ? "1px solid hsl(var(--hairline, 0 0% 90%))" : "none",
-                  background: inRange ? tint : "transparent",
-                  opacity: inRange ? 0.75 : 1,
+                  gridTemplateColumns: "44px minmax(0,1fr)",
                 }}
               >
-                {isHour && (
-                  <span className="mono pointer-events-none absolute left-1 top-0 -translate-y-1/2 bg-card px-0.5 text-[9px] tabular-nums text-muted-foreground/70">
-                    {fmtMin(minutes)}
-                  </span>
+                {/* Mark overlay — neutral grey just like the week view. */}
+                {inRange && (
+                  <span
+                    className="pointer-events-none absolute inset-x-0 z-[1] bg-muted-foreground/15"
+                    style={{
+                      top: isFirstInRange ? 0 : -1,
+                      bottom: isLastInRange ? 0 : -1,
+                    }}
+                  />
                 )}
+                {/* Hour gutter — same font/size as the week column. */}
+                <div className="px-2 text-[12px] font-medium tabular-nums text-muted-foreground">
+                  {hourLabel}
+                </div>
+                {/* Body cell — matches week column body (left hairline). */}
+                <div className="min-w-0 border-l border-hairline" />
               </div>
             );
           })}
