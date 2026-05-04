@@ -174,13 +174,7 @@ function startOfWeekMon(d: Date): Date {
   return x;
 }
 
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
+// `sameDay` is imported from ./dateUtils.
 
 const EASE = "cubic-bezier(0.2, 0, 0, 1)";
 const DUR_MS = 180;
