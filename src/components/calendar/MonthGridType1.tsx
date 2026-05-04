@@ -634,6 +634,10 @@ export function MonthGridType1({
                             onDragEnd={() => setDragItem(null)}
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (it.kind === "event" && it.event.id.startsWith("__ghost__:")) {
+                                // Ghost preview events are not editable.
+                                return;
+                              }
                               if (it.kind === "legacy") {
                                 openItemEditor(pos, it.idx, it.raw, e.currentTarget as HTMLElement);
                               } else {
