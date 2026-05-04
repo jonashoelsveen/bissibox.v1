@@ -858,6 +858,8 @@ export function UnifiedElasticGrid({
                 isMonthPeriph={isMonthPeriph}
                 markInfo={markInfo}
                 onMarkBegin={beginMark}
+                onMarkDragBegin={beginMarkDrag}
+                isDraggingMark={isDraggingMark}
                 onOpenPopover={openPopover}
                 allowMark={mode.kind === "year"}
                 markReleased={markReleased}
