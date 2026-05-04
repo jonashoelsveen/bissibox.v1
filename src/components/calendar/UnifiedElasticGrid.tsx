@@ -662,6 +662,8 @@ export function UnifiedElasticGrid({
     },
     [cellKeyToDate, weekEvents],
   );
+  // Expose latest lookup to openPopover via ref (declared above).
+  eventAtCellRef.current = eventAtCell;
 
   return (
     <div
