@@ -795,6 +795,19 @@ export function UnifiedElasticGrid({
               willChange: "grid-template-columns",
             }}
           >
+            {/* Week-number gutter header (clickable to zoom OUT to month). */}
+            {mode.kind === "year" && (
+              <button
+                key="wn-header"
+                type="button"
+                onClick={() => handleViewModeChange("month")}
+                title={`Uke ${isoWeekNumber(weekDates[0] ?? new Date())} — klikk for å zoome ut`}
+                className="sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-1 py-2 text-center text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+                ref={headerRef}
+              >
+                {isoWeekNumber(weekDates[0] ?? new Date())}
+              </button>
+            )}
             {months.map((m) => {
               const colDate = weekDates[m.idx];
               const isToday = mode.kind === "year" && colDate && sameDay(colDate, now);
@@ -802,15 +815,11 @@ export function UnifiedElasticGrid({
                 <div
                   key={`h-${m.idx}`}
                   data-month-col={m.idx}
-                  ref={m.idx === 0 ? headerRef : undefined}
-                  className={`sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${isToday ? "text-primary" : "text-muted-foreground"}`}
+                  className={`sticky top-0 z-20 select-none border-b border-r border-hairline px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${
+                    isToday ? "bg-secondary text-ink" : "bg-card text-muted-foreground"
+                  }`}
                 >
                   <span>{m.label}</span>
-                  {mode.kind === "year" && colDate && (
-                    <span className={`ml-1.5 font-light normal-case tracking-normal tabular-nums ${isToday ? "text-primary" : "text-muted-foreground/70"}`}>
-                      {colDate.getDate()}.{colDate.getMonth() + 1}
-                    </span>
-                  )}
                 </div>
               );
             })}
