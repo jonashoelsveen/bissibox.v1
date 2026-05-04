@@ -364,7 +364,7 @@ function EditNoteDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg text-ink">Edit note</h2>
+          <h2 className="text-lg text-ink">About this note</h2>
           <button onClick={onClose} className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary">
             <X className="h-4 w-4" />
           </button>
