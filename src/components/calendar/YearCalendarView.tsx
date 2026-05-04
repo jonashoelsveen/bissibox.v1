@@ -9,16 +9,34 @@
  * calendar in the grid header and the main view stay in lockstep.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Settings as SettingsIcon, Undo2, Redo2 } from "lucide-react";
 import { useYearStore, useEventStore, type CellKey } from "./yearStore";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode } from "./UnifiedElasticGrid";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
+import {
+  PreviewOverlayProvider,
+  usePreviewOverlay,
+} from "./ImportCalendar/PreviewOverlayContext";
+import { ImportButton } from "./ImportCalendar/ImportButton";
+import { buildGhostEvents } from "./ImportCalendar/ghost";
 
 export type CalendarSeat = "admin" | "individual";
 
-export function YearCalendarView({
+export function YearCalendarView(props: {
+  calId: string;
+  defaultTitle: string;
+  seat?: CalendarSeat;
+}) {
+  return (
+    <PreviewOverlayProvider>
+      <YearCalendarViewInner {...props} />
+    </PreviewOverlayProvider>
+  );
+}
+
+function YearCalendarViewInner({
   calId,
   defaultTitle,
   seat = "individual",
