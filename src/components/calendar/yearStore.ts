@@ -267,11 +267,30 @@ export function useEventStore(calId: string) {
   const [, forceTick] = useState(0);
   const bump = () => forceTick((n) => n + 1);
 
-  // Load on calendar switch.
+  // Load on calendar switch. Sanitize legacy/corrupt entries that pre-date
+  // the current CalendarEvent shape so they don't linger forever in the UI
+  // (they used to be undeletable because the new editor couldn't open them).
   useEffect(() => {
     const loaded = readJSON<CalendarEvent[]>(eventsKey(calId), []);
-    eventsRef.current = loaded;
-    setEvents(loaded);
+    const isValidISO = (s: unknown): s is string => {
+      if (typeof s !== "string" || s.length < 10) return false;
+      const t = Date.parse(s);
+      return Number.isFinite(t);
+    };
+    const cleaned = (Array.isArray(loaded) ? loaded : []).filter((e) => {
+      if (!e || typeof e !== "object") return false;
+      if (typeof e.id !== "string" || !e.id) return false;
+      if (typeof e.title !== "string") return false;
+      if (!isValidISO(e.startISO) || !isValidISO(e.endISO)) return false;
+      if (Date.parse(e.endISO) <= Date.parse(e.startISO)) return false;
+      return true;
+    });
+    eventsRef.current = cleaned;
+    setEvents(cleaned);
+    if (cleaned.length !== (Array.isArray(loaded) ? loaded.length : 0)) {
+      // Persist the cleanup so the prune is permanent.
+      writeJSON(eventsKey(calId), cleaned);
+    }
     pastRef.current = [];
     futureRef.current = [];
     bump();
