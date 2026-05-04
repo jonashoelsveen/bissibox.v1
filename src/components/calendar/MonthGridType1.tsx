@@ -462,7 +462,7 @@ export function MonthGridType1({
       </div>
 
       {/* The grid */}
-      <div className="relative flex-1 overflow-auto">
+      <div className="relative flex-1 overflow-auto" style={{ scrollbarGutter: "stable" }}>
         <LayoutGroup>
           <div
             className="grid h-full w-full"
