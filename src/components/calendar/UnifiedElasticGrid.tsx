@@ -233,12 +233,16 @@ export function UnifiedElasticGrid({
   currentDate,
   currentRange,
   onCurrentDateChange,
+  viewMode: viewModeProp,
+  onViewModeChange,
 }: UnifiedElasticGridProps) {
   // viewMode is the only user-facing toggle now. There are no "types".
   //   - "day"   → 7-column rich spreadsheet (one row per 30-min slot)
   //   - "week"  → 7-column compact spreadsheet (hourly time labels)
   //   - "month" → MonthGridType1 (full month grid)
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [viewModeInternal, setViewModeInternal] = useState<ViewMode>("month");
+  const viewMode = viewModeProp ?? viewModeInternal;
+  const isControlled = viewModeProp !== undefined;
   const [editingKey, setEditingKey] = useState<CellKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -250,7 +254,8 @@ export function UnifiedElasticGrid({
   const mode: Mode = viewMode === "day" ? { kind: "month", month: 0 } : { kind: "year" };
 
   const handleViewModeChange = (v: ViewMode) => {
-    setViewMode(v);
+    if (!isControlled) setViewModeInternal(v);
+    onViewModeChange?.(v);
   };
 
   // Both spreadsheet sub-views are always implemented; "month" routes to
