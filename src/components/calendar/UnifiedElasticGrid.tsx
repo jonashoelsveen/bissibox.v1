@@ -918,10 +918,14 @@ export function UnifiedElasticGrid({
               const date = weekDates[colIdx];
               if (date) {
                 // Determine slot range: marked range > popover anchor cell.
+                // Note: rank = day*2 + session uses day starting at 1, while
+                // the visual cellIndex used for time mapping is
+                // (day-1)*2 + session — so subtract 2 from the rank when
+                // converting to minutes.
                 const lo = markRange ? markRange.lo : popover.key.day * 2 + popover.key.session;
                 const hi = markRange ? markRange.hi : lo;
-                const startMin = WEEK_START_HOUR * 60 + lo * 30;
-                const endMin = WEEK_START_HOUR * 60 + (hi + 1) * 30;
+                const startMin = WEEK_START_HOUR * 60 + (lo - 2) * 30;
+                const endMin = WEEK_START_HOUR * 60 + (hi - 2 + 1) * 30;
                 const startISO = toISOLocal(setHM(date, Math.floor(startMin / 60), startMin % 60));
                 const endISO = toISOLocal(setHM(date, Math.floor(endMin / 60), endMin % 60));
 
@@ -1289,11 +1293,11 @@ function DayCellPair(props: DayCellPairProps) {
                   // the cell that was clicked.
                   onOpenPopover(k, e.currentTarget.parentElement as HTMLElement);
                 }}
-                className="pointer-events-auto absolute left-1/2 top-1/2 z-[5] flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-muted-foreground/80 shadow-sm ring-1 ring-hairline hover:text-ink"
-                style={{ padding: 0, lineHeight: 0 }}
+                className="pointer-events-auto absolute left-1/2 top-1/2 z-[5] flex -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-transparent text-muted-foreground/80 hover:text-ink"
+                style={{ padding: 0, lineHeight: 0, border: "none" }}
                 aria-label="Legg til økt"
               >
-                <Plus className="h-5 w-5" strokeWidth={1.75} />
+                <Plus className="h-5 w-5" strokeWidth={2} />
               </button>
             )}
             {isSelected && (

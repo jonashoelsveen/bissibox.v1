@@ -32,7 +32,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { Plus, Trash2, PersonStanding, GraduationCap, Briefcase, Sparkles } from "lucide-react";
+import { Plus, Trash2, PersonStanding, GraduationCap, Briefcase, Sparkles, Clock } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
@@ -679,10 +679,28 @@ export function MonthGridType1({
             seat={seat}
             initialText={popover.initialText}
             initialColor={popover.initialColor}
-            isEdit={popover.editIdx >= 0}
+            isEdit={popover.editIdx >= 0 || !!popover.eventId}
             anchor={popover.rect}
+            enableDuration={!!onUpsertEvent}
+            initialTime={(() => {
+              if (popover.eventId) {
+                const ev = events.find((e) => e.id === popover.eventId);
+                if (ev) {
+                  const s = fromISOLocal(ev.startISO);
+                  const e = fromISOLocal(ev.endISO);
+                  // Only show as a duration if it isn't an all-day event.
+                  if (!ev.allDay) {
+                    return {
+                      startMin: s.getHours() * 60 + s.getMinutes(),
+                      endMin: e.getHours() * 60 + e.getMinutes(),
+                    };
+                  }
+                }
+              }
+              return null;
+            })()}
             onClose={closePopover}
-            onCommit={(text, color) => {
+            onCommit={(text, color, time) => {
               const cell = days.find(
                 (d) => d.row === popover.pos.row && d.col === popover.pos.col,
               );
@@ -697,7 +715,29 @@ export function MonthGridType1({
                 if (!t) {
                   onDeleteEvent?.(popover.eventId);
                 } else {
-                  onUpsertEvent?.({ id: popover.eventId, title: t, color });
+                  const patch: Parameters<NonNullable<typeof onUpsertEvent>>[0] = {
+                    id: popover.eventId,
+                    title: t,
+                    color,
+                  };
+                  if (time) {
+                    const start = setHM(
+                      cell.date,
+                      Math.floor(time.startMin / 60),
+                      time.startMin % 60,
+                    );
+                    const end = setHM(
+                      cell.date,
+                      Math.floor(time.endMin / 60),
+                      time.endMin % 60,
+                    );
+                    Object.assign(patch, {
+                      startISO: toISOLocal(start),
+                      endISO: toISOLocal(end),
+                      allDay: false,
+                    });
+                  }
+                  onUpsertEvent?.(patch);
                 }
                 closePopover();
                 return;
@@ -707,14 +747,20 @@ export function MonthGridType1({
               // Default to the unified event store so it appears in week view too.
               if (popover.editIdx < 0 && onUpsertEvent) {
                 if (t) {
-                  const start = setHM(cell.date, 9, 0);
-                  const end = addMinutes(start, 60);
+                  const startH = time ? Math.floor(time.startMin / 60) : 9;
+                  const startM = time ? time.startMin % 60 : 0;
+                  const endH = time ? Math.floor(time.endMin / 60) : 10;
+                  const endM = time ? time.endMin % 60 : 0;
+                  const start = setHM(cell.date, startH, startM);
+                  const end = setHM(cell.date, endH, endM);
                   onUpsertEvent({
                     title: t,
                     color,
                     startISO: toISOLocal(start),
                     endISO: toISOLocal(end),
-                    allDay: true,
+                    // If the user explicitly set a time, treat as a timed
+                    // event (so it appears in week view at that slot).
+                    allDay: !time,
                     category: categoryFromColor(color),
                   });
                 }
@@ -763,8 +809,16 @@ export interface PopoverEditorProps {
   initialColor: string | null;
   isEdit: boolean;
   anchor: DOMRect;
+  /** Optional initial time range, in minutes from midnight. */
+  initialTime?: { startMin: number; endMin: number } | null;
+  /** When true, show the clock affordance for picking a duration. */
+  enableDuration?: boolean;
   onClose: () => void;
-  onCommit: (text: string, color: string | null) => void;
+  onCommit: (
+    text: string,
+    color: string | null,
+    time?: { startMin: number; endMin: number } | null,
+  ) => void;
 }
 
 // Category defaults — color is the source of truth.
@@ -788,6 +842,152 @@ function adminCategoryFromColor(color: string | null): AdminCategory {
   return "meeting";
 }
 
+function fmtMin(m: number): string {
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+
+/**
+ * MiniDurationColumn — a tiny version of the week-view column for picking
+ * a session duration inside the month-view popover. Drag from one slot
+ * down/up to another; the marked range becomes the session's time. Press
+ * Enter (or click "Lagre tid") to commit.
+ */
+function MiniDurationColumn({
+  startHour,
+  rows,
+  rowHeight,
+  initial,
+  onCommit,
+  onClose,
+  color,
+}: {
+  startHour: number;
+  rows: number;
+  rowHeight: number;
+  initial: { startMin: number; endMin: number } | null;
+  onCommit: (range: { startMin: number; endMin: number }) => void;
+  onClose: () => void;
+  color: string | null;
+}) {
+  // Convert initial time → slot ranks (lo/hi inclusive).
+  const initRange = (() => {
+    if (!initial) return null;
+    const lo = Math.max(0, Math.min(rows - 1, (initial.startMin - startHour * 60) / 30));
+    const hi = Math.max(lo, Math.min(rows - 1, (initial.endMin - startHour * 60) / 30 - 1));
+    return { lo: Math.round(lo), hi: Math.round(hi) };
+  })();
+
+  const [range, setRange] = useState<{ lo: number; hi: number } | null>(initRange);
+  const dragRef = useRef<{ anchor: number } | null>(null);
+
+  const beginAt = (rank: number) => {
+    dragRef.current = { anchor: rank };
+    setRange({ lo: rank, hi: rank });
+  };
+  const extendTo = (rank: number) => {
+    if (!dragRef.current) return;
+    const a = dragRef.current.anchor;
+    setRange({ lo: Math.min(a, rank), hi: Math.max(a, rank) });
+  };
+
+  useEffect(() => {
+    const onUp = () => {
+      dragRef.current = null;
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && range) {
+        e.preventDefault();
+        e.stopPropagation();
+        const startMin = startHour * 60 + range.lo * 30;
+        const endMin = startHour * 60 + (range.hi + 1) * 30;
+        onCommit({ startMin, endMin });
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("keydown", onKey, true);
+    };
+  }, [range, onCommit, onClose, startHour]);
+
+  const tint = color ?? "hsl(var(--primary))";
+
+  return (
+    <div
+      className="flex h-full flex-col overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg"
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      {/* Header row — matches the main popover header height/typography */}
+      <div className="flex items-center justify-between border-b border-hairline px-3 py-2">
+        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+          Varighet
+        </span>
+        <span className="mono text-[10.5px] tabular-nums text-ink/70">
+          {range
+            ? `${fmtMin(startHour * 60 + range.lo * 30)} – ${fmtMin(startHour * 60 + (range.hi + 1) * 30)}`
+            : "—"}
+        </span>
+      </div>
+      {/* Slot column */}
+      <div className="relative flex-1 overflow-y-auto">
+        <div className="relative" style={{ height: rows * rowHeight }}>
+          {Array.from({ length: rows }, (_, i) => {
+            const minutes = startHour * 60 + i * 30;
+            const isHour = minutes % 60 === 0;
+            const inRange = range && i >= range.lo && i <= range.hi;
+            return (
+              <div
+                key={i}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  beginAt(i);
+                }}
+                onMouseEnter={() => extendTo(i)}
+                className="relative cursor-row-resize select-none"
+                style={{
+                  height: rowHeight,
+                  borderTop: isHour ? "1px solid hsl(var(--hairline, 0 0% 90%))" : "none",
+                  background: inRange ? tint : "transparent",
+                  opacity: inRange ? 0.75 : 1,
+                }}
+              >
+                {isHour && (
+                  <span className="mono pointer-events-none absolute left-1 top-0 -translate-y-1/2 bg-card px-0.5 text-[9px] tabular-nums text-muted-foreground/70">
+                    {fmtMin(minutes)}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
+        <span className="mono tabular-nums">⏎ for å sette tid</span>
+        <button
+          type="button"
+          disabled={!range}
+          onClick={() => {
+            if (!range) return;
+            const startMin = startHour * 60 + range.lo * 30;
+            const endMin = startHour * 60 + (range.hi + 1) * 30;
+            onCommit({ startMin, endMin });
+          }}
+          className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+        >
+          Sett tid
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Notion-style inline popover for adding/editing a single session item.
  * Category dropdown + (individual only) 7-color row.
@@ -798,6 +998,8 @@ export function PopoverEditor({
   initialColor,
   isEdit,
   anchor,
+  initialTime = null,
+  enableDuration = false,
   onClose,
   onCommit,
 }: PopoverEditorProps) {
@@ -812,21 +1014,25 @@ export function PopoverEditor({
         : CAT_MEETING
       : initialColor ?? CAT_TRAINING_COLOR;
   const [color, setColor] = useState<string | null>(resolvedInitial);
+  const [time, setTime] = useState<{ startMin: number; endMin: number } | null>(initialTime);
+  const [showDuration, setShowDuration] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
   // Keep latest values for the unmount-time autosave to avoid stale captures.
   const valueRef = useRef(value);
   const colorRef = useRef(color);
+  const timeRef = useRef(time);
   useEffect(() => {
     valueRef.current = value;
     colorRef.current = color;
-  }, [value, color]);
+    timeRef.current = time;
+  }, [value, color, time]);
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
-        onCommit(valueRef.current.trim(), colorRef.current);
+        onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
       }
     };
     const onKey = (e: KeyboardEvent) => {
@@ -834,8 +1040,11 @@ export function PopoverEditor({
         e.preventDefault();
         onClose();
       } else if (e.key === "Enter" && !e.shiftKey) {
+        // The mini duration column captures Enter at capture-phase before
+        // this handler runs, so when its panel is open we never commit
+        // the whole popover from Enter.
         e.preventDefault();
-        onCommit(valueRef.current.trim(), colorRef.current);
+        onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
       }
     };
     window.addEventListener("mousedown", onDown);
@@ -858,142 +1067,201 @@ export function PopoverEditor({
     left = Math.max(margin, window.innerWidth - POPOVER_W - margin);
   }
 
+  // Mini duration column geometry.
+  const DUR_W = 116;
+  const DUR_GAP = 8;
+  const DUR_H = 320;
+  const DUR_START_HOUR = 6;
+  const DUR_ROWS = 36; // 06:00 → 24:00 in 30-min slots
+  const DUR_ROW_H = 14;
+
   const adminCategory = adminCategoryFromColor(color);
 
   return (
     <div
       ref={ref}
       data-role="popover"
-      className="fixed z-50 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg"
+      className="fixed z-50"
       style={{ top, left, width: POPOVER_W }}
     >
-      <div className="border-b border-hairline px-3 py-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-        {isEdit ? "Rediger økt" : "Legg til økt"}
-      </div>
-
-      {/* Session name */}
-      <input
-        autoFocus
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="f.eks. Intervaller 5×4min"
-        className="block w-full bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
-      />
-
-      {/* Category dropdown — full-width with vertical color bar at left */}
-      {(() => {
-        const indCat = categoryFromColor(color);
-        const indEntry = INDIVIDUAL_CATEGORIES.find((c) => c.value === indCat)!;
-        const sideColor =
-          seat === "admin"
-            ? ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!.color
-            : indEntry.color ?? color ?? "transparent";
-        return (
-          <div className="relative border-t border-hairline">
-            <span
-              aria-hidden
-              className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
-              style={{ background: sideColor }}
-            />
-            {seat === "admin" ? (
-              <select
-                value={adminCategory}
-                onChange={(e) => {
-                  const next = e.target.value as AdminCategory;
-                  const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
-                  setColor(cat.color);
-                }}
-                className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
-              >
-                {ADMIN_CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <div className="flex items-center gap-2 pl-4 pr-2 py-1.5">
-                <indEntry.Icon className="h-4 w-4 shrink-0" style={{ color: indEntry.color ?? "currentColor" }} />
-                <select
-                  value={indCat}
-                  onChange={(e) => {
-                    const next = e.target.value as IndividualCategory;
-                    const cat = INDIVIDUAL_CATEGORIES.find((c) => c.value === next)!;
-                    if (next === "else") {
-                      // Default to first palette color if none chosen yet,
-                      // otherwise keep the existing custom color if it's not
-                      // one of the fixed category colors.
-                      const fixed = [CAT_TRAINING_COLOR, CAT_SCHOOL_COLOR, CAT_WORK_COLOR]
-                        .map((c) => c.toLowerCase());
-                      if (!color || fixed.includes(color.toLowerCase())) {
-                        setColor(GROUP_COLOR_PALETTE[0].value);
-                      }
-                    } else {
-                      setColor(cat.color);
-                    }
-                  }}
-                  className="block flex-1 bg-transparent py-1 pr-3 text-[12px] text-ink outline-none"
+      <div className="relative flex items-start gap-2">
+        <div className="flex-1 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg">
+          <div className="flex items-center justify-between gap-2 border-b border-hairline px-3 py-2">
+            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              {isEdit ? "Rediger økt" : "Legg til økt"}
+            </span>
+            {enableDuration && (
+              <div className="flex items-center gap-1.5">
+                {time && (
+                  <span className="mono text-[10.5px] tabular-nums text-ink/70">
+                    {fmtMin(time.startMin)}–{fmtMin(time.endMin)}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  aria-label="Sett varighet"
+                  title="Sett varighet"
+                  onClick={() => setShowDuration((v) => !v)}
+                  className={[
+                    "rounded-md p-1 transition-colors",
+                    showDuration
+                      ? "bg-secondary text-ink"
+                      : "text-muted-foreground hover:bg-secondary hover:text-ink",
+                  ].join(" ")}
                 >
-                  {INDIVIDUAL_CATEGORIES.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
+                  <Clock className="h-3.5 w-3.5" strokeWidth={2} />
+                </button>
               </div>
             )}
           </div>
-        );
-      })()}
 
-      {/* Individual + "Else" only: 8-color picker */}
-      {seat === "individual" && categoryFromColor(color) === "else" && (
-        <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-3">
-          {GROUP_COLOR_PALETTE.map((c) => {
-            const selected = color?.toLowerCase() === c.value.toLowerCase();
+          {/* Session name */}
+          <input
+            autoFocus
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="f.eks. Intervaller 5×4min"
+            className="block w-full bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
+          />
+
+          {/* Category dropdown — full-width with vertical color bar at left */}
+          {(() => {
+            const indCat = categoryFromColor(color);
+            const indEntry = INDIVIDUAL_CATEGORIES.find((c) => c.value === indCat)!;
+            const sideColor =
+              seat === "admin"
+                ? ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!.color
+                : indEntry.color ?? color ?? "transparent";
             return (
-              <button
-                key={c.value}
-                type="button"
-                title={c.name}
-                aria-label={c.name}
-                aria-pressed={selected}
-                onClick={() => setColor(c.value)}
-                className={[
-                  "h-3.5 w-3.5 rounded-full border transition-transform hover:scale-125",
-                  selected
-                    ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
-                    : "border-black/15",
-                ].join(" ")}
-                style={{ background: c.value }}
-              />
+              <div className="relative border-t border-hairline">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
+                  style={{ background: sideColor }}
+                />
+                {seat === "admin" ? (
+                  <select
+                    value={adminCategory}
+                    onChange={(e) => {
+                      const next = e.target.value as AdminCategory;
+                      const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
+                      setColor(cat.color);
+                    }}
+                    className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
+                  >
+                    {ADMIN_CATEGORIES.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="flex items-center gap-2 pl-4 pr-2 py-1.5">
+                    <indEntry.Icon className="h-4 w-4 shrink-0" style={{ color: indEntry.color ?? "currentColor" }} />
+                    <select
+                      value={indCat}
+                      onChange={(e) => {
+                        const next = e.target.value as IndividualCategory;
+                        const cat = INDIVIDUAL_CATEGORIES.find((c) => c.value === next)!;
+                        if (next === "else") {
+                          // Default to first palette color if none chosen yet,
+                          // otherwise keep the existing custom color if it's not
+                          // one of the fixed category colors.
+                          const fixed = [CAT_TRAINING_COLOR, CAT_SCHOOL_COLOR, CAT_WORK_COLOR]
+                            .map((c) => c.toLowerCase());
+                          if (!color || fixed.includes(color.toLowerCase())) {
+                            setColor(GROUP_COLOR_PALETTE[0].value);
+                          }
+                        } else {
+                          setColor(cat.color);
+                        }
+                      }}
+                      className="block flex-1 bg-transparent py-1 pr-3 text-[12px] text-ink outline-none"
+                    >
+                      {INDIVIDUAL_CATEGORIES.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
             );
-          })}
-        </div>
-      )}
+          })()}
 
-      <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
-        {isEdit ? (
-          <button
-            type="button"
-            aria-label="Slett"
-            title="Slett"
-            onClick={() => onCommit("", color)}
-            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          {/* Individual + "Else" only: 8-color picker */}
+          {seat === "individual" && categoryFromColor(color) === "else" && (
+            <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-3">
+              {GROUP_COLOR_PALETTE.map((c) => {
+                const selected = color?.toLowerCase() === c.value.toLowerCase();
+                return (
+                  <button
+                    key={c.value}
+                    type="button"
+                    title={c.name}
+                    aria-label={c.name}
+                    aria-pressed={selected}
+                    onClick={() => setColor(c.value)}
+                    className={[
+                      "h-3.5 w-3.5 rounded-full border transition-transform hover:scale-125",
+                      selected
+                        ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
+                        : "border-black/15",
+                    ].join(" ")}
+                    style={{ background: c.value }}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
+            {isEdit ? (
+              <button
+                type="button"
+                aria-label="Slett"
+                title="Slett"
+                onClick={() => onCommit("", color, time)}
+                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <span className="mono tabular-nums">⏎ for å lagre</span>
+            )}
+            <button
+              type="button"
+              onClick={() => onCommit(value.trim(), color, time)}
+              className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
+            >
+              {isEdit ? "Lagre" : "Legg til"}
+            </button>
+          </div>
+        </div>
+
+        {/* Mini duration column — appears next to the editor when toggled. */}
+        {enableDuration && showDuration && (
+          <div
+            className="absolute left-full top-0"
+            style={{ width: DUR_W, height: DUR_H, marginLeft: DUR_GAP }}
           >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        ) : (
-          <span className="mono tabular-nums">⏎ for å lagre</span>
+            <MiniDurationColumn
+              startHour={DUR_START_HOUR}
+              rows={DUR_ROWS}
+              rowHeight={DUR_ROW_H}
+              initial={time}
+              color={color}
+              onCommit={(t) => {
+                setTime(t);
+                setShowDuration(false);
+              }}
+              onClose={() => setShowDuration(false)}
+            />
+          </div>
         )}
-        <button
-          type="button"
-          onClick={() => onCommit(value.trim(), color)}
-          className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
-        >
-          {isEdit ? "Lagre" : "Legg til"}
-        </button>
       </div>
     </div>
   );
 }
+
