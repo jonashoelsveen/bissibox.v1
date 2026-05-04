@@ -103,6 +103,8 @@ export function TeamBoardPage({
   const [editMeetingOpen, setEditMeetingOpen] = useState(false);
   const [editMeetingTitle, setEditMeetingTitle] = useState("");
   const [editMeetingFolder, setEditMeetingFolder] = useState<string>("");
+  const [confirmDeleteMeetingId, setConfirmDeleteMeetingId] = useState<string | null>(null);
+  const [deletingMeeting, setDeletingMeeting] = useState(false);
   const [meetingSearch, setMeetingSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
