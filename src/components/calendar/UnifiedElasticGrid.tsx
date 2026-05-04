@@ -1443,3 +1443,168 @@ function NowLine({
     </div>
   );
 }
+
+/**
+ * WeekEventsOverlay — projects unified `CalendarEvent`s onto the week-view
+ * column grid as absolutely-positioned blocks. Reads column boxes from the
+ * existing `[data-month-col]` cells so it stays perfectly aligned through
+ * grid track animations and resizes.
+ *
+ * Drag (pointer down + move) shifts an event in time and across days:
+ *   • horizontal → snap to the nearest day column
+ *   • vertical   → snap to the nearest 30-min slot
+ * Click without dragging opens the inline editor.
+ */
+function WeekEventsOverlay({
+  scrollRef,
+  events,
+  weekDates,
+  headerH,
+  rowHeight,
+  startHour,
+  onEventClick,
+  onEventDrop,
+}: {
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  events: CalendarEvent[];
+  weekDates: Date[];
+  headerH: number;
+  rowHeight: number;
+  startHour: number;
+  onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
+  onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number) => void;
+}) {
+  type Box = { left: number; width: number };
+  const [cols, setCols] = useState<Box[]>([]);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const c = scrollRef.current;
+      if (!c) return;
+      const next: Box[] = [];
+      for (let i = 0; i < 7; i++) {
+        // Pick any cell from this column; the header is always present.
+        const cell = c.querySelector<HTMLElement>(`[data-month-col="${i}"]`);
+        if (cell) next.push({ left: cell.offsetLeft, width: cell.offsetWidth });
+      }
+      if (next.length === 7) setCols(next);
+    };
+    measure();
+    const id = window.setInterval(measure, 500);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("resize", measure);
+    };
+  }, [scrollRef]);
+
+  const [drag, setDrag] = useState<{
+    id: string;
+    pointerStart: { x: number; y: number };
+    originColIdx: number;
+    originStartMin: number;
+    durationMin: number;
+    moved: boolean;
+    delta: { dx: number; dy: number };
+  } | null>(null);
+
+  useEffect(() => {
+    if (!drag) return;
+    const onMove = (e: PointerEvent) => {
+      const dx = e.clientX - drag.pointerStart.x;
+      const dy = e.clientY - drag.pointerStart.y;
+      const moved = drag.moved || Math.abs(dx) > 3 || Math.abs(dy) > 3;
+      setDrag({ ...drag, delta: { dx, dy }, moved });
+    };
+    const onUp = () => {
+      if (drag.moved && cols.length === 7) {
+        // Compute drop column based on horizontal delta.
+        const colW = cols[0].width;
+        let colShift = Math.round(drag.delta.dx / colW);
+        let newCol = Math.max(0, Math.min(6, drag.originColIdx + colShift));
+        // Compute new start minute from vertical delta (snap to 30-min grid).
+        const minShift = Math.round(drag.delta.dy / rowHeight) * 30;
+        let newStart = drag.originStartMin + minShift;
+        // Clamp inside visible range [startHour*60, startHour*60 + 19*60].
+        const minStart = startHour * 60;
+        const maxStart = startHour * 60 + 19 * 60 - drag.durationMin;
+        newStart = Math.max(minStart, Math.min(maxStart, newStart));
+        onEventDrop(drag.id, weekDates[newCol], newStart, drag.durationMin);
+      }
+      setDrag(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [drag, cols, rowHeight, startHour, weekDates, onEventDrop]);
+
+  if (cols.length !== 7) return null;
+
+  return (
+    <>
+      {events.map((ev) => {
+        const start = fromISOLocal(ev.startISO);
+        const end = fromISOLocal(ev.endISO);
+        const colIdx = weekDates.findIndex((d) => sameDay(d, start));
+        if (colIdx < 0) return null;
+        const startMin = start.getHours() * 60 + start.getMinutes();
+        const endMin = end.getHours() * 60 + end.getMinutes();
+        const since = startMin - startHour * 60;
+        const dur = Math.max(30, endMin - startMin);
+        if (since < 0 || since >= 19 * 60) return null;
+        const top = headerH + (since / 30) * rowHeight;
+        const height = (dur / 30) * rowHeight;
+        const box = cols[colIdx];
+        const isDragging = drag?.id === ev.id && drag.moved;
+        const dragDx = isDragging ? drag.delta.dx : 0;
+        const dragDy = isDragging ? drag.delta.dy : 0;
+        const bg = ev.color ?? "hsl(var(--primary))";
+        const fg = ev.color ? contrastTextOn(ev.color) : "hsl(var(--primary-foreground))";
+        const Icon = iconForColor(ev.color);
+        return (
+          <div
+            key={ev.id}
+            data-mark-cell="1"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+              setDrag({
+                id: ev.id,
+                pointerStart: { x: e.clientX, y: e.clientY },
+                originColIdx: colIdx,
+                originStartMin: startMin,
+                durationMin: dur,
+                moved: false,
+                delta: { dx: 0, dy: 0 },
+              });
+            }}
+            onClick={(e) => {
+              if (drag?.moved) return;
+              e.stopPropagation();
+              onEventClick(ev, e.currentTarget as HTMLElement);
+            }}
+            className="absolute z-[8] cursor-grab overflow-hidden rounded-[3px] px-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md"
+            style={{
+              left: box.left + 2 + dragDx,
+              width: box.width - 4,
+              top: top + dragDy,
+              height: Math.max(rowHeight - 2, height - 2),
+              background: bg,
+              color: fg,
+              opacity: isDragging ? 0.85 : 1,
+            }}
+            title={ev.title}
+          >
+            <div className="flex items-center gap-1 truncate">
+              {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} />}
+              <span className="truncate font-medium">{ev.title}</span>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
