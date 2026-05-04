@@ -652,11 +652,10 @@ export function UnifiedElasticGrid({
   const isMonthFocused = (m: number) => mode.kind === "month" && mode.month === m;
   const isMonthPeriph = (m: number) => mode.kind === "month" && mode.month !== m;
 
-  // Live clock — updated every 30s so the "now" line and today highlight
-  // stay in sync without burning frames.
+  // Live clock — updated every 15s so the "now" line stays accurate.
   const [now, setNow] = useState<Date>(() => new Date());
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 30_000);
+    const id = setInterval(() => setNow(new Date()), 15_000);
     return () => clearInterval(id);
   }, []);
 
@@ -685,13 +684,16 @@ export function UnifiedElasticGrid({
     setHeaderH(headerRef.current.offsetHeight);
   }, [viewMode]);
 
-  const nowOffset = useMemo(() => {
+  // Minutes elapsed since the week-view start (06:00). Includes seconds for
+  // sub-minute precision so the indicator advances smoothly between ticks.
+  const nowMinutesSinceStart = useMemo(() => {
     if (mode.kind !== "year") return null;
-    const minutes = now.getHours() * 60 + now.getMinutes();
+    const minutes =
+      now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
     const since6 = minutes - 6 * 60;
     if (since6 < 0 || since6 > 19 * 60) return null;
-    return (since6 / 30) * rowHeight;
-  }, [now, mode, rowHeight]);
+    return since6;
+  }, [now, mode]);
 
   // ─── Week view ↔ time helpers ────────────────────────────────────────
   // Cell layout: row 1 (day=1) starts at 06:00 and each (day, session)
@@ -956,11 +958,12 @@ export function UnifiedElasticGrid({
               }}
             />
           )}
-          {mode.kind === "year" && todayColIdx >= 0 && nowOffset !== null && (
+          {mode.kind === "year" && todayColIdx >= 0 && nowMinutesSinceStart !== null && (
             <NowLine
               scrollRef={scrollRef}
               colIdx={todayColIdx}
-              top={headerH + nowOffset}
+              nowMinutesSinceStart={nowMinutesSinceStart}
+              rowHeight={rowHeight}
             />
           )}
         </div>
@@ -1633,21 +1636,31 @@ function DurationCell({ initial, onCommit }: DurationCellProps) {
 function NowLine({
   scrollRef,
   colIdx,
-  top,
+  nowMinutesSinceStart,
+  rowHeight,
 }: {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   colIdx: number;
-  top: number;
+  /** Minutes elapsed since the grid's start hour (e.g. 06:00). */
+  nowMinutesSinceStart: number;
+  rowHeight: number;
 }) {
-  const [box, setBox] = useState<{ left: number; width: number } | null>(null);
+  const [box, setBox] = useState<{ left: number; width: number; headerBottom: number } | null>(
+    null,
+  );
 
   useLayoutEffect(() => {
     const measure = () => {
       const c = scrollRef.current;
       if (!c) return;
-      const cell = c.querySelector<HTMLElement>(`[data-month-col="${colIdx}"]`);
-      if (!cell) return;
-      setBox({ left: cell.offsetLeft, width: cell.offsetWidth });
+      // First match for data-month-col is the sticky day-column header.
+      const header = c.querySelector<HTMLElement>(`[data-month-col="${colIdx}"]`);
+      if (!header) return;
+      setBox({
+        left: header.offsetLeft,
+        width: header.offsetWidth,
+        headerBottom: header.offsetTop + header.offsetHeight,
+      });
     };
     measure();
     const id = window.setInterval(measure, 500);
@@ -1659,18 +1672,20 @@ function NowLine({
   }, [colIdx, scrollRef]);
 
   if (!box) return null;
+  // 30-min slot maps to one rowHeight; convert minutes precisely.
+  const top = box.headerBottom + (nowMinutesSinceStart / 30) * rowHeight;
   const NOW_COLOR = "#FF4F4F";
   return (
     <>
       {/* Past-time dim: subtle shading above the indicator inside today's column */}
-      {top > 0 && (
+      {top > box.headerBottom && (
         <div
           className="pointer-events-none absolute z-[14]"
           style={{
-            top: 0,
+            top: box.headerBottom,
             left: box.left,
             width: box.width,
-            height: top,
+            height: top - box.headerBottom,
             background: "rgba(15, 23, 42, 0.04)",
           }}
           aria-hidden
@@ -1726,18 +1741,24 @@ function WeekEventsOverlay({
 }) {
   type Box = { left: number; width: number };
   const [cols, setCols] = useState<Box[]>([]);
+  const [headerBottom, setHeaderBottom] = useState(0);
 
   useLayoutEffect(() => {
     const measure = () => {
       const c = scrollRef.current;
       if (!c) return;
       const next: Box[] = [];
+      let hb = 0;
       for (let i = 0; i < 7; i++) {
-        // Pick any cell from this column; the header is always present.
+        // First match for data-month-col is the sticky header for that column.
         const cell = c.querySelector<HTMLElement>(`[data-month-col="${i}"]`);
-        if (cell) next.push({ left: cell.offsetLeft, width: cell.offsetWidth });
+        if (cell) {
+          next.push({ left: cell.offsetLeft, width: cell.offsetWidth });
+          hb = Math.max(hb, cell.offsetTop + cell.offsetHeight);
+        }
       }
       if (next.length === 7) setCols(next);
+      setHeaderBottom(hb);
     };
     measure();
     const id = window.setInterval(measure, 500);
@@ -1805,7 +1826,7 @@ function WeekEventsOverlay({
         const since = startMin - startHour * 60;
         const dur = Math.max(30, endMin - startMin);
         if (since < 0 || since >= 19 * 60) return null;
-        const top = headerH + (since / 30) * rowHeight;
+        const top = headerBottom + (since / 30) * rowHeight;
         const height = (dur / 30) * rowHeight;
         const box = cols[colIdx];
         const isDragging = drag?.id === ev.id && drag.moved;
