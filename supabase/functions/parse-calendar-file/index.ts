@@ -183,12 +183,14 @@ serve(async (req) => {
     }
 
     const userMsg = [
-      `Filename: ${fileName}`,
-      `Mime: ${mimeType ?? "unknown"}`,
+      `Filename (CONTEXT ONLY — do not derive events from this): ${fileName}`,
       `Today: ${new Date().toISOString().slice(0, 10)}`,
       ``,
-      `Raw extracted content:`,
+      `Analyze this RAW EXTRACTED DOCUMENT CONTENT and return data via the submit_parsed_calendar tool. Only events explicitly present below are valid.`,
+      ``,
+      `"""`,
       content,
+      `"""`,
     ].join("\n");
 
     const aiRes = await fetch(LOVABLE_AI_URL, {
