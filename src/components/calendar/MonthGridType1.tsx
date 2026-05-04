@@ -991,12 +991,9 @@ function MiniDurationColumn({
       className="flex h-full flex-col overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg"
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {/* Header row — matches the main popover header height/typography */}
-      <div className="flex items-center justify-between border-b border-hairline px-3 py-2">
-        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-          Varighet
-        </span>
-        <span className="mono text-[10.5px] tabular-nums text-ink/70">
+      {/* Header — centered duration time, no label. */}
+      <div className="flex items-center justify-center border-b border-hairline px-3 py-2">
+        <span className="mono text-[12px] tabular-nums text-ink/80">
           {range
             ? `${fmtMin(startHour * 60 + range.lo * 30)} – ${fmtMin(startHour * 60 + (range.hi + 1) * 30)}`
             : "—"}
