@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from "react";
 import { Settings as SettingsIcon, Undo2, Redo2 } from "lucide-react";
-import { useYearStore, type CellKey } from "./yearStore";
+import { useYearStore, useEventStore, type CellKey } from "./yearStore";
 import { UnifiedElasticGrid } from "./UnifiedElasticGrid";
 import type { DateRange } from "./MiniCalendar";
 
