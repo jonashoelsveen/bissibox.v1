@@ -27,11 +27,12 @@
 import type React from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus } from "lucide-react";
-import type { CellData, CellKey, Session } from "./yearStore";
+import type { CellData, CellKey, Session, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
-import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, contrastTextOn } from "./MonthGridType1";
+import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, contrastTextOn, categoryFromColor } from "./MonthGridType1";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
+import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes } from "./dateUtils";
 
 type ViewMode = "day" | "week" | "month";
 
