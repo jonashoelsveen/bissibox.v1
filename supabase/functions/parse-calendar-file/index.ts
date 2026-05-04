@@ -36,12 +36,11 @@ function base64ToUint8Array(b64: string): Uint8Array {
   return out;
 }
 
-function classifyMime(name: string, mime: string): "spreadsheet" | "csv" | "pdf" | "text" {
+function classifyMime(name: string, mime: string): "spreadsheet" | "csv" | "text" {
   const n = name.toLowerCase();
   if (n.endsWith(".xlsx") || n.endsWith(".xls") || mime.includes("spreadsheet") || mime.includes("excel"))
     return "spreadsheet";
   if (n.endsWith(".csv") || mime.includes("csv")) return "csv";
-  if (n.endsWith(".pdf") || mime.includes("pdf")) return "pdf";
   return "text";
 }
 
@@ -51,52 +50,27 @@ function extractFromSpreadsheet(bytes: Uint8Array): string {
   for (const sheetName of wb.SheetNames) {
     const ws = wb.Sheets[sheetName];
     if (!ws) continue;
-    out.push(`### Sheet: ${sheetName}`);
-    // CSV-like rendering preserves row/column structure for the LLM.
-    const csv = XLSX.utils.sheet_to_csv(ws, { blankrows: false, FS: " | " });
-    out.push(csv);
+    // Extract raw structural data rows (array-of-arrays) — preserves the
+    // exact column layout of the source so the LLM never has to guess.
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false });
+    out.push(`[SHEET: ${sheetName}]`);
+    out.push(JSON.stringify(rows, null, 2));
   }
-  return out.join("\n\n").slice(0, 50_000);
+  return out.join("\n\n").slice(0, 60_000);
 }
 
 function extractFromCsv(bytes: Uint8Array): string {
-  return new TextDecoder().decode(bytes).slice(0, 50_000);
+  return new TextDecoder().decode(bytes).slice(0, 60_000);
 }
 
 function extractFromText(bytes: Uint8Array): string {
-  return new TextDecoder().decode(bytes).slice(0, 50_000);
-}
-
-// Best-effort PDF text extraction without heavy deps. Falls back to
-// returning a stub that signals to the AI that only the filename is
-// available — the model can still produce something usable in many cases.
-function extractFromPdf(bytes: Uint8Array, fileName: string): string {
-  const text = new TextDecoder("latin1").decode(bytes);
-  const chunks: string[] = [];
-  // Naive parenthesised string extraction from PDF content streams.
-  const re = /\(((?:[^()\\]|\\.)*)\)/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    const s = m[1].replace(/\\(\d{3}|.)/g, (_, esc) => {
-      if (esc.length === 3) return String.fromCharCode(parseInt(esc, 8));
-      const map: Record<string, string> = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f" };
-      return map[esc] ?? esc;
-    });
-    if (/[\p{L}\d]/u.test(s)) chunks.push(s);
-    if (chunks.join(" ").length > 50_000) break;
-  }
-  const joined = chunks.join(" ").trim();
-  if (joined.length < 50) {
-    return `[PDF: ${fileName}]\nUnable to extract text reliably. Use the filename and any inferred season-schedule context to produce events.`;
-  }
-  return joined.slice(0, 50_000);
+  return new TextDecoder().decode(bytes).slice(0, 60_000);
 }
 
 function extractContent(bytes: Uint8Array, fileName: string, mime: string): string {
   const kind = classifyMime(fileName, mime);
   if (kind === "spreadsheet") return extractFromSpreadsheet(bytes);
   if (kind === "csv") return extractFromCsv(bytes);
-  if (kind === "pdf") return extractFromPdf(bytes, fileName);
   return extractFromText(bytes);
 }
 
@@ -158,14 +132,17 @@ const PARSE_TOOL = {
   },
 };
 
-const SYSTEM_PROMPT = `You parse sports season schedules from raw spreadsheet/CSV/PDF dumps.
+const SYSTEM_PROMPT = `You are an elite sports federation administrative analyzer.
 
-Goals:
-1. Detect every concrete event (race, practice, game, meeting, training session).
-2. Group events into categories by recognising patterns: repeating prefixes ("XC – ", "Football: "), explicit section headers, dedicated columns/sheets per sport, indentation, repeating colour blocks, etc.
-3. Emit a compact set of categories (typically 1–6); reuse one id per category and assign every event a category id.
-4. Resolve dates: if only month/day is present, infer the year from the document context; if still ambiguous, prefer the upcoming season.
-5. Times: if a time is present, include it; otherwise default to 09:00 local for the start_time. Leave end_time empty unless specified or strongly implied.
+YOUR OBJECTIVE:
+Extract calendar dates, times, and events from the provided RAW EXTRACTED CONTENT only.
+
+CRITICAL EVALUATION RULES:
+- Source Isolation: Only parse events explicitly present in the raw content. NEVER invent dates, deadlines, or events using the filename, mime type, or any external assumption. The filename is provided for context only — it is NOT a source of events.
+- No Hallucinations: If the raw content contains no concrete dates or events, return empty detected_categories and empty events arrays.
+- Strict Categorization: Categorize each event into distinct sports, age groups, or event genres based on row content, column labels, sheet names, or explicit headings present in the data. Use snake_case ids.
+- Reasoning over Data: If a row contains a date and a label (e.g. "Round 1"), extract it. If no time is given, default start_time to 12:00 local. Leave end_time empty unless specified.
+- Year Resolution: If only month/day is present, infer the year only from explicit text within the content (e.g. headers, season labels). Otherwise use the provided "Today" date as a hint and choose the next upcoming occurrence.
 
 Output strictly via the submit_parsed_calendar tool. Never include explanatory prose.`;
 
@@ -206,12 +183,14 @@ serve(async (req) => {
     }
 
     const userMsg = [
-      `Filename: ${fileName}`,
-      `Mime: ${mimeType ?? "unknown"}`,
+      `Filename (CONTEXT ONLY — do not derive events from this): ${fileName}`,
       `Today: ${new Date().toISOString().slice(0, 10)}`,
       ``,
-      `Raw extracted content:`,
+      `Analyze this RAW EXTRACTED DOCUMENT CONTENT and return data via the submit_parsed_calendar tool. Only events explicitly present below are valid.`,
+      ``,
+      `"""`,
       content,
+      `"""`,
     ].join("\n");
 
     const aiRes = await fetch(LOVABLE_AI_URL, {
