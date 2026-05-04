@@ -1504,7 +1504,8 @@ function DayCellPair(props: DayCellPairProps) {
 
             {showCompact && !isEditing && (() => {
               const Icon = iconForColor(cellColor);
-              const labelColor = cellColor ? contrastTextOn(cellColor) : undefined;
+              const labelColor = "hsl(var(--ink, 220 13% 13%))";
+              const iconColor = cellColor ?? labelColor;
               return (
                 <span
                   className={`pointer-events-none absolute left-14 right-1.5 top-0.5 flex items-center gap-1 truncate text-[12px] ${
@@ -1513,11 +1514,11 @@ function DayCellPair(props: DayCellPairProps) {
                   style={{
                     opacity: focused ? 0 : 1,
                     transition: `opacity ${DUR_MS}ms ${EASE}`,
-                    color: labelColor ?? "hsl(var(--ink, 220 13% 13%))",
+                    color: labelColor,
                   }}
                 >
                   {!sameAbove && Icon && cellColor && (
-                    <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: labelColor }} />
+                    <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: iconColor }} />
                   )}
                   <span className="truncate">{sameAbove ? "" : cellLabel}</span>
                 </span>
