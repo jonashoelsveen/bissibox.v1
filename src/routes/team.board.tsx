@@ -1059,6 +1059,13 @@ export function TeamBoardPage({
             >
               <FolderIcon className="h-4 w-4" />
             </button>
+            <button
+              onClick={() => setConfirmDeleteMeetingId(ongoing.meeting.id)}
+              title="Delete meeting"
+              className="rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
             {meetingsAutosave ? (
               <span
                 title="Autosave is on. Edits are saved automatically."
