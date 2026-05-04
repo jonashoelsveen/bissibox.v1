@@ -209,11 +209,7 @@ function YearCalendarViewInner({
             unit={viewMode}
             currentDate={currentDate}
             selectedRange={currentRange}
-            onChange={(d, r) => {
-              setCurrentDate(d);
-              if (r) setCurrentRange(r);
-              else setCurrentRange({ start: d, end: d });
-            }}
+            onChange={(d, r) => updateCurrent(d, r)}
           />
           <span className="ml-2 mr-2 text-xs text-muted-foreground">{meta.year}</span>
           <button
