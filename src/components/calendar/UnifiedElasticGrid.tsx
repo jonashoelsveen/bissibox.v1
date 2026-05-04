@@ -1194,9 +1194,12 @@ function DayCellPair(props: DayCellPairProps) {
           <div
             key={session}
             data-mark-cell={mk.in ? "1" : undefined}
+            data-cell-key={allowMark ? `${month}:${day}:${session}` : undefined}
             onMouseDown={(e) => {
-              if ((e.target as HTMLElement).dataset.role === "fill-handle") return;
-              if ((e.target as HTMLElement).dataset.role === "mark-plus") return;
+              const t = e.target as HTMLElement;
+              if (t.dataset.role === "fill-handle") return;
+              if (t.dataset.role === "mark-plus") return;
+              if (t.dataset.role === "mark-drag") return;
               onSelect(k);
               if (allowMark) onMarkBegin(k);
             }}
@@ -1229,7 +1232,53 @@ function DayCellPair(props: DayCellPairProps) {
               />
             )}
 
-            {mk.isPlus && markReleased && mk.size > 1 && (
+            {/* Drag handle: covers the marked cell so the user can grab and
+                move the whole selection. Excludes a thin band at the very
+                top of the first cell and the very bottom of the last cell
+                (so resize-style edges feel intentional), and leaves the
+                center plus icon untouched via a CSS cutout (two stacked
+                regions). markReleased gates this so we never hijack the
+                initial drag-to-mark gesture. */}
+            {mk.in && markReleased && mk.size > 1 && (
+              <>
+                <div
+                  data-role="mark-drag"
+                  onMouseDown={(e) => {
+                    if (e.button !== 0) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onMarkDragBegin(k);
+                  }}
+                  className="absolute inset-x-0 z-[3]"
+                  style={{
+                    top: mk.isFirst ? 3 : 0,
+                    // If this is the plus cell, leave a 28px gap in the
+                    // middle for the icon — render only the upper band.
+                    bottom: mk.isPlus ? "calc(50% + 14px)" : (mk.isLast ? 3 : 0),
+                    cursor: isDraggingMark ? "grabbing" : "grab",
+                  }}
+                />
+                {mk.isPlus && (
+                  <div
+                    data-role="mark-drag"
+                    onMouseDown={(e) => {
+                      if (e.button !== 0) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onMarkDragBegin(k);
+                    }}
+                    className="absolute inset-x-0 z-[3]"
+                    style={{
+                      top: "calc(50% + 14px)",
+                      bottom: mk.isLast ? 3 : 0,
+                      cursor: isDraggingMark ? "grabbing" : "grab",
+                    }}
+                  />
+                )}
+              </>
+            )}
+
+            {mk.isPlus && markReleased && mk.size > 1 && !isDraggingMark && (
               <button
                 type="button"
                 data-role="mark-plus"
@@ -1240,11 +1289,11 @@ function DayCellPair(props: DayCellPairProps) {
                   // the cell that was clicked.
                   onOpenPopover(k, e.currentTarget.parentElement as HTMLElement);
                 }}
-                className="pointer-events-auto absolute left-1/2 top-1/2 z-[5] -translate-x-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-ink"
+                className="pointer-events-auto absolute left-1/2 top-1/2 z-[5] flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-muted-foreground/80 shadow-sm ring-1 ring-hairline hover:text-ink"
                 style={{ padding: 0, lineHeight: 0 }}
                 aria-label="Legg til økt"
               >
-                <Plus className="h-4 w-4" strokeWidth={1.5} />
+                <Plus className="h-5 w-5" strokeWidth={1.75} />
               </button>
             )}
             {isSelected && (
