@@ -343,6 +343,8 @@ export function UnifiedElasticGrid({
     initialText: string;
     initialColor: string | null;
     isEdit: boolean;
+    /** When set, the commit/delete will mutate this CalendarEvent. */
+    eventId?: string;
   } | null>(null);
 
   const openPopover = useCallback(
