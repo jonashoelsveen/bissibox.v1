@@ -247,10 +247,12 @@ export function MonthGridType1({
   const [popover, setPopover] = useState<{
     pos: CellPos;
     rect: DOMRect;
-    /** -1 = create new; >=0 = edit existing item index */
+    /** -1 = create new; >=0 = edit existing legacy item index */
     editIdx: number;
     initialText: string;
     initialColor: string | null;
+    /** When set, this popover is editing a unified CalendarEvent. */
+    eventId?: string;
   } | null>(null);
 
   const openPopoverAt = useCallback(
@@ -277,6 +279,20 @@ export function MonthGridType1({
         editIdx: idx,
         initialText: text,
         initialColor: color,
+      });
+    },
+    [],
+  );
+
+  const openEventEditor = useCallback(
+    (pos: CellPos, ev: CalendarEvent, anchor: HTMLElement) => {
+      setPopover({
+        pos,
+        rect: anchor.getBoundingClientRect(),
+        editIdx: -1,
+        initialText: ev.title,
+        initialColor: ev.color,
+        eventId: ev.id,
       });
     },
     [],
