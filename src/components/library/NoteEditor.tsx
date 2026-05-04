@@ -55,6 +55,8 @@ export function NoteEditor({
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editFolder, setEditFolder] = useState("");
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const isDirty = body !== savedBody;
   const scopeKey = activeEntityId
