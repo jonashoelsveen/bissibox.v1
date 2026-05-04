@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from "react";
 import { Settings as SettingsIcon, Undo2, Redo2 } from "lucide-react";
-import { useYearStore, type CellKey } from "./yearStore";
+import { useYearStore, useEventStore, type CellKey } from "./yearStore";
 import { UnifiedElasticGrid } from "./UnifiedElasticGrid";
 import type { DateRange } from "./MiniCalendar";
 
@@ -28,6 +28,16 @@ export function YearCalendarView({
 }) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta, undo, redo, canUndo, canRedo } =
     useYearStore(calId, defaultTitle);
+  const {
+    events,
+    upsertEvent,
+    moveEvent,
+    deleteEvent,
+    undoEvents,
+    redoEvents,
+    canUndoEvents,
+    canRedoEvents,
+  } = useEventStore(calId);
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
@@ -54,14 +64,16 @@ export function YearCalendarView({
       if (k === "z" && !e.shiftKey) {
         e.preventDefault();
         undo();
+        undoEvents();
       } else if ((k === "z" && e.shiftKey) || k === "y") {
         e.preventDefault();
         redo();
+        redoEvents();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [undo, redo]);
+  }, [undo, redo, undoEvents, redoEvents]);
 
   const commitTitle = () => {
     setEditingTitle(false);
@@ -107,8 +119,8 @@ export function YearCalendarView({
             type="button"
             aria-label="Undo"
             title="Undo (⌘Z)"
-            onClick={undo}
-            disabled={!canUndo}
+            onClick={() => { undo(); undoEvents(); }}
+            disabled={!canUndo && !canUndoEvents}
             className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <Undo2 className="h-4 w-4" />
@@ -117,8 +129,8 @@ export function YearCalendarView({
             type="button"
             aria-label="Redo"
             title="Redo (⌘⇧Z)"
-            onClick={redo}
-            disabled={!canRedo}
+            onClick={() => { redo(); redoEvents(); }}
+            disabled={!canRedo && !canRedoEvents}
             className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
           >
             <Redo2 className="h-4 w-4" />
@@ -144,6 +156,10 @@ export function YearCalendarView({
           onCommitDuration={(k, duration) => upsertCell(k, { duration })}
           onFill={fillRange}
           seat={seat}
+          events={events}
+          onUpsertEvent={upsertEvent}
+          onMoveEvent={moveEvent}
+          onDeleteEvent={deleteEvent}
           currentDate={currentDate}
           currentRange={currentRange}
           onCurrentDateChange={(d, r) => {

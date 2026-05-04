@@ -34,8 +34,9 @@ import {
 } from "react";
 import { Plus, Trash2, PersonStanding, GraduationCap, Briefcase, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { CellData, CellKey } from "./yearStore";
+import type { CellData, CellKey, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
+import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal } from "./dateUtils";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
 
 // Individual session categories. Three have fixed colors + icons for
@@ -122,6 +123,15 @@ export interface MonthGridType1Props {
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onCommitText: (k: CellKey, text: string) => void;
+  /** Unified event store — events created here will appear in week view too. */
+  events?: CalendarEvent[];
+  onUpsertEvent?: (
+    patch:
+      | (Partial<CalendarEvent> & Pick<CalendarEvent, "startISO" | "endISO" | "title">)
+      | (Partial<CalendarEvent> & { id: string }),
+  ) => CalendarEvent;
+  onMoveEvent?: (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => void;
+  onDeleteEvent?: (id: string) => void;
 }
 
 interface DayItem {
@@ -156,6 +166,10 @@ export function MonthGridType1({
   onPrevMonth,
   onNextMonth,
   onCommitText,
+  events = [],
+  onUpsertEvent,
+  onMoveEvent,
+  onDeleteEvent,
 }: MonthGridType1Props) {
   const dim = daysInMonth(year, month);
   const firstDow = dowMon0(new Date(year, month, 1));
@@ -233,10 +247,12 @@ export function MonthGridType1({
   const [popover, setPopover] = useState<{
     pos: CellPos;
     rect: DOMRect;
-    /** -1 = create new; >=0 = edit existing item index */
+    /** -1 = create new; >=0 = edit existing legacy item index */
     editIdx: number;
     initialText: string;
     initialColor: string | null;
+    /** When set, this popover is editing a unified CalendarEvent. */
+    eventId?: string;
   } | null>(null);
 
   const openPopoverAt = useCallback(
@@ -263,6 +279,20 @@ export function MonthGridType1({
         editIdx: idx,
         initialText: text,
         initialColor: color,
+      });
+    },
+    [],
+  );
+
+  const openEventEditor = useCallback(
+    (pos: CellPos, ev: CalendarEvent, anchor: HTMLElement) => {
+      setPopover({
+        pos,
+        rect: anchor.getBoundingClientRect(),
+        editIdx: -1,
+        initialText: ev.title,
+        initialColor: ev.color,
+        eventId: ev.id,
       });
     },
     [],
@@ -323,19 +353,49 @@ export function MonthGridType1({
 
   // ───────────────────────── Drag-and-drop items ─────────────────────────
 
-  const [dragItem, setDragItem] = useState<{
-    fromKey: CellKey;
-    text: string;
-  } | null>(null);
+  const [dragItem, setDragItem] = useState<
+    | { fromKey: CellKey; text: string; source: "legacy" }
+    | { fromKey: CellKey; text: string; source: "event"; eventId: string }
+    | null
+  >(null);
 
   const moveItem = useCallback(
-    (from: CellKey, toKey: CellKey, text: string) => {
+    (
+      from: CellKey,
+      toKey: CellKey,
+      text: string,
+      payload?:
+        | { source: "legacy" }
+        | { source: "event"; eventId: string },
+    ) => {
       if (
         from.year === toKey.year &&
         from.month === toKey.month &&
         from.day === toKey.day
       )
         return;
+
+      // ── Unified event drag: keep time-of-day, change date. ──
+      if (payload?.source === "event" && onMoveEvent) {
+        const ev = events.find((e) => e.id === payload.eventId);
+        if (ev) {
+          const start = fromISOLocal(ev.startISO);
+          const end = fromISOLocal(ev.endISO);
+          const durMin = Math.max(30, Math.round((end.getTime() - start.getTime()) / 60000));
+          const newStart = setHM(
+            new Date(toKey.year, toKey.month, toKey.day),
+            start.getHours(),
+            start.getMinutes(),
+          );
+          onMoveEvent(ev.id, {
+            startISO: toISOLocal(newStart),
+            endISO: toISOLocal(addMinutes(newStart, durMin)),
+          });
+        }
+        return;
+      }
+
+      // ── Legacy text-cell drag (preserved for old data). ──
       const fromId = makeCellId(calId, from);
       const toId = makeCellId(calId, toKey);
       const fromItems = parseItems(data[fromId]?.text);
@@ -344,7 +404,7 @@ export function MonthGridType1({
       onCommitText(from, serializeItems(next));
       onCommitText(toKey, serializeItems([...toItems, { idx: toItems.length, text }]));
     },
-    [calId, data, onCommitText],
+    [calId, data, onCommitText, events, onMoveEvent],
   );
 
   // ───────────────────────── Render ─────────────────────────
@@ -407,12 +467,29 @@ export function MonthGridType1({
                 session: 0,
               };
               const id = makeCellId(calId, k);
-              const items = parseItems(data[id]?.text);
+              const legacyItems = parseItems(data[id]?.text);
+              // Events whose start day is this calendar cell.
+              const dayEvents = events.filter((e) => sameDay(fromISOLocal(e.startISO), d.date));
+
+              type UnifiedItem =
+                | { kind: "legacy"; idx: number; raw: string }
+                | { kind: "event"; event: CalendarEvent };
+              const allItems: UnifiedItem[] = [
+                ...dayEvents
+                  .slice()
+                  .sort((a, b) => a.startISO.localeCompare(b.startISO))
+                  .map<UnifiedItem>((event) => ({ kind: "event", event })),
+                ...legacyItems.map<UnifiedItem>((it) => ({
+                  kind: "legacy",
+                  idx: it.idx,
+                  raw: it.text,
+                })),
+              ];
 
               // Strict row alignment: limit visible items, show "+N more"
               const MAX_VISIBLE = 3;
-              const visible = items.slice(0, MAX_VISIBLE);
-              const overflow = Math.max(0, items.length - MAX_VISIBLE);
+              const visible = allItems.slice(0, MAX_VISIBLE);
+              const overflow = Math.max(0, allItems.length - MAX_VISIBLE);
 
               return (
                 <div
@@ -434,7 +511,14 @@ export function MonthGridType1({
                   }}
                   onMouseUp={(e) => {
                     if (dragItem && d.inMonth) {
-                      moveItem(dragItem.fromKey, k, dragItem.text);
+                      moveItem(
+                        dragItem.fromKey,
+                        k,
+                        dragItem.text,
+                        dragItem.source === "event"
+                          ? { source: "event", eventId: dragItem.eventId }
+                          : { source: "legacy" },
+                      );
                       setDragItem(null);
                     }
                     // If user clicked without dragging, collapse range to focus
@@ -483,10 +567,13 @@ export function MonthGridType1({
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
                     <AnimatePresence initial={false}>
                       {visible.map((it) => {
-                        const { color: customColor, text: displayText } = splitColor(it.text);
+                        const raw = it.kind === "legacy" ? it.raw : it.event.title;
+                        const itemColor = it.kind === "legacy" ? splitColor(it.raw).color : it.event.color;
+                        const displayText = it.kind === "legacy" ? splitColor(it.raw).text : it.event.title;
+                        const itemKey = it.kind === "legacy" ? `legacy-${it.idx}` : `event-${it.event.id}`;
                         return (
                           <motion.div
-                            key={`${id}-${it.idx}-${it.text}`}
+                            key={`${id}-${itemKey}`}
                             layout
                             initial={{ opacity: 0, y: -2 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -498,51 +585,54 @@ export function MonthGridType1({
                             data-role="item"
                             draggable
                             onDragStart={(e) => {
-                              const ev = e as unknown as DragEvent;
-                              if (ev.dataTransfer) {
-                                ev.dataTransfer.effectAllowed = "move";
-                                ev.dataTransfer.setData("text/plain", it.text);
+                              const dev = e as unknown as DragEvent;
+                              if (dev.dataTransfer) {
+                                dev.dataTransfer.effectAllowed = "move";
+                                dev.dataTransfer.setData("text/plain", raw);
                               }
-                              setDragItem({ fromKey: k, text: it.text });
+                              if (it.kind === "legacy") {
+                                setDragItem({ fromKey: k, text: it.raw, source: "legacy" });
+                              } else {
+                                setDragItem({ fromKey: k, text: it.event.title, source: "event", eventId: it.event.id });
+                              }
                             }}
                             onDragEnd={() => setDragItem(null)}
                             onClick={(e) => {
                               e.stopPropagation();
-                              openItemEditor(
-                                pos,
-                                it.idx,
-                                it.text,
-                                e.currentTarget as HTMLElement,
-                              );
+                              if (it.kind === "legacy") {
+                                openItemEditor(pos, it.idx, it.raw, e.currentTarget as HTMLElement);
+                              } else {
+                                openEventEditor(pos, it.event, e.currentTarget as HTMLElement);
+                              }
                             }}
                             className={[
                               "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink transition-all",
-                              customColor ? "" : "bg-secondary/70",
+                              itemColor ? "" : "bg-secondary/70",
                               "hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
-                              customColor ? "" : "hover:bg-secondary",
+                              itemColor ? "" : "hover:bg-secondary",
                             ].join(" ")}
                             style={
-                              customColor
+                              itemColor
                                 ? {
-                                    backgroundColor: `${customColor}1F`,
-                                    boxShadow: `inset 2px 0 0 ${customColor}`,
+                                    backgroundColor: `${itemColor}1F`,
+                                    boxShadow: `inset 2px 0 0 ${itemColor}`,
                                   }
                                 : undefined
                             }
                             title={displayText}
                           >
                             {(() => {
-                              const Icon = iconForColor(customColor);
+                              const Icon = iconForColor(itemColor);
                               return Icon ? (
                                 <Icon
                                   className="h-3 w-3 shrink-0"
-                                  style={{ color: customColor ?? "currentColor" }}
+                                  style={{ color: itemColor ?? "currentColor" }}
                                   strokeWidth={2.25}
                                 />
-                              ) : customColor ? (
+                              ) : itemColor ? (
                                 <span
                                   className="h-1.5 w-1.5 shrink-0 rounded-full"
-                                  style={{ background: customColor }}
+                                  style={{ background: itemColor }}
                                 />
                               ) : null;
                             })()}
@@ -567,7 +657,7 @@ export function MonthGridType1({
                   </div>
 
                   {/* Hover "+" affordance — visible only when cell is empty + in month */}
-                  {d.inMonth && items.length === 0 && (
+                  {d.inMonth && allItems.length === 0 && (
                     <span className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover/cell:opacity-100">
                       <Plus className="h-3.5 w-3.5 text-muted-foreground/60" strokeWidth={2.25} />
                     </span>
@@ -596,37 +686,68 @@ export function MonthGridType1({
               const cell = days.find(
                 (d) => d.row === popover.pos.row && d.col === popover.pos.col,
               );
-              if (cell) {
-                const cellKey: CellKey = {
-                  year: cell.date.getFullYear(),
-                  month: cell.date.getMonth(),
-                  day: cell.date.getDate(),
-                  session: 0,
-                };
-                const id = makeCellId(calId, cellKey);
-                const existing = parseItems(data[id]?.text);
-                const t = text.trim();
-                let next: DayItem[];
-                if (popover.editIdx >= 0) {
-                  if (!t) {
-                    next = existing.filter((it) => it.idx !== popover.editIdx);
-                  } else {
-                    next = existing.map((it) =>
-                      it.idx === popover.editIdx
-                        ? { idx: it.idx, text: joinColor(color, t) }
-                        : it,
-                    );
-                  }
-                } else {
-                  next = t
-                    ? [
-                        ...existing,
-                        { idx: existing.length, text: joinColor(color, t) },
-                      ]
-                    : existing;
-                }
-                onCommitText(cellKey, serializeItems(next));
+              if (!cell) {
+                closePopover();
+                return;
               }
+              const t = text.trim();
+
+              // ── Editing an existing unified event. ──
+              if (popover.eventId) {
+                if (!t) {
+                  onDeleteEvent?.(popover.eventId);
+                } else {
+                  onUpsertEvent?.({ id: popover.eventId, title: t, color });
+                }
+                closePopover();
+                return;
+              }
+
+              // ── Creating a new item from month view. ──
+              // Default to the unified event store so it appears in week view too.
+              if (popover.editIdx < 0 && onUpsertEvent) {
+                if (t) {
+                  const start = setHM(cell.date, 9, 0);
+                  const end = addMinutes(start, 60);
+                  onUpsertEvent({
+                    title: t,
+                    color,
+                    startISO: toISOLocal(start),
+                    endISO: toISOLocal(end),
+                    allDay: true,
+                    category: categoryFromColor(color),
+                  });
+                }
+                closePopover();
+                return;
+              }
+
+              // ── Legacy text-cell edit fallback (for pre-existing data). ──
+              const cellKey: CellKey = {
+                year: cell.date.getFullYear(),
+                month: cell.date.getMonth(),
+                day: cell.date.getDate(),
+                session: 0,
+              };
+              const id = makeCellId(calId, cellKey);
+              const existing = parseItems(data[id]?.text);
+              let next: DayItem[];
+              if (popover.editIdx >= 0) {
+                if (!t) {
+                  next = existing.filter((it) => it.idx !== popover.editIdx);
+                } else {
+                  next = existing.map((it) =>
+                    it.idx === popover.editIdx
+                      ? { idx: it.idx, text: joinColor(color, t) }
+                      : it,
+                  );
+                }
+              } else {
+                next = t
+                  ? [...existing, { idx: existing.length, text: joinColor(color, t) }]
+                  : existing;
+              }
+              onCommitText(cellKey, serializeItems(next));
               closePopover();
             }}
           />

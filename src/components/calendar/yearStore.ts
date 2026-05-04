@@ -228,3 +228,144 @@ export function useYearStore(calId: string, defaultTitle: string) {
 
   return { data, meta, upsertCell, upsertCells, fillRange, setMeta: persistMeta, undo, redo, canUndo, canRedo };
 }
+
+// ──────────────────────────────────────────────────────────────────────
+// CalendarEvent store — single source of truth for both Month + Week views.
+//
+// Each event is keyed by its own stable id and carries real local-ISO
+// timestamps. Both views read from the same `events` array and project
+// it into their own visual model:
+//   • Month view  → group by start-date day, render as chips
+//   • Week view   → position absolutely between start/end pixel offsets
+//                   inside the start-date column
+//
+// Persisted to localStorage under `calendar:events:{calId}`.
+// ──────────────────────────────────────────────────────────────────────
+
+import { makeEventId } from "./dateUtils";
+
+export type IndividualCategory = "training" | "school" | "work" | "else";
+
+export interface CalendarEvent {
+  id: string;
+  startISO: string;       // local ISO, e.g. "2026-05-04T09:30:00"
+  endISO: string;         // local ISO
+  allDay: boolean;
+  title: string;
+  color: string | null;   // hex
+  category?: IndividualCategory;
+  description?: string;
+}
+
+const eventsKey = (calId: string) => `calendar:events:${calId}`;
+
+export function useEventStore(calId: string) {
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const eventsRef = useRef<CalendarEvent[]>([]);
+  const pastRef = useRef<CalendarEvent[][]>([]);
+  const futureRef = useRef<CalendarEvent[][]>([]);
+  const [, forceTick] = useState(0);
+  const bump = () => forceTick((n) => n + 1);
+
+  // Load on calendar switch.
+  useEffect(() => {
+    const loaded = readJSON<CalendarEvent[]>(eventsKey(calId), []);
+    eventsRef.current = loaded;
+    setEvents(loaded);
+    pastRef.current = [];
+    futureRef.current = [];
+    bump();
+  }, [calId]);
+
+  const persist = useCallback(
+    (next: CalendarEvent[], opts?: { history?: boolean }) => {
+      if (opts?.history !== false) {
+        pastRef.current.push(eventsRef.current);
+        if (pastRef.current.length > 100) pastRef.current.shift();
+        futureRef.current = [];
+        bump();
+      }
+      eventsRef.current = next;
+      setEvents(next);
+      writeJSON(eventsKey(calId), next);
+    },
+    [calId],
+  );
+
+  const upsertEvent = useCallback(
+    (
+      patch:
+        | (Partial<CalendarEvent> & Pick<CalendarEvent, "startISO" | "endISO" | "title">)
+        | (Partial<CalendarEvent> & { id: string }),
+    ) => {
+      const current = eventsRef.current;
+      const id = (patch as { id?: string }).id ?? makeEventId();
+      const existing = current.find((e) => e.id === id);
+      const merged: CalendarEvent = {
+        allDay: false,
+        color: null,
+        title: "",
+        startISO: "",
+        endISO: "",
+        ...existing,
+        ...patch,
+        id,
+      };
+      const next = existing
+        ? current.map((e) => (e.id === id ? merged : e))
+        : [...current, merged];
+      persist(next);
+      return merged;
+    },
+    [persist],
+  );
+
+  const moveEvent = useCallback(
+    (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => {
+      const current = eventsRef.current;
+      const next = current.map((e) => (e.id === id ? { ...e, ...patch } : e));
+      persist(next);
+    },
+    [persist],
+  );
+
+  const deleteEvent = useCallback(
+    (id: string) => {
+      const current = eventsRef.current;
+      const next = current.filter((e) => e.id !== id);
+      if (next.length !== current.length) persist(next);
+    },
+    [persist],
+  );
+
+  const undoEvents = useCallback(() => {
+    const prev = pastRef.current.pop();
+    if (!prev) return;
+    futureRef.current.push(eventsRef.current);
+    eventsRef.current = prev;
+    setEvents(prev);
+    writeJSON(eventsKey(calId), prev);
+    bump();
+  }, [calId]);
+
+  const redoEvents = useCallback(() => {
+    const next = futureRef.current.pop();
+    if (!next) return;
+    pastRef.current.push(eventsRef.current);
+    eventsRef.current = next;
+    setEvents(next);
+    writeJSON(eventsKey(calId), next);
+    bump();
+  }, [calId]);
+
+  return {
+    events,
+    upsertEvent,
+    moveEvent,
+    deleteEvent,
+    undoEvents,
+    redoEvents,
+    canUndoEvents: pastRef.current.length > 0,
+    canRedoEvents: futureRef.current.length > 0,
+  };
+}
