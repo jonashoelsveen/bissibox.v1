@@ -22,6 +22,7 @@ import {
 import { ImportButton } from "./ImportCalendar/ImportButton";
 import { buildGhostEvents } from "./ImportCalendar/ghost";
 import { isoWeekNumber } from "./dateUtils";
+import { categoryKeyFromColor, type CategoryKey } from "./CalendarSideNav";
 
 const MONTHS_NB = [
   "Januar", "Februar", "Mars", "April", "Mai", "Juni",
@@ -58,11 +59,21 @@ function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate:
 
 export type CalendarSeat = "admin" | "individual";
 
-export function YearCalendarView(props: {
+export interface YearCalendarViewProps {
   calId: string;
   defaultTitle: string;
   seat?: CalendarSeat;
-}) {
+  /** Optional controlled state (driven by the page shell + sidebar). */
+  currentDate?: Date;
+  currentRange?: DateRange;
+  onCurrentDateChange?: (date: Date, range?: DateRange) => void;
+  viewMode?: ViewMode;
+  onViewModeChange?: (v: ViewMode) => void;
+  /** When provided, only events whose category is in this set are rendered. */
+  visibleCategories?: Set<CategoryKey>;
+}
+
+export function YearCalendarView(props: YearCalendarViewProps) {
   return (
     <PreviewOverlayProvider>
       <YearCalendarViewInner {...props} />
@@ -74,11 +85,13 @@ function YearCalendarViewInner({
   calId,
   defaultTitle,
   seat = "individual",
-}: {
-  calId: string;
-  defaultTitle: string;
-  seat?: CalendarSeat;
-}) {
+  currentDate: currentDateProp,
+  currentRange: currentRangeProp,
+  onCurrentDateChange,
+  viewMode: viewModeProp,
+  onViewModeChange,
+  visibleCategories,
+}: YearCalendarViewProps) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta, undo, redo, canUndo, canRedo } =
     useYearStore(calId, defaultTitle);
   const {
@@ -107,25 +120,38 @@ function YearCalendarViewInner({
     [overlay.events, overlay.visibleCategoryIds, overlay.categoryColors, overlay.categories],
   );
   const previewActive = overlay.events !== null;
-  const mergedEvents = useMemo(
-    () => (previewActive ? [...events, ...ghostEvents] : events),
-    [previewActive, events, ghostEvents],
-  );
+  const mergedEvents = useMemo(() => {
+    const base = previewActive ? [...events, ...ghostEvents] : events;
+    if (!visibleCategories) return base;
+    return base.filter((e) => visibleCategories.has(categoryKeyFromColor(e.color)));
+  }, [previewActive, events, ghostEvents, visibleCategories]);
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
 
   // Shared "what is the calendar showing?" state — drives both the main grid
-  // and the mini-calendar navigator at the top-right of the grid.
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
-  const [currentRange, setCurrentRange] = useState<DateRange>(() => {
+  // and the mini-calendar navigator at the top-right of the grid. Falls back
+  // to internal state when no controlled value is supplied (legacy usage).
+  const [internalDate, setInternalDate] = useState<Date>(() => new Date());
+  const [internalRange, setInternalRange] = useState<DateRange>(() => {
     const t = new Date();
     return { start: t, end: t };
   });
-  // Lifted from UnifiedElasticGrid so the prev/next + mini-cal arrows can
-  // live in the page header (left of the year + undo cluster) instead of
-  // floating on top of the grid.
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const currentDate = currentDateProp ?? internalDate;
+  const currentRange = currentRangeProp ?? internalRange;
+  const updateCurrent = (d: Date, r?: DateRange) => {
+    if (onCurrentDateChange) onCurrentDateChange(d, r);
+    else {
+      setInternalDate(d);
+      setInternalRange(r ?? { start: d, end: d });
+    }
+  };
+  const [internalViewMode, setInternalViewMode] = useState<ViewMode>("month");
+  const viewMode = viewModeProp ?? internalViewMode;
+  const setViewMode = (v: ViewMode) => {
+    if (onViewModeChange) onViewModeChange(v);
+    else setInternalViewMode(v);
+  };
 
   // Keyboard shortcuts: ⌘Z / Ctrl+Z for undo, ⌘⇧Z / Ctrl+Y for redo
   useEffect(() => {
@@ -184,11 +210,7 @@ function YearCalendarViewInner({
             unit={viewMode}
             currentDate={currentDate}
             selectedRange={currentRange}
-            onChange={(d, r) => {
-              setCurrentDate(d);
-              if (r) setCurrentRange(r);
-              else setCurrentRange({ start: d, end: d });
-            }}
+            onChange={(d, r) => updateCurrent(d, r)}
           />
           <span className="ml-2 mr-2 text-xs text-muted-foreground">{meta.year}</span>
           <button
@@ -239,11 +261,7 @@ function YearCalendarViewInner({
           onDeleteEvent={deleteEvent}
           currentDate={currentDate}
           currentRange={currentRange}
-          onCurrentDateChange={(d, r) => {
-            setCurrentDate(d);
-            if (r) setCurrentRange(r);
-            else setCurrentRange({ start: d, end: d });
-          }}
+          onCurrentDateChange={(d, r) => updateCurrent(d, r)}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
         />
