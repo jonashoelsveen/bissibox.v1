@@ -23,6 +23,7 @@ import { SimplePinMap } from "@/components/SimplePinMap";
 import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
 import {
   type MapFolder,
+  type MapFolderView,
   type MapItem,
   type MapItemKind,
   pickFolderColor,
@@ -35,6 +36,7 @@ interface Props {
   items: MapItem[];
   onItemsChange: (updater: Updater) => void;
   onFolderRename: (newName: string) => void;
+  onFolderUpdateView: (view: MapFolderView | null) => void;
   editId: string | null;
   onSetEdit: (id: string | null) => void;
 }
