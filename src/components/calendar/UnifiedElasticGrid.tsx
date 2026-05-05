@@ -1734,6 +1734,57 @@ function NowLine({
 }
 
 /**
+ * SelectedDayColumn — minimalist border outlining the selected day's column
+ * in week view. Tracks the [data-month-col] header so it stays aligned.
+ */
+function SelectedDayColumn({
+  scrollRef,
+  colIdx,
+}: {
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  colIdx: number;
+}) {
+  const [box, setBox] = useState<{ left: number; width: number; top: number; height: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const c = scrollRef.current;
+      if (!c) return;
+      const header = c.querySelector<HTMLElement>(`[data-month-col="${colIdx}"]`);
+      if (!header) return;
+      setBox({
+        left: header.offsetLeft,
+        width: header.offsetWidth,
+        top: header.offsetTop,
+        height: Math.max(c.scrollHeight, c.clientHeight) - header.offsetTop,
+      });
+    };
+    measure();
+    const id = window.setInterval(measure, 500);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("resize", measure);
+    };
+  }, [colIdx, scrollRef]);
+
+  if (!box) return null;
+  return (
+    <div
+      className="pointer-events-none absolute z-[12] rounded-[2px]"
+      style={{
+        top: box.top,
+        left: box.left,
+        width: box.width,
+        height: box.height,
+        boxShadow: "inset 0 0 0 1.5px hsl(var(--primary) / 0.55)",
+      }}
+      aria-hidden
+    />
+  );
+}
+
+/**
  * WeekEventsOverlay — projects unified `CalendarEvent`s onto the week-view
  * column grid as absolutely-positioned blocks. Reads column boxes from the
  * existing `[data-month-col]` cells so it stays perfectly aligned through
