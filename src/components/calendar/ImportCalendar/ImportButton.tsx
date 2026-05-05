@@ -41,6 +41,7 @@ const ADMIN_INTERNAL: InternalCategoryOption[] = [
   { value: "meeting", label: "Meeting", color: CAT_MEETING_COLOR },
   { value: "event", label: "Event", color: CAT_EVENT_COLOR },
   { value: "race", label: "Race", color: CAT_RACE_COLOR },
+  { value: "else", label: "Else", color: "#94A3B8" },
 ];
 
 /** Heuristic: best internal category for a file-category id. Returns "" when
