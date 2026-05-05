@@ -1777,7 +1777,7 @@ function SelectedDayColumn({
         left: box.left,
         width: box.width,
         height: box.height,
-        boxShadow: "inset 0 0 0 1.5px hsl(var(--primary) / 0.55)",
+        boxShadow: "inset 0 0 0 1.5px color-mix(in oklab, var(--primary) 55%, transparent)",
       }}
       aria-hidden
     />
