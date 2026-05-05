@@ -18,6 +18,8 @@ export function buildGhostEvents(
   visibleCategoryIds: Set<string>,
   categoryColors: Record<string, string>,
   _categories: DetectedCategory[],
+  categoryMappings: Record<string, string> = {},
+  internalColors: Record<string, string> = {},
 ): CalendarEvent[] {
   if (!events || events.length === 0) return [];
   const out: CalendarEvent[] = [];
@@ -28,13 +30,18 @@ export function buildGhostEvents(
     if (!startISO) continue;
     const endISO = normalizeImportedLocalISO(ev.end_time ?? "")
       ?? toISOLocal(new Date(fromISOLocal(startISO).getTime() + 60 * 60 * 1000));
+    const internal = categoryMappings[ev.category];
+    const color =
+      (internal ? internalColors[internal] : undefined) ??
+      categoryColors[ev.category] ??
+      "#22C55E";
     out.push({
       id: `${GHOST_ID_PREFIX}${i}`,
       title: ev.title,
       startISO,
       endISO,
       allDay: false,
-      color: categoryColors[ev.category] ?? "#22C55E",
+      color,
       description: ev.description,
     });
   }
