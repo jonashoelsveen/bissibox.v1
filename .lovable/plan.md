@@ -1,65 +1,79 @@
-# Import Calendar — Plan
+# Map page — folder-scoped locations & courses
 
-A new "Import" entry point on the calendar page that parses spreadsheets/PDFs/CSVs with Lovable AI and lets the user preview & filter detected events directly on the calendar before saving.
+Build the missing folder workspace on `/map`. Folders contain locations (single pin) and courses (path + split points). Inside a folder the user can view multiple items at once on one map (checkbox-toggled, color-coded) or edit a single item full-screen using the same editors as the event page.
 
-## Scope
+## Data model (localStorage, structured for backend port later)
 
-1. **Entry point** — "Import" button next to the calendar type dropdown.
-2. **Source picker modal** — choose between *From Device* (file input) and *From Library* (mirror of the Library Page sidebar + valid files).
-3. **Parsing** — Edge Function `parse-calendar-file` that:
-   - Uses `xlsx` (SheetJS) to extract sheet data; reads CSV as text; for PDF, sends raw text/base64 (PDF parsing limited; falls back to AI on text content).
-   - Calls Lovable AI Gateway with **tool calling** for strict JSON output (categories + events).
-4. **Preview state** — modal stays open as floating card; existing calendar events dim; new events render in green; checkboxes per category filter live.
-5. **Save** — write filtered events to existing event store (frontend `addEvent`/store) + persist via existing pattern; toast & reset visual state.
+Extend `MapItem` in `src/components/map/MapPage.tsx`:
 
-## Files to create / change
+```ts
+type LatLng = [number, number];
+type SplitPoint = { id; kind; label; position: LatLng; note? };
 
-- `src/components/calendar/ImportCalendar/ImportButton.tsx` — entry button + modal orchestrator (state machine: source → loading → preview).
-- `src/components/calendar/ImportCalendar/SourcePickerStep.tsx` — two cards: From Device / From Library (+ Cancel).
-- `src/components/calendar/ImportCalendar/LibraryPickerStep.tsx` — two-column file picker; reuses the same folder list query as the Library page; right column filtered to `.xlsx`, `.csv`, `.pdf`.
-- `src/components/calendar/ImportCalendar/PreviewStep.tsx` — floating card (summary, category checkboxes, Save button).
-- `src/components/calendar/ImportCalendar/types.ts` — `ParsedImport`, `ParsedEvent`, `DetectedCategory`.
-- `src/components/calendar/ImportCalendar/usePreviewOverlay.ts` — provides preview events + category filter state for the calendar to consume.
-- `supabase/functions/parse-calendar-file/index.ts` — accepts `{ fileName, mimeType, base64 }`, extracts text/sheet data, calls Lovable AI with `parse_calendar` tool, returns the JSON envelope.
-- `supabase/config.toml` — add `[functions.parse-calendar-file] verify_jwt = true`.
-- `src/routes/calendar.tsx` (or wherever calendar layout lives) — render `<ImportButton />` next to the type dropdown; pipe preview overlay into the calendar grid (dim existing, render greens).
-- `src/components/calendar/UnifiedElasticGrid.tsx` & `MonthGridType1.tsx` — accept optional `previewEvents` + `dimExisting` props; render preview events with green styling and pointer-events-none.
-
-## AI parsing contract
-
-Edge function returns:
-```json
-{
-  "total_events_found": 12,
-  "detected_categories": [{ "id": "xc_skiing", "name": "XC Skiing", "count": 8 }],
-  "events": [{ "title": "...", "start_time": "ISO", "end_time": "ISO|null", "category": "xc_skiing", "description": "..." }]
-}
+type MapItem = {
+  id; kind: "location" | "course";
+  name; pinned; created_at;
+  folderId: string | null;        // replaces `folder` (folder name)
+  color: string;                   // assigned at creation, used for course/pin tint
+  pin?: { lat: number; lng: number } | null;   // location only
+  path?: LatLng[];                 // course only
+  splits?: SplitPoint[];           // course only
+};
 ```
 
-Implementation: tool-calling with `google/gemini-3-flash-preview`. System prompt instructs the model to detect categories from headers/prefixes/repeating sections and assign each event a stable category `id` (snake_case). End time defaults to start+1h when missing.
+A small migration on read converts legacy `folder` (name) → `folderId` by lookup. `color` is auto-picked from a 10-color palette, avoiding collisions inside the same folder when possible.
 
-## Preview overlay behavior
+## Side nav behaviour
 
-- While modal is in preview state, parent calendar page sets `previewMode = true` and passes `previewEvents` (filtered by selected category ids).
-- Existing events render with `opacity-30 pointer-events-none`.
-- Preview events render with `border-2 border-green-500 bg-green-50/60` and `pointer-events-none` (read-only).
-- Toggling category checkbox updates the filter instantly (local React state in the modal lifted to the page via context/prop).
+- Selecting a folder row in `MapSideNav` routes to `?folder=<folderId>` and the body renders the new `FolderMapView`.
+- `Unsorted` and `Previous` keep current behaviour (flat list).
+- Items inside a folder still open into tabs when clicked from list contexts; opening a single item from inside the folder view is handled by the right sidebar (see below).
 
-## Save flow
+## FolderMapView (new file `src/components/map/FolderMapView.tsx`)
 
-- "Save N events" calls existing event-add path (the calendar already persists `CalendarEvent`s; reuse `onUpsertEvent`/store).
-- Map `ParsedEvent` → `CalendarEvent { startISO, endISO, title, category, color }` using the existing color-from-category helper.
-- On success: toast "Successfully imported N events", clear overlay, close modal.
+Layout: `grid-cols-[1fr_320px]`, full viewport height under the tab bar.
 
-## Edge cases / notes
+### Right sidebar (320px) (Same size as the current blank right sidebar)
 
-- File size cap 10 MB on client; reject larger with toast.
-- PDF parsing in the Worker runtime: do best-effort text extraction (`pdfjs-dist` is heavy; fall back to sending raw base64 to AI with mime hint — keep the function simple and rely on AI for unstructured text when SheetJS can't read).
-- 402 / 429 errors from AI gateway surface as toasts.
-- Library picker uses the same Supabase `files` + `file_folders` queries already used by the Library page (we'll locate and reuse the existing hook).
+- Header row: folder icon + folder name (renamable inline later — out of scope now).
+- Section: **Locations** — checkbox + pin icon + name + color dot. Click row: opens that location for editing in main area. Toggle checkbox: include in view-mode overlay.
+- Section: **Courses** — same pattern with route icon.
+- Footer: collapsible **+ Add** that expands to two buttons: `+ Location`, `+ Course`. Clicking either creates a new empty item in this folder and immediately switches main area to its editor.
 
-## Out of scope
+### Main area — three modes
 
-- Editing parsed events inline before save (only category-level filter in v1).
-- Recurring event detection beyond what AI infers.
-- ICS file support (could be added later as a fast path that bypasses AI).
+1. **View mode** (default when no item selected for editing)
+  - Single Mapbox map.
+  - Overlays for every *checked* item in the folder, each rendered in its color (lines for courses with split markers, pins for locations).
+  - Top-left: a single search input. As the user types, fuzzy-match across folder items. If a query matches an item in the folder that is **not checked**, show a calm inline notice: *"'*&nbsp;*' is in this folder but not shown — tick it on the right to display it."* No matches → standard "no results" line.
+  - Style picker top-right.
+2. **Edit location mode**
+  - `<SimplePinMap hideSidebar showDescription={false} kindLabel="location" ...>` filling the main area.
+  - `onChange` writes pin into the item; `onSave` persists and returns to view mode.
+  - Top-right delete-pin / save buttons come from `SimplePinMap` already.
+3. **Edit course mode**
+  - `<CourseMapEditor ...>` with the existing island, height profile under the map (component already does this), and `onSave` persisting `path` + `splits` to the item.
+
+A small breadcrumb chip top-left in edit modes ("← Back to folder") returns to view mode.
+
+## Item geometry persistence
+
+Editing in either editor calls `onChange` continuously; we debounce-write the item's geometry into `map:items:<scope>` on every change so closing the page never loses work, and `onSave` shows a toast confirmation. This is the "professional save logic" the user asked for; storage shape is ready to swap with Supabase tables later (`map_folders`, `map_items` with `folder_id`, `geometry jsonb`, `color`).
+
+## Tab + creation surface adjustments
+
+- The global `+` dropdown in `MapBody` keeps Folder / Location / Course but the Location/Course flows now require a folder selection (already a select; just enforce non-empty) and route the user into the folder's edit mode after creation rather than opening a separate tab.
+- Existing `MapItemView` (placeholder) is deleted — opening an item navigates to its parent folder with `?edit=<itemId>`.
+
+## Files touched
+
+- `src/components/map/MapPage.tsx` — data model, route to FolderMapView, cleanup of MapItemView usage, enforce folder requirement.
+- `src/components/map/FolderMapView.tsx` — new component (right sidebar + view/edit mode switcher + multi-overlay viewer).
+- `src/components/map/MapItemView.tsx` — removed.
+
+## Out of scope for this round
+
+- Backend (Supabase) tables — keep localStorage; structure is ready.
+- Drag-to-reorder items inside a folder.
+- Renaming/deleting items from the folder sidebar (will follow once basic flow is verified).
+- Sharing folders / multi-user sync.
