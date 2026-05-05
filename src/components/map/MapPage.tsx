@@ -545,6 +545,26 @@ export function MapPage() {
             onOpenItem={openItem}
             onNewFolder={() => setNewFolderOpen(true)}
             onNewItem={(kind) => setNewItemOpen(kind)}
+            activeFolder={
+              sideValue.category === "map" &&
+              sideValue.folder &&
+              sideValue.folder !== "__unsorted__"
+                ? folders.find((f) => f.id === sideValue.folder) ?? null
+                : null
+            }
+            allItems={items}
+            onItemsChange={persistItems}
+            editId={search.edit ?? null}
+            onSetEdit={(id) => {
+              navigate({
+                to: "/map",
+                search: {
+                  folder: sideValue.folder || undefined,
+                  edit: id ?? undefined,
+                },
+                replace: true,
+              });
+            }}
           />
         </div>
       </div>
