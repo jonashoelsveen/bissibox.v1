@@ -139,7 +139,7 @@ export function PreviewStep({
                       onChange={(e) => onMappingChange(c.id, e.target.value)}
                       className="rounded-md border border-hairline bg-card px-1.5 py-1 text-[11px] text-ink focus:outline-none focus:ring-1 focus:ring-primary"
                     >
-                      <option value="">—</option>
+                      
                       {internalOptions.map((o) => (
                         <option key={o.value} value={o.value}>{o.label}</option>
                       ))}
