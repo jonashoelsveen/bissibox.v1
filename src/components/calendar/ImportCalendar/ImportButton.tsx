@@ -43,23 +43,23 @@ const ADMIN_INTERNAL: InternalCategoryOption[] = [
   { value: "race", label: "Race", color: CAT_RACE_COLOR },
 ];
 
-/** Heuristic: best internal category for a file-category id (fallback when AI
- *  doesn't return mappings). Uses keyword matching across modes. */
+/** Heuristic: best internal category for a file-category id. Returns "" when
+ *  no reasonable internal match is found (so the UI can render a gray dot). */
 function suggestInternal(catId: string, options: InternalCategoryOption[]): string {
   const id = catId.toLowerCase();
   const matchers: Record<string, RegExp> = {
     training: /(training|trening|practice|workout|run|ski|gym)/,
     school: /(school|skole|class|exam|study|lecture)/,
-    work: /(work|jobb|office|shift)/,
-    meeting: /(meeting|møte|standup|sync|call)/,
-    event: /(event|arrangement|gathering|party)/,
+    work: /(work|jobb|office|shift|business|corporate)/,
+    meeting: /(meeting|møte|standup|sync|call|conference)/,
+    event: /(event|arrangement|gathering|party|celebration)/,
     race: /(race|løp|match|game|competition|cup|tournament)/,
   };
   for (const opt of options) {
     const re = matchers[opt.value];
     if (re && re.test(id)) return opt.value;
   }
-  return options[0]?.value ?? "";
+  return "";
 }
 
 function colorForInternal(value: string, options: InternalCategoryOption[]): string | null {
