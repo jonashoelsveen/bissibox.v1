@@ -228,6 +228,9 @@ export function FolderMapView({
             saved={saved}
             editId={editId}
             checked={checked}
+            autoFocusNameId={autoFocusNameId}
+            onConsumeAutoFocus={() => setAutoFocusNameId(null)}
+            onRename={(id, name) => updateItem(id, { name })}
             onToggleCheck={setItemChecked}
             onEdit={(id) => onSetEdit(id)}
             onDelete={deleteItem}
@@ -242,6 +245,9 @@ export function FolderMapView({
             saved={saved}
             editId={editId}
             checked={checked}
+            autoFocusNameId={autoFocusNameId}
+            onConsumeAutoFocus={() => setAutoFocusNameId(null)}
+            onRename={(id, name) => updateItem(id, { name })}
             onToggleCheck={setItemChecked}
             onEdit={(id) => onSetEdit(id)}
             onDelete={deleteItem}
