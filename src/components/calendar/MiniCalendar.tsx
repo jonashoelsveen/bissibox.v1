@@ -180,7 +180,9 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
       <div className="grid grid-cols-7 gap-y-0.5">
         {days.map(({ date, inMonth }, i) => {
           const isToday = sameDay(date, today);
-          const isSelected = inSelectedRange(date);
+          // In week view we do not show a per-day selected dot — only the
+          // light week-row tint, so the UX stays focused on the week.
+          const isSelected = viewMode !== "week" && inSelectedRange(date);
           const dow = i % 7;
           const inSelectedWeek =
             viewMode === "week" &&

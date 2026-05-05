@@ -134,6 +134,10 @@ export interface MonthGridType1Props {
   onDeleteEvent?: (id: string) => void;
   /** When the user clicks a week-number cell, zoom into that week. */
   onWeekClick?: (anchorDate: Date) => void;
+  /** Externally-controlled selected day (mirrors mini-calendar). */
+  selectedDate?: Date | null;
+  /** Notify parent when a day cell is clicked. */
+  onSelectDate?: (date: Date) => void;
 }
 
 interface DayItem {
@@ -173,6 +177,8 @@ export function MonthGridType1({
   onMoveEvent,
   onDeleteEvent,
   onWeekClick,
+  selectedDate,
+  onSelectDate,
 }: MonthGridType1Props) {
   const dim = daysInMonth(year, month);
   const firstDow = dowMon0(new Date(year, month, 1));
@@ -220,6 +226,15 @@ export function MonthGridType1({
     if (first) setFocus({ row: first.row, col: first.col });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month]);
+
+  // Mirror externally-controlled selected date (e.g. mini-calendar click).
+  useEffect(() => {
+    if (!selectedDate) return;
+    if (selectedDate.getFullYear() !== year || selectedDate.getMonth() !== month) return;
+    const match = days.find((d) => d.inMonth && d.date.getDate() === selectedDate.getDate());
+    if (match) setFocus({ row: match.row, col: match.col });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, year, month]);
 
   // Drag-selection (mouse range across cells)
   const dragAnchorRef = useRef<CellPos | null>(null);
@@ -532,6 +547,7 @@ export function MonthGridType1({
                     setFocus(pos);
                     dragAnchorRef.current = pos;
                     setRange({ a: pos, b: pos });
+                    if (d.inMonth) onSelectDate?.(d.date);
                   }}
                   onMouseEnter={() => {
                     if (dragAnchorRef.current) {
