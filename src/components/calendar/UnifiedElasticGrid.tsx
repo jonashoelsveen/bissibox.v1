@@ -676,12 +676,6 @@ export function UnifiedElasticGrid({
     return -1;
   }, [weekDates, now]);
 
-  // Index of the selected day inside the visible week (week-view column marker).
-  const selectedColIdx = useMemo(() => {
-    for (let i = 0; i < 7; i++) if (sameDay(weekDates[i], currentDate)) return i;
-    return -1;
-  }, [weekDates, currentDate]);
-
   // Header height + now-line vertical offset for week view.
   const headerRef = useRef<HTMLElement | null>(null);
   const [headerH, setHeaderH] = useState(0);
