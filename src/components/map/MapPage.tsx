@@ -822,13 +822,7 @@ function MapBody({
           }}
           editId={editId}
           onSetEdit={onSetEdit}
-          onFolderRename={(newName) => {
-            const oldName = activeFolder.name;
-            const nextFolders = (readJSON<MapFolder[]>(foldersKey(scopeRef.current), []) ?? []);
-            // No-op: parent passes folders via prop. We rename in caller's folders state through onItemsChange + a side channel.
-            void nextFolders;
-            renameFolderRef.current?.(activeFolder.id, newName, oldName);
-          }}
+          onFolderRename={(newName) => onFolderRename(activeFolder.id, newName)}
         />
       ) : showingItem && activeItem ? (
         <MapItemView item={activeItem} />
