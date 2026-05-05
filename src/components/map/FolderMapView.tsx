@@ -454,17 +454,11 @@ function EditableNameChip({
 
 function LocationEditPane({
   item,
-  autoFocusName,
-  onConsumeAutoFocus,
   onChange,
-  onRename,
   onSaved,
 }: {
   item: MapItem;
-  autoFocusName: boolean;
-  onConsumeAutoFocus: () => void;
   onChange: (pin: { lat: number; lng: number } | null) => void;
-  onRename: (name: string) => void;
   onSaved: () => void;
 }) {
   return (
@@ -484,31 +478,18 @@ function LocationEditPane({
           onSaved();
         }}
       />
-      <EditableNameChip
-        value={item.name}
-        autoFocus={autoFocusName}
-        onConsumeAutoFocus={onConsumeAutoFocus}
-        onChange={onRename}
-        icon={<MapPin className="h-3.5 w-3.5" />}
-      />
     </div>
   );
 }
 
 function CourseEditPane({
   item,
-  autoFocusName,
-  onConsumeAutoFocus,
   onChange,
-  onRename,
   onSaved,
   onDelete,
 }: {
   item: MapItem;
-  autoFocusName: boolean;
-  onConsumeAutoFocus: () => void;
   onChange: (path: LatLng[], splits: SplitPoint[]) => void;
-  onRename: (name: string) => void;
   onSaved: () => void;
   onDelete: () => void;
 }) {
@@ -528,13 +509,6 @@ function CourseEditPane({
           onDelete={() => {
             if (confirm(`Delete "${item.name}"?`)) onDelete();
           }}
-        />
-        <EditableNameChip
-          value={item.name}
-          autoFocus={autoFocusName}
-          onConsumeAutoFocus={onConsumeAutoFocus}
-          onChange={onRename}
-          icon={<RouteIcon className="h-3.5 w-3.5" />}
         />
       </div>
     </div>
