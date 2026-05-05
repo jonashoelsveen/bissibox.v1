@@ -241,7 +241,22 @@ function EntityGroup({
   onToggleAll: () => void;
   onToggleCat: (k: AdminCatKey) => void;
 }) {
-  const [open, setOpen] = useState(true);
+  const storageKey = `calendar:sidenav:entityOpen:${entity.id}`;
+  const [open, setOpen] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(storageKey) === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(storageKey, open ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [open, storageKey]);
   const items = useMemo(() => ADMIN_SIDENAV_CATEGORIES, []);
   return (
     <div className="mt-1 flex flex-col">
