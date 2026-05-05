@@ -566,6 +566,19 @@ export function MapPage() {
                 replace: true,
               });
             }}
+            onFolderRename={(folderId, newName) => {
+              const trimmed = newName.trim();
+              if (!trimmed) return;
+              if (folders.some((f) => f.id !== folderId && f.name.toLowerCase() === trimmed.toLowerCase())) {
+                toast.error("A folder with this name already exists");
+                return;
+              }
+              const oldName = folders.find((f) => f.id === folderId)?.name ?? null;
+              persistFolders(folders.map((f) => (f.id === folderId ? { ...f, name: trimmed } : f)));
+              if (oldName && oldName !== trimmed) {
+                persistItems(items.map((i) => (i.folder === oldName ? { ...i, folder: trimmed } : i)));
+              }
+            }}
           />
         </div>
       </div>
