@@ -43,23 +43,23 @@ const ADMIN_INTERNAL: InternalCategoryOption[] = [
   { value: "race", label: "Race", color: CAT_RACE_COLOR },
 ];
 
-/** Heuristic: best internal category for a file-category id (fallback when AI
- *  doesn't return mappings). Uses keyword matching across modes. */
+/** Heuristic: best internal category for a file-category id. Returns "" when
+ *  no reasonable internal match is found (so the UI can render a gray dot). */
 function suggestInternal(catId: string, options: InternalCategoryOption[]): string {
   const id = catId.toLowerCase();
   const matchers: Record<string, RegExp> = {
     training: /(training|trening|practice|workout|run|ski|gym)/,
     school: /(school|skole|class|exam|study|lecture)/,
-    work: /(work|jobb|office|shift)/,
-    meeting: /(meeting|møte|standup|sync|call)/,
-    event: /(event|arrangement|gathering|party)/,
+    work: /(work|jobb|office|shift|business|corporate)/,
+    meeting: /(meeting|møte|standup|sync|call|conference)/,
+    event: /(event|arrangement|gathering|party|celebration)/,
     race: /(race|løp|match|game|competition|cup|tournament)/,
   };
   for (const opt of options) {
     const re = matchers[opt.value];
     if (re && re.test(id)) return opt.value;
   }
-  return options[0]?.value ?? "";
+  return "";
 }
 
 function colorForInternal(value: string, options: InternalCategoryOption[]): string | null {
@@ -137,15 +137,49 @@ export function ImportButton({
         setStep("source");
         return;
       }
+      // Merge similar categories — e.g. "Business meeting" + "meeting" → "Meeting".
+      // Group key is a normalized token derived from category name (lowercase,
+      // strip punctuation, drop generic qualifiers, take the most meaningful word).
+      const QUALIFIERS = new Set([
+        "business", "internal", "external", "weekly", "daily", "morning", "evening",
+        "the", "a", "an", "of", "and", "with", "for", "to", "my", "our",
+      ]);
+      const normalizeKey = (raw: string): { key: string; label: string } => {
+        const cleaned = raw.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").trim();
+        const tokens = cleaned.split(/\s+/).filter((t) => t && !QUALIFIERS.has(t));
+        const root = tokens[tokens.length - 1] ?? cleaned ?? raw.toLowerCase();
+        const label = root ? root.charAt(0).toUpperCase() + root.slice(1) : raw;
+        return { key: root || raw.toLowerCase(), label };
+      };
+      const groupByKey = new Map<string, { id: string; name: string; count: number }>();
+      const remap = new Map<string, string>(); // original cat id → group id
+      for (const c of raw.detected_categories ?? []) {
+        const { key, label } = normalizeKey(c.name || c.id);
+        remap.set(c.id, key);
+        const existing = groupByKey.get(key);
+        if (existing) existing.count = existing.count; // recompute below
+        else groupByKey.set(key, { id: key, name: label, count: 0 });
+      }
+      const remappedEvents = highConfEvents.map((e) => ({
+        ...e,
+        category: remap.get(e.category) ?? e.category,
+      }));
       const counts = new Map<string, number>();
-      for (const ev of highConfEvents) counts.set(ev.category, (counts.get(ev.category) ?? 0) + 1);
-      const detected_categories = (raw.detected_categories ?? [])
-        .filter((c) => (counts.get(c.id) ?? 0) > 0)
-        .map((c) => ({ ...c, count: counts.get(c.id) ?? 0 }));
+      for (const ev of remappedEvents) counts.set(ev.category, (counts.get(ev.category) ?? 0) + 1);
+      // Ensure any uncategorized event still gets a group entry.
+      for (const ev of remappedEvents) {
+        if (!groupByKey.has(ev.category)) {
+          const label = ev.category.charAt(0).toUpperCase() + ev.category.slice(1);
+          groupByKey.set(ev.category, { id: ev.category, name: label, count: 0 });
+        }
+      }
+      const detected_categories = Array.from(groupByKey.values())
+        .map((c) => ({ ...c, count: counts.get(c.id) ?? 0 }))
+        .filter((c) => c.count > 0);
       const parsed: ParsedImport = {
-        total_events_found: highConfEvents.length,
+        total_events_found: remappedEvents.length,
         detected_categories,
-        events: highConfEvents,
+        events: remappedEvents,
         past_status: raw.past_status,
         past_events_count: raw.past_events_count,
         future_events_count: raw.future_events_count,
@@ -180,7 +214,7 @@ export function ImportButton({
         if (!startISO) continue;
         const endISO = normalizeImportedLocalISO(ev.end_time ?? "")
           ?? toISOLocal(new Date(fromISOLocal(startISO).getTime() + 60 * 60 * 1000));
-        const internal = mappings[ev.category] ?? internalOptions[0].value;
+        const internal = mappings[ev.category] || suggestInternal(ev.category, internalOptions) || internalOptions[internalOptions.length - 1].value;
         const color = colorForInternal(internal, internalOptions);
         const category =
           seat === "admin"

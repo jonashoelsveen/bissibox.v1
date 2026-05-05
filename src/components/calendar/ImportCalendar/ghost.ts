@@ -31,10 +31,9 @@ export function buildGhostEvents(
     const endISO = normalizeImportedLocalISO(ev.end_time ?? "")
       ?? toISOLocal(new Date(fromISOLocal(startISO).getTime() + 60 * 60 * 1000));
     const internal = categoryMappings[ev.category];
-    const color =
-      (internal ? internalColors[internal] : undefined) ??
-      categoryColors[ev.category] ??
-      "#22C55E";
+    const internalColor = internal ? internalColors[internal] : undefined;
+    // If no internal mapping, render gray (matches the gray dot in the review modal).
+    const color = internalColor ?? (internal === undefined || internal === "" ? "#94A3B8" : (categoryColors[ev.category] ?? "#94A3B8"));
     out.push({
       id: `${GHOST_ID_PREFIX}${i}`,
       title: ev.title,
