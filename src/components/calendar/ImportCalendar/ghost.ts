@@ -4,6 +4,7 @@
 
 import type { CalendarEvent } from "../yearStore";
 import type { ParsedEvent, DetectedCategory } from "./types";
+import { fromISOLocal, normalizeImportedLocalISO, toISOLocal } from "../dateUtils";
 
 export const GHOST_ID_PREFIX = "__ghost__:";
 
@@ -23,16 +24,15 @@ export function buildGhostEvents(
   for (let i = 0; i < events.length; i++) {
     const ev = events[i];
     if (!visibleCategoryIds.has(ev.category)) continue;
-    const startMs = Date.parse(ev.start_time);
-    if (!Number.isFinite(startMs)) continue;
-    const endMs = ev.end_time && Number.isFinite(Date.parse(ev.end_time))
-      ? Date.parse(ev.end_time)
-      : startMs + 60 * 60 * 1000;
+    const startISO = normalizeImportedLocalISO(ev.start_time);
+    if (!startISO) continue;
+    const endISO = normalizeImportedLocalISO(ev.end_time ?? "")
+      ?? toISOLocal(new Date(fromISOLocal(startISO).getTime() + 60 * 60 * 1000));
     out.push({
       id: `${GHOST_ID_PREFIX}${i}`,
       title: ev.title,
-      startISO: new Date(startMs).toISOString().slice(0, 19),
-      endISO: new Date(endMs).toISOString().slice(0, 19),
+      startISO,
+      endISO,
       allDay: false,
       color: categoryColors[ev.category] ?? "#22C55E",
       description: ev.description,
