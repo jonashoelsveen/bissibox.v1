@@ -116,20 +116,7 @@ export function PreviewStep({
         onMouseDown={startDrag}
         className="flex cursor-grab items-center justify-between gap-2 border-b border-hairline bg-secondary/60 px-3 py-2 active:cursor-grabbing"
       >
-        <div className="flex items-center gap-2">
-          <span className="select-none text-xs font-medium text-ink">Review imported</span>
-          <div className="relative">
-            <select
-              value={view}
-              onChange={(e) => setView(e.target.value as ViewMode)}
-              className="cursor-pointer appearance-none rounded-md border border-hairline bg-card py-0.5 pl-2 pr-6 text-xs font-medium text-ink focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              <option value="events">events ({eventsCount})</option>
-              <option value="categories">categories ({categoriesCount})</option>
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
-          </div>
-        </div>
+        <span className="select-none text-xs font-medium text-ink">Review imported events</span>
         <button
           onClick={onClose}
           className="grid h-5 w-5 place-items-center rounded text-muted-foreground hover:bg-secondary hover:text-ink"
