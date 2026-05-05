@@ -12,7 +12,7 @@
  *      - Team / organizer seat: the entity's admin category list.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Eye, EyeOff } from "lucide-react";
 import { MiniCalendar, type DateRange } from "./MiniCalendar";
