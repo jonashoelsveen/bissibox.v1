@@ -32,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { MapSideNav, type MapSideNavValue } from "./MapSideNav";
 import { MapItemView } from "./MapItemView";
+import { FolderMapView } from "./FolderMapView";
 
 /* ------------------------------------------------------------------ */
 /* Local persistence                                                   */
@@ -39,18 +40,56 @@ import { MapItemView } from "./MapItemView";
 
 export type MapItemKind = "location" | "course";
 
+export type LatLng = [number, number];
+export type MapSplitKind = "split" | "fuel" | "start" | "finish" | "marker";
+export interface MapSplitPoint {
+  id: string;
+  kind: MapSplitKind;
+  label: string;
+  position: LatLng;
+  note?: string;
+}
+
 export type MapItem = {
   id: string;
   kind: MapItemKind;
   name: string;
   pinned: boolean;
+  /** Legacy: folder name. New code uses folderId. Kept for back-compat reads. */
   folder: string | null;
+  folderId: string | null;
+  color: string;
   created_at: string;
+  // Geometry
+  pin?: { lat: number; lng: number } | null;
+  path?: LatLng[];
+  splits?: MapSplitPoint[];
 };
 export type MapFolder = { id: string; name: string; pinned: boolean; sort_order: number };
 
 export const itemsKey = (scope: string) => `map:items:${scope}`;
 export const foldersKey = (scope: string) => `map:folders:${scope}`;
+
+/** 10-color palette used for locations + courses inside a folder. */
+export const MAP_COLOR_PALETTE = [
+  "#6366F1", // indigo
+  "#16a34a", // green
+  "#dc2626", // red
+  "#f59e0b", // amber
+  "#0ea5e9", // sky
+  "#7c3aed", // violet
+  "#db2777", // pink
+  "#0d9488", // teal
+  "#ea580c", // orange
+  "#475569", // slate
+];
+
+export function pickFolderColor(existing: string[]): string {
+  for (const c of MAP_COLOR_PALETTE) {
+    if (!existing.includes(c)) return c;
+  }
+  return MAP_COLOR_PALETTE[existing.length % MAP_COLOR_PALETTE.length];
+}
 
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -116,8 +155,30 @@ export function MapPage() {
   const [items, setItems] = useState<MapItem[]>([]);
 
   const reload = useCallback(() => {
-    setFolders(readJSON<MapFolder[]>(foldersKey(scope), []));
-    setItems(readJSON<MapItem[]>(itemsKey(scope), []));
+    const fs = readJSON<MapFolder[]>(foldersKey(scope), []);
+    const raw = readJSON<MapItem[]>(itemsKey(scope), []);
+    // Migrate legacy items: backfill folderId from folder name; ensure color set.
+    let mutated = false;
+    const migrated = raw.map((it) => {
+      let next = it;
+      if (next.folderId === undefined) {
+        const matched = next.folder ? fs.find((f) => f.name === next.folder) : null;
+        next = { ...next, folderId: matched?.id ?? null };
+        mutated = true;
+      }
+      if (!next.color) {
+        next = { ...next, color: MAP_COLOR_PALETTE[0] };
+        mutated = true;
+      }
+      return next;
+    });
+    if (mutated) {
+      try {
+        localStorage.setItem(itemsKey(scope), JSON.stringify(migrated));
+      } catch { /* ignore */ }
+    }
+    setFolders(fs);
+    setItems(migrated);
   }, [scope]);
 
   useEffect(() => {
@@ -485,6 +546,26 @@ export function MapPage() {
             onOpenItem={openItem}
             onNewFolder={() => setNewFolderOpen(true)}
             onNewItem={(kind) => setNewItemOpen(kind)}
+            activeFolder={
+              sideValue.category === "map" &&
+              sideValue.folder &&
+              sideValue.folder !== "__unsorted__"
+                ? folders.find((f) => f.id === sideValue.folder) ?? null
+                : null
+            }
+            allItems={items}
+            onItemsChange={persistItems}
+            editId={search.edit ?? null}
+            onSetEdit={(id) => {
+              navigate({
+                to: "/map",
+                search: {
+                  folder: sideValue.folder || undefined,
+                  edit: id ?? undefined,
+                },
+                replace: true,
+              });
+            }}
           />
         </div>
       </div>
@@ -535,17 +616,35 @@ export function MapPage() {
             return f;
           }}
           onSubmit={(name, folder) => {
+            // folder here is folder NAME (legacy from dialog). Resolve folderId.
+            const folderObj = folder ? folders.find((f) => f.name === folder) : null;
+            const folderId = folderObj?.id ?? null;
+            // Pick a color avoiding collisions inside that folder.
+            const used = items
+              .filter((c) => c.folderId === folderId)
+              .map((c) => c.color);
+            const color = pickFolderColor(used);
             const it: MapItem = {
               id: crypto.randomUUID(),
               kind: newItemOpen,
               name: name.trim() || (newItemOpen === "course" ? "Untitled course" : "Untitled location"),
               pinned: false,
               folder: folder ?? null,
+              folderId,
+              color,
               created_at: new Date().toISOString(),
+              pin: newItemOpen === "location" ? null : undefined,
+              path: newItemOpen === "course" ? [] : undefined,
+              splits: newItemOpen === "course" ? [] : undefined,
             };
             persistItems([...items, it]);
             setNewItemOpen(null);
-            openItem(it);
+            // Route into the parent folder view in edit mode.
+            if (folderId) {
+              navigate({ to: "/map", search: { folder: folderId, edit: it.id }, replace: false });
+            } else {
+              openItem(it);
+            }
           }}
         />
       )}
@@ -565,6 +664,11 @@ function MapBody({
   onOpenItem,
   onNewFolder,
   onNewItem,
+  activeFolder,
+  allItems,
+  onItemsChange,
+  editId,
+  onSetEdit,
 }: {
   actionsMount: HTMLDivElement | null;
   showingItem: boolean;
@@ -573,6 +677,11 @@ function MapBody({
   onOpenItem: (it: MapItem) => void;
   onNewFolder: () => void;
   onNewItem: (kind: MapItemKind) => void;
+  activeFolder: MapFolder | null;
+  allItems: MapItem[];
+  onItemsChange: (next: MapItem[]) => void;
+  editId: string | null;
+  onSetEdit: (id: string | null) => void;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -701,7 +810,20 @@ function MapBody({
   return (
     <div>
       {actionsMount && createPortal(actions, actionsMount)}
-      {showingItem && activeItem ? (
+      {activeFolder ? (
+        <FolderMapView
+          folder={activeFolder}
+          items={allItems.filter((i) => i.folderId === activeFolder.id)}
+          onItemsChange={(updater) => {
+            const inFolder = allItems.filter((i) => i.folderId === activeFolder.id);
+            const updated = updater(inFolder);
+            const others = allItems.filter((i) => i.folderId !== activeFolder.id);
+            onItemsChange([...others, ...updated]);
+          }}
+          editId={editId}
+          onSetEdit={onSetEdit}
+        />
+      ) : showingItem && activeItem ? (
         <MapItemView item={activeItem} />
       ) : (
         <PreviousList list={filtered} onOpen={onOpenItem} />
