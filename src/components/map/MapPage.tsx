@@ -590,6 +590,9 @@ export function MapPage() {
             onFolderUpdateView={(folderId, view) => {
               persistFolders(folders.map((f) => (f.id === folderId ? { ...f, defaultView: view } : f)));
             }}
+          />
+        </div>
+      </div>
 
       {newFolderOpen && (
         <NewFolderDialog
