@@ -218,14 +218,22 @@ export function FolderMapView({
               className="min-w-0 flex-1 rounded border border-hairline bg-background px-1.5 py-0.5 text-sm font-medium text-ink outline-none focus:border-ink"
             />
           ) : (
-            <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{folder.name}</span>
+            <span
+              className="min-w-0 flex-1 truncate text-sm font-medium text-ink cursor-text"
+              onDoubleClick={() => setEditingFolderName(true)}
+              title="Double-click to rename"
+            >
+              {folder.name}
+            </span>
           )}
           {!editingFolderName && (
             <button
-              onClick={() => setEditingFolderName(true)}
-              className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/60 transition hover:bg-secondary hover:text-ink"
-              aria-label="Rename folder"
-              title="Rename folder"
+              onClick={() => setEditingFolderArea(true)}
+              className={`grid h-6 w-6 shrink-0 place-items-center rounded transition hover:bg-secondary hover:text-ink ${
+                folder.defaultView ? "text-ink" : "text-muted-foreground/60"
+              }`}
+              aria-label="Set default location area"
+              title={folder.defaultView ? "Edit default location area" : "Set default location area"}
             >
               <Pencil className="h-3 w-3" />
             </button>
