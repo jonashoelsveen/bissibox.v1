@@ -154,8 +154,30 @@ export function MapPage() {
   const [items, setItems] = useState<MapItem[]>([]);
 
   const reload = useCallback(() => {
-    setFolders(readJSON<MapFolder[]>(foldersKey(scope), []));
-    setItems(readJSON<MapItem[]>(itemsKey(scope), []));
+    const fs = readJSON<MapFolder[]>(foldersKey(scope), []);
+    const raw = readJSON<MapItem[]>(itemsKey(scope), []);
+    // Migrate legacy items: backfill folderId from folder name; ensure color set.
+    let mutated = false;
+    const migrated = raw.map((it) => {
+      let next = it;
+      if (next.folderId === undefined) {
+        const matched = next.folder ? fs.find((f) => f.name === next.folder) : null;
+        next = { ...next, folderId: matched?.id ?? null };
+        mutated = true;
+      }
+      if (!next.color) {
+        next = { ...next, color: MAP_COLOR_PALETTE[0] };
+        mutated = true;
+      }
+      return next;
+    });
+    if (mutated) {
+      try {
+        localStorage.setItem(itemsKey(scope), JSON.stringify(migrated));
+      } catch { /* ignore */ }
+    }
+    setFolders(fs);
+    setItems(migrated);
   }, [scope]);
 
   useEffect(() => {
@@ -573,17 +595,35 @@ export function MapPage() {
             return f;
           }}
           onSubmit={(name, folder) => {
+            // folder here is folder NAME (legacy from dialog). Resolve folderId.
+            const folderObj = folder ? folders.find((f) => f.name === folder) : null;
+            const folderId = folderObj?.id ?? null;
+            // Pick a color avoiding collisions inside that folder.
+            const used = items
+              .filter((c) => c.folderId === folderId)
+              .map((c) => c.color);
+            const color = pickFolderColor(used);
             const it: MapItem = {
               id: crypto.randomUUID(),
               kind: newItemOpen,
               name: name.trim() || (newItemOpen === "course" ? "Untitled course" : "Untitled location"),
               pinned: false,
               folder: folder ?? null,
+              folderId,
+              color,
               created_at: new Date().toISOString(),
+              pin: newItemOpen === "location" ? null : undefined,
+              path: newItemOpen === "course" ? [] : undefined,
+              splits: newItemOpen === "course" ? [] : undefined,
             };
             persistItems([...items, it]);
             setNewItemOpen(null);
-            openItem(it);
+            // Route into the parent folder view in edit mode.
+            if (folderId) {
+              navigate({ to: "/map", search: { folder: folderId, edit: it.id }, replace: false });
+            } else {
+              openItem(it);
+            }
           }}
         />
       )}
