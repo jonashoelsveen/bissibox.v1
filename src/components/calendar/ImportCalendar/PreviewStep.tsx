@@ -74,16 +74,11 @@ export function PreviewStep({
           : { right: 24, top: 24 }
       }
     >
-      {/* Apple-like top bar */}
+      {/* Apple-like draggable top bar */}
       <div
         onMouseDown={startDrag}
         className="flex cursor-grab items-center justify-between gap-2 border-b border-hairline bg-secondary/60 px-3 py-2 active:cursor-grabbing"
       >
-        <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-[#FF5F57]" />
-          <span className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
-          <span className="h-3 w-3 rounded-full bg-[#28C840]" />
-        </div>
         <span className="select-none text-xs font-medium text-ink">Review imported events</span>
         <button
           onClick={onClose}
