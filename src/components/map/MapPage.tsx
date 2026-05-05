@@ -809,7 +809,20 @@ function MapBody({
   return (
     <div>
       {actionsMount && createPortal(actions, actionsMount)}
-      {showingItem && activeItem ? (
+      {activeFolder ? (
+        <FolderMapView
+          folder={activeFolder}
+          items={allItems.filter((i) => i.folderId === activeFolder.id)}
+          onItemsChange={(updater) => {
+            const inFolder = allItems.filter((i) => i.folderId === activeFolder.id);
+            const updated = updater(inFolder);
+            const others = allItems.filter((i) => i.folderId !== activeFolder.id);
+            onItemsChange([...others, ...updated]);
+          }}
+          editId={editId}
+          onSetEdit={onSetEdit}
+        />
+      ) : showingItem && activeItem ? (
         <MapItemView item={activeItem} />
       ) : (
         <PreviousList list={filtered} onOpen={onOpenItem} />
