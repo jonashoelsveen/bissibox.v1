@@ -547,6 +547,7 @@ export function MonthGridType1({
                     setFocus(pos);
                     dragAnchorRef.current = pos;
                     setRange({ a: pos, b: pos });
+                    if (d.inMonth) onSelectDate?.(d.date);
                   }}
                   onMouseEnter={() => {
                     if (dragAnchorRef.current) {
