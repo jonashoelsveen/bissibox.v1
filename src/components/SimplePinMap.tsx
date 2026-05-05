@@ -41,6 +41,7 @@ export function SimplePinMap({
   kindLabel = "location",
   hideSidebar = false,
   scopeId,
+  initialView,
 }: Props) {
   const containerId = useId().replace(/:/g, "-");
   const containerRef = useRef<HTMLDivElement | null>(null);
