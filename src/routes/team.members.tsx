@@ -374,6 +374,20 @@ function TeamMembersPage() {
     setBoardMembers((prev) => prev.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
   }
 
+  // ── Coaches (local-only for now) ──────────────────────────────────────────
+  function addCoach() {
+    setCoaches((prev) => [
+      ...prev,
+      { name: "", role: "", email: "", status: "pending", invited_at: null, sort_order: prev.length },
+    ]);
+  }
+  function updateCoach(idx: number, patch: Partial<BoardMemberDraft>) {
+    setCoaches((prev) => prev.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
+  }
+  function removeCoach(idx: number) {
+    setCoaches((prev) => prev.filter((_, i) => i !== idx));
+  }
+
   async function removeBoardMember(idx: number) {
     const m = boardMembers[idx];
     if (m.id) {
