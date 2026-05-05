@@ -20,6 +20,8 @@ interface Props {
   hideSidebar?: boolean;
   /** Stable id so the per-instance map style survives navigation. */
   scopeId?: string;
+  /** Optional initial map center+zoom when there is no pin yet. */
+  initialView?: { center: [number, number]; zoom: number } | null;
 }
 
 export const PIN_COLOR = "#dc2626";
@@ -39,6 +41,7 @@ export function SimplePinMap({
   kindLabel = "location",
   hideSidebar = false,
   scopeId,
+  initialView,
 }: Props) {
   const containerId = useId().replace(/:/g, "-");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -171,13 +174,17 @@ export function SimplePinMap({
 
     const stopWatchingVisibility = observeVisibleMapContainer(container, "SimplePinMap", () => {
       if (mapRef.current || map) return;
-      const initial = pinRef.current ?? { lat: 59.9139, lng: 10.7522 };
+      const initial = pinRef.current ?? null;
+      const center: [number, number] = initial
+        ? [initial.lng, initial.lat]
+        : initialView?.center ?? [10.7522, 59.9139];
+      const zoom = initial ? 14 : initialView?.zoom ?? 6;
       try {
         map = new mapbox.default.Map({
           container,
           style: MAP_STYLES[style].url,
-          center: [initial.lng, initial.lat],
-          zoom: pinRef.current ? 14 : 6,
+          center,
+          zoom,
           attributionControl: false,
         });
       } catch (err) {

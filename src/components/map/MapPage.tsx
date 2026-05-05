@@ -65,7 +65,15 @@ export type MapItem = {
   path?: LatLng[];
   splits?: MapSplitPoint[];
 };
-export type MapFolder = { id: string; name: string; pinned: boolean; sort_order: number };
+export type MapFolderView = { center: [number, number]; zoom: number };
+export type MapFolder = {
+  id: string;
+  name: string;
+  pinned: boolean;
+  sort_order: number;
+  /** Default map view shown when creating a new location/course inside this folder. */
+  defaultView?: MapFolderView | null;
+};
 
 export const itemsKey = (scope: string) => `map:items:${scope}`;
 export const foldersKey = (scope: string) => `map:folders:${scope}`;
@@ -579,6 +587,9 @@ export function MapPage() {
                 persistItems(items.map((i) => (i.folder === oldName ? { ...i, folder: trimmed } : i)));
               }
             }}
+            onFolderUpdateView={(folderId, view) => {
+              persistFolders(folders.map((f) => (f.id === folderId ? { ...f, defaultView: view } : f)));
+            }}
           />
         </div>
       </div>
@@ -683,6 +694,7 @@ function MapBody({
   editId,
   onSetEdit,
   onFolderRename,
+  onFolderUpdateView,
 }: {
   actionsMount: HTMLDivElement | null;
   showingItem: boolean;
@@ -697,6 +709,7 @@ function MapBody({
   editId: string | null;
   onSetEdit: (id: string | null) => void;
   onFolderRename: (folderId: string, newName: string) => void;
+  onFolderUpdateView: (folderId: string, view: MapFolderView | null) => void;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -838,6 +851,7 @@ function MapBody({
           editId={editId}
           onSetEdit={onSetEdit}
           onFolderRename={(newName) => onFolderRename(activeFolder.id, newName)}
+          onFolderUpdateView={(view) => onFolderUpdateView(activeFolder.id, view)}
         />
       ) : showingItem && activeItem ? (
         <MapItemView item={activeItem} />

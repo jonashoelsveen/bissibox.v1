@@ -23,6 +23,7 @@ import { SimplePinMap } from "@/components/SimplePinMap";
 import { CourseMapEditor, type LatLng, type SplitPoint } from "@/components/CourseMapEditor";
 import {
   type MapFolder,
+  type MapFolderView,
   type MapItem,
   type MapItemKind,
   pickFolderColor,
@@ -35,6 +36,7 @@ interface Props {
   items: MapItem[];
   onItemsChange: (updater: Updater) => void;
   onFolderRename: (newName: string) => void;
+  onFolderUpdateView: (view: MapFolderView | null) => void;
   editId: string | null;
   onSetEdit: (id: string | null) => void;
 }
@@ -44,10 +46,12 @@ export function FolderMapView({
   items,
   onItemsChange,
   onFolderRename,
+  onFolderUpdateView,
   editId,
   onSetEdit,
 }: Props) {
   const editing = editId ? items.find((i) => i.id === editId) ?? null : null;
+  const [editingFolderArea, setEditingFolderArea] = useState(false);
 
   // Track which item should auto-focus its name input (set on creation).
   const [autoFocusNameId, setAutoFocusNameId] = useState<string | null>(null);
@@ -164,6 +168,7 @@ export function FolderMapView({
           editing.kind === "location" ? (
             <LocationEditPane
               item={editing}
+              initialView={folder.defaultView ?? null}
               onChange={(pin) => updateItem(editing.id, { pin })}
               onSaved={() => {
                 markSaved(editing.id);
@@ -173,6 +178,7 @@ export function FolderMapView({
           ) : (
             <CourseEditPane
               item={editing}
+              initialView={folder.defaultView ?? null}
               onChange={(path, splits) => updateItem(editing.id, { path, splits })}
               onSaved={() => {
                 markSaved(editing.id);
@@ -181,6 +187,16 @@ export function FolderMapView({
               onDelete={() => deleteItem(editing.id)}
             />
           )
+        ) : editingFolderArea ? (
+          <FolderAreaEditor
+            folder={folder}
+            onSave={(view) => {
+              onFolderUpdateView(view);
+              setEditingFolderArea(false);
+              toast.success("Default location area saved");
+            }}
+            onCancel={() => setEditingFolderArea(false)}
+          />
         ) : (
           <FolderViewMap folder={folder} items={items} checked={checked} />
         )}
@@ -204,14 +220,22 @@ export function FolderMapView({
               className="min-w-0 flex-1 rounded border border-hairline bg-background px-1.5 py-0.5 text-sm font-medium text-ink outline-none focus:border-ink"
             />
           ) : (
-            <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{folder.name}</span>
+            <span
+              className="min-w-0 flex-1 truncate text-sm font-medium text-ink cursor-text"
+              onDoubleClick={() => setEditingFolderName(true)}
+              title="Double-click to rename"
+            >
+              {folder.name}
+            </span>
           )}
           {!editingFolderName && (
             <button
-              onClick={() => setEditingFolderName(true)}
-              className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/60 transition hover:bg-secondary hover:text-ink"
-              aria-label="Rename folder"
-              title="Rename folder"
+              onClick={() => setEditingFolderArea(true)}
+              className={`grid h-6 w-6 shrink-0 place-items-center rounded transition hover:bg-secondary hover:text-ink ${
+                folder.defaultView ? "text-ink" : "text-muted-foreground/60"
+              }`}
+              aria-label="Set default location area"
+              title={folder.defaultView ? "Edit default location area" : "Set default location area"}
             >
               <Pencil className="h-3 w-3" />
             </button>
@@ -496,10 +520,12 @@ function AddItemFooter({ onCreate }: { onCreate: (kind: MapItemKind) => void }) 
 
 function LocationEditPane({
   item,
+  initialView,
   onChange,
   onSaved,
 }: {
   item: MapItem;
+  initialView: MapFolderView | null;
   onChange: (pin: { lat: number; lng: number } | null) => void;
   onSaved: () => void;
 }) {
@@ -514,6 +540,7 @@ function LocationEditPane({
         showName={false}
         kindLabel="location"
         hideSidebar
+        initialView={initialView}
         onChange={({ pin }) => onChange(pin)}
         onSave={() => {
           toast.success("Location saved");
@@ -526,11 +553,13 @@ function LocationEditPane({
 
 function CourseEditPane({
   item,
+  initialView,
   onChange,
   onSaved,
   onDelete,
 }: {
   item: MapItem;
+  initialView: MapFolderView | null;
   onChange: (path: LatLng[], splits: SplitPoint[]) => void;
   onSaved: () => void;
   onDelete: () => void;
@@ -543,6 +572,7 @@ function CourseEditPane({
           path={item.path ?? []}
           splits={(item.splits as SplitPoint[]) ?? []}
           title={item.name}
+          initialView={initialView}
           onChange={({ path, splits }) => onChange(path, splits)}
           onSave={() => {
             toast.success("Course saved");
@@ -800,6 +830,191 @@ function FolderViewMap({
           Tick a location or course on the right to show it here.
         </div>
       )}
+
+      {!mapbox && (
+        <div className="absolute inset-0 z-[500] flex items-center justify-center bg-secondary text-sm text-muted-foreground">
+          Loading map…
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ---------------- Folder default-area editor ---------------- */
+
+function FolderAreaEditor({
+  folder,
+  onSave,
+  onCancel,
+}: {
+  folder: MapFolder;
+  onSave: (view: MapFolderView) => void;
+  onCancel: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<MapboxMap | null>(null);
+  const mapbox = useMapbox();
+  const [style, setStyle] = useMapStyle(`folder-area:${folder.id}`);
+  const [query, setQuery] = useState("");
+
+  type GeoResult = { display_name: string; lat: string; lon: string; boundingbox?: [string, string, string, string]; place_id: number };
+  const [results, setResults] = useState<GeoResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [open, setOpen] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 3) { setResults([]); setSearching(false); return; }
+    setSearching(true);
+    const t = setTimeout(async () => {
+      abortRef.current?.abort();
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=6&q=${encodeURIComponent(q)}`;
+        const res = await fetch(url, { signal: ctrl.signal, headers: { "Accept-Language": navigator.language || "en" } });
+        const data = await res.json();
+        setResults(data); setOpen(true);
+      } catch (err: any) {
+        if (err?.name !== "AbortError") setResults([]);
+      } finally { setSearching(false); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    if (!mapbox || !containerRef.current || mapRef.current) return;
+    const container = containerRef.current;
+    let map: MapboxMap | null = null;
+    let ro: ResizeObserver | null = null;
+    const center: [number, number] = folder.defaultView?.center ?? [10.7522, 59.9139];
+    const zoom = folder.defaultView?.zoom ?? 6;
+    const stop = observeVisibleMapContainer(container, "FolderAreaEditor", () => {
+      if (mapRef.current || map) return;
+      try {
+        map = new mapbox.default.Map({
+          container, style: MAP_STYLES[style].url, center, zoom, attributionControl: false,
+        });
+      } catch (err) { console.error("[mapbox] FolderAreaEditor init failed:", err); return; }
+      map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), "bottom-right");
+      ro = new ResizeObserver(() => { try { map?.resize(); } catch { /* ignore */ } });
+      ro.observe(container);
+      mapRef.current = map;
+    });
+    return () => {
+      stop();
+      ro?.disconnect();
+      map?.remove();
+      mapRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapbox]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.setStyle(MAP_STYLES[style].url);
+  }, [style]);
+
+  const flyToResult = (r: GeoResult) => {
+    const map = mapRef.current; if (!map) return;
+    if (r.boundingbox && r.boundingbox.length === 4) {
+      const [s, n, w, e] = r.boundingbox;
+      map.fitBounds(
+        [[parseFloat(w), parseFloat(s)], [parseFloat(e), parseFloat(n)]],
+        { duration: 800, maxZoom: 16 },
+      );
+    } else {
+      map.flyTo({ center: [parseFloat(r.lon), parseFloat(r.lat)], zoom: 12, duration: 800 });
+    }
+    setQuery(r.display_name.split(",")[0] ?? "");
+    setOpen(false);
+  };
+
+  const handleSave = () => {
+    const map = mapRef.current; if (!map) return;
+    const c = map.getCenter();
+    onSave({ center: [c.lng, c.lat], zoom: map.getZoom() });
+  };
+
+  return (
+    <>
+      <div ref={containerRef} className="absolute inset-0 z-0 h-full w-full bg-secondary" />
+
+      {/* Fixed glowing rectangle showing the default area framing */}
+      <div className="pointer-events-none absolute inset-0 z-[300] flex flex-col items-center justify-center">
+        <div
+          className="relative rounded-2xl"
+          style={{
+            width: "min(72%, 720px)",
+            height: "min(62%, 460px)",
+            background: "linear-gradient(135deg, hsl(var(--primary) / 0.06), hsl(var(--primary) / 0.02))",
+            boxShadow: "0 0 0 2px hsl(var(--primary) / 0.55), 0 0 40px hsl(var(--primary) / 0.35), inset 0 0 60px hsl(var(--primary) / 0.10)",
+          }}
+        />
+        <p className="mt-3 max-w-md rounded-md bg-card/85 px-3 py-1.5 text-center text-[11px] text-muted-foreground shadow-sm backdrop-blur">
+          This is the default area shown when adding a new location or course in this folder. Drag the map to position it, then save.
+        </p>
+      </div>
+
+      {/* Search bar top-left */}
+      <div className="absolute left-4 top-4 z-[400] w-[320px] max-w-[calc(100%-2rem)]">
+        <div className="flex h-[42px] items-center gap-2 rounded-xl border border-hairline bg-card/95 px-3 shadow-md backdrop-blur">
+          <SearchIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Find an area…"
+            className="h-full flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground"
+            onFocus={() => results.length > 0 && setOpen(true)}
+          />
+          {query && (
+            <button
+              onClick={() => { setQuery(""); setResults([]); setOpen(false); }}
+              className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-ink"
+              aria-label="Clear"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        {open && results.length > 0 && (
+          <div className="mt-1 max-h-72 overflow-y-auto rounded-xl border border-hairline bg-card/95 shadow-md backdrop-blur">
+            {results.map((r) => (
+              <button
+                key={r.place_id}
+                onClick={() => flyToResult(r)}
+                className="flex w-full items-start gap-2 px-3 py-2 text-left text-xs text-ink transition hover:bg-secondary"
+              >
+                <SearchIcon className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
+                <span className="truncate">{r.display_name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {searching && (
+          <div className="mt-1 px-3 py-1 text-[11px] text-muted-foreground">Searching…</div>
+        )}
+      </div>
+
+      {/* Save / cancel top-right */}
+      <div className="absolute right-4 top-4 z-[400] flex items-center gap-2">
+        <MapStylePicker value={style} onChange={setStyle} compact />
+        <button
+          onClick={onCancel}
+          className="inline-flex items-center gap-1.5 rounded-md border border-hairline bg-card/95 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur hover:text-ink"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSave}
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm hover:opacity-90"
+        >
+          Save location area
+        </button>
+      </div>
 
       {!mapbox && (
         <div className="absolute inset-0 z-[500] flex items-center justify-center bg-secondary text-sm text-muted-foreground">
