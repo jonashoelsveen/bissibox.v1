@@ -146,6 +146,7 @@ export function CourseMapEditor({
   hoverPosition,
   panToTarget,
   scopeId,
+  initialView,
 }: Props) {
   const containerId = useId().replace(/:/g, "-");
   const containerRef = useRef<HTMLDivElement | null>(null);
