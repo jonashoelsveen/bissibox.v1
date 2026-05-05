@@ -41,13 +41,38 @@ function classify(name: string, mime: string): Kind {
   return "text";
 }
 
+/** Trim leading/trailing fully-empty columns from a 2D row array. */
+function trimEmptyCols(rows: unknown[][]): unknown[][] {
+  if (rows.length === 0) return rows;
+  const width = Math.max(...rows.map((r) => r.length));
+  const colEmpty = (c: number) =>
+    rows.every((r) => {
+      const v = r[c];
+      return v === undefined || v === null || String(v).trim() === "";
+    });
+  let left = 0;
+  while (left < width && colEmpty(left)) left++;
+  let right = width - 1;
+  while (right >= left && colEmpty(right)) right--;
+  return rows.map((r) => r.slice(left, right + 1));
+}
+
 function fromSpreadsheet(bytes: Uint8Array): string {
   const wb = XLSX.read(bytes, { type: "array", cellDates: true });
   const out: string[] = [];
   for (const sheetName of wb.SheetNames) {
     const ws = wb.Sheets[sheetName];
     if (!ws) continue;
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false });
+    let rows = XLSX.utils.sheet_to_json(ws, {
+      header: 1,
+      blankrows: false,
+      defval: "",
+    }) as unknown[][];
+    // Drop rows where every cell is empty/whitespace.
+    rows = rows.filter((r) =>
+      r.some((v) => v !== undefined && v !== null && String(v).trim() !== ""),
+    );
+    rows = trimEmptyCols(rows);
     out.push(`Sheet: ${sheetName}`);
     out.push(JSON.stringify(rows, null, 2));
   }
