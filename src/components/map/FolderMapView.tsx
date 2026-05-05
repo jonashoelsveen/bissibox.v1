@@ -275,11 +275,13 @@ function CollapsibleSection({
   open,
   onToggle,
   items,
-  saved,
   editId,
   checked,
+  autoFocusNameId,
+  onConsumeAutoFocus,
   onToggleCheck,
   onEdit,
+  onRename,
   onDelete,
   emptyHint,
 }: {
@@ -288,11 +290,13 @@ function CollapsibleSection({
   open: boolean;
   onToggle: () => void;
   items: MapItem[];
-  saved: Record<string, boolean>;
   editId: string | null;
   checked: Record<string, boolean>;
+  autoFocusNameId: string | null;
+  onConsumeAutoFocus: () => void;
   onToggleCheck: (id: string, v: boolean) => void;
   onEdit: (id: string) => void;
+  onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
   emptyHint: string;
 }) {
