@@ -36,26 +36,6 @@ export function PreviewStep({
   const visibleCount = data.events.filter((e) => visible.has(e.category)).length;
   const pastStatus = data.past_status ?? "none";
 
-  const [view, setView] = useState<ViewMode>("categories");
-  const eventsCount = data.events.length;
-  const categoriesCount = data.detected_categories.length;
-
-  // Map for quick lookup of detected category labels.
-  const catNameById = useMemo(() => {
-    const m: Record<string, string> = {};
-    for (const c of data.detected_categories) m[c.id] = c.name;
-    return m;
-  }, [data.detected_categories]);
-
-  const colorFor = (catId: string): string => {
-    const mapped = mappings[catId];
-    if (mapped) {
-      const c = internalOptions.find((o) => o.value === mapped)?.color;
-      if (c) return c;
-    }
-    return categoryColors[catId] ?? GRAY;
-  };
-
   // Drag state
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
@@ -86,20 +66,6 @@ export function PreviewStep({
     dragRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
     if (!pos) setPos({ x: rect.left, y: rect.top });
     document.body.style.userSelect = "none";
-  };
-
-  const formatTime = (iso: string): string => {
-    try {
-      const d = fromISOLocal(iso);
-      return d.toLocaleString(undefined, {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return iso;
-    }
   };
 
   return (
