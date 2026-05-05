@@ -134,6 +134,10 @@ export interface MonthGridType1Props {
   onDeleteEvent?: (id: string) => void;
   /** When the user clicks a week-number cell, zoom into that week. */
   onWeekClick?: (anchorDate: Date) => void;
+  /** Externally-controlled selected day (mirrors mini-calendar). */
+  selectedDate?: Date | null;
+  /** Notify parent when a day cell is clicked. */
+  onSelectDate?: (date: Date) => void;
 }
 
 interface DayItem {
