@@ -16,6 +16,8 @@ export interface PreviewState {
   visibleCategoryIds: Set<string>;
   /** Color per category id. */
   categoryColors: Record<string, string>;
+  /** File-category id → internal platform category value (e.g. "training"). */
+  categoryMappings: Record<string, string>;
 }
 
 interface PreviewActions {
@@ -23,8 +25,10 @@ interface PreviewActions {
     events: ParsedEvent[],
     categories: DetectedCategory[],
     categoryColors: Record<string, string>,
+    categoryMappings: Record<string, string>,
   ) => void;
   setVisibleCategories: (ids: Set<string>) => void;
+  setCategoryMapping: (fileCategoryId: string, internal: string) => void;
   clear: () => void;
 }
 
@@ -36,26 +40,34 @@ export function PreviewOverlayProvider({ children }: { children: ReactNode }) {
     categories: [],
     visibleCategoryIds: new Set(),
     categoryColors: {},
+    categoryMappings: {},
   });
 
   const value = useMemo<PreviewState & PreviewActions>(
     () => ({
       ...state,
-      begin: (events, categories, categoryColors) =>
+      begin: (events, categories, categoryColors, categoryMappings) =>
         setState({
           events,
           categories,
           visibleCategoryIds: new Set(categories.map((c) => c.id)),
           categoryColors,
+          categoryMappings,
         }),
       setVisibleCategories: (ids) =>
         setState((prev) => ({ ...prev, visibleCategoryIds: new Set(ids) })),
+      setCategoryMapping: (fileCategoryId, internal) =>
+        setState((prev) => ({
+          ...prev,
+          categoryMappings: { ...prev.categoryMappings, [fileCategoryId]: internal },
+        })),
       clear: () =>
         setState({
           events: null,
           categories: [],
           visibleCategoryIds: new Set(),
           categoryColors: {},
+          categoryMappings: {},
         }),
     }),
     [state],

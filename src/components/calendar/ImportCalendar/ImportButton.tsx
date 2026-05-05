@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { CalendarEvent, IndividualCategory } from "../yearStore";
 import { SourcePickerStep } from "./SourcePickerStep";
 import { LibraryPickerStep } from "./LibraryPickerStep";
-import { PreviewStep } from "./PreviewStep";
+import { PreviewStep, type InternalCategoryOption } from "./PreviewStep";
 import { usePreviewOverlay } from "./PreviewOverlayContext";
 import { MIN_CONFIDENCE, PREVIEW_PALETTE, type ImportStep, type ParsedImport } from "./types";
 import { normalizeImportedLocalISO, fromISOLocal, toISOLocal } from "../dateUtils";
@@ -26,19 +26,47 @@ import {
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
-function inferCategory(catId: string): IndividualCategory {
+// Admin (entity) category colors — kept in sync with MonthGridType1 / CalendarSideNav.
+const CAT_MEETING_COLOR = "#E63337";
+const CAT_EVENT_COLOR = "#F09B0A";
+const CAT_RACE_COLOR = "#26B270";
+
+const INDIVIDUAL_INTERNAL: InternalCategoryOption[] = [
+  { value: "training", label: "Training", color: CAT_TRAINING_COLOR },
+  { value: "school", label: "School", color: CAT_SCHOOL_COLOR },
+  { value: "work", label: "Work", color: CAT_WORK_COLOR },
+  { value: "else", label: "Else", color: "#94A3B8" },
+];
+const ADMIN_INTERNAL: InternalCategoryOption[] = [
+  { value: "meeting", label: "Meeting", color: CAT_MEETING_COLOR },
+  { value: "event", label: "Event", color: CAT_EVENT_COLOR },
+  { value: "race", label: "Race", color: CAT_RACE_COLOR },
+];
+
+/** Heuristic: best internal category for a file-category id (fallback when AI
+ *  doesn't return mappings). Uses keyword matching across modes. */
+function suggestInternal(catId: string, options: InternalCategoryOption[]): string {
   const id = catId.toLowerCase();
-  if (/(training|trening|practice|workout|run|ski|race|football|game|match)/.test(id))
-    return "training";
-  if (/(school|skole|class|exam|study)/.test(id)) return "school";
-  if (/(work|jobb|meeting|office)/.test(id)) return "work";
-  return "else";
+  const matchers: Record<string, RegExp> = {
+    training: /(training|trening|practice|workout|run|ski|gym)/,
+    school: /(school|skole|class|exam|study|lecture)/,
+    work: /(work|jobb|office|shift)/,
+    meeting: /(meeting|møte|standup|sync|call)/,
+    event: /(event|arrangement|gathering|party)/,
+    race: /(race|løp|match|game|competition|cup|tournament)/,
+  };
+  for (const opt of options) {
+    const re = matchers[opt.value];
+    if (re && re.test(id)) return opt.value;
+  }
+  return options[0]?.value ?? "";
 }
-function colorForCategory(cat: IndividualCategory): string | null {
-  if (cat === "training") return CAT_TRAINING_COLOR;
-  if (cat === "school") return CAT_SCHOOL_COLOR;
-  if (cat === "work") return CAT_WORK_COLOR;
-  return null;
+
+function colorForInternal(value: string, options: InternalCategoryOption[]): string | null {
+  const opt = options.find((o) => o.value === value);
+  if (!opt) return null;
+  if (opt.value === "else") return null;
+  return opt.color;
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -55,10 +83,12 @@ function bytesToBase64(bytes: Uint8Array): string {
 
 export function ImportButton({
   onCommit,
+  seat = "individual",
 }: {
   onCommit: (
     patch: Partial<CalendarEvent> & Pick<CalendarEvent, "startISO" | "endISO" | "title">,
   ) => void;
+  seat?: "individual" | "admin";
 }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<ImportStep>("source");
@@ -67,6 +97,8 @@ export function ImportButton({
   const overlay = usePreviewOverlay();
   const stepRef = useRef(step);
   stepRef.current = step;
+
+  const internalOptions = seat === "admin" ? ADMIN_INTERNAL : INDIVIDUAL_INTERNAL;
 
   // Clear overlay on close.
   useEffect(() => {
@@ -97,7 +129,6 @@ export function ImportButton({
       });
       if (error) throw error;
       const raw = res as ParsedImport;
-      // Strict accuracy gate: only show events with reasoning_confidence >= 80.
       const highConfEvents = (raw?.events ?? []).filter(
         (e) => typeof e.reasoning_confidence === "number" && e.reasoning_confidence >= MIN_CONFIDENCE,
       );
@@ -106,7 +137,6 @@ export function ImportButton({
         setStep("source");
         return;
       }
-      // Recompute category counts after filtering.
       const counts = new Map<string, number>();
       for (const ev of highConfEvents) counts.set(ev.category, (counts.get(ev.category) ?? 0) + 1);
       const detected_categories = (raw.detected_categories ?? [])
@@ -121,11 +151,13 @@ export function ImportButton({
         future_events_count: raw.future_events_count,
       };
       const colors: Record<string, string> = {};
+      const initialMappings: Record<string, string> = {};
       parsed.detected_categories.forEach((c, i) => {
         colors[c.id] = PREVIEW_PALETTE[i % PREVIEW_PALETTE.length];
+        initialMappings[c.id] = suggestInternal(c.id + " " + c.name, internalOptions);
       });
       setData(parsed);
-      overlay.begin(parsed.events, parsed.detected_categories, colors);
+      overlay.begin(parsed.events, parsed.detected_categories, colors, initialMappings);
       setStep("preview");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to parse file";
@@ -139,20 +171,26 @@ export function ImportButton({
     setSaving(true);
     try {
       const visible = overlay.visibleCategoryIds;
+      const mappings = overlay.categoryMappings;
       const toSave = data.events.filter((e) => visible.has(e.category));
       for (const ev of toSave) {
         const startISO = normalizeImportedLocalISO(ev.start_time);
         if (!startISO) continue;
         const endISO = normalizeImportedLocalISO(ev.end_time ?? "")
           ?? toISOLocal(new Date(fromISOLocal(startISO).getTime() + 60 * 60 * 1000));
-        const cat = inferCategory(ev.category);
+        const internal = mappings[ev.category] ?? internalOptions[0].value;
+        const color = colorForInternal(internal, internalOptions);
+        const category =
+          seat === "admin"
+            ? ("else" as IndividualCategory) // admin events don't use IndividualCategory tag
+            : (internal as IndividualCategory);
         onCommit({
           title: ev.title,
           startISO,
           endISO,
           allDay: false,
-          color: colorForCategory(cat),
-          category: cat,
+          color,
+          category,
           description: ev.description,
         });
       }
@@ -174,28 +212,16 @@ export function ImportButton({
         <Download className="h-3.5 w-3.5" /> Import
       </button>
 
-      {open && (
-        // While in preview, render as a floating non-blocking card so the
-        // background calendar (with green ghost events) remains visible.
+      {open && step !== "preview" && (
         <div
-          className={
-            step === "preview"
-              ? "pointer-events-none fixed inset-0 z-50 flex items-start justify-end p-6"
-              : "fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          }
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={(e) => {
-            if (step !== "preview" && e.target === e.currentTarget) close();
+            if (e.target === e.currentTarget) close();
           }}
         >
-          <div
-            className={`pointer-events-auto rounded-lg border border-hairline bg-card p-5 shadow-xl ${
-              step === "preview" ? "w-[340px]" : "w-full max-w-xl"
-            }`}
-          >
+          <div className="pointer-events-auto w-full max-w-xl rounded-lg border border-hairline bg-card p-5 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-ink">
-                {step === "preview" ? "Review imported events" : "Import calendar"}
-              </h2>
+              <h2 className="text-base font-semibold text-ink">Import calendar</h2>
               <button onClick={close} className="text-muted-foreground hover:text-ink">
                 <X className="h-4 w-4" />
               </button>
@@ -249,24 +275,28 @@ export function ImportButton({
                 Extracting schedule data from the file…
               </div>
             )}
-
-            {step === "preview" && data && (
-              <PreviewStep
-                data={data}
-                visible={overlay.visibleCategoryIds}
-                categoryColors={overlay.categoryColors}
-                saving={saving}
-                onToggle={(id) => {
-                  const next = new Set(overlay.visibleCategoryIds);
-                  if (next.has(id)) next.delete(id);
-                  else next.add(id);
-                  overlay.setVisibleCategories(next);
-                }}
-                onSave={handleSave}
-              />
-            )}
           </div>
         </div>
+      )}
+
+      {open && step === "preview" && data && (
+        <PreviewStep
+          data={data}
+          visible={overlay.visibleCategoryIds}
+          categoryColors={overlay.categoryColors}
+          saving={saving}
+          internalOptions={internalOptions}
+          mappings={overlay.categoryMappings}
+          onMappingChange={(id, val) => overlay.setCategoryMapping(id, val)}
+          onClose={close}
+          onToggle={(id) => {
+            const next = new Set(overlay.visibleCategoryIds);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            overlay.setVisibleCategories(next);
+          }}
+          onSave={handleSave}
+        />
       )}
     </>
   );
