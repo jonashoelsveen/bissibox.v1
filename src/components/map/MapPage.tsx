@@ -851,6 +851,7 @@ function MapBody({
           editId={editId}
           onSetEdit={onSetEdit}
           onFolderRename={(newName) => onFolderRename(activeFolder.id, newName)}
+          onFolderUpdateView={(view) => onFolderUpdateView(activeFolder.id, view)}
         />
       ) : showingItem && activeItem ? (
         <MapItemView item={activeItem} />
