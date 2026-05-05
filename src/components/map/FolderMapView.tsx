@@ -46,10 +46,12 @@ export function FolderMapView({
   items,
   onItemsChange,
   onFolderRename,
+  onFolderUpdateView,
   editId,
   onSetEdit,
 }: Props) {
   const editing = editId ? items.find((i) => i.id === editId) ?? null : null;
+  const [editingFolderArea, setEditingFolderArea] = useState(false);
 
   // Track which item should auto-focus its name input (set on creation).
   const [autoFocusNameId, setAutoFocusNameId] = useState<string | null>(null);
