@@ -65,7 +65,15 @@ export type MapItem = {
   path?: LatLng[];
   splits?: MapSplitPoint[];
 };
-export type MapFolder = { id: string; name: string; pinned: boolean; sort_order: number };
+export type MapFolderView = { center: [number, number]; zoom: number };
+export type MapFolder = {
+  id: string;
+  name: string;
+  pinned: boolean;
+  sort_order: number;
+  /** Default map view shown when creating a new location/course inside this folder. */
+  defaultView?: MapFolderView | null;
+};
 
 export const itemsKey = (scope: string) => `map:items:${scope}`;
 export const foldersKey = (scope: string) => `map:folders:${scope}`;
