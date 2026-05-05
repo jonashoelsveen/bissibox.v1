@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Loader2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Loader2, X } from "lucide-react";
 import type { ParsedImport } from "./types";
-import { fromISOLocal } from "../dateUtils";
 
 export interface InternalCategoryOption {
   value: string;
@@ -10,8 +9,6 @@ export interface InternalCategoryOption {
 }
 
 const GRAY = "#94A3B8";
-
-type ViewMode = "events" | "categories";
 
 export function PreviewStep({
   data,
