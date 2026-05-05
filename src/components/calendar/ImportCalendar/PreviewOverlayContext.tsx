@@ -18,6 +18,8 @@ export interface PreviewState {
   categoryColors: Record<string, string>;
   /** File-category id → internal platform category value (e.g. "training"). */
   categoryMappings: Record<string, string>;
+  /** Internal platform category value → color (e.g. "training" → #...). */
+  internalColors: Record<string, string>;
 }
 
 interface PreviewActions {
