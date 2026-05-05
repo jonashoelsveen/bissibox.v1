@@ -669,6 +669,7 @@ function MapBody({
   onItemsChange,
   editId,
   onSetEdit,
+  onFolderRename,
 }: {
   actionsMount: HTMLDivElement | null;
   showingItem: boolean;
@@ -682,6 +683,7 @@ function MapBody({
   onItemsChange: (next: MapItem[]) => void;
   editId: string | null;
   onSetEdit: (id: string | null) => void;
+  onFolderRename: (folderId: string, newName: string) => void;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
