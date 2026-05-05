@@ -1478,3 +1478,61 @@ function CategoryAutosaveCard({
     </Card>
   );
 }
+
+/* ───────── Diary category settings ───────── */
+
+function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
+  return (
+    <div className="space-y-3">
+      <DiaryCategoryCard
+        title="Training"
+        items={["Connectors", "Units", "Activitytypes"]}
+      />
+      <DiaryCategoryCard title="Notes" items={[]} />
+    </div>
+  );
+}
+
+function DiaryCategoryCard({ title, items }: { title: string; items: string[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Card>
+      <div className="flex w-full items-center gap-3">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          <h3 className="text-sm font-semibold text-ink">{title}</h3>
+        </button>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Collapse" : "Expand"}
+          className="text-muted-foreground hover:text-ink"
+        >
+          {open ? (
+            <ChevronDown className="h-4 w-4" strokeWidth={2.25} />
+          ) : (
+            <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+          )}
+        </button>
+      </div>
+      {open && items.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {items.map((item) => (
+            <div
+              key={item}
+              className="flex items-center justify-between rounded-xl border border-hairline px-4 py-3"
+            >
+              <span className="text-sm text-ink">{item}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {open && items.length === 0 && (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Settings will appear here.
+        </p>
+      )}
+    </Card>
+  );
+}
