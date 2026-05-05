@@ -20,6 +20,8 @@ interface Props {
   hideSidebar?: boolean;
   /** Stable id so the per-instance map style survives navigation. */
   scopeId?: string;
+  /** Optional initial map center+zoom when there is no pin yet. */
+  initialView?: { center: [number, number]; zoom: number } | null;
 }
 
 export const PIN_COLOR = "#dc2626";
