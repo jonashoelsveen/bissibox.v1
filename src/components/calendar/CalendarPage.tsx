@@ -121,6 +121,7 @@ export function CalendarPage() {
               setCurrentDate(d);
               setCurrentRange(r);
             }}
+            viewMode={viewMode}
             visibleCategories={visibleCategories}
             onToggleCategory={toggleCategory}
             seat={seat}

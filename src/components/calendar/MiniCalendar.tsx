@@ -31,6 +31,14 @@ function dowMon0(date: Date) {
 function daysInMonth(y: number, m: number) {
   return new Date(y, m + 1, 0).getDate();
 }
+function startOfWeekMon(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - dowMon0(x));
+  return x;
+}
+function ymdNum(d: Date) {
+  return d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate();
+}
 function sameDay(a: Date, b: Date) {
   return (
     a.getFullYear() === b.getFullYear() &&
@@ -52,9 +60,11 @@ export interface MiniCalendarProps {
   selectedRange: DateRange;
   /** Called continuously during drag, and on click. */
   onSelectRange: (range: DateRange) => void;
+  /** When "week", the whole week-row containing the selected day is highlighted. */
+  viewMode?: "day" | "week" | "month";
 }
 
-export function MiniCalendar({ selectedRange, onSelectRange }: MiniCalendarProps) {
+export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" }: MiniCalendarProps) {
   // Displayed month (independent from selection so user can browse)
   const [view, setView] = useState(() => ({
     year: selectedRange.start.getFullYear(),
@@ -168,9 +178,14 @@ export function MiniCalendar({ selectedRange, onSelectRange }: MiniCalendarProps
 
       {/* Day grid */}
       <div className="grid grid-cols-7 gap-y-0.5">
-        {days.map(({ date, inMonth }) => {
+        {days.map(({ date, inMonth }, i) => {
           const isToday = sameDay(date, today);
           const isSelected = inSelectedRange(date);
+          const dow = i % 7;
+          const inSelectedWeek =
+            viewMode === "week" &&
+            ymdNum(startOfWeekMon(date)) === ymdNum(startOfWeekMon(selectedRange.start));
+          const weekBg = inSelectedWeek && !isSelected;
 
           return (
             <button
@@ -187,14 +202,16 @@ export function MiniCalendar({ selectedRange, onSelectRange }: MiniCalendarProps
                 }
               }}
               className={[
-                "relative grid h-6 w-full place-items-center rounded-full text-[12px] tabular-nums transition-colors",
+                "relative grid h-6 w-full place-items-center text-[12px] tabular-nums transition-colors",
                 isSelected
-                  ? "bg-primary text-primary-foreground"
-                  : isToday
-                    ? "bg-secondary text-ink"
-                    : inMonth
-                      ? "text-ink hover:bg-secondary"
-                      : "text-muted-foreground/40 hover:bg-secondary/60",
+                  ? "rounded-full bg-primary text-primary-foreground"
+                  : weekBg
+                    ? `bg-primary/15 text-ink ${dow === 0 ? "rounded-l-full" : ""} ${dow === 6 ? "rounded-r-full" : ""}`
+                    : isToday
+                      ? "rounded-full bg-secondary text-ink"
+                      : inMonth
+                        ? "rounded-full text-ink hover:bg-secondary"
+                        : "rounded-full text-muted-foreground/40 hover:bg-secondary/60",
               ].join(" ")}
             >
               {date.getDate()}
