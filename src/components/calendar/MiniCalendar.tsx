@@ -195,6 +195,14 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
               key={dateKey(date)}
               onMouseDown={(e) => {
                 e.preventDefault();
+                if (!inMonth) {
+                  // Clicking an adjacent-month day simply navigates both the
+                  // mini-calendar and the main view to that day's month —
+                  // no drag-range, no stray highlights.
+                  setView({ year: date.getFullYear(), month: date.getMonth() });
+                  onSelectRange({ start: date, end: date });
+                  return;
+                }
                 dragStartRef.current = date;
                 onSelectRange({ start: date, end: date });
               }}
