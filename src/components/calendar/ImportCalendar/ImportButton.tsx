@@ -17,6 +17,7 @@ import { LibraryPickerStep } from "./LibraryPickerStep";
 import { PreviewStep } from "./PreviewStep";
 import { usePreviewOverlay } from "./PreviewOverlayContext";
 import { MIN_CONFIDENCE, PREVIEW_PALETTE, type ImportStep, type ParsedImport } from "./types";
+import { normalizeImportedLocalISO, fromISOLocal, toISOLocal } from "../dateUtils";
 import {
   CAT_TRAINING_COLOR,
   CAT_SCHOOL_COLOR,
@@ -140,17 +141,10 @@ export function ImportButton({
       const visible = overlay.visibleCategoryIds;
       const toSave = data.events.filter((e) => visible.has(e.category));
       for (const ev of toSave) {
-        const startMs = Date.parse(ev.start_time);
-        if (!Number.isFinite(startMs)) continue;
-        const endMs = ev.end_time && Number.isFinite(Date.parse(ev.end_time))
-          ? Date.parse(ev.end_time)
-          : startMs + 60 * 60 * 1000;
-        const toLocalISO = (d: Date) => {
-          const p = (n: number) => String(n).padStart(2, "0");
-          return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-        };
-        const startISO = toLocalISO(new Date(startMs));
-        const endISO = toLocalISO(new Date(endMs));
+        const startISO = normalizeImportedLocalISO(ev.start_time);
+        if (!startISO) continue;
+        const endISO = normalizeImportedLocalISO(ev.end_time ?? "")
+          ?? toISOLocal(new Date(fromISOLocal(startISO).getTime() + 60 * 60 * 1000));
         const cat = inferCategory(ev.category);
         onCommit({
           title: ev.title,

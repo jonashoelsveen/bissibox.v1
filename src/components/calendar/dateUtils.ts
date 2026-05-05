@@ -38,6 +38,22 @@ export function toISOLocal(d: Date): string {
   );
 }
 
+/**
+ * Normalize imported datetimes into a local ISO string while preserving the
+ * literal clock time from the source. If the input includes a timezone suffix
+ * like Z or +02:00, we intentionally ignore that offset because imported file
+ * times should land exactly as written in the document.
+ */
+export function normalizeImportedLocalISO(value: string): string | null {
+  const trimmed = value.trim();
+  const literal = /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/.exec(trimmed);
+  if (literal) {
+    return `${literal[1]}-${literal[2]}-${literal[3]}T${literal[4]}:${literal[5]}:${literal[6] ?? "00"}`;
+  }
+  const parsed = new Date(trimmed);
+  return Number.isFinite(parsed.getTime()) ? toISOLocal(parsed) : null;
+}
+
 export function fromISOLocal(s: string): Date {
   // Parse manually so a missing TZ never gets re-interpreted as UTC.
   const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(s);
