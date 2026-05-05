@@ -616,6 +616,10 @@ function SettingsPage() {
               <LibrarySettingsPanel scopeKey={`user:${user.id}`} />
             )}
 
+            {tab === "diary" && !isTeamMode && (
+              <DiarySettingsPanel scopeKey={`user:${user.id}`} />
+            )}
+
             {(tab === "appearance" || tab === "entity-appearance") && (
               <AppearancePanel />
             )}
