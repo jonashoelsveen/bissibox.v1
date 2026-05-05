@@ -268,7 +268,7 @@ function SettingsPage() {
         "entity-appearance",
         "map",
       ]
-    : ["profiles", "general", "address", "roles", "library", "map", "appearance", "desk", "races", "liked"];
+    : ["profiles", "general", "address", "roles", "library", "diary", "map", "appearance", "desk", "races", "liked"];
 
   
 
