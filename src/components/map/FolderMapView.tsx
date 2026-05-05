@@ -307,57 +307,20 @@ function CollapsibleSection({
           </div>
         ) : (
           <div className="mt-1 flex flex-col gap-0.5">
-            {items.map((it) => {
-              const isChecked = !!checked[it.id];
-              const isEditing = editId === it.id;
-              const isSaved = !!saved[it.id];
-              return (
-                <div
-                  key={it.id}
-                  className={`group flex items-center gap-2 rounded-md px-1.5 py-1 transition ${
-                    isEditing ? "bg-secondary" : "hover:bg-secondary/60"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={(e) => onToggleCheck(it.id, e.target.checked)}
-                    className="h-3.5 w-3.5 shrink-0 cursor-pointer"
-                    style={{ accentColor: it.color }}
-                    aria-label={`Show ${it.name} on map`}
-                  />
-                  <span
-                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ background: it.color }}
-                  />
-                  <span
-                    className="min-w-0 flex-1 truncate text-left text-xs text-ink"
-                    title={it.name}
-                  >
-                    {it.name}
-                  </span>
-                  {isSaved && (
-                    <button
-                      onClick={() => onEdit(it.id)}
-                      className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/60 transition hover:bg-secondary hover:text-ink"
-                      aria-label={`Edit ${it.name}`}
-                      title="Edit"
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      if (confirm(`Delete "${it.name}"?`)) onDelete(it.id);
-                    }}
-                    className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/50 opacity-0 transition hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-                    aria-label={`Delete ${it.name}`}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </div>
-              );
-            })}
+            {items.map((it) => (
+              <SidebarItemRow
+                key={it.id}
+                item={it}
+                checked={!!checked[it.id]}
+                isEditing={editId === it.id}
+                autoFocusName={autoFocusNameId === it.id}
+                onConsumeAutoFocus={onConsumeAutoFocus}
+                onToggleCheck={(v) => onToggleCheck(it.id, v)}
+                onEdit={() => onEdit(it.id)}
+                onRename={(name) => onRename(it.id, name)}
+                onDelete={() => onDelete(it.id)}
+              />
+            ))}
           </div>
         )
       )}
