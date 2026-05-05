@@ -977,6 +977,9 @@ export function UnifiedElasticGrid({
               rowHeight={rowHeight}
             />
           )}
+          {mode.kind === "year" && selectedColIdx >= 0 && (
+            <SelectedDayColumn scrollRef={scrollRef} colIdx={selectedColIdx} />
+          )}
         </div>
         </motion.div>
       )}
