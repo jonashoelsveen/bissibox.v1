@@ -185,6 +185,16 @@ export function FolderMapView({
               onDelete={() => deleteItem(editing.id)}
             />
           )
+        ) : editingFolderArea ? (
+          <FolderAreaEditor
+            folder={folder}
+            onSave={(view) => {
+              onFolderUpdateView(view);
+              setEditingFolderArea(false);
+              toast.success("Default location area saved");
+            }}
+            onCancel={() => setEditingFolderArea(false)}
+          />
         ) : (
           <FolderViewMap folder={folder} items={items} checked={checked} />
         )}
