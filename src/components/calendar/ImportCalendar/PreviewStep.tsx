@@ -138,83 +138,55 @@ export function PreviewStep({
           </div>
         )}
 
-        {view === "categories" ? (
-          <ul className="mb-4 flex max-h-[320px] flex-col gap-1 overflow-y-auto">
-            {data.detected_categories.map((c) => {
-              const checked = visible.has(c.id);
-              const mapped = mappings[c.id] ?? "";
-              const internalColor = internalOptions.find((o) => o.value === mapped)?.color;
-              const dotColor = internalColor ?? GRAY;
-              return (
-                <li key={c.id}>
-                  <div className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-secondary/40">
-                    <button
-                      type="button"
-                      onClick={() => onToggle(c.id)}
-                      aria-pressed={checked}
-                      aria-label={checked ? "Hide category" : "Show category"}
-                      className="h-3 w-3 shrink-0 rounded-full border transition-opacity"
-                      style={{
-                        background: checked ? dotColor : "transparent",
-                        borderColor: dotColor,
-                        opacity: checked ? 1 : 0.6,
-                      }}
+        <div className="mb-3 text-sm text-ink">
+          <span className="font-medium">{data.total_events_found}</span> events found,{" "}
+          <span className="font-medium">{data.detected_categories.length}</span> categories detected.
+        </div>
+        <ul className="mb-4 flex max-h-[320px] flex-col gap-1 overflow-y-auto">
+          {data.detected_categories.map((c) => {
+            const checked = visible.has(c.id);
+            const mapped = mappings[c.id] ?? "";
+            const internalColor = internalOptions.find((o) => o.value === mapped)?.color;
+            const dotColor = internalColor ?? GRAY;
+            return (
+              <li key={c.id}>
+                <div className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-secondary/40">
+                  <button
+                    type="button"
+                    onClick={() => onToggle(c.id)}
+                    aria-pressed={checked}
+                    aria-label={checked ? "Hide category" : "Show category"}
+                    className="h-3 w-3 shrink-0 rounded-full border transition-opacity"
+                    style={{
+                      background: checked ? dotColor : "transparent",
+                      borderColor: dotColor,
+                      opacity: checked ? 1 : 0.6,
+                    }}
+                  />
+                  <span className="truncate text-ink" title={c.name}>{c.name}</span>
+                  <span className="text-muted-foreground">({c.count})</span>
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <span
+                      className="h-3 w-3 shrink-0 rounded-full"
+                      style={{ background: internalColor ?? GRAY }}
+                      aria-hidden
                     />
-                    <span className="truncate text-ink" title={c.name}>{c.name}</span>
-                    <span className="text-muted-foreground">({c.count})</span>
-                    <div className="ml-auto flex items-center gap-1.5">
-                      <span
-                        className="h-3 w-3 shrink-0 rounded-full"
-                        style={{ background: internalColor ?? GRAY }}
-                        aria-hidden
-                      />
-                      <select
-                        value={mapped}
-                        onChange={(e) => onMappingChange(c.id, e.target.value)}
-                        className="rounded-md border border-hairline bg-card px-1.5 py-1 text-[11px] text-ink focus:outline-none focus:ring-1 focus:ring-primary"
-                      >
-                        <option value="">—</option>
-                        {internalOptions.map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <select
+                      value={mapped}
+                      onChange={(e) => onMappingChange(c.id, e.target.value)}
+                      className="rounded-md border border-hairline bg-card px-1.5 py-1 text-[11px] text-ink focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="">—</option>
+                      {internalOptions.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
                   </div>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <ul className="mb-4 flex max-h-[320px] flex-col gap-1 overflow-y-auto">
-            {data.events.map((e, i) => {
-              const checked = visible.has(e.category);
-              const dotColor = colorFor(e.category);
-              return (
-                <li key={i}>
-                  <div className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-secondary/40">
-                    <button
-                      type="button"
-                      onClick={() => onToggle(e.category)}
-                      aria-pressed={checked}
-                      className="h-3 w-3 shrink-0 rounded-full border transition-opacity"
-                      style={{
-                        background: checked ? dotColor : "transparent",
-                        borderColor: dotColor,
-                        opacity: checked ? 1 : 0.6,
-                      }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-ink" title={e.title}>{e.title}</div>
-                      <div className="truncate text-[10px] text-muted-foreground">
-                        {formatTime(e.start_time)} · {catNameById[e.category] ?? e.category}
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
 
         <button
           type="button"
