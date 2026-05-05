@@ -249,7 +249,7 @@ function YearCalendarViewInner({
           >
             <SettingsIcon className="h-4 w-4" />
           </button>
-          <ImportButton onCommit={(patch) => upsertEvent(patch)} />
+          <ImportButton seat={seat} onCommit={(patch) => upsertEvent(patch)} />
         </div>
       </div>
 
