@@ -303,9 +303,11 @@ function SettingsPage() {
                                   ? "Events"
                                   : t === "library"
                                     ? "Library"
-                                    : t === "map"
-                                      ? "Map"
-                                      : "Sign out";
+                                    : t === "diary"
+                                      ? "Diary"
+                                      : t === "map"
+                                        ? "Map"
+                                        : "Sign out";
 
   return (
     <div className="px-4 md:px-6">
