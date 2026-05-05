@@ -168,6 +168,7 @@ export function FolderMapView({
           editing.kind === "location" ? (
             <LocationEditPane
               item={editing}
+              initialView={folder.defaultView ?? null}
               onChange={(pin) => updateItem(editing.id, { pin })}
               onSaved={() => {
                 markSaved(editing.id);
@@ -177,6 +178,7 @@ export function FolderMapView({
           ) : (
             <CourseEditPane
               item={editing}
+              initialView={folder.defaultView ?? null}
               onChange={(path, splits) => updateItem(editing.id, { path, splits })}
               onSaved={() => {
                 markSaved(editing.id);
