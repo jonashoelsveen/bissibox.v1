@@ -743,6 +743,75 @@ function TeamMembersPage() {
         </Panel>
       )}
 
+      {tab === "coaches" && (
+        <Panel>
+          <div className="space-y-3">
+            {coaches.length === 0 && (
+              <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
+                No coaches yet. Add one to get started.
+              </div>
+            )}
+            {coaches.map((m, i) => (
+              <div
+                key={`coach-${i}`}
+                className="flex items-center gap-4 rounded-lg border border-hairline bg-card p-4"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                  <UserIcon className="h-6 w-6" />
+                </div>
+                <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-3">
+                  <input
+                    placeholder="Name"
+                    value={m.name}
+                    onChange={(e) => updateCoach(i, { name: e.target.value })}
+                    className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                  />
+                  <input
+                    placeholder="Group (the group this coach is coaching)"
+                    value={m.role}
+                    onChange={(e) => updateCoach(i, { role: e.target.value })}
+                    className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Mail className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <input
+                        type="email"
+                        placeholder="Email"
+                        value={m.email}
+                        onChange={(e) => updateCoach(i, { email: e.target.value })}
+                        className="w-full rounded-md border border-hairline bg-background py-2 pl-8 pr-3 text-sm text-ink outline-none focus:border-primary"
+                      />
+                    </div>
+                    <button
+                      disabled
+                      title="Invite (sync coming soon)"
+                      className="shrink-0 rounded-md border border-hairline bg-card px-3 py-2 text-xs font-medium text-muted-foreground"
+                    >
+                      {m.status === "active" ? "Active" : "Invite"}
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={() => removeCoach(i)}
+                  className="rounded p-1 text-muted-foreground hover:text-destructive"
+                  aria-label="Remove coach"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={addCoach}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-hairline bg-background px-3 py-1.5 text-xs text-ink hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add coach
+          </button>
+        </Panel>
+      )}
+
       {tab === "memberships" && (
         <Panel>
           <div className="flex items-center justify-between">
