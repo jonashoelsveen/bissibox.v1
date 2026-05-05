@@ -17,6 +17,7 @@ import {
   Briefcase,
   Mail,
   User as UserIcon,
+  UserCog,
 } from "lucide-react";
 import { OrgChart, type OrgPerson, type OrgGroup } from "@/components/OrgChart";
 import { GroupColorPicker } from "@/components/GroupColorPicker";
