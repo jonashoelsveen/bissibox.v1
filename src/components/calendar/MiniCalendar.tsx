@@ -60,9 +60,11 @@ export interface MiniCalendarProps {
   selectedRange: DateRange;
   /** Called continuously during drag, and on click. */
   onSelectRange: (range: DateRange) => void;
+  /** When "week", the whole week-row containing the selected day is highlighted. */
+  viewMode?: "day" | "week" | "month";
 }
 
-export function MiniCalendar({ selectedRange, onSelectRange }: MiniCalendarProps) {
+export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" }: MiniCalendarProps) {
   // Displayed month (independent from selection so user can browse)
   const [view, setView] = useState(() => ({
     year: selectedRange.start.getFullYear(),
