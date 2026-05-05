@@ -31,6 +31,14 @@ function dowMon0(date: Date) {
 function daysInMonth(y: number, m: number) {
   return new Date(y, m + 1, 0).getDate();
 }
+function startOfWeekMon(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - dowMon0(x));
+  return x;
+}
+function ymdNum(d: Date) {
+  return d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate();
+}
 function sameDay(a: Date, b: Date) {
   return (
     a.getFullYear() === b.getFullYear() &&
