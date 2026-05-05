@@ -107,24 +107,32 @@ export function PreviewStep({
         <ul className="mb-4 flex max-h-[280px] flex-col gap-1 overflow-y-auto">
           {data.detected_categories.map((c) => {
             const checked = visible.has(c.id);
-            const color = categoryColors[c.id] ?? "#22C55E";
             const mapped = mappings[c.id] ?? internalOptions[0]?.value ?? "";
+            const internalColor = internalOptions.find((o) => o.value === mapped)?.color;
+            const color = internalColor ?? categoryColors[c.id] ?? "#22C55E";
             return (
               <li key={c.id}>
                 <div className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-secondary/40">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => onToggle(c.id)}
-                    className="h-3.5 w-3.5 accent-primary"
-                  />
-                  <span
-                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
-                    style={{ background: color }}
+                  <button
+                    type="button"
+                    onClick={() => onToggle(c.id)}
+                    aria-pressed={checked}
+                    aria-label={checked ? "Hide category" : "Show category"}
+                    className="h-3 w-3 shrink-0 rounded-full border border-hairline transition-opacity"
+                    style={{
+                      background: checked ? color : "transparent",
+                      borderColor: color,
+                      opacity: checked ? 1 : 0.6,
+                    }}
                   />
                   <span className="truncate text-ink" title={c.name}>{c.name}</span>
                   <span className="text-muted-foreground">({c.count})</span>
-                  <div className="ml-auto">
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <span
+                      className="h-3 w-3 shrink-0 rounded-full"
+                      style={{ background: color }}
+                      aria-hidden
+                    />
                     <select
                       value={mapped}
                       onChange={(e) => onMappingChange(c.id, e.target.value)}
