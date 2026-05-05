@@ -407,10 +407,10 @@ function SidebarItemRow({
         style={{ background: item.color }}
       />
       <button
-        onClick={() => setEditingName(true)}
+        onClick={onEdit}
         className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/60 transition hover:bg-secondary hover:text-ink"
-        aria-label={`Rename ${item.name}`}
-        title="Rename"
+        aria-label={`Edit ${item.name}`}
+        title="Edit on map"
       >
         <Pencil className="h-3 w-3" />
       </button>
