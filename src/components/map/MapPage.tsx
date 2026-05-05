@@ -587,9 +587,9 @@ export function MapPage() {
                 persistItems(items.map((i) => (i.folder === oldName ? { ...i, folder: trimmed } : i)));
               }
             }}
-          />
-        </div>
-      </div>
+            onFolderUpdateView={(folderId, view) => {
+              persistFolders(folders.map((f) => (f.id === folderId ? { ...f, defaultView: view } : f)));
+            }}
 
       {newFolderOpen && (
         <NewFolderDialog
