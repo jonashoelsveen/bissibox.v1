@@ -663,6 +663,11 @@ function MapBody({
   onOpenItem,
   onNewFolder,
   onNewItem,
+  activeFolder,
+  allItems,
+  onItemsChange,
+  editId,
+  onSetEdit,
 }: {
   actionsMount: HTMLDivElement | null;
   showingItem: boolean;
@@ -671,6 +676,11 @@ function MapBody({
   onOpenItem: (it: MapItem) => void;
   onNewFolder: () => void;
   onNewItem: (kind: MapItemKind) => void;
+  activeFolder: MapFolder | null;
+  allItems: MapItem[];
+  onItemsChange: (next: MapItem[]) => void;
+  editId: string | null;
+  onSetEdit: (id: string | null) => void;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
