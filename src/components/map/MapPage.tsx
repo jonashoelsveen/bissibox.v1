@@ -709,6 +709,7 @@ function MapBody({
   editId: string | null;
   onSetEdit: (id: string | null) => void;
   onFolderRename: (folderId: string, newName: string) => void;
+  onFolderUpdateView: (folderId: string, view: MapFolderView | null) => void;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
