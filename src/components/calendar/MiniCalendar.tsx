@@ -178,9 +178,14 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
 
       {/* Day grid */}
       <div className="grid grid-cols-7 gap-y-0.5">
-        {days.map(({ date, inMonth }) => {
+        {days.map(({ date, inMonth }, i) => {
           const isToday = sameDay(date, today);
           const isSelected = inSelectedRange(date);
+          const dow = i % 7;
+          const inSelectedWeek =
+            viewMode === "week" &&
+            ymdNum(startOfWeekMon(date)) === ymdNum(startOfWeekMon(selectedRange.start));
+          const weekBg = inSelectedWeek && !isSelected;
 
           return (
             <button
@@ -197,14 +202,16 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
                 }
               }}
               className={[
-                "relative grid h-6 w-full place-items-center rounded-full text-[12px] tabular-nums transition-colors",
+                "relative grid h-6 w-full place-items-center text-[12px] tabular-nums transition-colors",
                 isSelected
-                  ? "bg-primary text-primary-foreground"
-                  : isToday
-                    ? "bg-secondary text-ink"
-                    : inMonth
-                      ? "text-ink hover:bg-secondary"
-                      : "text-muted-foreground/40 hover:bg-secondary/60",
+                  ? "rounded-full bg-primary text-primary-foreground"
+                  : weekBg
+                    ? `bg-primary/15 text-ink ${dow === 0 ? "rounded-l-full" : ""} ${dow === 6 ? "rounded-r-full" : ""}`
+                    : isToday
+                      ? "rounded-full bg-secondary text-ink"
+                      : inMonth
+                        ? "rounded-full text-ink hover:bg-secondary"
+                        : "rounded-full text-muted-foreground/40 hover:bg-secondary/60",
               ].join(" ")}
             >
               {date.getDate()}
