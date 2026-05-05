@@ -694,6 +694,7 @@ function MapBody({
   editId,
   onSetEdit,
   onFolderRename,
+  onFolderUpdateView,
 }: {
   actionsMount: HTMLDivElement | null;
   showingItem: boolean;
