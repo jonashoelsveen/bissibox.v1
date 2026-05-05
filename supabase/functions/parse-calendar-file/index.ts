@@ -41,13 +41,38 @@ function classify(name: string, mime: string): Kind {
   return "text";
 }
 
+/** Trim leading/trailing fully-empty columns from a 2D row array. */
+function trimEmptyCols(rows: unknown[][]): unknown[][] {
+  if (rows.length === 0) return rows;
+  const width = Math.max(...rows.map((r) => r.length));
+  const colEmpty = (c: number) =>
+    rows.every((r) => {
+      const v = r[c];
+      return v === undefined || v === null || String(v).trim() === "";
+    });
+  let left = 0;
+  while (left < width && colEmpty(left)) left++;
+  let right = width - 1;
+  while (right >= left && colEmpty(right)) right--;
+  return rows.map((r) => r.slice(left, right + 1));
+}
+
 function fromSpreadsheet(bytes: Uint8Array): string {
   const wb = XLSX.read(bytes, { type: "array", cellDates: true });
   const out: string[] = [];
   for (const sheetName of wb.SheetNames) {
     const ws = wb.Sheets[sheetName];
     if (!ws) continue;
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false });
+    let rows = XLSX.utils.sheet_to_json(ws, {
+      header: 1,
+      blankrows: false,
+      defval: "",
+    }) as unknown[][];
+    // Drop rows where every cell is empty/whitespace.
+    rows = rows.filter((r) =>
+      r.some((v) => v !== undefined && v !== null && String(v).trim() !== ""),
+    );
+    rows = trimEmptyCols(rows);
     out.push(`Sheet: ${sheetName}`);
     out.push(JSON.stringify(rows, null, 2));
   }
@@ -140,16 +165,49 @@ const PARSE_TOOL = {
   },
 };
 
-const SYSTEM_PROMPT = `You are an advanced administrative sports assistant in Scandinavia. Your task is to extract exact calendar events and deadlines from the provided file content.
+const SYSTEM_PROMPT = `You are an advanced administrative sports assistant working across multiple languages (English, Norwegian, Swedish, Danish, German, Dutch, French, Spanish, Italian). Your task is to extract precise calendar events and deadlines from the provided file content.
 
-EVALUATION DIRECTIVES:
-- Analyze the raw text/table only. Extract exact dates, event titles, descriptions, and deduce categories based on row labels, section headers, sheet names, or repeating prefixes (e.g., XC Skiing, Football).
-- Do NOT infer, guess, or invent events based on the file name, mime type, or external assumptions. The filename is provided for context only.
-- Focus heavily on visual table alignments (Markdown tables or array-of-array rows).
-- Each extracted event REQUIRES a "reasoning_confidence" integer between 1 and 100. Use 90+ only when both the date AND the title are explicitly present in the source. Use 80-89 when small inference is needed (e.g., year resolved from a season header). Use <80 when guessing.
-- If an event lacks an explicit or clearly deducible date in the text, OMIT it entirely. Never fabricate dates.
-- If the content has no concrete dates, return empty arrays.
-- Use snake_case category ids. Default start_time to 12:00 local if a time is not given. Leave end_time unset unless specified.
+== SEMANTIC HEADER DETECTION ==
+- Do NOT assume data starts at cell A1 or row 1. Scan the ENTIRE sheet/text for header keywords that mark the start of the table.
+- Header keywords (case-insensitive, cross-lingual):
+  * Date column: "dato", "date", "datum", "fecha", "data", "jour", "tag"
+  * Time column: "tid", "time", "klokke", "klokkeslett", "kl", "uhrzeit", "zeit", "hora", "heure", "ora"
+  * Title/activity column: "hva", "what", "aktivitet", "activity", "aktivität", "tittel", "title", "beskrivelse", "description", "økt", "session", "training", "trening", "event", "termin"
+  * Location: "sted", "location", "ort", "lugar", "lieu"
+- Ignore empty rows and empty columns surrounding the data block. Treat the first row containing 2+ header keywords as the table header; rows below it are data.
+
+== CROSS-LINGUAL FIELD MAPPING ==
+- "Dato" / "Datum" / "Date" → date
+- "Hva" / "Aktivitet" / "What" / "Tittel" → title (also use as description if no separate description column)
+- "Klokkeslett" / "Klokke" / "Kl" / "Tid" / "Time" / "Uhrzeit" → time
+- "Beskrivelse" / "Description" / "Notes" / "Kommentar" → description
+
+== TIME RANGE EXTRACTION ==
+- Detect time-range patterns and ALWAYS split into start_time and end_time:
+  * "10:00 - 11:30", "10:00-11:30"
+  * "10:00 til 11:30", "10:00 to 11:30", "10:00 bis 11:30", "10:00 a 11:30"
+  * "kl 10-11", "10–11" (en/em dash)
+  * "from 10:00 until 11:30"
+- If only ONE time is given (no range): set end_time to start_time + 30 minutes.
+- If NO time is given in the time column, scan the title/description column for embedded times or durations (e.g. "Run 60 min at 18:00", "Møte 14.30") and use those.
+- If still no time is found anywhere: default start_time to 10:00 local, end_time to 10:30.
+
+== STRICT DATE NORMALIZATION ==
+- Detect the source date format and normalize to ISO 8601 local datetime ("YYYY-MM-DDTHH:MM:SS", no timezone suffix).
+- Supported source formats include: YYYY-MM-DD, DD.MM.YYYY, DD.MM.YY, DD/MM/YYYY, MM/DD/YYYY, "15. mars 2026", "15 Mar 2026", "Mon 15/03".
+- For 2-digit years, assume 20YY.
+- DATE INHERITANCE: if a row has a time but no date in its own date cell, inherit the date from the most recent non-empty date cell above it (rows often group multiple sessions under one date).
+- If a year is missing entirely, infer from a season header ("Season 2026/27", "Høst 2026") or from "Today" context; if unresolvable, OMIT the event.
+
+== EVALUATION DIRECTIVES ==
+- Extract exact dates, titles, descriptions; deduce categories from row labels, section headers, sheet names, or repeating prefixes (e.g. XC Skiing, Football, Strength).
+- Do NOT infer events from the filename or external assumptions. Filename is context only.
+- Each event REQUIRES "reasoning_confidence" 1-100:
+  * 90+ when date AND title are both explicit
+  * 80-89 when minor inference is needed (year from season header, time defaulted, date inherited from row above)
+  * <80 when guessing — those will be filtered out
+- If an event lacks an explicit or clearly deducible date, OMIT it entirely. Never fabricate dates.
+- Use snake_case category ids.
 
 Output strictly via the submit_parsed_calendar tool. Never include explanatory prose.`;
 
