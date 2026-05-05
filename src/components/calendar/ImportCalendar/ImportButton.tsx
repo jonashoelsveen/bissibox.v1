@@ -214,7 +214,7 @@ export function ImportButton({
         if (!startISO) continue;
         const endISO = normalizeImportedLocalISO(ev.end_time ?? "")
           ?? toISOLocal(new Date(fromISOLocal(startISO).getTime() + 60 * 60 * 1000));
-        const internal = mappings[ev.category] ?? internalOptions[0].value;
+        const internal = mappings[ev.category] || suggestInternal(ev.category, internalOptions) || internalOptions[internalOptions.length - 1].value;
         const color = colorForInternal(internal, internalOptions);
         const category =
           seat === "admin"
