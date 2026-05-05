@@ -338,6 +338,116 @@ function CollapsibleSection({
   );
 }
 
+function SidebarItemRow({
+  item,
+  checked,
+  isEditing,
+  autoFocusName,
+  onConsumeAutoFocus,
+  onToggleCheck,
+  onEdit,
+  onRename,
+  onDelete,
+}: {
+  item: MapItem;
+  checked: boolean;
+  isEditing: boolean;
+  autoFocusName: boolean;
+  onConsumeAutoFocus: () => void;
+  onToggleCheck: (v: boolean) => void;
+  onEdit: () => void;
+  onRename: (name: string) => void;
+  onDelete: () => void;
+}) {
+  const [editingName, setEditingName] = useState(autoFocusName);
+  const [draft, setDraft] = useState(item.name);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => { setDraft(item.name); }, [item.name]);
+  useEffect(() => {
+    if (autoFocusName) {
+      setEditingName(true);
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+        onConsumeAutoFocus();
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFocusName]);
+  useEffect(() => {
+    if (editingName) {
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      });
+    }
+  }, [editingName]);
+  const commit = () => {
+    const t = draft.trim();
+    if (t && t !== item.name) onRename(t);
+    else setDraft(item.name);
+    setEditingName(false);
+  };
+  return (
+    <div
+      className={`group flex items-center gap-2 rounded-md px-1.5 py-1 transition ${
+        isEditing ? "bg-secondary" : "hover:bg-secondary/60"
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onToggleCheck(e.target.checked)}
+        className="h-3.5 w-3.5 shrink-0 cursor-pointer"
+        style={{ accentColor: item.color }}
+        aria-label={`Show ${item.name} on map`}
+      />
+      <span
+        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+        style={{ background: item.color }}
+      />
+      <button
+        onClick={() => setEditingName(true)}
+        className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/60 transition hover:bg-secondary hover:text-ink"
+        aria-label={`Rename ${item.name}`}
+        title="Rename"
+      >
+        <Pencil className="h-3 w-3" />
+      </button>
+      {editingName ? (
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") { setDraft(item.name); setEditingName(false); }
+          }}
+          className="min-w-0 flex-1 rounded border border-hairline bg-background px-1 py-0.5 text-xs text-ink outline-none focus:border-ink"
+        />
+      ) : (
+        <button
+          onClick={onEdit}
+          className="min-w-0 flex-1 truncate text-left text-xs text-ink hover:underline"
+          title={`Edit ${item.name}`}
+        >
+          {item.name}
+        </button>
+      )}
+      <button
+        onClick={() => {
+          if (confirm(`Delete "${item.name}"?`)) onDelete();
+        }}
+        className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/50 opacity-0 transition hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+        aria-label={`Delete ${item.name}`}
+      >
+        <Trash2 className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
 function AddItemFooter({ onCreate }: { onCreate: (kind: MapItemKind) => void }) {
   const [open, setOpen] = useState(false);
   return (
