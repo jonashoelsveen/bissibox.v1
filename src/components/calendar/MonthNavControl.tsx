@@ -67,17 +67,6 @@ export function MonthNavControl({
       </button>
       <button
         type="button"
-        aria-label="Velg dato"
-        onClick={() => setOpen((v) => !v)}
-        className={[
-          "grid h-7 w-7 place-items-center rounded-md transition-colors hover:bg-secondary",
-          open ? "text-ink" : "text-muted-foreground/60 hover:text-ink",
-        ].join(" ")}
-      >
-        <CalendarDays className="h-4 w-4" strokeWidth={2} />
-      </button>
-      <button
-        type="button"
         aria-label="Neste"
         onClick={() => step(1)}
         className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
