@@ -429,22 +429,12 @@ function SidebarItemRow({
           {item.name}
         </button>
       )}
-      {isSaved && !renaming && (
-        <button
-          onClick={onEdit}
-          className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/60 transition hover:bg-secondary hover:text-ink"
-          aria-label={`Open ${item.name}`}
-          title="Open on map"
-        >
-          <Pencil className="h-3 w-3" />
-        </button>
-      )}
       {!renaming && (
         <button
-          onClick={() => setRenaming(true)}
-          className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/40 opacity-0 transition hover:bg-secondary hover:text-muted-foreground group-hover:opacity-100"
-          aria-label={`Rename ${item.name}`}
-          title="Rename"
+          onClick={() => { setRenaming(true); onEdit(); }}
+          className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/50 opacity-0 transition hover:bg-secondary hover:text-muted-foreground group-hover:opacity-100"
+          aria-label={`Edit ${item.name}`}
+          title="Edit"
         >
           <Pencil className="h-3 w-3" />
         </button>
