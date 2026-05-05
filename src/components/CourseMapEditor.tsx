@@ -327,7 +327,10 @@ export function CourseMapEditor({
 
     const stopWatchingVisibility = observeVisibleMapContainer(container, "CourseMapEditor", () => {
       if (mapRef.current || map) return;
-      const center: [number, number] = path[0] ? [path[0][1], path[0][0]] : [10.7522, 59.9139];
+      const center: [number, number] = path[0]
+        ? [path[0][1], path[0][0]]
+        : initialView?.center ?? [10.7522, 59.9139];
+      const initialZoom = path.length ? 14 : initialView?.zoom ?? 12;
       const token = getCachedMapboxToken();
       // eslint-disable-next-line no-console
       console.log("Mapbox Token Status:", !!token);
@@ -336,7 +339,7 @@ export function CourseMapEditor({
           container,
           style: MAP_STYLES[style].url,
           center,
-          zoom: path.length ? 14 : 12,
+          zoom: initialZoom,
           attributionControl: false,
         });
       } catch (err) {
