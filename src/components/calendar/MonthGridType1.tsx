@@ -177,6 +177,8 @@ export function MonthGridType1({
   onMoveEvent,
   onDeleteEvent,
   onWeekClick,
+  selectedDate,
+  onSelectDate,
 }: MonthGridType1Props) {
   const dim = daysInMonth(year, month);
   const firstDow = dowMon0(new Date(year, month, 1));
