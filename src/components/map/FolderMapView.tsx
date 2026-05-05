@@ -233,11 +233,13 @@ export function FolderMapView({
             open={openSections.locations}
             onToggle={() => setOpenSections((s) => ({ ...s, locations: !s.locations }))}
             items={locations}
-            saved={saved}
             editId={editId}
             checked={checked}
+            autoFocusNameId={autoFocusNameId}
+            onConsumeAutoFocus={() => setAutoFocusNameId(null)}
             onToggleCheck={setItemChecked}
             onEdit={(id) => onSetEdit(id)}
+            onRename={(id, name) => updateItem(id, { name })}
             onDelete={deleteItem}
             emptyHint="No locations yet"
           />
@@ -247,11 +249,13 @@ export function FolderMapView({
             open={openSections.courses}
             onToggle={() => setOpenSections((s) => ({ ...s, courses: !s.courses }))}
             items={courses}
-            saved={saved}
             editId={editId}
             checked={checked}
+            autoFocusNameId={autoFocusNameId}
+            onConsumeAutoFocus={() => setAutoFocusNameId(null)}
             onToggleCheck={setItemChecked}
             onEdit={(id) => onSetEdit(id)}
+            onRename={(id, name) => updateItem(id, { name })}
             onDelete={deleteItem}
             emptyHint="No courses yet"
           />
