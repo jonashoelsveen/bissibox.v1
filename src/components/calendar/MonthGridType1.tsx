@@ -227,6 +227,15 @@ export function MonthGridType1({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month]);
 
+  // Mirror externally-controlled selected date (e.g. mini-calendar click).
+  useEffect(() => {
+    if (!selectedDate) return;
+    if (selectedDate.getFullYear() !== year || selectedDate.getMonth() !== month) return;
+    const match = days.find((d) => d.inMonth && d.date.getDate() === selectedDate.getDate());
+    if (match) setFocus({ row: match.row, col: match.col });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, year, month]);
+
   // Drag-selection (mouse range across cells)
   const dragAnchorRef = useRef<CellPos | null>(null);
   const [range, setRange] = useState<{ a: CellPos; b: CellPos } | null>(null);
