@@ -39,18 +39,56 @@ import { MapItemView } from "./MapItemView";
 
 export type MapItemKind = "location" | "course";
 
+export type LatLng = [number, number];
+export type MapSplitKind = "split" | "fuel" | "start" | "finish" | "marker";
+export interface MapSplitPoint {
+  id: string;
+  kind: MapSplitKind;
+  label: string;
+  position: LatLng;
+  note?: string;
+}
+
 export type MapItem = {
   id: string;
   kind: MapItemKind;
   name: string;
   pinned: boolean;
+  /** Legacy: folder name. New code uses folderId. Kept for back-compat reads. */
   folder: string | null;
+  folderId: string | null;
+  color: string;
   created_at: string;
+  // Geometry
+  pin?: { lat: number; lng: number } | null;
+  path?: LatLng[];
+  splits?: MapSplitPoint[];
 };
 export type MapFolder = { id: string; name: string; pinned: boolean; sort_order: number };
 
 export const itemsKey = (scope: string) => `map:items:${scope}`;
 export const foldersKey = (scope: string) => `map:folders:${scope}`;
+
+/** 10-color palette used for locations + courses inside a folder. */
+export const MAP_COLOR_PALETTE = [
+  "#6366F1", // indigo
+  "#16a34a", // green
+  "#dc2626", // red
+  "#f59e0b", // amber
+  "#0ea5e9", // sky
+  "#7c3aed", // violet
+  "#db2777", // pink
+  "#0d9488", // teal
+  "#ea580c", // orange
+  "#475569", // slate
+];
+
+export function pickFolderColor(existing: string[]): string {
+  for (const c of MAP_COLOR_PALETTE) {
+    if (!existing.includes(c)) return c;
+  }
+  return MAP_COLOR_PALETTE[existing.length % MAP_COLOR_PALETTE.length];
+}
 
 function readJSON<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
