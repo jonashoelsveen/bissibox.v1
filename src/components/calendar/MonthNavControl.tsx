@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { MiniCalendar, type DateRange } from "./MiniCalendar";
 
 export type CalUnit = "day" | "week" | "month";
