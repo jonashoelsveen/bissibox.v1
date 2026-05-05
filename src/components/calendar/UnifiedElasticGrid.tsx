@@ -817,6 +817,8 @@ export function UnifiedElasticGrid({
             onCurrentDateChange(anchor, { start: anchor, end: anchor });
             handleViewModeChange("week");
           }}
+          selectedDate={currentDate}
+          onSelectDate={(d) => onCurrentDateChange(d, { start: d, end: d })}
         />
         </motion.div>
       ) : (
