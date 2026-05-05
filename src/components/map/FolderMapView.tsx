@@ -164,10 +164,7 @@ export function FolderMapView({
           editing.kind === "location" ? (
             <LocationEditPane
               item={editing}
-              autoFocusName={autoFocusNameId === editing.id}
-              onConsumeAutoFocus={() => setAutoFocusNameId(null)}
               onChange={(pin) => updateItem(editing.id, { pin })}
-              onRename={(name) => updateItem(editing.id, { name })}
               onSaved={() => {
                 markSaved(editing.id);
                 onSetEdit(null);
@@ -176,10 +173,7 @@ export function FolderMapView({
           ) : (
             <CourseEditPane
               item={editing}
-              autoFocusName={autoFocusNameId === editing.id}
-              onConsumeAutoFocus={() => setAutoFocusNameId(null)}
               onChange={(path, splits) => updateItem(editing.id, { path, splits })}
-              onRename={(name) => updateItem(editing.id, { name })}
               onSaved={() => {
                 markSaved(editing.id);
                 onSetEdit(null);
