@@ -116,8 +116,17 @@ function YearCalendarViewInner({
         overlay.visibleCategoryIds,
         overlay.categoryColors,
         overlay.categories,
+        overlay.categoryMappings,
+        overlay.internalColors,
       ),
-    [overlay.events, overlay.visibleCategoryIds, overlay.categoryColors, overlay.categories],
+    [
+      overlay.events,
+      overlay.visibleCategoryIds,
+      overlay.categoryColors,
+      overlay.categories,
+      overlay.categoryMappings,
+      overlay.internalColors,
+    ],
   );
   const previewActive = overlay.events !== null;
   const mergedEvents = useMemo(() => {

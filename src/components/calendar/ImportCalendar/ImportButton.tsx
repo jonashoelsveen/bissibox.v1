@@ -152,12 +152,14 @@ export function ImportButton({
       };
       const colors: Record<string, string> = {};
       const initialMappings: Record<string, string> = {};
+      const internalColorsMap: Record<string, string> = {};
+      for (const opt of internalOptions) internalColorsMap[opt.value] = opt.color;
       parsed.detected_categories.forEach((c, i) => {
         colors[c.id] = PREVIEW_PALETTE[i % PREVIEW_PALETTE.length];
         initialMappings[c.id] = suggestInternal(c.id + " " + c.name, internalOptions);
       });
       setData(parsed);
-      overlay.begin(parsed.events, parsed.detected_categories, colors, initialMappings);
+      overlay.begin(parsed.events, parsed.detected_categories, colors, initialMappings, internalColorsMap);
       setStep("preview");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to parse file";
