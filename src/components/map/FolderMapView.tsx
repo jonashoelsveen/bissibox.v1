@@ -93,9 +93,7 @@ export function FolderMapView({
     };
     onItemsChange((prev) => [...prev, it]);
     setAutoFocusNameId(id);
-    // Auto-tick so the new (empty) item is in view-mode visibility set.
-    setItemChecked(id, true);
-    // Do NOT switch to edit mode — user names it in the sidebar first.
+    onSetEdit(id);
   };
 
   const deleteItem = (id: string) => {
@@ -233,13 +231,11 @@ export function FolderMapView({
             open={openSections.locations}
             onToggle={() => setOpenSections((s) => ({ ...s, locations: !s.locations }))}
             items={locations}
+            saved={saved}
             editId={editId}
             checked={checked}
-            autoFocusNameId={autoFocusNameId}
-            onConsumeAutoFocus={() => setAutoFocusNameId(null)}
             onToggleCheck={setItemChecked}
             onEdit={(id) => onSetEdit(id)}
-            onRename={(id, name) => updateItem(id, { name })}
             onDelete={deleteItem}
             emptyHint="No locations yet"
           />
@@ -249,13 +245,11 @@ export function FolderMapView({
             open={openSections.courses}
             onToggle={() => setOpenSections((s) => ({ ...s, courses: !s.courses }))}
             items={courses}
+            saved={saved}
             editId={editId}
             checked={checked}
-            autoFocusNameId={autoFocusNameId}
-            onConsumeAutoFocus={() => setAutoFocusNameId(null)}
             onToggleCheck={setItemChecked}
             onEdit={(id) => onSetEdit(id)}
-            onRename={(id, name) => updateItem(id, { name })}
             onDelete={deleteItem}
             emptyHint="No courses yet"
           />
@@ -275,13 +269,11 @@ function CollapsibleSection({
   open,
   onToggle,
   items,
+  saved,
   editId,
   checked,
-  autoFocusNameId,
-  onConsumeAutoFocus,
   onToggleCheck,
   onEdit,
-  onRename,
   onDelete,
   emptyHint,
 }: {
@@ -290,13 +282,11 @@ function CollapsibleSection({
   open: boolean;
   onToggle: () => void;
   items: MapItem[];
+  saved: Record<string, boolean>;
   editId: string | null;
   checked: Record<string, boolean>;
-  autoFocusNameId: string | null;
-  onConsumeAutoFocus: () => void;
   onToggleCheck: (id: string, v: boolean) => void;
   onEdit: (id: string) => void;
-  onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
   emptyHint: string;
 }) {
@@ -317,133 +307,60 @@ function CollapsibleSection({
           </div>
         ) : (
           <div className="mt-1 flex flex-col gap-0.5">
-            {items.map((it) => (
-              <SidebarItemRow
-                key={it.id}
-                item={it}
-                checked={!!checked[it.id]}
-                isEditing={editId === it.id}
-                autoFocusName={autoFocusNameId === it.id}
-                onConsumeAutoFocus={onConsumeAutoFocus}
-                onToggleCheck={(v) => onToggleCheck(it.id, v)}
-                onEdit={() => onEdit(it.id)}
-                onRename={(name) => onRename(it.id, name)}
-                onDelete={() => onDelete(it.id)}
-              />
-            ))}
+            {items.map((it) => {
+              const isChecked = !!checked[it.id];
+              const isEditing = editId === it.id;
+              const isSaved = !!saved[it.id];
+              return (
+                <div
+                  key={it.id}
+                  className={`group flex items-center gap-2 rounded-md px-1.5 py-1 transition ${
+                    isEditing ? "bg-secondary" : "hover:bg-secondary/60"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={(e) => onToggleCheck(it.id, e.target.checked)}
+                    className="h-3.5 w-3.5 shrink-0 cursor-pointer"
+                    style={{ accentColor: it.color }}
+                    aria-label={`Show ${it.name} on map`}
+                  />
+                  <span
+                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ background: it.color }}
+                  />
+                  <span
+                    className="min-w-0 flex-1 truncate text-left text-xs text-ink"
+                    title={it.name}
+                  >
+                    {it.name}
+                  </span>
+                  {isSaved && (
+                    <button
+                      onClick={() => onEdit(it.id)}
+                      className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/60 transition hover:bg-secondary hover:text-ink"
+                      aria-label={`Edit ${it.name}`}
+                      title="Edit"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (confirm(`Delete "${it.name}"?`)) onDelete(it.id);
+                    }}
+                    className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/50 opacity-0 transition hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                    aria-label={`Delete ${it.name}`}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )
       )}
-    </div>
-  );
-}
-
-function SidebarItemRow({
-  item,
-  checked,
-  isEditing,
-  autoFocusName,
-  onConsumeAutoFocus,
-  onToggleCheck,
-  onEdit,
-  onRename,
-  onDelete,
-}: {
-  item: MapItem;
-  checked: boolean;
-  isEditing: boolean;
-  autoFocusName: boolean;
-  onConsumeAutoFocus: () => void;
-  onToggleCheck: (v: boolean) => void;
-  onEdit: () => void;
-  onRename: (name: string) => void;
-  onDelete: () => void;
-}) {
-  const [editingName, setEditingName] = useState(autoFocusName);
-  const [draft, setDraft] = useState(item.name);
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  useEffect(() => { setDraft(item.name); }, [item.name]);
-  useEffect(() => {
-    if (autoFocusName) {
-      setEditingName(true);
-      requestAnimationFrame(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-        onConsumeAutoFocus();
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoFocusName]);
-  useEffect(() => {
-    if (editingName) {
-      requestAnimationFrame(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      });
-    }
-  }, [editingName]);
-  const commit = () => {
-    const t = draft.trim();
-    if (t && t !== item.name) onRename(t);
-    else setDraft(item.name);
-    setEditingName(false);
-  };
-  return (
-    <div
-      className={`group flex items-center gap-2 rounded-md px-1.5 py-1 transition ${
-        isEditing ? "bg-secondary" : "hover:bg-secondary/60"
-      }`}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onToggleCheck(e.target.checked)}
-        className="h-3.5 w-3.5 shrink-0 cursor-pointer"
-        style={{ accentColor: item.color }}
-        aria-label={`Show ${item.name} on map`}
-      />
-      <span
-        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-        style={{ background: item.color }}
-      />
-      <button
-        onClick={onEdit}
-        className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/60 transition hover:bg-secondary hover:text-ink"
-        aria-label={`Edit ${item.name}`}
-        title="Edit on map"
-      >
-        <Pencil className="h-3 w-3" />
-      </button>
-      {editingName ? (
-        <input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            if (e.key === "Escape") { setDraft(item.name); setEditingName(false); }
-          }}
-          className="min-w-0 flex-1 rounded border border-hairline bg-background px-1 py-0.5 text-xs text-ink outline-none focus:border-ink"
-        />
-      ) : (
-        <button
-          onClick={onEdit}
-          className="min-w-0 flex-1 truncate text-left text-xs text-ink hover:underline"
-          title={`Edit ${item.name}`}
-        >
-          {item.name}
-        </button>
-      )}
-      <button
-        onClick={() => {
-          if (confirm(`Delete "${item.name}"?`)) onDelete();
-        }}
-        className="grid h-6 w-6 shrink-0 place-items-center rounded text-muted-foreground/50 opacity-0 transition hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-        aria-label={`Delete ${item.name}`}
-      >
-        <Trash2 className="h-3 w-3" />
-      </button>
     </div>
   );
 }
