@@ -145,8 +145,12 @@ export function ImportButton({
         const endMs = ev.end_time && Number.isFinite(Date.parse(ev.end_time))
           ? Date.parse(ev.end_time)
           : startMs + 60 * 60 * 1000;
-        const startISO = new Date(startMs).toISOString().slice(0, 19);
-        const endISO = new Date(endMs).toISOString().slice(0, 19);
+        const toLocalISO = (d: Date) => {
+          const p = (n: number) => String(n).padStart(2, "0");
+          return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+        };
+        const startISO = toLocalISO(new Date(startMs));
+        const endISO = toLocalISO(new Date(endMs));
         const cat = inferCategory(ev.category);
         onCommit({
           title: ev.title,
