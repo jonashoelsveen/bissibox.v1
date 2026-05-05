@@ -93,7 +93,9 @@ export function FolderMapView({
     };
     onItemsChange((prev) => [...prev, it]);
     setAutoFocusNameId(id);
-    onSetEdit(id);
+    // Auto-tick so the new (empty) item is in view-mode visibility set.
+    setItemChecked(id, true);
+    // Do NOT switch to edit mode — user names it in the sidebar first.
   };
 
   const deleteItem = (id: string) => {
