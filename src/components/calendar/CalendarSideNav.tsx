@@ -122,6 +122,7 @@ export function CalendarSideNav({
         <MiniCalendar
           selectedRange={currentRange ?? { start: currentDate, end: currentDate }}
           onSelectRange={(r) => onCurrentDateChange(r.start, r)}
+          viewMode={viewMode}
         />
       </div>
 
