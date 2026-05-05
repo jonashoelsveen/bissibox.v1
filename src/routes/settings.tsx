@@ -83,6 +83,7 @@ type Tab =
   | "profiles"
   | "appearance"
   | "library"
+  | "diary"
   | "map"
   | "entity-profile"
   | "desk"
