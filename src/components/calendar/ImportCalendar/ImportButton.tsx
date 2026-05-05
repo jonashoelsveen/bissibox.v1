@@ -60,7 +60,7 @@ function suggestInternal(catId: string, options: InternalCategoryOption[]): stri
     const re = matchers[opt.value];
     if (re && re.test(id)) return opt.value;
   }
-  return "";
+  return "else";
 }
 
 function colorForInternal(value: string, options: InternalCategoryOption[]): string | null {
