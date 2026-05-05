@@ -502,57 +502,6 @@ function AddItemFooter({ onCreate }: { onCreate: (kind: MapItemKind) => void }) 
   );
 }
 
-/* ---------------- Editable name chip (top-left of edit pane) ---------------- */
-
-function EditableNameChip({
-  value,
-  autoFocus,
-  onConsumeAutoFocus,
-  onChange,
-  icon,
-}: {
-  value: string;
-  autoFocus: boolean;
-  onConsumeAutoFocus: () => void;
-  onChange: (v: string) => void;
-  icon: React.ReactNode;
-}) {
-  const [draft, setDraft] = useState(value);
-  const ref = useRef<HTMLInputElement | null>(null);
-  useEffect(() => { setDraft(value); }, [value]);
-  useEffect(() => {
-    if (autoFocus) {
-      requestAnimationFrame(() => {
-        ref.current?.focus();
-        ref.current?.select();
-        onConsumeAutoFocus();
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoFocus]);
-  const commit = () => {
-    const t = draft.trim();
-    if (t && t !== value) onChange(t);
-    else setDraft(value);
-  };
-  return (
-    <div className="pointer-events-auto absolute left-4 top-4 z-[450] flex items-center gap-1.5 rounded-md border border-hairline bg-card/95 px-2 py-1.5 shadow-sm backdrop-blur">
-      <span className="text-muted-foreground">{icon}</span>
-      <input
-        ref={ref}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") { commit(); (e.target as HTMLInputElement).blur(); }
-          if (e.key === "Escape") { setDraft(value); (e.target as HTMLInputElement).blur(); }
-        }}
-        className="w-[220px] bg-transparent text-xs text-ink outline-none"
-      />
-    </div>
-  );
-}
-
 /* ---------------- Edit panes ---------------- */
 
 function LocationEditPane({
