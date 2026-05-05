@@ -520,10 +520,12 @@ function AddItemFooter({ onCreate }: { onCreate: (kind: MapItemKind) => void }) 
 
 function LocationEditPane({
   item,
+  initialView,
   onChange,
   onSaved,
 }: {
   item: MapItem;
+  initialView: MapFolderView | null;
   onChange: (pin: { lat: number; lng: number } | null) => void;
   onSaved: () => void;
 }) {
@@ -538,6 +540,7 @@ function LocationEditPane({
         showName={false}
         kindLabel="location"
         hideSidebar
+        initialView={initialView}
         onChange={({ pin }) => onChange(pin)}
         onSave={() => {
           toast.success("Location saved");
@@ -550,11 +553,13 @@ function LocationEditPane({
 
 function CourseEditPane({
   item,
+  initialView,
   onChange,
   onSaved,
   onDelete,
 }: {
   item: MapItem;
+  initialView: MapFolderView | null;
   onChange: (path: LatLng[], splits: SplitPoint[]) => void;
   onSaved: () => void;
   onDelete: () => void;
@@ -567,6 +572,7 @@ function CourseEditPane({
           path={item.path ?? []}
           splits={(item.splits as SplitPoint[]) ?? []}
           title={item.name}
+          initialView={initialView}
           onChange={({ path, splits }) => onChange(path, splits)}
           onSave={() => {
             toast.success("Course saved");
