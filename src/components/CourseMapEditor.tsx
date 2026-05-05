@@ -30,6 +30,8 @@ interface Props {
   panToTarget?: LatLng | null;
   /** Stable id so the per-instance map style survives navigation. */
   scopeId?: string;
+  /** Optional initial map center+zoom when the course has no points yet. */
+  initialView?: { center: [number, number]; zoom: number } | null;
 }
 
 type Tool = "pan" | "draw" | "split" | "fuel" | "marker" | "start" | "finish";
