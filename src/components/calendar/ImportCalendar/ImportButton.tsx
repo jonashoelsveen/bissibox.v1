@@ -137,15 +137,49 @@ export function ImportButton({
         setStep("source");
         return;
       }
+      // Merge similar categories — e.g. "Business meeting" + "meeting" → "Meeting".
+      // Group key is a normalized token derived from category name (lowercase,
+      // strip punctuation, drop generic qualifiers, take the most meaningful word).
+      const QUALIFIERS = new Set([
+        "business", "internal", "external", "weekly", "daily", "morning", "evening",
+        "the", "a", "an", "of", "and", "with", "for", "to", "my", "our",
+      ]);
+      const normalizeKey = (raw: string): { key: string; label: string } => {
+        const cleaned = raw.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").trim();
+        const tokens = cleaned.split(/\s+/).filter((t) => t && !QUALIFIERS.has(t));
+        const root = tokens[tokens.length - 1] ?? cleaned ?? raw.toLowerCase();
+        const label = root ? root.charAt(0).toUpperCase() + root.slice(1) : raw;
+        return { key: root || raw.toLowerCase(), label };
+      };
+      const groupByKey = new Map<string, { id: string; name: string; count: number }>();
+      const remap = new Map<string, string>(); // original cat id → group id
+      for (const c of raw.detected_categories ?? []) {
+        const { key, label } = normalizeKey(c.name || c.id);
+        remap.set(c.id, key);
+        const existing = groupByKey.get(key);
+        if (existing) existing.count = existing.count; // recompute below
+        else groupByKey.set(key, { id: key, name: label, count: 0 });
+      }
+      const remappedEvents = highConfEvents.map((e) => ({
+        ...e,
+        category: remap.get(e.category) ?? e.category,
+      }));
       const counts = new Map<string, number>();
-      for (const ev of highConfEvents) counts.set(ev.category, (counts.get(ev.category) ?? 0) + 1);
-      const detected_categories = (raw.detected_categories ?? [])
-        .filter((c) => (counts.get(c.id) ?? 0) > 0)
-        .map((c) => ({ ...c, count: counts.get(c.id) ?? 0 }));
+      for (const ev of remappedEvents) counts.set(ev.category, (counts.get(ev.category) ?? 0) + 1);
+      // Ensure any uncategorized event still gets a group entry.
+      for (const ev of remappedEvents) {
+        if (!groupByKey.has(ev.category)) {
+          const label = ev.category.charAt(0).toUpperCase() + ev.category.slice(1);
+          groupByKey.set(ev.category, { id: ev.category, name: label, count: 0 });
+        }
+      }
+      const detected_categories = Array.from(groupByKey.values())
+        .map((c) => ({ ...c, count: counts.get(c.id) ?? 0 }))
+        .filter((c) => c.count > 0);
       const parsed: ParsedImport = {
-        total_events_found: highConfEvents.length,
+        total_events_found: remappedEvents.length,
         detected_categories,
-        events: highConfEvents,
+        events: remappedEvents,
         past_status: raw.past_status,
         past_events_count: raw.past_events_count,
         future_events_count: raw.future_events_count,
