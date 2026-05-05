@@ -187,14 +187,31 @@ function YearCalendarViewInner({
 
   return (
     <div className="mt-3 flex flex-col">
-      {/* Header — inline-editable title + gear */}
+      {/* Header — title + nav arrows on the left, action cluster on the right */}
       <div className="mb-3 flex items-center justify-between gap-3 px-0.5">
-        <ViewTitle viewMode={viewMode} currentDate={currentDate} />
+        <div className="flex items-center gap-2 min-w-0">
+          <ViewTitle viewMode={viewMode} currentDate={currentDate} />
+          <MonthNavControl
+            unit={viewMode}
+            currentDate={currentDate}
+            selectedRange={currentRange}
+            onChange={(d, r) => updateCurrent(d, r)}
+          />
+        </div>
 
         <div className="flex items-center gap-1">
-          {/* Mode dropdown + prev/next/mini-cal arrows. Sit to the LEFT of
-              the year + undo/redo cluster so all navigation lives above the
-              calendar window instead of floating on top of it. */}
+          <button
+            type="button"
+            aria-label="Gå til i dag"
+            title="I dag"
+            onClick={() => {
+              const t = new Date();
+              updateCurrent(t, { start: t, end: t });
+            }}
+            className="group grid h-8 w-8 place-items-center rounded-md transition-colors hover:bg-secondary"
+          >
+            <span className="block h-2.5 w-2.5 animate-pulse rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
+          </button>
           <HeaderDropdown<ViewMode>
             ariaLabel="Visningsmodus"
             value={viewMode}
@@ -206,13 +223,6 @@ function YearCalendarViewInner({
               { value: "month", label: "Måned" },
             ]}
           />
-          <MonthNavControl
-            unit={viewMode}
-            currentDate={currentDate}
-            selectedRange={currentRange}
-            onChange={(d, r) => updateCurrent(d, r)}
-          />
-          <span className="ml-2 mr-2 text-xs text-muted-foreground">{meta.year}</span>
           <button
             type="button"
             aria-label="Undo"

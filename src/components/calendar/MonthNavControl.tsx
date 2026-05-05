@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { MiniCalendar, type DateRange } from "./MiniCalendar";
 
 export type CalUnit = "day" | "week" | "month";
@@ -64,17 +64,6 @@ export function MonthNavControl({
         className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
       >
         <ChevronLeft className="h-4 w-4" strokeWidth={2.25} />
-      </button>
-      <button
-        type="button"
-        aria-label="Velg dato"
-        onClick={() => setOpen((v) => !v)}
-        className={[
-          "grid h-7 w-7 place-items-center rounded-md transition-colors hover:bg-secondary",
-          open ? "text-ink" : "text-muted-foreground/60 hover:text-ink",
-        ].join(" ")}
-      >
-        <CalendarDays className="h-4 w-4" strokeWidth={2} />
       </button>
       <button
         type="button"
