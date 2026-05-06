@@ -200,7 +200,7 @@ export function MeetingsListPage({
     if (selected.size === 0) return;
     if (!confirm(`Delete ${selected.size} meeting(s)? This cannot be undone.`)) return;
     const ids = Array.from(selected);
-    const { error } = await supabase.from(tables.meetings).delete().in("id", ids);
+    const { error } = await sb.from(tables.meetings).delete().in("id", ids);
     if (error) { toast.error(error.message); return; }
     toast.success("Deleted");
     exitSelect();
@@ -252,7 +252,7 @@ export function MeetingsListPage({
         (r) => (r.email ?? "").toLowerCase() === creatorEmail,
       );
       if (selfEntry) {
-        await supabase.from(tables.attendance).insert({
+        await sb.from(tables.attendance).insert({
           meeting_id: data.id,
           team_id: teamId,
           roster_id: selfEntry.id,
