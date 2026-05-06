@@ -158,7 +158,7 @@ export function DiaryPopoverEditor({
   }, [onCommit, onClose, showDetails]);
 
   const POPOVER_W = 280;
-  const POPOVER_H = diaryType === "training" ? (hasSubs ? 280 : 250) : 200;
+  const POPOVER_H = diaryType === "training" ? (hasSubs ? 280 : 250) : 320;
   const margin = 8;
   let top = anchor.bottom + margin;
   let left = anchor.left;
