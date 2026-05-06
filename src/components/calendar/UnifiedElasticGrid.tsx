@@ -1747,6 +1747,7 @@ function WeekEventsOverlay({
   headerH,
   rowHeight,
   startHour,
+  appKind = "calendar",
   onEventClick,
   onEventDrop,
 }: {
@@ -1756,6 +1757,7 @@ function WeekEventsOverlay({
   headerH: number;
   rowHeight: number;
   startHour: number;
+  appKind?: "calendar" | "diary";
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number) => void;
 }) {
