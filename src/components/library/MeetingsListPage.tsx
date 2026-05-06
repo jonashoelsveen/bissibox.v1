@@ -112,7 +112,7 @@ export function MeetingsListPage({
     }
     setTeamId(team.id);
     const { data: rows } = await supabase
-      .from("team_board_meetings")
+      .from(tables.meetings)
       .select("id,title,folder,meeting_date,notes,created_at")
       .eq("team_id", team.id)
       .order("meeting_date", { ascending: false, nullsFirst: false })
@@ -127,7 +127,7 @@ export function MeetingsListPage({
   const loadFolders = useCallback(async () => {
     if (!teamId) { setExtraFolders([]); return; }
     const { data } = await supabase
-      .from("meeting_folders")
+      .from(tables.folders)
       .select("name")
       .eq("team_id", teamId)
       .order("pinned", { ascending: false })
@@ -151,7 +151,7 @@ export function MeetingsListPage({
     if (folders.includes(trimmed)) { toast.error("A folder with that name already exists"); return false; }
     if (!teamId) { toast.error("No active team"); return false; }
     const { error } = await supabase
-      .from("meeting_folders")
+      .from(tables.folders)
       .insert({ team_id: teamId, name: trimmed });
     if (error) { toast.error(error.message); return false; }
     await loadFolders();
@@ -200,7 +200,7 @@ export function MeetingsListPage({
     if (selected.size === 0) return;
     if (!confirm(`Delete ${selected.size} meeting(s)? This cannot be undone.`)) return;
     const ids = Array.from(selected);
-    const { error } = await supabase.from("team_board_meetings").delete().in("id", ids);
+    const { error } = await supabase.from(tables.meetings).delete().in("id", ids);
     if (error) { toast.error(error.message); return; }
     toast.success("Deleted");
     exitSelect();
@@ -215,7 +215,7 @@ export function MeetingsListPage({
     const title = newMeetingTitle.trim() || `Board meeting · ${new Date().toLocaleDateString()}`;
     const folder = newMeetingFolder.trim() || (view.type === "folder" && view.name) || null;
     const { data, error } = await supabase
-      .from("team_board_meetings")
+      .from(tables.meetings)
       .insert({
         team_id: teamId,
         title,
@@ -244,7 +244,7 @@ export function MeetingsListPage({
     }));
     if (snapshotRows.length) {
       const { data: rosterData } = await supabase
-        .from("team_board_meeting_roster")
+        .from(tables.roster)
         .insert(snapshotRows)
         .select("id,board_member_id,name,role,email,sort_order");
       const creatorEmail = (user.email ?? "").toLowerCase();
@@ -252,7 +252,7 @@ export function MeetingsListPage({
         (r) => (r.email ?? "").toLowerCase() === creatorEmail,
       );
       if (selfEntry) {
-        await supabase.from("team_board_meeting_attendance").insert({
+        await supabase.from(tables.attendance).insert({
           meeting_id: data.id,
           team_id: teamId,
           roster_id: selfEntry.id,
