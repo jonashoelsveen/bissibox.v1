@@ -66,6 +66,8 @@ export interface DiaryPopoverEditorProps {
   isEdit: boolean;
   anchor: DOMRect;
   initialTime?: { startMin: number; endMin: number } | null;
+  /** Date represented by the popover — used to label note-mode session details. */
+  date?: Date;
   onClose: () => void;
   onCommit: (value: DiaryPopoverValue, opts?: { delete?: boolean }) => void;
 }
@@ -75,6 +77,7 @@ export function DiaryPopoverEditor({
   isEdit,
   anchor,
   initialTime = null,
+  date,
   onClose,
   onCommit,
 }: DiaryPopoverEditorProps) {
@@ -155,7 +158,7 @@ export function DiaryPopoverEditor({
   }, [onCommit, onClose, showDetails]);
 
   const POPOVER_W = 280;
-  const POPOVER_H = diaryType === "training" ? (hasSubs ? 280 : 250) : 200;
+  const POPOVER_H = diaryType === "training" ? (hasSubs ? 280 : 250) : 320;
   const margin = 8;
   let top = anchor.bottom + margin;
   let left = anchor.left;
@@ -194,14 +197,16 @@ export function DiaryPopoverEditor({
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              {time && (
+              {diaryType !== "note" && time && (
                 <span className="mono text-[10.5px] tabular-nums text-ink/70">
                   {fmtMin(time.startMin)}–{fmtMin(time.endMin)}
                 </span>
               )}
-              <span className="rounded-md p-1 text-muted-foreground/60">
-                <Clock className="h-3.5 w-3.5" strokeWidth={2} />
-              </span>
+              {diaryType !== "note" && (
+                <span className="rounded-md p-1 text-muted-foreground/60">
+                  <Clock className="h-3.5 w-3.5" strokeWidth={2} />
+                </span>
+              )}
             </div>
           </div>
 
@@ -225,6 +230,24 @@ export function DiaryPopoverEditor({
               <option value="note">Note</option>
             </select>
           </DropdownRow>
+
+          {/* Note text field — appears when Note type is selected */}
+          {diaryType === "note" && (
+            <div className="relative border-t border-hairline">
+              <span
+                aria-hidden
+                className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
+                style={{ background: accent }}
+              />
+              <textarea
+                value={sessionNote}
+                onChange={(e) => setSessionNote(e.target.value)}
+                placeholder="Skriv notat…"
+                className="block w-full resize-none bg-transparent pl-4 pr-3 py-2 text-[12px] text-ink outline-none placeholder:text-muted-foreground/60"
+                rows={4}
+              />
+            </div>
+          )}
 
           {/* Group dropdown */}
           {diaryType === "training" && (
@@ -290,6 +313,7 @@ export function DiaryPopoverEditor({
       {showDetails && (
         <SessionDetailsModal
           isEdit={isEdit}
+          date={date}
           strava={
             initialEvent?.summaryPolyline
               ? {

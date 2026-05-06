@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, MapPin, NotebookPen, Info, Paperclip } from "lucide-react";
+import { X, Plus, MapPin, NotebookPen, Info, Paperclip, Trash2 } from "lucide-react";
 import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import { useLibrarySetting } from "@/lib/library-settings";
 import { diaryAutosyncKey } from "@/lib/library-settings";
@@ -47,6 +47,7 @@ export function SessionDetailsModal({
   onClose,
   onSave,
   strava,
+  date,
 }: {
   isEdit: boolean;
   value: SessionDetailsValue;
@@ -54,9 +55,11 @@ export function SessionDetailsModal({
   onClose: () => void;
   onSave: (v: SessionDetailsValue) => void;
   strava?: { polyline?: string | null; elevationGainM?: number | null; distanceKm?: number | null } | null;
+  date?: Date;
 }) {
   const [tab, setTab] = useState<Tab>("about");
   const [autosync] = useLibrarySetting<boolean>(diaryAutosyncKey("global"), false);
+  const isNote = value.diaryType === "note";
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -74,6 +77,10 @@ export function SessionDetailsModal({
 
   const startStr = value.time ? fmtMin(value.time.startMin) : "";
   const endStr = value.time ? fmtMin(value.time.endMin) : "";
+
+  const headerTitle = isNote
+    ? `Note ${date ? `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}` : ""}`.trim()
+    : "Session details";
 
   return (
     <AnimatePresence>
@@ -94,7 +101,7 @@ export function SessionDetailsModal({
         >
           {/* Header */}
           <div className="flex items-center justify-between gap-3 border-b border-hairline px-4 py-3">
-            <h2 className="text-sm font-semibold text-ink">Session details</h2>
+            <h2 className="text-sm font-semibold text-ink">{headerTitle}</h2>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -113,6 +120,16 @@ export function SessionDetailsModal({
               </button>
             </div>
           </div>
+
+          {isNote ? (
+            <NoteBody
+              title={value.title}
+              note={value.sessionNote ?? ""}
+              onTitle={(t) => set("title", t)}
+              onNote={(n) => set("sessionNote", n)}
+            />
+          ) : (
+            <>
 
           {/* Top fields */}
           <div className="grid grid-cols-1 gap-3 border-b border-hairline px-4 py-4 md:grid-cols-4">
@@ -253,6 +270,8 @@ export function SessionDetailsModal({
               </div>
             )}
           </div>
+            </>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
@@ -361,6 +380,58 @@ function AboutTab({
         <Plus className="h-3.5 w-3.5" />
         Add activity
       </button>
+    </div>
+  );
+}
+
+function NoteBody({
+  title,
+  note,
+  onTitle,
+  onNote,
+}: {
+  title: string;
+  note: string;
+  onTitle: (v: string) => void;
+  onNote: (v: string) => void;
+}) {
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-4">
+      <section className="rounded-lg border border-hairline bg-card shadow-sm">
+        {/* Document toolbar */}
+        <div className="flex items-center gap-2 border-b border-hairline px-4 py-2">
+          <button
+            type="button"
+            title="Attach documents"
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-secondary hover:text-ink"
+          >
+            <Paperclip className="h-4 w-4" />
+            <span>Attach</span>
+          </button>
+          <input
+            value={title}
+            onChange={(e) => onTitle(e.target.value)}
+            placeholder="Note title"
+            className="ml-3 flex-1 bg-transparent text-[12px] uppercase tracking-[0.18em] text-muted-foreground outline-none placeholder:text-muted-foreground/50"
+          />
+          <button
+            type="button"
+            title="Delete"
+            className="rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mx-auto my-6 flex min-h-[420px] w-full max-w-2xl flex-col rounded-md border border-hairline bg-background p-8 shadow-inner">
+          <textarea
+            value={note}
+            onChange={(e) => onNote(e.target.value)}
+            placeholder="Write your note here…"
+            className="flex-1 resize-none border-0 bg-transparent text-base leading-relaxed text-ink outline-none placeholder:text-muted-foreground/60"
+          />
+        </div>
+      </section>
     </div>
   );
 }
