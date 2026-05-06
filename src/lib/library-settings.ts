@@ -68,6 +68,7 @@ export function useLibrarySetting<T>(key: string, fallback: T): [T, (v: T) => vo
 
 export const notesAutosaveKey = (scope: string) => `library:autosave:notes:${scope}`;
 export const meetingsAutosaveKey = (scope: string) => `library:autosave:meetings:${scope}`;
+export const diaryAutosyncKey = (scope: string) => `diary:autosync:${scope}`;
 
 /* ───────── profile visibility ───────── */
 
