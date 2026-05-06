@@ -402,8 +402,55 @@ function TeamMembersPage() {
   function updateCoach(idx: number, patch: Partial<BoardMemberDraft>) {
     setCoaches((prev) => prev.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
   }
-  function removeCoach(idx: number) {
+  async function removeCoach(idx: number) {
+    const m = coaches[idx];
+    if (m.id) {
+      const { error } = await supabase.from("team_group_leaders").delete().eq("id", m.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+    }
     setCoaches((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function reloadCoaches(tid: string) {
+    const { data } = await supabase
+      .from("team_group_leaders")
+      .select("id,name,group_name,email,status,invited_at,sort_order")
+      .eq("team_id", tid)
+      .order("sort_order", { ascending: true });
+    setCoaches(
+      ((data ?? []) as Array<{ id: string; name: string | null; group_name: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((g, i) => ({
+        id: g.id,
+        name: g.name ?? "",
+        role: g.group_name ?? "",
+        email: g.email ?? "",
+        status: (g.status as "pending" | "active") ?? "pending",
+        invited_at: g.invited_at,
+        sort_order: g.sort_order ?? i,
+      })),
+    );
+  }
+
+  async function inviteCoach(idx: number) {
+    const m = coaches[idx];
+    if (!m.email || !m.email.includes("@")) {
+      toast.error("Enter a valid email first");
+      return;
+    }
+    if (!m.id) await save();
+    const updated = coaches[idx];
+    if (!updated.id) return;
+    const { error } = await supabase.functions.invoke("group-leader-invite", {
+      body: { leader_id: updated.id },
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Invitation sent to ${updated.email}`);
+    if (teamId) await reloadCoaches(teamId);
   }
 
   async function removeBoardMember(idx: number) {
