@@ -125,6 +125,7 @@ export function TeamBoardPage({
   const [editMeetingOpen, setEditMeetingOpen] = useState(false);
   const [editMeetingTitle, setEditMeetingTitle] = useState("");
   const [editMeetingFolder, setEditMeetingFolder] = useState<string>("");
+  const [editMeetingGroupId, setEditMeetingGroupId] = useState<string>("");
   const [confirmDeleteMeetingId, setConfirmDeleteMeetingId] = useState<string | null>(null);
   const [deletingMeeting, setDeletingMeeting] = useState(false);
   const [meetingSearch, setMeetingSearch] = useState("");
@@ -217,7 +218,7 @@ export function TeamBoardPage({
         setLoaded(true);
         return;
       }
-      await Promise.all([loadMembers(tid), loadMeetings(tid), loadGroupOptions(tid)]);
+      await Promise.all([loadMembers(tid), loadMeetings(tid), loadGroupOptions(tid), loadFoldersFromTable(tid)]);
       setLoaded(true);
     })();
   }, [user, activeEntityId]);
@@ -279,6 +280,17 @@ export function TeamBoardPage({
       .order("meeting_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
     setMeetings(data ?? []);
+  }
+
+  async function loadFoldersFromTable(tid: string) {
+    const { data } = await sb
+      .from(tables.folders)
+      .select("name")
+      .eq("team_id", tid)
+      .order("pinned", { ascending: false })
+      .order("sort_order", { ascending: true });
+    const names = ((data ?? []) as { name: string }[]).map((r) => r.name).filter(Boolean);
+    setExtraFolders((prev) => Array.from(new Set([...prev, ...names])));
   }
 
   async function loadGroupOptions(tid: string) {
@@ -418,14 +430,31 @@ export function TeamBoardPage({
     return Array.from(set).sort();
   }, [meetings, extraFolders]);
 
-  function createFolder() {
+  async function persistFolder(name: string): Promise<boolean> {
+    if (!teamId) return false;
+    const { error } = await sb.from(tables.folders).insert({ team_id: teamId, name });
+    if (error) {
+      // Ignore unique-conflict; surface other errors
+      if (!String(error.message ?? "").toLowerCase().includes("duplicate")) {
+        toast.error(error.message);
+        return false;
+      }
+    }
+    window.dispatchEvent(new Event("library:refresh"));
+    window.dispatchEvent(new Event("group-meetings:refresh"));
+    return true;
+  }
+
+  async function createFolder() {
     const name = newFolderName.trim();
     if (!name) return;
     if (folders.includes(name)) {
       toast.error("A folder with that name already exists");
       return;
     }
-    setExtraFolders((prev) => [...prev, name]);
+    const ok = await persistFolder(name);
+    if (!ok) return;
+    setExtraFolders((prev) => (prev.includes(name) ? prev : [...prev, name]));
     setFolderFilter(name);
     setNewFolderName("");
     setNewFolderOpen(false);
@@ -617,6 +646,7 @@ export function TeamBoardPage({
     if (!ongoing) return;
     setEditMeetingTitle(ongoing.meeting.title ?? "");
     setEditMeetingFolder(ongoing.meeting.folder ?? "");
+    setEditMeetingGroupId(ongoing.meeting.group_id ?? "");
     setEditMeetingOpen(true);
   }
 
@@ -624,18 +654,47 @@ export function TeamBoardPage({
     if (!ongoing) return;
     const title = editMeetingTitle.trim() || ongoing.meeting.title;
     const folder = editMeetingFolder.trim() || null;
+    const isGroupKind = kind === "group";
+    const groupId = isGroupKind ? (editMeetingGroupId || null) : undefined;
+    if (isGroupKind && !groupId) {
+      toast.error("Pick a group for this meeting");
+      return;
+    }
+    const updatePayload: Record<string, unknown> = {
+      title,
+      folder,
+      updated_at: new Date().toISOString(),
+    };
+    if (isGroupKind) updatePayload.group_id = groupId;
     const { error } = await sb
       .from(tables.meetings)
-      .update({ title, folder, updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq("id", ongoing.meeting.id);
     if (error) {
       toast.error(error.message);
       return;
     }
-    patchMeetingInTab(ongoing.meeting.id, { title, folder });
+    const groupChanged = isGroupKind && groupId !== (ongoing.meeting.group_id ?? null);
+    patchMeetingInTab(ongoing.meeting.id, {
+      title,
+      folder,
+      ...(isGroupKind ? { group_id: groupId } : {}),
+    });
     setMeetings((prev) =>
-      prev.map((m) => (m.id === ongoing.meeting.id ? { ...m, title, folder } : m)),
+      prev.map((m) =>
+        m.id === ongoing.meeting.id
+          ? { ...m, title, folder, ...(isGroupKind ? { group_id: groupId } : {}) }
+          : m,
+      ),
     );
+    // If the group changed, wipe roster + attendance so it gets rebuilt from
+    // the new group's members on next load.
+    if (groupChanged) {
+      await sb.from(tables.attendance).delete().eq("meeting_id", ongoing.meeting.id);
+      await sb.from(tables.roster).delete().eq("meeting_id", ongoing.meeting.id);
+      patchTab(ongoing.meeting.id, { roster: [], attendance: [] });
+      void loadRosterAndAttendanceFor(ongoing.meeting.id);
+    }
     setEditMeetingOpen(false);
     toast.success("Updated");
   }
@@ -1528,7 +1587,9 @@ export function TeamBoardPage({
           folders={folders}
           onName={setNewMeetingTitle}
           onFolder={setNewMeetingFolder}
-          onCreateFolder={(name) => {
+          onCreateFolder={async (name) => {
+            const ok = await persistFolder(name);
+            if (!ok) return;
             setExtraFolders((prev) => (prev.includes(name) ? prev : [...prev, name]));
             setNewMeetingFolder(name);
           }}
@@ -1543,19 +1604,24 @@ export function TeamBoardPage({
 
       {editMeetingOpen && (
         <MeetingDialog
-          title="About this meeting"
+          title={kind === "group" ? "About this group meeting" : "About this meeting"}
           name={editMeetingTitle}
           folder={editMeetingFolder}
           folders={folders}
           onName={setEditMeetingTitle}
           onFolder={setEditMeetingFolder}
-          onCreateFolder={(name) => {
+          onCreateFolder={async (name) => {
+            const ok = await persistFolder(name);
+            if (!ok) return;
             setExtraFolders((prev) => (prev.includes(name) ? prev : [...prev, name]));
             setEditMeetingFolder(name);
           }}
           onClose={() => setEditMeetingOpen(false)}
           onConfirm={saveEditMeeting}
           confirmLabel="Save"
+          groupOptions={kind === "group" ? groupOptions : undefined}
+          groupId={editMeetingGroupId}
+          onGroupId={setEditMeetingGroupId}
         />
       )}
 
