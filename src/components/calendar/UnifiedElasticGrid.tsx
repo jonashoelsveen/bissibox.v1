@@ -1937,7 +1937,7 @@ function WeekEventsOverlay({
         const minStart = startHour * 60;
         const maxStart = startHour * 60 + 19 * 60 - drag.durationMin;
         newStart = Math.max(minStart, Math.min(maxStart, newStart));
-        onEventDrop(drag.id, weekDates[newCol], newStart, drag.durationMin);
+        onEventDrop(drag.id, weekDates[newCol], newStart, drag.durationMin, drag.anchor ?? undefined);
       }
       setDrag(null);
     };
