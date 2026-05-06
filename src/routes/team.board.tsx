@@ -1585,7 +1585,7 @@ export function TeamBoardPage({
 
       {editMeetingOpen && (
         <MeetingDialog
-          title="About this meeting"
+          title={kind === "group" ? "About this group meeting" : "About this meeting"}
           name={editMeetingTitle}
           folder={editMeetingFolder}
           folders={folders}
@@ -1598,6 +1598,9 @@ export function TeamBoardPage({
           onClose={() => setEditMeetingOpen(false)}
           onConfirm={saveEditMeeting}
           confirmLabel="Save"
+          groupOptions={kind === "group" ? groupOptions : undefined}
+          groupId={editMeetingGroupId}
+          onGroupId={setEditMeetingGroupId}
         />
       )}
 
