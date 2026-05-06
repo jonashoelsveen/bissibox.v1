@@ -359,7 +359,12 @@ export function DiaryPopoverEditor({
             // sync local state from modal then commit
             const merged: DiaryPopoverValue = {
               title: v.title.trim(),
-              color: v.diaryType === "training" ? CAT_TRAINING_COLOR : NOTE_COLOR,
+              color:
+                v.diaryType === "training"
+                  ? v.diaryGroup === "endurance"
+                    ? colorForActivity(v.diarySub)
+                    : CAT_TRAINING_COLOR
+                  : NOTE_COLOR,
               time: v.time,
               diaryType: v.diaryType,
               diaryGroup: v.diaryType === "training" ? v.diaryGroup : undefined,
