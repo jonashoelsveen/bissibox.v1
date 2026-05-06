@@ -12,6 +12,12 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { meetingTables, type MeetingKind } from "@/lib/meeting-kind";
+
+// Supabase generated types only know the literal table names, so we cast to
+// `any` when the table name is computed dynamically from `kind`.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sb = supabase as any;
 
 interface MeetingRow {
   id: string;
