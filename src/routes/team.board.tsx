@@ -1610,7 +1610,9 @@ export function TeamBoardPage({
           folders={folders}
           onName={setEditMeetingTitle}
           onFolder={setEditMeetingFolder}
-          onCreateFolder={(name) => {
+          onCreateFolder={async (name) => {
+            const ok = await persistFolder(name);
+            if (!ok) return;
             setExtraFolders((prev) => (prev.includes(name) ? prev : [...prev, name]));
             setEditMeetingFolder(name);
           }}
