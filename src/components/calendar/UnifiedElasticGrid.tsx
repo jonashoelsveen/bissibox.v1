@@ -375,6 +375,9 @@ export function UnifiedElasticGrid({
     isEdit: boolean;
     /** When set, the commit/delete will mutate this CalendarEvent. */
     eventId?: string;
+    /** Pending unsaved drag — date/time to apply on Save. */
+    pendingDate?: Date;
+    pendingTime?: { startMin: number; endMin: number };
   } | null>(null);
 
   // Refs assigned later in render so openPopover can reach the latest
@@ -964,10 +967,21 @@ export function UnifiedElasticGrid({
                   eventId: ev.id,
                 });
               }}
-              onEventDrop={(id, newDate, newStartMin, durationMin) => {
-                const startISO = toISOLocal(setHM(newDate, Math.floor(newStartMin / 60), newStartMin % 60));
-                const endISO = toISOLocal(addMinutes(fromISOLocal(startISO), durationMin));
-                onMoveEvent(id, { startISO, endISO, allDay: false });
+              onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
+                // Calendar: open the editor with pending date/time; user must Save.
+                // Diary: drag is disabled at the source (see WeekEventsOverlay).
+                const ev = events.find((e) => e.id === id);
+                if (!ev) return;
+                setPopover({
+                  key: { year, month: 0, day: 1, session: 0 },
+                  rect: (anchor ?? document.body).getBoundingClientRect(),
+                  initialText: ev.title,
+                  initialColor: ev.color,
+                  isEdit: true,
+                  eventId: id,
+                  pendingDate: newDate,
+                  pendingTime: { startMin: newStartMin, endMin: newStartMin + durationMin },
+                });
               }}
             />
           )}
@@ -1091,7 +1105,7 @@ export function UnifiedElasticGrid({
           enableDuration={mode.kind === "year"}
           initialTime={(() => {
             if (mode.kind !== "year") return null;
-            // Editing an existing event → use its real time.
+            if (popover.pendingTime) return popover.pendingTime;
             if (popover.eventId) {
               const ev = events.find((e) => e.id === popover.eventId);
               if (ev && !ev.allDay) {
@@ -1104,13 +1118,11 @@ export function UnifiedElasticGrid({
               }
               return null;
             }
-            // New event from a marked range → derive time from the range.
             if (markRange) {
               const startMin = WEEK_START_HOUR * 60 + (markRange.lo - 2) * 30;
               const endMin = WEEK_START_HOUR * 60 + (markRange.hi - 2 + 1) * 30;
               return { startMin, endMin };
             }
-            // Fallback: anchor cell (single slot).
             const lo = popover.key.day * 2 + popover.key.session;
             const startMin = WEEK_START_HOUR * 60 + (lo - 2) * 30;
             return { startMin, endMin: startMin + 30 };
@@ -1125,7 +1137,9 @@ export function UnifiedElasticGrid({
               // current day so saving doesn't jump the event to Monday
               // (popover.key is a synthetic placeholder for event edits).
               let date: Date | undefined;
-              if (markRange) {
+              if (popover.pendingDate) {
+                date = popover.pendingDate;
+              } else if (markRange) {
                 date = weekDates[markRange.month];
               } else if (popover.eventId) {
                 const ev = events.find((e) => e.id === popover.eventId);
@@ -1134,23 +1148,17 @@ export function UnifiedElasticGrid({
                 date = weekDates[popover.key.month];
               }
               if (date) {
-                // Determine slot range: explicit `time` from clock picker >
-                // marked range > popover anchor cell.
-                // Note: rank = day*2 + session uses day starting at 1, while
-                // the visual cellIndex used for time mapping is
-                // (day-1)*2 + session — so subtract 2 from the rank when
-                // converting to minutes.
                 const lo = markRange ? markRange.lo : popover.key.day * 2 + popover.key.session;
                 const hi = markRange ? markRange.hi : lo;
                 const rangeStartMin = WEEK_START_HOUR * 60 + (lo - 2) * 30;
                 const rangeEndMin = WEEK_START_HOUR * 60 + (hi - 2 + 1) * 30;
-                const startMin = time ? time.startMin : rangeStartMin;
-                const endMin = time ? time.endMin : rangeEndMin;
+                const effTime = time ?? popover.pendingTime ?? null;
+                const startMin = effTime ? effTime.startMin : rangeStartMin;
+                const endMin = effTime ? effTime.endMin : rangeEndMin;
                 const startISO = toISOLocal(setHM(date, Math.floor(startMin / 60), startMin % 60));
                 const endISO = toISOLocal(setHM(date, Math.floor(endMin / 60), endMin % 60));
 
                 if (popover.eventId) {
-                  // Edit existing event.
                   if (!t) {
                     onDeleteEvent(popover.eventId);
                   } else {
@@ -1158,9 +1166,7 @@ export function UnifiedElasticGrid({
                       id: popover.eventId,
                       title: t,
                       color,
-                      // Update times if the user marked a new range OR
-                      // adjusted the time via the clock picker.
-                      ...(markRange || time ? { startISO, endISO } : {}),
+                      ...(markRange || time || popover.pendingDate || popover.pendingTime ? { startISO, endISO } : {}),
                       allDay: false,
                     });
                   }
@@ -1858,7 +1864,7 @@ function WeekEventsOverlay({
   startHour: number;
   appKind?: "calendar" | "diary";
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
-  onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number) => void;
+  onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
 }) {
   const [tileDesign] = useSessionTileDesign();
   type Box = { left: number; width: number };
@@ -1899,6 +1905,7 @@ function WeekEventsOverlay({
     durationMin: number;
     moved: boolean;
     delta: { dx: number; dy: number };
+    anchor: HTMLElement | null;
   } | null>(null);
 
   useEffect(() => {
@@ -1922,7 +1929,7 @@ function WeekEventsOverlay({
         const minStart = startHour * 60;
         const maxStart = startHour * 60 + 19 * 60 - drag.durationMin;
         newStart = Math.max(minStart, Math.min(maxStart, newStart));
-        onEventDrop(drag.id, weekDates[newCol], newStart, drag.durationMin);
+        onEventDrop(drag.id, weekDates[newCol], newStart, drag.durationMin, drag.anchor ?? undefined);
       }
       setDrag(null);
     };
@@ -1969,6 +1976,8 @@ function WeekEventsOverlay({
             data-ghost-event={isGhost ? "1" : undefined}
             onPointerDown={(e) => {
               if (isGhost) return;
+              // Diary: all events are logged (manual or Strava) — not movable.
+              if (appKind === "diary") return;
               e.stopPropagation();
               (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
               setDrag({
@@ -1979,6 +1988,7 @@ function WeekEventsOverlay({
                 durationMin: dur,
                 moved: false,
                 delta: { dx: 0, dy: 0 },
+                anchor: e.currentTarget as HTMLElement,
               });
             }}
             onClick={(e) => {
@@ -1987,7 +1997,7 @@ function WeekEventsOverlay({
               e.stopPropagation();
               onEventClick(ev, e.currentTarget as HTMLElement);
             }}
-            className={`absolute z-[8] ${isGhost ? "cursor-default" : "cursor-grab"} overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
+            className={`absolute z-[8] ${isGhost || appKind === "diary" ? "cursor-pointer" : "cursor-grab"} overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
             style={{
               left: box.left + 2 + dragDx,
               width: box.width - 4,
