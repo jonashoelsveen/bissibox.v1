@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import { Pencil, Clock, Trash2 } from "lucide-react";
 import type { CalendarEvent } from "./yearStore";
 import { CAT_TRAINING_COLOR } from "./MonthGridType1";
+import { colorForActivity } from "@/lib/activity-colors";
 import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
 
 export type DiaryType = "training" | "note";
@@ -24,6 +25,7 @@ export const DIARY_GROUPS: { id: string; label: string; children?: { id: string;
     label: "Endurance",
     children: [
       { id: "running", label: "Running" },
+      { id: "swimming", label: "Swimming" },
       { id: "cycling", label: "Cycling" },
       { id: "other", label: "Other" },
     ],
