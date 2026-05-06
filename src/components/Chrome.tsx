@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, Library, Plus, Tent, Settings, LogIn, Users, Armchair, CalendarDays, Map as MapIcon, BookOpen } from "lucide-react";
+import { Search, Library, Plus, Tent, Settings, LogIn, Users, Armchair, CalendarDays, Map as MapIcon, BookOpen, Briefcase } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { NewEventDialog } from "@/components/organizer/NewEventDialog";
