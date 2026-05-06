@@ -282,6 +282,17 @@ export function TeamBoardPage({
     setMeetings(data ?? []);
   }
 
+  async function loadFoldersFromTable(tid: string) {
+    const { data } = await sb
+      .from(tables.folders)
+      .select("name")
+      .eq("team_id", tid)
+      .order("pinned", { ascending: false })
+      .order("sort_order", { ascending: true });
+    const names = ((data ?? []) as { name: string }[]).map((r) => r.name).filter(Boolean);
+    setExtraFolders((prev) => Array.from(new Set([...prev, ...names])));
+  }
+
   async function loadGroupOptions(tid: string) {
     if (kind !== "group") return;
     const { data: allGroups } = await supabase
