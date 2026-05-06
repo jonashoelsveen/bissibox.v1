@@ -197,16 +197,19 @@ function SettingsPage() {
   }, [user, activeEntityId]);
 
   useEffect(() => {
-    if (isTeamMode && (tab === "races" || tab === "liked" || tab === "profiles" || tab === "desk" || tab === "library")) setTab("general");
+    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "diary" || tab === "library" || tab === "connectors")) {
+      setTab("entity-profile");
+    }
     if (
       !isTeamMode &&
       (tab === "entity-profile" ||
         tab === "entity-organization" ||
-        tab === "entity-meetings" ||
-        tab === "entity-library" ||
-        tab === "entity-events")
+        tab === "entity-calendar" ||
+        tab === "entity-map" ||
+        tab === "entity-events" ||
+        tab === "entity-library")
     )
-      setTab("general");
+      setTab("account");
   }, [isTeamMode, tab]);
 
   const [userRoles, setUserRoles] = useState<{ role: "organizer" | "photographer" | "timekeeper" }[]>([]);
