@@ -173,7 +173,12 @@ export function DiaryPopoverEditor({
     left = Math.max(margin, window.innerWidth - POPOVER_W - margin);
   }
 
-  const accent = diaryType === "training" ? CAT_TRAINING_COLOR : NOTE_COLOR;
+  const accent =
+    diaryType === "training"
+      ? diaryGroup === "endurance"
+        ? colorForActivity(diarySub)
+        : CAT_TRAINING_COLOR
+      : NOTE_COLOR;
 
   return (
     <>
