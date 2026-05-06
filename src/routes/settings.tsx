@@ -820,8 +820,44 @@ function Card({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Grid({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{children}</div>;
+function SystemPanel() {
+  const [unit, setUnit] = useDistanceUnit();
+  const options: { value: DistanceUnit; label: string; hint: string }[] = [
+    { value: "km", label: "Kilometers", hint: "km" },
+    { value: "mi", label: "Miles", hint: "mi" },
+  ];
+  return (
+    <Card>
+      <h3 className="text-sm font-semibold text-ink">Measurement units</h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Choose how distances are displayed across the platform.
+      </p>
+      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {options.map((o) => {
+          const active = unit === o.value;
+          return (
+            <button
+              key={o.value}
+              onClick={() => setUnit(o.value)}
+              className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
+                active
+                  ? "border-primary bg-primary/5 text-ink"
+                  : "border-hairline bg-card text-ink hover:bg-secondary"
+              }`}
+            >
+              <div>
+                <div className="text-sm font-medium">{o.label}</div>
+                <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                  {o.hint}
+                </div>
+              </div>
+              {active && <Check className="h-4 w-4 text-primary" strokeWidth={2.5} />}
+            </button>
+          );
+        })}
+      </div>
+    </Card>
+  );
 }
 
 function Field({
