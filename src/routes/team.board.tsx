@@ -269,13 +269,26 @@ export function TeamBoardPage({
   }
 
   async function loadMeetings(tid: string) {
+    const cols = kind === "group"
+      ? "id,title,folder,meeting_date,notes,created_at,group_id"
+      : "id,title,folder,meeting_date,notes,created_at";
     const { data } = await sb
       .from(tables.meetings)
-      .select("id,title,folder,meeting_date,notes,created_at")
+      .select(cols)
       .eq("team_id", tid)
       .order("meeting_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
     setMeetings(data ?? []);
+  }
+
+  async function loadGroupOptions(tid: string) {
+    if (kind !== "group") return;
+    const { data } = await supabase
+      .from("team_groups")
+      .select("id,name")
+      .eq("team_id", tid)
+      .order("sort_order", { ascending: true });
+    setGroupOptions((data ?? []).map((g) => ({ id: g.id, name: g.name || "Group" })));
   }
 
   // ── Members ────────────────────────────────────────────────────────────────
