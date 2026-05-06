@@ -236,6 +236,7 @@ export function UnifiedElasticGrid({
   onCurrentDateChange,
   viewMode: viewModeProp,
   onViewModeChange,
+  appKind = "calendar",
 }: UnifiedElasticGridProps) {
   // viewMode is the only user-facing toggle now. There are no "types".
   //   - "day"   → 7-column rich spreadsheet (one row per 30-min slot)
