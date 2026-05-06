@@ -1852,6 +1852,7 @@ function WeekEventsOverlay({
   onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
 }) {
   const [tileDesign] = useSessionTileDesign();
+  const [unit] = useDistanceUnit();
   type Box = { left: number; width: number };
   const [cols, setCols] = useState<Box[]>([]);
   const [headerBottom, setHeaderBottom] = useState(0);
