@@ -320,9 +320,9 @@ function SettingsPage() {
   const navItems: NavItem[] = isTeamMode
     ? [
         "appearance",
+        "entity-general",
         "divider-1",
         "entity-profile",
-        "entity-general",
         "entity-organization",
         "entity-calendar",
         "entity-map",
