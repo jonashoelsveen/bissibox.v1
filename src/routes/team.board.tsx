@@ -794,7 +794,8 @@ export function TeamBoardPage({
   }
 
   async function loadRosterAndAttendanceFor(meetingId: string) {
-    const rosterCols = kind === "group"
+    const isGroupKind = kind === "group";
+    const rosterCols = isGroupKind
       ? "id,board_member_id,name,role,email,sort_order,is_leader,user_id"
       : "id,board_member_id,name,role,email,sort_order";
     const { data: rosterData } = await sb
@@ -804,7 +805,88 @@ export function TeamBoardPage({
       .order("sort_order", { ascending: true });
     let rosterRows = (rosterData ?? []) as RosterEntry[];
 
-    if (rosterRows.length === 0 && teamId) {
+    // For group meetings: detect a stale/legacy roster (snapshot built from board
+    // members before group-aware creation) and rebuild from team_group_members +
+    // team_group_leaders for this meeting's group.
+    const looksLikeBoardSnapshot =
+      isGroupKind &&
+      rosterRows.length > 0 &&
+      rosterRows.every((r) => !r.user_id && !r.is_leader);
+
+    if (isGroupKind && teamId && (rosterRows.length === 0 || looksLikeBoardSnapshot)) {
+      const meetingRow = meetings.find((m) => m.id === meetingId);
+      const groupId = meetingRow?.group_id ?? null;
+      if (groupId) {
+        // Wipe stale snapshot + attendance
+        if (rosterRows.length) {
+          await sb.from(tables.attendance).delete().eq("meeting_id", meetingId);
+          await sb.from(tables.roster).delete().eq("meeting_id", meetingId);
+          rosterRows = [];
+        }
+        const { data: leadersData } = await supabase
+          .from("team_group_leaders")
+          .select("id,name,email,group_name,group_id,user_id,sort_order")
+          .eq("team_id", teamId);
+        const groupName = (groupOptions.find((g) => g.id === groupId)?.name ?? "").toLowerCase();
+        const leaders = (leadersData ?? []).filter((l) => {
+          if (l.group_id) return l.group_id === groupId;
+          const gn = (l.group_name ?? "").trim().toLowerCase();
+          return gn !== "" && gn === groupName;
+        });
+        const { data: gmData } = await supabase
+          .from("team_group_members")
+          .select("user_id")
+          .eq("team_id", teamId)
+          .eq("group_id", groupId);
+        const memberIds = (gmData ?? []).map((r) => r.user_id);
+        let memberProfiles: Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null }> = [];
+        if (memberIds.length) {
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id,first_name,last_name,email")
+            .in("id", memberIds);
+          memberProfiles = profs ?? [];
+        }
+        const insertRows: Array<Record<string, unknown>> = [];
+        let order = 0;
+        for (const l of leaders) {
+          insertRows.push({
+            meeting_id: meetingId,
+            team_id: teamId,
+            board_member_id: null,
+            name: l.name ?? "",
+            role: "Group leader",
+            email: l.email ?? "",
+            sort_order: order++,
+            is_leader: true,
+            user_id: l.user_id ?? null,
+          });
+        }
+        for (const p of memberProfiles) {
+          const fullName = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim();
+          insertRows.push({
+            meeting_id: meetingId,
+            team_id: teamId,
+            board_member_id: null,
+            name: fullName || (p.email ?? ""),
+            role: "",
+            email: p.email ?? "",
+            sort_order: order++,
+            is_leader: false,
+            user_id: p.id,
+          });
+        }
+        if (insertRows.length) {
+          const { data: inserted } = await sb
+            .from(tables.roster)
+            .insert(insertRows)
+            .select(rosterCols);
+          rosterRows = ((inserted ?? []) as RosterEntry[]).sort(
+            (a, b) => a.sort_order - b.sort_order,
+          );
+        }
+      }
+    } else if (!isGroupKind && rosterRows.length === 0 && teamId) {
       const live = members.filter((m) => !!m.id);
       if (live.length) {
         const insertRows = live.map((m) => ({
