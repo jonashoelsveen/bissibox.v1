@@ -69,6 +69,8 @@ export function MeetingsListPage({
   const [newMeetingOpen, setNewMeetingOpen] = useState(false);
   const [newMeetingTitle, setNewMeetingTitle] = useState("");
   const [newMeetingFolder, setNewMeetingFolder] = useState("");
+  const [newMeetingGroupId, setNewMeetingGroupId] = useState("");
+  const [groupOptions, setGroupOptions] = useState<{ id: string; name: string }[]>([]);
   const [creatingFolderInline, setCreatingFolderInline] = useState(false);
   const [draftFolder, setDraftFolder] = useState("");
 
