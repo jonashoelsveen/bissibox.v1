@@ -1489,7 +1489,7 @@ function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
     <div className="space-y-3">
       <DiaryCategoryCard
         title="Training"
-        items={["Connectors", "Units", "Activitytypes"]}
+        items={["Units", "Activitytypes"]}
       />
       <DiaryCategoryCard title="Notes" items={[]} />
     </div>
