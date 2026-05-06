@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, Library, Plus, Tent, Settings, LogIn, Users, Armchair, CalendarDays, Map as MapIcon } from "lucide-react";
+import { Search, Library, Plus, Tent, Settings, LogIn, Users, Armchair, CalendarDays, Map as MapIcon, BookOpen } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { NewEventDialog } from "@/components/organizer/NewEventDialog";
@@ -49,6 +49,12 @@ export function TopChrome() {
         {user && (
           <NavBtn to="/calendar" label="Calendar" active={path.startsWith("/calendar")}>
             <CalendarDays className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </NavBtn>
+        )}
+
+        {user && isIndividual && (
+          <NavBtn to="/diary" label="Diary" active={path.startsWith("/diary")}>
+            <BookOpen className="h-[18px] w-[18px]" strokeWidth={2.25} />
           </NavBtn>
         )}
 

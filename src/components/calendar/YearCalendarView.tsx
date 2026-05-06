@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Settings as SettingsIcon, Undo2, Redo2 } from "lucide-react";
 import { useYearStore, useEventStore, type CellKey } from "./yearStore";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode } from "./UnifiedElasticGrid";
@@ -58,19 +59,20 @@ function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate:
 }
 
 export type CalendarSeat = "admin" | "individual";
+export type CalendarAppKind = "calendar" | "diary";
 
 export interface YearCalendarViewProps {
   calId: string;
   defaultTitle: string;
   seat?: CalendarSeat;
-  /** Optional controlled state (driven by the page shell + sidebar). */
   currentDate?: Date;
   currentRange?: DateRange;
   onCurrentDateChange?: (date: Date, range?: DateRange) => void;
   viewMode?: ViewMode;
   onViewModeChange?: (v: ViewMode) => void;
-  /** When provided, only events whose category is in this set are rendered. */
   visibleCategories?: Set<CategoryKey>;
+  /** "diary" hides import + undo/redo, restricts to week/month, blocks future logging. */
+  appKind?: CalendarAppKind;
 }
 
 export function YearCalendarView(props: YearCalendarViewProps) {
@@ -91,6 +93,7 @@ function YearCalendarViewInner({
   viewMode: viewModeProp,
   onViewModeChange,
   visibleCategories,
+  appKind = "calendar",
 }: YearCalendarViewProps) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta, undo, redo, canUndo, canRedo } =
     useYearStore(calId, defaultTitle);
@@ -226,39 +229,52 @@ function YearCalendarViewInner({
             value={viewMode}
             onChange={setViewMode}
             width={108}
-            options={[
-              { value: "day", label: "Dag" },
-              { value: "week", label: "Uke" },
-              { value: "month", label: "Måned" },
-            ]}
+            options={
+              appKind === "diary"
+                ? [
+                    { value: "week", label: "Uke" },
+                    { value: "month", label: "Måned" },
+                  ]
+                : [
+                    { value: "day", label: "Dag" },
+                    { value: "week", label: "Uke" },
+                    { value: "month", label: "Måned" },
+                  ]
+            }
           />
-          <button
-            type="button"
-            aria-label="Undo"
-            title="Undo (⌘Z)"
-            onClick={() => { undo(); undoEvents(); }}
-            disabled={!canUndo && !canUndoEvents}
-            className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-          >
-            <Undo2 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            aria-label="Redo"
-            title="Redo (⌘⇧Z)"
-            onClick={() => { redo(); redoEvents(); }}
-            disabled={!canRedo && !canRedoEvents}
-            className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-          >
-            <Redo2 className="h-4 w-4" />
-          </button>
+          {appKind !== "diary" && (
+            <>
+              <button
+                type="button"
+                aria-label="Undo"
+                title="Undo (⌘Z)"
+                onClick={() => { undo(); undoEvents(); }}
+                disabled={!canUndo && !canUndoEvents}
+                className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                <Undo2 className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Redo"
+                title="Redo (⌘⇧Z)"
+                onClick={() => { redo(); redoEvents(); }}
+                disabled={!canRedo && !canRedoEvents}
+                className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                <Redo2 className="h-4 w-4" />
+              </button>
+            </>
+          )}
           <button
             aria-label="Calendar settings"
             className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-ink"
           >
             <SettingsIcon className="h-4 w-4" />
           </button>
-          <ImportButton seat={seat} onCommit={(patch) => upsertEvent(patch)} />
+          {appKind !== "diary" && (
+            <ImportButton seat={seat} onCommit={(patch) => upsertEvent(patch)} />
+          )}
         </div>
       </div>
 
@@ -275,7 +291,26 @@ function YearCalendarViewInner({
           onFill={fillRange}
           seat={seat}
           events={mergedEvents}
-          onUpsertEvent={upsertEvent}
+          onUpsertEvent={(patch) => {
+            if (appKind === "diary") {
+              const startISO = (patch as { startISO?: string }).startISO;
+              if (startISO && new Date(startISO).getTime() > Date.now()) {
+                toast("Diary is for logging past sessions", {
+                  description: "For planning upcoming sessions, go to Calendar.",
+                });
+                // Return a no-op CalendarEvent shape to satisfy type.
+                return {
+                  id: "__blocked__",
+                  startISO: startISO ?? "",
+                  endISO: (patch as { endISO?: string }).endISO ?? "",
+                  allDay: false,
+                  title: "",
+                  color: null,
+                };
+              }
+            }
+            return upsertEvent(patch);
+          }}
           onMoveEvent={moveEvent}
           onDeleteEvent={deleteEvent}
           currentDate={currentDate}
@@ -283,6 +318,7 @@ function YearCalendarViewInner({
           onCurrentDateChange={(d, r) => updateCurrent(d, r)}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          appKind={appKind}
         />
       </div>
     </div>

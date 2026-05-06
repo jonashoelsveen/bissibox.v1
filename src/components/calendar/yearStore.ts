@@ -313,6 +313,8 @@ import { makeEventId } from "./dateUtils";
 
 export type IndividualCategory = "training" | "school" | "work" | "else";
 
+export type DiaryActivity = "running" | "cycling" | "strength" | "xcskiing";
+
 export interface CalendarEvent {
   id: string;
   startISO: string;       // local ISO, e.g. "2026-05-04T09:30:00"
@@ -322,6 +324,9 @@ export interface CalendarEvent {
   color: string | null;   // hex
   category?: IndividualCategory;
   description?: string;
+  /** Diary-only metadata (logged training sessions). */
+  activity?: DiaryActivity;
+  distanceKm?: number;
 }
 
 const eventsKey = (calId: string) => `calendar:events:${calId}`;
