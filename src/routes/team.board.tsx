@@ -588,7 +588,7 @@ export function TeamBoardPage({
       .select("storage_path")
       .eq("meeting_id", m.id);
     if (atts && atts.length) {
-      await supabase.storage.from("board-attachments").remove(atts.map((a) => a.storage_path));
+      await supabase.storage.from("board-attachments").remove(atts.map((a: { storage_path: string }) => a.storage_path));
     }
     await sb.from(tables.attachments).delete().eq("meeting_id", m.id);
     const { error } = await sb.from(tables.meetings).delete().eq("id", m.id);
@@ -1363,14 +1363,14 @@ export function TeamBoardPage({
                     const tab = openTabs.find((t) => t.meeting.id === id);
                     const atts = tab?.attachments ?? [];
                     if (atts.length) {
-                      await supabase.storage.from("board-attachments").remove(atts.map((a) => a.storage_path));
+                      await supabase.storage.from("board-attachments").remove(atts.map((a: { storage_path: string }) => a.storage_path));
                     } else {
                       const { data } = await sb
                         .from(tables.attachments)
                         .select("storage_path").eq("meeting_id", id);
                       if (data && data.length) {
                         await supabase.storage.from("board-attachments")
-                          .remove(data.map((a) => a.storage_path));
+                          .remove(data.map((a: { storage_path: string }) => a.storage_path));
                       }
                     }
                     await sb.from(tables.attachments).delete().eq("meeting_id", id);
