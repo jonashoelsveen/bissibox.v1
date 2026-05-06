@@ -123,13 +123,17 @@ export function DiaryPopoverEditor({
 
   const buildValue = (): DiaryPopoverValue => {
     const s = stateRef.current;
+    const effectiveType: DiaryType = noteOnly ? "note" : s.diaryType;
+    const fallbackTitle = noteOnly
+      ? (s.sessionNote || "").trim().split(/\r?\n/)[0].slice(0, 80) || "Notat"
+      : "";
     return {
-      title: s.title.trim(),
-      color: s.diaryType === "training" ? CAT_TRAINING_COLOR : NOTE_COLOR,
+      title: s.title.trim() || fallbackTitle,
+      color: effectiveType === "training" ? CAT_TRAINING_COLOR : NOTE_COLOR,
       time: s.time,
-      diaryType: s.diaryType,
-      diaryGroup: s.diaryType === "training" ? s.diaryGroup : undefined,
-      diarySub: s.diaryType === "training" && hasSubs ? s.diarySub : undefined,
+      diaryType: effectiveType,
+      diaryGroup: effectiveType === "training" ? s.diaryGroup : undefined,
+      diarySub: effectiveType === "training" && hasSubs ? s.diarySub : undefined,
       distanceKm: s.distanceKm,
       paceSecPerKm: s.paceSecPerKm,
       sessionNote: s.sessionNote || undefined,
