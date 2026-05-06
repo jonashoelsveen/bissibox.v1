@@ -283,12 +283,42 @@ export function TeamBoardPage({
 
   async function loadGroupOptions(tid: string) {
     if (kind !== "group") return;
-    const { data } = await supabase
+    const { data: allGroups } = await supabase
       .from("team_groups")
       .select("id,name")
       .eq("team_id", tid)
       .order("sort_order", { ascending: true });
-    setGroupOptions((data ?? []).map((g) => ({ id: g.id, name: g.name || "Group" })));
+    const all = (allGroups ?? []).map((g) => ({ id: g.id, name: g.name || "Group" }));
+
+    // If the user is the team owner, show all groups. Otherwise restrict to
+    // the groups they lead (matched via team_group_leaders by user_id or email).
+    const { data: teamRow } = await supabase
+      .from("teams")
+      .select("owner_id")
+      .eq("id", tid)
+      .maybeSingle();
+    const isOwner = !!user && teamRow?.owner_id === user.id;
+    if (isOwner) {
+      setGroupOptions(all);
+      return;
+    }
+    const email = (user?.email ?? "").toLowerCase();
+    const orFilter = email
+      ? `user_id.eq.${user!.id},email.ilike.${email}`
+      : `user_id.eq.${user!.id}`;
+    const { data: leaderRows } = await supabase
+      .from("team_group_leaders")
+      .select("group_id,group_name")
+      .eq("team_id", tid)
+      .or(orFilter);
+    const ledIds = new Set<string>();
+    const ledNames = new Set<string>();
+    for (const r of (leaderRows ?? []) as Array<{ group_id: string | null; group_name: string | null }>) {
+      if (r.group_id) ledIds.add(r.group_id);
+      if (r.group_name) ledNames.add(r.group_name.toLowerCase());
+    }
+    const filtered = all.filter((g) => ledIds.has(g.id) || ledNames.has(g.name.toLowerCase()));
+    setGroupOptions(filtered.length ? filtered : all);
   }
 
   // ── Members ────────────────────────────────────────────────────────────────
