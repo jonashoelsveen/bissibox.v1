@@ -116,9 +116,11 @@ export function DiaryPopoverEditor({
 
   const buildValue = (): DiaryPopoverValue => {
     const s = stateRef.current;
+    const trainingColor =
+      s.diaryGroup === "endurance" ? colorForActivity(s.diarySub) : CAT_TRAINING_COLOR;
     return {
       title: s.title.trim(),
-      color: s.diaryType === "training" ? CAT_TRAINING_COLOR : NOTE_COLOR,
+      color: s.diaryType === "training" ? trainingColor : NOTE_COLOR,
       time: s.time,
       diaryType: s.diaryType,
       diaryGroup: s.diaryType === "training" ? s.diaryGroup : undefined,
