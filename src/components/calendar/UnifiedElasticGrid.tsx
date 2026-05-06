@@ -1872,7 +1872,7 @@ function WeekEventsOverlay({
   startHour: number;
   appKind?: "calendar" | "diary";
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
-  onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number) => void;
+  onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
 }) {
   const [tileDesign] = useSessionTileDesign();
   type Box = { left: number; width: number };
