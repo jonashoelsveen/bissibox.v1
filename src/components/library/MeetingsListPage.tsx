@@ -249,7 +249,7 @@ export function MeetingsListPage({
         .select("id,board_member_id,name,role,email,sort_order");
       const creatorEmail = (user.email ?? "").toLowerCase();
       const selfEntry = (rosterData ?? []).find(
-        (r) => (r.email ?? "").toLowerCase() === creatorEmail,
+        (r: { email?: string | null }) => (r.email ?? "").toLowerCase() === creatorEmail,
       );
       if (selfEntry) {
         await sb.from(tables.attendance).insert({
