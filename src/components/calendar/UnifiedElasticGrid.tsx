@@ -1008,6 +1008,13 @@ export function UnifiedElasticGrid({
             isEdit={popover.isEdit}
             anchor={popover.rect}
             initialTime={initialTime}
+            date={
+              existingEv
+                ? fromISOLocal(existingEv.startISO)
+                : markRange
+                  ? weekDates[markRange.month]
+                  : weekDates[popover.key.month]
+            }
             onClose={closePopover}
             onCommit={(v: DiaryPopoverValue, opts) => {
               const date = markRange
