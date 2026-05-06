@@ -501,11 +501,12 @@ export function TeamBoardPage({
       // Group leaders for this group: match by group_name (case-insensitive) or any leader if blank.
       const { data: leadersData } = await supabase
         .from("team_group_leaders")
-        .select("id,name,email,group_name,user_id,sort_order")
+        .select("id,name,email,group_name,group_id,user_id,sort_order")
         .eq("team_id", teamId);
       const leaders = (leadersData ?? []).filter((l) => {
+        if (l.group_id) return l.group_id === groupId;
         const gn = (l.group_name ?? "").trim().toLowerCase();
-        return gn === "" || gn === groupName.toLowerCase();
+        return gn !== "" && gn === groupName.toLowerCase();
       });
       // Group members for this group, with profile info.
       const { data: gmData } = await supabase
