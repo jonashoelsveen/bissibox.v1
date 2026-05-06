@@ -580,12 +580,7 @@ function SettingsPage() {
 
             {tab === "connectors" && <ConnectorsPanel />}
 
-            {tab === "system" && (
-              <Card>
-                <h3 className="text-sm font-semibold text-ink">System</h3>
-                <p className="mt-2 text-xs text-muted-foreground">System settings will appear here.</p>
-              </Card>
-            )}
+            {tab === "system" && <SystemPanel />}
 
             {tab === "appearance" && <AppearancePanel />}
 
