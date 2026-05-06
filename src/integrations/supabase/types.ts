@@ -1511,6 +1511,7 @@ export type Database = {
           accepted_at: string | null
           created_at: string
           email: string
+          group_id: string | null
           group_name: string
           id: string
           invited_at: string | null
@@ -1526,6 +1527,7 @@ export type Database = {
           accepted_at?: string | null
           created_at?: string
           email?: string
+          group_id?: string | null
           group_name?: string
           id?: string
           invited_at?: string | null
@@ -1541,6 +1543,7 @@ export type Database = {
           accepted_at?: string | null
           created_at?: string
           email?: string
+          group_id?: string | null
           group_name?: string
           id?: string
           invited_at?: string | null

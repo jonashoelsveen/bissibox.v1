@@ -64,6 +64,7 @@ interface BoardMemberDraft {
   status: "pending" | "active";
   invited_at: string | null;
   sort_order: number;
+  group_id?: string | null;
 }
 
 interface MemberRow {
@@ -173,13 +174,13 @@ function TeamMembersPage() {
           .order("sort_order", { ascending: true }),
         supabase
           .from("team_group_leaders")
-          .select("id,name,group_name,email,status,invited_at,sort_order")
+          .select("id,name,group_name,group_id,email,status,invited_at,sort_order")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
       ]);
 
       setCoaches(
-        ((gls ?? []) as Array<{ id: string; name: string | null; group_name: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((g, i) => ({
+        ((gls ?? []) as Array<{ id: string; name: string | null; group_name: string | null; group_id: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((g, i) => ({
           id: g.id,
           name: g.name ?? "",
           role: g.group_name ?? "",
@@ -187,6 +188,7 @@ function TeamMembersPage() {
           status: (g.status as "pending" | "active") ?? "pending",
           invited_at: g.invited_at,
           sort_order: g.sort_order ?? i,
+          group_id: g.group_id ?? null,
         })),
       );
 
@@ -417,11 +419,11 @@ function TeamMembersPage() {
   async function reloadCoaches(tid: string) {
     const { data } = await supabase
       .from("team_group_leaders")
-      .select("id,name,group_name,email,status,invited_at,sort_order")
+      .select("id,name,group_name,group_id,email,status,invited_at,sort_order")
       .eq("team_id", tid)
       .order("sort_order", { ascending: true });
     setCoaches(
-      ((data ?? []) as Array<{ id: string; name: string | null; group_name: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((g, i) => ({
+      ((data ?? []) as Array<{ id: string; name: string | null; group_name: string | null; group_id: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((g, i) => ({
         id: g.id,
         name: g.name ?? "",
         role: g.group_name ?? "",
@@ -429,12 +431,19 @@ function TeamMembersPage() {
         status: (g.status as "pending" | "active") ?? "pending",
         invited_at: g.invited_at,
         sort_order: g.sort_order ?? i,
+        group_id: g.group_id ?? null,
       })),
     );
   }
 
   async function inviteCoach(idx: number) {
     const m = coaches[idx];
+    if (!m.group_id) {
+      toast.message("Please choose a group first", {
+        description: "Group leaders must be assigned to a group before you can send the invite.",
+      });
+      return;
+    }
     if (!m.email || !m.email.includes("@")) {
       toast.error("Enter a valid email first");
       return;
@@ -661,10 +670,11 @@ function TeamMembersPage() {
       const glIdMap: Record<number, string> = {};
       for (let i = 0; i < coaches.length; i++) {
         const m = coaches[i];
+        const groupName = m.group_id ? (groups.find((g) => g.id === m.group_id)?.name ?? m.role) : m.role;
         if (m.id) {
           const { error } = await supabase
             .from("team_group_leaders")
-            .update({ name: m.name, group_name: m.role, email: m.email, sort_order: i })
+            .update({ name: m.name, group_name: groupName, group_id: m.group_id ?? null, email: m.email, sort_order: i })
             .eq("id", m.id);
           if (error) throw error;
           glIdMap[i] = m.id;
@@ -674,7 +684,8 @@ function TeamMembersPage() {
             .insert({
               team_id: teamId,
               name: m.name,
-              group_name: m.role,
+              group_name: groupName,
+              group_id: m.group_id ?? null,
               email: m.email,
               status: "pending",
               sort_order: i,
@@ -863,12 +874,20 @@ function TeamMembersPage() {
                     onChange={(e) => updateCoach(i, { name: e.target.value })}
                     className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
                   />
-                  <input
-                    placeholder="Group (the group this coach is coaching)"
-                    value={m.role}
-                    onChange={(e) => updateCoach(i, { role: e.target.value })}
+                  <select
+                    value={m.group_id ?? ""}
+                    onChange={(e) => {
+                      const gid = e.target.value || null;
+                      const gname = gid ? (groups.find((g) => g.id === gid)?.name ?? "") : "";
+                      updateCoach(i, { group_id: gid, role: gname });
+                    }}
                     className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-                  />
+                  >
+                    <option value="">Choose group…</option>
+                    {groups.filter((g) => g.id).map((g) => (
+                      <option key={g.id} value={g.id!}>{g.name || "Untitled"}</option>
+                    ))}
+                  </select>
                   <div className="flex items-center gap-2">
                     <div className="relative flex-1">
                       <Mail className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
