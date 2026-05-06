@@ -15,6 +15,8 @@ import {
   useLibrarySetting,
 } from "@/lib/library-settings";
 import { MapSettingsPanel } from "@/components/settings/MapSettingsPanel";
+import { Footprints, Bike, Dumbbell, Check } from "lucide-react";
+import { SESSION_TILE_DESIGNS, useSessionTileDesign, type SessionTileDesign } from "@/lib/session-tile-design";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
