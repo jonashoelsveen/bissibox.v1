@@ -437,57 +437,131 @@ export function TeamBoardPage({
     }
     const title = newMeetingTitle.trim() || `${kindLabel} meeting · ${new Date().toLocaleDateString()}`;
     const folder = newMeetingFolder.trim() || null;
+    const isGroupKind = kind === "group";
+    const groupId = isGroupKind ? (newMeetingGroupId || null) : null;
+    if (isGroupKind && !groupId) {
+      toast.error("Pick a group for this meeting");
+      return;
+    }
+    const insertPayload: Record<string, unknown> = {
+      team_id: teamId,
+      title,
+      folder,
+      meeting_date: new Date().toISOString().slice(0, 10),
+      created_by: user.id,
+    };
+    if (isGroupKind) insertPayload.group_id = groupId;
+    const selectCols = isGroupKind
+      ? "id,title,folder,meeting_date,notes,created_at,group_id"
+      : "id,title,folder,meeting_date,notes,created_at";
     const { data, error } = await sb
       .from(tables.meetings)
-      .insert({
-        team_id: teamId,
-        title,
-        folder,
-        meeting_date: new Date().toISOString().slice(0, 10),
-        created_by: user.id,
-      })
-      .select("id,title,folder,meeting_date,notes,created_at")
+      .insert(insertPayload)
+      .select(selectCols)
       .single();
     if (error) {
       toast.error(error.message);
       return;
     }
-    const snapshotRows = members
-      .filter((m) => !!m.id)
-      .map((m) => ({
-        meeting_id: data.id,
-        team_id: teamId,
-        board_member_id: m.id as string,
-        name: m.name ?? "",
-        role: m.role ?? "",
-        email: m.email ?? "",
-        sort_order: m.sort_order ?? 0,
-      }));
+
+    // Build the roster snapshot.
+    let snapshotRows: Array<Record<string, unknown>> = [];
+    if (isGroupKind && groupId) {
+      const groupName = groupOptions.find((g) => g.id === groupId)?.name ?? "";
+      // Group leaders for this group: match by group_name (case-insensitive) or any leader if blank.
+      const { data: leadersData } = await supabase
+        .from("team_group_leaders")
+        .select("id,name,email,group_name,user_id,sort_order")
+        .eq("team_id", teamId);
+      const leaders = (leadersData ?? []).filter((l) => {
+        const gn = (l.group_name ?? "").trim().toLowerCase();
+        return gn === "" || gn === groupName.toLowerCase();
+      });
+      // Group members for this group, with profile info.
+      const { data: gmData } = await supabase
+        .from("team_group_members")
+        .select("user_id")
+        .eq("team_id", teamId)
+        .eq("group_id", groupId);
+      const memberIds = (gmData ?? []).map((r) => r.user_id);
+      let memberProfiles: Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null }> = [];
+      if (memberIds.length) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id,first_name,last_name,email")
+          .in("id", memberIds);
+        memberProfiles = profs ?? [];
+      }
+      let order = 0;
+      for (const l of leaders) {
+        snapshotRows.push({
+          meeting_id: data.id,
+          team_id: teamId,
+          board_member_id: null,
+          name: l.name ?? "",
+          role: "Group leader",
+          email: l.email ?? "",
+          sort_order: order++,
+          is_leader: true,
+          user_id: l.user_id ?? null,
+        });
+      }
+      for (const p of memberProfiles) {
+        const fullName = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim();
+        snapshotRows.push({
+          meeting_id: data.id,
+          team_id: teamId,
+          board_member_id: null,
+          name: fullName || (p.email ?? ""),
+          role: "",
+          email: p.email ?? "",
+          sort_order: order++,
+          is_leader: false,
+          user_id: p.id,
+        });
+      }
+    } else {
+      snapshotRows = members
+        .filter((m) => !!m.id)
+        .map((m) => ({
+          meeting_id: data.id,
+          team_id: teamId,
+          board_member_id: m.id as string,
+          name: m.name ?? "",
+          role: m.role ?? "",
+          email: m.email ?? "",
+          sort_order: m.sort_order ?? 0,
+        }));
+    }
+
     let snapshot: RosterEntry[] = [];
     if (snapshotRows.length) {
+      const rosterSelect = isGroupKind
+        ? "id,board_member_id,name,role,email,sort_order,is_leader,user_id"
+        : "id,board_member_id,name,role,email,sort_order";
       const { data: rosterData } = await sb
         .from(tables.roster)
         .insert(snapshotRows)
-        .select("id,board_member_id,name,role,email,sort_order");
+        .select(rosterSelect);
       snapshot = (rosterData ?? []) as RosterEntry[];
     }
 
-    // Auto-attend the creator: match by email against the roster snapshot.
+    // Auto-attend the creator: prefer user_id match (group meetings), fall back to email.
     const creatorEmail = (user.email ?? "").toLowerCase();
     let initialAttendance: string[] = [];
-    if (creatorEmail) {
-      const selfEntry = snapshot.find((r) => (r.email ?? "").toLowerCase() === creatorEmail);
-      if (selfEntry) {
-        const { error: attErr } = await sb
-          .from(tables.attendance)
-          .insert({
-            meeting_id: data.id,
-            team_id: teamId,
-            roster_id: selfEntry.id,
-            board_member_id: selfEntry.board_member_id ?? selfEntry.id,
-          });
-        if (!attErr) initialAttendance = [selfEntry.id];
-      }
+    const selfEntry =
+      snapshot.find((r) => r.user_id === user.id) ??
+      (creatorEmail ? snapshot.find((r) => (r.email ?? "").toLowerCase() === creatorEmail) : undefined);
+    if (selfEntry) {
+      const { error: attErr } = await sb
+        .from(tables.attendance)
+        .insert({
+          meeting_id: data.id,
+          team_id: teamId,
+          roster_id: selfEntry.id,
+          board_member_id: selfEntry.board_member_id ?? selfEntry.id,
+        });
+      if (!attErr) initialAttendance = [selfEntry.id];
     }
 
     setMeetings((prev) => [data, ...prev]);
