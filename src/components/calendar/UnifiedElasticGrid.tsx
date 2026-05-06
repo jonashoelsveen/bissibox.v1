@@ -1008,6 +1008,9 @@ export function UnifiedElasticGrid({
             isEdit={popover.isEdit}
             anchor={popover.rect}
             initialTime={initialTime}
+            lockedType={existingEv?.diaryType === "note" ? "note" : "training"}
+            noteOnly={popover.noteOnly}
+            headerLabel={popover.noteOnly ? "Nytt notat" : undefined}
             date={
               existingEv
                 ? fromISOLocal(existingEv.startISO)
