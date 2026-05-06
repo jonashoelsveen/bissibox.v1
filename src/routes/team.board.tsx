@@ -1630,6 +1630,9 @@ function MeetingDialog({
   onClose,
   onConfirm,
   confirmLabel,
+  groupOptions,
+  groupId,
+  onGroupId,
 }: {
   title: string;
   name: string;
@@ -1641,7 +1644,11 @@ function MeetingDialog({
   onClose: () => void;
   onConfirm: () => void;
   confirmLabel: string;
+  groupOptions?: GroupOption[];
+  groupId?: string;
+  onGroupId?: (v: string) => void;
 }) {
+  const showGroup = !!groupOptions;
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in"
@@ -1675,8 +1682,25 @@ function MeetingDialog({
             className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
           />
         </label>
+        {showGroup && (
+          <label className="mt-4 block">
+            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Group
+            </span>
+            <select
+              value={groupId ?? ""}
+              onChange={(e) => onGroupId?.(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
+            >
+              <option value="">Select a group…</option>
+              {groupOptions!.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <FolderSelect folder={folder} folders={folders} onFolder={onFolder} onCreateFolder={onCreateFolder} />
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-6 flex items-center justify-between gap-2">
           <button
             onClick={onClose}
             className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
@@ -1685,7 +1709,7 @@ function MeetingDialog({
           </button>
           <button
             onClick={onConfirm}
-            disabled={!name.trim()}
+            disabled={!name.trim() || (showGroup && !groupId)}
             className="rounded-full bg-primary px-5 py-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
             {confirmLabel}
