@@ -212,7 +212,7 @@ export function MeetingsListPage({
       toast.error("No active team");
       return;
     }
-    const title = newMeetingTitle.trim() || `Board meeting · ${new Date().toLocaleDateString()}`;
+    const title = newMeetingTitle.trim() || `${kind === "group" ? "Group" : "Board"} meeting · ${new Date().toLocaleDateString()}`;
     const folder = newMeetingFolder.trim() || (view.type === "folder" && view.name) || null;
     const { data, error } = await sb
       .from(tables.meetings)
@@ -452,7 +452,7 @@ export function MeetingsListPage({
                 autoFocus
                 value={newMeetingTitle}
                 onChange={(e) => setNewMeetingTitle(e.target.value)}
-                placeholder={`Board meeting · ${new Date().toLocaleDateString()}`}
+                placeholder={`${kind === "group" ? "Group" : "Board"} meeting · ${new Date().toLocaleDateString()}`}
                 className="mt-1 w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
               />
             </label>
