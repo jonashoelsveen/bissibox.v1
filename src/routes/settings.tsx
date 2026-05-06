@@ -1494,7 +1494,57 @@ function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
         items={["Units", "Activitytypes"]}
       />
       <DiaryCategoryCard title="Notes" items={[]} />
+      <DiarySessionDetailsCard />
     </div>
+  );
+}
+
+function DiarySessionDetailsCard() {
+  const [open, setOpen] = useState(false);
+  const [autosync, setAutosync] = useLibrarySetting<boolean>(
+    "diary:autosync:global",
+    false,
+  );
+  return (
+    <Card>
+      <div className="flex w-full items-center gap-3">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          <h3 className="text-sm font-semibold text-ink">Session details</h3>
+        </button>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Collapse" : "Expand"}
+          className="text-muted-foreground hover:text-ink"
+        >
+          {open ? (
+            <ChevronDown className="h-4 w-4" strokeWidth={2.25} />
+          ) : (
+            <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+          )}
+        </button>
+      </div>
+      {open && (
+        <div className="mt-4 space-y-2">
+          <label className="flex items-center justify-between rounded-xl border border-hairline px-4 py-3">
+            <div className="flex flex-col">
+              <span className="text-sm text-ink">Autosync</span>
+              <span className="text-xs text-muted-foreground">
+                Automatically save changes to session details.
+              </span>
+            </div>
+            <input
+              type="checkbox"
+              checked={autosync}
+              onChange={(e) => setAutosync(e.target.checked)}
+              className="h-4 w-4 cursor-pointer accent-primary"
+            />
+          </label>
+        </div>
+      )}
+    </Card>
   );
 }
 

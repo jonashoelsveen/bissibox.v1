@@ -327,6 +327,17 @@ export interface CalendarEvent {
   /** Diary-only metadata (logged training sessions). */
   activity?: DiaryActivity;
   distanceKm?: number;
+  paceSecPerKm?: number;
+  /** Diary type: training | note */
+  diaryType?: "training" | "note";
+  /** Diary group: endurance | strength | stretch */
+  diaryGroup?: string;
+  /** Diary sub-group: running | cycling | other | core | max */
+  diarySub?: string;
+  /** Session note (rich text body for diary). */
+  sessionNote?: string;
+  /** Multiple activity entries inside one session. */
+  activities?: { type: string; durationMin?: number; distanceKm?: number }[];
 }
 
 const eventsKey = (calId: string) => `calendar:events:${calId}`;
