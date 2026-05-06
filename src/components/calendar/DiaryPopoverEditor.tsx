@@ -66,6 +66,8 @@ export interface DiaryPopoverEditorProps {
   isEdit: boolean;
   anchor: DOMRect;
   initialTime?: { startMin: number; endMin: number } | null;
+  /** Date represented by the popover — used to label note-mode session details. */
+  date?: Date;
   onClose: () => void;
   onCommit: (value: DiaryPopoverValue, opts?: { delete?: boolean }) => void;
 }
@@ -75,6 +77,7 @@ export function DiaryPopoverEditor({
   isEdit,
   anchor,
   initialTime = null,
+  date,
   onClose,
   onCommit,
 }: DiaryPopoverEditorProps) {
