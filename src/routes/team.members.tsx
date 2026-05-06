@@ -419,11 +419,11 @@ function TeamMembersPage() {
   async function reloadCoaches(tid: string) {
     const { data } = await supabase
       .from("team_group_leaders")
-      .select("id,name,group_name,email,status,invited_at,sort_order")
+      .select("id,name,group_name,group_id,email,status,invited_at,sort_order")
       .eq("team_id", tid)
       .order("sort_order", { ascending: true });
     setCoaches(
-      ((data ?? []) as Array<{ id: string; name: string | null; group_name: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((g, i) => ({
+      ((data ?? []) as Array<{ id: string; name: string | null; group_name: string | null; group_id: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((g, i) => ({
         id: g.id,
         name: g.name ?? "",
         role: g.group_name ?? "",
@@ -431,6 +431,7 @@ function TeamMembersPage() {
         status: (g.status as "pending" | "active") ?? "pending",
         invited_at: g.invited_at,
         sort_order: g.sort_order ?? i,
+        group_id: g.group_id ?? null,
       })),
     );
   }
