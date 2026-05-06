@@ -84,6 +84,7 @@ type Tab =
   | "appearance"
   | "library"
   | "diary"
+  | "connectors"
   | "map"
   | "entity-profile"
   | "desk"
