@@ -967,10 +967,21 @@ export function UnifiedElasticGrid({
                   eventId: ev.id,
                 });
               }}
-              onEventDrop={(id, newDate, newStartMin, durationMin) => {
-                const startISO = toISOLocal(setHM(newDate, Math.floor(newStartMin / 60), newStartMin % 60));
-                const endISO = toISOLocal(addMinutes(fromISOLocal(startISO), durationMin));
-                onMoveEvent(id, { startISO, endISO, allDay: false });
+              onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
+                // Calendar: open the editor with pending date/time; user must Save.
+                // Diary: drag is disabled at the source (see WeekEventsOverlay).
+                const ev = events.find((e) => e.id === id);
+                if (!ev) return;
+                setPopover({
+                  key: { year, month: 0, day: 1, session: 0 },
+                  rect: (anchor ?? document.body).getBoundingClientRect(),
+                  initialText: ev.title,
+                  initialColor: ev.color,
+                  isEdit: true,
+                  eventId: id,
+                  pendingDate: newDate,
+                  pendingTime: { startMin: newStartMin, endMin: newStartMin + durationMin },
+                });
               }}
             />
           )}
