@@ -92,6 +92,7 @@ function YearCalendarViewInner({
   viewMode: viewModeProp,
   onViewModeChange,
   visibleCategories,
+  appKind = "calendar",
 }: YearCalendarViewProps) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta, undo, redo, canUndo, canRedo } =
     useYearStore(calId, defaultTitle);
