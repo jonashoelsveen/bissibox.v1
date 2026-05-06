@@ -2009,6 +2009,8 @@ function WeekEventsOverlay({
                   Footprints;
                 const durStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
                 const km = ev.distanceKm;
+                const distVal = km != null ? kmToUnit(km, unit) : null;
+                const distLabel = distVal != null ? `${distVal.toFixed(1)} ${unitLabel(unit)}` : "—";
                 const iconHalfBg = ev.color
                   ? `color-mix(in srgb, ${ev.color} 40%, white)`
                   : "rgba(0,0,0,0.05)";
@@ -2033,7 +2035,7 @@ function WeekEventsOverlay({
                         <span className="truncate text-[12px] font-semibold">{ev.title}</span>
                         <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{durStr}</span>
                         <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
-                          {km != null ? `${km.toFixed(1)} km` : "—"}
+                          {distLabel}
                         </span>
                       </div>
                     </div>
@@ -2049,16 +2051,23 @@ function WeekEventsOverlay({
                       <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
                     </div>
                     <div
-                      className="flex w-1/2 items-center justify-center text-ink"
+                      className="flex w-1/2 items-center justify-center gap-1 text-ink"
                       style={{
                         fontFamily: "Helvetica, Arial, sans-serif",
                         fontWeight: 700,
                         fontSize: 22,
                         lineHeight: 1,
                       }}
-                      title={km != null ? `${km.toFixed(1)} km` : undefined}
+                      title={distLabel}
                     >
-                      {km != null ? km.toFixed(1) : "—"}
+                      {distVal != null ? (
+                        <>
+                          <span>{distVal.toFixed(1)}</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{unitLabel(unit)}</span>
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </div>
                   </div>
                 );
