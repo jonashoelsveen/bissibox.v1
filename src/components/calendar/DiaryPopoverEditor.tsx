@@ -68,6 +68,12 @@ export interface DiaryPopoverEditorProps {
   initialTime?: { startMin: number; endMin: number } | null;
   /** Date represented by the popover — used to label note-mode session details. */
   date?: Date;
+  /** Force a fixed type (no dropdown). */
+  lockedType?: DiaryType;
+  /** Note-only mode: just a "Write note" textarea + footer. No title, no dropdowns. */
+  noteOnly?: boolean;
+  /** Override the header label (default "Legg til økt" / "Rediger økt"). */
+  headerLabel?: string;
   onClose: () => void;
   onCommit: (value: DiaryPopoverValue, opts?: { delete?: boolean }) => void;
 }
@@ -78,12 +84,15 @@ export function DiaryPopoverEditor({
   anchor,
   initialTime = null,
   date,
+  lockedType,
+  noteOnly = false,
+  headerLabel,
   onClose,
   onCommit,
 }: DiaryPopoverEditorProps) {
   const [title, setTitle] = useState(initialEvent?.title ?? "");
   const [diaryType, setDiaryType] = useState<DiaryType>(
-    (initialEvent?.diaryType as DiaryType) ?? "training",
+    lockedType ?? (initialEvent?.diaryType as DiaryType) ?? "training",
   );
   const [diaryGroup, setDiaryGroup] = useState<string>(
     initialEvent?.diaryGroup ?? "endurance",
@@ -114,13 +123,17 @@ export function DiaryPopoverEditor({
 
   const buildValue = (): DiaryPopoverValue => {
     const s = stateRef.current;
+    const effectiveType: DiaryType = noteOnly ? "note" : s.diaryType;
+    const fallbackTitle = noteOnly
+      ? (s.sessionNote || "").trim().split(/\r?\n/)[0].slice(0, 80) || "Notat"
+      : "";
     return {
-      title: s.title.trim(),
-      color: s.diaryType === "training" ? CAT_TRAINING_COLOR : NOTE_COLOR,
+      title: s.title.trim() || fallbackTitle,
+      color: effectiveType === "training" ? CAT_TRAINING_COLOR : NOTE_COLOR,
       time: s.time,
-      diaryType: s.diaryType,
-      diaryGroup: s.diaryType === "training" ? s.diaryGroup : undefined,
-      diarySub: s.diaryType === "training" && hasSubs ? s.diarySub : undefined,
+      diaryType: effectiveType,
+      diaryGroup: effectiveType === "training" ? s.diaryGroup : undefined,
+      diarySub: effectiveType === "training" && hasSubs ? s.diarySub : undefined,
       distanceKm: s.distanceKm,
       paceSecPerKm: s.paceSecPerKm,
       sessionNote: s.sessionNote || undefined,
@@ -158,7 +171,7 @@ export function DiaryPopoverEditor({
   }, [onCommit, onClose, showDetails]);
 
   const POPOVER_W = 280;
-  const POPOVER_H = diaryType === "training" ? (hasSubs ? 280 : 250) : 320;
+  const POPOVER_H = noteOnly ? 220 : diaryType === "training" ? (hasSubs ? 250 : 220) : 290;
   const margin = 8;
   let top = anchor.bottom + margin;
   let left = anchor.left;
@@ -193,16 +206,16 @@ export function DiaryPopoverEditor({
                 <Pencil className="h-3.5 w-3.5" strokeWidth={2} />
               </button>
               <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                {isEdit ? "Rediger økt" : "Legg til økt"}
+                {headerLabel ?? (isEdit ? "Rediger økt" : "Legg til økt")}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              {diaryType !== "note" && time && (
+              {!noteOnly && diaryType !== "note" && time && (
                 <span className="mono text-[10.5px] tabular-nums text-ink/70">
                   {fmtMin(time.startMin)}–{fmtMin(time.endMin)}
                 </span>
               )}
-              {diaryType !== "note" && (
+              {!noteOnly && diaryType !== "note" && (
                 <span className="rounded-md p-1 text-muted-foreground/60">
                   <Clock className="h-3.5 w-3.5" strokeWidth={2} />
                 </span>
@@ -210,29 +223,19 @@ export function DiaryPopoverEditor({
             </div>
           </div>
 
-          {/* Title */}
-          <input
-            autoFocus
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={diaryType === "training" ? "f.eks. Intervaller 5×4min" : "Notat tittel"}
-            className="block w-full bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
-          />
+          {/* Title — hidden in note-only mode */}
+          {!noteOnly && (
+            <input
+              autoFocus
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={diaryType === "training" ? "f.eks. Intervaller 5×4min" : "Notat tittel"}
+              className="block w-full bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
+            />
+          )}
 
-          {/* Type dropdown */}
-          <DropdownRow accent={accent}>
-            <select
-              value={diaryType}
-              onChange={(e) => setDiaryType(e.target.value as DiaryType)}
-              className="block flex-1 bg-transparent py-1 pr-3 text-[12px] text-ink outline-none"
-            >
-              <option value="training">Training</option>
-              <option value="note">Note</option>
-            </select>
-          </DropdownRow>
-
-          {/* Note text field — appears when Note type is selected */}
-          {diaryType === "note" && (
+          {/* Note text field — appears in note-only mode or when Note type is selected */}
+          {(noteOnly || diaryType === "note") && (
             <div className="relative border-t border-hairline">
               <span
                 aria-hidden
@@ -240,11 +243,12 @@ export function DiaryPopoverEditor({
                 style={{ background: accent }}
               />
               <textarea
+                autoFocus={noteOnly}
                 value={sessionNote}
                 onChange={(e) => setSessionNote(e.target.value)}
                 placeholder="Skriv notat…"
                 className="block w-full resize-none bg-transparent pl-4 pr-3 py-2 text-[12px] text-ink outline-none placeholder:text-muted-foreground/60"
-                rows={4}
+                rows={5}
               />
             </div>
           )}

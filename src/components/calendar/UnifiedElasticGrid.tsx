@@ -374,6 +374,8 @@ export function UnifiedElasticGrid({
     isEdit: boolean;
     /** When set, the commit/delete will mutate this CalendarEvent. */
     eventId?: string;
+    /** Note-only quick-add popover (diary day-header plus button). */
+    noteOnly?: boolean;
   } | null>(null);
 
   // Refs assigned later in render so openPopover can reach the latest
@@ -864,14 +866,37 @@ export function UnifiedElasticGrid({
             {months.map((m) => {
               const colDate = weekDates[m.idx];
               const isToday = mode.kind === "year" && colDate && sameDay(colDate, now);
+              const showAddNote = appKind === "diary" && mode.kind === "year" && !!colDate;
               return (
                 <div
                   key={`h-${m.idx}`}
                   data-month-col={m.idx}
-                  className={`sticky top-0 z-20 select-none border-b border-r border-hairline px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${
+                  className={`group/hcell relative sticky top-0 z-20 select-none border-b border-r border-hairline px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${
                     isToday ? "bg-secondary text-ink" : "bg-card text-muted-foreground"
                   }`}
                 >
+                  {showAddNote && (
+                    <button
+                      type="button"
+                      aria-label="Legg til notat"
+                      title="Legg til notat"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const target = e.currentTarget.parentElement as HTMLElement;
+                        setPopover({
+                          key: { year, month: m.idx, day: 1, session: 0 },
+                          rect: target.getBoundingClientRect(),
+                          initialText: "",
+                          initialColor: null,
+                          isEdit: false,
+                          noteOnly: true,
+                        });
+                      }}
+                      className="absolute left-0 top-1/2 -translate-y-1/2 p-0 leading-none text-muted-foreground/40 opacity-0 transition-opacity hover:text-ink group-hover/hcell:opacity-100"
+                    >
+                      <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+                    </button>
+                  )}
                   <span>
                     {m.label}
                     {mode.kind === "year" && colDate && (
@@ -1008,6 +1033,9 @@ export function UnifiedElasticGrid({
             isEdit={popover.isEdit}
             anchor={popover.rect}
             initialTime={initialTime}
+            lockedType={existingEv?.diaryType === "note" ? "note" : "training"}
+            noteOnly={popover.noteOnly}
+            headerLabel={popover.noteOnly ? "Nytt notat" : undefined}
             date={
               existingEv
                 ? fromISOLocal(existingEv.startISO)
