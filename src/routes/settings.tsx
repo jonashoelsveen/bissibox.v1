@@ -84,6 +84,7 @@ type Tab =
   | "appearance"
   | "library"
   | "diary"
+  | "connectors"
   | "map"
   | "entity-profile"
   | "desk"
@@ -268,7 +269,7 @@ function SettingsPage() {
         "entity-appearance",
         "map",
       ]
-    : ["profiles", "general", "address", "roles", "library", "diary", "map", "appearance", "desk", "races", "liked"];
+    : ["profiles", "general", "address", "roles", "library", "diary", "connectors", "map", "appearance", "desk", "races", "liked"];
 
   
 
@@ -305,9 +306,11 @@ function SettingsPage() {
                                     ? "Library"
                                     : t === "diary"
                                       ? "Diary"
-                                      : t === "map"
-                                        ? "Map"
-                                        : "Sign out";
+                                      : t === "connectors"
+                                        ? "Connectors"
+                                        : t === "map"
+                                          ? "Map"
+                                          : "Sign out";
 
   return (
     <div className="px-4 md:px-6">
@@ -619,6 +622,8 @@ function SettingsPage() {
             {tab === "diary" && !isTeamMode && (
               <DiarySettingsPanel scopeKey={`user:${user.id}`} />
             )}
+
+            {tab === "connectors" && !isTeamMode && <ConnectorsPanel />}
 
             {(tab === "appearance" || tab === "entity-appearance") && (
               <AppearancePanel />
@@ -1486,7 +1491,7 @@ function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
     <div className="space-y-3">
       <DiaryCategoryCard
         title="Training"
-        items={["Connectors", "Units", "Activitytypes"]}
+        items={["Units", "Activitytypes"]}
       />
       <DiaryCategoryCard title="Notes" items={[]} />
     </div>
@@ -1534,5 +1539,96 @@ function DiaryCategoryCard({ title, items }: { title: string; items: string[] })
         </p>
       )}
     </Card>
+  );
+}
+
+/* ───────── Connectors panel ───────── */
+
+const CONNECTOR_GROUPS: { title: string; items: { name: string; tag: string }[] }[] = [
+  {
+    title: "Sports & timing",
+    items: [
+      { name: "Strava", tag: "fitness" },
+      { name: "EQ Timing", tag: "timing" },
+    ],
+  },
+  {
+    title: "Cloud storage",
+    items: [
+      { name: "One Drive", tag: "storage" },
+      { name: "iCloud", tag: "storage" },
+      { name: "Google Drive", tag: "storage" },
+      { name: "Dropbox", tag: "storage" },
+    ],
+  },
+  {
+    title: "Email",
+    items: [
+      { name: "Outlook", tag: "email" },
+      { name: "Hotmail", tag: "email" },
+      { name: "Gmail", tag: "email" },
+    ],
+  },
+];
+
+function ConnectorsPanel() {
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+
+  const allItems = CONNECTOR_GROUPS.flatMap((g) =>
+    g.items.map((it) => ({ ...it, group: g.title })),
+  );
+  const matches = q ? allItems.filter((it) => it.name.toLowerCase().includes(q)) : [];
+
+  return (
+    <div className="space-y-6">
+      <div className="relative">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search connectors…"
+          className="w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none transition focus:border-primary"
+        />
+      </div>
+
+      {matches.length > 0 && (
+        <Card>
+          <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            Matches
+          </h3>
+          <div className="mt-3 space-y-2">
+            {matches.map((it) => (
+              <ConnectorRow key={`m-${it.name}`} name={it.name} />
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {CONNECTOR_GROUPS.map((g) => (
+        <Card key={g.title}>
+          <h3 className="text-sm font-semibold text-ink">{g.title}</h3>
+          <div className="mt-3 space-y-2">
+            {g.items.map((it) => (
+              <ConnectorRow key={it.name} name={it.name} />
+            ))}
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function ConnectorRow({ name }: { name: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-hairline px-4 py-3">
+      <span className="text-sm text-ink">{name}</span>
+      <button
+        type="button"
+        className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-ink hover:text-ink"
+      >
+        Connect
+      </button>
+    </div>
   );
 }
