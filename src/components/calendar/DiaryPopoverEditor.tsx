@@ -68,6 +68,12 @@ export interface DiaryPopoverEditorProps {
   initialTime?: { startMin: number; endMin: number } | null;
   /** Date represented by the popover — used to label note-mode session details. */
   date?: Date;
+  /** Force a fixed type (no dropdown). */
+  lockedType?: DiaryType;
+  /** Note-only mode: just a "Write note" textarea + footer. No title, no dropdowns. */
+  noteOnly?: boolean;
+  /** Override the header label (default "Legg til økt" / "Rediger økt"). */
+  headerLabel?: string;
   onClose: () => void;
   onCommit: (value: DiaryPopoverValue, opts?: { delete?: boolean }) => void;
 }
@@ -78,12 +84,15 @@ export function DiaryPopoverEditor({
   anchor,
   initialTime = null,
   date,
+  lockedType,
+  noteOnly = false,
+  headerLabel,
   onClose,
   onCommit,
 }: DiaryPopoverEditorProps) {
   const [title, setTitle] = useState(initialEvent?.title ?? "");
   const [diaryType, setDiaryType] = useState<DiaryType>(
-    (initialEvent?.diaryType as DiaryType) ?? "training",
+    lockedType ?? (initialEvent?.diaryType as DiaryType) ?? "training",
   );
   const [diaryGroup, setDiaryGroup] = useState<string>(
     initialEvent?.diaryGroup ?? "endurance",
