@@ -670,10 +670,11 @@ function TeamMembersPage() {
       const glIdMap: Record<number, string> = {};
       for (let i = 0; i < coaches.length; i++) {
         const m = coaches[i];
+        const groupName = m.group_id ? (groups.find((g) => g.id === m.group_id)?.name ?? m.role) : m.role;
         if (m.id) {
           const { error } = await supabase
             .from("team_group_leaders")
-            .update({ name: m.name, group_name: m.role, email: m.email, sort_order: i })
+            .update({ name: m.name, group_name: groupName, group_id: m.group_id ?? null, email: m.email, sort_order: i })
             .eq("id", m.id);
           if (error) throw error;
           glIdMap[i] = m.id;
@@ -683,7 +684,8 @@ function TeamMembersPage() {
             .insert({
               team_id: teamId,
               name: m.name,
-              group_name: m.role,
+              group_name: groupName,
+              group_id: m.group_id ?? null,
               email: m.email,
               status: "pending",
               sort_order: i,
