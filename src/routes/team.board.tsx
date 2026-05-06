@@ -1422,6 +1422,9 @@ export function TeamBoardPage({
           onClose={() => setNewMeetingOpen(false)}
           onConfirm={startNewMeeting}
           confirmLabel="Start meeting"
+          groupOptions={kind === "group" ? groupOptions : undefined}
+          groupId={newMeetingGroupId}
+          onGroupId={setNewMeetingGroupId}
         />
       )}
 
