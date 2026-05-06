@@ -374,6 +374,8 @@ export function UnifiedElasticGrid({
     isEdit: boolean;
     /** When set, the commit/delete will mutate this CalendarEvent. */
     eventId?: string;
+    /** Note-only quick-add popover (diary day-header plus button). */
+    noteOnly?: boolean;
   } | null>(null);
 
   // Refs assigned later in render so openPopover can reach the latest
