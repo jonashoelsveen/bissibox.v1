@@ -231,6 +231,24 @@ export function DiaryPopoverEditor({
             </select>
           </DropdownRow>
 
+          {/* Note text field — appears when Note type is selected */}
+          {diaryType === "note" && (
+            <div className="relative border-t border-hairline">
+              <span
+                aria-hidden
+                className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
+                style={{ background: accent }}
+              />
+              <textarea
+                value={sessionNote}
+                onChange={(e) => setSessionNote(e.target.value)}
+                placeholder="Skriv notat…"
+                className="block w-full resize-none bg-transparent pl-4 pr-3 py-2 text-[12px] text-ink outline-none placeholder:text-muted-foreground/60"
+                rows={4}
+              />
+            </div>
+          )}
+
           {/* Group dropdown */}
           {diaryType === "training" && (
             <DropdownRow accent={accent}>
