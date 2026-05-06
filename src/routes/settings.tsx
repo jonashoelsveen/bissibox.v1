@@ -539,8 +539,16 @@ function SettingsPage() {
                     </Grid>
                   </div>
                 </Card>
+                <Card>
+                  <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Appearance</h3>
+                  <div className="mt-4">
+                    <TopBarColorPicker />
+                  </div>
+                </Card>
               </div>
             )}
+
+            {false && (
 
             {tab === "profiles" && !isTeamMode && (
               <ProfileVisibilityPanel
