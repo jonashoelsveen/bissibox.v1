@@ -510,8 +510,13 @@ function SettingsPage() {
                     await supabase.from("teams").update({ active: v }).eq("id", team.id);
                   }}
                 />
+              </div>
+            )}
+
+            {tab === "entity-general" && isTeamMode && team && (
+              <div className="space-y-6">
                 <Card>
-                  <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">General</h3>
+                  <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">About</h3>
                   <div className="mt-4">
                     <Grid>
                       <Field label="Team name" value={team.name ?? ""} onChange={(v) => updateTeam("name", v)} />
