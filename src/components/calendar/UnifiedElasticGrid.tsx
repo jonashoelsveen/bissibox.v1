@@ -984,7 +984,96 @@ export function UnifiedElasticGrid({
       </AnimatePresence>
       </LayoutGroup>
 
-      {popover && (
+      {popover && appKind === "diary" && mode.kind === "year" && (() => {
+        const existingEv = popover.eventId ? events.find((e) => e.id === popover.eventId) : null;
+        const initialTime = (() => {
+          if (existingEv && !existingEv.allDay) {
+            const s = fromISOLocal(existingEv.startISO);
+            const e = fromISOLocal(existingEv.endISO);
+            return { startMin: s.getHours() * 60 + s.getMinutes(), endMin: e.getHours() * 60 + e.getMinutes() };
+          }
+          if (markRange) {
+            return {
+              startMin: WEEK_START_HOUR * 60 + (markRange.lo - 2) * 30,
+              endMin: WEEK_START_HOUR * 60 + (markRange.hi - 2 + 1) * 30,
+            };
+          }
+          const lo = popover.key.day * 2 + popover.key.session;
+          const startMin = WEEK_START_HOUR * 60 + (lo - 2) * 30;
+          return { startMin, endMin: startMin + 30 };
+        })();
+        return (
+          <DiaryPopoverEditor
+            initialEvent={existingEv ?? { title: popover.initialText }}
+            isEdit={popover.isEdit}
+            anchor={popover.rect}
+            initialTime={initialTime}
+            onClose={closePopover}
+            onCommit={(v: DiaryPopoverValue, opts) => {
+              const date = markRange
+                ? weekDates[markRange.month]
+                : existingEv
+                  ? fromISOLocal(existingEv.startISO)
+                  : weekDates[popover.key.month];
+              if (!date) {
+                closePopover();
+                return;
+              }
+              if (opts?.delete && popover.eventId) {
+                onDeleteEvent(popover.eventId);
+                setMarkRange(null);
+                setMarkReleased(false);
+                closePopover();
+                return;
+              }
+              const time = v.time ?? initialTime;
+              const startISO = toISOLocal(setHM(date, Math.floor(time.startMin / 60), time.startMin % 60));
+              const endISO = toISOLocal(setHM(date, Math.floor(time.endMin / 60), time.endMin % 60));
+              if (popover.eventId) {
+                if (!v.title) {
+                  onDeleteEvent(popover.eventId);
+                } else {
+                  onUpsertEvent({
+                    id: popover.eventId,
+                    title: v.title,
+                    color: v.color,
+                    startISO,
+                    endISO,
+                    allDay: false,
+                    diaryType: v.diaryType,
+                    diaryGroup: v.diaryGroup,
+                    diarySub: v.diarySub,
+                    distanceKm: v.distanceKm,
+                    paceSecPerKm: v.paceSecPerKm,
+                    sessionNote: v.sessionNote,
+                    activities: v.activities,
+                  });
+                }
+              } else if (v.title) {
+                onUpsertEvent({
+                  title: v.title,
+                  color: v.color,
+                  startISO,
+                  endISO,
+                  allDay: false,
+                  diaryType: v.diaryType,
+                  diaryGroup: v.diaryGroup,
+                  diarySub: v.diarySub,
+                  distanceKm: v.distanceKm,
+                  paceSecPerKm: v.paceSecPerKm,
+                  sessionNote: v.sessionNote,
+                  activities: v.activities,
+                });
+              }
+              setMarkRange(null);
+              setMarkReleased(false);
+              closePopover();
+            }}
+          />
+        );
+      })()}
+
+      {popover && !(appKind === "diary" && mode.kind === "year") && (
         <PopoverEditor
           seat={seat}
           initialText={popover.initialText}
