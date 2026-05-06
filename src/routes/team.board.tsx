@@ -120,6 +120,8 @@ export function TeamBoardPage({
   const [newMeetingOpen, setNewMeetingOpen] = useState(false);
   const [newMeetingTitle, setNewMeetingTitle] = useState("");
   const [newMeetingFolder, setNewMeetingFolder] = useState<string>("");
+  const [newMeetingGroupId, setNewMeetingGroupId] = useState<string>("");
+  const [groupOptions, setGroupOptions] = useState<GroupOption[]>([]);
   const [editMeetingOpen, setEditMeetingOpen] = useState(false);
   const [editMeetingTitle, setEditMeetingTitle] = useState("");
   const [editMeetingFolder, setEditMeetingFolder] = useState<string>("");
