@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          average_heartrate: number | null
+          average_speed: number | null
+          created_at: string
+          distance_m: number | null
+          elapsed_time_sec: number | null
+          id: string
+          last_synced_at: string | null
+          map_polyline: string | null
+          max_heartrate: number | null
+          moving_time_sec: number | null
+          name: string | null
+          raw: Json | null
+          source: string
+          sport_type: string | null
+          start_date: string | null
+          strava_activity_id: number | null
+          sub_type: string | null
+          summary_polyline: string | null
+          sync_status: string
+          total_elevation_gain_m: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          average_heartrate?: number | null
+          average_speed?: number | null
+          created_at?: string
+          distance_m?: number | null
+          elapsed_time_sec?: number | null
+          id?: string
+          last_synced_at?: string | null
+          map_polyline?: string | null
+          max_heartrate?: number | null
+          moving_time_sec?: number | null
+          name?: string | null
+          raw?: Json | null
+          source?: string
+          sport_type?: string | null
+          start_date?: string | null
+          strava_activity_id?: number | null
+          sub_type?: string | null
+          summary_polyline?: string | null
+          sync_status?: string
+          total_elevation_gain_m?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          average_heartrate?: number | null
+          average_speed?: number | null
+          created_at?: string
+          distance_m?: number | null
+          elapsed_time_sec?: number | null
+          id?: string
+          last_synced_at?: string | null
+          map_polyline?: string | null
+          max_heartrate?: number | null
+          moving_time_sec?: number | null
+          name?: string | null
+          raw?: Json | null
+          source?: string
+          sport_type?: string | null
+          start_date?: string | null
+          strava_activity_id?: number | null
+          sub_type?: string | null
+          summary_polyline?: string | null
+          sync_status?: string
+          total_elevation_gain_m?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           cover_media_id: string | null
@@ -1151,6 +1226,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      strava_auth: {
+        Row: {
+          access_token: string
+          athlete_id: number
+          connected_at: string
+          created_at: string
+          expires_at: string
+          id: string
+          refresh_token: string
+          scope: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          athlete_id: number
+          connected_at?: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          refresh_token: string
+          scope?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          athlete_id?: number
+          connected_at?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          refresh_token?: string
+          scope?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       team_board_meeting_attachments: {
         Row: {
