@@ -438,6 +438,12 @@ function TeamMembersPage() {
 
   async function inviteCoach(idx: number) {
     const m = coaches[idx];
+    if (!m.group_id) {
+      toast.message("Please choose a group first", {
+        description: "Group leaders must be assigned to a group before you can send the invite.",
+      });
+      return;
+    }
     if (!m.email || !m.email.includes("@")) {
       toast.error("Enter a valid email first");
       return;
