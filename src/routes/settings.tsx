@@ -93,6 +93,7 @@ type Tab =
   | "system"
   | "appearance"
   | "entity-profile"
+  | "entity-general"
   | "entity-organization"
   | "entity-calendar"
   | "entity-map"
