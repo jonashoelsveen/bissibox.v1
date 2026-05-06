@@ -395,7 +395,6 @@ function NoteBody({
   onTitle: (v: string) => void;
   onNote: (v: string) => void;
 }) {
-  const fileInputRef = useState<HTMLInputElement | null>(null)[0];
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4">
       <section className="rounded-lg border border-hairline bg-card shadow-sm">
