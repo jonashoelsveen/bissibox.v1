@@ -322,6 +322,7 @@ function SettingsPage() {
         "appearance",
         "divider-1",
         "entity-profile",
+        "entity-general",
         "entity-organization",
         "entity-calendar",
         "entity-map",
