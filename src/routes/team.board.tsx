@@ -629,6 +629,7 @@ export function TeamBoardPage({
     if (!ongoing) return;
     setEditMeetingTitle(ongoing.meeting.title ?? "");
     setEditMeetingFolder(ongoing.meeting.folder ?? "");
+    setEditMeetingGroupId(ongoing.meeting.group_id ?? "");
     setEditMeetingOpen(true);
   }
 
@@ -636,18 +637,47 @@ export function TeamBoardPage({
     if (!ongoing) return;
     const title = editMeetingTitle.trim() || ongoing.meeting.title;
     const folder = editMeetingFolder.trim() || null;
+    const isGroupKind = kind === "group";
+    const groupId = isGroupKind ? (editMeetingGroupId || null) : undefined;
+    if (isGroupKind && !groupId) {
+      toast.error("Pick a group for this meeting");
+      return;
+    }
+    const updatePayload: Record<string, unknown> = {
+      title,
+      folder,
+      updated_at: new Date().toISOString(),
+    };
+    if (isGroupKind) updatePayload.group_id = groupId;
     const { error } = await sb
       .from(tables.meetings)
-      .update({ title, folder, updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq("id", ongoing.meeting.id);
     if (error) {
       toast.error(error.message);
       return;
     }
-    patchMeetingInTab(ongoing.meeting.id, { title, folder });
+    const groupChanged = isGroupKind && groupId !== (ongoing.meeting.group_id ?? null);
+    patchMeetingInTab(ongoing.meeting.id, {
+      title,
+      folder,
+      ...(isGroupKind ? { group_id: groupId } : {}),
+    });
     setMeetings((prev) =>
-      prev.map((m) => (m.id === ongoing.meeting.id ? { ...m, title, folder } : m)),
+      prev.map((m) =>
+        m.id === ongoing.meeting.id
+          ? { ...m, title, folder, ...(isGroupKind ? { group_id: groupId } : {}) }
+          : m,
+      ),
     );
+    // If the group changed, wipe roster + attendance so it gets rebuilt from
+    // the new group's members on next load.
+    if (groupChanged) {
+      await sb.from(tables.attendance).delete().eq("meeting_id", ongoing.meeting.id);
+      await sb.from(tables.roster).delete().eq("meeting_id", ongoing.meeting.id);
+      patchTab(ongoing.meeting.id, { roster: [], attendance: [] });
+      void loadRosterAndAttendanceFor(ongoing.meeting.id);
+    }
     setEditMeetingOpen(false);
     toast.success("Updated");
   }
