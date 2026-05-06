@@ -84,25 +84,23 @@ interface LikedRow {
 }
 
 type Tab =
-  | "general"
-  | "address"
-  | "races"
-  | "liked"
-  | "roles"
+  | "account"
   | "profiles"
-  | "appearance"
-  | "library"
+  | "calendar"
   | "diary"
+  | "library"
   | "connectors"
-  | "map"
+  | "system"
+  | "appearance"
   | "entity-profile"
-  | "desk"
-  | "signout"
   | "entity-organization"
-  | "entity-meetings"
-  | "entity-library"
+  | "entity-calendar"
+  | "entity-map"
   | "entity-events"
-  | "entity-appearance";
+  | "entity-library";
+
+type DividerKey = `divider-${number}`;
+type NavItem = Tab | DividerKey;
 
 interface EntityRow {
   id: string;
