@@ -143,7 +143,7 @@ function TeamMembersPage() {
         return;
       }
 
-      const [{ data: gs }, { data: tms }, { data: tmemberships }, { data: tgms }, { data: tiers }, { data: bms }] = await Promise.all([
+      const [{ data: gs }, { data: tms }, { data: tmemberships }, { data: tgms }, { data: tiers }, { data: bms }, { data: gls }] = await Promise.all([
         supabase
           .from("team_groups")
           .select("id,name,age_from,age_to,sort_order,description,leader_name,leader_email,leader_phone,is_default,color")
@@ -171,7 +171,25 @@ function TeamMembersPage() {
           .select("id,name,role,email,status,invited_at,sort_order")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
+        supabase
+          .from("team_group_leaders")
+          .select("id,name,group_name,email,status,invited_at,sort_order")
+          .eq("team_id", tid)
+          .order("sort_order", { ascending: true }),
       ]);
+
+      setCoaches(
+        ((gls ?? []) as Array<{ id: string; name: string | null; group_name: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((g, i) => ({
+          id: g.id,
+          name: g.name ?? "",
+          role: g.group_name ?? "",
+          email: g.email ?? "",
+          status: (g.status as "pending" | "active") ?? "pending",
+          invited_at: g.invited_at,
+          sort_order: g.sort_order ?? i,
+        })),
+      );
+
 
       setBoardMembers(
         ((bms ?? []) as Array<{ id: string; name: string | null; role: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((b, i) => ({
