@@ -6,11 +6,8 @@
 import { useMemo, useState } from "react";
 import { BookOpen } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import {
-  CalendarSideNav,
-  type CategoryKey,
-  INDIVIDUAL_SIDENAV_CATEGORIES,
-} from "./CalendarSideNav";
+import type { CategoryKey } from "./CalendarSideNav";
+import { DiarySideNav } from "./DiarySideNav";
 import { YearCalendarView } from "./YearCalendarView";
 import type { DateRange } from "./MiniCalendar";
 import type { ViewMode } from "./UnifiedElasticGrid";
@@ -33,11 +30,9 @@ export function DiaryPage() {
   });
   const [viewMode, setViewMode] = useState<ViewMode>("week");
 
-  const [visibleCategories, setVisibleCategories] = useState<Set<CategoryKey>>(() => {
-    const all = new Set<CategoryKey>();
-    INDIVIDUAL_SIDENAV_CATEGORIES.forEach((c) => all.add(c.key));
-    return all;
-  });
+  const [visibleCategories, setVisibleCategories] = useState<Set<CategoryKey>>(
+    () => new Set<CategoryKey>(["ind:training"]),
+  );
   const toggleCategory = (k: CategoryKey) =>
     setVisibleCategories((prev) => {
       const next = new Set(prev);
@@ -61,7 +56,7 @@ export function DiaryPage() {
 
       <div className="grid gap-6 pt-4 md:grid-cols-[240px_1fr]">
         <aside className="md:sticky md:top-28 md:self-start">
-          <CalendarSideNav
+          <DiarySideNav
             currentDate={currentDate}
             currentRange={currentRange}
             onCurrentDateChange={(d, r) => {
@@ -71,8 +66,6 @@ export function DiaryPage() {
             viewMode={viewMode}
             visibleCategories={visibleCategories}
             onToggleCategory={toggleCategory}
-            seat="individual"
-            entities={[]}
           />
         </aside>
 
