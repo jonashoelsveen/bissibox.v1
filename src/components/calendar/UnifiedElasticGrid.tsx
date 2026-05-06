@@ -2002,11 +2002,12 @@ function WeekEventsOverlay({
             />
             {appKind === "diary" ? (
               (() => {
+                const actKey = (ev.activity || ev.diarySub || "").toLowerCase();
                 const ActIcon: LucideIcon =
-                  ev.activity === "cycling" ? Bike :
-                  ev.activity === "swimming" ? Waves :
-                  ev.activity === "strength" ? Dumbbell :
-                  ev.activity === "xcskiing" ? Snowflake :
+                  actKey === "cycling" || actKey === "bike" ? Bike :
+                  actKey === "swimming" || actKey === "swim" ? Waves :
+                  actKey === "strength" ? Dumbbell :
+                  actKey === "xcskiing" ? Snowflake :
                   Footprints;
                 const durStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
                 const km = ev.distanceKm;
