@@ -1898,9 +1898,12 @@ function WeekEventsOverlay({
               className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]"
               style={{ background: accent }}
             />
-            <div className="flex items-center gap-1 truncate">
+            <div className="flex items-center gap-1">
               {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: accent }} />}
               <span className="truncate font-medium">{ev.title}</span>
+              <span className="ml-auto shrink-0 pl-1 mono text-[10.5px] tabular-nums opacity-70">
+                {`${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`}
+              </span>
             </div>
           </div>
         );
