@@ -338,6 +338,13 @@ export interface CalendarEvent {
   sessionNote?: string;
   /** Multiple activity entries inside one session. */
   activities?: { type: string; durationMin?: number; distanceKm?: number }[];
+  /** Strava integration metadata. */
+  stravaActivityId?: number;
+  summaryPolyline?: string;
+  totalElevationGainM?: number;
+  averageHeartrate?: number;
+  sportType?: string;
+  subType?: string;
 }
 
 const eventsKey = (calId: string) => `calendar:events:${calId}`;

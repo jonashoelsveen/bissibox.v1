@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.parse-calendar-file]
 verify_jwt = true
+
+[functions.strava-oauth-callback]
+verify_jwt = false
+
+[functions.strava-webhook]
+verify_jwt = false

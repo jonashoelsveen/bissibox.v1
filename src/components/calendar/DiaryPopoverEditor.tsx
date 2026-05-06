@@ -290,6 +290,15 @@ export function DiaryPopoverEditor({
       {showDetails && (
         <SessionDetailsModal
           isEdit={isEdit}
+          strava={
+            initialEvent?.summaryPolyline
+              ? {
+                  polyline: initialEvent.summaryPolyline,
+                  elevationGainM: initialEvent.totalElevationGainM ?? null,
+                  distanceKm: initialEvent.distanceKm ?? null,
+                }
+              : null
+          }
           value={{
             title,
             diaryType,

@@ -12,6 +12,7 @@ import { X, Plus, MapPin, NotebookPen, Info, Paperclip } from "lucide-react";
 import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import { useLibrarySetting } from "@/lib/library-settings";
 import { diaryAutosyncKey } from "@/lib/library-settings";
+import { StravaMapPanel } from "./StravaMapPanel";
 
 export interface SessionDetailsValue {
   title: string;
@@ -45,12 +46,14 @@ export function SessionDetailsModal({
   onChange,
   onClose,
   onSave,
+  strava,
 }: {
   isEdit: boolean;
   value: SessionDetailsValue;
   onChange: (v: SessionDetailsValue) => void;
   onClose: () => void;
   onSave: (v: SessionDetailsValue) => void;
+  strava?: { polyline?: string | null; elevationGainM?: number | null; distanceKm?: number | null } | null;
 }) {
   const [tab, setTab] = useState<Tab>("about");
   const [autosync] = useLibrarySetting<boolean>(diaryAutosyncKey("global"), false);
@@ -216,13 +219,21 @@ export function SessionDetailsModal({
               />
             )}
             {tab === "map" && (
-              <div className="grid place-items-center rounded-lg border border-dashed border-hairline bg-muted/20 py-16 text-center">
-                <div className="space-y-1">
-                  <MapPin className="mx-auto h-6 w-6 text-muted-foreground/60" />
-                  <p className="text-sm text-ink">Map syncs automatically with Strava</p>
-                  <p className="text-xs text-muted-foreground">Coming soon — connect Strava in the Connectors settings.</p>
+              strava?.polyline ? (
+                <StravaMapPanel
+                  polyline={strava.polyline}
+                  elevationGainM={strava.elevationGainM ?? null}
+                  distanceKm={strava.distanceKm ?? value.distanceKm ?? null}
+                />
+              ) : (
+                <div className="grid place-items-center rounded-lg border border-dashed border-hairline bg-muted/20 py-16 text-center">
+                  <div className="space-y-1">
+                    <MapPin className="mx-auto h-6 w-6 text-muted-foreground/60" />
+                    <p className="text-sm text-ink">Map syncs automatically with Strava</p>
+                    <p className="text-xs text-muted-foreground">Connect Strava in the Connectors settings to see your activity route here.</p>
+                  </div>
                 </div>
-              </div>
+              )
             )}
             {tab === "note" && (
               <div className="space-y-3">

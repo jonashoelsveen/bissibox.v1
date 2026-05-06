@@ -24,6 +24,7 @@ import { ImportButton } from "./ImportCalendar/ImportButton";
 import { buildGhostEvents } from "./ImportCalendar/ghost";
 import { isoWeekNumber } from "./dateUtils";
 import { categoryKeyFromColor, type CategoryKey } from "./CalendarSideNav";
+import { useStravaActivities } from "./useStravaActivities";
 
 const MONTHS_NB = [
   "Januar", "Februar", "Mars", "April", "Mai", "Juni",
@@ -132,11 +133,18 @@ function YearCalendarViewInner({
     ],
   );
   const previewActive = overlay.events !== null;
+  const { events: stravaEvents } = useStravaActivities();
   const mergedEvents = useMemo(() => {
-    const base = previewActive ? [...events, ...ghostEvents] : events;
+    const stravaForDiary = appKind === "diary" ? stravaEvents : [];
+    // De-duplicate: a manually-logged event with the same id (strava:<id>) takes precedence.
+    const ids = new Set(events.map((e) => e.id));
+    const stravaUnique = stravaForDiary.filter((e) => !ids.has(e.id));
+    const base = previewActive
+      ? [...events, ...stravaUnique, ...ghostEvents]
+      : [...events, ...stravaUnique];
     if (!visibleCategories) return base;
     return base.filter((e) => visibleCategories.has(categoryKeyFromColor(e.color)));
-  }, [previewActive, events, ghostEvents, visibleCategories]);
+  }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind]);
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
