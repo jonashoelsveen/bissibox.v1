@@ -58,19 +58,20 @@ function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate:
 }
 
 export type CalendarSeat = "admin" | "individual";
+export type CalendarAppKind = "calendar" | "diary";
 
 export interface YearCalendarViewProps {
   calId: string;
   defaultTitle: string;
   seat?: CalendarSeat;
-  /** Optional controlled state (driven by the page shell + sidebar). */
   currentDate?: Date;
   currentRange?: DateRange;
   onCurrentDateChange?: (date: Date, range?: DateRange) => void;
   viewMode?: ViewMode;
   onViewModeChange?: (v: ViewMode) => void;
-  /** When provided, only events whose category is in this set are rendered. */
   visibleCategories?: Set<CategoryKey>;
+  /** "diary" hides import + undo/redo, restricts to week/month, blocks future logging. */
+  appKind?: CalendarAppKind;
 }
 
 export function YearCalendarView(props: YearCalendarViewProps) {
