@@ -17,6 +17,13 @@ import {
 import { MapSettingsPanel } from "@/components/settings/MapSettingsPanel";
 import { Footprints, Check } from "lucide-react";
 import { SESSION_TILE_DESIGNS, useSessionTileDesign, type SessionTileDesign } from "@/lib/session-tile-design";
+import stravaLogo from "@/assets/strava-logo.png";
+import eqTimingLogo from "@/assets/eq-timing-logo.png";
+
+const CONNECTOR_LOGOS: Record<string, string> = {
+  "Strava": stravaLogo,
+  "EQ Timing": eqTimingLogo,
+};
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -1804,10 +1811,13 @@ function ConnectorsPanel() {
       return (
         <div className="rounded-xl border border-hairline px-4 py-3" key={key || name}>
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex items-center gap-3">
+              <img src={stravaLogo} alt="Strava" className="h-9 w-9 rounded-lg object-cover" />
+              <div>
               <div className="text-sm text-ink">Strava</div>
               <div className="mt-0.5 text-xs text-muted-foreground">
                 Auto-syncs your activities into the Diary. Recent activities cover the <strong>last 90 days</strong>.
+              </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -1882,9 +1892,13 @@ function ConnectorsPanel() {
 }
 
 function ConnectorRow({ name }: { name: string }) {
+  const logo = CONNECTOR_LOGOS[name];
   return (
     <div className="flex items-center justify-between rounded-xl border border-hairline px-4 py-3">
-      <span className="text-sm text-ink">{name}</span>
+      <div className="flex items-center gap-3">
+        {logo && <img src={logo} alt={name} className="h-9 w-9 rounded-lg object-cover" />}
+        <span className="text-sm text-ink">{name}</span>
+      </div>
       <button
         type="button"
         className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-ink hover:text-ink"
