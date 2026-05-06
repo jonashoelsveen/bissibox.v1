@@ -1,6 +1,15 @@
 import { adminClient, exchangeCode, verifyState } from "../_shared/strava.ts";
 
 Deno.serve(async (req) => {
+  const STRAVA_CLIENT_ID = (Deno.env.get("STRAVA_CLIENT_ID") ?? "").trim();
+  const STRAVA_CLIENT_SECRET = (Deno.env.get("STRAVA_CLIENT_SECRET") ?? "").trim();
+  if (!STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
+    console.error("Missing Strava credentials in callback", {
+      hasId: !!STRAVA_CLIENT_ID, hasSecret: !!STRAVA_CLIENT_SECRET,
+    });
+    return new Response("Server configuration error: Missing Strava credentials", { status: 500 });
+  }
+
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
   const stateParam = url.searchParams.get("state") || "";
