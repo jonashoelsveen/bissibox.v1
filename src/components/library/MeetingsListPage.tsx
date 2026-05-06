@@ -12,6 +12,12 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { meetingTables, type MeetingKind } from "@/lib/meeting-kind";
+
+// Supabase generated types only know the literal table names, so we cast to
+// `any` when the table name is computed dynamically from `kind`.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sb = supabase as any;
 
 interface MeetingRow {
   id: string;
@@ -23,6 +29,7 @@ interface MeetingRow {
 }
 
 export function MeetingsListPage({
+  kind = "board",
   actionsMount,
   hideNewActions,
   externalView,
@@ -30,6 +37,7 @@ export function MeetingsListPage({
   onMeetingCreated,
   newMeetingSignal,
 }: {
+  kind?: MeetingKind;
   actionsMount?: HTMLDivElement | null;
   hideNewActions?: boolean;
   /** "all" or filter by folder name (null = unsorted, string = folder name). */
@@ -41,6 +49,7 @@ export function MeetingsListPage({
   /** Trigger the "new meeting" dialog from the parent (counter increments). */
   newMeetingSignal?: number;
 } = {}) {
+  const tables = meetingTables(kind);
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
@@ -102,8 +111,8 @@ export function MeetingsListPage({
       return;
     }
     setTeamId(team.id);
-    const { data: rows } = await supabase
-      .from("team_board_meetings")
+    const { data: rows } = await sb
+      .from(tables.meetings)
       .select("id,title,folder,meeting_date,notes,created_at")
       .eq("team_id", team.id)
       .order("meeting_date", { ascending: false, nullsFirst: false })
@@ -117,8 +126,8 @@ export function MeetingsListPage({
   // Load folder rows from the meeting_folders table (mirrors note_folders).
   const loadFolders = useCallback(async () => {
     if (!teamId) { setExtraFolders([]); return; }
-    const { data } = await supabase
-      .from("meeting_folders")
+    const { data } = await sb
+      .from(tables.folders)
       .select("name")
       .eq("team_id", teamId)
       .order("pinned", { ascending: false })
@@ -141,8 +150,8 @@ export function MeetingsListPage({
     if (!trimmed) { toast.error("Folder name is required"); return false; }
     if (folders.includes(trimmed)) { toast.error("A folder with that name already exists"); return false; }
     if (!teamId) { toast.error("No active team"); return false; }
-    const { error } = await supabase
-      .from("meeting_folders")
+    const { error } = await sb
+      .from(tables.folders)
       .insert({ team_id: teamId, name: trimmed });
     if (error) { toast.error(error.message); return false; }
     await loadFolders();
@@ -191,7 +200,7 @@ export function MeetingsListPage({
     if (selected.size === 0) return;
     if (!confirm(`Delete ${selected.size} meeting(s)? This cannot be undone.`)) return;
     const ids = Array.from(selected);
-    const { error } = await supabase.from("team_board_meetings").delete().in("id", ids);
+    const { error } = await sb.from(tables.meetings).delete().in("id", ids);
     if (error) { toast.error(error.message); return; }
     toast.success("Deleted");
     exitSelect();
@@ -203,10 +212,10 @@ export function MeetingsListPage({
       toast.error("No active team");
       return;
     }
-    const title = newMeetingTitle.trim() || `Board meeting · ${new Date().toLocaleDateString()}`;
+    const title = newMeetingTitle.trim() || `${kind === "group" ? "Group" : "Board"} meeting · ${new Date().toLocaleDateString()}`;
     const folder = newMeetingFolder.trim() || (view.type === "folder" && view.name) || null;
-    const { data, error } = await supabase
-      .from("team_board_meetings")
+    const { data, error } = await sb
+      .from(tables.meetings)
       .insert({
         team_id: teamId,
         title,
@@ -234,16 +243,16 @@ export function MeetingsListPage({
       sort_order: m.sort_order ?? 0,
     }));
     if (snapshotRows.length) {
-      const { data: rosterData } = await supabase
-        .from("team_board_meeting_roster")
+      const { data: rosterData } = await sb
+        .from(tables.roster)
         .insert(snapshotRows)
         .select("id,board_member_id,name,role,email,sort_order");
       const creatorEmail = (user.email ?? "").toLowerCase();
       const selfEntry = (rosterData ?? []).find(
-        (r) => (r.email ?? "").toLowerCase() === creatorEmail,
+        (r: { email?: string | null }) => (r.email ?? "").toLowerCase() === creatorEmail,
       );
       if (selfEntry) {
-        await supabase.from("team_board_meeting_attendance").insert({
+        await sb.from(tables.attendance).insert({
           meeting_id: data.id,
           team_id: teamId,
           roster_id: selfEntry.id,
@@ -443,7 +452,7 @@ export function MeetingsListPage({
                 autoFocus
                 value={newMeetingTitle}
                 onChange={(e) => setNewMeetingTitle(e.target.value)}
-                placeholder={`Board meeting · ${new Date().toLocaleDateString()}`}
+                placeholder={`${kind === "group" ? "Group" : "Board"} meeting · ${new Date().toLocaleDateString()}`}
                 className="mt-1 w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
               />
             </label>

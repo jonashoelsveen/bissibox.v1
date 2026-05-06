@@ -1506,6 +1506,171 @@ export type Database = {
           },
         ]
       }
+      team_group_meeting_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size: number | null
+          id: string
+          meeting_id: string
+          mime_type: string | null
+          storage_path: string
+          team_id: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size?: number | null
+          id?: string
+          meeting_id: string
+          mime_type?: string | null
+          storage_path: string
+          team_id: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          meeting_id?: string
+          mime_type?: string | null
+          storage_path?: string
+          team_id?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
+      team_group_meeting_attendance: {
+        Row: {
+          board_member_id: string
+          created_at: string
+          id: string
+          meeting_id: string
+          roster_id: string | null
+          team_id: string
+        }
+        Insert: {
+          board_member_id: string
+          created_at?: string
+          id?: string
+          meeting_id: string
+          roster_id?: string | null
+          team_id: string
+        }
+        Update: {
+          board_member_id?: string
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          roster_id?: string | null
+          team_id?: string
+        }
+        Relationships: []
+      }
+      team_group_meeting_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          pinned: boolean
+          sort_order: number
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          pinned?: boolean
+          sort_order?: number
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          pinned?: boolean
+          sort_order?: number
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      team_group_meeting_roster: {
+        Row: {
+          board_member_id: string | null
+          created_at: string
+          email: string
+          id: string
+          meeting_id: string
+          name: string
+          role: string
+          sort_order: number
+          team_id: string
+        }
+        Insert: {
+          board_member_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          meeting_id: string
+          name?: string
+          role?: string
+          sort_order?: number
+          team_id: string
+        }
+        Update: {
+          board_member_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          meeting_id?: string
+          name?: string
+          role?: string
+          sort_order?: number
+          team_id?: string
+        }
+        Relationships: []
+      }
+      team_group_meetings: {
+        Row: {
+          created_at: string
+          created_by: string
+          folder: string | null
+          id: string
+          meeting_date: string | null
+          notes: string | null
+          team_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          folder?: string | null
+          id?: string
+          meeting_date?: string | null
+          notes?: string | null
+          team_id: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          folder?: string | null
+          id?: string
+          meeting_date?: string | null
+          notes?: string | null
+          team_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       team_group_members: {
         Row: {
           created_at: string

@@ -21,6 +21,11 @@ import {
   X,
 } from "lucide-react";
 import { useLibrarySetting, meetingsAutosaveKey, registerUnsaved } from "@/lib/library-settings";
+import { meetingTables, type MeetingKind } from "@/lib/meeting-kind";
+
+// Cast for dynamic table names not present in generated types
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sb = supabase as any;
 
 export const Route = createFileRoute("/team/board")({
   component: TeamBoardPage,
@@ -63,6 +68,7 @@ interface RosterEntry {
 }
 
 export function TeamBoardPage({
+  kind = "board",
   embedded,
   newMeetingSignal,
   hideOwnTabBar,
@@ -70,6 +76,7 @@ export function TeamBoardPage({
   onMeetingOpened,
   onMeetingDeleted,
 }: {
+  kind?: MeetingKind;
   embedded?: boolean;
   newMeetingSignal?: number;
   /** When true, hide the inner tab nav and meetings list — parent controls tabs. */
@@ -81,6 +88,8 @@ export function TeamBoardPage({
   /** Notify parent when a meeting is deleted from this view. */
   onMeetingDeleted?: (id: string) => void;
 } = {}) {
+  const tables = meetingTables(kind);
+  const kindLabel = kind === "group" ? "Group" : "Board";
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
   // Active tab: "meetings" or a meeting id
@@ -250,8 +259,8 @@ export function TeamBoardPage({
   }
 
   async function loadMeetings(tid: string) {
-    const { data } = await supabase
-      .from("team_board_meetings")
+    const { data } = await sb
+      .from(tables.meetings)
       .select("id,title,folder,meeting_date,notes,created_at")
       .eq("team_id", tid)
       .order("meeting_date", { ascending: false, nullsFirst: false })
@@ -385,7 +394,7 @@ export function TeamBoardPage({
   }, [meetings, folderFilter, meetingSearch, dateFrom, dateTo]);
 
   function openNewMeeting() {
-    setNewMeetingTitle(`Board meeting · ${new Date().toLocaleDateString()}`);
+    setNewMeetingTitle(`${kindLabel} meeting · ${new Date().toLocaleDateString()}`);
     setNewMeetingFolder("");
     setNewMeetingOpen(true);
   }
@@ -402,10 +411,10 @@ export function TeamBoardPage({
       toast.error(`You can have at most ${MAX_TABS} meeting tabs open at once. Please close another tab to open a new meeting.`);
       return;
     }
-    const title = newMeetingTitle.trim() || `Board meeting · ${new Date().toLocaleDateString()}`;
+    const title = newMeetingTitle.trim() || `${kindLabel} meeting · ${new Date().toLocaleDateString()}`;
     const folder = newMeetingFolder.trim() || null;
-    const { data, error } = await supabase
-      .from("team_board_meetings")
+    const { data, error } = await sb
+      .from(tables.meetings)
       .insert({
         team_id: teamId,
         title,
@@ -432,8 +441,8 @@ export function TeamBoardPage({
       }));
     let snapshot: RosterEntry[] = [];
     if (snapshotRows.length) {
-      const { data: rosterData } = await supabase
-        .from("team_board_meeting_roster")
+      const { data: rosterData } = await sb
+        .from(tables.roster)
         .insert(snapshotRows)
         .select("id,board_member_id,name,role,email,sort_order");
       snapshot = (rosterData ?? []) as RosterEntry[];
@@ -445,8 +454,8 @@ export function TeamBoardPage({
     if (creatorEmail) {
       const selfEntry = snapshot.find((r) => (r.email ?? "").toLowerCase() === creatorEmail);
       if (selfEntry) {
-        const { error: attErr } = await supabase
-          .from("team_board_meeting_attendance")
+        const { error: attErr } = await sb
+          .from(tables.attendance)
           .insert({
             meeting_id: data.id,
             team_id: teamId,
@@ -486,8 +495,8 @@ export function TeamBoardPage({
     if (!ongoing) return;
     const title = editMeetingTitle.trim() || ongoing.meeting.title;
     const folder = editMeetingFolder.trim() || null;
-    const { error } = await supabase
-      .from("team_board_meetings")
+    const { error } = await sb
+      .from(tables.meetings)
       .update({ title, folder, updated_at: new Date().toISOString() })
       .eq("id", ongoing.meeting.id);
     if (error) {
@@ -555,15 +564,15 @@ export function TeamBoardPage({
       return;
     }
 
-    if (!confirm("Do you want to delete board meeting?")) return;
+    if (!confirm(`Do you want to delete ${kindLabel.toLowerCase()} meeting?`)) return;
 
     if (tab.attachments.length) {
       await supabase.storage
         .from("board-attachments")
         .remove(tab.attachments.map((a) => a.storage_path));
     }
-    await supabase.from("team_board_meeting_attachments").delete().eq("meeting_id", id);
-    const { error } = await supabase.from("team_board_meetings").delete().eq("id", id);
+    await sb.from(tables.attachments).delete().eq("meeting_id", id);
+    const { error } = await sb.from(tables.meetings).delete().eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
@@ -573,16 +582,16 @@ export function TeamBoardPage({
   }
 
   async function deleteMeeting(m: MeetingRow) {
-    if (!confirm("Do you want to delete board meeting?")) return;
-    const { data: atts } = await supabase
-      .from("team_board_meeting_attachments")
+    if (!confirm(`Do you want to delete ${kindLabel.toLowerCase()} meeting?`)) return;
+    const { data: atts } = await sb
+      .from(tables.attachments)
       .select("storage_path")
       .eq("meeting_id", m.id);
     if (atts && atts.length) {
-      await supabase.storage.from("board-attachments").remove(atts.map((a) => a.storage_path));
+      await supabase.storage.from("board-attachments").remove(atts.map((a: { storage_path: string }) => a.storage_path));
     }
-    await supabase.from("team_board_meeting_attachments").delete().eq("meeting_id", m.id);
-    const { error } = await supabase.from("team_board_meetings").delete().eq("id", m.id);
+    await sb.from(tables.attachments).delete().eq("meeting_id", m.id);
+    const { error } = await sb.from(tables.meetings).delete().eq("id", m.id);
     if (error) {
       toast.error(error.message);
       return;
@@ -599,8 +608,8 @@ export function TeamBoardPage({
     if (tab.text === tab.savedText) return;
     const textToSave = tab.text;
     setSaving(true);
-    const { error } = await supabase
-      .from("team_board_meetings")
+    const { error } = await sb
+      .from(tables.meetings)
       .update({ notes: textToSave, updated_at: new Date().toISOString() })
       .eq("id", id);
     setSaving(false);
@@ -647,8 +656,8 @@ export function TeamBoardPage({
   }, [ongoing?.meeting.id, ongoingText, savedText]);
 
   async function loadAttachmentsFor(meetingId: string) {
-    const { data } = await supabase
-      .from("team_board_meeting_attachments")
+    const { data } = await sb
+      .from(tables.attachments)
       .select("id,file_name,storage_path,file_size")
       .eq("meeting_id", meetingId)
       .order("created_at", { ascending: false });
@@ -656,8 +665,8 @@ export function TeamBoardPage({
   }
 
   async function loadRosterAndAttendanceFor(meetingId: string) {
-    const { data: rosterData } = await supabase
-      .from("team_board_meeting_roster")
+    const { data: rosterData } = await sb
+      .from(tables.roster)
       .select("id,board_member_id,name,role,email,sort_order")
       .eq("meeting_id", meetingId)
       .order("sort_order", { ascending: true });
@@ -675,24 +684,24 @@ export function TeamBoardPage({
           email: m.email ?? "",
           sort_order: m.sort_order ?? 0,
         }));
-        const { data: inserted } = await supabase
-          .from("team_board_meeting_roster")
+        const { data: inserted } = await sb
+          .from(tables.roster)
           .insert(insertRows)
           .select("id,board_member_id,name,role,email,sort_order");
         rosterRows = ((inserted ?? []) as RosterEntry[]).sort(
           (a, b) => a.sort_order - b.sort_order,
         );
 
-        const { data: legacyAtt } = await supabase
-          .from("team_board_meeting_attendance")
+        const { data: legacyAtt } = await sb
+          .from(tables.attendance)
           .select("id,board_member_id,roster_id")
           .eq("meeting_id", meetingId);
         for (const row of legacyAtt ?? []) {
           if (row.roster_id) continue;
           const match = rosterRows.find((r) => r.board_member_id === row.board_member_id);
           if (match) {
-            await supabase
-              .from("team_board_meeting_attendance")
+            await sb
+              .from(tables.attendance)
               .update({ roster_id: match.id })
               .eq("id", row.id);
           }
@@ -700,8 +709,8 @@ export function TeamBoardPage({
       }
     }
 
-    const { data: attData } = await supabase
-      .from("team_board_meeting_attendance")
+    const { data: attData } = await sb
+      .from(tables.attendance)
       .select("roster_id,board_member_id")
       .eq("meeting_id", meetingId);
     const ids: string[] = [];
@@ -730,8 +739,8 @@ export function TeamBoardPage({
       const toAdd = [...draft].filter((id) => !current.has(id));
       const toRemove = [...current].filter((id) => !draft.has(id));
       if (toRemove.length) {
-        const { error } = await supabase
-          .from("team_board_meeting_attendance")
+        const { error } = await sb
+          .from(tables.attendance)
           .delete()
           .eq("meeting_id", ongoing.meeting.id)
           .in("roster_id", toRemove);
@@ -747,8 +756,8 @@ export function TeamBoardPage({
             board_member_id: entry?.board_member_id ?? rid,
           };
         });
-        const { error } = await supabase
-          .from("team_board_meeting_attendance")
+        const { error } = await sb
+          .from(tables.attendance)
           .insert(rows);
         if (error) throw error;
       }
@@ -778,7 +787,7 @@ export function TeamBoardPage({
           .from("board-attachments")
           .upload(path, file, { contentType: file.type || "application/octet-stream" });
         if (upErr) throw upErr;
-        const { error: insErr } = await supabase.from("team_board_meeting_attachments").insert({
+        const { error: insErr } = await sb.from(tables.attachments).insert({
           meeting_id: ongoing.meeting.id,
           team_id: teamId,
           file_name: file.name,
@@ -814,7 +823,7 @@ export function TeamBoardPage({
 
   async function removeAttachment(id: string, path: string) {
     await supabase.storage.from("board-attachments").remove([path]);
-    await supabase.from("team_board_meeting_attachments").delete().eq("id", id);
+    await sb.from(tables.attachments).delete().eq("id", id);
     if (ongoing) await loadAttachmentsFor(ongoing.meeting.id);
   }
 
@@ -867,7 +876,7 @@ export function TeamBoardPage({
                   disabled={busy}
                   className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
                 >
-                  <Plus className="h-4 w-4" /> New board meeting
+                  <Plus className="h-4 w-4" /> New {kindLabel.toLowerCase()} meeting
                 </button>
               </>
             )}
@@ -995,7 +1004,7 @@ export function TeamBoardPage({
             <div className="mt-5 space-y-2">
               {filteredMeetings.length === 0 && (
                 <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
-                  No board meetings yet.
+                  {`No ${kindLabel.toLowerCase()} meetings yet.`}
                 </div>
               )}
               {filteredMeetings.map((m) => (
@@ -1021,7 +1030,7 @@ export function TeamBoardPage({
                   <button
                     onClick={() => deleteMeeting(m)}
                     className="rounded p-1.5 text-muted-foreground hover:text-destructive"
-                    aria-label="Delete board meeting"
+                    aria-label={`Delete ${kindLabel.toLowerCase()} meeting`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -1281,7 +1290,7 @@ export function TeamBoardPage({
 
       {newMeetingOpen && (
         <MeetingDialog
-          title="New board meeting"
+          title={`New ${kindLabel.toLowerCase()} meeting`}
           name={newMeetingTitle}
           folder={newMeetingFolder}
           folders={folders}
@@ -1354,18 +1363,18 @@ export function TeamBoardPage({
                     const tab = openTabs.find((t) => t.meeting.id === id);
                     const atts = tab?.attachments ?? [];
                     if (atts.length) {
-                      await supabase.storage.from("board-attachments").remove(atts.map((a) => a.storage_path));
+                      await supabase.storage.from("board-attachments").remove(atts.map((a: { storage_path: string }) => a.storage_path));
                     } else {
-                      const { data } = await supabase
-                        .from("team_board_meeting_attachments")
+                      const { data } = await sb
+                        .from(tables.attachments)
                         .select("storage_path").eq("meeting_id", id);
                       if (data && data.length) {
                         await supabase.storage.from("board-attachments")
-                          .remove(data.map((a) => a.storage_path));
+                          .remove(data.map((a: { storage_path: string }) => a.storage_path));
                       }
                     }
-                    await supabase.from("team_board_meeting_attachments").delete().eq("meeting_id", id);
-                    const { error } = await supabase.from("team_board_meetings").delete().eq("id", id);
+                    await sb.from(tables.attachments).delete().eq("meeting_id", id);
+                    const { error } = await sb.from(tables.meetings).delete().eq("id", id);
                     setDeletingMeeting(false);
                     if (error) { toast.error(error.message); return; }
                     setMeetings((prev) => prev.filter((x) => x.id !== id));

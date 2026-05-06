@@ -1,79 +1,65 @@
-# Map page — folder-scoped locations & courses
+# Group Meetings (separate page) — implementation plan
 
-Build the missing folder workspace on `/map`. Folders contain locations (single pin) and courses (path + split points). Inside a folder the user can view multiple items at once on one map (checkbox-toggled, color-coded) or edit a single item full-screen using the same editors as the event page.
+## Goal
 
-## Data model (localStorage, structured for backend port later)
+- Add a new "Group Meetings" page that is a behavioral replica of the current Library "Meetings" tab, but:
+  - Lives at its own route (`/team/group-meetings`), with its own icon (suitcase) in the left main nav.
+  - Stores data in **separate tables** so board and group meetings never mix.
+- Rename the current Library "Meetings" tab to **Board Meetings** (visible label + side-nav label).
+- Role gating: per user instruction, role/access logic is deferred. For now, **always show the new icon in team mode** so the user can preview the page. Specs for who sees what will be wired later.
 
-Extend `MapItem` in `src/components/map/MapPage.tsx`:
+## Database (new tables, mirror of board ones)
 
-```ts
-type LatLng = [number, number];
-type SplitPoint = { id; kind; label; position: LatLng; note? };
+Mirror the schema/RLS of the existing board tables one-for-one, replacing `team_board` with `team_group`:
 
-type MapItem = {
-  id; kind: "location" | "course";
-  name; pinned; created_at;
-  folderId: string | null;        // replaces `folder` (folder name)
-  color: string;                   // assigned at creation, used for course/pin tint
-  pin?: { lat: number; lng: number } | null;   // location only
-  path?: LatLng[];                 // course only
-  splits?: SplitPoint[];           // course only
-};
-```
+- `team_group_meetings` (id, team_id, title, folder, meeting_date, notes, created_by, timestamps)
+- `team_group_meeting_folders` (id, team_id, name, pinned, sort_order, timestamps)
+- `team_group_meeting_attachments` (id, meeting_id, team_id, uploaded_by, file_name, storage_path, file_size, mime_type, created_at)
+- `team_group_meeting_roster` (id, meeting_id, team_id, board_member_id, name, role, email, sort_order)
+- `team_group_meeting_attendance` (id, meeting_id, team_id, board_member_id, roster_id, created_at)
 
-A small migration on read converts legacy `folder` (name) → `folderId` by lookup. `color` is auto-picked from a 10-color palette, avoiding collisions inside the same folder when possible.
+RLS for now: team owner full access (matches how the board tables read/write today). Read access for non-owners can be tightened once the role model is specified.
 
-## Side nav behaviour
+No changes to existing board tables.
 
-- Selecting a folder row in `MapSideNav` routes to `?folder=<folderId>` and the body renders the new `FolderMapView`.
-- `Unsorted` and `Previous` keep current behaviour (flat list).
-- Items inside a folder still open into tabs when clicked from list contexts; opening a single item from inside the folder view is handled by the right sidebar (see below).
+## Code changes
 
-## FolderMapView (new file `src/components/map/FolderMapView.tsx`)
+Strategy: parameterize the existing components with a `kind: "board" | "group"` prop that selects table names, instead of duplicating ~2000 lines.
 
-Layout: `grid-cols-[1fr_320px]`, full viewport height under the tab bar.
+1. **`src/lib/meeting-kind.ts` (new)** — small helper:
+   ```ts
+   export type MeetingKind = "board" | "group";
+   export const meetingTables = (k: MeetingKind) => k === "group"
+     ? { meetings: "team_group_meetings", folders: "team_group_meeting_folders",
+         attachments: "team_group_meeting_attachments",
+         roster: "team_group_meeting_roster", attendance: "team_group_meeting_attendance" }
+     : { meetings: "team_board_meetings", folders: "meeting_folders",
+         attachments: "team_board_meeting_attachments",
+         roster: "team_board_meeting_roster", attendance: "team_board_meeting_attendance" };
+   ```
 
-### Right sidebar (320px) (Same size as the current blank right sidebar)
+2. **`MeetingsListPage`** — add optional `kind` prop (default `"board"`); replace hardcoded table names with `meetingTables(kind).*`.
 
-- Header row: folder icon + folder name (renamable inline later — out of scope now).
-- Section: **Locations** — checkbox + pin icon + name + color dot. Click row: opens that location for editing in main area. Toggle checkbox: include in view-mode overlay.
-- Section: **Courses** — same pattern with route icon.
-- Footer: collapsible **+ Add** that expands to two buttons: `+ Location`, `+ Course`. Clicking either creates a new empty item in this folder and immediately switches main area to its editor.
+3. **`TeamBoardPage`** — add optional `kind` prop; replace hardcoded board-table names with `meetingTables(kind).*`. Default `"board"` so existing usage is unaffected.
 
-### Main area — three modes
+4. **`LibrarySideNav`** — rename the "Meetings" section label to **"Board Meetings"**. (It only ever shows board folders.)
 
-1. **View mode** (default when no item selected for editing)
-  - Single Mapbox map.
-  - Overlays for every *checked* item in the folder, each rendered in its color (lines for courses with split markers, pins for locations).
-  - Top-left: a single search input. As the user types, fuzzy-match across folder items. If a query matches an item in the folder that is **not checked**, show a calm inline notice: *"'*&nbsp;*' is in this folder but not shown — tick it on the right to display it."* No matches → standard "no results" line.
-  - Style picker top-right.
-2. **Edit location mode**
-  - `<SimplePinMap hideSidebar showDescription={false} kindLabel="location" ...>` filling the main area.
-  - `onChange` writes pin into the item; `onSave` persists and returns to view mode.
-  - Top-right delete-pin / save buttons come from `SimplePinMap` already.
-3. **Edit course mode**
-  - `<CourseMapEditor ...>` with the existing island, height profile under the map (component already does this), and `onSave` persisting `path` + `splits` to the item.
+5. **`src/routes/media.tsx`** — rename the "Meetings" library tab label to **"Board Meetings"** wherever shown to the user. Library continues to use `kind="board"` (default).
 
-A small breadcrumb chip top-left in edit modes ("← Back to folder") returns to view mode.
+6. **`src/routes/team.group-meetings.tsx` (new)** — a new page that mimics `media.tsx`'s shell but with only one fixed top tab ("Meetings", suitcase icon) plus opened-meeting tabs. It renders:
+   - Sidebar = a slim folder list (just the group meeting folders) — built inline (small component); reuses the same drag/pin/rename/delete patterns by calling into `meetingTables("group").folders`.
+   - Body = `<MeetingsListPage kind="group" ... />` and `<TeamBoardPage kind="group" embedded hideOwnTabBar forceMeetingId={...} />` for the active meeting tab.
+   - + button shows a tiny menu: Folder | Meeting (matching the spec).
 
-## Item geometry persistence
+7. **`src/components/Chrome.tsx`** — add a new `Briefcase` nav button "Group Meetings" → `/team/group-meetings`, shown when `mode === "team"` and a user is signed in. Place it directly under the Organization (Tent) icon as requested.
 
-Editing in either editor calls `onChange` continuously; we debounce-write the item's geometry into `map:items:<scope>` on every change so closing the page never loses work, and `onSave` shows a toast confirmation. This is the "professional save logic" the user asked for; storage shape is ready to swap with Supabase tables later (`map_folders`, `map_items` with `folder_id`, `geometry jsonb`, `color`).
+## Out of scope (per user)
 
-## Tab + creation surface adjustments
+- Role enforcement (admin vs group leader). Will be specified later.
+- Invite/accept flow for either role.
+- Permission-based hiding/showing of icons or pages.
 
-- The global `+` dropdown in `MapBody` keeps Folder / Location / Course but the Location/Course flows now require a folder selection (already a select; just enforce non-empty) and route the user into the folder's edit mode after creation rather than opening a separate tab.
-- Existing `MapItemView` (placeholder) is deleted — opening an item navigates to its parent folder with `?edit=<itemId>`.
+## Notes
 
-## Files touched
-
-- `src/components/map/MapPage.tsx` — data model, route to FolderMapView, cleanup of MapItemView usage, enforce folder requirement.
-- `src/components/map/FolderMapView.tsx` — new component (right sidebar + view/edit mode switcher + multi-overlay viewer).
-- `src/components/map/MapItemView.tsx` — removed.
-
-## Out of scope for this round
-
-- Backend (Supabase) tables — keep localStorage; structure is ready.
-- Drag-to-reorder items inside a folder.
-- Renaming/deleting items from the folder sidebar (will follow once basic flow is verified).
-- Sharing folders / multi-user sync.
+- All existing Board Meetings behavior remains unchanged (default `kind="board"`).
+- New tables are isolated; any future role policies can be applied without disturbing the board side.
