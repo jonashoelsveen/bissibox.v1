@@ -1653,33 +1653,39 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_leader: boolean
           meeting_id: string
           name: string
           role: string
           sort_order: number
           team_id: string
+          user_id: string | null
         }
         Insert: {
           board_member_id?: string | null
           created_at?: string
           email?: string
           id?: string
+          is_leader?: boolean
           meeting_id: string
           name?: string
           role?: string
           sort_order?: number
           team_id: string
+          user_id?: string | null
         }
         Update: {
           board_member_id?: string | null
           created_at?: string
           email?: string
           id?: string
+          is_leader?: boolean
           meeting_id?: string
           name?: string
           role?: string
           sort_order?: number
           team_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1688,6 +1694,7 @@ export type Database = {
           created_at: string
           created_by: string
           folder: string | null
+          group_id: string | null
           id: string
           meeting_date: string | null
           notes: string | null
@@ -1699,6 +1706,7 @@ export type Database = {
           created_at?: string
           created_by: string
           folder?: string | null
+          group_id?: string | null
           id?: string
           meeting_date?: string | null
           notes?: string | null
@@ -1710,6 +1718,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           folder?: string | null
+          group_id?: string | null
           id?: string
           meeting_date?: string | null
           notes?: string | null
@@ -1717,7 +1726,15 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "team_group_meetings_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "team_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_group_members: {
         Row: {

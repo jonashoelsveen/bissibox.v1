@@ -49,6 +49,7 @@ interface MeetingRow {
   meeting_date: string | null;
   notes: string | null;
   created_at: string;
+  group_id?: string | null;
 }
 
 interface AttachmentRow {
@@ -65,6 +66,13 @@ interface RosterEntry {
   role: string;
   email: string;
   sort_order: number;
+  is_leader?: boolean;
+  user_id?: string | null;
+}
+
+interface GroupOption {
+  id: string;
+  name: string;
 }
 
 export function TeamBoardPage({
@@ -112,6 +120,8 @@ export function TeamBoardPage({
   const [newMeetingOpen, setNewMeetingOpen] = useState(false);
   const [newMeetingTitle, setNewMeetingTitle] = useState("");
   const [newMeetingFolder, setNewMeetingFolder] = useState<string>("");
+  const [newMeetingGroupId, setNewMeetingGroupId] = useState<string>("");
+  const [groupOptions, setGroupOptions] = useState<GroupOption[]>([]);
   const [editMeetingOpen, setEditMeetingOpen] = useState(false);
   const [editMeetingTitle, setEditMeetingTitle] = useState("");
   const [editMeetingFolder, setEditMeetingFolder] = useState<string>("");
@@ -207,7 +217,7 @@ export function TeamBoardPage({
         setLoaded(true);
         return;
       }
-      await Promise.all([loadMembers(tid), loadMeetings(tid)]);
+      await Promise.all([loadMembers(tid), loadMeetings(tid), loadGroupOptions(tid)]);
       setLoaded(true);
     })();
   }, [user, activeEntityId]);
@@ -259,13 +269,26 @@ export function TeamBoardPage({
   }
 
   async function loadMeetings(tid: string) {
+    const cols = kind === "group"
+      ? "id,title,folder,meeting_date,notes,created_at,group_id"
+      : "id,title,folder,meeting_date,notes,created_at";
     const { data } = await sb
       .from(tables.meetings)
-      .select("id,title,folder,meeting_date,notes,created_at")
+      .select(cols)
       .eq("team_id", tid)
       .order("meeting_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
     setMeetings(data ?? []);
+  }
+
+  async function loadGroupOptions(tid: string) {
+    if (kind !== "group") return;
+    const { data } = await supabase
+      .from("team_groups")
+      .select("id,name")
+      .eq("team_id", tid)
+      .order("sort_order", { ascending: true });
+    setGroupOptions((data ?? []).map((g) => ({ id: g.id, name: g.name || "Group" })));
   }
 
   // ── Members ────────────────────────────────────────────────────────────────
@@ -396,6 +419,7 @@ export function TeamBoardPage({
   function openNewMeeting() {
     setNewMeetingTitle(`${kindLabel} meeting · ${new Date().toLocaleDateString()}`);
     setNewMeetingFolder("");
+    setNewMeetingGroupId(kind === "group" && groupOptions.length === 1 ? groupOptions[0].id : "");
     setNewMeetingOpen(true);
   }
 
@@ -413,57 +437,131 @@ export function TeamBoardPage({
     }
     const title = newMeetingTitle.trim() || `${kindLabel} meeting · ${new Date().toLocaleDateString()}`;
     const folder = newMeetingFolder.trim() || null;
+    const isGroupKind = kind === "group";
+    const groupId = isGroupKind ? (newMeetingGroupId || null) : null;
+    if (isGroupKind && !groupId) {
+      toast.error("Pick a group for this meeting");
+      return;
+    }
+    const insertPayload: Record<string, unknown> = {
+      team_id: teamId,
+      title,
+      folder,
+      meeting_date: new Date().toISOString().slice(0, 10),
+      created_by: user.id,
+    };
+    if (isGroupKind) insertPayload.group_id = groupId;
+    const selectCols = isGroupKind
+      ? "id,title,folder,meeting_date,notes,created_at,group_id"
+      : "id,title,folder,meeting_date,notes,created_at";
     const { data, error } = await sb
       .from(tables.meetings)
-      .insert({
-        team_id: teamId,
-        title,
-        folder,
-        meeting_date: new Date().toISOString().slice(0, 10),
-        created_by: user.id,
-      })
-      .select("id,title,folder,meeting_date,notes,created_at")
+      .insert(insertPayload)
+      .select(selectCols)
       .single();
     if (error) {
       toast.error(error.message);
       return;
     }
-    const snapshotRows = members
-      .filter((m) => !!m.id)
-      .map((m) => ({
-        meeting_id: data.id,
-        team_id: teamId,
-        board_member_id: m.id as string,
-        name: m.name ?? "",
-        role: m.role ?? "",
-        email: m.email ?? "",
-        sort_order: m.sort_order ?? 0,
-      }));
+
+    // Build the roster snapshot.
+    let snapshotRows: Array<Record<string, unknown>> = [];
+    if (isGroupKind && groupId) {
+      const groupName = groupOptions.find((g) => g.id === groupId)?.name ?? "";
+      // Group leaders for this group: match by group_name (case-insensitive) or any leader if blank.
+      const { data: leadersData } = await supabase
+        .from("team_group_leaders")
+        .select("id,name,email,group_name,user_id,sort_order")
+        .eq("team_id", teamId);
+      const leaders = (leadersData ?? []).filter((l) => {
+        const gn = (l.group_name ?? "").trim().toLowerCase();
+        return gn === "" || gn === groupName.toLowerCase();
+      });
+      // Group members for this group, with profile info.
+      const { data: gmData } = await supabase
+        .from("team_group_members")
+        .select("user_id")
+        .eq("team_id", teamId)
+        .eq("group_id", groupId);
+      const memberIds = (gmData ?? []).map((r) => r.user_id);
+      let memberProfiles: Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null }> = [];
+      if (memberIds.length) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id,first_name,last_name,email")
+          .in("id", memberIds);
+        memberProfiles = profs ?? [];
+      }
+      let order = 0;
+      for (const l of leaders) {
+        snapshotRows.push({
+          meeting_id: data.id,
+          team_id: teamId,
+          board_member_id: null,
+          name: l.name ?? "",
+          role: "Group leader",
+          email: l.email ?? "",
+          sort_order: order++,
+          is_leader: true,
+          user_id: l.user_id ?? null,
+        });
+      }
+      for (const p of memberProfiles) {
+        const fullName = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim();
+        snapshotRows.push({
+          meeting_id: data.id,
+          team_id: teamId,
+          board_member_id: null,
+          name: fullName || (p.email ?? ""),
+          role: "",
+          email: p.email ?? "",
+          sort_order: order++,
+          is_leader: false,
+          user_id: p.id,
+        });
+      }
+    } else {
+      snapshotRows = members
+        .filter((m) => !!m.id)
+        .map((m) => ({
+          meeting_id: data.id,
+          team_id: teamId,
+          board_member_id: m.id as string,
+          name: m.name ?? "",
+          role: m.role ?? "",
+          email: m.email ?? "",
+          sort_order: m.sort_order ?? 0,
+        }));
+    }
+
     let snapshot: RosterEntry[] = [];
     if (snapshotRows.length) {
+      const rosterSelect = isGroupKind
+        ? "id,board_member_id,name,role,email,sort_order,is_leader,user_id"
+        : "id,board_member_id,name,role,email,sort_order";
       const { data: rosterData } = await sb
         .from(tables.roster)
         .insert(snapshotRows)
-        .select("id,board_member_id,name,role,email,sort_order");
+        .select(rosterSelect);
       snapshot = (rosterData ?? []) as RosterEntry[];
     }
 
-    // Auto-attend the creator: match by email against the roster snapshot.
+    // Auto-attend the creator: prefer user_id match (group meetings), fall back to email.
     const creatorEmail = (user.email ?? "").toLowerCase();
     let initialAttendance: string[] = [];
-    if (creatorEmail) {
-      const selfEntry = snapshot.find((r) => (r.email ?? "").toLowerCase() === creatorEmail);
-      if (selfEntry) {
-        const { error: attErr } = await sb
-          .from(tables.attendance)
-          .insert({
-            meeting_id: data.id,
-            team_id: teamId,
-            roster_id: selfEntry.id,
-            board_member_id: selfEntry.board_member_id ?? selfEntry.id,
-          });
-        if (!attErr) initialAttendance = [selfEntry.id];
-      }
+    const selfEntry =
+      snapshot.find((r) => r.user_id === user.id) ??
+      (creatorEmail ? snapshot.find((r) => (r.email ?? "").toLowerCase() === creatorEmail) : undefined);
+    if (selfEntry) {
+      const { error: attErr } = await sb
+        .from(tables.attendance)
+        .insert({
+          meeting_id: data.id,
+          team_id: teamId,
+          roster_id: selfEntry.id,
+          board_member_id: selfEntry.board_member_id ?? selfEntry.id,
+        });
+      if (!attErr) initialAttendance = [selfEntry.id];
     }
 
     setMeetings((prev) => [data, ...prev]);
@@ -665,9 +763,12 @@ export function TeamBoardPage({
   }
 
   async function loadRosterAndAttendanceFor(meetingId: string) {
+    const rosterCols = kind === "group"
+      ? "id,board_member_id,name,role,email,sort_order,is_leader,user_id"
+      : "id,board_member_id,name,role,email,sort_order";
     const { data: rosterData } = await sb
       .from(tables.roster)
-      .select("id,board_member_id,name,role,email,sort_order")
+      .select(rosterCols)
       .eq("meeting_id", meetingId)
       .order("sort_order", { ascending: true });
     let rosterRows = (rosterData ?? []) as RosterEntry[];
@@ -1164,47 +1265,65 @@ export function TeamBoardPage({
             <div className="max-h-[60vh] overflow-y-auto px-5 py-4">
               {roster.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No board members were on the board when this meeting was created.
+                  No one was on the roster when this meeting was created.
                 </p>
-              ) : (
-                <div className="space-y-2">
-                  {roster.map((r) => {
-                    const id = r.id;
-                    const checked = attendanceDraft.includes(id);
-                    return (
-                      <label
-                        key={id}
-                        className="flex cursor-pointer items-center gap-3 rounded-md border border-hairline bg-background px-3 py-2 hover:bg-secondary/40"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) =>
-                            setAttendanceDraft((prev) =>
-                              e.target.checked
-                                ? [...prev, id]
-                                : prev.filter((x) => x !== id),
-                            )
-                          }
-                          className="h-4 w-4"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm text-ink">
-                            {r.name || r.email || "—"}
-                          </div>
-                          {r.role && (
-                            <div className="truncate text-xs text-muted-foreground">
-                              {r.role}
-                            </div>
-                          )}
+              ) : (() => {
+                const leaders = roster.filter((r) => r.is_leader);
+                const others = roster.filter((r) => !r.is_leader);
+                const renderRow = (r: RosterEntry) => {
+                  const id = r.id;
+                  const checked = attendanceDraft.includes(id);
+                  return (
+                    <label
+                      key={id}
+                      className="flex cursor-pointer items-center gap-3 rounded-md border border-hairline bg-background px-3 py-2 hover:bg-secondary/40"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) =>
+                          setAttendanceDraft((prev) =>
+                            e.target.checked ? [...prev, id] : prev.filter((x) => x !== id),
+                          )
+                        }
+                        className="h-4 w-4"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm text-ink">
+                          {r.name || r.email || "—"}
                         </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
+                        {r.role && (
+                          <div className="truncate text-xs text-muted-foreground">{r.role}</div>
+                        )}
+                      </div>
+                    </label>
+                  );
+                };
+                return (
+                  <div className="space-y-4">
+                    {leaders.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                          Group leaders
+                        </div>
+                        {leaders.map(renderRow)}
+                      </div>
+                    )}
+                    {others.length > 0 && (
+                      <div className="space-y-2">
+                        {leaders.length > 0 && (
+                          <div className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                            Members
+                          </div>
+                        )}
+                        {others.map(renderRow)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
-            <div className="flex justify-end gap-2 border-t border-hairline px-5 py-3">
+            <div className="flex items-center justify-between gap-2 border-t border-hairline px-5 py-3">
               <button
                 onClick={() => setAttendanceOpen(false)}
                 className="rounded-md border border-hairline bg-background px-3 py-1.5 text-xs text-ink hover:bg-secondary"
@@ -1303,6 +1422,9 @@ export function TeamBoardPage({
           onClose={() => setNewMeetingOpen(false)}
           onConfirm={startNewMeeting}
           confirmLabel="Start meeting"
+          groupOptions={kind === "group" ? groupOptions : undefined}
+          groupId={newMeetingGroupId}
+          onGroupId={setNewMeetingGroupId}
         />
       )}
 
@@ -1508,6 +1630,9 @@ function MeetingDialog({
   onClose,
   onConfirm,
   confirmLabel,
+  groupOptions,
+  groupId,
+  onGroupId,
 }: {
   title: string;
   name: string;
@@ -1519,7 +1644,11 @@ function MeetingDialog({
   onClose: () => void;
   onConfirm: () => void;
   confirmLabel: string;
+  groupOptions?: GroupOption[];
+  groupId?: string;
+  onGroupId?: (v: string) => void;
 }) {
+  const showGroup = !!groupOptions;
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in"
@@ -1553,8 +1682,25 @@ function MeetingDialog({
             className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
           />
         </label>
+        {showGroup && (
+          <label className="mt-4 block">
+            <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Group
+            </span>
+            <select
+              value={groupId ?? ""}
+              onChange={(e) => onGroupId?.(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
+            >
+              <option value="">Select a group…</option>
+              {groupOptions!.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <FolderSelect folder={folder} folders={folders} onFolder={onFolder} onCreateFolder={onCreateFolder} />
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-6 flex items-center justify-between gap-2">
           <button
             onClick={onClose}
             className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
@@ -1563,7 +1709,7 @@ function MeetingDialog({
           </button>
           <button
             onClick={onConfirm}
-            disabled={!name.trim()}
+            disabled={!name.trim() || (showGroup && !groupId)}
             className="rounded-full bg-primary px-5 py-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
             {confirmLabel}
