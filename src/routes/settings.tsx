@@ -262,68 +262,104 @@ function SettingsPage() {
     setEntities((prev) => [...prev, row]);
     setActiveEntity(row.id);
     setCreateOpen(false);
-    setTab("general");
+    setTab("entity-profile");
   };
+
+  // Load entities the user belongs to + their roles within each (for the Account tab list).
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const [{ data: owned }, { data: members }, { data: board }, { data: groups }] = await Promise.all([
+        supabase.from("teams").select("id, name, entity_type").eq("owner_id", user.id),
+        supabase.from("team_members").select("team_id, accepted").eq("user_id", user.id).eq("accepted", true),
+        supabase.from("team_board_members").select("team_id, role, status").eq("user_id", user.id).eq("status", "accepted"),
+        supabase.from("team_group_members").select("team_id, group_id").eq("user_id", user.id),
+      ]);
+      const map = new Map<string, { id: string; name: string; entity_type: string; roles: Set<string> }>();
+      const ensure = async (teamId: string) => {
+        if (map.has(teamId)) return map.get(teamId)!;
+        const { data: t } = await supabase.from("teams").select("id, name, entity_type").eq("id", teamId).maybeSingle();
+        if (!t) return null;
+        const v = { id: t.id, name: t.name, entity_type: t.entity_type, roles: new Set<string>() };
+        map.set(teamId, v);
+        return v;
+      };
+      for (const o of owned ?? []) {
+        const v = { id: o.id, name: o.name, entity_type: o.entity_type, roles: new Set<string>(["Admin"]) };
+        map.set(o.id, v);
+      }
+      for (const m of members ?? []) {
+        const v = await ensure(m.team_id);
+        if (v) v.roles.add("Member");
+      }
+      for (const b of board ?? []) {
+        const v = await ensure(b.team_id);
+        if (v) v.roles.add(b.role || "Board");
+      }
+      // group leader heuristic: any group membership where user is recorded as leader-like.
+      for (const g of groups ?? []) {
+        const v = await ensure(g.team_id);
+        if (v) v.roles.add("Group leader");
+      }
+      setProfileEntities(
+        Array.from(map.values()).map((v) => ({
+          id: v.id,
+          name: v.name,
+          entity_type: v.entity_type,
+          roles: Array.from(v.roles),
+        })),
+      );
+    })();
+  }, [user, entities.length]);
 
   if (!user || !profile) {
     return <div className="mx-auto max-w-3xl px-6 py-20 text-muted-foreground">Loading…</div>;
   }
 
-  const tabs: Tab[] = isTeamMode
+  const navItems: NavItem[] = isTeamMode
     ? [
         "entity-profile",
-        "general",
-        "address",
-        "roles",
         "entity-organization",
-        "entity-meetings",
-        "entity-library",
+        "entity-calendar",
+        "entity-map",
         "entity-events",
-        "entity-appearance",
-        "map",
+        "entity-library",
+        "divider-1",
+        "connectors",
+        "system",
+        "appearance",
       ]
-    : ["profiles", "general", "address", "roles", "library", "diary", "connectors", "map", "appearance", "desk", "races", "liked"];
+    : [
+        "account",
+        "divider-1",
+        "profiles",
+        "calendar",
+        "diary",
+        "library",
+        "divider-2",
+        "connectors",
+        "system",
+        "appearance",
+      ];
 
-  
-
-  const tabLabel = (t: Tab) =>
-    t === "general"
-      ? "General"
-      : t === "address"
-        ? "Contact & address"
-        : t === "roles"
-          ? "Roles"
-          : t === "profiles"
-            ? "Profile"
-            : t === "entity-profile"
-              ? "Profile"
-              : t === "desk"
-                ? "Desk"
-                : t === "races"
-                  ? "My races"
-                  : t === "liked"
-                    ? "Liked races"
-                    : t === "appearance"
-                      ? "Appearance"
-                      : t === "entity-appearance"
-                        ? "Appearance"
-                        : t === "entity-organization"
-                          ? "Organization"
-                          : t === "entity-meetings"
-                            ? "Meetings"
-                            : t === "entity-library"
-                              ? "Library"
-                                : t === "entity-events"
-                                  ? "Events"
-                                  : t === "library"
-                                    ? "Library"
-                                    : t === "diary"
-                                      ? "Diary"
-                                      : t === "connectors"
-                                        ? "Connectors"
-                                        : t === "map"
-                                          ? "Map"
-                                          : "Sign out";
+  const tabLabel = (t: Tab): string => {
+    switch (t) {
+      case "account": return "Account";
+      case "profiles": return "Profile";
+      case "calendar": return "Calendar";
+      case "diary": return "Diary";
+      case "library": return "Library";
+      case "connectors": return "Connectors";
+      case "system": return "System";
+      case "appearance": return "Appearance";
+      case "entity-profile": return "Profile";
+      case "entity-organization": return "Organization";
+      case "entity-calendar": return "Calendar";
+      case "entity-map": return "Map";
+      case "entity-events": return "Events";
+      case "entity-library": return "Library";
+    }
+  };
 
   return (
     <div className="px-4 md:px-6">
