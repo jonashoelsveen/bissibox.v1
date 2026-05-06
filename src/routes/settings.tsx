@@ -84,25 +84,23 @@ interface LikedRow {
 }
 
 type Tab =
-  | "general"
-  | "address"
-  | "races"
-  | "liked"
-  | "roles"
+  | "account"
   | "profiles"
-  | "appearance"
-  | "library"
+  | "calendar"
   | "diary"
+  | "library"
   | "connectors"
-  | "map"
+  | "system"
+  | "appearance"
   | "entity-profile"
-  | "desk"
-  | "signout"
   | "entity-organization"
-  | "entity-meetings"
-  | "entity-library"
+  | "entity-calendar"
+  | "entity-map"
   | "entity-events"
-  | "entity-appearance";
+  | "entity-library";
+
+type DividerKey = `divider-${number}`;
+type NavItem = Tab | DividerKey;
 
 interface EntityRow {
   id: string;
@@ -121,8 +119,11 @@ function SettingsPage() {
   const [regs, setRegs] = useState<RegistrationRow[]>([]);
   const [liked, setLiked] = useState<LikedRow[]>([]);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<Tab>("general");
+  const [tab, setTab] = useState<Tab>("account");
   const [createOpen, setCreateOpen] = useState(false);
+  const [profileEntities, setProfileEntities] = useState<
+    { id: string; name: string; entity_type: string; roles: string[] }[]
+  >([]);
 
   // Active selection: null = individual profile, otherwise the entity id.
   const isTeamMode = !!activeEntityId;
@@ -196,16 +197,19 @@ function SettingsPage() {
   }, [user, activeEntityId]);
 
   useEffect(() => {
-    if (isTeamMode && (tab === "races" || tab === "liked" || tab === "profiles" || tab === "desk" || tab === "library")) setTab("general");
+    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "diary" || tab === "library" || tab === "connectors")) {
+      setTab("entity-profile");
+    }
     if (
       !isTeamMode &&
       (tab === "entity-profile" ||
         tab === "entity-organization" ||
-        tab === "entity-meetings" ||
-        tab === "entity-library" ||
-        tab === "entity-events")
+        tab === "entity-calendar" ||
+        tab === "entity-map" ||
+        tab === "entity-events" ||
+        tab === "entity-library")
     )
-      setTab("general");
+      setTab("account");
   }, [isTeamMode, tab]);
 
   const [userRoles, setUserRoles] = useState<{ role: "organizer" | "photographer" | "timekeeper" }[]>([]);
@@ -258,68 +262,104 @@ function SettingsPage() {
     setEntities((prev) => [...prev, row]);
     setActiveEntity(row.id);
     setCreateOpen(false);
-    setTab("general");
+    setTab("entity-profile");
   };
+
+  // Load entities the user belongs to + their roles within each (for the Account tab list).
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const [{ data: owned }, { data: members }, { data: board }, { data: groups }] = await Promise.all([
+        supabase.from("teams").select("id, name, entity_type").eq("owner_id", user.id),
+        supabase.from("team_members").select("team_id, accepted").eq("user_id", user.id).eq("accepted", true),
+        supabase.from("team_board_members").select("team_id, role, status").eq("user_id", user.id).eq("status", "accepted"),
+        supabase.from("team_group_members").select("team_id, group_id").eq("user_id", user.id),
+      ]);
+      const map = new Map<string, { id: string; name: string; entity_type: string; roles: Set<string> }>();
+      const ensure = async (teamId: string) => {
+        if (map.has(teamId)) return map.get(teamId)!;
+        const { data: t } = await supabase.from("teams").select("id, name, entity_type").eq("id", teamId).maybeSingle();
+        if (!t) return null;
+        const v = { id: t.id, name: t.name, entity_type: t.entity_type, roles: new Set<string>() };
+        map.set(teamId, v);
+        return v;
+      };
+      for (const o of owned ?? []) {
+        const v = { id: o.id, name: o.name, entity_type: o.entity_type, roles: new Set<string>(["Admin"]) };
+        map.set(o.id, v);
+      }
+      for (const m of members ?? []) {
+        const v = await ensure(m.team_id);
+        if (v) v.roles.add("Member");
+      }
+      for (const b of board ?? []) {
+        const v = await ensure(b.team_id);
+        if (v) v.roles.add(b.role || "Board");
+      }
+      // group leader heuristic: any group membership where user is recorded as leader-like.
+      for (const g of groups ?? []) {
+        const v = await ensure(g.team_id);
+        if (v) v.roles.add("Group leader");
+      }
+      setProfileEntities(
+        Array.from(map.values()).map((v) => ({
+          id: v.id,
+          name: v.name,
+          entity_type: v.entity_type,
+          roles: Array.from(v.roles),
+        })),
+      );
+    })();
+  }, [user, entities.length]);
 
   if (!user || !profile) {
     return <div className="mx-auto max-w-3xl px-6 py-20 text-muted-foreground">Loading…</div>;
   }
 
-  const tabs: Tab[] = isTeamMode
+  const navItems: NavItem[] = isTeamMode
     ? [
         "entity-profile",
-        "general",
-        "address",
-        "roles",
         "entity-organization",
-        "entity-meetings",
-        "entity-library",
+        "entity-calendar",
+        "entity-map",
         "entity-events",
-        "entity-appearance",
-        "map",
+        "entity-library",
+        "divider-1",
+        "connectors",
+        "system",
+        "appearance",
       ]
-    : ["profiles", "general", "address", "roles", "library", "diary", "connectors", "map", "appearance", "desk", "races", "liked"];
+    : [
+        "account",
+        "divider-1",
+        "profiles",
+        "calendar",
+        "diary",
+        "library",
+        "divider-2",
+        "connectors",
+        "system",
+        "appearance",
+      ];
 
-  
-
-  const tabLabel = (t: Tab) =>
-    t === "general"
-      ? "General"
-      : t === "address"
-        ? "Contact & address"
-        : t === "roles"
-          ? "Roles"
-          : t === "profiles"
-            ? "Profile"
-            : t === "entity-profile"
-              ? "Profile"
-              : t === "desk"
-                ? "Desk"
-                : t === "races"
-                  ? "My races"
-                  : t === "liked"
-                    ? "Liked races"
-                    : t === "appearance"
-                      ? "Appearance"
-                      : t === "entity-appearance"
-                        ? "Appearance"
-                        : t === "entity-organization"
-                          ? "Organization"
-                          : t === "entity-meetings"
-                            ? "Meetings"
-                            : t === "entity-library"
-                              ? "Library"
-                                : t === "entity-events"
-                                  ? "Events"
-                                  : t === "library"
-                                    ? "Library"
-                                    : t === "diary"
-                                      ? "Diary"
-                                      : t === "connectors"
-                                        ? "Connectors"
-                                        : t === "map"
-                                          ? "Map"
-                                          : "Sign out";
+  const tabLabel = (t: Tab): string => {
+    switch (t) {
+      case "account": return "Account";
+      case "profiles": return "Profile";
+      case "calendar": return "Calendar";
+      case "diary": return "Diary";
+      case "library": return "Library";
+      case "connectors": return "Connectors";
+      case "system": return "System";
+      case "appearance": return "Appearance";
+      case "entity-profile": return "Profile";
+      case "entity-organization": return "Organization";
+      case "entity-calendar": return "Calendar";
+      case "entity-map": return "Map";
+      case "entity-events": return "Events";
+      case "entity-library": return "Library";
+    }
+  };
 
   return (
     <div className="px-4 md:px-6">
@@ -331,13 +371,15 @@ function SettingsPage() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md bg-ink px-4 py-2 text-xs font-medium text-background transition hover:opacity-90"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Create new entity
-            </button>
+            {!isTeamMode && (
+              <button
+                onClick={() => setCreateOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-md bg-ink px-4 py-2 text-xs font-medium text-background transition hover:opacity-90"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Create new entity
+              </button>
+            )}
             <button
               onClick={save}
               disabled={saving || !isDirty}
@@ -354,19 +396,23 @@ function SettingsPage() {
 
         <div className="mt-8 grid gap-10 md:grid-cols-[180px_1fr]">
           <nav className="-ml-2 flex flex-row gap-1 md:flex-col md:gap-0.5">
-            {tabs.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`rounded-md px-3 py-2 text-left text-sm transition ${
-                  tab === t
-                    ? "bg-secondary font-medium text-ink"
-                    : "text-muted-foreground hover:text-ink"
-                }`}
-              >
-                {tabLabel(t)}
-              </button>
-            ))}
+            {navItems.map((item) =>
+              item.startsWith("divider-") ? (
+                <div key={item} className="my-1 hidden h-px w-full bg-hairline md:block" />
+              ) : (
+                <button
+                  key={item}
+                  onClick={() => setTab(item as Tab)}
+                  className={`rounded-md px-3 py-2 text-left text-sm transition ${
+                    tab === item
+                      ? "bg-secondary font-medium text-ink"
+                      : "text-muted-foreground hover:text-ink"
+                  }`}
+                >
+                  {tabLabel(item as Tab)}
+                </button>
+              ),
+            )}
             <div className="my-1 hidden h-px w-full bg-hairline md:block" />
             <button
               onClick={async () => {
@@ -380,105 +426,124 @@ function SettingsPage() {
           </nav>
 
           <div>
+            {tab === "account" && !isTeamMode && (
+              <div className="space-y-6">
+                <Card>
+                  <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">General</h3>
+                  <div className="mt-4">
+                    <Grid>
+                      <Field label="First name" value={profile.first_name ?? ""} onChange={(v) => updateProfile("first_name", v)} />
+                      <Field label="Last name" value={profile.last_name ?? ""} onChange={(v) => updateProfile("last_name", v)} />
+                      <Select
+                        label="Gender"
+                        value={profile.gender ?? ""}
+                        onChange={(v) => updateProfile("gender", v || null)}
+                        options={[
+                          { value: "", label: "—" },
+                          { value: "male", label: "Male" },
+                          { value: "female", label: "Female" },
+                          { value: "other", label: "Other" },
+                        ]}
+                      />
+                      <Field
+                        label="Birth date"
+                        type="date"
+                        value={profile.birth_date ?? ""}
+                        onChange={(v) => updateProfile("birth_date", v || null)}
+                      />
+                      <Field label="Team" value={profile.team ?? ""} onChange={(v) => updateProfile("team", v)} />
+                      <Field label="License" value={profile.license ?? ""} onChange={(v) => updateProfile("license", v)} />
+                    </Grid>
+                    <Anonymous value={profile.anonymous} onChange={(v) => updateProfile("anonymous", v)} />
+                  </div>
+                </Card>
+
+                <Card>
+                  <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Contact &amp; address</h3>
+                  <div className="mt-4">
+                    <Grid>
+                      <Field label="Address" value={profile.address ?? ""} onChange={(v) => updateProfile("address", v)} />
+                      <Field label="Postal code" value={profile.postal_code ?? ""} onChange={(v) => updateProfile("postal_code", v)} />
+                      <Field label="Postal place" value={profile.postal_place ?? ""} onChange={(v) => updateProfile("postal_place", v)} />
+                      <Field label="Country" value={profile.country ?? ""} onChange={(v) => updateProfile("country", v)} />
+                      <Field label="Nationality" value={profile.nationality ?? ""} onChange={(v) => updateProfile("nationality", v)} />
+                      <Field label="Mobile" value={profile.mobile ?? ""} onChange={(v) => updateProfile("mobile", v)} />
+                      <Field label="Emergency contact" value={profile.emergency_contact ?? ""} onChange={(v) => updateProfile("emergency_contact", v)} />
+                      <Field label="Emergency phone" value={profile.emergency_phone ?? ""} onChange={(v) => updateProfile("emergency_phone", v)} />
+                    </Grid>
+                  </div>
+                </Card>
+
+                <Card>
+                  <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Profiles</h3>
+                  <div className="mt-4 space-y-2">
+                    {profileEntities.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">You are not part of any entity yet.</p>
+                    ) : (
+                      profileEntities.map((e) => (
+                        <div key={e.id} className="flex items-center justify-between rounded-xl border border-hairline bg-background px-4 py-3">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm text-ink">{e.name}</div>
+                            <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                              {ENTITY_LABEL[e.entity_type as EntityType] ?? e.entity_type}
+                            </div>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {e.roles.join(", ")}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </Card>
+              </div>
+            )}
+
             {tab === "entity-profile" && isTeamMode && team && (
-              <ProfileVisibilityPanel
-                scopeKey={`entity:${team.id}`}
-                active={team.active}
-                onActiveChange={async (v) => {
-                  updateTeam("active", v);
-                  await supabase.from("teams").update({ active: v }).eq("id", team.id);
-                }}
-              />
-            )}
-
-            {tab === "general" && isTeamMode && team && (
-              <Card>
-                <Grid>
-                  <Field label="Team name" value={team.name ?? ""} onChange={(v) => updateTeam("name", v)} />
-                  <Field label="NIF ID" value={team.nif_id ?? ""} onChange={(v) => updateTeam("nif_id", v || null)} />
-                  <Field label="Website" value={team.website ?? ""} onChange={(v) => updateTeam("website", v || null)} />
-                </Grid>
-                <div className="mt-4">
-                  <label className="block">
-                    <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Description</span>
-                    <textarea
-                      value={team.description ?? ""}
-                      onChange={(e) => updateTeam("description", e.target.value || null)}
-                      rows={3}
-                      className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none transition focus:border-primary"
-                    />
-                  </label>
-                </div>
-                <SaveBar saving={saving} onSave={save} />
-              </Card>
-            )}
-
-            {tab === "general" && !isTeamMode && (
-              <Card>
-                <Grid>
-                  <Field label="First name" value={profile.first_name ?? ""} onChange={(v) => updateProfile("first_name", v)} />
-                  <Field label="Last name" value={profile.last_name ?? ""} onChange={(v) => updateProfile("last_name", v)} />
-                  <Select
-                    label="Gender"
-                    value={profile.gender ?? ""}
-                    onChange={(v) => updateProfile("gender", v || null)}
-                    options={[
-                      { value: "", label: "—" },
-                      { value: "male", label: "Male" },
-                      { value: "female", label: "Female" },
-                      { value: "other", label: "Other" },
-                    ]}
-                  />
-                  <Field
-                    label="Birth date"
-                    type="date"
-                    value={profile.birth_date ?? ""}
-                    onChange={(v) => updateProfile("birth_date", v || null)}
-                  />
-                  <Field label="Team" value={profile.team ?? ""} onChange={(v) => updateProfile("team", v)} />
-                  <Field label="License" value={profile.license ?? ""} onChange={(v) => updateProfile("license", v)} />
-                </Grid>
-                <Anonymous value={profile.anonymous} onChange={(v) => updateProfile("anonymous", v)} />
-                <SaveBar saving={saving} onSave={save} />
-              </Card>
-            )}
-
-            {tab === "address" && isTeamMode && team && (
-              <Card>
-                <Grid>
-                  <Field label="Address" value={team.address ?? ""} onChange={(v) => updateTeam("address", v || null)} />
-                  <Field label="Postal code" value={team.postal_code ?? ""} onChange={(v) => updateTeam("postal_code", v || null)} />
-                  <Field label="Postal place" value={team.postal_place ?? ""} onChange={(v) => updateTeam("postal_place", v || null)} />
-                  <Field label="Country" value={team.country ?? ""} onChange={(v) => updateTeam("country", v || null)} />
-                  <Field label="Contact email" value={team.contact_email ?? ""} onChange={(v) => updateTeam("contact_email", v || null)} />
-                  <Field label="Contact phone" value={team.contact_phone ?? ""} onChange={(v) => updateTeam("contact_phone", v || null)} />
-                </Grid>
-                <SaveBar saving={saving} onSave={save} />
-              </Card>
-            )}
-
-            {tab === "address" && !isTeamMode && (
-              <Card>
-                <Grid>
-                  <Field label="Address" value={profile.address ?? ""} onChange={(v) => updateProfile("address", v)} />
-                  <Field label="Postal code" value={profile.postal_code ?? ""} onChange={(v) => updateProfile("postal_code", v)} />
-                  <Field label="Postal place" value={profile.postal_place ?? ""} onChange={(v) => updateProfile("postal_place", v)} />
-                  <Field label="Country" value={profile.country ?? ""} onChange={(v) => updateProfile("country", v)} />
-                  <Field label="Nationality" value={profile.nationality ?? ""} onChange={(v) => updateProfile("nationality", v)} />
-                  <Field label="Mobile" value={profile.mobile ?? ""} onChange={(v) => updateProfile("mobile", v)} />
-                  <Field
-                    label="Emergency contact"
-                    value={profile.emergency_contact ?? ""}
-                    onChange={(v) => updateProfile("emergency_contact", v)}
-                  />
-                  <Field
-                    label="Emergency phone"
-                    value={profile.emergency_phone ?? ""}
-                    onChange={(v) => updateProfile("emergency_phone", v)}
-                  />
-                </Grid>
-                <SaveBar saving={saving} onSave={save} />
-              </Card>
+              <div className="space-y-6">
+                <ProfileVisibilityPanel
+                  scopeKey={`entity:${team.id}`}
+                  active={team.active}
+                  onActiveChange={async (v) => {
+                    updateTeam("active", v);
+                    await supabase.from("teams").update({ active: v }).eq("id", team.id);
+                  }}
+                />
+                <Card>
+                  <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">General</h3>
+                  <div className="mt-4">
+                    <Grid>
+                      <Field label="Team name" value={team.name ?? ""} onChange={(v) => updateTeam("name", v)} />
+                      <Field label="NIF ID" value={team.nif_id ?? ""} onChange={(v) => updateTeam("nif_id", v || null)} />
+                      <Field label="Website" value={team.website ?? ""} onChange={(v) => updateTeam("website", v || null)} />
+                    </Grid>
+                    <div className="mt-4">
+                      <label className="block">
+                        <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Description</span>
+                        <textarea
+                          value={team.description ?? ""}
+                          onChange={(e) => updateTeam("description", e.target.value || null)}
+                          rows={3}
+                          className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none transition focus:border-primary"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </Card>
+                <Card>
+                  <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Contact &amp; address</h3>
+                  <div className="mt-4">
+                    <Grid>
+                      <Field label="Address" value={team.address ?? ""} onChange={(v) => updateTeam("address", v || null)} />
+                      <Field label="Postal code" value={team.postal_code ?? ""} onChange={(v) => updateTeam("postal_code", v || null)} />
+                      <Field label="Postal place" value={team.postal_place ?? ""} onChange={(v) => updateTeam("postal_place", v || null)} />
+                      <Field label="Country" value={team.country ?? ""} onChange={(v) => updateTeam("country", v || null)} />
+                      <Field label="Contact email" value={team.contact_email ?? ""} onChange={(v) => updateTeam("contact_email", v || null)} />
+                      <Field label="Contact phone" value={team.contact_phone ?? ""} onChange={(v) => updateTeam("contact_phone", v || null)} />
+                    </Grid>
+                  </div>
+                </Card>
+              </div>
             )}
 
             {tab === "profiles" && !isTeamMode && (
@@ -492,106 +557,31 @@ function SettingsPage() {
               />
             )}
 
-            {tab === "roles" && <RolesPanel userId={user.id} viewMode={isTeamMode ? "team" : "individual"} />}
-
-            {tab === "races" && !isTeamMode && (
+            {tab === "calendar" && !isTeamMode && (
               <Card>
-                {regs.length === 0 ? (
-                  <div className="py-10 text-center">
-                    <p className="text-muted-foreground">No races yet.</p>
-                    <Link
-                      to="/"
-                      className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground"
-                    >
-                      Find a race
-                    </Link>
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-hairline">
-                    {regs.map((r) => (
-                      <li key={r.id} className="flex items-center justify-between gap-3 py-4">
-                        <div className="min-w-0">
-                          <Link
-                            to="/events/$eventId"
-                            params={{ eventId: r.events?.id ?? "" }}
-                            className="block truncate text-ink hover:underline"
-                          >
-                            {r.events?.title ?? "Race"}
-                          </Link>
-                          <div className="text-xs text-muted-foreground">
-                            {r.race_type} · {r.events?.location}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="num text-sm text-ink">
-                            {r.events ? formatDate(r.events.starts_at) : ""}
-                          </span>
-                          <span
-                            className={`mono text-[10px] uppercase tracking-widest ${
-                              r.status === "confirmed"
-                                ? "text-ink"
-                                : r.status === "cancelled"
-                                  ? "text-destructive"
-                                  : "text-accent"
-                            }`}
-                          >
-                            {r.status}
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <h3 className="text-sm font-semibold text-ink">Calendar</h3>
+                <p className="mt-2 text-xs text-muted-foreground">Calendar settings will appear here.</p>
               </Card>
             )}
 
-            {tab === "liked" && !isTeamMode && (
+            {tab === "diary" && !isTeamMode && (
+              <DiarySettingsPanel scopeKey={`user:${user.id}`} />
+            )}
+
+            {tab === "library" && !isTeamMode && (
+              <LibrarySettingsPanel scopeKey={`user:${user.id}`} />
+            )}
+
+            {tab === "connectors" && <ConnectorsPanel />}
+
+            {tab === "system" && (
               <Card>
-                {liked.length === 0 ? (
-                  <div className="py-10 text-center">
-                    <p className="text-muted-foreground">No liked races yet.</p>
-                    <Link
-                      to="/"
-                      className="mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground"
-                    >
-                      Discover races
-                    </Link>
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-hairline">
-                    {liked.map((l) => (
-                      <li key={l.id} className="flex items-center justify-between gap-3 py-4">
-                        <div className="min-w-0">
-                          <Link
-                            to="/events/$eventId"
-                            params={{ eventId: l.events?.id ?? "" }}
-                            className="block truncate text-ink hover:underline"
-                          >
-                            {l.events?.title ?? "Race"}
-                          </Link>
-                          <div className="text-xs text-muted-foreground">
-                            {l.events?.location}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="num text-sm text-ink">
-                            {l.events ? formatDate(l.events.starts_at) : ""}
-                          </span>
-                          <button
-                            onClick={() => unlike(l.id)}
-                            className="mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-destructive"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <h3 className="text-sm font-semibold text-ink">System</h3>
+                <p className="mt-2 text-xs text-muted-foreground">System settings will appear here.</p>
               </Card>
             )}
 
-            {tab === "desk" && !isTeamMode && <DeskSettingsPanel />}
+            {tab === "appearance" && <AppearancePanel />}
 
             {tab === "entity-organization" && isTeamMode && (
               <Card>
@@ -602,18 +592,14 @@ function SettingsPage() {
               </Card>
             )}
 
-            {tab === "entity-meetings" && isTeamMode && (
+            {tab === "entity-calendar" && isTeamMode && (
               <Card>
-                <h3 className="text-sm font-semibold text-ink">Meetings</h3>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Settings related to board meetings will appear here.
-                </p>
+                <h3 className="text-sm font-semibold text-ink">Calendar</h3>
+                <p className="mt-2 text-xs text-muted-foreground">Calendar settings will appear here.</p>
               </Card>
             )}
 
-            {tab === "entity-library" && isTeamMode && team && (
-              <LibrarySettingsPanel scopeKey={`entity:${team.id}`} />
-            )}
+            {tab === "entity-map" && isTeamMode && <MapSettingsPanel />}
 
             {tab === "entity-events" && isTeamMode && (
               <Card>
@@ -624,21 +610,9 @@ function SettingsPage() {
               </Card>
             )}
 
-            {tab === "library" && !isTeamMode && (
-              <LibrarySettingsPanel scopeKey={`user:${user.id}`} />
+            {tab === "entity-library" && isTeamMode && team && (
+              <LibrarySettingsPanel scopeKey={`entity:${team.id}`} />
             )}
-
-            {tab === "diary" && !isTeamMode && (
-              <DiarySettingsPanel scopeKey={`user:${user.id}`} />
-            )}
-
-            {tab === "connectors" && !isTeamMode && <ConnectorsPanel />}
-
-            {(tab === "appearance" || tab === "entity-appearance") && (
-              <AppearancePanel />
-            )}
-
-            {tab === "map" && <MapSettingsPanel />}
           </div>
         </div>
       </div>
