@@ -251,49 +251,100 @@ export function MeetingsListPage({
       toast.error("No active team");
       return;
     }
-    const title = newMeetingTitle.trim() || `${kind === "group" ? "Group" : "Board"} meeting · ${new Date().toLocaleDateString()}`;
+    const isGroupKind = kind === "group";
+    const groupId = isGroupKind ? newMeetingGroupId : "";
+    if (isGroupKind && !groupId) {
+      toast.error("Pick a group for this meeting");
+      return;
+    }
+    const title = newMeetingTitle.trim() || `${isGroupKind ? "Group" : "Board"} meeting · ${new Date().toLocaleDateString()}`;
     const folder = newMeetingFolder.trim() || (view.type === "folder" && view.name) || null;
+    const insertPayload: Record<string, unknown> = {
+      team_id: teamId,
+      title,
+      folder,
+      meeting_date: new Date().toISOString().slice(0, 10),
+      created_by: user.id,
+    };
+    if (isGroupKind) insertPayload.group_id = groupId;
+    const selectCols = isGroupKind
+      ? "id,title,folder,meeting_date,notes,created_at,group_id"
+      : "id,title,folder,meeting_date,notes,created_at";
     const { data, error } = await sb
       .from(tables.meetings)
-      .insert({
-        team_id: teamId,
-        title,
-        folder,
-        meeting_date: new Date().toISOString().slice(0, 10),
-        created_by: user.id,
-      })
-      .select("id,title,folder,meeting_date,notes,created_at")
+      .insert(insertPayload)
+      .select(selectCols)
       .single();
     if (error) { toast.error(error.message); return; }
 
-    // Snapshot board members into roster + auto-attend creator
-    const { data: members } = await supabase
-      .from("team_board_members")
-      .select("id,name,role,email,sort_order")
-      .eq("team_id", teamId)
-      .order("sort_order", { ascending: true });
-    const snapshotRows = (members ?? []).map((m) => ({
-      meeting_id: data.id,
-      team_id: teamId,
-      board_member_id: m.id,
-      name: m.name ?? "",
-      role: m.role ?? "",
-      email: m.email ?? "",
-      sort_order: m.sort_order ?? 0,
-    }));
+    // Build roster snapshot
+    let snapshotRows: Array<Record<string, unknown>> = [];
+    if (isGroupKind && groupId) {
+      const groupName = (groupOptions.find((g) => g.id === groupId)?.name ?? "").toLowerCase();
+      const { data: leadersData } = await supabase
+        .from("team_group_leaders")
+        .select("id,name,email,group_name,group_id,user_id,sort_order")
+        .eq("team_id", teamId);
+      const leaders = (leadersData ?? []).filter((l) => {
+        if (l.group_id) return l.group_id === groupId;
+        const gn = (l.group_name ?? "").trim().toLowerCase();
+        return gn !== "" && gn === groupName;
+      });
+      const { data: gmData } = await supabase
+        .from("team_group_members")
+        .select("user_id")
+        .eq("team_id", teamId)
+        .eq("group_id", groupId);
+      const memberIds = (gmData ?? []).map((r) => r.user_id);
+      let memberProfiles: Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null }> = [];
+      if (memberIds.length) {
+        const { data: profs } = await supabase
+          .from("profiles").select("id,first_name,last_name,email").in("id", memberIds);
+        memberProfiles = profs ?? [];
+      }
+      let order = 0;
+      for (const l of leaders) {
+        snapshotRows.push({
+          meeting_id: data.id, team_id: teamId, board_member_id: null,
+          name: l.name ?? "", role: "Group leader", email: l.email ?? "",
+          sort_order: order++, is_leader: true, user_id: l.user_id ?? null,
+        });
+      }
+      for (const p of memberProfiles) {
+        const fullName = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim();
+        snapshotRows.push({
+          meeting_id: data.id, team_id: teamId, board_member_id: null,
+          name: fullName || (p.email ?? ""), role: "", email: p.email ?? "",
+          sort_order: order++, is_leader: false, user_id: p.id,
+        });
+      }
+    } else {
+      const { data: members } = await supabase
+        .from("team_board_members")
+        .select("id,name,role,email,sort_order")
+        .eq("team_id", teamId)
+        .order("sort_order", { ascending: true });
+      snapshotRows = (members ?? []).map((m) => ({
+        meeting_id: data.id, team_id: teamId, board_member_id: m.id,
+        name: m.name ?? "", role: m.role ?? "", email: m.email ?? "",
+        sort_order: m.sort_order ?? 0,
+      }));
+    }
+
     if (snapshotRows.length) {
+      const rosterSelect = isGroupKind
+        ? "id,board_member_id,name,role,email,sort_order,is_leader,user_id"
+        : "id,board_member_id,name,role,email,sort_order";
       const { data: rosterData } = await sb
-        .from(tables.roster)
-        .insert(snapshotRows)
-        .select("id,board_member_id,name,role,email,sort_order");
+        .from(tables.roster).insert(snapshotRows).select(rosterSelect);
       const creatorEmail = (user.email ?? "").toLowerCase();
-      const selfEntry = (rosterData ?? []).find(
-        (r: { email?: string | null }) => (r.email ?? "").toLowerCase() === creatorEmail,
-      );
+      const rows = (rosterData ?? []) as Array<{ id: string; board_member_id: string | null; email?: string | null; user_id?: string | null }>;
+      const selfEntry =
+        rows.find((r) => r.user_id === user.id) ??
+        (creatorEmail ? rows.find((r) => (r.email ?? "").toLowerCase() === creatorEmail) : undefined);
       if (selfEntry) {
         await sb.from(tables.attendance).insert({
-          meeting_id: data.id,
-          team_id: teamId,
+          meeting_id: data.id, team_id: teamId,
           roster_id: selfEntry.id,
           board_member_id: selfEntry.board_member_id ?? selfEntry.id,
         });
@@ -304,10 +355,10 @@ export function MeetingsListPage({
     setNewMeetingOpen(false);
     setNewMeetingTitle("");
     setNewMeetingFolder("");
+    setNewMeetingGroupId("");
     if (onMeetingCreated) {
       onMeetingCreated({ id: data.id, title: data.title, folder: data.folder });
     } else {
-      // Fallback (standalone usage): open the existing TeamBoard editor.
       navigate({ to: "/team/board" });
     }
   }
