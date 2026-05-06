@@ -211,6 +211,7 @@ export interface UnifiedElasticGridProps {
    *  can render its own controls in the header strip. */
   viewMode?: ViewMode;
   onViewModeChange?: (v: ViewMode) => void;
+  appKind?: "calendar" | "diary";
 }
 
 type Mode = { kind: "year" } | { kind: "month"; month: number };
