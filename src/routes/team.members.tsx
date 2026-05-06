@@ -1246,6 +1246,7 @@ function GroupRow({
   currentYear,
   onHandleDown,
   onHandleUp,
+  leaders,
 }: {
   group: GroupDraft;
   open: boolean;
@@ -1255,6 +1256,7 @@ function GroupRow({
   currentYear: number;
   onHandleDown?: () => void;
   onHandleUp?: () => void;
+  leaders: BoardMemberDraft[];
 }) {
   const yearFrom = group.age_from ? currentYear - Number(group.age_from) : null;
   const yearTo = group.age_to ? currentYear - Number(group.age_to) : null;
