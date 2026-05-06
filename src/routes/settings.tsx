@@ -1818,6 +1818,7 @@ function ConnectorsPanel() {
               <div className="mt-0.5 text-xs text-muted-foreground">
                 Auto-syncs your activities into the Diary. Recent activities cover the <strong>last 90 days</strong>.
               </div>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {stravaConnected && (
