@@ -318,6 +318,8 @@ function SettingsPage() {
 
   const navItems: NavItem[] = isTeamMode
     ? [
+        "appearance",
+        "divider-1",
         "entity-profile",
         "entity-organization",
         "entity-calendar",
