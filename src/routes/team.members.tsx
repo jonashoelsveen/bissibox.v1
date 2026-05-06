@@ -879,11 +879,23 @@ function TeamMembersPage() {
                       />
                     </div>
                     <button
-                      disabled
-                      title="Invite (sync coming soon)"
-                      className="shrink-0 rounded-md border border-hairline bg-card px-3 py-2 text-xs font-medium text-muted-foreground"
+                      onClick={() => inviteCoach(i)}
+                      title={
+                        m.status === "active"
+                          ? "Active group leader"
+                          : m.invited_at
+                            ? "Invitation pending"
+                            : `Invite as group leader for ${teamName || "team"}`
+                      }
+                      className={`shrink-0 rounded-md px-3 py-2 text-xs font-medium transition ${
+                        m.status === "active"
+                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                          : m.invited_at
+                            ? "border border-hairline bg-card text-muted-foreground hover:text-ink"
+                            : "bg-primary text-primary-foreground hover:opacity-90"
+                      }`}
                     >
-                      {m.status === "active" ? "Active" : "Invite"}
+                      {m.status === "active" ? "Active" : m.invited_at ? "Resend" : "Invite"}
                     </button>
                   </div>
                 </div>
