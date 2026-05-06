@@ -874,12 +874,20 @@ function TeamMembersPage() {
                     onChange={(e) => updateCoach(i, { name: e.target.value })}
                     className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
                   />
-                  <input
-                    placeholder="Group (the group this coach is coaching)"
-                    value={m.role}
-                    onChange={(e) => updateCoach(i, { role: e.target.value })}
+                  <select
+                    value={m.group_id ?? ""}
+                    onChange={(e) => {
+                      const gid = e.target.value || null;
+                      const gname = gid ? (groups.find((g) => g.id === gid)?.name ?? "") : "";
+                      updateCoach(i, { group_id: gid, role: gname });
+                    }}
                     className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-                  />
+                  >
+                    <option value="">Choose group…</option>
+                    {groups.filter((g) => g.id).map((g) => (
+                      <option key={g.id} value={g.id!}>{g.name || "Untitled"}</option>
+                    ))}
+                  </select>
                   <div className="flex items-center gap-2">
                     <div className="relative flex-1">
                       <Mail className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
