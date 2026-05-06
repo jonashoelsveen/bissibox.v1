@@ -548,8 +548,6 @@ function SettingsPage() {
               </div>
             )}
 
-            {false && (
-
             {tab === "profiles" && !isTeamMode && (
               <ProfileVisibilityPanel
                 scopeKey={`user:${user.id}`}
