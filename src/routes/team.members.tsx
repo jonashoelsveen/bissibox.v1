@@ -143,7 +143,7 @@ function TeamMembersPage() {
         return;
       }
 
-      const [{ data: gs }, { data: tms }, { data: tmemberships }, { data: tgms }, { data: tiers }, { data: bms }] = await Promise.all([
+      const [{ data: gs }, { data: tms }, { data: tmemberships }, { data: tgms }, { data: tiers }, { data: bms }, { data: gls }] = await Promise.all([
         supabase
           .from("team_groups")
           .select("id,name,age_from,age_to,sort_order,description,leader_name,leader_email,leader_phone,is_default,color")
@@ -171,7 +171,25 @@ function TeamMembersPage() {
           .select("id,name,role,email,status,invited_at,sort_order")
           .eq("team_id", tid)
           .order("sort_order", { ascending: true }),
+        supabase
+          .from("team_group_leaders")
+          .select("id,name,group_name,email,status,invited_at,sort_order")
+          .eq("team_id", tid)
+          .order("sort_order", { ascending: true }),
       ]);
+
+      setCoaches(
+        ((gls ?? []) as Array<{ id: string; name: string | null; group_name: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((g, i) => ({
+          id: g.id,
+          name: g.name ?? "",
+          role: g.group_name ?? "",
+          email: g.email ?? "",
+          status: (g.status as "pending" | "active") ?? "pending",
+          invited_at: g.invited_at,
+          sort_order: g.sort_order ?? i,
+        })),
+      );
+
 
       setBoardMembers(
         ((bms ?? []) as Array<{ id: string; name: string | null; role: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((b, i) => ({
@@ -384,8 +402,55 @@ function TeamMembersPage() {
   function updateCoach(idx: number, patch: Partial<BoardMemberDraft>) {
     setCoaches((prev) => prev.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
   }
-  function removeCoach(idx: number) {
+  async function removeCoach(idx: number) {
+    const m = coaches[idx];
+    if (m.id) {
+      const { error } = await supabase.from("team_group_leaders").delete().eq("id", m.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+    }
     setCoaches((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function reloadCoaches(tid: string) {
+    const { data } = await supabase
+      .from("team_group_leaders")
+      .select("id,name,group_name,email,status,invited_at,sort_order")
+      .eq("team_id", tid)
+      .order("sort_order", { ascending: true });
+    setCoaches(
+      ((data ?? []) as Array<{ id: string; name: string | null; group_name: string | null; email: string | null; status: string | null; invited_at: string | null; sort_order: number | null }>).map((g, i) => ({
+        id: g.id,
+        name: g.name ?? "",
+        role: g.group_name ?? "",
+        email: g.email ?? "",
+        status: (g.status as "pending" | "active") ?? "pending",
+        invited_at: g.invited_at,
+        sort_order: g.sort_order ?? i,
+      })),
+    );
+  }
+
+  async function inviteCoach(idx: number) {
+    const m = coaches[idx];
+    if (!m.email || !m.email.includes("@")) {
+      toast.error("Enter a valid email first");
+      return;
+    }
+    if (!m.id) await save();
+    const updated = coaches[idx];
+    if (!updated.id) return;
+    const { error } = await supabase.functions.invoke("group-leader-invite", {
+      body: { leader_id: updated.id },
+    });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Invitation sent to ${updated.email}`);
+    if (teamId) await reloadCoaches(teamId);
   }
 
   async function removeBoardMember(idx: number) {
@@ -590,6 +655,36 @@ function TeamMembersPage() {
       }
       setBoardMembers((arr) => arr.map((m, i) => ({ ...m, id: bmIdMap[i] ?? m.id })));
 
+      // Persist group leaders (coaches)
+      const glIdMap: Record<number, string> = {};
+      for (let i = 0; i < coaches.length; i++) {
+        const m = coaches[i];
+        if (m.id) {
+          const { error } = await supabase
+            .from("team_group_leaders")
+            .update({ name: m.name, group_name: m.role, email: m.email, sort_order: i })
+            .eq("id", m.id);
+          if (error) throw error;
+          glIdMap[i] = m.id;
+        } else {
+          const { data, error } = await supabase
+            .from("team_group_leaders")
+            .insert({
+              team_id: teamId,
+              name: m.name,
+              group_name: m.role,
+              email: m.email,
+              status: "pending",
+              sort_order: i,
+            })
+            .select("id")
+            .single();
+          if (error) throw error;
+          glIdMap[i] = data!.id as string;
+        }
+      }
+      setCoaches((arr) => arr.map((m, i) => ({ ...m, id: glIdMap[i] ?? m.id })));
+
       toast.success("Saved.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save.");
@@ -784,11 +879,23 @@ function TeamMembersPage() {
                       />
                     </div>
                     <button
-                      disabled
-                      title="Invite (sync coming soon)"
-                      className="shrink-0 rounded-md border border-hairline bg-card px-3 py-2 text-xs font-medium text-muted-foreground"
+                      onClick={() => inviteCoach(i)}
+                      title={
+                        m.status === "active"
+                          ? "Active group leader"
+                          : m.invited_at
+                            ? "Invitation pending"
+                            : `Invite as group leader for ${teamName || "team"}`
+                      }
+                      className={`shrink-0 rounded-md px-3 py-2 text-xs font-medium transition ${
+                        m.status === "active"
+                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                          : m.invited_at
+                            ? "border border-hairline bg-card text-muted-foreground hover:text-ink"
+                            : "bg-primary text-primary-foreground hover:opacity-90"
+                      }`}
                     >
-                      {m.status === "active" ? "Active" : "Invite"}
+                      {m.status === "active" ? "Active" : m.invited_at ? "Resend" : "Invite"}
                     </button>
                   </div>
                 </div>

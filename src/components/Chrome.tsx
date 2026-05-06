@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { Search, Library, Plus, Tent, Settings, LogIn, Users, Armchair, CalendarDays, Map as MapIcon, BookOpen, Briefcase } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { NewEventDialog } from "@/components/organizer/NewEventDialog";
 
@@ -9,6 +10,7 @@ export function TopChrome() {
   const router = useRouterState();
   const path = router.location.pathname;
   const { user, mode } = useAuth();
+  const isGroupLeader = useIsGroupLeader();
   const [newNoteOpen, setNewNoteOpen] = useState(false);
   const [newEventOpen, setNewEventOpen] = useState(false);
 
@@ -37,6 +39,15 @@ export function TopChrome() {
         {user && mode === "team" && (
           <NavBtn to="/team/members" label="Members" active={path.startsWith("/team/members")}>
             <Users className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </NavBtn>
+        )}
+        {user && isGroupLeader && (
+          <NavBtn
+            to="/team/group-meetings"
+            label="Group meetings"
+            active={path.startsWith("/team/group-meetings")}
+          >
+            <Briefcase className="h-[18px] w-[18px]" strokeWidth={2.25} />
           </NavBtn>
         )}
 

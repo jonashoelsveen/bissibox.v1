@@ -1506,6 +1506,54 @@ export type Database = {
           },
         ]
       }
+      team_group_leaders: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          group_name: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          name: string
+          sort_order: number
+          status: string
+          team_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          group_name?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          name?: string
+          sort_order?: number
+          status?: string
+          team_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          group_name?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          name?: string
+          sort_order?: number
+          status?: string
+          team_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       team_group_meeting_attachments: {
         Row: {
           created_at: string
