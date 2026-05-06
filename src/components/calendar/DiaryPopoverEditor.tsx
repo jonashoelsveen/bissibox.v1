@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import { Pencil, Clock, Trash2 } from "lucide-react";
 import type { CalendarEvent } from "./yearStore";
 import { CAT_TRAINING_COLOR } from "./MonthGridType1";
+import { colorForActivity } from "@/lib/activity-colors";
 import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
 
 export type DiaryType = "training" | "note";
@@ -24,6 +25,7 @@ export const DIARY_GROUPS: { id: string; label: string; children?: { id: string;
     label: "Endurance",
     children: [
       { id: "running", label: "Running" },
+      { id: "swimming", label: "Swimming" },
       { id: "cycling", label: "Cycling" },
       { id: "other", label: "Other" },
     ],
@@ -114,9 +116,11 @@ export function DiaryPopoverEditor({
 
   const buildValue = (): DiaryPopoverValue => {
     const s = stateRef.current;
+    const trainingColor =
+      s.diaryGroup === "endurance" ? colorForActivity(s.diarySub) : CAT_TRAINING_COLOR;
     return {
       title: s.title.trim(),
-      color: s.diaryType === "training" ? CAT_TRAINING_COLOR : NOTE_COLOR,
+      color: s.diaryType === "training" ? trainingColor : NOTE_COLOR,
       time: s.time,
       diaryType: s.diaryType,
       diaryGroup: s.diaryType === "training" ? s.diaryGroup : undefined,
@@ -169,7 +173,12 @@ export function DiaryPopoverEditor({
     left = Math.max(margin, window.innerWidth - POPOVER_W - margin);
   }
 
-  const accent = diaryType === "training" ? CAT_TRAINING_COLOR : NOTE_COLOR;
+  const accent =
+    diaryType === "training"
+      ? diaryGroup === "endurance"
+        ? colorForActivity(diarySub)
+        : CAT_TRAINING_COLOR
+      : NOTE_COLOR;
 
   return (
     <>
@@ -350,7 +359,12 @@ export function DiaryPopoverEditor({
             // sync local state from modal then commit
             const merged: DiaryPopoverValue = {
               title: v.title.trim(),
-              color: v.diaryType === "training" ? CAT_TRAINING_COLOR : NOTE_COLOR,
+              color:
+                v.diaryType === "training"
+                  ? v.diaryGroup === "endurance"
+                    ? colorForActivity(v.diarySub)
+                    : CAT_TRAINING_COLOR
+                  : NOTE_COLOR,
               time: v.time,
               diaryType: v.diaryType,
               diaryGroup: v.diaryType === "training" ? v.diaryGroup : undefined,

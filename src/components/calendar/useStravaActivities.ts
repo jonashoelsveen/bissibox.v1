@@ -8,6 +8,7 @@
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { colorForActivity } from "@/lib/activity-colors";
 import type { CalendarEvent } from "./yearStore";
 
 export type StravaActivityRow = {
@@ -33,10 +34,11 @@ function localISO(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-function sportToDiary(sport: string | null): { group: string; sub?: string; activity?: "running" | "cycling" | "strength" | "xcskiing" } {
+function sportToDiary(sport: string | null): { group: string; sub?: string; activity?: "running" | "cycling" | "swimming" | "strength" | "xcskiing" } {
   const s = (sport || "").toLowerCase();
   if (s.includes("run")) return { group: "endurance", sub: "running", activity: "running" };
   if (s.includes("ride") || s.includes("cycl") || s.includes("bike")) return { group: "endurance", sub: "cycling", activity: "cycling" };
+  if (s.includes("swim")) return { group: "endurance", sub: "swimming", activity: "swimming" };
   if (s.includes("ski")) return { group: "endurance", sub: "other", activity: "xcskiing" };
   if (s.includes("weight") || s.includes("strength")) return { group: "strength", activity: "strength" };
   if (s.includes("yoga") || s.includes("stretch")) return { group: "stretch" };
@@ -56,7 +58,7 @@ export function rowToCalendarEvent(row: StravaActivityRow): CalendarEvent | null
     startISO: localISO(start),
     endISO: localISO(end),
     allDay: false,
-    color: "#B8B8FF", // training (periwinkle)
+    color: colorForActivity(sub ?? activity ?? row.sport_type),
     diaryType: "training",
     diaryGroup: group,
     diarySub: sub,
