@@ -324,10 +324,6 @@ function SettingsPage() {
         "entity-map",
         "entity-events",
         "entity-library",
-        "divider-1",
-        "connectors",
-        "system",
-        "appearance",
       ]
     : [
         "account",
@@ -543,6 +539,7 @@ function SettingsPage() {
                     </Grid>
                   </div>
                 </Card>
+                <AppearancePanel />
               </div>
             )}
 
