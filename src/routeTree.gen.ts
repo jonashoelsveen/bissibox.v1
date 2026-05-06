@@ -14,6 +14,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MediaRouteImport } from './routes/media'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as DiscoverRouteImport } from './routes/discover'
+import { Route as DiaryRouteImport } from './routes/diary'
 import { Route as DeskRouteImport } from './routes/desk'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -53,6 +54,11 @@ const MapRoute = MapRouteImport.update({
 const DiscoverRoute = DiscoverRouteImport.update({
   id: '/discover',
   path: '/discover',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiaryRoute = DiaryRouteImport.update({
+  id: '/diary',
+  path: '/diary',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DeskRoute = DeskRouteImport.update({
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/desk': typeof DeskRoute
+  '/diary': typeof DiaryRoute
   '/discover': typeof DiscoverRoute
   '/map': typeof MapRoute
   '/media': typeof MediaRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/desk': typeof DeskRoute
+  '/diary': typeof DiaryRoute
   '/discover': typeof DiscoverRoute
   '/map': typeof MapRoute
   '/media': typeof MediaRoute
@@ -182,6 +190,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/desk': typeof DeskRoute
+  '/diary': typeof DiaryRoute
   '/discover': typeof DiscoverRoute
   '/map': typeof MapRoute
   '/media': typeof MediaRoute
@@ -206,6 +215,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/calendar'
     | '/desk'
+    | '/diary'
     | '/discover'
     | '/map'
     | '/media'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/calendar'
     | '/desk'
+    | '/diary'
     | '/discover'
     | '/map'
     | '/media'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/calendar'
     | '/desk'
+    | '/diary'
     | '/discover'
     | '/map'
     | '/media'
@@ -273,6 +285,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CalendarRoute: typeof CalendarRoute
   DeskRoute: typeof DeskRoute
+  DiaryRoute: typeof DiaryRoute
   DiscoverRoute: typeof DiscoverRoute
   MapRoute: typeof MapRoute
   MediaRoute: typeof MediaRoute
@@ -326,6 +339,13 @@ declare module '@tanstack/react-router' {
       path: '/discover'
       fullPath: '/discover'
       preLoaderRoute: typeof DiscoverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/diary': {
+      id: '/diary'
+      path: '/diary'
+      fullPath: '/diary'
+      preLoaderRoute: typeof DiaryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/desk': {
@@ -441,6 +461,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CalendarRoute: CalendarRoute,
   DeskRoute: DeskRoute,
+  DiaryRoute: DiaryRoute,
   DiscoverRoute: DiscoverRoute,
   MapRoute: MapRoute,
   MediaRoute: MediaRoute,
