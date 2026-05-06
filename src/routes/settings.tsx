@@ -623,6 +623,8 @@ function SettingsPage() {
               <DiarySettingsPanel scopeKey={`user:${user.id}`} />
             )}
 
+            {tab === "connectors" && !isTeamMode && <ConnectorsPanel />}
+
             {(tab === "appearance" || tab === "entity-appearance") && (
               <AppearancePanel />
             )}
