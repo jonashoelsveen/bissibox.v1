@@ -1624,6 +1624,115 @@ const CONNECTOR_GROUPS: { title: string; items: { name: string; tag: string }[] 
 function ConnectorsPanel() {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
+  const [stravaConnected, setStravaConnected] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u?.user) { if (active) setStravaConnected(false); return; }
+      const { data } = await supabase
+        .from("strava_auth")
+        .select("user_id")
+        .eq("user_id", u.user.id)
+        .maybeSingle();
+      if (active) setStravaConnected(!!data);
+    })();
+    // Surface OAuth result toast
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      const r = url.searchParams.get("strava");
+      if (r === "connected") { toast.success("Strava connected. Syncing the last 90 days…"); url.searchParams.delete("strava"); window.history.replaceState({}, "", url.toString()); }
+      else if (r === "denied") { toast.error("Strava connection denied."); url.searchParams.delete("strava"); window.history.replaceState({}, "", url.toString()); }
+      else if (r) { toast.error("Strava connection failed."); url.searchParams.delete("strava"); window.history.replaceState({}, "", url.toString()); }
+    }
+    return () => { active = false; };
+  }, []);
+
+  const handleStravaConnect = async () => {
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("strava-oauth-start", {
+        body: { redirect_to: window.location.origin + "/settings/connectors" },
+      });
+      if (error) throw error;
+      if (data?.url) window.location.href = data.url;
+    } catch (e: any) {
+      toast.error(e?.message || "Could not start Strava connection");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleStravaDisconnect = async () => {
+    setBusy(true);
+    try {
+      const { error } = await supabase.functions.invoke("strava-disconnect", { body: {} });
+      if (error) throw error;
+      setStravaConnected(false);
+      toast.success("Strava disconnected.");
+    } catch (e: any) {
+      toast.error(e?.message || "Disconnect failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleStravaResync = async () => {
+    setBusy(true);
+    try {
+      const { error } = await supabase.functions.invoke("strava-sync-recent", { body: { days: 90 } });
+      if (error) throw error;
+      toast.success("Re-syncing recent activities…");
+    } catch (e: any) {
+      toast.error(e?.message || "Sync failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const renderRow = (name: string, key?: string) => {
+    if (name === "Strava") {
+      return (
+        <div className="rounded-xl border border-hairline px-4 py-3" key={key || name}>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-ink">Strava</div>
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                Auto-syncs your activities into the Diary. Recent activities cover the <strong>last 90 days</strong>.
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {stravaConnected && (
+                <button
+                  type="button"
+                  onClick={handleStravaResync}
+                  disabled={busy}
+                  className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-ink hover:text-ink disabled:opacity-50"
+                >
+                  Re-sync
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={stravaConnected ? handleStravaDisconnect : handleStravaConnect}
+                disabled={busy || stravaConnected === null}
+                className={`rounded-md border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
+                  stravaConnected
+                    ? "border-hairline text-muted-foreground hover:border-ink hover:text-ink"
+                    : "border-ink bg-ink text-background hover:opacity-90"
+                }`}
+              >
+                {stravaConnected ? "Disconnect" : "Connect"}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return <ConnectorRow key={key || name} name={name} />;
+  };
 
   const allItems = CONNECTOR_GROUPS.flatMap((g) =>
     g.items.map((it) => ({ ...it, group: g.title })),
@@ -1648,9 +1757,7 @@ function ConnectorsPanel() {
             Matches
           </h3>
           <div className="mt-3 space-y-2">
-            {matches.map((it) => (
-              <ConnectorRow key={`m-${it.name}`} name={it.name} />
-            ))}
+            {matches.map((it) => renderRow(it.name, `m-${it.name}`))}
           </div>
         </Card>
       )}
@@ -1659,9 +1766,7 @@ function ConnectorsPanel() {
         <Card key={g.title}>
           <h3 className="text-sm font-semibold text-ink">{g.title}</h3>
           <div className="mt-3 space-y-2">
-            {g.items.map((it) => (
-              <ConnectorRow key={it.name} name={it.name} />
-            ))}
+            {g.items.map((it) => renderRow(it.name))}
           </div>
         </Card>
       ))}
@@ -1682,3 +1787,4 @@ function ConnectorRow({ name }: { name: string }) {
     </div>
   );
 }
+
