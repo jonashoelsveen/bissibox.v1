@@ -58,7 +58,7 @@ export function rowToCalendarEvent(row: StravaActivityRow): CalendarEvent | null
     startISO: localISO(start),
     endISO: localISO(end),
     allDay: false,
-    color: "#B8B8FF", // training (periwinkle)
+    color: colorForActivity(sub ?? activity ?? row.sport_type),
     diaryType: "training",
     diaryGroup: group,
     diarySub: sub,
