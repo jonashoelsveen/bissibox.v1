@@ -1904,13 +1904,36 @@ function WeekEventsOverlay({
               className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]"
               style={{ background: accent }}
             />
-            <div className="flex items-center gap-1">
-              {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: accent }} />}
-              <span className="truncate font-medium">{ev.title}</span>
-              <span className="ml-auto shrink-0 pl-1 mono text-[10.5px] tabular-nums opacity-70">
-                {`${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`}
-              </span>
-            </div>
+            {appKind === "diary" ? (
+              (() => {
+                const ActIcon: LucideIcon =
+                  ev.activity === "cycling" ? Bike :
+                  ev.activity === "strength" ? Dumbbell :
+                  ev.activity === "xcskiing" ? Snowflake :
+                  Footprints;
+                const dur = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
+                return (
+                  <div className="flex h-full items-center gap-2 pl-1">
+                    <ActIcon className="h-4 w-4 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+                    <div className="flex min-w-0 flex-1 flex-col justify-center leading-tight">
+                      <span className="truncate text-[12px] font-semibold">{ev.title}</span>
+                      <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{dur}</span>
+                      <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
+                        {ev.distanceKm != null ? `${ev.distanceKm.toFixed(1)} km` : "—"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="flex items-center gap-1">
+                {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: accent }} />}
+                <span className="truncate font-medium">{ev.title}</span>
+                <span className="ml-auto shrink-0 pl-1 mono text-[10.5px] tabular-nums opacity-70">
+                  {`${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`}
+                </span>
+              </div>
+            )}
           </div>
         );
       })}
