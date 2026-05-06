@@ -1984,6 +1984,8 @@ function WeekEventsOverlay({
             data-ghost-event={isGhost ? "1" : undefined}
             onPointerDown={(e) => {
               if (isGhost) return;
+              // Diary: all events are logged (manual or Strava) — not movable.
+              if (appKind === "diary") return;
               e.stopPropagation();
               (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
               setDrag({
@@ -1994,6 +1996,7 @@ function WeekEventsOverlay({
                 durationMin: dur,
                 moved: false,
                 delta: { dx: 0, dy: 0 },
+                anchor: e.currentTarget as HTMLElement,
               });
             }}
             onClick={(e) => {
