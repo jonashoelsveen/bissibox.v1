@@ -2051,7 +2051,7 @@ function WeekEventsOverlay({
                       <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
                     </div>
                     <div
-                      className="flex w-1/2 items-center justify-center gap-1 text-ink"
+                      className="flex w-1/2 items-baseline justify-center gap-1 text-ink"
                       style={{
                         fontFamily: "Helvetica, Arial, sans-serif",
                         fontWeight: 700,
