@@ -1735,21 +1735,25 @@ function ConnectorsPanel() {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const [stravaConnected, setStravaConnected] = useState<boolean | null>(null);
+  const [stravaSyncedAt, setStravaSyncedAt] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const refreshStravaStatus = async () => {
+    const { data: u } = await supabase.auth.getUser();
+    if (!u?.user) { setStravaConnected(false); return; }
+    const { data } = await supabase
+      .from("strava_auth")
+      .select("user_id, updated_at")
+      .eq("user_id", u.user.id)
+      .maybeSingle();
+    setStravaConnected(!!data);
+    setStravaSyncedAt(data?.updated_at ?? null);
+  };
 
   useEffect(() => {
     let active = true;
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u?.user) { if (active) setStravaConnected(false); return; }
-      const { data } = await supabase
-        .from("strava_auth")
-        .select("user_id")
-        .eq("user_id", u.user.id)
-        .maybeSingle();
-      if (active) setStravaConnected(!!data);
-    })();
-    // Surface OAuth result toast
+    (async () => { if (active) await refreshStravaStatus(); })();
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       const r = url.searchParams.get("strava");
@@ -1781,6 +1785,8 @@ function ConnectorsPanel() {
       const { error } = await supabase.functions.invoke("strava-disconnect", { body: {} });
       if (error) throw error;
       setStravaConnected(false);
+      setStravaSyncedAt(null);
+      setSheetOpen(false);
       toast.success("Strava disconnected.");
     } catch (e: any) {
       toast.error(e?.message || "Disconnect failed");
@@ -1795,6 +1801,7 @@ function ConnectorsPanel() {
       const { error } = await supabase.functions.invoke("strava-sync-recent", { body: { days: 90 } });
       if (error) throw error;
       toast.success("Re-syncing recent activities…");
+      await refreshStravaStatus();
     } catch (e: any) {
       toast.error(e?.message || "Sync failed");
     } finally {
@@ -1802,43 +1809,42 @@ function ConnectorsPanel() {
     }
   };
 
+  const lastSyncedLabel = (() => {
+    if (!stravaSyncedAt) return "Connected";
+    const diff = Date.now() - new Date(stravaSyncedAt).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return "Last synced: just now";
+    if (m < 60) return `Last synced: ${m} minute${m === 1 ? "" : "s"} ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `Last synced: ${h} hour${h === 1 ? "" : "s"} ago`;
+    const d = Math.floor(h / 24);
+    return `Last synced: ${d} day${d === 1 ? "" : "s"} ago`;
+  })();
+
   const renderRow = (name: string, key?: string) => {
     if (name === "Strava") {
+      const isConnected = !!stravaConnected;
+      const isLoading = stravaConnected === null;
       return (
-        <div className="rounded-xl border border-hairline px-4 py-3" key={key || name}>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-ink">Strava</div>
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                Auto-syncs your activities into the Diary. Recent activities cover the <strong>last 90 days</strong>.
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {stravaConnected && (
-                <button
-                  type="button"
-                  onClick={handleStravaResync}
-                  disabled={busy}
-                  className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-ink hover:text-ink disabled:opacity-50"
-                >
-                  Re-sync
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={stravaConnected ? handleStravaDisconnect : handleStravaConnect}
-                disabled={busy || stravaConnected === null}
-                className={`rounded-md border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
-                  stravaConnected
-                    ? "border-hairline text-muted-foreground hover:border-ink hover:text-ink"
-                    : "border-ink bg-ink text-background hover:opacity-90"
-                }`}
-              >
-                {stravaConnected ? "Disconnect" : "Connect"}
-              </button>
+        <button
+          type="button"
+          key={key || name}
+          onClick={() => setSheetOpen(true)}
+          className="flex w-full items-center gap-3 rounded-xl border border-hairline px-4 py-3 text-left transition hover:border-ink/40"
+        >
+          <img src={stravaSymbol} alt="" className="h-9 w-9 shrink-0 rounded-lg object-contain" />
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-medium text-ink">Strava</div>
+            <div className="mt-0.5 truncate text-xs text-muted-foreground">
+              {isConnected ? lastSyncedLabel : "Sync your activities and segments."}
             </div>
           </div>
-        </div>
+          {busy || isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
+          )}
+        </button>
       );
     }
     return <ConnectorRow key={key || name} name={name} />;
