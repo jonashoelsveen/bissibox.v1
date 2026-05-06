@@ -383,3 +383,56 @@ function AboutTab({
     </div>
   );
 }
+
+function NoteBody({
+  title,
+  note,
+  onTitle,
+  onNote,
+}: {
+  title: string;
+  note: string;
+  onTitle: (v: string) => void;
+  onNote: (v: string) => void;
+}) {
+  const fileInputRef = useState<HTMLInputElement | null>(null)[0];
+  return (
+    <div className="flex-1 overflow-y-auto px-4 py-4">
+      <section className="rounded-lg border border-hairline bg-card shadow-sm">
+        {/* Document toolbar */}
+        <div className="flex items-center gap-2 border-b border-hairline px-4 py-2">
+          <button
+            type="button"
+            title="Attach documents"
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-secondary hover:text-ink"
+          >
+            <Paperclip className="h-4 w-4" />
+            <span>Attach</span>
+          </button>
+          <input
+            value={title}
+            onChange={(e) => onTitle(e.target.value)}
+            placeholder="Note title"
+            className="ml-3 flex-1 bg-transparent text-[12px] uppercase tracking-[0.18em] text-muted-foreground outline-none placeholder:text-muted-foreground/50"
+          />
+          <button
+            type="button"
+            title="Delete"
+            className="rounded-md p-2 text-muted-foreground transition hover:bg-secondary hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mx-auto my-6 flex min-h-[420px] w-full max-w-2xl flex-col rounded-md border border-hairline bg-background p-8 shadow-inner">
+          <textarea
+            value={note}
+            onChange={(e) => onNote(e.target.value)}
+            placeholder="Write your note here…"
+            className="flex-1 resize-none border-0 bg-transparent text-base leading-relaxed text-ink outline-none placeholder:text-muted-foreground/60"
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
