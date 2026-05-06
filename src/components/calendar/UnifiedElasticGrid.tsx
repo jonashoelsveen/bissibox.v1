@@ -1913,6 +1913,7 @@ function WeekEventsOverlay({
     durationMin: number;
     moved: boolean;
     delta: { dx: number; dy: number };
+    anchor: HTMLElement | null;
   } | null>(null);
 
   useEffect(() => {
