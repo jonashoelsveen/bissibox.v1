@@ -1886,6 +1886,69 @@ function ConnectorsPanel() {
           </div>
         </Card>
       ))}
+
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="bottom" className="h-[50vh] rounded-t-2xl">
+          <SheetHeader className="text-left">
+            <div className="flex items-center gap-3">
+              <img src={stravaSymbol} alt="" className="h-10 w-10 rounded-lg object-contain" />
+              <div>
+                <SheetTitle>Strava</SheetTitle>
+                <SheetDescription>
+                  Sync your activities and segments into your Diary.
+                </SheetDescription>
+              </div>
+            </div>
+          </SheetHeader>
+
+          <div className="mt-8 flex flex-col items-center gap-6">
+            {stravaConnected ? (
+              <>
+                <div className="text-sm text-ink">{lastSyncedLabel}</div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleStravaResync}
+                    disabled={busy}
+                    className="rounded-md border border-hairline px-4 py-2 text-xs font-medium text-muted-foreground transition hover:border-ink hover:text-ink disabled:opacity-50"
+                  >
+                    {busy ? "Syncing…" : "Re-sync now"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleStravaDisconnect}
+                    disabled={busy}
+                    className="rounded-md px-4 py-2 text-xs font-medium text-destructive/80 transition hover:text-destructive disabled:opacity-50"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="max-w-sm text-center text-sm text-muted-foreground">
+                  You'll be redirected to Strava to authorize access. We import the last 90 days of activities.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleStravaConnect}
+                  disabled={busy || stravaConnected === null}
+                  className="transition hover:opacity-90 disabled:opacity-50"
+                  aria-label="Connect with Strava"
+                >
+                  {busy ? (
+                    <div className="flex h-12 items-center justify-center rounded-md bg-[#FC5200] px-6 text-sm font-bold text-white">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    </div>
+                  ) : (
+                    <img src={stravaConnectBtn} alt="Connect with Strava" className="h-12 w-auto" />
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
