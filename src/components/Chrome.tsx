@@ -41,6 +41,15 @@ export function TopChrome() {
             <Users className="h-[18px] w-[18px]" strokeWidth={2.25} />
           </NavBtn>
         )}
+        {user && isGroupLeader && (
+          <NavBtn
+            to="/team/group-meetings"
+            label="Group meetings"
+            active={path.startsWith("/team/group-meetings")}
+          >
+            <Briefcase className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </NavBtn>
+        )}
 
         {user && (
           <NavBtn to="/media" label="Content" active={path.startsWith("/media")}>
