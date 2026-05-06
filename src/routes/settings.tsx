@@ -353,6 +353,7 @@ function SettingsPage() {
       case "system": return "System";
       case "appearance": return "Appearance";
       case "entity-profile": return "Profile";
+      case "entity-general": return "General";
       case "entity-organization": return "Organization";
       case "entity-calendar": return "Calendar";
       case "entity-map": return "Map";
