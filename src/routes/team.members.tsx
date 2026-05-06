@@ -646,7 +646,7 @@ function TeamMembersPage() {
           Board
         </TabBtn>
         <TabBtn active={tab === "coaches"} onClick={() => setTab("coaches")} icon={<UserCog className="h-3.5 w-3.5" />}>
-          Coaches
+          Group leaders
         </TabBtn>
         <TabBtn active={tab === "groups"} onClick={() => setTab("groups")} icon={<Layers className="h-3.5 w-3.5" />}>
           Groups
