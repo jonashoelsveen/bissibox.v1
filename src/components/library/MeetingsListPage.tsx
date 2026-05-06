@@ -139,6 +139,43 @@ export function MeetingsListPage({
 
   useEffect(() => { void loadFolders(); }, [loadFolders]);
 
+  // For group meetings, restrict the group dropdown to groups the current user
+  // leads (or all groups if they're the team owner).
+  useEffect(() => {
+    if (kind !== "group" || !teamId || !user) { setGroupOptions([]); return; }
+    let cancelled = false;
+    void (async () => {
+      const { data: allGroups } = await supabase
+        .from("team_groups")
+        .select("id,name")
+        .eq("team_id", teamId)
+        .order("sort_order", { ascending: true });
+      const all = (allGroups ?? []).map((g) => ({ id: g.id, name: g.name || "Group" }));
+      const { data: teamRow } = await supabase
+        .from("teams").select("owner_id").eq("id", teamId).maybeSingle();
+      const isOwner = teamRow?.owner_id === user.id;
+      if (isOwner) { if (!cancelled) setGroupOptions(all); return; }
+      const email = (user.email ?? "").toLowerCase();
+      const orFilter = email
+        ? `user_id.eq.${user.id},email.ilike.${email}`
+        : `user_id.eq.${user.id}`;
+      const { data: leaderRows } = await supabase
+        .from("team_group_leaders")
+        .select("group_id,group_name")
+        .eq("team_id", teamId)
+        .or(orFilter);
+      const ledIds = new Set<string>();
+      const ledNames = new Set<string>();
+      for (const r of (leaderRows ?? []) as Array<{ group_id: string | null; group_name: string | null }>) {
+        if (r.group_id) ledIds.add(r.group_id);
+        if (r.group_name) ledNames.add(r.group_name.toLowerCase());
+      }
+      const filtered = all.filter((g) => ledIds.has(g.id) || ledNames.has(g.name.toLowerCase()));
+      if (!cancelled) setGroupOptions(filtered.length ? filtered : all);
+    })();
+    return () => { cancelled = true; };
+  }, [kind, teamId, user]);
+
   // Existing folder list (folder rows + folders referenced by meetings) for the picker
   const folders = useMemo(() => {
     const set = new Set<string>();
