@@ -36,6 +36,7 @@ import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
 import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoWeekNumber } from "./dateUtils";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
+import { useSessionTileDesign } from "@/lib/session-tile-design";
 
 export type ViewMode = "day" | "week" | "month";
 
