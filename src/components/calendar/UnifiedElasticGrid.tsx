@@ -950,9 +950,10 @@ export function UnifiedElasticGrid({
               headerH={headerH}
               rowHeight={rowHeight}
               startHour={WEEK_START_HOUR}
+              appKind={appKind}
               onEventClick={(ev, anchor) => {
                 setPopover({
-                  key: { year, month: 0, day: 1, session: 0 }, // unused for events
+                  key: { year, month: 0, day: 1, session: 0 },
                   rect: anchor.getBoundingClientRect(),
                   initialText: ev.title,
                   initialColor: ev.color,
