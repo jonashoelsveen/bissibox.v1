@@ -1105,7 +1105,7 @@ export function UnifiedElasticGrid({
           enableDuration={mode.kind === "year"}
           initialTime={(() => {
             if (mode.kind !== "year") return null;
-            // Editing an existing event → use its real time.
+            if (popover.pendingTime) return popover.pendingTime;
             if (popover.eventId) {
               const ev = events.find((e) => e.id === popover.eventId);
               if (ev && !ev.allDay) {
@@ -1118,13 +1118,11 @@ export function UnifiedElasticGrid({
               }
               return null;
             }
-            // New event from a marked range → derive time from the range.
             if (markRange) {
               const startMin = WEEK_START_HOUR * 60 + (markRange.lo - 2) * 30;
               const endMin = WEEK_START_HOUR * 60 + (markRange.hi - 2 + 1) * 30;
               return { startMin, endMin };
             }
-            // Fallback: anchor cell (single slot).
             const lo = popover.key.day * 2 + popover.key.session;
             const startMin = WEEK_START_HOUR * 60 + (lo - 2) * 30;
             return { startMin, endMin: startMin + 30 };
