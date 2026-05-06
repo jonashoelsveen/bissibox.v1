@@ -111,7 +111,7 @@ export function MeetingsListPage({
       return;
     }
     setTeamId(team.id);
-    const { data: rows } = await supabase
+    const { data: rows } = await sb
       .from(tables.meetings)
       .select("id,title,folder,meeting_date,notes,created_at")
       .eq("team_id", team.id)
@@ -126,7 +126,7 @@ export function MeetingsListPage({
   // Load folder rows from the meeting_folders table (mirrors note_folders).
   const loadFolders = useCallback(async () => {
     if (!teamId) { setExtraFolders([]); return; }
-    const { data } = await supabase
+    const { data } = await sb
       .from(tables.folders)
       .select("name")
       .eq("team_id", teamId)
@@ -150,7 +150,7 @@ export function MeetingsListPage({
     if (!trimmed) { toast.error("Folder name is required"); return false; }
     if (folders.includes(trimmed)) { toast.error("A folder with that name already exists"); return false; }
     if (!teamId) { toast.error("No active team"); return false; }
-    const { error } = await supabase
+    const { error } = await sb
       .from(tables.folders)
       .insert({ team_id: teamId, name: trimmed });
     if (error) { toast.error(error.message); return false; }
@@ -214,7 +214,7 @@ export function MeetingsListPage({
     }
     const title = newMeetingTitle.trim() || `Board meeting · ${new Date().toLocaleDateString()}`;
     const folder = newMeetingFolder.trim() || (view.type === "folder" && view.name) || null;
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from(tables.meetings)
       .insert({
         team_id: teamId,
@@ -243,7 +243,7 @@ export function MeetingsListPage({
       sort_order: m.sort_order ?? 0,
     }));
     if (snapshotRows.length) {
-      const { data: rosterData } = await supabase
+      const { data: rosterData } = await sb
         .from(tables.roster)
         .insert(snapshotRows)
         .select("id,board_member_id,name,role,email,sort_order");
