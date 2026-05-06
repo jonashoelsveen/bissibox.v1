@@ -442,11 +442,13 @@ function TeamMembersPage() {
     if (!m.id) await save();
     const updated = coaches[idx];
     if (!updated.id) return;
-    const { error } = await supabase.functions.invoke("group-leader-invite", {
+    const { data, error } = await supabase.functions.invoke("group-leader-invite", {
       body: { leader_id: updated.id },
     });
-    if (error) {
-      toast.error(error.message);
+    if (error || (data && (data as { error?: string }).error)) {
+      const msg = (data as { error?: string } | null)?.error || error?.message || "Could not send invitation";
+      toast.error(msg);
+      console.error("group-leader-invite failed", { error, data });
       return;
     }
     toast.success(`Invitation sent to ${updated.email}`);
