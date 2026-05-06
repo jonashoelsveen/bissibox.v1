@@ -1265,47 +1265,65 @@ export function TeamBoardPage({
             <div className="max-h-[60vh] overflow-y-auto px-5 py-4">
               {roster.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No board members were on the board when this meeting was created.
+                  No one was on the roster when this meeting was created.
                 </p>
-              ) : (
-                <div className="space-y-2">
-                  {roster.map((r) => {
-                    const id = r.id;
-                    const checked = attendanceDraft.includes(id);
-                    return (
-                      <label
-                        key={id}
-                        className="flex cursor-pointer items-center gap-3 rounded-md border border-hairline bg-background px-3 py-2 hover:bg-secondary/40"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) =>
-                            setAttendanceDraft((prev) =>
-                              e.target.checked
-                                ? [...prev, id]
-                                : prev.filter((x) => x !== id),
-                            )
-                          }
-                          className="h-4 w-4"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm text-ink">
-                            {r.name || r.email || "—"}
-                          </div>
-                          {r.role && (
-                            <div className="truncate text-xs text-muted-foreground">
-                              {r.role}
-                            </div>
-                          )}
+              ) : (() => {
+                const leaders = roster.filter((r) => r.is_leader);
+                const others = roster.filter((r) => !r.is_leader);
+                const renderRow = (r: RosterEntry) => {
+                  const id = r.id;
+                  const checked = attendanceDraft.includes(id);
+                  return (
+                    <label
+                      key={id}
+                      className="flex cursor-pointer items-center gap-3 rounded-md border border-hairline bg-background px-3 py-2 hover:bg-secondary/40"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) =>
+                          setAttendanceDraft((prev) =>
+                            e.target.checked ? [...prev, id] : prev.filter((x) => x !== id),
+                          )
+                        }
+                        className="h-4 w-4"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm text-ink">
+                          {r.name || r.email || "—"}
                         </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
+                        {r.role && (
+                          <div className="truncate text-xs text-muted-foreground">{r.role}</div>
+                        )}
+                      </div>
+                    </label>
+                  );
+                };
+                return (
+                  <div className="space-y-4">
+                    {leaders.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                          Group leaders
+                        </div>
+                        {leaders.map(renderRow)}
+                      </div>
+                    )}
+                    {others.length > 0 && (
+                      <div className="space-y-2">
+                        {leaders.length > 0 && (
+                          <div className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                            Members
+                          </div>
+                        )}
+                        {others.map(renderRow)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
-            <div className="flex justify-end gap-2 border-t border-hairline px-5 py-3">
+            <div className="flex items-center justify-between gap-2 border-t border-hairline px-5 py-3">
               <button
                 onClick={() => setAttendanceOpen(false)}
                 className="rounded-md border border-hairline bg-background px-3 py-1.5 text-xs text-ink hover:bg-secondary"
