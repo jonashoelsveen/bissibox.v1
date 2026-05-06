@@ -541,7 +541,6 @@ function SettingsPage() {
                     </Grid>
                   </div>
                 </Card>
-                <AppearancePanel />
               </div>
             )}
 
