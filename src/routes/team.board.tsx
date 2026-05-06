@@ -217,7 +217,7 @@ export function TeamBoardPage({
         setLoaded(true);
         return;
       }
-      await Promise.all([loadMembers(tid), loadMeetings(tid)]);
+      await Promise.all([loadMembers(tid), loadMeetings(tid), loadGroupOptions(tid)]);
       setLoaded(true);
     })();
   }, [user, activeEntityId]);
