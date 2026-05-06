@@ -21,6 +21,11 @@ import {
   X,
 } from "lucide-react";
 import { useLibrarySetting, meetingsAutosaveKey, registerUnsaved } from "@/lib/library-settings";
+import { meetingTables, type MeetingKind } from "@/lib/meeting-kind";
+
+// Cast for dynamic table names not present in generated types
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sb = supabase as any;
 
 export const Route = createFileRoute("/team/board")({
   component: TeamBoardPage,
