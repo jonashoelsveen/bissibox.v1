@@ -66,6 +66,13 @@ interface RosterEntry {
   role: string;
   email: string;
   sort_order: number;
+  is_leader?: boolean;
+  user_id?: string | null;
+}
+
+interface GroupOption {
+  id: string;
+  name: string;
 }
 
 export function TeamBoardPage({
