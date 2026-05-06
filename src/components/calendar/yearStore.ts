@@ -313,7 +313,7 @@ import { makeEventId } from "./dateUtils";
 
 export type IndividualCategory = "training" | "school" | "work" | "else";
 
-export type DiaryActivity = "running" | "cycling" | "strength" | "xcskiing";
+export type DiaryActivity = "running" | "cycling" | "swimming" | "strength" | "xcskiing";
 
 export interface CalendarEvent {
   id: string;
