@@ -52,6 +52,12 @@ export function TopChrome() {
           </NavBtn>
         )}
 
+        {user && isIndividual && (
+          <NavBtn to="/diary" label="Diary" active={path.startsWith("/diary")}>
+            <BookOpen className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </NavBtn>
+        )}
+
         {isOrganizer && (
           <NavBtn to="/map" label="Map" active={path.startsWith("/map")}>
             <MapIcon className="h-[18px] w-[18px]" strokeWidth={2.25} />
