@@ -655,6 +655,36 @@ function TeamMembersPage() {
       }
       setBoardMembers((arr) => arr.map((m, i) => ({ ...m, id: bmIdMap[i] ?? m.id })));
 
+      // Persist group leaders (coaches)
+      const glIdMap: Record<number, string> = {};
+      for (let i = 0; i < coaches.length; i++) {
+        const m = coaches[i];
+        if (m.id) {
+          const { error } = await supabase
+            .from("team_group_leaders")
+            .update({ name: m.name, group_name: m.role, email: m.email, sort_order: i })
+            .eq("id", m.id);
+          if (error) throw error;
+          glIdMap[i] = m.id;
+        } else {
+          const { data, error } = await supabase
+            .from("team_group_leaders")
+            .insert({
+              team_id: teamId,
+              name: m.name,
+              group_name: m.role,
+              email: m.email,
+              status: "pending",
+              sort_order: i,
+            })
+            .select("id")
+            .single();
+          if (error) throw error;
+          glIdMap[i] = data!.id as string;
+        }
+      }
+      setCoaches((arr) => arr.map((m, i) => ({ ...m, id: glIdMap[i] ?? m.id })));
+
       toast.success("Saved.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save.");
