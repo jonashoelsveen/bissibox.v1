@@ -763,9 +763,12 @@ export function TeamBoardPage({
   }
 
   async function loadRosterAndAttendanceFor(meetingId: string) {
+    const rosterCols = kind === "group"
+      ? "id,board_member_id,name,role,email,sort_order,is_leader,user_id"
+      : "id,board_member_id,name,role,email,sort_order";
     const { data: rosterData } = await sb
       .from(tables.roster)
-      .select("id,board_member_id,name,role,email,sort_order")
+      .select(rosterCols)
       .eq("meeting_id", meetingId)
       .order("sort_order", { ascending: true });
     let rosterRows = (rosterData ?? []) as RosterEntry[];
