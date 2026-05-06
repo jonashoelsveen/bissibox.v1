@@ -29,6 +29,7 @@ interface MeetingRow {
 }
 
 export function MeetingsListPage({
+  kind = "board",
   actionsMount,
   hideNewActions,
   externalView,
@@ -36,6 +37,7 @@ export function MeetingsListPage({
   onMeetingCreated,
   newMeetingSignal,
 }: {
+  kind?: MeetingKind;
   actionsMount?: HTMLDivElement | null;
   hideNewActions?: boolean;
   /** "all" or filter by folder name (null = unsorted, string = folder name). */
@@ -47,6 +49,7 @@ export function MeetingsListPage({
   /** Trigger the "new meeting" dialog from the parent (counter increments). */
   newMeetingSignal?: number;
 } = {}) {
+  const tables = meetingTables(kind);
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
