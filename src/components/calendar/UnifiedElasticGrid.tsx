@@ -2004,6 +2004,7 @@ function WeekEventsOverlay({
               (() => {
                 const ActIcon: LucideIcon =
                   ev.activity === "cycling" ? Bike :
+                  ev.activity === "swimming" ? Waves :
                   ev.activity === "strength" ? Dumbbell :
                   ev.activity === "xcskiing" ? Snowflake :
                   Footprints;
