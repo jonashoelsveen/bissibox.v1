@@ -419,6 +419,7 @@ export function TeamBoardPage({
   function openNewMeeting() {
     setNewMeetingTitle(`${kindLabel} meeting · ${new Date().toLocaleDateString()}`);
     setNewMeetingFolder("");
+    setNewMeetingGroupId(kind === "group" && groupOptions.length === 1 ? groupOptions[0].id : "");
     setNewMeetingOpen(true);
   }
 
