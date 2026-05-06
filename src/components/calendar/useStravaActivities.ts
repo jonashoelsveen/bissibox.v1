@@ -99,6 +99,13 @@ export function useStravaActivities(): {
         setLoading(false);
       }
 
+      // Fire-and-forget background re-sync so any activity edits made in
+      // Strava (e.g. sport_type changes) get pulled in without requiring the
+      // user to press "Re-sync". Realtime will propagate the resulting
+      // updates to this component.
+      supabase.functions.invoke("strava-sync-recent", { body: { days: 90 } })
+        .catch(() => { /* ignore — user may not be connected */ });
+
       channel = supabase
         .channel(`activities:${auth.user.id}`)
         .on(
