@@ -49,6 +49,7 @@ interface MeetingRow {
   meeting_date: string | null;
   notes: string | null;
   created_at: string;
+  group_id?: string | null;
 }
 
 interface AttachmentRow {
