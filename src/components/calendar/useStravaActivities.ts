@@ -49,17 +49,18 @@ export function rowToCalendarEvent(row: StravaActivityRow): CalendarEvent | null
   if (Number.isNaN(start.getTime())) return null;
   const dur = (row.elapsed_time_sec ?? row.moving_time_sec ?? 3600) * 1000;
   const end = new Date(start.getTime() + dur);
-  const { group, sub } = sportToDiary(row.sport_type);
+  const { group, sub, activity } = sportToDiary(row.sport_type);
   return {
     id: `strava:${row.strava_activity_id ?? row.id}`,
     title: row.name || row.sport_type || "Strava activity",
     startISO: localISO(start),
     endISO: localISO(end),
     allDay: false,
-    color: "#fc4c02",
+    color: "#B8B8FF", // training (periwinkle)
     diaryType: "training",
     diaryGroup: group,
     diarySub: sub,
+    activity,
     distanceKm: row.distance_m != null ? row.distance_m / 1000 : undefined,
     sportType: row.sport_type ?? undefined,
     subType: row.sub_type ?? undefined,
