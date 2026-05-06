@@ -1892,9 +1892,13 @@ function ConnectorsPanel() {
 }
 
 function ConnectorRow({ name }: { name: string }) {
+  const logo = CONNECTOR_LOGOS[name];
   return (
     <div className="flex items-center justify-between rounded-xl border border-hairline px-4 py-3">
-      <span className="text-sm text-ink">{name}</span>
+      <div className="flex items-center gap-3">
+        {logo && <img src={logo} alt={name} className="h-9 w-9 rounded-lg object-cover" />}
+        <span className="text-sm text-ink">{name}</span>
+      </div>
       <button
         type="button"
         className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-ink hover:text-ink"
