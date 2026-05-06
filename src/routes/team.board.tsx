@@ -394,7 +394,7 @@ export function TeamBoardPage({
   }, [meetings, folderFilter, meetingSearch, dateFrom, dateTo]);
 
   function openNewMeeting() {
-    setNewMeetingTitle(`Board meeting · ${new Date().toLocaleDateString()}`);
+    setNewMeetingTitle(`${kindLabel} meeting · ${new Date().toLocaleDateString()}`);
     setNewMeetingFolder("");
     setNewMeetingOpen(true);
   }
@@ -411,7 +411,7 @@ export function TeamBoardPage({
       toast.error(`You can have at most ${MAX_TABS} meeting tabs open at once. Please close another tab to open a new meeting.`);
       return;
     }
-    const title = newMeetingTitle.trim() || `Board meeting · ${new Date().toLocaleDateString()}`;
+    const title = newMeetingTitle.trim() || `${kindLabel} meeting · ${new Date().toLocaleDateString()}`;
     const folder = newMeetingFolder.trim() || null;
     const { data, error } = await sb
       .from(tables.meetings)
@@ -564,7 +564,7 @@ export function TeamBoardPage({
       return;
     }
 
-    if (!confirm("Do you want to delete board meeting?")) return;
+    if (!confirm(`Do you want to delete ${kindLabel.toLowerCase()} meeting?`)) return;
 
     if (tab.attachments.length) {
       await supabase.storage
@@ -582,7 +582,7 @@ export function TeamBoardPage({
   }
 
   async function deleteMeeting(m: MeetingRow) {
-    if (!confirm("Do you want to delete board meeting?")) return;
+    if (!confirm(`Do you want to delete ${kindLabel.toLowerCase()} meeting?`)) return;
     const { data: atts } = await sb
       .from(tables.attachments)
       .select("storage_path")
@@ -876,7 +876,7 @@ export function TeamBoardPage({
                   disabled={busy}
                   className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
                 >
-                  <Plus className="h-4 w-4" /> New board meeting
+                  <Plus className="h-4 w-4" /> New {kindLabel.toLowerCase()} meeting
                 </button>
               </>
             )}
@@ -1004,7 +1004,7 @@ export function TeamBoardPage({
             <div className="mt-5 space-y-2">
               {filteredMeetings.length === 0 && (
                 <div className="rounded-lg border border-hairline px-5 py-8 text-center text-sm text-muted-foreground">
-                  No board meetings yet.
+                  {`No ${kindLabel.toLowerCase()} meetings yet.`}
                 </div>
               )}
               {filteredMeetings.map((m) => (
@@ -1030,7 +1030,7 @@ export function TeamBoardPage({
                   <button
                     onClick={() => deleteMeeting(m)}
                     className="rounded p-1.5 text-muted-foreground hover:text-destructive"
-                    aria-label="Delete board meeting"
+                    aria-label={`Delete ${kindLabel.toLowerCase()} meeting`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -1290,7 +1290,7 @@ export function TeamBoardPage({
 
       {newMeetingOpen && (
         <MeetingDialog
-          title="New board meeting"
+          title={`New ${kindLabel.toLowerCase()} meeting`}
           name={newMeetingTitle}
           folder={newMeetingFolder}
           folders={folders}
