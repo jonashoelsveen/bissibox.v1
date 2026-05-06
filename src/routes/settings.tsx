@@ -119,8 +119,11 @@ function SettingsPage() {
   const [regs, setRegs] = useState<RegistrationRow[]>([]);
   const [liked, setLiked] = useState<LikedRow[]>([]);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<Tab>("general");
+  const [tab, setTab] = useState<Tab>("account");
   const [createOpen, setCreateOpen] = useState(false);
+  const [profileEntities, setProfileEntities] = useState<
+    { id: string; name: string; entity_type: string; roles: string[] }[]
+  >([]);
 
   // Active selection: null = individual profile, otherwise the entity id.
   const isTeamMode = !!activeEntityId;
