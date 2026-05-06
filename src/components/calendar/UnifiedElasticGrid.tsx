@@ -895,13 +895,19 @@ export function UnifiedElasticGrid({
               (_, i) => i + 1,
             ).map((day) => (
               <Fragment key={day}>
-                {mode.kind === "year" && (
-                  <div
-                    className="border-b border-r border-hairline bg-card"
-                    style={{ height: rowHeight * 2 }}
-                    aria-hidden
-                  />
-                )}
+                {mode.kind === "year" && (() => {
+                  const hh = 5 + day;
+                  const label = `${String(hh).padStart(2, "0")}:00`;
+                  return (
+                    <div
+                      className="border-b border-r border-hairline bg-card pl-1.5 pt-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
+                      style={{ height: rowHeight * 2 }}
+                      aria-hidden
+                    >
+                      {label}
+                    </div>
+                  );
+                })()}
                 <DayRow
                   day={day}
                   months={months}
