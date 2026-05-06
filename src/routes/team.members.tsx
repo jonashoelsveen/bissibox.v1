@@ -1097,6 +1097,7 @@ function TeamMembersPage() {
                     open={openIdx === idx}
                     onToggle={() => setOpenIdx((o) => (o === idx ? null : idx))}
                     currentYear={currentYear}
+                    leaders={coaches}
                     onChange={(patch) =>
                       setGroups((arr) => arr.map((x, i) => (i === idx ? { ...x, ...patch } : x)))
                     }
