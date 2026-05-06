@@ -269,7 +269,7 @@ function SettingsPage() {
         "entity-appearance",
         "map",
       ]
-    : ["profiles", "general", "address", "roles", "library", "diary", "map", "appearance", "desk", "races", "liked"];
+    : ["profiles", "general", "address", "roles", "library", "diary", "connectors", "map", "appearance", "desk", "races", "liked"];
 
   
 
