@@ -1,0 +1,138 @@
+/**
+ * useStravaActivities — fetches synced Strava activities for the logged-in
+ * user from the `activities` table and exposes them as CalendarEvent-shaped
+ * items so the Diary view can render them next to manually logged sessions.
+ *
+ * It also subscribes to realtime changes so newly webhook-synced activities
+ * appear without a refresh.
+ */
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { CalendarEvent } from "./yearStore";
+
+export type StravaActivityRow = {
+  id: string;
+  user_id: string;
+  strava_activity_id: number | null;
+  name: string | null;
+  sport_type: string | null;
+  sub_type: string | null;
+  start_date: string | null;
+  elapsed_time_sec: number | null;
+  moving_time_sec: number | null;
+  distance_m: number | null;
+  total_elevation_gain_m: number | null;
+  average_heartrate: number | null;
+  summary_polyline: string | null;
+  map_polyline: string | null;
+  sync_status: string;
+};
+
+function localISO(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function sportToDiary(sport: string | null): { group: string; sub?: string } {
+  const s = (sport || "").toLowerCase();
+  if (s.includes("run")) return { group: "endurance", sub: "running" };
+  if (s.includes("ride") || s.includes("cycl") || s.includes("bike")) return { group: "endurance", sub: "cycling" };
+  if (s.includes("ski")) return { group: "endurance", sub: "other" };
+  if (s.includes("weight") || s.includes("strength")) return { group: "strength" };
+  if (s.includes("yoga") || s.includes("stretch")) return { group: "stretch" };
+  return { group: "endurance", sub: "other" };
+}
+
+export function rowToCalendarEvent(row: StravaActivityRow): CalendarEvent | null {
+  if (!row.start_date) return null;
+  const start = new Date(row.start_date);
+  if (Number.isNaN(start.getTime())) return null;
+  const dur = (row.elapsed_time_sec ?? row.moving_time_sec ?? 3600) * 1000;
+  const end = new Date(start.getTime() + dur);
+  const { group, sub } = sportToDiary(row.sport_type);
+  return {
+    id: `strava:${row.strava_activity_id ?? row.id}`,
+    title: row.name || row.sport_type || "Strava activity",
+    startISO: localISO(start),
+    endISO: localISO(end),
+    allDay: false,
+    color: "#fc4c02",
+    diaryType: "training",
+    diaryGroup: group,
+    diarySub: sub,
+    distanceKm: row.distance_m != null ? row.distance_m / 1000 : undefined,
+    sportType: row.sport_type ?? undefined,
+    subType: row.sub_type ?? undefined,
+    summaryPolyline: row.summary_polyline ?? undefined,
+    totalElevationGainM: row.total_elevation_gain_m ?? undefined,
+    averageHeartrate: row.average_heartrate ?? undefined,
+    stravaActivityId: row.strava_activity_id ?? undefined,
+  };
+}
+
+export function useStravaActivities(): {
+  events: CalendarEvent[];
+  rows: Record<string, StravaActivityRow>;
+  loading: boolean;
+} {
+  const [rows, setRows] = useState<StravaActivityRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth?.user) { if (active) { setRows([]); setLoading(false); } return; }
+      const { data } = await supabase
+        .from("activities")
+        .select("*")
+        .eq("user_id", auth.user.id)
+        .eq("source", "strava")
+        .order("start_date", { ascending: false });
+      if (active) {
+        setRows((data || []) as StravaActivityRow[]);
+        setLoading(false);
+      }
+
+      channel = supabase
+        .channel(`activities:${auth.user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "activities", filter: `user_id=eq.${auth.user.id}` },
+          (payload) => {
+            setRows((prev) => {
+              const next = [...prev];
+              const incoming = (payload.new || payload.old) as StravaActivityRow;
+              if (payload.eventType === "DELETE") {
+                return next.filter((r) => r.id !== (payload.old as StravaActivityRow).id);
+              }
+              const idx = next.findIndex((r) => r.id === incoming.id);
+              if (idx >= 0) next[idx] = incoming;
+              else next.unshift(incoming);
+              return next;
+            });
+          },
+        )
+        .subscribe();
+    })();
+
+    return () => {
+      active = false;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const events = rows
+    .map(rowToCalendarEvent)
+    .filter((e): e is CalendarEvent => !!e);
+
+  const byKey: Record<string, StravaActivityRow> = {};
+  rows.forEach((r) => {
+    const k = `strava:${r.strava_activity_id ?? r.id}`;
+    byKey[k] = r;
+  });
+
+  return { events, rows: byKey, loading };
+}
