@@ -197,14 +197,16 @@ export function DiaryPopoverEditor({
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              {time && (
+              {diaryType !== "note" && time && (
                 <span className="mono text-[10.5px] tabular-nums text-ink/70">
                   {fmtMin(time.startMin)}–{fmtMin(time.endMin)}
                 </span>
               )}
-              <span className="rounded-md p-1 text-muted-foreground/60">
-                <Clock className="h-3.5 w-3.5" strokeWidth={2} />
-              </span>
+              {diaryType !== "note" && (
+                <span className="rounded-md p-1 text-muted-foreground/60">
+                  <Clock className="h-3.5 w-3.5" strokeWidth={2} />
+                </span>
+              )}
             </div>
           </div>
 
