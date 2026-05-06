@@ -291,7 +291,26 @@ function YearCalendarViewInner({
           onFill={fillRange}
           seat={seat}
           events={mergedEvents}
-          onUpsertEvent={upsertEvent}
+          onUpsertEvent={(patch) => {
+            if (appKind === "diary") {
+              const startISO = (patch as { startISO?: string }).startISO;
+              if (startISO && new Date(startISO).getTime() > Date.now()) {
+                toast("Diary is for logging past sessions", {
+                  description: "For planning upcoming sessions, go to Calendar.",
+                });
+                // Return a no-op CalendarEvent shape to satisfy type.
+                return {
+                  id: "__blocked__",
+                  startISO: startISO ?? "",
+                  endISO: (patch as { endISO?: string }).endISO ?? "",
+                  allDay: false,
+                  title: "",
+                  color: null,
+                };
+              }
+            }
+            return upsertEvent(patch);
+          }}
           onMoveEvent={moveEvent}
           onDeleteEvent={deleteEvent}
           currentDate={currentDate}
