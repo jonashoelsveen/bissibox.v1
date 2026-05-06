@@ -33,14 +33,14 @@ function localISO(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-function sportToDiary(sport: string | null): { group: string; sub?: string } {
+function sportToDiary(sport: string | null): { group: string; sub?: string; activity?: "running" | "cycling" | "strength" | "xcskiing" } {
   const s = (sport || "").toLowerCase();
-  if (s.includes("run")) return { group: "endurance", sub: "running" };
-  if (s.includes("ride") || s.includes("cycl") || s.includes("bike")) return { group: "endurance", sub: "cycling" };
-  if (s.includes("ski")) return { group: "endurance", sub: "other" };
-  if (s.includes("weight") || s.includes("strength")) return { group: "strength" };
+  if (s.includes("run")) return { group: "endurance", sub: "running", activity: "running" };
+  if (s.includes("ride") || s.includes("cycl") || s.includes("bike")) return { group: "endurance", sub: "cycling", activity: "cycling" };
+  if (s.includes("ski")) return { group: "endurance", sub: "other", activity: "xcskiing" };
+  if (s.includes("weight") || s.includes("strength")) return { group: "strength", activity: "strength" };
   if (s.includes("yoga") || s.includes("stretch")) return { group: "stretch" };
-  return { group: "endurance", sub: "other" };
+  return { group: "endurance", sub: "other", activity: "running" };
 }
 
 export function rowToCalendarEvent(row: StravaActivityRow): CalendarEvent | null {
@@ -49,17 +49,18 @@ export function rowToCalendarEvent(row: StravaActivityRow): CalendarEvent | null
   if (Number.isNaN(start.getTime())) return null;
   const dur = (row.elapsed_time_sec ?? row.moving_time_sec ?? 3600) * 1000;
   const end = new Date(start.getTime() + dur);
-  const { group, sub } = sportToDiary(row.sport_type);
+  const { group, sub, activity } = sportToDiary(row.sport_type);
   return {
     id: `strava:${row.strava_activity_id ?? row.id}`,
     title: row.name || row.sport_type || "Strava activity",
     startISO: localISO(start),
     endISO: localISO(end),
     allDay: false,
-    color: "#fc4c02",
+    color: "#B8B8FF", // training (periwinkle)
     diaryType: "training",
     diaryGroup: group,
     diarySub: sub,
+    activity,
     distanceKm: row.distance_m != null ? row.distance_m / 1000 : undefined,
     sportType: row.sport_type ?? undefined,
     subType: row.sub_type ?? undefined,

@@ -15,6 +15,8 @@ import {
   useLibrarySetting,
 } from "@/lib/library-settings";
 import { MapSettingsPanel } from "@/components/settings/MapSettingsPanel";
+import { Footprints, Check } from "lucide-react";
+import { SESSION_TILE_DESIGNS, useSessionTileDesign, type SessionTileDesign } from "@/lib/session-tile-design";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -1494,7 +1496,112 @@ function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
         items={["Units", "Activitytypes"]}
       />
       <DiaryCategoryCard title="Notes" items={[]} />
+      <SessionTileDesignCard />
       <DiarySessionDetailsCard />
+    </div>
+  );
+}
+
+function SessionTileDesignCard() {
+  const [open, setOpen] = useState(true);
+  const [design, setDesign] = useSessionTileDesign();
+  return (
+    <Card>
+      <div className="flex w-full items-center gap-3">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          <h3 className="text-sm font-semibold text-ink">Session tile design</h3>
+        </button>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Collapse" : "Expand"}
+          className="text-muted-foreground hover:text-ink"
+        >
+          {open ? (
+            <ChevronDown className="h-4 w-4" strokeWidth={2.25} />
+          ) : (
+            <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+          )}
+        </button>
+      </div>
+      {open && (
+        <>
+          <p className="mt-1 text-xs text-muted-foreground">
+            How logged sessions appear in the Diary week view.
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {SESSION_TILE_DESIGNS.map((d) => {
+              const active = d.id === design;
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => setDesign(d.id)}
+                  className={`group relative overflow-hidden rounded-xl border text-left transition ${
+                    active
+                      ? "border-primary shadow-md ring-2 ring-primary/30"
+                      : "border-hairline hover:border-ink/30"
+                  }`}
+                >
+                  <div className="relative flex h-24 items-center justify-center bg-[#B8B8FF]/25 px-2">
+                    <SessionTilePreview design={d.id} />
+                    {active && (
+                      <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+                        <Check className="h-3 w-3" />
+                      </span>
+                    )}
+                  </div>
+                  <div className="bg-card px-3 py-2.5">
+                    <div className="text-sm font-medium text-ink">{d.label}</div>
+                    <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                      {d.description}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+function SessionTilePreview({ design }: { design: SessionTileDesign }) {
+  const accent = "#5b5bff";
+  if (design === "icon") {
+    return (
+      <div className="flex h-14 w-full items-center justify-center rounded-[3px] bg-white/70 ring-1 ring-black/5">
+        <Footprints className="h-6 w-6" strokeWidth={2.25} style={{ color: accent }} />
+      </div>
+    );
+  }
+  if (design === "stacked") {
+    return (
+      <div className="flex h-14 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
+        <div className="flex w-1/2 items-center justify-center" style={{ background: "rgba(184,184,255,0.45)" }}>
+          <Footprints className="h-6 w-6" strokeWidth={2.25} style={{ color: accent }} />
+        </div>
+        <div className="flex w-1/2 flex-col justify-center px-1.5 leading-tight">
+          <span className="truncate text-[9px] font-semibold text-ink">Morning run</span>
+          <span className="text-[8px] tabular-nums text-ink/70">45 min</span>
+          <span className="text-[8px] tabular-nums text-ink/70">8.2 km</span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-14 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
+      <div className="flex w-1/2 items-center justify-center" style={{ background: "rgba(184,184,255,0.45)" }}>
+        <Footprints className="h-7 w-7" strokeWidth={2.25} style={{ color: accent }} />
+      </div>
+      <div
+        className="flex w-1/2 items-center justify-center text-ink"
+        style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18 }}
+      >
+        8.2
+      </div>
     </div>
   );
 }

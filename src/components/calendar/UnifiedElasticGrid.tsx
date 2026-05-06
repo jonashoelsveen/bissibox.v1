@@ -36,6 +36,7 @@ import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
 import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoWeekNumber } from "./dateUtils";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
+import { useSessionTileDesign } from "@/lib/session-tile-design";
 
 export type ViewMode = "day" | "week" | "month";
 
@@ -1859,6 +1860,7 @@ function WeekEventsOverlay({
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number) => void;
 }) {
+  const [tileDesign] = useSessionTileDesign();
   type Box = { left: number; width: number };
   const [cols, setCols] = useState<Box[]>([]);
   const [headerBottom, setHeaderBottom] = useState(0);
@@ -2008,16 +2010,58 @@ function WeekEventsOverlay({
                   ev.activity === "strength" ? Dumbbell :
                   ev.activity === "xcskiing" ? Snowflake :
                   Footprints;
-                const dur = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
+                const durStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
+                const km = ev.distanceKm;
+                const iconHalfBg = ev.color
+                  ? `color-mix(in srgb, ${ev.color} 40%, white)`
+                  : "rgba(0,0,0,0.05)";
+
+                if (tileDesign === "icon") {
+                  return (
+                    <div className="flex h-full w-full items-center justify-center pl-1">
+                      <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+                    </div>
+                  );
+                }
+                if (tileDesign === "stacked") {
+                  return (
+                    <div className="-mx-2 -my-0.5 flex h-full items-stretch">
+                      <div
+                        className="flex w-1/2 items-center justify-center"
+                        style={{ background: iconHalfBg }}
+                      >
+                        <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+                      </div>
+                      <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
+                        <span className="truncate text-[12px] font-semibold">{ev.title}</span>
+                        <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{durStr}</span>
+                        <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
+                          {km != null ? `${km.toFixed(1)} km` : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+                // "split" (default)
                 return (
-                  <div className="flex h-full items-center gap-2 pl-1">
-                    <ActIcon className="h-4 w-4 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
-                    <div className="flex min-w-0 flex-1 flex-col justify-center leading-tight">
-                      <span className="truncate text-[12px] font-semibold">{ev.title}</span>
-                      <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{dur}</span>
-                      <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
-                        {ev.distanceKm != null ? `${ev.distanceKm.toFixed(1)} km` : "—"}
-                      </span>
+                  <div className="-mx-2 -my-0.5 flex h-full items-stretch">
+                    <div
+                      className="flex w-1/2 items-center justify-center"
+                      style={{ background: iconHalfBg }}
+                    >
+                      <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+                    </div>
+                    <div
+                      className="flex w-1/2 items-center justify-center text-ink"
+                      style={{
+                        fontFamily: "Helvetica, Arial, sans-serif",
+                        fontWeight: 700,
+                        fontSize: 22,
+                        lineHeight: 1,
+                      }}
+                      title={km != null ? `${km.toFixed(1)} km` : undefined}
+                    >
+                      {km != null ? km.toFixed(1) : "—"}
                     </div>
                   </div>
                 );
