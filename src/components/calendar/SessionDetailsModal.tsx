@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, MapPin, NotebookPen, Info, Paperclip } from "lucide-react";
+import { X, Plus, MapPin, NotebookPen, Info, Paperclip, Trash2 } from "lucide-react";
 import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import { useLibrarySetting } from "@/lib/library-settings";
 import { diaryAutosyncKey } from "@/lib/library-settings";
