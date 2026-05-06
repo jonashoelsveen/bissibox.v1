@@ -47,6 +47,7 @@ export function SessionDetailsModal({
   onClose,
   onSave,
   strava,
+  date,
 }: {
   isEdit: boolean;
   value: SessionDetailsValue;
@@ -54,9 +55,11 @@ export function SessionDetailsModal({
   onClose: () => void;
   onSave: (v: SessionDetailsValue) => void;
   strava?: { polyline?: string | null; elevationGainM?: number | null; distanceKm?: number | null } | null;
+  date?: Date;
 }) {
   const [tab, setTab] = useState<Tab>("about");
   const [autosync] = useLibrarySetting<boolean>(diaryAutosyncKey("global"), false);
+  const isNote = value.diaryType === "note";
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -74,6 +77,10 @@ export function SessionDetailsModal({
 
   const startStr = value.time ? fmtMin(value.time.startMin) : "";
   const endStr = value.time ? fmtMin(value.time.endMin) : "";
+
+  const headerTitle = isNote
+    ? `Note ${date ? `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}` : ""}`.trim()
+    : "Session details";
 
   return (
     <AnimatePresence>
@@ -94,7 +101,7 @@ export function SessionDetailsModal({
         >
           {/* Header */}
           <div className="flex items-center justify-between gap-3 border-b border-hairline px-4 py-3">
-            <h2 className="text-sm font-semibold text-ink">Session details</h2>
+            <h2 className="text-sm font-semibold text-ink">{headerTitle}</h2>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -113,6 +120,16 @@ export function SessionDetailsModal({
               </button>
             </div>
           </div>
+
+          {isNote ? (
+            <NoteBody
+              title={value.title}
+              note={value.sessionNote ?? ""}
+              onTitle={(t) => set("title", t)}
+              onNote={(n) => set("sessionNote", n)}
+            />
+          ) : (
+            <>
 
           {/* Top fields */}
           <div className="grid grid-cols-1 gap-3 border-b border-hairline px-4 py-4 md:grid-cols-4">
