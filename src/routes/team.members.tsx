@@ -64,6 +64,7 @@ interface BoardMemberDraft {
   status: "pending" | "active";
   invited_at: string | null;
   sort_order: number;
+  group_id?: string | null;
 }
 
 interface MemberRow {
