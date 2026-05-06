@@ -375,6 +375,9 @@ export function UnifiedElasticGrid({
     isEdit: boolean;
     /** When set, the commit/delete will mutate this CalendarEvent. */
     eventId?: string;
+    /** Pending unsaved drag — date/time to apply on Save. */
+    pendingDate?: Date;
+    pendingTime?: { startMin: number; endMin: number };
   } | null>(null);
 
   // Refs assigned later in render so openPopover can reach the latest
