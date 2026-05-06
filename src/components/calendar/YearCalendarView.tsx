@@ -298,6 +298,7 @@ function YearCalendarViewInner({
           onCurrentDateChange={(d, r) => updateCurrent(d, r)}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          appKind={appKind}
         />
       </div>
     </div>
