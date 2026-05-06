@@ -546,6 +546,26 @@ export function MeetingsListPage({
                 className="mt-1 w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
               />
             </label>
+            {kind === "group" && (
+              <label className="mb-3 block text-xs text-muted-foreground">
+                Group
+                <select
+                  value={newMeetingGroupId}
+                  onChange={(e) => setNewMeetingGroupId(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                >
+                  <option value="">Select a group…</option>
+                  {groupOptions.map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+                {groupOptions.length === 0 && (
+                  <span className="mt-1 block text-[11px] text-muted-foreground/80">
+                    You aren't assigned to lead any group yet.
+                  </span>
+                )}
+              </label>
+            )}
             <div className="mb-4">
               <span className="block text-xs text-muted-foreground">Folder (optional)</span>
               {creatingFolderInline ? (
