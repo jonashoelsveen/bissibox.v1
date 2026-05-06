@@ -313,6 +313,7 @@ export function DiaryPopoverEditor({
       {showDetails && (
         <SessionDetailsModal
           isEdit={isEdit}
+          date={date}
           strava={
             initialEvent?.summaryPolyline
               ? {
