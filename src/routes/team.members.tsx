@@ -1385,11 +1385,32 @@ function GroupRow({
             <label className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Group leader name</span>
               <input
+                list={`group-leaders-${group.id ?? group.name}`}
                 value={group.leader_name}
-                onChange={(e) => onChange({ leader_name: e.target.value })}
-                placeholder="—"
+                onChange={(e) => {
+                  const name = e.target.value;
+                  const match = leaders.find((l) => l.name === name);
+                  if (match) {
+                    onChange({
+                      leader_name: match.name,
+                      leader_email: match.email || group.leader_email,
+                    });
+                  } else {
+                    onChange({ leader_name: name });
+                  }
+                }}
+                placeholder={leaders.length ? "Select or search…" : "Add a group leader first"}
                 className="rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
               />
+              <datalist id={`group-leaders-${group.id ?? group.name}`}>
+                {leaders
+                  .filter((l) => (l.name || "").trim().length > 0)
+                  .map((l, i) => (
+                    <option key={`${l.id ?? i}-${l.name}`} value={l.name}>
+                      {l.email || ""}
+                    </option>
+                  ))}
+              </datalist>
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Leader email</span>
