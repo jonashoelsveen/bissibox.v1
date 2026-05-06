@@ -430,14 +430,31 @@ export function TeamBoardPage({
     return Array.from(set).sort();
   }, [meetings, extraFolders]);
 
-  function createFolder() {
+  async function persistFolder(name: string): Promise<boolean> {
+    if (!teamId) return false;
+    const { error } = await sb.from(tables.folders).insert({ team_id: teamId, name });
+    if (error) {
+      // Ignore unique-conflict; surface other errors
+      if (!String(error.message ?? "").toLowerCase().includes("duplicate")) {
+        toast.error(error.message);
+        return false;
+      }
+    }
+    window.dispatchEvent(new Event("library:refresh"));
+    window.dispatchEvent(new Event("group-meetings:refresh"));
+    return true;
+  }
+
+  async function createFolder() {
     const name = newFolderName.trim();
     if (!name) return;
     if (folders.includes(name)) {
       toast.error("A folder with that name already exists");
       return;
     }
-    setExtraFolders((prev) => [...prev, name]);
+    const ok = await persistFolder(name);
+    if (!ok) return;
+    setExtraFolders((prev) => (prev.includes(name) ? prev : [...prev, name]));
     setFolderFilter(name);
     setNewFolderName("");
     setNewFolderOpen(false);
