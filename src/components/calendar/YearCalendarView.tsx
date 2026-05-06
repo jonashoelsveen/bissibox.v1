@@ -228,39 +228,52 @@ function YearCalendarViewInner({
             value={viewMode}
             onChange={setViewMode}
             width={108}
-            options={[
-              { value: "day", label: "Dag" },
-              { value: "week", label: "Uke" },
-              { value: "month", label: "Måned" },
-            ]}
+            options={
+              appKind === "diary"
+                ? [
+                    { value: "week", label: "Uke" },
+                    { value: "month", label: "Måned" },
+                  ]
+                : [
+                    { value: "day", label: "Dag" },
+                    { value: "week", label: "Uke" },
+                    { value: "month", label: "Måned" },
+                  ]
+            }
           />
-          <button
-            type="button"
-            aria-label="Undo"
-            title="Undo (⌘Z)"
-            onClick={() => { undo(); undoEvents(); }}
-            disabled={!canUndo && !canUndoEvents}
-            className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-          >
-            <Undo2 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            aria-label="Redo"
-            title="Redo (⌘⇧Z)"
-            onClick={() => { redo(); redoEvents(); }}
-            disabled={!canRedo && !canRedoEvents}
-            className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-          >
-            <Redo2 className="h-4 w-4" />
-          </button>
+          {appKind !== "diary" && (
+            <>
+              <button
+                type="button"
+                aria-label="Undo"
+                title="Undo (⌘Z)"
+                onClick={() => { undo(); undoEvents(); }}
+                disabled={!canUndo && !canUndoEvents}
+                className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                <Undo2 className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Redo"
+                title="Redo (⌘⇧Z)"
+                onClick={() => { redo(); redoEvents(); }}
+                disabled={!canRedo && !canRedoEvents}
+                className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                <Redo2 className="h-4 w-4" />
+              </button>
+            </>
+          )}
           <button
             aria-label="Calendar settings"
             className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-ink"
           >
             <SettingsIcon className="h-4 w-4" />
           </button>
-          <ImportButton seat={seat} onCommit={(patch) => upsertEvent(patch)} />
+          {appKind !== "diary" && (
+            <ImportButton seat={seat} onCommit={(patch) => upsertEvent(patch)} />
+          )}
         </div>
       </div>
 
