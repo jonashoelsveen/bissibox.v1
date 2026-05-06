@@ -68,6 +68,7 @@ interface RosterEntry {
 }
 
 export function TeamBoardPage({
+  kind = "board",
   embedded,
   newMeetingSignal,
   hideOwnTabBar,
@@ -75,6 +76,7 @@ export function TeamBoardPage({
   onMeetingOpened,
   onMeetingDeleted,
 }: {
+  kind?: MeetingKind;
   embedded?: boolean;
   newMeetingSignal?: number;
   /** When true, hide the inner tab nav and meetings list — parent controls tabs. */
@@ -86,6 +88,8 @@ export function TeamBoardPage({
   /** Notify parent when a meeting is deleted from this view. */
   onMeetingDeleted?: (id: string) => void;
 } = {}) {
+  const tables = meetingTables(kind);
+  const kindLabel = kind === "group" ? "Group" : "Board";
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
   // Active tab: "meetings" or a meeting id
