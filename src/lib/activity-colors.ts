@@ -8,7 +8,7 @@
 
 export const ACTIVITY_COLORS = {
   running: "#B8B8FF", // Periwinkle
-  swimming: "#5EFF5E",
+  swimming: "#B8FFFF",
   cycling: "#B8FFB8",
   else: "#D1D1E0",
 } as const;
