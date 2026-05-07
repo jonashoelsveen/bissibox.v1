@@ -41,7 +41,7 @@ export function TopChrome() {
             <Users className="h-[18px] w-[18px]" strokeWidth={2.25} />
           </NavBtn>
         )}
-        {user && isGroupLeader && (
+        {user && isOrganizer && isGroupLeader && (
           <NavBtn
             to="/team/group-meetings"
             label="Group meetings"
