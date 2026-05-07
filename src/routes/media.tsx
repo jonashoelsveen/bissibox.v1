@@ -2640,13 +2640,13 @@ function PenColorDropdown({ color, onChange }: { color: string; onChange: (c: st
       </button>
       {open && (
         <div className="absolute right-0 top-9 z-30 rounded-md border border-hairline bg-card p-1.5 shadow-lg">
-          <div className="grid grid-cols-4 gap-1">
+          <div className="flex flex-col gap-1">
             {DRAW_COLORS.map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => { onChange(c); setOpen(false); }}
-                className="h-6 w-6 rounded-sm border border-black/10 transition hover:scale-110"
+                className="h-6 w-10 rounded-sm border border-black/10 transition hover:scale-105"
                 style={{ background: c }}
                 aria-label={c}
               />
