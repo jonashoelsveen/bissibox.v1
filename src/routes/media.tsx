@@ -1095,10 +1095,23 @@ function MediaPage({
     setSelected(new Set());
   };
 
+  const tabTitleFor = (list: MediaItem[]) => {
+    if (list.length === 0) return "Media";
+    const first = list[0];
+    const evTitle = attended.find((e) => e.id === first.event_id)?.title;
+    if (list.length === 1) return evTitle || "Media";
+    return evTitle ? `${evTitle} (${list.length})` : `Media (${list.length})`;
+  };
+
   const openSelected = () => {
     if (selected.size === 0) return;
     const list = items.filter((i) => selected.has(i.id));
-    setOpenItems(list);
+    if (onOpenMediaTab) {
+      onOpenMediaTab(`media:${list.map((i) => i.id).sort().join(",")}`, tabTitleFor(list), list.map((i) => i.id));
+      exitSelect();
+    } else {
+      setOpenItems(list);
+    }
   };
 
   const handleDelete = async () => {
