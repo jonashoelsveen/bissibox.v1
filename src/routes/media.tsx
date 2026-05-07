@@ -3582,6 +3582,13 @@ function MediaTabView({
   const isMulti = items.length > 1;
   const current = items[idx];
   const url = current ? urls[current.id] : undefined;
+  const isVideo = current?.media_type === "video";
+  const drawing = useDrawingState();
+  useEffect(() => { drawing.clear(); drawing.setEnabled(false); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [current?.id]);
+  const tabs: ReadonlyArray<"about" | "access" | "draw" | "export"> = isVideo
+    ? ["about", "access", "draw", "export"]
+    : ["about", "access", "export"];
+  useEffect(() => { if (!isVideo && tab === "draw") setTab("about"); }, [isVideo, tab]);
 
   return (
     <div className="flex h-[calc(100vh-12rem)] min-h-[480px] gap-4 rounded-2xl border border-hairline bg-card overflow-hidden">
@@ -3596,7 +3603,7 @@ function MediaTabView({
               />
             )
           ) : (
-            <VideoPlayer src={url} />
+            <VideoPlayer src={url} drawing={drawing} />
           )}
         </div>
         {isMulti && (
@@ -3611,7 +3618,7 @@ function MediaTabView({
       <aside className="flex w-96 flex-col border-l border-hairline bg-background">
         <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
           <div className="flex gap-1">
-            {(["about", "access", "draw", "export"] as const).map((t) => (
+            {tabs.map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
