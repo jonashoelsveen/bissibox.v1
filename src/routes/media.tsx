@@ -3048,7 +3048,7 @@ function formatVideoTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(cs).padStart(2, "0")}`;
 }
 
-function VideoPlayer({ src }: { src?: string }) {
+function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
   const [playing, setPlaying] = useState(false);
