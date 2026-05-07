@@ -8,7 +8,7 @@
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { colorForActivity } from "@/lib/activity-colors";
+import { colorForActivity, colorForStravaSession } from "@/lib/activity-colors";
 import type { CalendarEvent } from "./yearStore";
 
 export type StravaActivityRow = {
