@@ -723,6 +723,11 @@ export function MonthGridType1({
                     </span>
                   )}
 
+                  {/* Diary: per-day note (bottom-right corner) */}
+                  {appKind === "diary" && d.inMonth && (
+                    <DayNoteButton calId={calId} date={d.date} variant="month" />
+                  )}
+
                   {/* Excel focus ring */}
                   {focused && d.inMonth && (
                     <span className="pointer-events-none absolute inset-0 z-[2] rounded-[2px] outline outline-2 outline-primary outline-offset-[-2px]" />
