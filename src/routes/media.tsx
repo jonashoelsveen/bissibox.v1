@@ -655,7 +655,7 @@ function LibraryPage() {
           ) : baseTab === "files" ? (
             <FilesPage actionsMount={actionsMount} hideSideNav externalView={externalFilesView} />
           ) : (
-            <MediaPage actionsMount={actionsMount} hideSideNav externalView={externalMediaView} />
+            <MediaPage actionsMount={actionsMount} hideSideNav externalView={externalMediaView} onOpenMediaTab={openMediaTab} />
           )}
         </div>
       </div>
