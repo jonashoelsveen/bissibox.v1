@@ -2052,6 +2052,11 @@ function Lightbox({
   const isMulti = items.length > 1;
   const current = items[idx];
   const url = current ? urls[current.id] : undefined;
+  const isVideo = current?.media_type === "video";
+  const drawing = useDrawingState();
+  useEffect(() => { drawing.clear(); drawing.setEnabled(false); /* reset on item change */ /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [current?.id]);
+  const tabs = (isVideo ? ["about", "access", "draw", "export"] : ["about", "access", "export"]) as const;
+  useEffect(() => { if (!isVideo && tab === "draw") setTab("about"); }, [isVideo, tab]);
 
   return (
     <div className="fixed inset-0 z-50 flex animate-in fade-in" onClick={onClose}>
