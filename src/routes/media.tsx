@@ -613,6 +613,12 @@ function LibraryPage() {
               }
               onMeetingDeleted={(id) => finalizeClose(id)}
             />
+          ) : showingNote && activeNoteId && showingMedia && activeTabEntry ? (
+            <MediaTabView
+              key={activeNoteId}
+              mediaIds={activeTabEntry.mediaIds ?? []}
+              onTitleChange={(title) => updateNoteTab({ id: activeNoteId, title })}
+            />
           ) : showingNote && activeNoteId ? (
             <NoteEditor
               key={activeNoteId}
