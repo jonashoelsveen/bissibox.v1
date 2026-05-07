@@ -1,16 +1,16 @@
 /**
- * DayNoteButton + DayNotePanel — diary-only "note for the day" affordance.
+ * DayNoteButton + NotePanel — diary "note for the day" affordance and a
+ * reusable read-only / editable note panel used by both day-notes and
+ * session-notes.
  *
- * - Renders a small note icon that is invisible until the parent
- *   `[data-day-anchor]` element is hovered (light gray on hover).
- * - When a note exists, the icon is permanently shown in the same light-gray
- *   tone, and darkens on hover.
- * - Clicking opens a roll-down panel anchored beneath the column/cell whose
- *   width exactly matches the anchor element's width.
- * - Header: "Note dd.mm.yy". Body: a single auto-growing textarea that
- *   continues writing as it extends. Footer mirrors the session popover
- *   (⏎ to save · Add/Lagre button). The bottom edge is drag-resizable.
- * - Storage: localStorage under `diary:daynotes:{calId}` keyed by ISO day.
+ * Hover behaviour:
+ *  - Empty: icon invisible until parent `[data-day-anchor]` is hovered →
+ *    light gray. Clicking opens the editable panel.
+ *  - Has note: icon permanently light gray. Hovering the parent anchor
+ *    auto-opens the panel in PREVIEW mode (read-only, no cursor, light gray
+ *    background). Clicking the icon switches the panel into EDIT mode.
+ *
+ * Storage: localStorage under `diary:daynotes:{calId}` keyed by ISO day.
  */
 
 import {
@@ -76,12 +76,7 @@ export function useDayNote(calId: string, date: Date): string {
 interface DayNoteButtonProps {
   calId: string;
   date: Date;
-  /**
-   * "week" → small icon to the left inside the weekday-header cell.
-   * "month" → small icon at the bottom-right corner of the day cell.
-   */
   variant: "week" | "month";
-  /** CSS selector for the anchor element (column/cell). Defaults to `[data-day-anchor]`. */
   anchorSelector?: string;
 }
 
@@ -93,26 +88,52 @@ export function DayNoteButton({
 }: DayNoteButtonProps) {
   const note = useDayNote(calId, date);
   const has = !!note.trim();
-  const [open, setOpen] = useState(false);
+  // mode: null = closed, "preview" = hover read-only, "edit" = clicked
+  const [mode, setMode] = useState<null | "preview" | "edit">(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);
+  const anchorElRef = useRef<HTMLElement | null>(null);
 
   const refreshRect = () => {
     const anchor =
       btnRef.current?.closest(anchorSelector) as HTMLElement | null;
-    if (anchor) setAnchorRect(anchor.getBoundingClientRect());
-    else if (btnRef.current) setAnchorRect(btnRef.current.getBoundingClientRect());
+    if (anchor) {
+      anchorElRef.current = anchor;
+      setAnchorRect(anchor.getBoundingClientRect());
+    } else if (btnRef.current) {
+      setAnchorRect(btnRef.current.getBoundingClientRect());
+    }
   };
+
+  // Auto-preview when parent anchor is hovered AND note exists.
+  useEffect(() => {
+    if (!has) return;
+    const anchor =
+      btnRef.current?.closest(anchorSelector) as HTMLElement | null;
+    if (!anchor) return;
+    anchorElRef.current = anchor;
+    const onEnter = () => {
+      setMode((m) => (m === "edit" ? m : "preview"));
+      refreshRect();
+    };
+    const onLeave = () => {
+      setMode((m) => (m === "edit" ? m : null));
+    };
+    anchor.addEventListener("mouseenter", onEnter);
+    anchor.addEventListener("mouseleave", onLeave);
+    return () => {
+      anchor.removeEventListener("mouseenter", onEnter);
+      anchor.removeEventListener("mouseleave", onLeave);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [has, anchorSelector]);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     refreshRect();
-    setOpen(true);
+    setMode("edit");
   };
 
-  // Visibility / tone:
-  //  - no note: invisible until anchor is hovered → light gray; hover icon → darker
-  //  - has note: permanently light gray; hover icon → darker
   const visibility = has
     ? "opacity-100"
     : "opacity-0 group-hover/daynote-anchor:opacity-100";
@@ -122,6 +143,10 @@ export function DayNoteButton({
     variant === "week"
       ? "absolute right-1.5 top-1/2 -translate-y-1/2"
       : "absolute bottom-1 right-1";
+
+  const dateLabel = `${String(date.getDate()).padStart(2, "0")}.${String(
+    date.getMonth() + 1,
+  ).padStart(2, "0")}.${String(date.getFullYear() % 100).padStart(2, "0")}`;
 
   return (
     <>
@@ -141,61 +166,78 @@ export function DayNoteButton({
       >
         <StickyNote className="h-3 w-3" strokeWidth={2.25} />
       </button>
-      {open && anchorRect && (
-        <DayNotePanel
-          calId={calId}
-          date={date}
+      {mode && anchorRect && (
+        <NotePanel
           anchorRect={anchorRect}
-          variant={variant}
+          headerLabel={`Note ${dateLabel}`}
           initialValue={note}
-          onClose={() => setOpen(false)}
+          mode={mode}
+          defaultBodyHeight={variant === "week" ? 240 : 160}
+          onSave={(text) => writeNote(calId, date, text)}
+          onClose={() => setMode(null)}
+          onRequestEdit={() => setMode("edit")}
         />
       )}
     </>
   );
 }
 
-interface DayNotePanelProps {
-  calId: string;
-  date: Date;
+/* ============================================================
+ * NotePanel — reusable note popover (read-only preview / editable)
+ * ============================================================ */
+
+export interface NotePanelProps {
   anchorRect: DOMRect;
-  variant: "week" | "month";
+  headerLabel: string;
   initialValue: string;
+  mode: "preview" | "edit";
+  defaultBodyHeight?: number;
+  /** Width override (defaults to 280, matching the new-session popover). */
+  panelWidth?: number;
+  /** Custom anchor placement: defaults to anchorRect.bottom + anchorRect.left. */
+  placement?: "below-anchor-left" | "right-of-anchor-top";
+  onSave: (text: string) => void;
   onClose: () => void;
+  onRequestEdit?: () => void;
 }
 
-function DayNotePanel({
-  calId,
-  date,
+export function NotePanel({
   anchorRect,
-  variant,
+  headerLabel,
   initialValue,
+  mode,
+  defaultBodyHeight = 240,
+  panelWidth = 280,
+  placement = "below-anchor-left",
+  onSave,
   onClose,
-}: DayNotePanelProps) {
+  onRequestEdit,
+}: NotePanelProps) {
   const [val, setVal] = useState(initialValue);
   const ref = useRef<HTMLDivElement | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const [extra, setExtra] = useState(0);
+  const isEdit = mode === "edit";
 
-  // Default body height: ~6 hours (12 half-hour rows ≈ 240px) for week,
-  // a little more than one month-day cell for month view.
-  const DEFAULT_BODY_H = variant === "week" ? 240 : 160;
+  useEffect(() => {
+    if (mode === "preview") setVal(initialValue);
+  }, [initialValue, mode]);
 
-  // Auto-grow textarea: extends as the user writes past the bottom.
   useLayoutEffect(() => {
     const ta = taRef.current;
     if (!ta) return;
     ta.style.height = "auto";
-    const next = Math.max(DEFAULT_BODY_H + extra, ta.scrollHeight);
+    const next = Math.max(defaultBodyHeight + extra, ta.scrollHeight);
     ta.style.height = next + "px";
-  }, [val, extra, DEFAULT_BODY_H]);
+  }, [val, extra, defaultBodyHeight]);
 
-  // Outside click → save and close. Enter → save. Esc → close.
+  // Outside click + keys only matter in edit mode.
   useEffect(() => {
+    if (!isEdit) return;
     const onDown = (e: MouseEvent) => {
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
-        writeNote(calId, date, val);
+        onSave(val);
         onClose();
       }
     };
@@ -205,7 +247,7 @@ function DayNotePanel({
         onClose();
       } else if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        writeNote(calId, date, val);
+        onSave(val);
         onClose();
       }
     };
@@ -215,10 +257,10 @@ function DayNotePanel({
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("keydown", onKey);
     };
-  }, [val, calId, date, onClose]);
+  }, [val, isEdit, onSave, onClose]);
 
-  // Drag-to-resize from the bottom edge.
   const onDragStart = (e: React.MouseEvent) => {
+    if (!isEdit) return;
     e.preventDefault();
     e.stopPropagation();
     const startY = e.clientY;
@@ -235,25 +277,32 @@ function DayNotePanel({
     window.addEventListener("mouseup", up);
   };
 
-  const dateLabel = `${String(date.getDate()).padStart(2, "0")}.${String(
-    date.getMonth() + 1,
-  ).padStart(2, "0")}.${String(date.getFullYear() % 100).padStart(2, "0")}`;
-
-  // Fixed width matching the new-session popover, regardless of screen size.
-  // Anchored to the LEFT edge of the day column/cell so it narrows from the
-  // right side of the day.
-  const PANEL_W = 280;
   const margin = 8;
-  let left = anchorRect.left;
-  if (left + PANEL_W > window.innerWidth - margin) {
-    left = Math.max(margin, window.innerWidth - PANEL_W - margin);
+  let left: number;
+  let top: number;
+  let transformOrigin = "top left";
+  if (placement === "right-of-anchor-top") {
+    left = anchorRect.right + 6;
+    top = anchorRect.top;
+    if (left + panelWidth > window.innerWidth - margin) {
+      left = Math.max(margin, anchorRect.left - panelWidth - 6);
+      transformOrigin = "top right";
+    }
+  } else {
+    left = anchorRect.left;
+    top = anchorRect.bottom;
+    if (left + panelWidth > window.innerWidth - margin) {
+      left = Math.max(margin, window.innerWidth - panelWidth - margin);
+    }
   }
   const style: CSSProperties = {
-    top: anchorRect.bottom,
+    top,
     left,
-    width: PANEL_W,
-    transformOrigin: "top left",
+    width: panelWidth,
+    transformOrigin,
   };
+
+  const previewBg = "color-mix(in srgb, hsl(var(--muted-foreground)) 10%, transparent)";
 
   return createPortal(
     <motion.div
@@ -264,53 +313,72 @@ function DayNotePanel({
       animate={{ opacity: 1, scaleY: 1, y: 0 }}
       exit={{ opacity: 0, scaleY: 0.6, y: -4 }}
       transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+      onClick={(e) => {
+        if (!isEdit && onRequestEdit) {
+          e.stopPropagation();
+          onRequestEdit();
+        }
+      }}
     >
-      <div className="relative overflow-hidden rounded-b-md border border-t-0 border-ink/15 bg-card shadow-lg">
-        {/* Dark-gray left bar — same color & width as the session-note bar */}
+      <div
+        className="relative overflow-hidden rounded-b-md border border-t-0 border-ink/15 shadow-lg"
+        style={{ background: isEdit ? "hsl(var(--card))" : previewBg }}
+      >
         <span
           aria-hidden
           className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
           style={{ background: "#9CA3AF" }}
         />
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-hairline pl-4 pr-3 py-1.5">
           <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            Note {dateLabel}
+            {headerLabel}
           </span>
         </div>
-        {/* Body */}
         <div className="pl-4 pr-3 py-2">
-          <textarea
-            ref={taRef}
-            autoFocus
-            value={val}
-            onChange={(e) => setVal(e.target.value)}
-            placeholder="Skriv notat…"
-            className="block w-full resize-none bg-transparent text-[12px] leading-snug text-ink outline-none placeholder:text-muted-foreground/60"
-            style={{ minHeight: DEFAULT_BODY_H + extra }}
+          {isEdit ? (
+            <textarea
+              ref={taRef}
+              autoFocus
+              value={val}
+              onChange={(e) => setVal(e.target.value)}
+              placeholder="Skriv notat…"
+              className="block w-full resize-none bg-transparent text-[12px] leading-snug text-ink outline-none placeholder:text-muted-foreground/60"
+              style={{ minHeight: defaultBodyHeight + extra }}
+            />
+          ) : (
+            <div
+              className="block w-full whitespace-pre-wrap text-[12px] leading-snug text-ink"
+              style={{ minHeight: defaultBodyHeight, cursor: "default" }}
+            >
+              {initialValue || (
+                <span className="text-muted-foreground/60">Skriv notat…</span>
+              )}
+            </div>
+          )}
+        </div>
+        {isEdit && (
+          <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
+            <span className="mono tabular-nums">⏎ for å lagre</span>
+            <button
+              type="button"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => {
+                onSave(val);
+                onClose();
+              }}
+              className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
+            >
+              {initialValue ? "Lagre" : "Legg til"}
+            </button>
+          </div>
+        )}
+        {isEdit && (
+          <div
+            onMouseDown={onDragStart}
+            className="absolute bottom-0 left-0 right-0 h-1.5 cursor-ns-resize hover:bg-secondary/60"
+            aria-hidden
           />
-        </div>
-        {/* Footer */}
-        <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
-          <span className="mono tabular-nums">⏎ for å lagre</span>
-          <button
-            type="button"
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={() => {
-              writeNote(calId, date, val);
-              onClose();
-            }}
-            className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
-          >
-            {initialValue ? "Lagre" : "Legg til"}
-          </button>
-        </div>
-        {/* Drag handle (bottom edge) */}
-        <div
-          onMouseDown={onDragStart}
-          className="absolute bottom-0 left-0 right-0 h-1.5 cursor-ns-resize hover:bg-secondary/60"
-          aria-hidden
-        />
+        )}
       </div>
     </motion.div>,
     document.body,
