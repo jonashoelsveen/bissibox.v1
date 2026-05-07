@@ -1976,9 +1976,24 @@ function WeekEventsOverlay({
             data-mark-cell="1"
             data-real-event={isGhost ? undefined : "1"}
             data-ghost-event={isGhost ? "1" : undefined}
+            onMouseEnter={(e) => {
+              if (isGhost || appKind !== "diary") return;
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setHoverId(ev.id);
+              setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+            }}
+            onMouseLeave={(e) => {
+              if (isGhost || appKind !== "diary") return;
+              // Keep menu open if pointer moves into the menu portal — handled by simple delay.
+              const related = e.relatedTarget as Node | null;
+              const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
+              if (goingIntoMenu) return;
+              window.setTimeout(() => {
+                setHoverId((cur) => (cur === ev.id ? null : cur));
+              }, 120);
+            }}
             onPointerDown={(e) => {
               if (isGhost) return;
-              // Diary: all events are logged (manual or Strava) — not movable.
               if (appKind === "diary") return;
               e.stopPropagation();
               (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -1995,6 +2010,11 @@ function WeekEventsOverlay({
             }}
             onClick={(e) => {
               if (isGhost) return;
+              // Diary: existing sessions are edited via the hover menu (Details).
+              if (appKind === "diary") {
+                e.stopPropagation();
+                return;
+              }
               if (drag?.moved) return;
               e.stopPropagation();
               onEventClick(ev, e.currentTarget as HTMLElement);
