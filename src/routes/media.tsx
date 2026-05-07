@@ -3271,7 +3271,8 @@ function MediaTabView({
           {tab === "access" && (
             <AccessPanel items={items} onSaved={() => setReloadKey((k) => k + 1)} />
           )}
-          {tab === "share" && <SharePanel url={url} disabled={isMulti} />}
+          {tab === "draw" && <DrawPanel />}
+          {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
         </div>
       </aside>
     </div>
