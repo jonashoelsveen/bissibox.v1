@@ -2115,7 +2115,7 @@ function Lightbox({
               />
             )}
             {tab === "access" && (
-              <AccessPanel items={items} onSaved={onChanged} />
+              <AccessPanel items={items} onSaved={onChanged} isTeamMode={isTeamMode} />
             )}
             {tab === "draw" && <DrawPanel />}
             {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
