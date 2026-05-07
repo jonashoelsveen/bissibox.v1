@@ -2288,14 +2288,42 @@ function AboutPanel({
   );
 }
 
-function AccessPanel({ items, onSaved }: { items: MediaItem[]; onSaved: () => void }) {
+function AccessPanel({
+  items,
+  onSaved,
+  isTeamMode,
+}: {
+  items: MediaItem[];
+  onSaved: () => void;
+  isTeamMode?: boolean;
+}) {
+  const { user } = useAuth();
   const isMulti = items.length > 1;
   const first = items[0];
   const [world, setWorld] = useState(first.visible_world);
   const [media, setMedia] = useState(first.visible_media);
   const [friends, setFriends] = useState(first.visible_friends);
   const [houses, setHouses] = useState<string[]>(first.allowed_media_houses);
+  const [supporters, setSupporters] = useState<string[]>(first.visible_world ? ["__all__"] : []);
+  const [teams, setTeams] = useState<string[]>(first.visible_friends ? ["__all__"] : []);
+  const [userTeams, setUserTeams] = useState<{ id: string; name: string }[]>([]);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!user || isTeamMode) return;
+    void (async () => {
+      const { data } = await supabase
+        .from("team_members")
+        .select("team_id, teams!team_members_team_id_fkey(id, name)")
+        .eq("user_id", user.id)
+        .eq("accepted", true);
+      const list = ((data as any[]) ?? [])
+        .map((r) => r.teams)
+        .filter(Boolean)
+        .map((t: any) => ({ id: t.id, name: t.name }));
+      setUserTeams(list);
+    })();
+  }, [user, isTeamMode]);
 
   const save = async () => {
     setBusy(true);
@@ -2303,9 +2331,9 @@ function AccessPanel({ items, onSaved }: { items: MediaItem[]; onSaved: () => vo
     const { error } = await supabase
       .from("media_items")
       .update({
-        visible_world: world,
+        visible_world: world || supporters.length > 0,
         visible_media: media,
-        visible_friends: friends,
+        visible_friends: isTeamMode ? friends : friends || teams.length > 0,
         allowed_media_houses: houses,
       })
       .in("id", ids);
@@ -2315,42 +2343,86 @@ function AccessPanel({ items, onSaved }: { items: MediaItem[]; onSaved: () => vo
     onSaved();
   };
 
+  const selectClass =
+    "w-full rounded-lg border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary";
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {isMulti && (
         <p className="rounded-lg border border-hairline bg-secondary/40 px-3 py-2 text-[11px] text-muted-foreground">
           Update access for all {items.length} selected items.
         </p>
       )}
-      <AccessGroup
-        title="Followers"
-        checked={world}
-        onChange={setWorld}
-        searchPlaceholder="Search followers…"
-        items={[]}
-        emptyHint="When checked, your followers can view."
-      />
-      <AccessGroup
-        title="Media"
-        checked={media}
-        onChange={setMedia}
-        searchPlaceholder="Search media houses…"
-        items={MEDIA_HOUSES}
-        selected={houses}
-        onToggleItem={(name) =>
-          setHouses((cur) =>
-            cur.includes(name) ? cur.filter((x) => x !== name) : [...cur, name],
-          )
-        }
-      />
-      <AccessGroup
-        title="Subscribers"
-        checked={friends}
-        onChange={setFriends}
-        searchPlaceholder="Search subscribers…"
-        items={[]}
-        emptyHint="Your team or membership subscribers will appear here."
-      />
+
+      <div>
+        <label className="mb-1.5 block text-xs font-medium text-ink">Supporters</label>
+        <select
+          multiple
+          value={supporters}
+          onChange={(e) => {
+            const vals = Array.from(e.target.selectedOptions).map((o) => o.value);
+            setSupporters(vals);
+            setWorld(vals.includes("__all__") || vals.length > 0);
+          }}
+          className={selectClass}
+          size={3}
+        >
+          <option value="__all__">All supporters</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-xs font-medium text-ink">Media</label>
+        <select
+          multiple
+          value={media ? ["__all__", ...houses] : houses}
+          onChange={(e) => {
+            const vals = Array.from(e.target.selectedOptions).map((o) => o.value);
+            const all = vals.includes("__all__");
+            setMedia(all);
+            setHouses(vals.filter((v) => v !== "__all__"));
+          }}
+          className={selectClass}
+          size={Math.min(6, MEDIA_HOUSES.length + 1)}
+        >
+          <option value="__all__">All media houses</option>
+          {MEDIA_HOUSES.map((h) => (
+            <option key={h} value={h}>
+              {h}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {!isTeamMode && (
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-ink">Teams</label>
+          <select
+            multiple
+            value={teams}
+            onChange={(e) => {
+              const vals = Array.from(e.target.selectedOptions).map((o) => o.value);
+              setTeams(vals);
+              setFriends(vals.length > 0);
+            }}
+            className={selectClass}
+            size={Math.min(6, userTeams.length + 1) || 3}
+          >
+            {userTeams.length === 0 ? (
+              <option disabled value="">
+                You are not a member of any team
+              </option>
+            ) : (
+              userTeams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+      )}
+
       <button
         onClick={save}
         disabled={busy}
