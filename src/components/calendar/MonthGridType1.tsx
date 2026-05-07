@@ -121,6 +121,8 @@ export interface MonthGridType1Props {
   month: number;
   data: Record<string, CellData>;
   seat?: CalendarSeat;
+  /** "diary" enables the per-day note affordance. */
+  appKind?: "calendar" | "diary";
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onCommitText: (k: CellKey, text: string) => void;
