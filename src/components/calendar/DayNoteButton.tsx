@@ -126,11 +126,20 @@ export function DayNoteButton({
     if (!anchor) return;
     anchorElRef.current = anchor;
     const onEnter = () => {
+      console.log("[daynote] anchor enter");
       cancelClose();
       setMode((m) => (m === "edit" ? m : "preview"));
       refreshRect();
     };
-    const onLeave = () => {
+    const onLeave = (e: MouseEvent) => {
+      const related = e.relatedTarget as Node | null;
+      const intoPanel =
+        related instanceof HTMLElement && !!related.closest('[data-note-panel="1"]');
+      console.log("[daynote] anchor leave intoPanel=", intoPanel);
+      if (intoPanel) {
+        cancelClose();
+        return;
+      }
       scheduleClose();
     };
     anchor.addEventListener("mouseenter", onEnter);
