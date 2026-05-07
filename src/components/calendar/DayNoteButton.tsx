@@ -364,7 +364,6 @@ export function NotePanel({
           {isEdit ? (
             <textarea
               ref={taRef}
-              autoFocus
               value={val}
               onChange={(e) => setVal(e.target.value)}
               placeholder="Skriv notat…"
@@ -382,7 +381,7 @@ export function NotePanel({
             </div>
           )}
         </div>
-        {isEdit && (
+        {isEdit && showFooter && (
           <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
             <span className="mono tabular-nums">⏎ for å lagre</span>
             <button
