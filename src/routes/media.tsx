@@ -59,7 +59,8 @@ export interface OpenNoteTab {
   title: string;
   folder: string | null;
   kind: "new" | "earlier";
-  type?: "note" | "meeting";
+  type?: "note" | "meeting" | "media";
+  mediaIds?: string[];
 }
 
 export const Route = createFileRoute("/media")({
@@ -303,6 +304,22 @@ function LibraryPage() {
     [],
   );
 
+  const openMediaTab = useCallback(
+    (tabId: string, title: string, mediaIds: string[]) => {
+      setOpenNoteTabs((prev) => {
+        const existing = prev.find((t) => t.id === tabId);
+        if (existing) return prev;
+        if (prev.length >= MAX_NOTE_TABS) {
+          toast.error(`You can have at most ${MAX_NOTE_TABS} tabs open at once.`);
+          return prev;
+        }
+        return [...prev, { id: tabId, title, folder: null, kind: "earlier", type: "media", mediaIds }];
+      });
+      setActiveNoteId(tabId);
+    },
+    [],
+  );
+
   const updateNoteTab = (patch: { id: string; title?: string; folder?: string | null }) => {
     setOpenNoteTabs((prev) =>
       prev.map((t) =>
@@ -325,6 +342,7 @@ function LibraryPage() {
   const showingNote = activeNoteId !== null;
   const activeTabEntry = activeNoteId ? openNoteTabs.find((t) => t.id === activeNoteId) ?? null : null;
   const showingMeeting = !!activeTabEntry && activeTabEntry.type === "meeting";
+  const showingMedia = !!activeTabEntry && activeTabEntry.type === "media";
 
   // Pointer-based, X-axis-locked tab drag (Chrome-style).
   const onTabPointerDown = (e: React.PointerEvent<HTMLButtonElement>, id: string) => {
@@ -547,6 +565,8 @@ function LibraryPage() {
                     >
                       {t.type === "meeting" ? (
                         <Briefcase className="h-3 w-3 shrink-0 opacity-70" />
+                      ) : t.type === "media" ? (
+                        <ImageIcon className="h-3 w-3 shrink-0 opacity-70" />
                       ) : (
                         <StickyNote className="h-3 w-3 shrink-0 opacity-70" />
                       )}
@@ -595,6 +615,12 @@ function LibraryPage() {
               }
               onMeetingDeleted={(id) => finalizeClose(id)}
             />
+          ) : showingNote && activeNoteId && showingMedia && activeTabEntry ? (
+            <MediaTabView
+              key={activeNoteId}
+              mediaIds={activeTabEntry.mediaIds ?? []}
+              onTitleChange={(title) => updateNoteTab({ id: activeNoteId, title })}
+            />
           ) : showingNote && activeNoteId ? (
             <NoteEditor
               key={activeNoteId}
@@ -631,7 +657,7 @@ function LibraryPage() {
           ) : baseTab === "files" ? (
             <FilesPage actionsMount={actionsMount} hideSideNav externalView={externalFilesView} />
           ) : (
-            <MediaPage actionsMount={actionsMount} hideSideNav externalView={externalMediaView} />
+            <MediaPage actionsMount={actionsMount} hideSideNav externalView={externalMediaView} onOpenMediaTab={openMediaTab} />
           )}
         </div>
       </div>
@@ -740,12 +766,14 @@ function MediaPage({
   externalView,
   hideNewActions,
   onOpenMedia,
+  onOpenMediaTab,
 }: {
   actionsMount?: HTMLDivElement | null;
   hideSideNav?: boolean;
   externalView?: { type: "all" } | { type: "album"; id: string | null };
   hideNewActions?: boolean;
   onOpenMedia?: (id: string) => void;
+  onOpenMediaTab?: (tabId: string, title: string, mediaIds: string[]) => void;
 } = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -1069,10 +1097,23 @@ function MediaPage({
     setSelected(new Set());
   };
 
+  const tabTitleFor = (list: MediaItem[]) => {
+    if (list.length === 0) return "Media";
+    const first = list[0];
+    const evTitle = attended.find((e) => e.id === first.event_id)?.title;
+    if (list.length === 1) return evTitle || "Media";
+    return evTitle ? `${evTitle} (${list.length})` : `Media (${list.length})`;
+  };
+
   const openSelected = () => {
     if (selected.size === 0) return;
     const list = items.filter((i) => selected.has(i.id));
-    setOpenItems(list);
+    if (onOpenMediaTab) {
+      onOpenMediaTab(`media:${list.map((i) => i.id).sort().join(",")}`, tabTitleFor(list), list.map((i) => i.id));
+      exitSelect();
+    } else {
+      setOpenItems(list);
+    }
   };
 
   const handleDelete = async () => {
@@ -1318,7 +1359,9 @@ function MediaPage({
                     key={it.id}
                     onClick={() => {
                       if (selectMode) toggleSel(it.id);
-                      else if (onOpenMedia) onOpenMedia(it.id);
+                      else if (onOpenMediaTab) {
+                        onOpenMediaTab(`media:${it.id}`, tabTitleFor([it]), [it.id]);
+                      } else if (onOpenMedia) onOpenMedia(it.id);
                       else setOpenItems([it]);
                     }}
                     className="group relative aspect-square cursor-default overflow-hidden rounded-sm bg-secondary"
@@ -2821,7 +2864,7 @@ function VideoPlayer({ src }: { src?: string }) {
   const progress = ready && duration > 0 ? Math.min(1, current / duration) : 0;
 
   return (
-    <div className="flex max-h-[88%] w-full max-w-[88%] flex-col gap-4">
+    <div className="flex h-full w-full max-w-[88%] flex-col gap-3">
       <div
         className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg bg-black"
         onClick={togglePlay}
@@ -2834,7 +2877,7 @@ function VideoPlayer({ src }: { src?: string }) {
           preload="metadata"
         />
       </div>
-      <div className="w-full">
+      <div className="w-full shrink-0">
         {/* Centered minimalist play/pause */}
         <div className="mb-2 flex items-center justify-center">
           <button
@@ -3026,6 +3069,208 @@ function UnsavedChangesDialog({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function MediaTabView({
+  mediaIds,
+  onTitleChange,
+}: {
+  mediaIds: string[];
+  onTitleChange: (title: string) => void;
+}) {
+  const { user, mode, activeEntityId, loading: authLoading } = useAuth();
+  const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
+  const [items, setItems] = useState<MediaItem[]>([]);
+  const [albums, setAlbums] = useState<Album[]>([]);
+  const [attended, setAttended] = useState<AttendedEvent[]>([]);
+  const [itemAlbums, setItemAlbums] = useState<Record<string, string[]>>({});
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [userName, setUserName] = useState<string>("");
+  const [tab, setTab] = useState<"about" | "access" | "share">("about");
+  const [idx, setIdx] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const load = useCallback(async () => {
+    if (!user || mediaIds.length === 0) return;
+    const { data: mi } = await supabase
+      .from("media_items")
+      .select("*")
+      .in("id", mediaIds);
+    const list = ((mi as MediaItem[]) ?? []).sort(
+      (a, b) => mediaIds.indexOf(a.id) - mediaIds.indexOf(b.id),
+    );
+    setItems(list);
+
+    // Albums (scope to current mode)
+    if (isTeamMode) {
+      const { data: team } = await supabase
+        .from("teams")
+        .select("id,name")
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (team) {
+        const { data: a } = await supabase
+          .from("media_albums")
+          .select("id,name,pinned,sort_order")
+          .eq("team_id", team.id)
+          .order("pinned", { ascending: false })
+          .order("sort_order", { ascending: true });
+        setAlbums((a ?? []) as Album[]);
+        const { data: ev } = await supabase
+          .from("events")
+          .select("id,title,organizer,starts_at")
+          .eq("organizer", team.name);
+        setAttended((ev as AttendedEvent[]) ?? []);
+      }
+    } else {
+      const { data: a } = await supabase
+        .from("media_albums")
+        .select("id,name,pinned,sort_order")
+        .is("team_id", null)
+        .eq("user_id", user.id)
+        .order("pinned", { ascending: false })
+        .order("sort_order", { ascending: true });
+      setAlbums((a ?? []) as Album[]);
+      // Attended events for user
+      const { data: regs } = await supabase
+        .from("registrations")
+        .select("event_id, events(id,title,organizer,starts_at)")
+        .eq("user_id", user.id);
+      const ev: AttendedEvent[] = [];
+      const seen = new Set<string>();
+      type Reg = { events: AttendedEvent | null };
+      for (const row of (regs as unknown as Reg[]) ?? []) {
+        const e = row.events;
+        if (e && !seen.has(e.id)) {
+          seen.add(e.id);
+          ev.push(e);
+        }
+      }
+      setAttended(ev);
+    }
+
+    // Album links
+    const { data: links } = await supabase
+      .from("media_item_albums")
+      .select("media_item_id,album_id")
+      .in("media_item_id", mediaIds);
+    const map: Record<string, string[]> = {};
+    for (const row of (links as { media_item_id: string; album_id: string }[] | null) ?? []) {
+      (map[row.media_item_id] ??= []).push(row.album_id);
+    }
+    setItemAlbums(map);
+
+    // Profile name
+    const { data: p } = await supabase
+      .from("profiles")
+      .select("first_name,last_name,email")
+      .eq("id", user.id)
+      .maybeSingle();
+    const nm =
+      [p?.first_name, p?.last_name].filter(Boolean).join(" ").trim() ||
+      p?.email ||
+      user.email ||
+      "";
+    setUserName(nm);
+
+    // Signed URLs
+    const urlMap: Record<string, string> = {};
+    for (const it of list) {
+      const { data: signed } = await supabase.storage
+        .from("media")
+        .createSignedUrl(it.storage_path, 60 * 60);
+      if (signed?.signedUrl) urlMap[it.id] = signed.signedUrl;
+    }
+    setUrls(urlMap);
+  }, [user, mediaIds, isTeamMode]);
+
+  useEffect(() => {
+    void load();
+  }, [load, reloadKey]);
+
+  // Update tab title when items / attended changes
+  useEffect(() => {
+    if (items.length === 0) return;
+    const first = items[0];
+    const evTitle = attended.find((e) => e.id === first.event_id)?.title;
+    const title = items.length === 1
+      ? (evTitle || "Media")
+      : (evTitle ? `${evTitle} (${items.length})` : `Media (${items.length})`);
+    onTitleChange(title);
+  }, [items, attended, onTitleChange]);
+
+  if (authLoading || !user) return null;
+  if (items.length === 0) {
+    return <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>;
+  }
+
+  const isMulti = items.length > 1;
+  const current = items[idx];
+  const url = current ? urls[current.id] : undefined;
+
+  return (
+    <div className="flex h-[calc(100vh-12rem)] min-h-[480px] gap-4 rounded-2xl border border-hairline bg-card overflow-hidden">
+      <div className="flex flex-1 flex-col items-center justify-center p-6 min-w-0 bg-black/90">
+        <div className="flex w-full flex-1 items-center justify-center min-h-0">
+          {current?.media_type === "photo" ? (
+            url && (
+              <img
+                src={url}
+                alt=""
+                className="max-h-full max-w-full object-contain"
+              />
+            )
+          ) : (
+            <VideoPlayer src={url} />
+          )}
+        </div>
+        {isMulti && (
+          <DockStrip
+            items={items}
+            urls={urls}
+            activeIdx={idx}
+            onSelect={setIdx}
+          />
+        )}
+      </div>
+      <aside className="flex w-96 flex-col border-l border-hairline bg-background">
+        <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
+          <div className="flex gap-1">
+            {(["about", "access", "share"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
+                  tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5">
+          {tab === "about" && (
+            <AboutPanel
+              items={items}
+              albums={albums}
+              attended={attended}
+              userName={userName}
+              itemAlbums={itemAlbums}
+              onSaved={() => setReloadKey((k) => k + 1)}
+            />
+          )}
+          {tab === "access" && (
+            <AccessPanel items={items} onSaved={() => setReloadKey((k) => k + 1)} />
+          )}
+          {tab === "share" && <SharePanel url={url} disabled={isMulti} />}
+        </div>
+      </aside>
     </div>
   );
 }
