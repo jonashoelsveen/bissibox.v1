@@ -167,17 +167,22 @@ export function DayNoteButton({
         <StickyNote className="h-3 w-3" strokeWidth={2.25} />
       </button>
       {mode && anchorRect && (
-        <NotePanel
-          anchorRect={anchorRect}
-          headerLabel={`Note ${dateLabel}`}
-          initialValue={note}
-          mode={mode}
-          defaultBodyHeight={variant === "week" ? 240 : 160}
-          closeOnEnter={false}
-          onSave={(text) => writeNote(calId, date, text)}
-          onClose={() => setMode(null)}
-          onRequestEdit={() => setMode("edit")}
-        />
+        <div
+          onMouseEnter={() => { if (has) setMode((m) => (m === "edit" ? m : "preview")); }}
+          onMouseLeave={() => setMode((m) => (m === "edit" ? m : null))}
+        >
+          <NotePanel
+            anchorRect={anchorRect}
+            headerLabel={`Note ${dateLabel}`}
+            initialValue={note}
+            mode={mode}
+            defaultBodyHeight={variant === "week" ? 240 : 160}
+            closeOnEnter={false}
+            onSave={(text) => writeNote(calId, date, text)}
+            onClose={() => setMode(null)}
+            onRequestEdit={() => setMode("edit")}
+          />
+        </div>
       )}
     </>
   );
