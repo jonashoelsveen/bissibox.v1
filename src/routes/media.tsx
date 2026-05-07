@@ -304,6 +304,22 @@ function LibraryPage() {
     [],
   );
 
+  const openMediaTab = useCallback(
+    (tabId: string, title: string, mediaIds: string[]) => {
+      setOpenNoteTabs((prev) => {
+        const existing = prev.find((t) => t.id === tabId);
+        if (existing) return prev;
+        if (prev.length >= MAX_NOTE_TABS) {
+          toast.error(`You can have at most ${MAX_NOTE_TABS} tabs open at once.`);
+          return prev;
+        }
+        return [...prev, { id: tabId, title, folder: null, kind: "earlier", type: "media", mediaIds }];
+      });
+      setActiveNoteId(tabId);
+    },
+    [],
+  );
+
   const updateNoteTab = (patch: { id: string; title?: string; folder?: string | null }) => {
     setOpenNoteTabs((prev) =>
       prev.map((t) =>
