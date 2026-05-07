@@ -2177,27 +2177,27 @@ function WeekEventsOverlay({
         const ev = events.find((e) => e.id === hoverId);
         if (!ev) return null;
         return (
-          <div
-            data-session-hover-menu="1"
-            onMouseEnter={() => setHoverId(hoverId)}
-            onMouseLeave={() => setHoverId(null)}
-          >
-            <SessionHoverMenu
-              ev={ev}
-              blockRect={hoverRect}
-              rowHeight={rowHeight}
-              visible={true}
-              onOpenDetails={() => {
-                setHoverId(null);
-                onEventClick(ev, document.body as HTMLElement);
-              }}
-              onDelete={() => {
-                setHoverId(null);
-                onDeleteEvent?.(ev.id);
-              }}
-              onSaveNote={(note) => onSaveSessionNote?.(ev.id, note)}
-            />
-          </div>
+          <SessionHoverMenu
+            ev={ev}
+            blockRect={hoverRect}
+            rowHeight={rowHeight}
+            visible={true}
+            onMenuEnter={cancelClose}
+            onMenuLeave={scheduleClose}
+            onOpenDetails={() => {
+              cancelClose();
+              setHoverId(null);
+              setHoverRect(null);
+              onEventClick(ev, document.body as HTMLElement);
+            }}
+            onDelete={() => {
+              cancelClose();
+              setHoverId(null);
+              setHoverRect(null);
+              onDeleteEvent?.(ev.id);
+            }}
+            onSaveNote={(note) => onSaveSessionNote?.(ev.id, note)}
+          />
         );
       })()}
     </>
