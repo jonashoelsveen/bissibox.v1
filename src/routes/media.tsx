@@ -3333,7 +3333,7 @@ function MediaTabView({
             />
           )}
           {tab === "access" && (
-            <AccessPanel items={items} onSaved={() => setReloadKey((k) => k + 1)} />
+            <AccessPanel items={items} onSaved={() => setReloadKey((k) => k + 1)} isTeamMode={isTeamMode} />
           )}
           {tab === "draw" && <DrawPanel />}
           {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
