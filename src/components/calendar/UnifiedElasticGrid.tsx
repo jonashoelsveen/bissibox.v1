@@ -1850,6 +1850,8 @@ function WeekEventsOverlay({
   appKind = "calendar",
   onEventClick,
   onEventDrop,
+  onDeleteEvent,
+  onSaveSessionNote,
 }: {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   events: CalendarEvent[];
@@ -1860,9 +1862,13 @@ function WeekEventsOverlay({
   appKind?: "calendar" | "diary";
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
+  onDeleteEvent?: (id: string) => void;
+  onSaveSessionNote?: (id: string, note: string) => void;
 }) {
   const [tileDesign] = useSessionTileDesign();
   const [unit] = useDistanceUnit();
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   type Box = { left: number; width: number };
   const [cols, setCols] = useState<Box[]>([]);
   const [headerBottom, setHeaderBottom] = useState(0);
