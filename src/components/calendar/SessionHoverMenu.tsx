@@ -101,7 +101,7 @@ export function SessionHoverMenu({
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node | null;
       const inMenu = menuRef.current?.contains(t as Node);
-      const inNote = (t as HTMLElement | null)?.closest('[data-session-note-panel="1"]');
+      const inNote = (t as HTMLElement | null)?.closest('[data-note-panel="1"]');
       if (!inMenu && !inNote) {
         setNoteEdit(false);
         onForceClose?.();

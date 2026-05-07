@@ -173,6 +173,7 @@ export function DayNoteButton({
           initialValue={note}
           mode={mode}
           defaultBodyHeight={variant === "week" ? 240 : 160}
+          closeOnEnter={false}
           onSave={(text) => writeNote(calId, date, text)}
           onClose={() => setMode(null)}
           onRequestEdit={() => setMode("edit")}
@@ -279,11 +280,13 @@ export function NotePanel({
           onSave(val);
           onClose();
         } else {
-          // Save current text and hide the footer; keep editor open so the
-          // user can keep typing / adding newlines (Shift+Enter style).
+          // Save current text, hide the footer and blur the textarea so the
+          // caret disappears. The panel stays open; the user can click back
+          // into the textarea to keep editing.
           e.preventDefault();
           onSave(val);
           setFooterHidden(true);
+          taRef.current?.blur();
         }
       }
     };
@@ -343,6 +346,7 @@ export function NotePanel({
   return createPortal(
     <motion.div
       ref={ref}
+      data-note-panel="1"
       className="fixed z-50"
       style={style}
       initial={{ opacity: 0, scaleY: 0.6, y: -4 }}
