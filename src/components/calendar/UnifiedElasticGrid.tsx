@@ -801,6 +801,7 @@ export function UnifiedElasticGrid({
           month={currentDate.getMonth()}
           data={data}
           seat={seat}
+          appKind={appKind}
           events={events}
           onUpsertEvent={onUpsertEvent}
           onMoveEvent={onMoveEvent}
