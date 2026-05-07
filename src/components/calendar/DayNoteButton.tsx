@@ -279,11 +279,13 @@ export function NotePanel({
           onSave(val);
           onClose();
         } else {
-          // Save current text and hide the footer; keep editor open so the
-          // user can keep typing / adding newlines (Shift+Enter style).
+          // Save current text, hide the footer and blur the textarea so the
+          // caret disappears. The panel stays open; the user can click back
+          // into the textarea to keep editing.
           e.preventDefault();
           onSave(val);
           setFooterHidden(true);
+          taRef.current?.blur();
         }
       }
     };
