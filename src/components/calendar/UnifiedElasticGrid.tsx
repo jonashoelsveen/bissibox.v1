@@ -2161,6 +2161,34 @@ function WeekEventsOverlay({
           </div>
         );
       })}
+      {appKind === "diary" && hoverId && hoverRect && (() => {
+        const ev = events.find((e) => e.id === hoverId);
+        if (!ev) return null;
+        return (
+          <div
+            data-session-hover-menu="1"
+            onMouseEnter={() => setHoverId(hoverId)}
+            onMouseLeave={() => setHoverId(null)}
+          >
+            <SessionHoverMenu
+              ev={ev}
+              blockRect={hoverRect}
+              rowHeight={rowHeight}
+              visible={true}
+              onOpenDetails={() => {
+                setHoverId(null);
+                onEventClick(ev, document.body as HTMLElement);
+              }}
+              onDelete={() => {
+                setHoverId(null);
+                onDeleteEvent?.(ev.id);
+              }}
+              onSaveNote={(note) => onSaveSessionNote?.(ev.id, note)}
+            />
+          </div>
+        );
+      })()}
     </>
   );
 }
+
