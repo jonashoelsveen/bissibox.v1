@@ -4,6 +4,7 @@ import { ArrowUpRight, Search, UsersRound, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
 import { supabase } from "@/integrations/supabase/client";
+import { MemberDataPanel } from "./MemberDataPanel";
 
 interface MemberRow {
   user_id: string;
@@ -212,28 +213,13 @@ export function GroupMembersPage() {
       </div>
 
       {activeTab ? (
-        <div className="grid gap-6 pt-4 md:grid-cols-[1fr_320px]">
+        <div className="grid gap-6 pt-4 md:grid-cols-[1fr_300px]">
           <div className="min-w-0 px-2 py-12 text-sm text-muted-foreground">
-            Member view coming soon.
+            Member content view coming soon.
           </div>
-          <aside className="md:sticky md:top-28 md:self-start">
-            <div className="rounded-lg border border-hairline p-4">
-              <div className="flex items-center gap-3">
-                {activeTab.avatar_url ? (
-                  <img src={activeTab.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />
-                ) : (
-                  <span className="grid h-10 w-10 place-items-center rounded-full bg-secondary text-sm uppercase text-muted-foreground">
-                    {activeTab.name.slice(0, 1)}
-                  </span>
-                )}
-                <div className="min-w-0">
-                  <div className="truncate text-base font-medium text-ink" style={{ fontFamily: "Helvetica, Arial, sans-serif" }}>
-                    {activeTab.name}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </aside>
+          <div className="md:sticky md:top-28 md:self-start">
+            <MemberDataPanel name={activeTab.name} />
+          </div>
         </div>
       ) : (
         <div className="grid gap-6 pt-4 md:grid-cols-[220px_1fr]">
