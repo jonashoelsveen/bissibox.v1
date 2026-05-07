@@ -2551,17 +2551,19 @@ const DRAW_COLORS = [
   "#17A4E0", "#1960C4", "#A22CC8", "#D22551",
 ];
 
-export type DrawStroke = { color: string; points: { x: number; y: number }[] };
+export type DrawPoint = { x: number; y: number };
+export type DrawEvent =
+  | { type: "point"; x: number; y: number; color: string }
+  | { type: "end" };
 
 export interface DrawingState {
   enabled: boolean;
   setEnabled: (v: boolean) => void;
   color: string;
   setColor: (c: string) => void;
-  strokes: DrawStroke[];
-  setStrokes: React.Dispatch<React.SetStateAction<DrawStroke[]>>;
-  current: DrawStroke | null;
-  setCurrent: React.Dispatch<React.SetStateAction<DrawStroke | null>>;
+  events: DrawEvent[];
+  addPoint: (p: DrawPoint) => void;
+  endStroke: () => void;
   undo: () => void;
   redo: () => void;
   clear: () => void;
@@ -2572,44 +2574,44 @@ export interface DrawingState {
 function useDrawingState(): DrawingState {
   const [enabled, setEnabled] = useState(false);
   const [color, setColor] = useState(DRAW_COLORS[0]);
-  const [strokes, setStrokes] = useState<DrawStroke[]>([]);
-  const [redoStack, setRedoStack] = useState<DrawStroke[]>([]);
-  const [current, setCurrent] = useState<DrawStroke | null>(null);
+  const [events, setEvents] = useState<DrawEvent[]>([]);
+  const [redoStack, setRedoStack] = useState<DrawEvent[]>([]);
 
+  const push = (e: DrawEvent) => {
+    setEvents((arr) => [...arr, e]);
+    setRedoStack([]);
+  };
+  const addPoint = (p: DrawPoint) => push({ type: "point", x: p.x, y: p.y, color });
+  const endStroke = () => {
+    setEvents((arr) => (arr.length === 0 || arr[arr.length - 1].type === "end" ? arr : [...arr, { type: "end" }]));
+    setRedoStack([]);
+  };
   const undo = () => {
-    setStrokes((s) => {
-      if (s.length === 0) return s;
-      const last = s[s.length - 1];
+    setEvents((arr) => {
+      if (arr.length === 0) return arr;
+      const last = arr[arr.length - 1];
       setRedoStack((r) => [...r, last]);
-      return s.slice(0, -1);
+      return arr.slice(0, -1);
     });
   };
   const redo = () => {
     setRedoStack((r) => {
       if (r.length === 0) return r;
       const last = r[r.length - 1];
-      setStrokes((s) => [...s, last]);
+      setEvents((arr) => [...arr, last]);
       return r.slice(0, -1);
     });
   };
   const clear = () => {
-    setStrokes([]);
+    setEvents([]);
     setRedoStack([]);
-    setCurrent(null);
-  };
-
-  // pushing a new stroke clears redo
-  const setStrokesWrapped: React.Dispatch<React.SetStateAction<DrawStroke[]>> = (v) => {
-    setRedoStack([]);
-    setStrokes(v);
   };
 
   return {
     enabled, setEnabled, color, setColor,
-    strokes, setStrokes: setStrokesWrapped,
-    current, setCurrent,
+    events, addPoint, endStroke,
     undo, redo, clear,
-    canUndo: strokes.length > 0,
+    canUndo: events.length > 0,
     canRedo: redoStack.length > 0,
   };
 }
@@ -2638,13 +2640,13 @@ function PenColorDropdown({ color, onChange }: { color: string; onChange: (c: st
       </button>
       {open && (
         <div className="absolute right-0 top-9 z-30 rounded-md border border-hairline bg-card p-1.5 shadow-lg">
-          <div className="grid grid-cols-4 gap-1">
+          <div className="flex flex-col gap-1">
             {DRAW_COLORS.map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => { onChange(c); setOpen(false); }}
-                className="h-6 w-6 rounded-sm border border-black/10 transition hover:scale-110"
+                className="h-6 w-10 rounded-sm border border-black/10 transition hover:scale-105"
                 style={{ background: c }}
                 aria-label={c}
               />
@@ -3316,7 +3318,9 @@ function DockItem({
 
 function DrawingOverlay({ state }: { state: DrawingState }) {
   const ref = useRef<SVGSVGElement>(null);
-  const getPoint = (e: React.PointerEvent | React.MouseEvent) => {
+  const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
+
+  const getPoint = (e: React.MouseEvent) => {
     const el = ref.current;
     if (!el) return { x: 0, y: 0 };
     const r = el.getBoundingClientRect();
@@ -3325,28 +3329,41 @@ function DrawingOverlay({ state }: { state: DrawingState }) {
       y: ((e.clientY - r.top) / r.height) * 100,
     };
   };
+
+  type Stroke = { color: string; points: DrawPoint[] };
+  const strokes: Stroke[] = [];
+  let cur: Stroke | null = null;
+  for (const ev of state.events) {
+    if (ev.type === "end") {
+      if (cur && cur.points.length >= 2) strokes.push(cur);
+      cur = null;
+    } else {
+      if (!cur || cur.color !== ev.color) {
+        if (cur && cur.points.length >= 2) strokes.push(cur);
+        cur = { color: ev.color, points: [{ x: ev.x, y: ev.y }] };
+      } else {
+        cur.points.push({ x: ev.x, y: ev.y });
+      }
+    }
+  }
+  const openStroke = cur;
+  if (openStroke && openStroke.points.length >= 1) strokes.push(openStroke);
+
+  const toPath = (pts: DrawPoint[]) =>
+    pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+
   const handleClick = (e: React.MouseEvent) => {
     if (!state.enabled) return;
     e.stopPropagation();
-    const p = getPoint(e);
-    if (!state.current) {
-      state.setCurrent({ color: state.color, points: [p] });
-    } else {
-      state.setCurrent({ ...state.current, points: [...state.current.points, p] });
-    }
+    state.addPoint(getPoint(e));
   };
   const handleDouble = (e: React.MouseEvent) => {
     if (!state.enabled) return;
     e.stopPropagation();
-    if (state.current && state.current.points.length >= 2) {
-      state.setStrokes((s) => [...s, state.current!]);
-    }
-    state.setCurrent(null);
+    state.endStroke();
   };
-  const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
 
-  const toPath = (pts: { x: number; y: number }[]) =>
-    pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+  const STROKE_W = 4;
 
   return (
     <svg
@@ -3357,27 +3374,30 @@ function DrawingOverlay({ state }: { state: DrawingState }) {
       style={{ pointerEvents: state.enabled ? "auto" : "none", cursor: state.enabled ? "crosshair" : "default" }}
       onClick={handleClick}
       onDoubleClick={handleDouble}
-      onMouseMove={(e) => state.enabled && state.current && setHover(getPoint(e))}
+      onMouseMove={(e) => state.enabled && openStroke && setHover(getPoint(e))}
       onMouseLeave={() => setHover(null)}
     >
-      {state.strokes.map((s, i) => (
-        <path key={i} d={toPath(s.points)} stroke={s.color} strokeWidth={0.4} fill="none" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" style={{ strokeWidth: 2 } as React.CSSProperties} />
+      {strokes.map((s, i) => (
+        <path
+          key={i}
+          d={toPath(s.points)}
+          stroke={s.color}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ strokeWidth: STROKE_W } as React.CSSProperties}
+        />
       ))}
-      {state.current && (
-        <>
-          <path d={toPath(state.current.points)} stroke={state.current.color} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ strokeWidth: 2 } as React.CSSProperties} />
-          {hover && state.current.points.length > 0 && (
-            <line
-              x1={state.current.points[state.current.points.length - 1].x}
-              y1={state.current.points[state.current.points.length - 1].y}
-              x2={hover.x}
-              y2={hover.y}
-              stroke={state.current.color}
-              strokeDasharray="2 2"
-              style={{ strokeWidth: 1.5, opacity: 0.6 } as React.CSSProperties}
-            />
-          )}
-        </>
+      {openStroke && hover && openStroke.points.length > 0 && (
+        <line
+          x1={openStroke.points[openStroke.points.length - 1].x}
+          y1={openStroke.points[openStroke.points.length - 1].y}
+          x2={hover.x}
+          y2={hover.y}
+          stroke={openStroke.color}
+          strokeLinecap="round"
+          style={{ strokeWidth: STROKE_W, opacity: 0.7 } as React.CSSProperties}
+        />
       )}
     </svg>
   );
