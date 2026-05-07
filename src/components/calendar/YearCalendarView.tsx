@@ -144,7 +144,13 @@ function YearCalendarViewInner({
       ? [...events, ...stravaUnique, ...ghostEvents]
       : [...events, ...stravaUnique];
     if (!visibleCategories) return base;
-    return base.filter((e) => visibleCategories.has(categoryKeyFromColor(e.color)));
+    return base.filter((e) => {
+      // Diary training sessions (incl. Strava imports with custom activity
+      // colors like track/strength/else) should follow the "Training"
+      // category toggle, not the color-derived fallback.
+      if (e.diaryType === "training") return visibleCategories.has("ind:training");
+      return visibleCategories.has(categoryKeyFromColor(e.color));
+    });
   }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind]);
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
