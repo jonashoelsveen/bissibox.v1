@@ -173,6 +173,7 @@ export function DayNoteButton({
           initialValue={note}
           mode={mode}
           defaultBodyHeight={variant === "week" ? 240 : 160}
+          closeOnEnter={false}
           onSave={(text) => writeNote(calId, date, text)}
           onClose={() => setMode(null)}
           onRequestEdit={() => setMode("edit")}
