@@ -345,6 +345,7 @@ export function NotePanel({
   return createPortal(
     <motion.div
       ref={ref}
+      data-note-panel="1"
       className="fixed z-50"
       style={style}
       initial={{ opacity: 0, scaleY: 0.6, y: -4 }}
