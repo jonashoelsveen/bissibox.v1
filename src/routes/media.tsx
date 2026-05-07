@@ -2093,7 +2093,7 @@ function Lightbox({
         <aside className="flex w-96 flex-col border-l border-hairline bg-background">
           <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
             <div className="flex gap-1">
-              {(["about", "access", "draw", "export"] as const).map((t) => (
+              {tabs.map((t) => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
