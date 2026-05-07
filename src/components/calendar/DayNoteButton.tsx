@@ -390,7 +390,7 @@ export function NotePanel({
             </div>
           )}
         </div>
-        {isEdit && showFooter && (
+        {isEdit && showFooter && !footerHidden && (
           <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
             <span className="mono tabular-nums">⏎ for å lagre</span>
             <button
