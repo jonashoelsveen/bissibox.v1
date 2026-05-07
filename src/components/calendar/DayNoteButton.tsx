@@ -189,7 +189,7 @@ export function DayNoteButton({
 
 export interface NotePanelProps {
   anchorRect: DOMRect;
-  headerLabel: string;
+  headerLabel?: string;
   initialValue: string;
   mode: "preview" | "edit";
   defaultBodyHeight?: number;
@@ -368,11 +368,13 @@ export function NotePanel({
           className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
           style={{ background: "#9CA3AF" }}
         />
-        <div className="flex items-center justify-between border-b border-hairline pl-4 pr-3 py-1.5">
-          <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            {headerLabel}
-          </span>
-        </div>
+        {headerLabel ? (
+          <div className="flex items-center justify-between border-b border-hairline pl-4 pr-3 py-1.5">
+            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              {headerLabel}
+            </span>
+          </div>
+        ) : null}
         <div className="pl-4 pr-3 py-2">
           {isEdit ? (
             <textarea

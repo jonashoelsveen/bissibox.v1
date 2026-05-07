@@ -210,7 +210,6 @@ export function SessionHoverMenu({
                 toJSON: () => ({}),
               } as DOMRect
             }
-            headerLabel="Session note"
             initialValue={ev.sessionNote ?? ""}
             mode={noteEdit ? "edit" : "preview"}
             defaultBodyHeight={140}
