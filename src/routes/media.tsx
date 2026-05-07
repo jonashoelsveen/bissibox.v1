@@ -3363,7 +3363,7 @@ function DrawingOverlay({ state }: { state: DrawingState }) {
     state.endStroke();
   };
 
-  const STROKE_W = 3;
+  const STROKE_W = 0.6;
 
   return (
     <svg
