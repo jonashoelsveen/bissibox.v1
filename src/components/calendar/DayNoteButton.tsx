@@ -228,6 +228,8 @@ export interface NotePanelProps {
   onSave: (text: string) => void;
   onClose: () => void;
   onRequestEdit?: () => void;
+  onPanelMouseEnter?: () => void;
+  onPanelMouseLeave?: () => void;
 }
 
 export function NotePanel({
