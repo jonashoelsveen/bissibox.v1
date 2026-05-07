@@ -179,9 +179,11 @@ export function useStravaActivities(): {
     };
   }, []);
 
-  const events = rows
-    .map(rowToCalendarEvent)
-    .filter((e): e is CalendarEvent => !!e);
+  const events = mergeAdjacentSessions(
+    rows
+      .map(rowToCalendarEvent)
+      .filter((e): e is CalendarEvent => !!e),
+  );
 
   const byKey: Record<string, StravaActivityRow> = {};
   rows.forEach((r) => {
