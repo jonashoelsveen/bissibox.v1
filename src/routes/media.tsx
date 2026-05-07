@@ -565,6 +565,8 @@ function LibraryPage() {
                     >
                       {t.type === "meeting" ? (
                         <Briefcase className="h-3 w-3 shrink-0 opacity-70" />
+                      ) : t.type === "media" ? (
+                        <ImageIcon className="h-3 w-3 shrink-0 opacity-70" />
                       ) : (
                         <StickyNote className="h-3 w-3 shrink-0 opacity-70" />
                       )}
