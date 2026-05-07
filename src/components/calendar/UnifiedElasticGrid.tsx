@@ -1852,6 +1852,7 @@ function WeekEventsOverlay({
   onEventDrop,
   onDeleteEvent,
   onSaveSessionNote,
+  onUpsertSession,
 }: {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   events: CalendarEvent[];
@@ -1864,6 +1865,7 @@ function WeekEventsOverlay({
   onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
   onDeleteEvent?: (id: string) => void;
   onSaveSessionNote?: (id: string, note: string) => void;
+  onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
 }) {
   const [tileDesign] = useSessionTileDesign();
   const [unit] = useDistanceUnit();
