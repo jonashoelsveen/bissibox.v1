@@ -2864,7 +2864,7 @@ function VideoPlayer({ src }: { src?: string }) {
   const progress = ready && duration > 0 ? Math.min(1, current / duration) : 0;
 
   return (
-    <div className="flex max-h-[88%] w-full max-w-[88%] flex-col gap-4">
+    <div className="flex h-full w-full max-w-[88%] flex-col gap-3">
       <div
         className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg bg-black"
         onClick={togglePlay}
@@ -2877,7 +2877,7 @@ function VideoPlayer({ src }: { src?: string }) {
           preload="metadata"
         />
       </div>
-      <div className="w-full">
+      <div className="w-full shrink-0">
         {/* Centered minimalist play/pause */}
         <div className="mb-2 flex items-center justify-center">
           <button
