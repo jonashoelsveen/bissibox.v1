@@ -226,6 +226,7 @@ export function NotePanel({
   const ref = useRef<HTMLDivElement | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const [extra, setExtra] = useState(0);
+  const [footerHidden, setFooterHidden] = useState(false);
   const isEdit = mode === "edit";
 
   useEffect(() => {
