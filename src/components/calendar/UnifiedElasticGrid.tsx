@@ -33,6 +33,7 @@ import { makeCellId } from "./yearStore";
 import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, contrastTextOn, categoryFromColor } from "./MonthGridType1";
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 import { DayNoteButton } from "./DayNoteButton";
+import { SessionHoverMenu } from "./SessionHoverMenu";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
 import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoWeekNumber } from "./dateUtils";
@@ -981,8 +982,6 @@ export function UnifiedElasticGrid({
                 });
               }}
               onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
-                // Calendar: open the editor with pending date/time; user must Save.
-                // Diary: drag is disabled at the source (see WeekEventsOverlay).
                 const ev = events.find((e) => e.id === id);
                 if (!ev) return;
                 setPopover({
@@ -996,6 +995,10 @@ export function UnifiedElasticGrid({
                   pendingTime: { startMin: newStartMin, endMin: newStartMin + durationMin },
                 });
               }}
+              onDeleteEvent={onDeleteEvent}
+              onSaveSessionNote={(id, note) =>
+                onUpsertEvent({ id, sessionNote: note || undefined })
+              }
             />
           )}
           {mode.kind === "year" && todayColIdx >= 0 && nowMinutesSinceStart !== null && (
@@ -1847,6 +1850,8 @@ function WeekEventsOverlay({
   appKind = "calendar",
   onEventClick,
   onEventDrop,
+  onDeleteEvent,
+  onSaveSessionNote,
 }: {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   events: CalendarEvent[];
@@ -1857,9 +1862,13 @@ function WeekEventsOverlay({
   appKind?: "calendar" | "diary";
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
+  onDeleteEvent?: (id: string) => void;
+  onSaveSessionNote?: (id: string, note: string) => void;
 }) {
   const [tileDesign] = useSessionTileDesign();
   const [unit] = useDistanceUnit();
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   type Box = { left: number; width: number };
   const [cols, setCols] = useState<Box[]>([]);
   const [headerBottom, setHeaderBottom] = useState(0);
@@ -1967,9 +1976,24 @@ function WeekEventsOverlay({
             data-mark-cell="1"
             data-real-event={isGhost ? undefined : "1"}
             data-ghost-event={isGhost ? "1" : undefined}
+            onMouseEnter={(e) => {
+              if (isGhost || appKind !== "diary") return;
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setHoverId(ev.id);
+              setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+            }}
+            onMouseLeave={(e) => {
+              if (isGhost || appKind !== "diary") return;
+              // Keep menu open if pointer moves into the menu portal — handled by simple delay.
+              const related = e.relatedTarget as Node | null;
+              const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
+              if (goingIntoMenu) return;
+              window.setTimeout(() => {
+                setHoverId((cur) => (cur === ev.id ? null : cur));
+              }, 120);
+            }}
             onPointerDown={(e) => {
               if (isGhost) return;
-              // Diary: all events are logged (manual or Strava) — not movable.
               if (appKind === "diary") return;
               e.stopPropagation();
               (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -1986,6 +2010,11 @@ function WeekEventsOverlay({
             }}
             onClick={(e) => {
               if (isGhost) return;
+              // Diary: existing sessions are edited via the hover menu (Details).
+              if (appKind === "diary") {
+                e.stopPropagation();
+                return;
+              }
               if (drag?.moved) return;
               e.stopPropagation();
               onEventClick(ev, e.currentTarget as HTMLElement);
@@ -2132,6 +2161,34 @@ function WeekEventsOverlay({
           </div>
         );
       })}
+      {appKind === "diary" && hoverId && hoverRect && (() => {
+        const ev = events.find((e) => e.id === hoverId);
+        if (!ev) return null;
+        return (
+          <div
+            data-session-hover-menu="1"
+            onMouseEnter={() => setHoverId(hoverId)}
+            onMouseLeave={() => setHoverId(null)}
+          >
+            <SessionHoverMenu
+              ev={ev}
+              blockRect={hoverRect}
+              rowHeight={rowHeight}
+              visible={true}
+              onOpenDetails={() => {
+                setHoverId(null);
+                onEventClick(ev, document.body as HTMLElement);
+              }}
+              onDelete={() => {
+                setHoverId(null);
+                onDeleteEvent?.(ev.id);
+              }}
+              onSaveNote={(note) => onSaveSessionNote?.(ev.id, note)}
+            />
+          </div>
+        );
+      })()}
     </>
   );
 }
+
