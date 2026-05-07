@@ -1869,6 +1869,20 @@ function WeekEventsOverlay({
   const [unit] = useDistanceUnit();
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const closeTimerRef = useRef<number | null>(null);
+  const cancelClose = useCallback(() => {
+    if (closeTimerRef.current != null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+  const scheduleClose = useCallback(() => {
+    cancelClose();
+    closeTimerRef.current = window.setTimeout(() => {
+      setHoverId(null);
+      setHoverRect(null);
+    }, 180);
+  }, [cancelClose]);
   type Box = { left: number; width: number };
   const [cols, setCols] = useState<Box[]>([]);
   const [headerBottom, setHeaderBottom] = useState(0);
@@ -1978,19 +1992,17 @@ function WeekEventsOverlay({
             data-ghost-event={isGhost ? "1" : undefined}
             onMouseEnter={(e) => {
               if (isGhost || appKind !== "diary") return;
+              cancelClose();
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
               setHoverId(ev.id);
               setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
             }}
             onMouseLeave={(e) => {
               if (isGhost || appKind !== "diary") return;
-              // Keep menu open if pointer moves into the menu portal — handled by simple delay.
               const related = e.relatedTarget as Node | null;
               const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
               if (goingIntoMenu) return;
-              window.setTimeout(() => {
-                setHoverId((cur) => (cur === ev.id ? null : cur));
-              }, 120);
+              scheduleClose();
             }}
             onPointerDown={(e) => {
               if (isGhost) return;
@@ -2165,27 +2177,27 @@ function WeekEventsOverlay({
         const ev = events.find((e) => e.id === hoverId);
         if (!ev) return null;
         return (
-          <div
-            data-session-hover-menu="1"
-            onMouseEnter={() => setHoverId(hoverId)}
-            onMouseLeave={() => setHoverId(null)}
-          >
-            <SessionHoverMenu
-              ev={ev}
-              blockRect={hoverRect}
-              rowHeight={rowHeight}
-              visible={true}
-              onOpenDetails={() => {
-                setHoverId(null);
-                onEventClick(ev, document.body as HTMLElement);
-              }}
-              onDelete={() => {
-                setHoverId(null);
-                onDeleteEvent?.(ev.id);
-              }}
-              onSaveNote={(note) => onSaveSessionNote?.(ev.id, note)}
-            />
-          </div>
+          <SessionHoverMenu
+            ev={ev}
+            blockRect={hoverRect}
+            rowHeight={rowHeight}
+            visible={true}
+            onMenuEnter={cancelClose}
+            onMenuLeave={scheduleClose}
+            onOpenDetails={() => {
+              cancelClose();
+              setHoverId(null);
+              setHoverRect(null);
+              onEventClick(ev, document.body as HTMLElement);
+            }}
+            onDelete={() => {
+              cancelClose();
+              setHoverId(null);
+              setHoverRect(null);
+              onDeleteEvent?.(ev.id);
+            }}
+            onSaveNote={(note) => onSaveSessionNote?.(ev.id, note)}
+          />
         );
       })()}
     </>

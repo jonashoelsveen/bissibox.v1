@@ -23,7 +23,7 @@ import { StickyNote, Pencil, Trash2 } from "lucide-react";
 import { NotePanel } from "./DayNoteButton";
 import type { CalendarEvent } from "./yearStore";
 
-const MENU_W = 280;
+const NOTE_PANEL_W = 280;
 
 export interface SessionHoverMenuProps {
   ev: CalendarEvent;
@@ -34,6 +34,10 @@ export interface SessionHoverMenuProps {
   onDelete: () => void;
   onSaveNote: (text: string) => void;
   visible: boolean;
+  /** Called when the cursor enters the menu — parent should cancel its close timer. */
+  onMenuEnter?: () => void;
+  /** Called when the cursor leaves the menu — parent should start its close timer. */
+  onMenuLeave?: () => void;
 }
 
 export function SessionHoverMenu({
@@ -44,6 +48,8 @@ export function SessionHoverMenu({
   onDelete,
   onSaveNote,
   visible,
+  onMenuEnter,
+  onMenuLeave,
 }: SessionHoverMenuProps) {
   const [confirm, setConfirm] = useState(false);
   const [noteEdit, setNoteEdit] = useState(false);
@@ -54,23 +60,35 @@ export function SessionHoverMenu({
     if (!visible) setNoteEdit(false);
   }, [visible]);
 
-  const menuH = Math.max(24, rowHeight * 1.4);
+  const menuH = Math.max(28, rowHeight * 1.4);
+  // Compact menu: just the three icon buttons. The note panel below uses
+  // the full new-session-popover width (NOTE_PANEL_W).
+  const ICON_W = 32; // matches MenuBtn w-8
+  const PADDING_X = 6 * 2;
+  const GAP = 2 * 2; // gap-0.5 between 3 buttons → 2 gaps × 4px
+  const compactW = ICON_W * 3 + GAP + PADDING_X;
+  const showNote = (hasNote && visible) || noteEdit;
+  const menuW = showNote ? NOTE_PANEL_W : compactW;
+
   const gap = 4;
   let left = blockRect.left + blockRect.width + gap;
-  if (left + MENU_W > window.innerWidth - 8) {
-    left = Math.max(8, blockRect.left - MENU_W - gap);
+  // If the wider variant would overflow, flip to the left side.
+  const widestNeeded = Math.max(menuW, showNote ? NOTE_PANEL_W : compactW);
+  if (left + widestNeeded > window.innerWidth - 8) {
+    left = Math.max(8, blockRect.left - widestNeeded - gap);
   }
   const top = blockRect.top;
-
-  const showNote = (hasNote && visible) || noteEdit;
 
   return (
     <>
       {visible && (
         createPortal(
           <div
-            className="fixed z-[20] flex items-stretch gap-1 rounded-md border border-hairline bg-card/95 px-1.5 shadow-md backdrop-blur"
-            style={{ left, top, width: MENU_W, height: menuH }}
+            data-session-hover-menu="1"
+            className="fixed z-[20] flex items-stretch gap-1 rounded-md border border-hairline bg-card/95 px-1.5 shadow-md backdrop-blur transition-[width] duration-150"
+            style={{ left, top, width: menuW, height: menuH }}
+            onMouseEnter={onMenuEnter}
+            onMouseLeave={onMenuLeave}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
@@ -100,10 +118,10 @@ export function SessionHoverMenu({
           anchorRect={
             {
               left,
-              right: left + MENU_W,
+              right: left + NOTE_PANEL_W,
               top: top + menuH,
               bottom: top + menuH,
-              width: MENU_W,
+              width: NOTE_PANEL_W,
               height: 0,
               x: left,
               y: top + menuH,
@@ -114,7 +132,7 @@ export function SessionHoverMenu({
           initialValue={ev.sessionNote ?? ""}
           mode={noteEdit ? "edit" : "preview"}
           defaultBodyHeight={140}
-          panelWidth={MENU_W}
+          panelWidth={NOTE_PANEL_W}
           onSave={(text) => onSaveNote(text)}
           onClose={() => setNoteEdit(false)}
           onRequestEdit={() => setNoteEdit(true)}
@@ -157,7 +175,7 @@ function MenuBtn({
         onClick();
       }}
       className={[
-        "grid h-full w-9 place-items-center rounded transition-colors",
+        "grid h-full w-8 place-items-center rounded transition-colors",
         destructive
           ? "text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           : "text-muted-foreground hover:bg-secondary hover:text-ink",
