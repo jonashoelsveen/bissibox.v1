@@ -1992,19 +1992,17 @@ function WeekEventsOverlay({
             data-ghost-event={isGhost ? "1" : undefined}
             onMouseEnter={(e) => {
               if (isGhost || appKind !== "diary") return;
+              cancelClose();
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
               setHoverId(ev.id);
               setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
             }}
             onMouseLeave={(e) => {
               if (isGhost || appKind !== "diary") return;
-              // Keep menu open if pointer moves into the menu portal — handled by simple delay.
               const related = e.relatedTarget as Node | null;
               const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
               if (goingIntoMenu) return;
-              window.setTimeout(() => {
-                setHoverId((cur) => (cur === ev.id ? null : cur));
-              }, 120);
+              scheduleClose();
             }}
             onPointerDown={(e) => {
               if (isGhost) return;
