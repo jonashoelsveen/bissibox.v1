@@ -2538,18 +2538,170 @@ function AccessGroup({
   );
 }
 
-function DrawPanel() {
+// 8 platform pen colors (shared with GroupColorPicker palette)
+const DRAW_COLORS = [
+  "#E63337", "#F09B0A", "#FFCD33", "#26B270",
+  "#17A4E0", "#1960C4", "#A22CC8", "#D22551",
+];
+
+export type DrawStroke = { color: string; points: { x: number; y: number }[] };
+
+export interface DrawingState {
+  enabled: boolean;
+  setEnabled: (v: boolean) => void;
+  color: string;
+  setColor: (c: string) => void;
+  strokes: DrawStroke[];
+  setStrokes: React.Dispatch<React.SetStateAction<DrawStroke[]>>;
+  current: DrawStroke | null;
+  setCurrent: React.Dispatch<React.SetStateAction<DrawStroke | null>>;
+  undo: () => void;
+  redo: () => void;
+  clear: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+function useDrawingState(): DrawingState {
+  const [enabled, setEnabled] = useState(false);
+  const [color, setColor] = useState(DRAW_COLORS[0]);
+  const [strokes, setStrokes] = useState<DrawStroke[]>([]);
+  const [redoStack, setRedoStack] = useState<DrawStroke[]>([]);
+  const [current, setCurrent] = useState<DrawStroke | null>(null);
+
+  const undo = () => {
+    setStrokes((s) => {
+      if (s.length === 0) return s;
+      const last = s[s.length - 1];
+      setRedoStack((r) => [...r, last]);
+      return s.slice(0, -1);
+    });
+  };
+  const redo = () => {
+    setRedoStack((r) => {
+      if (r.length === 0) return r;
+      const last = r[r.length - 1];
+      setStrokes((s) => [...s, last]);
+      return r.slice(0, -1);
+    });
+  };
+  const clear = () => {
+    setStrokes([]);
+    setRedoStack([]);
+    setCurrent(null);
+  };
+
+  // pushing a new stroke clears redo
+  const setStrokesWrapped: React.Dispatch<React.SetStateAction<DrawStroke[]>> = (v) => {
+    setRedoStack([]);
+    setStrokes(v);
+  };
+
+  return {
+    enabled, setEnabled, color, setColor,
+    strokes, setStrokes: setStrokesWrapped,
+    current, setCurrent,
+    undo, redo, clear,
+    canUndo: strokes.length > 0,
+    canRedo: redoStack.length > 0,
+  };
+}
+
+function PenColorDropdown({ color, onChange }: { color: string; onChange: (c: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-8 items-center gap-1.5 rounded-md border border-hairline bg-background px-2 hover:border-primary"
+        aria-label="Pen color"
+      >
+        <span className="block h-[3px] w-6 rounded-full" style={{ background: color }} />
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-9 z-30 rounded-md border border-hairline bg-card p-1.5 shadow-lg">
+          <div className="grid grid-cols-4 gap-1">
+            {DRAW_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => { onChange(c); setOpen(false); }}
+                className="h-6 w-6 rounded-sm border border-black/10 transition hover:scale-110"
+                style={{ background: c }}
+                aria-label={c}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DrawPanel({ state }: { state: DrawingState }) {
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-hairline bg-card p-4">
-        <div className="mb-2 flex items-center gap-2 text-sm text-ink">
-          <Pencil className="h-4 w-4" />
-          Draw on media
-        </div>
-        <p className="text-[11px] text-muted-foreground">
-          Drawing tools will appear here. More instructions coming.
-        </p>
+      <div className="flex items-center gap-2">
+        {/* Round tick toggle */}
+        <button
+          type="button"
+          onClick={() => state.setEnabled(!state.enabled)}
+          aria-pressed={state.enabled}
+          aria-label={state.enabled ? "Disable drawing" : "Enable drawing"}
+          className="h-4 w-4 shrink-0 rounded-full border transition-opacity"
+          style={{
+            background: state.enabled ? state.color : "transparent",
+            borderColor: state.color,
+            opacity: state.enabled ? 1 : 0.6,
+          }}
+        />
+
+        {/* Pen color dropdown */}
+        <PenColorDropdown color={state.color} onChange={state.setColor} />
+
+        {/* Undo / redo (no padding) */}
+        <button
+          type="button"
+          onClick={state.undo}
+          disabled={!state.canUndo}
+          aria-label="Undo"
+          className="text-muted-foreground transition hover:text-ink disabled:opacity-30"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>
+        </button>
+        <button
+          type="button"
+          onClick={state.redo}
+          disabled={!state.canRedo}
+          aria-label="Redo"
+          className="text-muted-foreground transition hover:text-ink disabled:opacity-30"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/></svg>
+        </button>
+
+        {/* Clear all */}
+        <button
+          type="button"
+          onClick={state.clear}
+          className="ml-auto rounded-md border border-hairline bg-background px-2.5 py-1 text-xs text-ink transition hover:border-primary"
+        >
+          Clear all
+        </button>
       </div>
+      <p className="text-[11px] text-muted-foreground">
+        Click around the video to draw lines. Double-click to end a line.
+      </p>
     </div>
   );
 }
