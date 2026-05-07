@@ -2078,7 +2078,7 @@ function Lightbox({
                 />
               )
             ) : (
-              <VideoPlayer src={url} />
+              <VideoPlayer src={url} drawing={drawing} />
             )}
           </div>
           {isMulti && (
