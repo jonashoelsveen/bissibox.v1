@@ -172,6 +172,7 @@ export function MonthGridType1({
   month,
   data,
   seat = "individual",
+  appKind = "calendar",
   onPrevMonth,
   onNextMonth,
   onCommitText,
