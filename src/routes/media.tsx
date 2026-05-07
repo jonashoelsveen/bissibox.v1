@@ -2052,6 +2052,13 @@ function Lightbox({
   const isMulti = items.length > 1;
   const current = items[idx];
   const url = current ? urls[current.id] : undefined;
+  const isVideo = current?.media_type === "video";
+  const drawing = useDrawingState();
+  useEffect(() => { drawing.clear(); drawing.setEnabled(false); /* reset on item change */ /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [current?.id]);
+  const tabs: ReadonlyArray<"about" | "access" | "draw" | "export"> = isVideo
+    ? ["about", "access", "draw", "export"]
+    : ["about", "access", "export"];
+  useEffect(() => { if (!isVideo && tab === "draw") setTab("about"); }, [isVideo, tab]);
 
   return (
     <div className="fixed inset-0 z-50 flex animate-in fade-in" onClick={onClose}>
@@ -2071,7 +2078,7 @@ function Lightbox({
                 />
               )
             ) : (
-              <VideoPlayer src={url} />
+              <VideoPlayer src={url} drawing={drawing} />
             )}
           </div>
           {isMulti && (
@@ -2086,7 +2093,7 @@ function Lightbox({
         <aside className="flex w-96 flex-col border-l border-hairline bg-background">
           <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
             <div className="flex gap-1">
-              {(["about", "access", "draw", "export"] as const).map((t) => (
+              {tabs.map((t) => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
@@ -2120,7 +2127,7 @@ function Lightbox({
             {tab === "access" && (
               <AccessPanel items={items} onSaved={onChanged} isTeamMode={isTeamMode} />
             )}
-            {tab === "draw" && <DrawPanel />}
+            {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
             {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
           </div>
         </aside>
@@ -2538,18 +2545,170 @@ function AccessGroup({
   );
 }
 
-function DrawPanel() {
+// 8 platform pen colors (shared with GroupColorPicker palette)
+const DRAW_COLORS = [
+  "#E63337", "#F09B0A", "#FFCD33", "#26B270",
+  "#17A4E0", "#1960C4", "#A22CC8", "#D22551",
+];
+
+export type DrawStroke = { color: string; points: { x: number; y: number }[] };
+
+export interface DrawingState {
+  enabled: boolean;
+  setEnabled: (v: boolean) => void;
+  color: string;
+  setColor: (c: string) => void;
+  strokes: DrawStroke[];
+  setStrokes: React.Dispatch<React.SetStateAction<DrawStroke[]>>;
+  current: DrawStroke | null;
+  setCurrent: React.Dispatch<React.SetStateAction<DrawStroke | null>>;
+  undo: () => void;
+  redo: () => void;
+  clear: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+function useDrawingState(): DrawingState {
+  const [enabled, setEnabled] = useState(false);
+  const [color, setColor] = useState(DRAW_COLORS[0]);
+  const [strokes, setStrokes] = useState<DrawStroke[]>([]);
+  const [redoStack, setRedoStack] = useState<DrawStroke[]>([]);
+  const [current, setCurrent] = useState<DrawStroke | null>(null);
+
+  const undo = () => {
+    setStrokes((s) => {
+      if (s.length === 0) return s;
+      const last = s[s.length - 1];
+      setRedoStack((r) => [...r, last]);
+      return s.slice(0, -1);
+    });
+  };
+  const redo = () => {
+    setRedoStack((r) => {
+      if (r.length === 0) return r;
+      const last = r[r.length - 1];
+      setStrokes((s) => [...s, last]);
+      return r.slice(0, -1);
+    });
+  };
+  const clear = () => {
+    setStrokes([]);
+    setRedoStack([]);
+    setCurrent(null);
+  };
+
+  // pushing a new stroke clears redo
+  const setStrokesWrapped: React.Dispatch<React.SetStateAction<DrawStroke[]>> = (v) => {
+    setRedoStack([]);
+    setStrokes(v);
+  };
+
+  return {
+    enabled, setEnabled, color, setColor,
+    strokes, setStrokes: setStrokesWrapped,
+    current, setCurrent,
+    undo, redo, clear,
+    canUndo: strokes.length > 0,
+    canRedo: redoStack.length > 0,
+  };
+}
+
+function PenColorDropdown({ color, onChange }: { color: string; onChange: (c: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-8 items-center gap-1.5 rounded-md border border-hairline bg-background px-2 hover:border-primary"
+        aria-label="Pen color"
+      >
+        <span className="block h-[3px] w-6 rounded-full" style={{ background: color }} />
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-9 z-30 rounded-md border border-hairline bg-card p-1.5 shadow-lg">
+          <div className="grid grid-cols-4 gap-1">
+            {DRAW_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => { onChange(c); setOpen(false); }}
+                className="h-6 w-6 rounded-sm border border-black/10 transition hover:scale-110"
+                style={{ background: c }}
+                aria-label={c}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DrawPanel({ state }: { state: DrawingState }) {
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-hairline bg-card p-4">
-        <div className="mb-2 flex items-center gap-2 text-sm text-ink">
-          <Pencil className="h-4 w-4" />
-          Draw on media
-        </div>
-        <p className="text-[11px] text-muted-foreground">
-          Drawing tools will appear here. More instructions coming.
-        </p>
+      <div className="flex items-center gap-2">
+        {/* Round tick toggle */}
+        <button
+          type="button"
+          onClick={() => state.setEnabled(!state.enabled)}
+          aria-pressed={state.enabled}
+          aria-label={state.enabled ? "Disable drawing" : "Enable drawing"}
+          className="h-4 w-4 shrink-0 rounded-full border transition-opacity"
+          style={{
+            background: state.enabled ? state.color : "transparent",
+            borderColor: state.color,
+            opacity: state.enabled ? 1 : 0.6,
+          }}
+        />
+
+        {/* Pen color dropdown */}
+        <PenColorDropdown color={state.color} onChange={state.setColor} />
+
+        {/* Undo / redo (no padding) */}
+        <button
+          type="button"
+          onClick={state.undo}
+          disabled={!state.canUndo}
+          aria-label="Undo"
+          className="text-muted-foreground transition hover:text-ink disabled:opacity-30"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>
+        </button>
+        <button
+          type="button"
+          onClick={state.redo}
+          disabled={!state.canRedo}
+          aria-label="Redo"
+          className="text-muted-foreground transition hover:text-ink disabled:opacity-30"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 15-6.7L21 13"/></svg>
+        </button>
+
+        {/* Clear all */}
+        <button
+          type="button"
+          onClick={state.clear}
+          className="ml-auto rounded-md border border-hairline bg-background px-2.5 py-1 text-xs text-ink transition hover:border-primary"
+        >
+          Clear all
+        </button>
       </div>
+      <p className="text-[11px] text-muted-foreground">
+        Click around the video to draw lines. Double-click to end a line.
+      </p>
     </div>
   );
 }
@@ -2896,7 +3055,7 @@ function formatVideoTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(cs).padStart(2, "0")}`;
 }
 
-function VideoPlayer({ src }: { src?: string }) {
+function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -3009,7 +3168,7 @@ function VideoPlayer({ src }: { src?: string }) {
     <div className="flex h-full w-full max-w-[88%] flex-col gap-3">
       <div
         className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg bg-black"
-        onClick={togglePlay}
+        onClick={drawing?.enabled ? undefined : togglePlay}
       >
         <video
           ref={videoRef}
@@ -3018,6 +3177,7 @@ function VideoPlayer({ src }: { src?: string }) {
           playsInline
           preload="metadata"
         />
+        {drawing && <DrawingOverlay state={drawing} />}
       </div>
       <div className="w-full shrink-0">
         {/* Centered minimalist play/pause */}
@@ -3151,6 +3311,75 @@ function DockItem({
     >
       {children}
     </motion.button>
+  );
+}
+
+function DrawingOverlay({ state }: { state: DrawingState }) {
+  const ref = useRef<SVGSVGElement>(null);
+  const getPoint = (e: React.PointerEvent | React.MouseEvent) => {
+    const el = ref.current;
+    if (!el) return { x: 0, y: 0 };
+    const r = el.getBoundingClientRect();
+    return {
+      x: ((e.clientX - r.left) / r.width) * 100,
+      y: ((e.clientY - r.top) / r.height) * 100,
+    };
+  };
+  const handleClick = (e: React.MouseEvent) => {
+    if (!state.enabled) return;
+    e.stopPropagation();
+    const p = getPoint(e);
+    if (!state.current) {
+      state.setCurrent({ color: state.color, points: [p] });
+    } else {
+      state.setCurrent({ ...state.current, points: [...state.current.points, p] });
+    }
+  };
+  const handleDouble = (e: React.MouseEvent) => {
+    if (!state.enabled) return;
+    e.stopPropagation();
+    if (state.current && state.current.points.length >= 2) {
+      state.setStrokes((s) => [...s, state.current!]);
+    }
+    state.setCurrent(null);
+  };
+  const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
+
+  const toPath = (pts: { x: number; y: number }[]) =>
+    pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+
+  return (
+    <svg
+      ref={ref}
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      className="absolute inset-0 h-full w-full"
+      style={{ pointerEvents: state.enabled ? "auto" : "none", cursor: state.enabled ? "crosshair" : "default" }}
+      onClick={handleClick}
+      onDoubleClick={handleDouble}
+      onMouseMove={(e) => state.enabled && state.current && setHover(getPoint(e))}
+      onMouseLeave={() => setHover(null)}
+    >
+      {state.strokes.map((s, i) => (
+        <path key={i} d={toPath(s.points)} stroke={s.color} strokeWidth={0.4} fill="none" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" style={{ strokeWidth: 2 } as React.CSSProperties} />
+      ))}
+      {state.current && (
+        <>
+          <path d={toPath(state.current.points)} stroke={state.current.color} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ strokeWidth: 2 } as React.CSSProperties} />
+          {hover && state.current.points.length > 0 && (
+            <line
+              x1={state.current.points[state.current.points.length - 1].x}
+              y1={state.current.points[state.current.points.length - 1].y}
+              x2={hover.x}
+              y2={hover.y}
+              stroke={state.current.color}
+              strokeDasharray="2 2"
+              style={{ strokeWidth: 1.5, opacity: 0.6 } as React.CSSProperties}
+            />
+          )}
+        </>
+      )}
+    </svg>
   );
 }
 
@@ -3353,6 +3582,13 @@ function MediaTabView({
   const isMulti = items.length > 1;
   const current = items[idx];
   const url = current ? urls[current.id] : undefined;
+  const isVideo = current?.media_type === "video";
+  const drawing = useDrawingState();
+  useEffect(() => { drawing.clear(); drawing.setEnabled(false); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [current?.id]);
+  const tabs: ReadonlyArray<"about" | "access" | "draw" | "export"> = isVideo
+    ? ["about", "access", "draw", "export"]
+    : ["about", "access", "export"];
+  useEffect(() => { if (!isVideo && tab === "draw") setTab("about"); }, [isVideo, tab]);
 
   return (
     <div className="flex h-[calc(100vh-12rem)] min-h-[480px] gap-4 rounded-2xl border border-hairline bg-card overflow-hidden">
@@ -3367,7 +3603,7 @@ function MediaTabView({
               />
             )
           ) : (
-            <VideoPlayer src={url} />
+            <VideoPlayer src={url} drawing={drawing} />
           )}
         </div>
         {isMulti && (
@@ -3382,7 +3618,7 @@ function MediaTabView({
       <aside className="flex w-96 flex-col border-l border-hairline bg-background">
         <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
           <div className="flex gap-1">
-            {(["about", "access", "draw", "export"] as const).map((t) => (
+            {tabs.map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -3410,7 +3646,7 @@ function MediaTabView({
           {tab === "access" && (
             <AccessPanel items={items} onSaved={() => setReloadKey((k) => k + 1)} isTeamMode={isTeamMode} />
           )}
-          {tab === "draw" && <DrawPanel />}
+          {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
           {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
         </div>
       </aside>
