@@ -21,6 +21,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUserIdRouteImport } from './routes/u.$userId'
 import { Route as TeamMembersRouteImport } from './routes/team.members'
+import { Route as TeamGroupMembersRouteImport } from './routes/team.group-members'
 import { Route as TeamGroupMeetingsRouteImport } from './routes/team.group-meetings'
 import { Route as TeamBoardRouteImport } from './routes/team.board'
 import { Route as TTeamIdRouteImport } from './routes/t.$teamId'
@@ -90,6 +91,11 @@ const UUserIdRoute = UUserIdRouteImport.update({
 const TeamMembersRoute = TeamMembersRouteImport.update({
   id: '/team/members',
   path: '/team/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamGroupMembersRoute = TeamGroupMembersRouteImport.update({
+  id: '/team/group-members',
+  path: '/team/group-members',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TeamGroupMeetingsRoute = TeamGroupMeetingsRouteImport.update({
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
   '/team/group-meetings': typeof TeamGroupMeetingsRoute
+  '/team/group-members': typeof TeamGroupMembersRoute
   '/team/members': typeof TeamMembersRoute
   '/u/$userId': typeof UUserIdRoute
   '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
   '/team/group-meetings': typeof TeamGroupMeetingsRoute
+  '/team/group-members': typeof TeamGroupMembersRoute
   '/team/members': typeof TeamMembersRoute
   '/u/$userId': typeof UUserIdRoute
   '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
   '/team/group-meetings': typeof TeamGroupMeetingsRoute
+  '/team/group-members': typeof TeamGroupMembersRoute
   '/team/members': typeof TeamMembersRoute
   '/u/$userId': typeof UUserIdRoute
   '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
@@ -238,6 +247,7 @@ export interface FileRouteTypes {
     | '/t/$teamId'
     | '/team/board'
     | '/team/group-meetings'
+    | '/team/group-members'
     | '/team/members'
     | '/u/$userId'
     | '/organizer/$eventId/edit'
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/t/$teamId'
     | '/team/board'
     | '/team/group-meetings'
+    | '/team/group-members'
     | '/team/members'
     | '/u/$userId'
     | '/organizer/$eventId/edit'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/t/$teamId'
     | '/team/board'
     | '/team/group-meetings'
+    | '/team/group-members'
     | '/team/members'
     | '/u/$userId'
     | '/organizer/$eventId/edit'
@@ -311,6 +323,7 @@ export interface RootRouteChildren {
   TTeamIdRoute: typeof TTeamIdRoute
   TeamBoardRoute: typeof TeamBoardRoute
   TeamGroupMeetingsRoute: typeof TeamGroupMeetingsRoute
+  TeamGroupMembersRoute: typeof TeamGroupMembersRoute
   TeamMembersRoute: typeof TeamMembersRoute
   UUserIdRoute: typeof UUserIdRoute
   OrganizerEventIdEditRoute: typeof OrganizerEventIdEditRoute
@@ -401,6 +414,13 @@ declare module '@tanstack/react-router' {
       path: '/team/members'
       fullPath: '/team/members'
       preLoaderRoute: typeof TeamMembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/team/group-members': {
+      id: '/team/group-members'
+      path: '/team/group-members'
+      fullPath: '/team/group-members'
+      preLoaderRoute: typeof TeamGroupMembersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/team/group-meetings': {
@@ -495,6 +515,7 @@ const rootRouteChildren: RootRouteChildren = {
   TTeamIdRoute: TTeamIdRoute,
   TeamBoardRoute: TeamBoardRoute,
   TeamGroupMeetingsRoute: TeamGroupMeetingsRoute,
+  TeamGroupMembersRoute: TeamGroupMembersRoute,
   TeamMembersRoute: TeamMembersRoute,
   UUserIdRoute: UUserIdRoute,
   OrganizerEventIdEditRoute: OrganizerEventIdEditRoute,
@@ -503,3 +524,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
