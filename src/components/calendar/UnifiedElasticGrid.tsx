@@ -2181,14 +2181,13 @@ function WeekEventsOverlay({
             ev={ev}
             blockRect={hoverRect}
             rowHeight={rowHeight}
-            visible={true}
+            visible={hoverId === ev.id}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
-            onOpenDetails={() => {
+            onForceClose={() => {
               cancelClose();
               setHoverId(null);
               setHoverRect(null);
-              onEventClick(ev, document.body as HTMLElement);
             }}
             onDelete={() => {
               cancelClose();
@@ -2197,6 +2196,7 @@ function WeekEventsOverlay({
               onDeleteEvent?.(ev.id);
             }}
             onSaveNote={(note) => onSaveSessionNote?.(ev.id, note)}
+            onUpsert={(patch) => onUpsertSession?.(patch)}
           />
         );
       })()}
