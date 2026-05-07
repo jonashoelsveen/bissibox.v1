@@ -182,8 +182,11 @@ export function DayNoteButton({
       </button>
       {mode && anchorRect && (
         <div
-          onMouseEnter={() => { if (has) setMode((m) => (m === "edit" ? m : "preview")); }}
-          onMouseLeave={() => setMode((m) => (m === "edit" ? m : null))}
+          onMouseEnter={() => {
+            cancelClose();
+            if (has) setMode((m) => (m === "edit" ? m : "preview"));
+          }}
+          onMouseLeave={() => scheduleClose()}
         >
           <NotePanel
             anchorRect={anchorRect}
