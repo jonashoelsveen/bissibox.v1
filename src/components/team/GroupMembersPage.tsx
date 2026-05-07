@@ -4,6 +4,7 @@ import { ArrowUpRight, Search, UsersRound, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
 import { supabase } from "@/integrations/supabase/client";
+import { MemberDataPanel } from "./MemberDataPanel";
 
 interface MemberRow {
   user_id: string;
