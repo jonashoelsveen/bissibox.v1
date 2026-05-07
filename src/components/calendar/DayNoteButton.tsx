@@ -379,6 +379,8 @@ export function NotePanel({
       animate={{ opacity: 1, scaleY: 1, y: 0 }}
       exit={{ opacity: 0, scaleY: 0.6, y: -4 }}
       transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+      onMouseEnter={onPanelMouseEnter}
+      onMouseLeave={onPanelMouseLeave}
       onClick={(e) => {
         if (!isEdit && onRequestEdit) {
           e.stopPropagation();
