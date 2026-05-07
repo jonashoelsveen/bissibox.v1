@@ -38,6 +38,7 @@ import type { CellData, CellKey, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, isoWeekNumber } from "./dateUtils";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
+import { DayNoteButton } from "./DayNoteButton";
 
 // Individual session categories. Three have fixed colors + icons for
 // consistent UX across the platform; "Else" lets the user pick from the 8
@@ -120,6 +121,8 @@ export interface MonthGridType1Props {
   month: number;
   data: Record<string, CellData>;
   seat?: CalendarSeat;
+  /** "diary" enables the per-day note affordance. */
+  appKind?: "calendar" | "diary";
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onCommitText: (k: CellKey, text: string) => void;
@@ -169,6 +172,7 @@ export function MonthGridType1({
   month,
   data,
   seat = "individual",
+  appKind = "calendar",
   onPrevMonth,
   onNextMonth,
   onCommitText,
@@ -585,13 +589,14 @@ export function MonthGridType1({
                     openPopoverAt(pos, e.currentTarget);
                   }}
                   className={[
-                    "group/cell relative flex flex-col border-b border-r border-hairline transition-colors",
+                    "group/cell group/daynote-anchor relative flex flex-col border-b border-r border-hairline transition-colors",
                     "first:border-l-0", // first column has no left border (parent supplies)
                     isWeekend ? "bg-muted/20" : "bg-card",
                     !d.inMonth ? "bg-muted/40 text-muted-foreground/60" : "",
                     isInRange ? "bg-primary/10" : "",
                     "hover:bg-secondary/40",
                   ].join(" ")}
+                  data-day-anchor=""
                   style={{ cursor: d.inMonth ? "cell" : "default" }}
                 >
                   {/* Day number — small, top-right, muted */}
@@ -716,6 +721,11 @@ export function MonthGridType1({
                     <span className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover/cell:opacity-100">
                       <Plus className="h-3.5 w-3.5 text-muted-foreground/60" strokeWidth={2.25} />
                     </span>
+                  )}
+
+                  {/* Diary: per-day note (bottom-right corner) */}
+                  {appKind === "diary" && d.inMonth && (
+                    <DayNoteButton calId={calId} date={d.date} variant="month" />
                   )}
 
                   {/* Excel focus ring */}
