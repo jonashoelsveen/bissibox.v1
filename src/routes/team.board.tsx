@@ -1622,6 +1622,7 @@ export function TeamBoardPage({
           groupOptions={kind === "group" ? groupOptions : undefined}
           groupId={editMeetingGroupId}
           onGroupId={setEditMeetingGroupId}
+          initialGroupId={ongoing?.meeting.group_id ?? ""}
         />
       )}
 
@@ -1812,6 +1813,7 @@ function MeetingDialog({
   groupOptions,
   groupId,
   onGroupId,
+  initialGroupId,
 }: {
   title: string;
   name: string;
@@ -1826,8 +1828,10 @@ function MeetingDialog({
   groupOptions?: GroupOption[];
   groupId?: string;
   onGroupId?: (v: string) => void;
+  initialGroupId?: string;
 }) {
   const showGroup = !!groupOptions;
+  const groupChanged = !!initialGroupId && !!groupId && initialGroupId !== groupId;
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in"
@@ -1879,13 +1883,18 @@ function MeetingDialog({
           </label>
         )}
         <FolderSelect folder={folder} folders={folders} onFolder={onFolder} onCreateFolder={onCreateFolder} />
-        <div className="mt-6 flex items-center justify-between gap-2">
+        <div className="mt-6 flex items-start justify-between gap-2">
           <button
             onClick={onClose}
             className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
           >
             Cancel
           </button>
+          {groupChanged && (
+            <p className="flex-1 pl-16 pr-2 text-right text-[11px] leading-tight text-destructive">
+              Changing group will delete<br />current attendance list
+            </p>
+          )}
           <button
             onClick={onConfirm}
             disabled={!name.trim() || (showGroup && !groupId)}
