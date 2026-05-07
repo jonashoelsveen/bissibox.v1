@@ -1622,6 +1622,7 @@ export function TeamBoardPage({
           groupOptions={kind === "group" ? groupOptions : undefined}
           groupId={editMeetingGroupId}
           onGroupId={setEditMeetingGroupId}
+          initialGroupId={ongoing?.meeting.group_id ?? ""}
         />
       )}
 
