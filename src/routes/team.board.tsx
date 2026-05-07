@@ -1813,6 +1813,7 @@ function MeetingDialog({
   groupOptions,
   groupId,
   onGroupId,
+  initialGroupId,
 }: {
   title: string;
   name: string;
@@ -1827,8 +1828,10 @@ function MeetingDialog({
   groupOptions?: GroupOption[];
   groupId?: string;
   onGroupId?: (v: string) => void;
+  initialGroupId?: string;
 }) {
   const showGroup = !!groupOptions;
+  const groupChanged = !!initialGroupId && !!groupId && initialGroupId !== groupId;
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in"
