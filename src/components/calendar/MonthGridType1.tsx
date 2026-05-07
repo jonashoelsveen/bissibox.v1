@@ -589,13 +589,14 @@ export function MonthGridType1({
                     openPopoverAt(pos, e.currentTarget);
                   }}
                   className={[
-                    "group/cell relative flex flex-col border-b border-r border-hairline transition-colors",
+                    "group/cell group/daynote-anchor relative flex flex-col border-b border-r border-hairline transition-colors",
                     "first:border-l-0", // first column has no left border (parent supplies)
                     isWeekend ? "bg-muted/20" : "bg-card",
                     !d.inMonth ? "bg-muted/40 text-muted-foreground/60" : "",
                     isInRange ? "bg-primary/10" : "",
                     "hover:bg-secondary/40",
                   ].join(" ")}
+                  data-day-anchor=""
                   style={{ cursor: d.inMonth ? "cell" : "default" }}
                 >
                   {/* Day number — small, top-right, muted */}
