@@ -322,7 +322,7 @@ export function NotePanel({
     >
       <div
         className="relative overflow-hidden rounded-b-md border border-t-0 border-ink/15 shadow-lg"
-        style={{ background: isEdit ? "hsl(var(--card))" : previewBg }}
+        style={{ background: previewBg }}
       >
         <span
           aria-hidden

@@ -999,6 +999,7 @@ export function UnifiedElasticGrid({
               onSaveSessionNote={(id, note) =>
                 onUpsertEvent({ id, sessionNote: note || undefined })
               }
+              onUpsertSession={(patch) => onUpsertEvent(patch)}
             />
           )}
           {mode.kind === "year" && todayColIdx >= 0 && nowMinutesSinceStart !== null && (
@@ -1852,6 +1853,7 @@ function WeekEventsOverlay({
   onEventDrop,
   onDeleteEvent,
   onSaveSessionNote,
+  onUpsertSession,
 }: {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   events: CalendarEvent[];
@@ -1864,6 +1866,7 @@ function WeekEventsOverlay({
   onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
   onDeleteEvent?: (id: string) => void;
   onSaveSessionNote?: (id: string, note: string) => void;
+  onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
 }) {
   const [tileDesign] = useSessionTileDesign();
   const [unit] = useDistanceUnit();
@@ -2181,14 +2184,13 @@ function WeekEventsOverlay({
             ev={ev}
             blockRect={hoverRect}
             rowHeight={rowHeight}
-            visible={true}
+            visible={hoverId === ev.id}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
-            onOpenDetails={() => {
+            onForceClose={() => {
               cancelClose();
               setHoverId(null);
               setHoverRect(null);
-              onEventClick(ev, document.body as HTMLElement);
             }}
             onDelete={() => {
               cancelClose();
@@ -2197,6 +2199,7 @@ function WeekEventsOverlay({
               onDeleteEvent?.(ev.id);
             }}
             onSaveNote={(note) => onSaveSessionNote?.(ev.id, note)}
+            onUpsert={(patch) => onUpsertSession?.(patch)}
           />
         );
       })()}
