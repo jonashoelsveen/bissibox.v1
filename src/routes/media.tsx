@@ -2463,7 +2463,33 @@ function AccessGroup({
   );
 }
 
-function SharePanel({ url, disabled }: { url?: string; disabled?: boolean }) {
+function DrawPanel() {
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-hairline bg-card p-4">
+        <div className="mb-2 flex items-center gap-2 text-sm text-ink">
+          <Pencil className="h-4 w-4" />
+          Draw on media
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Drawing tools will appear here. More instructions coming.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function SharePanel({
+  url,
+  disabled,
+  items,
+  urls,
+}: {
+  url?: string;
+  disabled?: boolean;
+  items?: MediaItem[];
+  urls?: Record<string, string>;
+}) {
   const targets = [
     { name: "Instagram", href: "https://www.instagram.com/", Icon: Instagram },
     { name: "Facebook", href: "https://www.facebook.com/", Icon: Facebook },
@@ -2485,46 +2511,84 @@ function SharePanel({ url, disabled }: { url?: string; disabled?: boolean }) {
     }
   };
 
-  if (disabled) {
-    return (
-      <p className="rounded-lg border border-hairline bg-secondary/40 px-3 py-3 text-[11px] text-muted-foreground">
-        Share is available for one item at a time. Select a single item to share.
-      </p>
-    );
-  }
+  const downloadAll = async () => {
+    const list = items && items.length > 0 ? items : [];
+    const single = !list.length && url ? [{ id: "single", url, ext: "" }] : null;
+    const targets = single
+      ? single
+      : list.map((it) => {
+          const u = urls?.[it.id];
+          const ext = it.media_type === "video" ? "mp4" : "jpg";
+          const base = (it.storage_path?.split("/").pop() || it.id).split("?")[0];
+          const name = base.includes(".") ? base : `${base}.${ext}`;
+          return { id: it.id, url: u, ext: name };
+        });
+    for (const t of targets) {
+      if (!t.url) continue;
+      try {
+        const res = await fetch(t.url);
+        const blob = await res.blob();
+        const objUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = objUrl;
+        a.download = typeof t.ext === "string" && t.ext ? t.ext : `media-${t.id}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(objUrl);
+      } catch (e) {
+        toast.error("Download failed");
+      }
+    }
+  };
 
   return (
     <div className="space-y-2">
       <button
-        onClick={nativeShare}
+        onClick={downloadAll}
         className="flex w-full items-center gap-3 rounded-xl border border-hairline bg-card px-4 py-3 text-sm text-ink hover:bg-secondary"
       >
-        <Share2 className="h-4 w-4" />
-        Share via device
+        <Download className="h-4 w-4" />
+        Download
       </button>
-      <button
-        onClick={async () => {
-          if (!url) return;
-          await navigator.clipboard.writeText(url);
-          toast.success("Link copied");
-        }}
-        className="flex w-full items-center gap-3 rounded-xl border border-hairline bg-card px-4 py-3 text-sm text-ink hover:bg-secondary"
-      >
-        <Link2 className="h-4 w-4" />
-        Copy link
-      </button>
-      {targets.map(({ name, href, Icon }) => (
-        <a
-          key={name}
-          href={href}
-          target="_blank"
-          rel="noreferrer"
-          className="flex w-full items-center gap-3 rounded-xl border border-hairline bg-card px-4 py-3 text-sm text-ink hover:bg-secondary"
-        >
-          <Icon className="h-4 w-4" />
-          {name}
-        </a>
-      ))}
+      {disabled ? (
+        <p className="rounded-lg border border-hairline bg-secondary/40 px-3 py-3 text-[11px] text-muted-foreground">
+          Sharing to social platforms is available for one item at a time. Select a single item to share.
+        </p>
+      ) : (
+        <>
+          <button
+            onClick={nativeShare}
+            className="flex w-full items-center gap-3 rounded-xl border border-hairline bg-card px-4 py-3 text-sm text-ink hover:bg-secondary"
+          >
+            <Share2 className="h-4 w-4" />
+            Share via device
+          </button>
+          <button
+            onClick={async () => {
+              if (!url) return;
+              await navigator.clipboard.writeText(url);
+              toast.success("Link copied");
+            }}
+            className="flex w-full items-center gap-3 rounded-xl border border-hairline bg-card px-4 py-3 text-sm text-ink hover:bg-secondary"
+          >
+            <Link2 className="h-4 w-4" />
+            Copy link
+          </button>
+          {targets.map(({ name, href, Icon }) => (
+            <a
+              key={name}
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className="flex w-full items-center gap-3 rounded-xl border border-hairline bg-card px-4 py-3 text-sm text-ink hover:bg-secondary"
+            >
+              <Icon className="h-4 w-4" />
+              {name}
+            </a>
+          ))}
+        </>
+      )}
     </div>
   );
 }
