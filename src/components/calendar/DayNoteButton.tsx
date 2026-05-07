@@ -388,7 +388,7 @@ export function NotePanel({
           ) : (
             <div
               className="block w-full whitespace-pre-wrap text-[12px] leading-snug text-ink"
-              style={{ minHeight: defaultBodyHeight, cursor: "default" }}
+              style={{ minHeight: defaultBodyHeight, cursor: "text" }}
             >
               {initialValue || (
                 <span className="text-muted-foreground/60">Skriv notat…</span>
