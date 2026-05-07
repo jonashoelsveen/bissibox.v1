@@ -3462,6 +3462,13 @@ function MediaTabView({
   const [tab, setTab] = useState<"about" | "access" | "draw" | "export">("about");
   const [idx, setIdx] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
+  const drawing = useDrawingState();
+  const currentIdForReset = items[idx]?.id;
+  useEffect(() => { drawing.clear(); drawing.setEnabled(false); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [currentIdForReset]);
+  useEffect(() => {
+    const isVid = items[idx]?.media_type === "video";
+    if (!isVid && tab === "draw") setTab("about");
+  }, [items, idx, tab]);
 
   const load = useCallback(async () => {
     if (!user || mediaIds.length === 0) return;
@@ -3583,12 +3590,9 @@ function MediaTabView({
   const current = items[idx];
   const url = current ? urls[current.id] : undefined;
   const isVideo = current?.media_type === "video";
-  const drawing = useDrawingState();
-  useEffect(() => { drawing.clear(); drawing.setEnabled(false); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [current?.id]);
   const tabs: ReadonlyArray<"about" | "access" | "draw" | "export"> = isVideo
     ? ["about", "access", "draw", "export"]
     : ["about", "access", "export"];
-  useEffect(() => { if (!isVideo && tab === "draw") setTab("about"); }, [isVideo, tab]);
 
   return (
     <div className="flex h-[calc(100vh-12rem)] min-h-[480px] gap-4 rounded-2xl border border-hairline bg-card overflow-hidden">
