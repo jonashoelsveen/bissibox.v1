@@ -120,7 +120,7 @@ export function DayNoteButton({
 
   const positionClass =
     variant === "week"
-      ? "absolute left-1.5 top-1/2 -translate-y-1/2"
+      ? "absolute right-1.5 top-1/2 -translate-y-1/2"
       : "absolute bottom-1 right-1";
 
   return (
