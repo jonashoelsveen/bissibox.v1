@@ -126,11 +126,12 @@ export function DayNoteButton({
     if (!anchor) return;
     anchorElRef.current = anchor;
     const onEnter = () => {
+      cancelClose();
       setMode((m) => (m === "edit" ? m : "preview"));
       refreshRect();
     };
     const onLeave = () => {
-      setMode((m) => (m === "edit" ? m : null));
+      scheduleClose();
     };
     anchor.addEventListener("mouseenter", onEnter);
     anchor.addEventListener("mouseleave", onLeave);
