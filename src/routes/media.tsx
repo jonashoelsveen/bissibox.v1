@@ -2055,7 +2055,9 @@ function Lightbox({
   const isVideo = current?.media_type === "video";
   const drawing = useDrawingState();
   useEffect(() => { drawing.clear(); drawing.setEnabled(false); /* reset on item change */ /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [current?.id]);
-  const tabs = (isVideo ? ["about", "access", "draw", "export"] : ["about", "access", "export"]) as const;
+  const tabs: ReadonlyArray<"about" | "access" | "draw" | "export"> = isVideo
+    ? ["about", "access", "draw", "export"]
+    : ["about", "access", "export"];
   useEffect(() => { if (!isVideo && tab === "draw") setTab("about"); }, [isVideo, tab]);
 
   return (
