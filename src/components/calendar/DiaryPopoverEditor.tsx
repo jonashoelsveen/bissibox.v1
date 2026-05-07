@@ -87,11 +87,23 @@ export function DiaryPopoverEditor({
   const [diaryType, setDiaryType] = useState<DiaryType>(
     (initialEvent?.diaryType as DiaryType) ?? "training",
   );
+  // Derive group/sub from initialEvent.activity when not explicitly set,
+  // so opening the editor for a strength / cycling / swimming session does
+  // not silently revert it to "endurance / running".
+  const inferredFromActivity = (() => {
+    const a = (initialEvent?.activity || "").toLowerCase();
+    if (a === "strength") return { group: "strength", sub: "max" };
+    if (a === "cycling") return { group: "endurance", sub: "cycling" };
+    if (a === "swimming") return { group: "endurance", sub: "swimming" };
+    if (a === "xcskiing") return { group: "endurance", sub: "other" };
+    if (a === "running") return { group: "endurance", sub: "running" };
+    return null;
+  })();
   const [diaryGroup, setDiaryGroup] = useState<string>(
-    initialEvent?.diaryGroup ?? "endurance",
+    initialEvent?.diaryGroup ?? inferredFromActivity?.group ?? "endurance",
   );
   const [diarySub, setDiarySub] = useState<string>(
-    initialEvent?.diarySub ?? "running",
+    initialEvent?.diarySub ?? inferredFromActivity?.sub ?? "running",
   );
   const [time, setTime] = useState<{ startMin: number; endMin: number } | null>(initialTime);
   const [showDetails, setShowDetails] = useState(false);
