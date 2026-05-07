@@ -3161,7 +3161,7 @@ function VideoPlayer({ src }: { src?: string }) {
     <div className="flex h-full w-full max-w-[88%] flex-col gap-3">
       <div
         className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg bg-black"
-        onClick={togglePlay}
+        onClick={drawing?.enabled ? undefined : togglePlay}
       >
         <video
           ref={videoRef}
@@ -3170,6 +3170,7 @@ function VideoPlayer({ src }: { src?: string }) {
           playsInline
           preload="metadata"
         />
+        {drawing && <DrawingOverlay state={drawing} />}
       </div>
       <div className="w-full shrink-0">
         {/* Centered minimalist play/pause */}
