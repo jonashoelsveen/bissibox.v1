@@ -2044,7 +2044,7 @@ function Lightbox({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const [tab, setTab] = useState<"about" | "access" | "share">("about");
+  const [tab, setTab] = useState<"about" | "access" | "draw" | "export">("about");
   const [idx, setIdx] = useState(0);
   const isMulti = items.length > 1;
   const current = items[idx];
