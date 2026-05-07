@@ -3318,7 +3318,9 @@ function DockItem({
 
 function DrawingOverlay({ state }: { state: DrawingState }) {
   const ref = useRef<SVGSVGElement>(null);
-  const getPoint = (e: React.PointerEvent | React.MouseEvent) => {
+  const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
+
+  const getPoint = (e: React.MouseEvent) => {
     const el = ref.current;
     if (!el) return { x: 0, y: 0 };
     const r = el.getBoundingClientRect();
@@ -3327,28 +3329,41 @@ function DrawingOverlay({ state }: { state: DrawingState }) {
       y: ((e.clientY - r.top) / r.height) * 100,
     };
   };
+
+  type Stroke = { color: string; points: DrawPoint[] };
+  const strokes: Stroke[] = [];
+  let cur: Stroke | null = null;
+  for (const ev of state.events) {
+    if (ev.type === "end") {
+      if (cur && cur.points.length >= 2) strokes.push(cur);
+      cur = null;
+    } else {
+      if (!cur || cur.color !== ev.color) {
+        if (cur && cur.points.length >= 2) strokes.push(cur);
+        cur = { color: ev.color, points: [{ x: ev.x, y: ev.y }] };
+      } else {
+        cur.points.push({ x: ev.x, y: ev.y });
+      }
+    }
+  }
+  const openStroke = cur;
+  if (openStroke && openStroke.points.length >= 1) strokes.push(openStroke);
+
+  const toPath = (pts: DrawPoint[]) =>
+    pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+
   const handleClick = (e: React.MouseEvent) => {
     if (!state.enabled) return;
     e.stopPropagation();
-    const p = getPoint(e);
-    if (!state.current) {
-      state.setCurrent({ color: state.color, points: [p] });
-    } else {
-      state.setCurrent({ ...state.current, points: [...state.current.points, p] });
-    }
+    state.addPoint(getPoint(e));
   };
   const handleDouble = (e: React.MouseEvent) => {
     if (!state.enabled) return;
     e.stopPropagation();
-    if (state.current && state.current.points.length >= 2) {
-      state.setStrokes((s) => [...s, state.current!]);
-    }
-    state.setCurrent(null);
+    state.endStroke();
   };
-  const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
 
-  const toPath = (pts: { x: number; y: number }[]) =>
-    pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+  const STROKE_W = 4;
 
   return (
     <svg
@@ -3359,27 +3374,30 @@ function DrawingOverlay({ state }: { state: DrawingState }) {
       style={{ pointerEvents: state.enabled ? "auto" : "none", cursor: state.enabled ? "crosshair" : "default" }}
       onClick={handleClick}
       onDoubleClick={handleDouble}
-      onMouseMove={(e) => state.enabled && state.current && setHover(getPoint(e))}
+      onMouseMove={(e) => state.enabled && openStroke && setHover(getPoint(e))}
       onMouseLeave={() => setHover(null)}
     >
-      {state.strokes.map((s, i) => (
-        <path key={i} d={toPath(s.points)} stroke={s.color} strokeWidth={0.4} fill="none" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" style={{ strokeWidth: 2 } as React.CSSProperties} />
+      {strokes.map((s, i) => (
+        <path
+          key={i}
+          d={toPath(s.points)}
+          stroke={s.color}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ strokeWidth: STROKE_W } as React.CSSProperties}
+        />
       ))}
-      {state.current && (
-        <>
-          <path d={toPath(state.current.points)} stroke={state.current.color} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ strokeWidth: 2 } as React.CSSProperties} />
-          {hover && state.current.points.length > 0 && (
-            <line
-              x1={state.current.points[state.current.points.length - 1].x}
-              y1={state.current.points[state.current.points.length - 1].y}
-              x2={hover.x}
-              y2={hover.y}
-              stroke={state.current.color}
-              strokeDasharray="2 2"
-              style={{ strokeWidth: 1.5, opacity: 0.6 } as React.CSSProperties}
-            />
-          )}
-        </>
+      {openStroke && hover && openStroke.points.length > 0 && (
+        <line
+          x1={openStroke.points[openStroke.points.length - 1].x}
+          y1={openStroke.points[openStroke.points.length - 1].y}
+          x2={hover.x}
+          y2={hover.y}
+          stroke={openStroke.color}
+          strokeLinecap="round"
+          style={{ strokeWidth: STROKE_W, opacity: 0.7 } as React.CSSProperties}
+        />
       )}
     </svg>
   );
