@@ -273,10 +273,18 @@ export function NotePanel({
         e.preventDefault();
         onSave(val);
         onClose();
-      } else if (e.key === "Enter" && !e.shiftKey && closeOnEnter) {
-        e.preventDefault();
-        onSave(val);
-        onClose();
+      } else if (e.key === "Enter" && !e.shiftKey) {
+        if (closeOnEnter) {
+          e.preventDefault();
+          onSave(val);
+          onClose();
+        } else {
+          // Save current text and hide the footer; keep editor open so the
+          // user can keep typing / adding newlines (Shift+Enter style).
+          e.preventDefault();
+          onSave(val);
+          setFooterHidden(true);
+        }
       }
     };
     window.addEventListener("mousedown", onDown);
