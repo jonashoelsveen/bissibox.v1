@@ -93,6 +93,19 @@ export function DayNoteButton({
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const anchorElRef = useRef<HTMLElement | null>(null);
+  const closeTimerRef = useRef<number | null>(null);
+  const cancelClose = () => {
+    if (closeTimerRef.current != null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimerRef.current = window.setTimeout(() => {
+      setMode((m) => (m === "edit" ? m : null));
+    }, 120);
+  };
 
   const refreshRect = () => {
     const anchor =
@@ -113,11 +126,12 @@ export function DayNoteButton({
     if (!anchor) return;
     anchorElRef.current = anchor;
     const onEnter = () => {
+      cancelClose();
       setMode((m) => (m === "edit" ? m : "preview"));
       refreshRect();
     };
     const onLeave = () => {
-      setMode((m) => (m === "edit" ? m : null));
+      scheduleClose();
     };
     anchor.addEventListener("mouseenter", onEnter);
     anchor.addEventListener("mouseleave", onLeave);
@@ -168,8 +182,11 @@ export function DayNoteButton({
       </button>
       {mode && anchorRect && (
         <div
-          onMouseEnter={() => { if (has) setMode((m) => (m === "edit" ? m : "preview")); }}
-          onMouseLeave={() => setMode((m) => (m === "edit" ? m : null))}
+          onMouseEnter={() => {
+            cancelClose();
+            if (has) setMode((m) => (m === "edit" ? m : "preview"));
+          }}
+          onMouseLeave={() => scheduleClose()}
         >
           <NotePanel
             anchorRect={anchorRect}
@@ -180,7 +197,7 @@ export function DayNoteButton({
             closeOnEnter={false}
             onSave={(text) => writeNote(calId, date, text)}
             onClose={() => setMode(null)}
-            onRequestEdit={() => setMode("edit")}
+            onRequestEdit={() => { cancelClose(); setMode("edit"); }}
           />
         </div>
       )}
