@@ -189,7 +189,7 @@ export function DayNoteButton({
 
 export interface NotePanelProps {
   anchorRect: DOMRect;
-  headerLabel: string;
+  headerLabel?: string;
   initialValue: string;
   mode: "preview" | "edit";
   defaultBodyHeight?: number;
