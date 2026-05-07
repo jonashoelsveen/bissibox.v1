@@ -126,30 +126,44 @@ export function DayNoteButton({
     if (!anchor) return;
     anchorElRef.current = anchor;
     const onEnter = () => {
-      console.log("[daynote] anchor enter");
       cancelClose();
       setMode((m) => (m === "edit" ? m : "preview"));
       refreshRect();
     };
-    const onLeave = (e: MouseEvent) => {
-      const related = e.relatedTarget as Node | null;
-      const intoPanel =
-        related instanceof HTMLElement && !!related.closest('[data-note-panel="1"]');
-      console.log("[daynote] anchor leave intoPanel=", intoPanel);
-      if (intoPanel) {
-        cancelClose();
-        return;
-      }
-      scheduleClose();
-    };
     anchor.addEventListener("mouseenter", onEnter);
-    anchor.addEventListener("mouseleave", onLeave);
     return () => {
       anchor.removeEventListener("mouseenter", onEnter);
-      anchor.removeEventListener("mouseleave", onLeave);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [has, anchorSelector]);
+
+  // While preview is open, close only when cursor leaves BOTH the anchor
+  // and the floating panel (with a small bridge tolerance).
+  useEffect(() => {
+    if (mode !== "preview") return;
+    const onMove = (e: MouseEvent) => {
+      const anchor = anchorElRef.current;
+      const panel = document.querySelector('[data-note-panel="1"]') as HTMLElement | null;
+      const inside = (el: HTMLElement | null) => {
+        if (!el) return false;
+        const r = el.getBoundingClientRect();
+        const pad = 6;
+        return (
+          e.clientX >= r.left - pad &&
+          e.clientX <= r.right + pad &&
+          e.clientY >= r.top - pad &&
+          e.clientY <= r.bottom + pad
+        );
+      };
+      if (!inside(anchor) && !inside(panel)) {
+        scheduleClose();
+      } else {
+        cancelClose();
+      }
+    };
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, [mode]);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
