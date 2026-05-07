@@ -2067,7 +2067,26 @@ function WeekEventsOverlay({
                       className="flex w-1/2 items-center justify-center text-ink"
                       title={distLabel}
                     >
-                      {distVal != null ? (
+                      {isStrength ? (
+                        <span
+                          className="flex items-baseline gap-1"
+                          style={{
+                            fontFamily: "Helvetica, Arial, sans-serif",
+                            fontWeight: 700,
+                            fontSize: 22,
+                            lineHeight: 1,
+                          }}
+                        >
+                          {durH > 0 && (
+                            <>
+                              <span>{durH}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{hourSuffix}</span>
+                            </>
+                          )}
+                          <span>{durM}</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>m</span>
+                        </span>
+                      ) : distVal != null ? (
                         <span
                           className="flex items-baseline gap-1"
                           style={{
