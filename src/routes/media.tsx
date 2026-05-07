@@ -764,12 +764,14 @@ function MediaPage({
   externalView,
   hideNewActions,
   onOpenMedia,
+  onOpenMediaTab,
 }: {
   actionsMount?: HTMLDivElement | null;
   hideSideNav?: boolean;
   externalView?: { type: "all" } | { type: "album"; id: string | null };
   hideNewActions?: boolean;
   onOpenMedia?: (id: string) => void;
+  onOpenMediaTab?: (tabId: string, title: string, mediaIds: string[]) => void;
 } = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
