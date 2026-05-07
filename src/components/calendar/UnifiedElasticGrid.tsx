@@ -999,6 +999,7 @@ export function UnifiedElasticGrid({
               onSaveSessionNote={(id, note) =>
                 onUpsertEvent({ id, sessionNote: note || undefined })
               }
+              onUpsertSession={(patch) => onUpsertEvent(patch)}
             />
           )}
           {mode.kind === "year" && todayColIdx >= 0 && nowMinutesSinceStart !== null && (
