@@ -196,6 +196,12 @@ export interface NotePanelProps {
   panelWidth?: number;
   /** Custom anchor placement: defaults to anchorRect.bottom + anchorRect.left. */
   placement?: "below-anchor-left" | "right-of-anchor-top";
+  /** Default true: Enter saves and closes. Set false to allow newlines and let parent handle persistence. */
+  closeOnEnter?: boolean;
+  /** Default true: clicking outside saves and closes. Set false when parent owns dismissal. */
+  closeOnOutsideClick?: boolean;
+  /** Default true: shows the bottom Save bar in edit mode. */
+  showFooter?: boolean;
   onSave: (text: string) => void;
   onClose: () => void;
   onRequestEdit?: () => void;
@@ -209,6 +215,9 @@ export function NotePanel({
   defaultBodyHeight = 240,
   panelWidth = 280,
   placement = "below-anchor-left",
+  closeOnEnter = true,
+  closeOnOutsideClick = true,
+  showFooter = true,
   onSave,
   onClose,
   onRequestEdit,
@@ -217,11 +226,28 @@ export function NotePanel({
   const ref = useRef<HTMLDivElement | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const [extra, setExtra] = useState(0);
+  const [footerHidden, setFooterHidden] = useState(false);
   const isEdit = mode === "edit";
 
   useEffect(() => {
     if (mode === "preview") setVal(initialValue);
   }, [initialValue, mode]);
+
+  // When entering edit mode, place caret at end of existing text.
+  useEffect(() => {
+    if (!isEdit) return;
+    const ta = taRef.current;
+    if (!ta) return;
+    const len = ta.value.length;
+    requestAnimationFrame(() => {
+      ta.focus();
+      try {
+        ta.setSelectionRange(len, len);
+      } catch {
+        /* ignore */
+      }
+    });
+  }, [isEdit]);
 
   useLayoutEffect(() => {
     const ta = taRef.current;
@@ -235,6 +261,7 @@ export function NotePanel({
   useEffect(() => {
     if (!isEdit) return;
     const onDown = (e: MouseEvent) => {
+      if (!closeOnOutsideClick) return;
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
         onSave(val);
@@ -244,11 +271,20 @@ export function NotePanel({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
-      } else if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
         onSave(val);
         onClose();
+      } else if (e.key === "Enter" && !e.shiftKey) {
+        if (closeOnEnter) {
+          e.preventDefault();
+          onSave(val);
+          onClose();
+        } else {
+          // Save current text and hide the footer; keep editor open so the
+          // user can keep typing / adding newlines (Shift+Enter style).
+          e.preventDefault();
+          onSave(val);
+          setFooterHidden(true);
+        }
       }
     };
     window.addEventListener("mousedown", onDown);
@@ -257,7 +293,7 @@ export function NotePanel({
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("keydown", onKey);
     };
-  }, [val, isEdit, onSave, onClose]);
+  }, [val, isEdit, onSave, onClose, closeOnEnter, closeOnOutsideClick]);
 
   const onDragStart = (e: React.MouseEvent) => {
     if (!isEdit) return;
@@ -337,7 +373,6 @@ export function NotePanel({
           {isEdit ? (
             <textarea
               ref={taRef}
-              autoFocus
               value={val}
               onChange={(e) => setVal(e.target.value)}
               placeholder="Skriv notat…"
@@ -355,7 +390,7 @@ export function NotePanel({
             </div>
           )}
         </div>
-        {isEdit && (
+        {isEdit && showFooter && !footerHidden && (
           <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
             <span className="mono tabular-nums">⏎ for å lagre</span>
             <button
