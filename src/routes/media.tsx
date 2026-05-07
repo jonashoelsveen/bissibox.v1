@@ -2117,7 +2117,8 @@ function Lightbox({
             {tab === "access" && (
               <AccessPanel items={items} onSaved={onChanged} />
             )}
-            {tab === "share" && <SharePanel url={url} disabled={isMulti} />}
+            {tab === "draw" && <DrawPanel />}
+            {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
           </div>
         </aside>
       </div>
