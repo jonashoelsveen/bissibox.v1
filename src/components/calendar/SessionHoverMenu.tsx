@@ -195,7 +195,11 @@ export function SessionHoverMenu({
       )}
 
       {showNote && (
-        <div data-session-note-panel="1">
+        <div
+          data-session-note-panel="1"
+          onMouseEnter={onMenuEnter}
+          onMouseLeave={() => { if (!sticky) onMenuLeave?.(); }}
+        >
           <NotePanel
             anchorRect={
               {
