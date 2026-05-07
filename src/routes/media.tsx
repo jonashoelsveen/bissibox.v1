@@ -2551,17 +2551,19 @@ const DRAW_COLORS = [
   "#17A4E0", "#1960C4", "#A22CC8", "#D22551",
 ];
 
-export type DrawStroke = { color: string; points: { x: number; y: number }[] };
+export type DrawPoint = { x: number; y: number };
+export type DrawEvent =
+  | { type: "point"; x: number; y: number; color: string }
+  | { type: "end" };
 
 export interface DrawingState {
   enabled: boolean;
   setEnabled: (v: boolean) => void;
   color: string;
   setColor: (c: string) => void;
-  strokes: DrawStroke[];
-  setStrokes: React.Dispatch<React.SetStateAction<DrawStroke[]>>;
-  current: DrawStroke | null;
-  setCurrent: React.Dispatch<React.SetStateAction<DrawStroke | null>>;
+  events: DrawEvent[];
+  addPoint: (p: DrawPoint) => void;
+  endStroke: () => void;
   undo: () => void;
   redo: () => void;
   clear: () => void;
@@ -2572,44 +2574,44 @@ export interface DrawingState {
 function useDrawingState(): DrawingState {
   const [enabled, setEnabled] = useState(false);
   const [color, setColor] = useState(DRAW_COLORS[0]);
-  const [strokes, setStrokes] = useState<DrawStroke[]>([]);
-  const [redoStack, setRedoStack] = useState<DrawStroke[]>([]);
-  const [current, setCurrent] = useState<DrawStroke | null>(null);
+  const [events, setEvents] = useState<DrawEvent[]>([]);
+  const [redoStack, setRedoStack] = useState<DrawEvent[]>([]);
 
+  const push = (e: DrawEvent) => {
+    setEvents((arr) => [...arr, e]);
+    setRedoStack([]);
+  };
+  const addPoint = (p: DrawPoint) => push({ type: "point", x: p.x, y: p.y, color });
+  const endStroke = () => {
+    setEvents((arr) => (arr.length === 0 || arr[arr.length - 1].type === "end" ? arr : [...arr, { type: "end" }]));
+    setRedoStack([]);
+  };
   const undo = () => {
-    setStrokes((s) => {
-      if (s.length === 0) return s;
-      const last = s[s.length - 1];
+    setEvents((arr) => {
+      if (arr.length === 0) return arr;
+      const last = arr[arr.length - 1];
       setRedoStack((r) => [...r, last]);
-      return s.slice(0, -1);
+      return arr.slice(0, -1);
     });
   };
   const redo = () => {
     setRedoStack((r) => {
       if (r.length === 0) return r;
       const last = r[r.length - 1];
-      setStrokes((s) => [...s, last]);
+      setEvents((arr) => [...arr, last]);
       return r.slice(0, -1);
     });
   };
   const clear = () => {
-    setStrokes([]);
+    setEvents([]);
     setRedoStack([]);
-    setCurrent(null);
-  };
-
-  // pushing a new stroke clears redo
-  const setStrokesWrapped: React.Dispatch<React.SetStateAction<DrawStroke[]>> = (v) => {
-    setRedoStack([]);
-    setStrokes(v);
   };
 
   return {
     enabled, setEnabled, color, setColor,
-    strokes, setStrokes: setStrokesWrapped,
-    current, setCurrent,
+    events, addPoint, endStroke,
     undo, redo, clear,
-    canUndo: strokes.length > 0,
+    canUndo: events.length > 0,
     canRedo: redoStack.length > 0,
   };
 }
