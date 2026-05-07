@@ -2034,6 +2034,7 @@ function Lightbox({
   itemAlbums,
   onClose,
   onChanged,
+  isTeamMode,
 }: {
   items: MediaItem[];
   urls: Record<string, string>;
@@ -2043,6 +2044,7 @@ function Lightbox({
   itemAlbums: Record<string, string[]>;
   onClose: () => void;
   onChanged: () => void;
+  isTeamMode?: boolean;
 }) {
   const [tab, setTab] = useState<"about" | "access" | "draw" | "export">("about");
   const [idx, setIdx] = useState(0);
