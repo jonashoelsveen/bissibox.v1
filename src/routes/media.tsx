@@ -1563,6 +1563,7 @@ function MediaPage({
             exitSelect();
           }}
           onChanged={() => void load()}
+          isTeamMode={isTeamMode}
         />
       )}
     </div>
