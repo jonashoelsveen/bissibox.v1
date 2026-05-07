@@ -34,15 +34,29 @@ function localISO(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-function sportToDiary(sport: string | null): { group: string; sub?: string; activity?: "running" | "cycling" | "swimming" | "strength" | "xcskiing" } {
+function sportToDiary(sport: string | null, name: string | null): {
+  group: string;
+  sub?: string;
+  activity?: "running" | "cycling" | "swimming" | "strength" | "xcskiing";
+} {
   const s = (sport || "").toLowerCase();
-  if (s.includes("run")) return { group: "endurance", sub: "running", activity: "running" };
-  if (s.includes("ride") || s.includes("cycl") || s.includes("bike")) return { group: "endurance", sub: "cycling", activity: "cycling" };
+  const t = (name || "").toLowerCase();
+  if (s.includes("run")) {
+    const isTrack = /\b(track|bane)\b/i.test(t);
+    return { group: "endurance", sub: isTrack ? "track" : "running", activity: "running" };
+  }
+  if (s.includes("ride") || s.includes("cycl") || s.includes("bike")) {
+    return { group: "endurance", sub: "cycling", activity: "cycling" };
+  }
   if (s.includes("swim")) return { group: "endurance", sub: "swimming", activity: "swimming" };
   if (s.includes("ski")) return { group: "endurance", sub: "other", activity: "xcskiing" };
-  if (s.includes("weight") || s.includes("strength")) return { group: "strength", activity: "strength" };
+  if (s.includes("weight") || s.includes("strength")) {
+    const isCore = /\b(core|basis)\b/i.test(t);
+    return { group: "strength", sub: isCore ? "core" : "max", activity: "strength" };
+  }
   if (s.includes("yoga") || s.includes("stretch")) return { group: "stretch" };
-  return { group: "endurance", sub: "other", activity: "running" };
+  // Unknown sport types still get imported, but show as "Else".
+  return { group: "else" };
 }
 
 export function rowToCalendarEvent(row: StravaActivityRow): CalendarEvent | null {
@@ -51,14 +65,14 @@ export function rowToCalendarEvent(row: StravaActivityRow): CalendarEvent | null
   if (Number.isNaN(start.getTime())) return null;
   const dur = (row.elapsed_time_sec ?? row.moving_time_sec ?? 3600) * 1000;
   const end = new Date(start.getTime() + dur);
-  const { group, sub, activity } = sportToDiary(row.sport_type);
+  const { group, sub, activity } = sportToDiary(row.sport_type, row.name);
   return {
     id: `strava:${row.strava_activity_id ?? row.id}`,
     title: row.name || row.sport_type || "Strava activity",
     startISO: localISO(start),
     endISO: localISO(end),
     allDay: false,
-    color: colorForActivity(sub ?? activity ?? row.sport_type),
+    color: colorForStravaSession(row.sport_type, row.name),
     diaryType: "training",
     diaryGroup: group,
     diarySub: sub,
@@ -72,6 +86,37 @@ export function rowToCalendarEvent(row: StravaActivityRow): CalendarEvent | null
     stravaActivityId: row.strava_activity_id ?? undefined,
   };
 }
+
+/**
+ * Group sessions whose end-of-prev → start-of-next gap is < 30 minutes.
+ * They are rendered as one continuous block (no visual gap), but each
+ * session keeps its own tile so the activity / color split stays visible.
+ *
+ * The merging is purely visual: we extend the previous event's `endISO`
+ * to butt up against the next event's `startISO`, eliminating the gap
+ * while preserving each session as a separate calendar entry.
+ */
+export function mergeAdjacentSessions(events: CalendarEvent[]): CalendarEvent[] {
+  if (events.length < 2) return events;
+  const sorted = [...events].sort((a, b) => a.startISO.localeCompare(b.startISO));
+  const GAP_MS = 30 * 60 * 1000;
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const prev = sorted[i];
+    const next = sorted[i + 1];
+    const prevEnd = new Date(prev.endISO).getTime();
+    const nextStart = new Date(next.startISO).getTime();
+    if (Number.isNaN(prevEnd) || Number.isNaN(nextStart)) continue;
+    const gap = nextStart - prevEnd;
+    if (gap > 0 && gap < GAP_MS) {
+      // Close the gap: extend prev to touch next.
+      sorted[i] = { ...prev, endISO: next.startISO };
+    }
+  }
+  return sorted;
+}
+
+// Silence unused-import linter for colorForActivity (kept for backward compat).
+void colorForActivity;
 
 export function useStravaActivities(): {
   events: CalendarEvent[];
