@@ -215,11 +215,10 @@ export function DayNoteButton({
           onClose={() => setMode(null)}
           onRequestEdit={() => { cancelClose(); setMode("edit"); }}
           onPanelMouseEnter={() => {
-            console.log("[daynote] panel enter");
             cancelClose();
             if (has) setMode((m) => (m === "edit" ? m : "preview"));
           }}
-          onPanelMouseLeave={() => { console.log("[daynote] panel leave"); scheduleClose(); }}
+          onPanelMouseLeave={() => scheduleClose()}
         />
       )}
     </>
