@@ -3091,7 +3091,7 @@ function MediaTabView({
   const [itemAlbums, setItemAlbums] = useState<Record<string, string[]>>({});
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [userName, setUserName] = useState<string>("");
-  const [tab, setTab] = useState<"about" | "access" | "share">("about");
+  const [tab, setTab] = useState<"about" | "access" | "draw" | "export">("about");
   const [idx, setIdx] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
 
