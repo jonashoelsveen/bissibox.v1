@@ -212,6 +212,8 @@ export function SessionHoverMenu({
             mode={noteEdit ? "edit" : "preview"}
             defaultBodyHeight={140}
             panelWidth={NOTE_PANEL_W}
+            closeOnEnter={false}
+            closeOnOutsideClick={false}
             onSave={(text) => onSaveNote(text)}
             onClose={() => {
               setNoteEdit(false);
