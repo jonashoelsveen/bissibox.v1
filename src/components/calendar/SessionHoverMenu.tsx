@@ -163,7 +163,10 @@ export function SessionHoverMenu({
           <div
             ref={menuRef}
             data-session-hover-menu="1"
-            className="fixed z-[20] flex items-stretch gap-1 rounded-md border border-hairline bg-card/95 px-1.5 shadow-md backdrop-blur transition-[width] duration-150"
+            className={[
+              "fixed z-[20] flex items-stretch gap-1 border border-hairline bg-card/95 px-1.5 shadow-md backdrop-blur transition-[width] duration-150",
+              showNote ? "rounded-t-md border-b-0" : "rounded-md",
+            ].join(" ")}
             style={{ left, top, width: menuW, height: menuH }}
             onMouseEnter={onMenuEnter}
             onMouseLeave={() => { if (!sticky) onMenuLeave?.(); }}
