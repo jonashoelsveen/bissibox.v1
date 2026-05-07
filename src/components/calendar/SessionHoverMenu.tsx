@@ -2,26 +2,25 @@
  * SessionHoverMenu — right-side action menu shown when a logged session
  * (manual or Strava-synced) is hovered in the diary week view.
  *
- * Layout:
- *   - The menu sits to the right of the session block, top-aligned with the
- *     block's top edge, height ≈ 1.4× one slot row.
- *   - Width matches the day-note panel (280 px).
- *   - Buttons (left → right): Note, Details, Delete.
- *
- * Behaviour:
- *   - Hovering the wrapper reveals the menu.
- *   - If the session has a `sessionNote`, the note panel auto-opens beneath
- *     the menu in read-only preview mode (light gray background).
- *   - Clicking the note button switches the panel into edit mode.
- *   - Clicking details delegates to `onOpenDetails` (existing editor flow).
- *   - Clicking delete opens a confirm dialog; confirming calls `onDelete`.
+ * Contains: Note button, Details button, Delete button.
+ * - Compact width (3 icons). Expands to NOTE_PANEL_W when a note is shown.
+ * - Note panel uses a light-gray "preview" background; clicking the note
+ *   icon enables editing in place. While the note panel is open the menu
+ *   stays visible until the user clicks outside.
+ * - Details opens the centered SessionDetailsModal (About / Map / Note).
+ * - Delete opens a confirm dialog.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { StickyNote, Pencil, Trash2 } from "lucide-react";
 import { NotePanel } from "./DayNoteButton";
+import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
+import { CAT_TRAINING_COLOR } from "./MonthGridType1";
+import { colorForActivity } from "@/lib/activity-colors";
+import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import type { CalendarEvent } from "./yearStore";
+import { fromISOLocal, toISOLocal, setHM } from "./dateUtils";
 
 const NOTE_PANEL_W = 280;
 
