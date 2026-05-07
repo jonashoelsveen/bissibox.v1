@@ -874,10 +874,14 @@ export function UnifiedElasticGrid({
                 <div
                   key={`h-${m.idx}`}
                   data-month-col={m.idx}
-                  className={`sticky top-0 z-20 select-none border-b border-r border-hairline px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${
+                  data-day-anchor=""
+                  className={`group/daynote-anchor sticky top-0 z-20 select-none border-b border-r border-hairline px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${
                     isToday ? "bg-secondary text-ink" : "bg-card text-muted-foreground"
-                  }`}
+                  } ${appKind === "diary" ? "relative" : ""}`}
                 >
+                  {appKind === "diary" && colDate && (
+                    <DayNoteButton calId={calId} date={colDate} variant="week" />
+                  )}
                   <span>
                     {m.label}
                     {mode.kind === "year" && colDate && (
