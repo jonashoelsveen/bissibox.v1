@@ -246,6 +246,8 @@ export function NotePanel({
   onSave,
   onClose,
   onRequestEdit,
+  onPanelMouseEnter,
+  onPanelMouseLeave,
 }: NotePanelProps) {
   const [val, setVal] = useState(initialValue);
   const ref = useRef<HTMLDivElement | null>(null);
