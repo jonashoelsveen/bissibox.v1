@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, Library, Plus, Tent, Settings, LogIn, Users, Armchair, CalendarDays, Map as MapIcon, BookOpen, Briefcase } from "lucide-react";
+import { Search, Library, Plus, Tent, Settings, LogIn, Users, UsersRound, Armchair, CalendarDays, Map as MapIcon, BookOpen, Briefcase } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
@@ -48,6 +48,15 @@ export function TopChrome() {
             active={path.startsWith("/team/group-meetings")}
           >
             <Briefcase className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </NavBtn>
+        )}
+        {user && isOrganizer && isGroupLeader && (
+          <NavBtn
+            to="/team/group-members"
+            label="Group members"
+            active={path.startsWith("/team/group-members")}
+          >
+            <UsersRound className="h-[18px] w-[18px]" strokeWidth={2.25} />
           </NavBtn>
         )}
 
