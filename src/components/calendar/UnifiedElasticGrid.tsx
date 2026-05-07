@@ -2045,9 +2045,11 @@ function WeekEventsOverlay({
                       <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
                         <span className="truncate text-[12px] font-semibold">{ev.title}</span>
                         <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{durStr}</span>
-                        <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
-                          {distLabel}
-                        </span>
+                        {!isStrength && (
+                          <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
+                            {distLabel}
+                          </span>
+                        )}
                       </div>
                     </div>
                   );
