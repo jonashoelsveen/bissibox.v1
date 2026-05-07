@@ -175,7 +175,7 @@ function MenuBtn({
         onClick();
       }}
       className={[
-        "grid h-full w-9 place-items-center rounded transition-colors",
+        "grid h-full w-8 place-items-center rounded transition-colors",
         destructive
           ? "text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           : "text-muted-foreground hover:bg-secondary hover:text-ink",
