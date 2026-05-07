@@ -3307,6 +3307,75 @@ function DockItem({
   );
 }
 
+function DrawingOverlay({ state }: { state: DrawingState }) {
+  const ref = useRef<SVGSVGElement>(null);
+  const getPoint = (e: React.PointerEvent | React.MouseEvent) => {
+    const el = ref.current;
+    if (!el) return { x: 0, y: 0 };
+    const r = el.getBoundingClientRect();
+    return {
+      x: ((e.clientX - r.left) / r.width) * 100,
+      y: ((e.clientY - r.top) / r.height) * 100,
+    };
+  };
+  const handleClick = (e: React.MouseEvent) => {
+    if (!state.enabled) return;
+    e.stopPropagation();
+    const p = getPoint(e);
+    if (!state.current) {
+      state.setCurrent({ color: state.color, points: [p] });
+    } else {
+      state.setCurrent({ ...state.current, points: [...state.current.points, p] });
+    }
+  };
+  const handleDouble = (e: React.MouseEvent) => {
+    if (!state.enabled) return;
+    e.stopPropagation();
+    if (state.current && state.current.points.length >= 2) {
+      state.setStrokes((s) => [...s, state.current!]);
+    }
+    state.setCurrent(null);
+  };
+  const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
+
+  const toPath = (pts: { x: number; y: number }[]) =>
+    pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+
+  return (
+    <svg
+      ref={ref}
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      className="absolute inset-0 h-full w-full"
+      style={{ pointerEvents: state.enabled ? "auto" : "none", cursor: state.enabled ? "crosshair" : "default" }}
+      onClick={handleClick}
+      onDoubleClick={handleDouble}
+      onMouseMove={(e) => state.enabled && state.current && setHover(getPoint(e))}
+      onMouseLeave={() => setHover(null)}
+    >
+      {state.strokes.map((s, i) => (
+        <path key={i} d={toPath(s.points)} stroke={s.color} strokeWidth={0.4} fill="none" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" style={{ strokeWidth: 2 } as React.CSSProperties} />
+      ))}
+      {state.current && (
+        <>
+          <path d={toPath(state.current.points)} stroke={state.current.color} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ strokeWidth: 2 } as React.CSSProperties} />
+          {hover && state.current.points.length > 0 && (
+            <line
+              x1={state.current.points[state.current.points.length - 1].x}
+              y1={state.current.points[state.current.points.length - 1].y}
+              x2={hover.x}
+              y2={hover.y}
+              stroke={state.current.color}
+              strokeDasharray="2 2"
+              style={{ strokeWidth: 1.5, opacity: 0.6 } as React.CSSProperties}
+            />
+          )}
+        </>
+      )}
+    </svg>
+  );
+}
+
 
 function UnsavedChangesDialog({
   title,
