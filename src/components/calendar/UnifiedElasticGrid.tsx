@@ -2012,7 +2012,16 @@ function WeekEventsOverlay({
                 const durStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
                 const km = ev.distanceKm;
                 const distVal = km != null ? kmToUnit(km, unit) : null;
-                const distLabel = distVal != null ? `${distVal.toFixed(1)} ${unitLabel(unit)}` : "—";
+                const isStrength = actKey === "strength";
+                const isNorwegian = typeof navigator !== "undefined" && /^nb|^nn|^no/i.test(navigator.language || "");
+                const hourSuffix = isNorwegian ? "t" : "h";
+                const totalMin = Math.max(0, endMin - startMin);
+                const durH = Math.floor(totalMin / 60);
+                const durM = totalMin % 60;
+                const strengthLabel = durH > 0 ? `${durH}${hourSuffix} ${durM}m` : `${durM}m`;
+                const distLabel = isStrength
+                  ? strengthLabel
+                  : distVal != null ? `${distVal.toFixed(1)} ${unitLabel(unit)}` : "—";
                 const iconHalfBg = ev.color
                   ? `color-mix(in srgb, ${ev.color} 40%, white)`
                   : "rgba(0,0,0,0.05)";
@@ -2036,9 +2045,11 @@ function WeekEventsOverlay({
                       <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
                         <span className="truncate text-[12px] font-semibold">{ev.title}</span>
                         <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{durStr}</span>
-                        <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
-                          {distLabel}
-                        </span>
+                        {!isStrength && (
+                          <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
+                            {distLabel}
+                          </span>
+                        )}
                       </div>
                     </div>
                   );
@@ -2056,7 +2067,26 @@ function WeekEventsOverlay({
                       className="flex w-1/2 items-center justify-center text-ink"
                       title={distLabel}
                     >
-                      {distVal != null ? (
+                      {isStrength ? (
+                        <span
+                          className="flex items-baseline gap-1"
+                          style={{
+                            fontFamily: "Helvetica, Arial, sans-serif",
+                            fontWeight: 700,
+                            fontSize: 22,
+                            lineHeight: 1,
+                          }}
+                        >
+                          {durH > 0 && (
+                            <>
+                              <span>{durH}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{hourSuffix}</span>
+                            </>
+                          )}
+                          <span>{durM}</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>m</span>
+                        </span>
+                      ) : distVal != null ? (
                         <span
                           className="flex items-baseline gap-1"
                           style={{
