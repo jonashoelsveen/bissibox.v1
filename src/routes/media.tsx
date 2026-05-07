@@ -49,6 +49,8 @@ import {
   Briefcase,
   Play,
   Pause,
+  Download,
+  Pencil,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 
