@@ -982,8 +982,6 @@ export function UnifiedElasticGrid({
                 });
               }}
               onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
-                // Calendar: open the editor with pending date/time; user must Save.
-                // Diary: drag is disabled at the source (see WeekEventsOverlay).
                 const ev = events.find((e) => e.id === id);
                 if (!ev) return;
                 setPopover({
@@ -997,6 +995,10 @@ export function UnifiedElasticGrid({
                   pendingTime: { startMin: newStartMin, endMin: newStartMin + durationMin },
                 });
               }}
+              onDeleteEvent={onDeleteEvent}
+              onSaveSessionNote={(id, note) =>
+                onUpsertEvent({ id, sessionNote: note || undefined })
+              }
             />
           )}
           {mode.kind === "year" && todayColIdx >= 0 && nowMinutesSinceStart !== null && (
