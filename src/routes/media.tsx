@@ -3137,8 +3137,8 @@ function MediaTabView({
       setAlbums((a ?? []) as Album[]);
       // Attended events for user
       const { data: regs } = await supabase
-        .from("event_registrations")
-        .select("events(id,title,organizer,starts_at)")
+        .from("registrations")
+        .select("event_id, events(id,title,organizer,starts_at)")
         .eq("user_id", user.id);
       const ev: AttendedEvent[] = [];
       const seen = new Set<string>();
@@ -3165,12 +3165,17 @@ function MediaTabView({
     setItemAlbums(map);
 
     // Profile name
-    const { data: prof } = await supabase
+    const { data: p } = await supabase
       .from("profiles")
-      .select("display_name,full_name")
+      .select("first_name,last_name,email")
       .eq("id", user.id)
       .maybeSingle();
-    setUserName((prof?.display_name as string) || (prof?.full_name as string) || "");
+    const nm =
+      [p?.first_name, p?.last_name].filter(Boolean).join(" ").trim() ||
+      p?.email ||
+      user.email ||
+      "";
+    setUserName(nm);
 
     // Signed URLs
     const urlMap: Record<string, string> = {};
