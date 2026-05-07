@@ -3462,6 +3462,13 @@ function MediaTabView({
   const [tab, setTab] = useState<"about" | "access" | "draw" | "export">("about");
   const [idx, setIdx] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
+  const drawing = useDrawingState();
+  const currentIdForReset = items[idx]?.id;
+  useEffect(() => { drawing.clear(); drawing.setEnabled(false); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [currentIdForReset]);
+  useEffect(() => {
+    const isVid = items[idx]?.media_type === "video";
+    if (!isVid && tab === "draw") setTab("about");
+  }, [items, idx, tab]);
 
   const load = useCallback(async () => {
     if (!user || mediaIds.length === 0) return;
