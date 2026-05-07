@@ -361,7 +361,7 @@ export function NotePanel({
       }}
     >
       <div
-        className="relative overflow-hidden rounded-b-md border border-t-0 border-ink/15 bg-card shadow-lg"
+        className="relative overflow-hidden rounded-b-md border border-t border-ink/15 bg-card shadow-lg"
       >
         <span
           aria-hidden
