@@ -197,7 +197,7 @@ export function DayNoteButton({
             closeOnEnter={false}
             onSave={(text) => writeNote(calId, date, text)}
             onClose={() => setMode(null)}
-            onRequestEdit={() => setMode("edit")}
+            onRequestEdit={() => { cancelClose(); setMode("edit"); }}
           />
         </div>
       )}
