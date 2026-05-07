@@ -240,12 +240,11 @@ function DayNotePanel({
   ).padStart(2, "0")}.${String(date.getFullYear() % 100).padStart(2, "0")}`;
 
   // Fixed width matching the new-session popover, regardless of screen size.
-  // Aligned to the right edge of the anchor (column/cell) so it narrows from
-  // the right side of the day rather than stretching the full column width.
+  // Anchored to the LEFT edge of the day column/cell so it narrows from the
+  // right side of the day.
   const PANEL_W = 280;
   const margin = 8;
-  let left = anchorRect.right - PANEL_W;
-  if (left < margin) left = margin;
+  let left = anchorRect.left;
   if (left + PANEL_W > window.innerWidth - margin) {
     left = Math.max(margin, window.innerWidth - PANEL_W - margin);
   }
@@ -253,7 +252,7 @@ function DayNotePanel({
     top: anchorRect.bottom,
     left,
     width: PANEL_W,
-    transformOrigin: "top right",
+    transformOrigin: "top left",
   };
 
   return createPortal(
