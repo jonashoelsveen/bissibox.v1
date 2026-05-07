@@ -34,10 +34,11 @@ const MONTHS_NB = [
 function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate: Date }) {
   const month = MONTHS_NB[currentDate.getMonth()];
   const year = currentDate.getFullYear();
+  const fontStyle = { fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif' };
   if (viewMode === "week") {
     const wk = isoWeekNumber(currentDate);
     return (
-      <h1 className="truncate text-xl text-ink">
+      <h1 className="truncate text-xl text-ink" style={fontStyle}>
         <span className="font-semibold">Uke {wk} {month}</span>{" "}
         <span className="font-normal">{year}</span>
       </h1>
@@ -45,14 +46,14 @@ function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate:
   }
   if (viewMode === "day") {
     return (
-      <h1 className="truncate text-xl text-ink">
+      <h1 className="truncate text-xl text-ink" style={fontStyle}>
         <span className="font-semibold">{currentDate.getDate()}. {month}</span>{" "}
         <span className="font-normal">{year}</span>
       </h1>
     );
   }
   return (
-    <h1 className="truncate text-xl text-ink">
+    <h1 className="truncate text-xl text-ink" style={fontStyle}>
       <span className="font-semibold">{month}</span>{" "}
       <span className="font-normal">{year}</span>
     </h1>
