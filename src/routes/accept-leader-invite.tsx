@@ -68,7 +68,7 @@ function AcceptLeaderInvitePage() {
     return () => {
       cancelled = true;
     };
-  }, [token, user, navigate]);
+  }, [token, user, loading, navigate]);
 
   return (
     <div className="mx-auto max-w-md px-6">
