@@ -598,6 +598,7 @@ function ActivityRow({
                   onKeyDown={(e) => handleArrowNav(e, null, mRef)}
                   className={`${inputCls} w-12 text-center`}
                 />
+                <span className="text-xs font-bold text-ink">h</span>
                 <input
                   ref={mRef}
                   type="text"
@@ -612,6 +613,7 @@ function ActivityRow({
                   onKeyDown={(e) => handleArrowNav(e, hRef, isEndurance ? kmRef : null)}
                   className={`${inputCls} w-12 text-center`}
                 />
+                <span className="text-xs font-bold text-ink">m</span>
               </>
             )}
           </div>
