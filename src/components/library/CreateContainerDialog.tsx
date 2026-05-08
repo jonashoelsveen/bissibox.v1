@@ -53,24 +53,26 @@ export function CreateContainerDialog({
     const userId = user.id;
     const tId = isTeamMode ? teamId : null;
 
-    const tableMap = {
-      meeting: "meeting_folders",
-      note: "note_folders",
-      files: "file_folders",
-      media: "media_albums",
-    } as const;
-    const table = tableMap[kind];
+    const nextSortOrder = async (table: "meeting_folders" | "note_folders" | "file_folders" | "media_albums") => {
+      const q = supabase.from(table).select("sort_order").order("sort_order", { ascending: false }).limit(1);
+      const { data } = tId ? await q.eq("team_id", tId) : await q.is("team_id", null).eq("user_id", userId);
+      return ((data?.[0]?.sort_order as number | undefined) ?? -1) + 1;
+    };
 
-    // Compute next sort_order in scope.
-    const scopeQ = supabase.from(table).select("sort_order").order("sort_order", { ascending: false }).limit(1);
-    const { data: maxRows } = tId
-      ? await scopeQ.eq("team_id", tId)
-      : await scopeQ.is("team_id", null).eq("user_id", userId);
-    const nextOrder = ((maxRows?.[0]?.sort_order as number | undefined) ?? -1) + 1;
-
-    const { error } = await supabase
-      .from(table)
-      .insert({ user_id: userId, team_id: tId, name: name.trim(), sort_order: nextOrder });
+    let error: { message: string } | null = null;
+    if (kind === "meeting") {
+      const sort_order = await nextSortOrder("meeting_folders");
+      ({ error } = await supabase.from("meeting_folders").insert({ user_id: userId, team_id: tId, name: name.trim(), sort_order }));
+    } else if (kind === "note") {
+      const sort_order = await nextSortOrder("note_folders");
+      ({ error } = await supabase.from("note_folders").insert({ user_id: userId, team_id: tId, name: name.trim(), sort_order }));
+    } else if (kind === "files") {
+      const sort_order = await nextSortOrder("file_folders");
+      ({ error } = await supabase.from("file_folders").insert({ user_id: userId, team_id: tId, name: name.trim(), sort_order }));
+    } else {
+      const sort_order = await nextSortOrder("media_albums");
+      ({ error } = await supabase.from("media_albums").insert({ user_id: userId, team_id: tId, name: name.trim(), sort_order }));
+    }
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     toast.success(isAlbum ? "Album created" : "Folder created");
