@@ -119,25 +119,11 @@ export function SessionDetailsModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const pulseControls = useAnimationControls();
 
-  const revertChanges = () => {
-    try {
-      const initial = JSON.parse(initialRef.current) as SessionDetailsValue;
-      onChange(initial);
-    } catch {
-      /* noop */
-    }
-    setConfirmClose(false);
-  };
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const requestClose = () => {
-    if (isDirty && !readOnly) {
-      if (confirmClose) {
-        pulseControls.start({
-          scale: [1, 1.025, 1],
-          transition: { duration: 0.22, ease: [0.2, 0, 0, 1], times: [0, 0.45, 1] },
-        });
-      } else setConfirmClose(true);
-    } else onClose();
+    if (isDirty && !readOnly) setConfirmCancel(true);
+    else onClose();
   };
 
   useEffect(() => {
