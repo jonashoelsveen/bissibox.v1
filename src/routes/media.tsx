@@ -824,6 +824,8 @@ function MediaPage({
   onOpenMedia,
   onOpenMediaTab,
   onCreate,
+  onCreateContainer,
+  newAlbumSignal,
   showMeetingOption,
 }: {
   actionsMount?: HTMLDivElement | null;
@@ -833,6 +835,8 @@ function MediaPage({
   onOpenMedia?: (id: string) => void;
   onOpenMediaTab?: (tabId: string, title: string, mediaIds: string[]) => void;
   onCreate?: (kind: PreviousNewKind) => void;
+  onCreateContainer?: (kind: PreviousNewKind) => void;
+  newAlbumSignal?: number;
   showMeetingOption?: boolean;
 } = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
