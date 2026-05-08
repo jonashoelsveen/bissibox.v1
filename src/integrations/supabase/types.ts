@@ -1514,6 +1514,7 @@ export type Database = {
           group_id: string | null
           group_name: string
           id: string
+          invite_token: string | null
           invited_at: string | null
           invited_by: string | null
           name: string
@@ -1530,6 +1531,7 @@ export type Database = {
           group_id?: string | null
           group_name?: string
           id?: string
+          invite_token?: string | null
           invited_at?: string | null
           invited_by?: string | null
           name?: string
@@ -1546,6 +1548,7 @@ export type Database = {
           group_id?: string | null
           group_name?: string
           id?: string
+          invite_token?: string | null
           invited_at?: string | null
           invited_by?: string | null
           name?: string
