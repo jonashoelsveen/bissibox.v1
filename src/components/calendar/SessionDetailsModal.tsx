@@ -433,7 +433,7 @@ function FieldStack({
 
   return (
     <div className="relative flex flex-col gap-1.5">
-      <span className="flex items-center gap-1 text-sm font-semibold text-ink">
+      <span className="flex items-center gap-1 text-xs font-semibold text-ink">
         {label}
         {locked && <Lock className="h-3 w-3 text-muted-foreground/70" />}
       </span>
