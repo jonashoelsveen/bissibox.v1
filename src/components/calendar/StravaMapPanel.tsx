@@ -5,10 +5,11 @@
  * Real per-point elevation/time streams are not pulled (deferred to a
  * later round); we use total_elevation_gain to render a smooth profile.
  */
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { loadMapbox } from "@/lib/mapbox";
 import { useMapStyle, MAP_STYLES } from "@/lib/mapbox";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
 
 // Google polyline decoder (Encoded Polyline Algorithm Format)
 function decodePolyline(str: string): [number, number][] {
@@ -32,15 +33,32 @@ export function StravaMapPanel({
   polyline,
   elevationGainM,
   distanceKm,
+  stravaActivityId,
 }: {
   polyline?: string | null;
   elevationGainM?: number | null;
   distanceKm?: number | null;
+  stravaActivityId?: number | null;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [styleId] = useMapStyle("strava-activity");
+  const [streams, setStreams] = useState<{ altitude: number[]; distance: number[] } | null>(null);
 
   const coords = useMemo(() => (polyline ? decodePolyline(polyline) : []), [polyline]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setStreams(null);
+    if (!stravaActivityId) return;
+    (async () => {
+      const { data, error } = await supabase.functions.invoke("strava-activity-streams", {
+        body: { activityId: stravaActivityId },
+      });
+      if (cancelled || error || !data?.altitude?.length) return;
+      setStreams({ altitude: data.altitude, distance: data.distance ?? [] });
+    })();
+    return () => { cancelled = true; };
+  }, [stravaActivityId]);
 
   useEffect(() => {
     let map: any = null;
@@ -91,18 +109,33 @@ export function StravaMapPanel({
     return () => { cancelled = true; if (map) map.remove(); };
   }, [coords, styleId]);
 
-  // Synthetic elevation profile when only gain is known.
+  // Real elevation profile from Strava streams when available, otherwise
+  // a synthetic bell curve scaled to total elevation gain as a fallback.
   const elevationData = useMemo(() => {
+    if (streams && streams.altitude.length > 1) {
+      const alt = streams.altitude;
+      const dist = streams.distance;
+      const haveDist = dist.length === alt.length;
+      // Downsample to ~200 points for chart performance.
+      const N = Math.min(200, alt.length);
+      const step = alt.length / N;
+      const points: { km: number; m: number }[] = [];
+      for (let i = 0; i < N; i++) {
+        const idx = Math.min(alt.length - 1, Math.floor(i * step));
+        const km = haveDist ? dist[idx] / 1000 : (i / (N - 1)) * (distanceKm || 1);
+        points.push({ km: Number(km.toFixed(2)), m: Math.round(alt[idx]) });
+      }
+      return points;
+    }
     if (!elevationGainM || elevationGainM <= 0) return [];
     const N = 60;
     const km = distanceKm || 1;
     return Array.from({ length: N }, (_, i) => {
       const x = i / (N - 1);
-      // gentle bell curve scaled to total gain
       const y = elevationGainM * Math.sin(Math.PI * x);
       return { km: Number((x * km).toFixed(2)), m: Math.round(y) };
     });
-  }, [elevationGainM, distanceKm]);
+  }, [streams, elevationGainM, distanceKm]);
 
   if (!polyline) {
     return (
@@ -130,7 +163,7 @@ export function StravaMapPanel({
                 </linearGradient>
               </defs>
               <XAxis dataKey="km" tickLine={false} axisLine={false} fontSize={10} />
-              <YAxis hide />
+              <YAxis hide domain={["dataMin", "dataMax"]} />
               <Tooltip
                 contentStyle={{ fontSize: 11, padding: "4px 8px" }}
                 formatter={(v: any) => [`${v} m`, "Elev"]}

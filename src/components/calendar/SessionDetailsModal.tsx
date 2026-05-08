@@ -54,7 +54,7 @@ export function SessionDetailsModal({
   onChange: (v: SessionDetailsValue) => void;
   onClose: () => void;
   onSave: (v: SessionDetailsValue) => void;
-  strava?: { polyline?: string | null; elevationGainM?: number | null; distanceKm?: number | null } | null;
+  strava?: { polyline?: string | null; elevationGainM?: number | null; distanceKm?: number | null; stravaActivityId?: number | null } | null;
   date?: Date;
 }) {
   const [tab, setTab] = useState<Tab>("about");
@@ -241,6 +241,7 @@ export function SessionDetailsModal({
                   polyline={strava.polyline}
                   elevationGainM={strava.elevationGainM ?? null}
                   distanceKm={strava.distanceKm ?? value.distanceKm ?? null}
+                  stravaActivityId={strava.stravaActivityId ?? null}
                 />
               ) : (
                 <div className="grid place-items-center rounded-lg border border-dashed border-hairline bg-muted/20 py-16 text-center">

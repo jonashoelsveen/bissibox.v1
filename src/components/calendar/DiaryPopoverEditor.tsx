@@ -341,6 +341,7 @@ export function DiaryPopoverEditor({
                   polyline: initialEvent.summaryPolyline,
                   elevationGainM: initialEvent.totalElevationGainM ?? null,
                   distanceKm: initialEvent.distanceKm ?? null,
+                  stravaActivityId: initialEvent.stravaActivityId ?? null,
                 }
               : null
           }
