@@ -49,7 +49,7 @@ async function sendEmail(to: string, code: string) {
 
   const payload = {
     from: FROM_EMAIL,
-    to: SANDBOX_TO_EMAIL,
+    to: to,
     subject: `Your verification code: ${code}`,
     html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#0f172a">
       <h1 style="font-size:18px;margin:0 0 16px">Verify it's you</h1>
