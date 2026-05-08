@@ -18,6 +18,7 @@ import { Route as DiaryRouteImport } from './routes/diary'
 import { Route as DeskRouteImport } from './routes/desk'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AcceptLeaderInviteRouteImport } from './routes/accept-leader-invite'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUserIdRouteImport } from './routes/u.$userId'
 import { Route as TeamMembersRouteImport } from './routes/team.members'
@@ -76,6 +77,11 @@ const CalendarRoute = CalendarRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AcceptLeaderInviteRoute = AcceptLeaderInviteRouteImport.update({
+  id: '/accept-leader-invite',
+  path: '/accept-leader-invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -152,6 +158,7 @@ const OrganizerEventIdEditRoute = OrganizerEventIdEditRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/accept-leader-invite': typeof AcceptLeaderInviteRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/desk': typeof DeskRoute
@@ -177,6 +184,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/accept-leader-invite': typeof AcceptLeaderInviteRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/desk': typeof DeskRoute
@@ -203,6 +211,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/accept-leader-invite': typeof AcceptLeaderInviteRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/desk': typeof DeskRoute
@@ -230,6 +239,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/accept-leader-invite'
     | '/auth'
     | '/calendar'
     | '/desk'
@@ -255,6 +265,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/accept-leader-invite'
     | '/auth'
     | '/calendar'
     | '/desk'
@@ -280,6 +291,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/accept-leader-invite'
     | '/auth'
     | '/calendar'
     | '/desk'
@@ -306,6 +318,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AcceptLeaderInviteRoute: typeof AcceptLeaderInviteRoute
   AuthRoute: typeof AuthRoute
   CalendarRoute: typeof CalendarRoute
   DeskRoute: typeof DeskRoute
@@ -393,6 +406,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accept-leader-invite': {
+      id: '/accept-leader-invite'
+      path: '/accept-leader-invite'
+      fullPath: '/accept-leader-invite'
+      preLoaderRoute: typeof AcceptLeaderInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -498,6 +518,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AcceptLeaderInviteRoute: AcceptLeaderInviteRoute,
   AuthRoute: AuthRoute,
   CalendarRoute: CalendarRoute,
   DeskRoute: DeskRoute,
@@ -524,3 +545,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
