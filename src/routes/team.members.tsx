@@ -81,7 +81,111 @@ interface MemberRow {
 function TeamMembersPage() {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"board" | "coaches" | "memberships" | "groups" | "members" | "chart">("board");
+  const [tab, setTab] = useState<OrgTabId | null>(null);
+  const [openTabs, setOpenTabs] = useState<OrgTabId[]>([]);
+
+  const selectTab = useCallback((id: OrgTabId) => {
+    setOpenTabs((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    setTab(id);
+  }, []);
+  const closeTab = useCallback((id: OrgTabId) => {
+    setOpenTabs((prev) => {
+      const idx = prev.indexOf(id);
+      const next = prev.filter((t) => t !== id);
+      setTab((cur) => {
+        if (cur !== id) return cur;
+        if (next.length === 0) return null;
+        return next[Math.max(0, idx - 1)];
+      });
+      return next;
+    });
+  }, []);
+
+  // ── Top-tab DnD (pointer based, mirrors organizer.library) ──────────────────
+  const tabStripRef = useRef<HTMLDivElement | null>(null);
+  const tabRefs = useRef<Map<OrgTabId, HTMLDivElement>>(new Map());
+  const [dragTabId, setDragTabId] = useState<OrgTabId | null>(null);
+  const [dragDx, setDragDx] = useState(0);
+  const dragStateRef = useRef<{
+    id: OrgTabId; startX: number; startIndex: number; currentIndex: number; width: number; offsets: number[]; moved: boolean;
+  } | null>(null);
+  const flipRef = useRef<{ id: OrgTabId; fromLeft: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const flip = flipRef.current;
+    if (!flip) return;
+    flipRef.current = null;
+    const el = tabRefs.current.get(flip.id);
+    if (!el) return;
+    const newLeft = el.getBoundingClientRect().left;
+    const delta = flip.fromLeft - newLeft;
+    if (Math.abs(delta) < 0.5) return;
+    el.style.transition = "none";
+    el.style.transform = `translate3d(${delta}px,0,0)`;
+    void el.offsetWidth;
+    el.style.transition = "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)";
+    el.style.transform = "translate3d(0,0,0)";
+    const cleanup = () => {
+      el.style.transition = ""; el.style.transform = "";
+      el.removeEventListener("transitionend", cleanup);
+    };
+    el.addEventListener("transitionend", cleanup);
+  });
+
+  const onTabPointerDown = (e: React.PointerEvent<HTMLDivElement>, id: OrgTabId) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("[data-tab-close]")) return;
+    setTab(id);
+    const strip = tabStripRef.current; if (!strip) return;
+    const tabsArr = openTabs;
+    const startIndex = tabsArr.indexOf(id); if (startIndex < 0) return;
+    const els = tabsArr.map((t) => tabRefs.current.get(t)).filter((b): b is HTMLDivElement => !!b);
+    if (els.length !== tabsArr.length) return;
+    const stripRect = strip.getBoundingClientRect();
+    const offsets = els.map((b) => b.getBoundingClientRect().left - stripRect.left + strip.scrollLeft);
+    const width = els[startIndex].getBoundingClientRect().width;
+    dragStateRef.current = { id, startX: e.clientX, startIndex, currentIndex: startIndex, width, offsets, moved: false };
+
+    const onMove = (ev: PointerEvent) => {
+      const st = dragStateRef.current; if (!st) return;
+      const dx = ev.clientX - st.startX;
+      if (!st.moved && Math.abs(dx) < 4) return;
+      st.moved = true;
+      if (dragTabId !== st.id) setDragTabId(st.id);
+      setDragDx(dx);
+      const stripEl = tabStripRef.current; if (!stripEl) return;
+      const pointerXInStrip = ev.clientX - stripEl.getBoundingClientRect().left + stripEl.scrollLeft;
+      let newIdx = 0;
+      for (let i = 0; i < st.offsets.length; i++) {
+        const mid = st.offsets[i] + st.width / 2;
+        if (pointerXInStrip < mid) { newIdx = i; break; }
+        newIdx = i;
+      }
+      if (newIdx !== st.currentIndex) st.currentIndex = newIdx;
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      const st = dragStateRef.current; dragStateRef.current = null;
+      const willReorder = !!(st && st.moved && st.currentIndex !== st.startIndex);
+      if (willReorder && st) {
+        const el = tabRefs.current.get(st.id);
+        if (el) flipRef.current = { id: st.id, fromLeft: el.getBoundingClientRect().left };
+        setOpenTabs((prev) => {
+          const next = prev.slice();
+          const [moved] = next.splice(st.startIndex, 1);
+          next.splice(st.currentIndex, 0, moved);
+          return next;
+        });
+      }
+      setDragTabId(null); setDragDx(0);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  };
   const [teamId, setTeamId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
