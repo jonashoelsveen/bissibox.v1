@@ -94,34 +94,14 @@ function LibraryPage() {
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
   const [newNoteOpen, setNewNoteOpen] = useState(false);
   const [newMeetingSignal, setNewMeetingSignal] = useState(0);
-  const [newMeetingFolderSignal, setNewMeetingFolderSignal] = useState(0);
-  const [newNoteFolderSignal, setNewNoteFolderSignal] = useState(0);
-  const [newFilesFolderSignal, setNewFilesFolderSignal] = useState(0);
-  const [newMediaAlbumSignal, setNewMediaAlbumSignal] = useState(0);
+  const [createContainerKind, setCreateContainerKind] = useState<PreviousNewKind | null>(null);
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
 
   const handleCreateContainerFromPrevious = (kind: PreviousNewKind) => {
-    setActiveNoteId(null);
-    if (kind === "meeting") {
-      navigate({ to: "/media", search: { tab: "meetings" }, replace: true });
-      setNewMeetingFolderSignal((n) => n + 1);
-      return;
-    }
-    if (kind === "note") {
-      navigate({ to: "/media", search: { tab: "notes" }, replace: true });
-      setNewNoteFolderSignal((n) => n + 1);
-      return;
-    }
-    if (kind === "files") {
-      navigate({ to: "/media", search: { tab: "files" }, replace: true });
-      setNewFilesFolderSignal((n) => n + 1);
-      return;
-    }
-    if (kind === "media") {
-      navigate({ to: "/media", search: { tab: "media" }, replace: true });
-      setNewMediaAlbumSignal((n) => n + 1);
-      return;
-    }
+    // Open the parent-level create dialog WITHOUT navigating away from the
+    // current tab. The new folder/album appears in the side nav immediately
+    // via the shared `library:refresh` event.
+    setCreateContainerKind(kind);
   };
 
   const handleCreateFromPrevious = (kind: PreviousNewKind) => {
