@@ -164,6 +164,21 @@ export function SessionDetailsModal({
             </button>
           </div>
 
+          <div
+            className={`flex flex-1 flex-col overflow-hidden transition-opacity ${
+              confirmClose ? "pointer-events-none opacity-50" : ""
+            }`}
+            onClickCapture={
+              confirmClose
+                ? (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setConfirmClose(false);
+                  }
+                : undefined
+            }
+            style={confirmClose ? { pointerEvents: "auto" } : undefined}
+          >
           {isNote ? (
             <NoteBody
               title={value.title}
@@ -292,48 +307,13 @@ export function SessionDetailsModal({
               </div>
             </>
           )}
+          </div>
 
-          {/* Footer — always visible: Cancel (left), Save (right, toned down when no changes) */}
+          {/* Footer — always visible. Switches to Discard / Save when user attempts to close with unsaved changes. */}
           {!readOnly && (
             <div className="flex items-center justify-between border-t border-hairline bg-muted/40 px-4 py-3">
-              <button
-                type="button"
-                onClick={requestClose}
-                className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => onSave(value)}
-                disabled={saveDisabled}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-opacity ${
-                  saveDisabled
-                    ? "bg-secondary text-muted-foreground/70 cursor-not-allowed"
-                    : "bg-primary text-primary-foreground hover:opacity-90"
-                }`}
-              >
-                {autosync ? "Autosync" : isEdit ? "Save changes" : "Add"}
-              </button>
-            </div>
-          )}
-
-          {/* Confirm-close overlay */}
-          <AnimatePresence>
-            {confirmClose && (
-              <motion.div
-                className="absolute inset-0 z-10 flex flex-col bg-card/95 backdrop-blur-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-                  <p className="text-sm font-medium text-ink">You have unsaved changes.</p>
-                  <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                    Would you like to save them before closing, or discard them?
-                  </p>
-                </div>
-                <div className="flex items-center justify-between border-t border-hairline px-4 py-3">
+              {confirmClose ? (
+                <>
                   <button
                     type="button"
                     onClick={() => {
@@ -354,10 +334,33 @@ export function SessionDetailsModal({
                   >
                     Save changes
                   </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={requestClose}
+                    className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSave(value)}
+                    disabled={saveDisabled}
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition-opacity ${
+                      saveDisabled
+                        ? "bg-secondary text-muted-foreground/70 cursor-not-allowed"
+                        : "bg-primary text-primary-foreground hover:opacity-90"
+                    }`}
+                  >
+                    {autosync ? "Autosync" : isEdit ? "Save changes" : "Add"}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
         </motion.div>
       </motion.div>
     </AnimatePresence>
