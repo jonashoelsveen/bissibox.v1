@@ -425,12 +425,14 @@ function AboutTab({
   readOnly: boolean;
 }) {
   const list = activities ?? [];
+  const [autoEditIdx, setAutoEditIdx] = useState<number | null>(null);
   const update = (idx: number, patch: Partial<SessionDetailsValue["activities"][number]>) => {
     onChange(list.map((a, i) => (i === idx ? { ...a, ...patch } : a)));
   };
   const add = () => {
     const first = DIARY_GROUPS[0];
     const sub = first.children?.[0]?.id ?? first.id;
+    setAutoEditIdx(list.length);
     onChange([...list, { type: sub }]);
   };
   const remove = (idx: number) => onChange(list.filter((_, i) => i !== idx));
@@ -447,6 +449,7 @@ function AboutTab({
           // Lock the first activity's metrics when this is a Strava-synced session.
           stravaLocked={isStravaSynced && idx === 0}
           readOnly={readOnly}
+          startEditing={autoEditIdx === idx}
           onChange={(patch) => update(idx, patch)}
           onRemove={() => remove(idx)}
         />
