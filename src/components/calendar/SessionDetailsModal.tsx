@@ -12,7 +12,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, MapPin, NotebookPen, Info, Paperclip, Pencil, Check, Lock } from "lucide-react";
+import { X, Plus, MapPin, StickyNote, Info, Paperclip, Pencil, Check, Lock } from "lucide-react";
 import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import { useLibrarySetting, diaryAutosyncKey } from "@/lib/library-settings";
 import { StravaMapPanel } from "./StravaMapPanel";
@@ -245,7 +245,7 @@ export function SessionDetailsModal({
                   [
                     { id: "about", label: "About", Icon: Info },
                     { id: "map", label: "Map", Icon: MapPin },
-                    { id: "note", label: "Session note", Icon: NotebookPen },
+                    { id: "note", label: "Session note", Icon: StickyNote },
                   ] as const
                 ).map((t) => {
                   const active = tab === t.id;
@@ -486,34 +486,40 @@ function ActivityRow({
     return () => clearTimeout(t);
   }, [showLockedMsg]);
 
-  const [editDuration, setEditDuration] = useState(false);
 
+
+  const [editing, setEditing] = useState(false);
   const dur = activity.durationMin ?? 0;
   const durH = Math.floor(dur / 60);
   const durM = dur % 60;
 
-  const lockedClick = (msg: string) => {
-    if (stravaLocked || readOnly) {
-      setShowLockedMsg(msg);
-      return true;
+  const pace = useMemo(() => {
+    if (!activity.durationMin || !activity.distanceKm || activity.distanceKm <= 0) return null;
+    const secPerKm = Math.round((activity.durationMin * 60) / activity.distanceKm);
+    const m = Math.floor(secPerKm / 60);
+    const s = secPerKm % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  }, [activity.durationMin, activity.distanceKm]);
+
+  const handleEditClick = () => {
+    if (readOnly) return;
+    if (stravaLocked) {
+      setShowLockedMsg("This activity is synced from Strava and can't be edited here.");
+      return;
     }
-    return false;
+    setEditing((v) => !v);
   };
+
+  // Excel-ish input look: thin border, very subtle radius, tabular numbers, bold.
+  const inputCls =
+    "mono rounded-[3px] border border-input bg-background px-1.5 py-0.5 text-sm font-bold tabular-nums text-ink outline-none focus:border-primary disabled:cursor-not-allowed";
 
   return (
     <div
-      className="relative rounded-lg border border-hairline bg-background"
-      style={{
-        borderLeft: `4px solid ${color}`,
-      }}
+      className="relative rounded-[6px] border border-hairline bg-background"
+      style={{ borderLeft: `4px solid ${color}` }}
     >
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2">
-        {/* Color chip + type select */}
-        <span
-          className="inline-block h-3.5 w-3.5 shrink-0 rounded-sm"
-          style={{ background: color }}
-          aria-hidden
-        />
+      <div className="flex flex-wrap items-center gap-3 px-3 py-2">
         <select
           value={activity.type}
           disabled={readOnly}
@@ -538,29 +544,14 @@ function ActivityRow({
           )}
         </select>
 
-        {/* Duration */}
-        <div
-          className="ml-2 flex items-center gap-1 rounded-md border border-hairline bg-card px-2 py-1"
-          onClick={() => lockedClick("Duration is set by Strava and can't be edited here.")}
-        >
-          {!editDuration ? (
-            <>
-              {!stravaLocked && !readOnly && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setEditDuration(true); }}
-                  className="text-muted-foreground hover:text-ink"
-                  aria-label="Edit duration"
-                >
-                  <Pencil className="h-3 w-3" />
-                </button>
-              )}
-              <span className="mono w-16 text-center text-sm tabular-nums text-ink">
-                {dur > 0 ? fmtHM(dur) : "—"}
-              </span>
-            </>
+        <div className="ml-auto flex items-center gap-4">
+          {/* Duration */}
+          {!editing ? (
+            <span className="text-sm font-bold tabular-nums text-ink">
+              {dur > 0 ? fmtHM(dur) : "—"}
+            </span>
           ) : (
-            <>
+            <span className="inline-flex items-center gap-1">
               <input
                 type="number"
                 min={0}
@@ -570,8 +561,7 @@ function ActivityRow({
                   const h = e.target.value === "" ? 0 : Math.max(0, Number(e.target.value));
                   onChange({ durationMin: h * 60 + durM });
                 }}
-                onClick={(e) => e.stopPropagation()}
-                className="mono w-10 bg-transparent text-center text-sm tabular-nums text-ink outline-none"
+                className={`${inputCls} w-12 text-center`}
                 placeholder="h"
               />
               <span className="text-xs text-muted-foreground">h</span>
@@ -585,64 +575,69 @@ function ActivityRow({
                   const m = e.target.value === "" ? 0 : Math.max(0, Math.min(59, Number(e.target.value)));
                   onChange({ durationMin: durH * 60 + m });
                 }}
-                onClick={(e) => e.stopPropagation()}
-                className="mono w-10 bg-transparent text-center text-sm tabular-nums text-ink outline-none"
+                className={`${inputCls} w-12 text-center`}
                 placeholder="m"
               />
               <span className="text-xs text-muted-foreground">m</span>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setEditDuration(false); }}
-                className="ml-1 text-muted-foreground hover:text-ink"
-                aria-label="Done"
-              >
-                <Check className="h-3.5 w-3.5" />
-              </button>
+            </span>
+          )}
+
+          {isEndurance && (
+            <>
+              {/* Distance */}
+              {!editing ? (
+                <span className="text-sm font-bold tabular-nums text-ink">
+                  {activity.distanceKm != null
+                    ? `${activity.distanceKm.toFixed(1)} km`
+                    : "—"}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={activity.distanceKm ?? ""}
+                    disabled={stravaLocked || readOnly}
+                    onChange={(e) =>
+                      onChange({ distanceKm: e.target.value === "" ? undefined : Number(e.target.value) })
+                    }
+                    placeholder="km"
+                    className={`${inputCls} w-20 text-right`}
+                  />
+                  <span className="text-xs text-muted-foreground">km</span>
+                </span>
+              )}
+
+              {/* Pace (auto, read-only) */}
+              <span className="text-sm font-bold tabular-nums text-ink">
+                {pace ? `${pace} /km` : "—"}
+              </span>
             </>
           )}
-        </div>
 
-        {isEndurance && (
-          <>
-            {/* Distance */}
-            <label
-              className="flex items-center gap-1 rounded-md border border-hairline bg-card px-2 py-1 text-xs text-muted-foreground"
-              onClick={() => lockedClick("Distance is set by Strava and can't be edited here.")}
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={handleEditClick}
+              className="rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-ink"
+              aria-label={editing ? "Done editing" : "Edit activity"}
+              title={editing ? "Done" : "Edit"}
             >
-              <span>distance</span>
-              <input
-                type="number"
-                step="0.1"
-                value={activity.distanceKm ?? ""}
-                disabled={stravaLocked || readOnly}
-                onChange={(e) =>
-                  onChange({ distanceKm: e.target.value === "" ? undefined : Number(e.target.value) })
-                }
-                onClick={(e) => e.stopPropagation()}
-                placeholder="km"
-                className="mono w-16 bg-transparent text-sm tabular-nums text-ink outline-none"
-              />
-              <span>km</span>
-            </label>
+              {editing ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+            </button>
+          )}
 
-            {/* Pace (auto) */}
-            <PaceTag
-              durationMin={activity.durationMin}
-              distanceKm={activity.distanceKm}
-            />
-          </>
-        )}
-
-        {!readOnly && (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="ml-auto rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-            aria-label="Remove"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              aria-label="Remove"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -669,24 +664,6 @@ function ActivityRow({
         )}
       </AnimatePresence>
     </div>
-  );
-}
-
-function PaceTag({ durationMin, distanceKm }: { durationMin?: number; distanceKm?: number }) {
-  const pace = useMemo(() => {
-    if (!durationMin || !distanceKm || distanceKm <= 0) return null;
-    const secPerKm = Math.round((durationMin * 60) / distanceKm);
-    const m = Math.floor(secPerKm / 60);
-    const s = secPerKm % 60;
-    return `${m}:${String(s).padStart(2, "0")}`;
-  }, [durationMin, distanceKm]);
-
-  return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-hairline bg-card px-2 py-1 text-xs text-muted-foreground">
-      <span>pace</span>
-      <span className="mono tabular-nums text-ink">{pace ?? "—"}</span>
-      <span>min/km</span>
-    </span>
   );
 }
 
