@@ -279,13 +279,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
         <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
           <div className="flex items-start gap-3">
             <div>
-              <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                Organizer · {mode === "create" ? "New event" : "Edit event"}
-              </p>
-              <h1
-                className="mt-2 text-3xl text-ink md:text-4xl"
-                style={{ fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif' }}
-              >
+              <h1 className="text-3xl font-medium text-ink md:text-4xl">
                 {title || "Untitled event"}
               </h1>
             </div>
@@ -344,7 +338,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
               onClick={() => setTab("subevents")}
               icon={<ListTree className="h-3.5 w-3.5" />}
             >
-              {eventType === "event" ? "Tickets" : "Subevents"}
+              {eventType === "event" ? "Tickets" : "Races"}
             </TabBtn>
           )}
           <TabBtn active={tab === "map"} onClick={() => setTab("map")} icon={<MapIcon className="h-3.5 w-3.5" />}>

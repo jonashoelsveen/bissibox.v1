@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
@@ -65,6 +65,32 @@ function EventsPage() {
   const [rowMenuFor, setRowMenuFor] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
 
+  // Chrome-like tab DnD (pointer-based, X-axis only) — mirrors /media
+  const tabStripRef = useRef<HTMLDivElement | null>(null);
+  const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [dragTabId, setDragTabId] = useState<string | null>(null);
+  const [dragDx, setDragDx] = useState(0);
+  const dragStateRef = useRef<{
+    id: string;
+    startX: number;
+    startIndex: number;
+    currentIndex: number;
+    width: number;
+    offsets: number[];
+    moved: boolean;
+  } | null>(null);
+  const flipRef = useRef<{ id: string; fromLeft: number } | null>(null);
+  const [edgeFade, setEdgeFade] = useState({ left: false, right: false });
+
+  const updateEdgeFade = useCallback(() => {
+    const el = tabStripRef.current;
+    if (!el) return;
+    setEdgeFade({
+      left: el.scrollLeft > 2,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 2,
+    });
+  }, []);
+
   useEffect(() => {
     if (!loading && !user) nav({ to: "/auth" });
   }, [loading, user, nav]);
@@ -116,6 +142,91 @@ function EventsPage() {
   useEffect(() => {
     if (searchOpen) setTimeout(() => searchRef.current?.focus(), 30);
   }, [searchOpen]);
+
+  useEffect(() => { updateEdgeFade(); }, [openTabs, updateEdgeFade]);
+
+  useLayoutEffect(() => {
+    const flip = flipRef.current;
+    if (!flip) return;
+    flipRef.current = null;
+    const el = tabRefs.current.get(flip.id);
+    if (!el) return;
+    const newLeft = el.getBoundingClientRect().left;
+    const delta = flip.fromLeft - newLeft;
+    if (Math.abs(delta) < 0.5) return;
+    el.style.transition = "none";
+    el.style.transform = `translate3d(${delta}px,0,0)`;
+    void el.offsetWidth;
+    el.style.transition = "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)";
+    el.style.transform = "translate3d(0,0,0)";
+    const cleanup = () => {
+      el.style.transition = "";
+      el.style.transform = "";
+      el.removeEventListener("transitionend", cleanup);
+    };
+    el.addEventListener("transitionend", cleanup);
+  });
+
+  const onTabPointerDown = (e: React.PointerEvent<HTMLDivElement>, id: string) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("[data-tab-close]")) return;
+    setActiveId(id);
+    const strip = tabStripRef.current;
+    if (!strip) return;
+    const tabsArr = openTabs;
+    const startIndex = tabsArr.findIndex((t) => t.id === id);
+    if (startIndex < 0) return;
+    const els = tabsArr.map((t) => tabRefs.current.get(t.id)).filter((b): b is HTMLDivElement => !!b);
+    if (els.length !== tabsArr.length) return;
+    const stripRect = strip.getBoundingClientRect();
+    const offsets = els.map((b) => b.getBoundingClientRect().left - stripRect.left + strip.scrollLeft);
+    const width = els[startIndex].getBoundingClientRect().width;
+    dragStateRef.current = { id, startX: e.clientX, startIndex, currentIndex: startIndex, width, offsets, moved: false };
+
+    const onMove = (ev: PointerEvent) => {
+      const st = dragStateRef.current;
+      if (!st) return;
+      const dx = ev.clientX - st.startX;
+      if (!st.moved && Math.abs(dx) < 4) return;
+      st.moved = true;
+      if (dragTabId !== st.id) setDragTabId(st.id);
+      setDragDx(dx);
+      const stripEl = tabStripRef.current;
+      if (!stripEl) return;
+      const pointerXInStrip = ev.clientX - stripEl.getBoundingClientRect().left + stripEl.scrollLeft;
+      let newIdx = 0;
+      for (let i = 0; i < st.offsets.length; i++) {
+        const mid = st.offsets[i] + st.width / 2;
+        if (pointerXInStrip < mid) { newIdx = i; break; }
+        newIdx = i;
+      }
+      if (newIdx !== st.currentIndex) st.currentIndex = newIdx;
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      const st = dragStateRef.current;
+      dragStateRef.current = null;
+      const willReorder = !!(st && st.moved && st.currentIndex !== st.startIndex);
+      if (willReorder && st) {
+        const el = tabRefs.current.get(st.id);
+        if (el) flipRef.current = { id: st.id, fromLeft: el.getBoundingClientRect().left };
+        setOpenTabs((prev) => {
+          const next = prev.slice();
+          const [moved] = next.splice(st.startIndex, 1);
+          next.splice(st.currentIndex, 0, moved);
+          return next;
+        });
+      }
+      setDragTabId(null);
+      setDragDx(0);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  };
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -236,31 +347,85 @@ function EventsPage() {
         </button>
 
         {/* Open event tabs */}
-        <div className="flex flex-1 items-end gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {openTabs.map((t) => {
-            const active = activeId === t.id;
-            return (
+        <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
+          {openTabs.length > 0 && (
+            <div className="relative min-w-0 flex-1">
+              {edgeFade.left && (
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent" />
+              )}
+              {edgeFade.right && (
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent" />
+              )}
               <div
-                key={t.id}
-                className={`-mb-px group inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 py-2.5 pl-3 pr-1.5 text-sm transition ${
-                  active ? "border-primary text-ink font-medium" : "border-transparent text-muted-foreground hover:text-ink"
-                }`}
-                style={{ maxWidth: 220 }}
+                ref={tabStripRef}
+                onScroll={updateEdgeFade}
+                className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                style={{ scrollBehavior: "smooth" }}
               >
-                <button onClick={() => setActiveId(t.id)} className="truncate text-left">
-                  {t.title || "Untitled event"}
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); closeTab(t.id); }}
-                  className="rounded p-0.5 text-muted-foreground/60 opacity-0 transition group-hover:opacity-100 hover:bg-secondary hover:text-ink"
-                  aria-label="Close tab"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                {openTabs.map((t, idx) => {
+                  const active = activeId === t.id;
+                  const isDragging = dragTabId === t.id;
+                  let translateX = 0;
+                  if (dragTabId && !isDragging) {
+                    const st = dragStateRef.current;
+                    if (st) {
+                      const from = st.startIndex;
+                      const to = st.currentIndex;
+                      if (to > from && idx > from && idx <= to) translateX = -st.width;
+                      else if (to < from && idx >= to && idx < from) translateX = st.width;
+                    }
+                  }
+                  const dragStyle: React.CSSProperties = isDragging
+                    ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
+                    : { transform: `translate3d(${translateX}px,0,0)` };
+                  return (
+                    <div
+                      key={t.id}
+                      ref={(el) => {
+                        if (el) tabRefs.current.set(t.id, el);
+                        else tabRefs.current.delete(t.id);
+                      }}
+                      onPointerDown={(e) => onTabPointerDown(e, t.id)}
+                      onClick={() => setActiveId(t.id)}
+                      style={{
+                        flex: "1 1 200px",
+                        minWidth: 140,
+                        maxWidth: 240,
+                        touchAction: "pan-y",
+                        ...dragStyle,
+                        transition: isDragging
+                          ? "none"
+                          : dragTabId
+                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
+                            : "color 150ms, border-color 150ms",
+                      }}
+                      className={`group -mb-px inline-flex shrink-0 cursor-default select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
+                        active
+                          ? "border-primary text-ink font-medium"
+                          : "border-transparent text-muted-foreground hover:text-ink"
+                      }`}
+                      title={t.title}
+                    >
+                      <span className="min-w-0 flex-1 truncate text-left">
+                        {t.title || "Untitled event"}
+                      </span>
+                      <span
+                        data-tab-close
+                        role="button"
+                        tabIndex={0}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); closeTab(t.id); }}
+                        className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                      >
+                        ✕
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          )}
+        </nav>
 
         {/* Right side: search + plus */}
         <div className="flex shrink-0 items-center gap-1 pb-1">
