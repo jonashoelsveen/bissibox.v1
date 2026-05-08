@@ -2198,7 +2198,9 @@ function WeekEventsOverlay({
               setHoverRect(null);
               onDeleteEvent?.(ev.id);
             }}
-            onSaveNote={(note) => onSaveSessionNote?.(ev.id, note)}
+            onSaveNote={(note) =>
+              onUpsertSession?.({ ...ev, sessionNote: note || undefined })
+            }
             onUpsert={(patch) => onUpsertSession?.(patch)}
           />
         );
