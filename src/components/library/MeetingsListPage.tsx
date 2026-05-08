@@ -421,7 +421,11 @@ export function MeetingsListPage({
         )}
       </div>
       {onCreate && (
-        <LibraryPlusMenu onCreate={onCreate} showMeetingOption={showMeetingOption} />
+        <LibraryPlusMenu
+          onCreate={onCreate}
+          onCreateContainer={onCreateContainer}
+          showMeetingOption={showMeetingOption}
+        />
       )}
     </>
   );
