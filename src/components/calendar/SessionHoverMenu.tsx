@@ -240,6 +240,7 @@ export function SessionHoverMenu({
                   polyline: ev.summaryPolyline,
                   elevationGainM: ev.totalElevationGainM ?? null,
                   distanceKm: ev.distanceKm ?? null,
+                  stravaActivityId: ev.stravaActivityId ?? null,
                 }
               : null
           }
