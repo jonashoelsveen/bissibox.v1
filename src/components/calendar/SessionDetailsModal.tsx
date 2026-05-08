@@ -669,6 +669,12 @@ function ActivityRow({
               </div>
             </>
           )}
+          {!isEndurance && (
+            <>
+              <div className="w-[110px]" />
+              <div className="w-[90px]" />
+            </>
+          )}
 
           {!readOnly && (
             <button
