@@ -104,10 +104,13 @@ export function SessionDetailsModal({
     [value],
   );
   const [confirmClose, setConfirmClose] = useState(false);
+  const [pulse, setPulse] = useState(0);
 
   const requestClose = () => {
-    if (isDirty && !readOnly) setConfirmClose(true);
-    else onClose();
+    if (isDirty && !readOnly) {
+      if (confirmClose) setPulse((p) => p + 1);
+      else setConfirmClose(true);
+    } else onClose();
   };
 
   useEffect(() => {
