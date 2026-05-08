@@ -14,7 +14,7 @@ export const Route = createFileRoute("/accept-leader-invite")({
 });
 
 function AcceptLeaderInvitePage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { token } = Route.useSearch();
   const [state, setState] = useState<"loading" | "success" | "error">("loading");
