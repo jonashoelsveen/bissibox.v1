@@ -4,8 +4,7 @@ import { ArrowUpRight, Search, UsersRound, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
 import { supabase } from "@/integrations/supabase/client";
-import { MemberDataPanel, type MemberSubTab } from "./MemberDataPanel";
-import { MemberContentView } from "./MemberContentView";
+import { MemberWorkspace } from "./MemberWorkspace";
 
 interface MemberRow {
   user_id: string;
@@ -35,7 +34,6 @@ export function GroupMembersPage() {
   const [loading, setLoading] = useState(false);
   const [openTabs, setOpenTabs] = useState<OpenMemberTab[]>([]);
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
-  const [subTab, setSubTab] = useState<MemberSubTab>("calendar");
 
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
 
@@ -384,23 +382,11 @@ export function GroupMembersPage() {
       </div>
 
       {activeTab ? (
-        <div className="grid gap-6 pt-4 md:grid-cols-[1fr_240px]">
-          <div className="min-w-0">
-            <MemberContentView
-              key={activeTab.user_id}
-              userId={activeTab.user_id}
-              name={activeTab.name}
-              subTab={subTab}
-            />
-          </div>
-          <aside className="md:sticky md:top-28 md:self-start">
-            <MemberDataPanel
-              name={activeTab.name}
-              subTab={subTab}
-              onSubTabChange={setSubTab}
-            />
-          </aside>
-        </div>
+        <MemberWorkspace
+          key={activeTab.user_id}
+          userId={activeTab.user_id}
+          name={activeTab.name}
+        />
       ) : (
         <div className="grid gap-6 pt-4 md:grid-cols-[200px_1fr]">
           <aside className="md:sticky md:top-28 md:self-start">
