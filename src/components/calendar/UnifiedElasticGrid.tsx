@@ -1462,7 +1462,7 @@ function DayCellPair(props: DayCellPairProps) {
                 onBeginEdit(k);
               }
             }}
-            className={`relative flex-1 cursor-cell select-none text-[12px] leading-tight ${
+            className={`relative flex-1 select-none text-[12px] leading-tight ${
               !isFirst && !hideTopDivider ? "border-t border-hairline/60" : ""
             } ${ranged && !isSelected ? "bg-primary/10" : ""}`}
             style={{
