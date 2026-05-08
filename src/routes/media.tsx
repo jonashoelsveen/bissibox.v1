@@ -1713,7 +1713,6 @@ function CreateAlbumDialog({
   teamId: string | null;
 }) {
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
 
   const create = async () => {
@@ -1731,7 +1730,6 @@ function CreateAlbumDialog({
         user_id: userId,
         team_id: teamId,
         name: name.trim(),
-        description: description.trim() || null,
         sort_order: nextOrder,
       });
     setBusy(false);
@@ -1747,7 +1745,6 @@ function CreateAlbumDialog({
   return (
     <Modal title="New album" onClose={onClose}>
       <Field label="Name" value={name} onChange={setName} autoFocus onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void create(); } }} />
-      <Field label="Description" value={description} onChange={setDescription} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void create(); } }} />
       <div className="mt-6 flex justify-end gap-2">
         <button
           onClick={onClose}
