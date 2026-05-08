@@ -595,7 +595,7 @@ function ActivityRow({
                     const h = v === "" ? 0 : Math.max(0, Number(v));
                     onChange({ durationMin: h * 60 + durM });
                   }}
-                  onKeyDown={(e) => handleArrowNav(e, { current: null }, mRef)}
+                  onKeyDown={(e) => handleArrowNav(e, null, mRef)}
                   className={`${inputCls} w-12 text-center`}
                 />
                 <input
@@ -609,7 +609,7 @@ function ActivityRow({
                     const m = v === "" ? 0 : Math.max(0, Math.min(59, Number(v)));
                     onChange({ durationMin: durH * 60 + m });
                   }}
-                  onKeyDown={(e) => handleArrowNav(e, hRef, isEndurance ? kmRef : { current: null })}
+                  onKeyDown={(e) => handleArrowNav(e, hRef, isEndurance ? kmRef : null)}
                   className={`${inputCls} w-12 text-center`}
                 />
               </>
@@ -637,7 +637,7 @@ function ActivityRow({
                       const v = e.target.value.replace(/[^\d.]/g, "");
                       onChange({ distanceKm: v === "" ? undefined : Number(v) });
                     }}
-                    onKeyDown={(e) => handleArrowNav(e, mRef, { current: null })}
+                    onKeyDown={(e) => handleArrowNav(e, mRef, null)}
                     className={`${inputCls} w-20 text-right`}
                   />
                 )}
