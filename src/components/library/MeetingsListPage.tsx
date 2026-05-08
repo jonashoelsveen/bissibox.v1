@@ -492,7 +492,7 @@ export function MeetingsListPage({
             onClick={(e) => e.stopPropagation()}
             onSubmit={(e) => { e.preventDefault(); void createMeeting(); }}
           >
-            <h2 className="mb-4 text-lg text-ink">New meeting</h2>
+            <h2 className="mb-4 text-sm font-medium text-ink">New meeting</h2>
             <label className="mb-3 block text-xs text-muted-foreground">
               Title
               <input
