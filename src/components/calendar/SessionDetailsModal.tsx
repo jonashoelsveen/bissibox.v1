@@ -164,6 +164,21 @@ export function SessionDetailsModal({
             </button>
           </div>
 
+          <div
+            className={`flex flex-1 flex-col overflow-hidden transition-opacity ${
+              confirmClose ? "pointer-events-none opacity-50" : ""
+            }`}
+            onClickCapture={
+              confirmClose
+                ? (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setConfirmClose(false);
+                  }
+                : undefined
+            }
+            style={confirmClose ? { pointerEvents: "auto" } : undefined}
+          >
           {isNote ? (
             <NoteBody
               title={value.title}
