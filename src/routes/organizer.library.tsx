@@ -347,31 +347,85 @@ function EventsPage() {
         </button>
 
         {/* Open event tabs */}
-        <div className="flex flex-1 items-end gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {openTabs.map((t) => {
-            const active = activeId === t.id;
-            return (
+        <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
+          {openTabs.length > 0 && (
+            <div className="relative min-w-0 flex-1">
+              {edgeFade.left && (
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent" />
+              )}
+              {edgeFade.right && (
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent" />
+              )}
               <div
-                key={t.id}
-                className={`-mb-px group inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 py-2.5 pl-3 pr-1.5 text-sm transition ${
-                  active ? "border-primary text-ink font-medium" : "border-transparent text-muted-foreground hover:text-ink"
-                }`}
-                style={{ maxWidth: 220 }}
+                ref={tabStripRef}
+                onScroll={updateEdgeFade}
+                className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                style={{ scrollBehavior: "smooth" }}
               >
-                <button onClick={() => setActiveId(t.id)} className="truncate text-left">
-                  {t.title || "Untitled event"}
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); closeTab(t.id); }}
-                  className="rounded p-0.5 text-muted-foreground/60 opacity-0 transition group-hover:opacity-100 hover:bg-secondary hover:text-ink"
-                  aria-label="Close tab"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                {openTabs.map((t, idx) => {
+                  const active = activeId === t.id;
+                  const isDragging = dragTabId === t.id;
+                  let translateX = 0;
+                  if (dragTabId && !isDragging) {
+                    const st = dragStateRef.current;
+                    if (st) {
+                      const from = st.startIndex;
+                      const to = st.currentIndex;
+                      if (to > from && idx > from && idx <= to) translateX = -st.width;
+                      else if (to < from && idx >= to && idx < from) translateX = st.width;
+                    }
+                  }
+                  const dragStyle: React.CSSProperties = isDragging
+                    ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
+                    : { transform: `translate3d(${translateX}px,0,0)` };
+                  return (
+                    <div
+                      key={t.id}
+                      ref={(el) => {
+                        if (el) tabRefs.current.set(t.id, el);
+                        else tabRefs.current.delete(t.id);
+                      }}
+                      onPointerDown={(e) => onTabPointerDown(e, t.id)}
+                      onClick={() => setActiveId(t.id)}
+                      style={{
+                        flex: "1 1 200px",
+                        minWidth: 140,
+                        maxWidth: 240,
+                        touchAction: "pan-y",
+                        ...dragStyle,
+                        transition: isDragging
+                          ? "none"
+                          : dragTabId
+                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
+                            : "color 150ms, border-color 150ms",
+                      }}
+                      className={`group -mb-px inline-flex shrink-0 cursor-default select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
+                        active
+                          ? "border-primary text-ink font-medium"
+                          : "border-transparent text-muted-foreground hover:text-ink"
+                      }`}
+                      title={t.title}
+                    >
+                      <span className="min-w-0 flex-1 truncate text-left">
+                        {t.title || "Untitled event"}
+                      </span>
+                      <span
+                        data-tab-close
+                        role="button"
+                        tabIndex={0}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); closeTab(t.id); }}
+                        className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                      >
+                        ✕
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          )}
+        </nav>
 
         {/* Right side: search + plus */}
         <div className="flex shrink-0 items-center gap-1 pb-1">
