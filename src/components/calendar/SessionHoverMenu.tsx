@@ -65,21 +65,30 @@ export function SessionHoverMenu({
     if (!showDetails) return;
     const start = fromISOLocal(ev.startISO);
     const end = fromISOLocal(ev.endISO);
+    const startMin = start.getHours() * 60 + start.getMinutes();
+    const endMin = end.getHours() * 60 + end.getMinutes();
+    const durationMin = Math.max(0, endMin - startMin);
+    let activities = ev.activities ?? [];
+    // Seed an activity row from Strava data when none is stored yet.
+    if (activities.length === 0 && ev.stravaActivityId) {
+      activities = [
+        {
+          type: ev.diarySub ?? ev.diaryGroup ?? "running",
+          durationMin,
+          distanceKm: ev.distanceKm,
+        },
+      ];
+    }
     setDetailsValue({
       title: ev.title,
       diaryType: (ev.diaryType as DiaryType) ?? "training",
       diaryGroup: ev.diaryGroup,
       diarySub: ev.diarySub,
-      time: ev.allDay
-        ? null
-        : {
-            startMin: start.getHours() * 60 + start.getMinutes(),
-            endMin: end.getHours() * 60 + end.getMinutes(),
-          },
+      time: ev.allDay ? null : { startMin, endMin },
       distanceKm: ev.distanceKm,
       paceSecPerKm: ev.paceSecPerKm,
       sessionNote: ev.sessionNote ?? "",
-      activities: ev.activities ?? [],
+      activities,
     });
   }, [showDetails, ev]);
 
