@@ -34,7 +34,6 @@ export function GroupMembersPage() {
   const [loading, setLoading] = useState(false);
   const [openTabs, setOpenTabs] = useState<OpenMemberTab[]>([]);
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
-  const [subTab, setSubTab] = useState<MemberSubTab>("calendar");
 
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
 
