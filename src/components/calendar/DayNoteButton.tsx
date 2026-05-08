@@ -178,8 +178,8 @@ export function DayNoteButton({
 
   const positionClass =
     variant === "week"
-      ? "absolute right-1 top-1/2 -translate-y-1/2"
-      : "absolute right-1 top-1";
+      ? "absolute left-1 top-1/2 -translate-y-1/2"
+      : "absolute left-1 bottom-1";
 
   const dateLabel = `${String(date.getDate()).padStart(2, "0")}.${String(
     date.getMonth() + 1,
