@@ -8,8 +8,6 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
-  CheckSquare,
-  Square,
   X,
   Trash2,
   MoreVertical,
@@ -22,6 +20,8 @@ import {
   Search as SearchIcon,
   Folder as FolderIcon,
 } from "lucide-react";
+import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
+import type { PreviousNewKind } from "@/components/library/PreviousPage";
 
 /* ───────── search helpers ───────── */
 
@@ -147,6 +147,8 @@ export function NotesPage({
   hideSideNav,
   externalView,
   hideNewActions,
+  onCreate,
+  showMeetingOption,
 }: {
   actionsMount?: HTMLDivElement | null;
   onOpenNote?: (id: string, kind: "new" | "earlier") => void;
@@ -156,6 +158,9 @@ export function NotesPage({
   externalView?: { type: "all" } | { type: "folder"; name: string | null };
   /** When true, hide the "New folder" / "New note" action buttons (parent renders unified ones). */
   hideNewActions?: boolean;
+  /** Wired from parent to drive the unified "+" dropdown menu. */
+  onCreate?: (kind: PreviousNewKind) => void;
+  showMeetingOption?: boolean;
 }) {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -370,88 +375,52 @@ export function NotesPage({
 
   const actions = (
     <>
-      {!selectMode && (
-        <div
-          className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
-            searchOpen
-              ? "w-64 border-hairline bg-card pl-3 pr-1"
-              : "w-9 hover:border-hairline hover:bg-card"
-          }`}
+      <div
+        className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
+          searchOpen
+            ? "w-64 border-hairline bg-card pl-3 pr-1"
+            : "w-9 hover:border-hairline hover:bg-card"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            if (!searchOpen) setSearchOpen(true);
+            else searchInputRef.current?.focus();
+          }}
+          aria-label="Search notes"
+          className="grid h-9 w-9 shrink-0 place-items-center text-muted-foreground transition hover:text-ink"
         >
+          <SearchIcon className="h-4 w-4" />
+        </button>
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") closeSearch();
+          }}
+          placeholder="Search in notes"
+          className={`min-w-0 flex-1 border-b border-hairline bg-transparent py-1 text-xs text-ink outline-none transition placeholder:text-muted-foreground/70 focus:border-ink/40 ${
+            searchOpen ? "opacity-100" : "pointer-events-none w-0 opacity-0"
+          }`}
+        />
+        {searchOpen && (
           <button
             type="button"
-            onClick={() => {
-              if (!searchOpen) setSearchOpen(true);
-              else searchInputRef.current?.focus();
-            }}
-            aria-label="Search notes"
-            className="grid h-9 w-9 shrink-0 place-items-center text-muted-foreground transition hover:text-ink"
-          >
-            <SearchIcon className="h-4 w-4" />
-          </button>
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") closeSearch();
-            }}
-            placeholder="Search in notes"
-            className={`min-w-0 flex-1 border-b border-hairline bg-transparent py-1 text-xs text-ink outline-none transition placeholder:text-muted-foreground/70 focus:border-ink/40 ${
-              searchOpen ? "opacity-100" : "pointer-events-none w-0 opacity-0"
+            onClick={closeSearch}
+            aria-label="Clear search"
+            className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-ink ${
+              searchQuery ? "opacity-100" : "opacity-60"
             }`}
-          />
-          {searchOpen && (
-            <button
-              type="button"
-              onClick={closeSearch}
-              aria-label="Clear search"
-              className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-ink ${
-                searchQuery ? "opacity-100" : "opacity-60"
-              }`}
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-      )}
-      {selectMode ? (
-        <div className="flex items-center gap-2 rounded-full border border-hairline bg-card p-1 pr-2">
-          <button
-            onClick={handleDelete}
-            disabled={selected.size === 0}
-            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-40"
           >
-            <Trash2 className="h-3.5 w-3.5" /> Delete ({selected.size})
-          </button>
-          <button onClick={exitSelect} className="ml-1 rounded-full p-1.5 text-muted-foreground hover:bg-secondary">
             <X className="h-3.5 w-3.5" />
           </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setSelectMode(true)}
-          className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
-        >
-          <CheckSquare className="h-3.5 w-3.5" /> Select
-        </button>
-      )}
-      {!hideNewActions && (
-        <>
-          <button
-            onClick={() => setCreateFolderOpen(true)}
-            className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
-          >
-            <Plus className="h-3.5 w-3.5" /> New folder
-          </button>
-          <button
-            onClick={() => setNewNoteOpen(true)}
-            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
-          >
-            <Plus className="h-3.5 w-3.5" /> New note
-          </button>
-        </>
+        )}
+      </div>
+      {onCreate && (
+        <LibraryPlusMenu onCreate={onCreate} showMeetingOption={showMeetingOption} />
       )}
     </>
   );
@@ -597,18 +566,12 @@ export function NotesPage({
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {filtered.map((n) => {
-                const isSel = selected.has(n.id);
                 return (
                   <div
                     key={n.id}
-                    onClick={() => { if (selectMode) toggleSel(n.id); else openNote(n.id); }}
+                    onClick={() => openNote(n.id)}
                     className="group relative flex aspect-square cursor-pointer flex-col overflow-hidden rounded-xl border border-hairline bg-card p-3 transition hover:border-ink/20"
                   >
-                    {selectMode && (
-                      <div className="absolute left-2 top-2 z-10 rounded-full bg-background/80 p-0.5">
-                        {isSel ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}
-                      </div>
-                    )}
                     <div className="flex flex-1 items-center justify-center overflow-hidden rounded-lg bg-secondary/40">
                       {n.cover_image_url ? (
                         <img

@@ -11,6 +11,7 @@ import { NotesPage } from "@/components/library/NotesPage";
 import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
 import { PreviousPage, type PreviousNewKind } from "@/components/library/PreviousPage";
+import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { MeetingsListPage } from "@/components/library/MeetingsListPage";
 import { getUnsaved } from "@/lib/library-settings";
@@ -648,6 +649,8 @@ function LibraryPage() {
               newMeetingSignal={newMeetingSignal}
               onOpenMeeting={(m) => openMeetingTab(m, "earlier")}
               onMeetingCreated={(m) => openMeetingTab(m, "new")}
+              onCreate={handleCreateFromPrevious}
+              showMeetingOption={isTeamMode}
             />
           ) : baseTab === "notes" ? (
             <NotesPage
@@ -655,11 +658,26 @@ function LibraryPage() {
               onOpenNote={(id, kind) => void openNote(id, kind)}
               hideSideNav
               externalView={externalNotesView}
+              onCreate={handleCreateFromPrevious}
+              showMeetingOption={isTeamMode}
             />
           ) : baseTab === "files" ? (
-            <FilesPage actionsMount={actionsMount} hideSideNav externalView={externalFilesView} />
+            <FilesPage
+              actionsMount={actionsMount}
+              hideSideNav
+              externalView={externalFilesView}
+              onCreate={handleCreateFromPrevious}
+              showMeetingOption={isTeamMode}
+            />
           ) : (
-            <MediaPage actionsMount={actionsMount} hideSideNav externalView={externalMediaView} onOpenMediaTab={openMediaTab} />
+            <MediaPage
+              actionsMount={actionsMount}
+              hideSideNav
+              externalView={externalMediaView}
+              onOpenMediaTab={openMediaTab}
+              onCreate={handleCreateFromPrevious}
+              showMeetingOption={isTeamMode}
+            />
           )}
         </div>
       </div>
@@ -769,6 +787,8 @@ function MediaPage({
   hideNewActions,
   onOpenMedia,
   onOpenMediaTab,
+  onCreate,
+  showMeetingOption,
 }: {
   actionsMount?: HTMLDivElement | null;
   hideSideNav?: boolean;
@@ -776,6 +796,8 @@ function MediaPage({
   hideNewActions?: boolean;
   onOpenMedia?: (id: string) => void;
   onOpenMediaTab?: (tabId: string, title: string, mediaIds: string[]) => void;
+  onCreate?: (kind: PreviousNewKind) => void;
+  showMeetingOption?: boolean;
 } = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -807,7 +829,9 @@ function MediaPage({
   const [albumDragId, setAlbumDragId] = useState<string | null>(null);
   const [albumDragHandle, setAlbumDragHandle] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Album | null>(null);
-
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const persistAlbumOrder = useCallback(async (next: Album[]) => {
     // Write sort_order based on current array index (pinned first already handled by sort)
     await Promise.all(
@@ -1075,15 +1099,34 @@ function MediaPage({
   }, [items]);
 
   const filtered = useMemo(() => {
-    if (view.type === "all") return items;
-    if (view.id === null) {
-      // Unsorted = items with zero album links
-      return items.filter((i) => (itemAlbums[i.id]?.length ?? 0) === 0 && !i.album_id);
+    let list = items;
+    if (view.type === "album") {
+      list = view.id === null
+        ? list.filter((i) => (itemAlbums[i.id]?.length ?? 0) === 0 && !i.album_id)
+        : list.filter(
+            (i) => itemAlbums[i.id]?.includes(view.id as string) || i.album_id === view.id,
+          );
     }
-    return items.filter(
-      (i) => itemAlbums[i.id]?.includes(view.id as string) || i.album_id === view.id,
-    );
-  }, [items, view, itemAlbums]);
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter((i) =>
+        ((i.storage_path as string).split("/").pop() || "").toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [items, view, itemAlbums, searchQuery]);
+
+  useEffect(() => {
+    if (searchOpen) {
+      const t = setTimeout(() => searchInputRef.current?.focus(), 60);
+      return () => clearTimeout(t);
+    }
+  }, [searchOpen]);
+
+  const closeSearch = () => {
+    setSearchQuery("");
+    setSearchOpen(false);
+  };
 
   const toggleSel = (id: string) => {
     setSelected((s) => {
@@ -1134,52 +1177,52 @@ function MediaPage({
 
   const actions = (
     <>
-      {selectMode ? (
-        <div className="flex items-center gap-2 rounded-full border border-hairline bg-card p-1 pr-2">
+      <div
+        className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
+          searchOpen
+            ? "w-64 border-hairline bg-card pl-3 pr-1"
+            : "w-9 hover:border-hairline hover:bg-card"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            if (!searchOpen) setSearchOpen(true);
+            else searchInputRef.current?.focus();
+          }}
+          aria-label="Search media"
+          className="grid h-9 w-9 shrink-0 place-items-center text-muted-foreground transition hover:text-ink"
+        >
+          <Search className="h-4 w-4" />
+        </button>
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") closeSearch();
+          }}
+          placeholder="Search media"
+          className={`min-w-0 flex-1 border-b border-hairline bg-transparent py-1 text-xs text-ink outline-none transition placeholder:text-muted-foreground/70 focus:border-ink/40 ${
+            searchOpen ? "opacity-100" : "pointer-events-none w-0 opacity-0"
+          }`}
+        />
+        {searchOpen && (
           <button
-            onClick={openSelected}
-            disabled={selected.size === 0}
-            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-ink hover:bg-secondary disabled:opacity-40"
-          >
-            <Eye className="h-3.5 w-3.5" /> Open ({selected.size})
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={selected.size === 0}
-            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-40"
-          >
-            <Trash2 className="h-3.5 w-3.5" /> Delete
-          </button>
-          <button
-            onClick={exitSelect}
-            className="ml-1 rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+            type="button"
+            onClick={closeSearch}
+            aria-label="Clear search"
+            className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-ink ${
+              searchQuery ? "opacity-100" : "opacity-60"
+            }`}
           >
             <X className="h-3.5 w-3.5" />
           </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setSelectMode(true)}
-          className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
-        >
-          <CheckSquare className="h-3.5 w-3.5" /> Select
-        </button>
-      )}
-      {!hideNewActions && (
-        <>
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
-          >
-            <Plus className="h-3.5 w-3.5" /> New album
-          </button>
-          <button
-            onClick={() => setUploadOpen(true)}
-            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
-          >
-            <Upload className="h-3.5 w-3.5" /> Upload
-          </button>
-        </>
+        )}
+      </div>
+      {onCreate && (
+        <LibraryPlusMenu onCreate={onCreate} showMeetingOption={showMeetingOption} />
       )}
     </>
   );

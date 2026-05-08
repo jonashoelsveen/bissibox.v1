@@ -11,8 +11,6 @@ import {
   ChevronRight,
   Plus,
   Upload,
-  CheckSquare,
-  Square,
   X,
   Trash2,
   MoreVertical,
@@ -24,7 +22,10 @@ import {
   ShieldAlert,
   Loader2,
   Download,
+  Search as SearchIcon,
 } from "lucide-react";
+import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
+import type { PreviousNewKind } from "@/components/library/PreviousPage";
 
 interface Folder {
   id: string;
@@ -61,12 +62,16 @@ export function FilesPage({
   externalView,
   hideNewActions,
   onOpenFile,
+  onCreate,
+  showMeetingOption,
 }: {
   actionsMount?: HTMLDivElement | null;
   hideSideNav?: boolean;
   externalView?: { type: "all" } | { type: "folder"; id: string | null };
   hideNewActions?: boolean;
   onOpenFile?: (id: string) => void;
+  onCreate?: (kind: PreviousNewKind) => void;
+  showMeetingOption?: boolean;
 } = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -85,8 +90,9 @@ export function FilesPage({
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [folderMenuFor, setFolderMenuFor] = useState<string | null>(null);
   const [folderDragId, setFolderDragId] = useState<string | null>(null);
@@ -234,35 +240,27 @@ export function FilesPage({
   }, [accessToken, files, load, runPoll]);
 
   const filtered = useMemo(() => {
-    if (view.type === "all") return files;
-    if (view.id === null) return files.filter((f) => !f.folder_id);
-    return files.filter((f) => f.folder_id === view.id);
-  }, [files, view]);
+    let list = files;
+    if (view.type === "folder") {
+      list = view.id === null
+        ? list.filter((f) => !f.folder_id)
+        : list.filter((f) => f.folder_id === view.id);
+    }
+    const q = searchQuery.trim().toLowerCase();
+    if (q) list = list.filter((f) => f.file_name.toLowerCase().includes(q));
+    return list;
+  }, [files, view, searchQuery]);
 
-  const toggleSel = (id: string) => {
-    setSelected((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
-  };
+  useEffect(() => {
+    if (searchOpen) {
+      const t = setTimeout(() => searchInputRef.current?.focus(), 60);
+      return () => clearTimeout(t);
+    }
+  }, [searchOpen]);
 
-  const exitSelect = () => {
-    setSelectMode(false);
-    setSelected(new Set());
-  };
-
-  const handleDelete = async () => {
-    if (selected.size === 0) return;
-    if (!confirm(`Delete ${selected.size} item(s)? This cannot be undone.`)) return;
-    const ids = Array.from(selected);
-    const paths = files.filter((f) => ids.includes(f.id)).map((f) => f.storage_path);
-    await supabase.storage.from("documents").remove(paths);
-    await supabase.from("files").delete().in("id", ids);
-    toast.success("Deleted");
-    exitSelect();
-    void load();
+  const closeSearch = () => {
+    setSearchQuery("");
+    setSearchOpen(false);
   };
 
   const downloadOne = async (f: FileRow) => {
@@ -281,45 +279,52 @@ export function FilesPage({
 
   const actions = (
     <>
-      {selectMode ? (
-        <div className="flex items-center gap-2 rounded-full border border-hairline bg-card p-1 pr-2">
+      <div
+        className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
+          searchOpen
+            ? "w-64 border-hairline bg-card pl-3 pr-1"
+            : "w-9 hover:border-hairline hover:bg-card"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            if (!searchOpen) setSearchOpen(true);
+            else searchInputRef.current?.focus();
+          }}
+          aria-label="Search files"
+          className="grid h-9 w-9 shrink-0 place-items-center text-muted-foreground transition hover:text-ink"
+        >
+          <SearchIcon className="h-4 w-4" />
+        </button>
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") closeSearch();
+          }}
+          placeholder="Search files"
+          className={`min-w-0 flex-1 border-b border-hairline bg-transparent py-1 text-xs text-ink outline-none transition placeholder:text-muted-foreground/70 focus:border-ink/40 ${
+            searchOpen ? "opacity-100" : "pointer-events-none w-0 opacity-0"
+          }`}
+        />
+        {searchOpen && (
           <button
-            onClick={handleDelete}
-            disabled={selected.size === 0}
-            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-40"
-          >
-            <Trash2 className="h-3.5 w-3.5" /> Delete ({selected.size})
-          </button>
-          <button
-            onClick={exitSelect}
-            className="ml-1 rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+            type="button"
+            onClick={closeSearch}
+            aria-label="Clear search"
+            className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-ink ${
+              searchQuery ? "opacity-100" : "opacity-60"
+            }`}
           >
             <X className="h-3.5 w-3.5" />
           </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setSelectMode(true)}
-          className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
-        >
-          <CheckSquare className="h-3.5 w-3.5" /> Select
-        </button>
-      )}
-      {!hideNewActions && (
-        <>
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
-          >
-            <Plus className="h-3.5 w-3.5" /> New folder
-          </button>
-          <button
-            onClick={() => setImportOpen(true)}
-            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
-          >
-            <Upload className="h-3.5 w-3.5" /> Import
-          </button>
-        </>
+        )}
+      </div>
+      {onCreate && (
+        <LibraryPlusMenu onCreate={onCreate} showMeetingOption={showMeetingOption} />
       )}
     </>
   );
@@ -486,26 +491,15 @@ export function FilesPage({
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {filtered.map((f) => {
-                const isSel = selected.has(f.id);
                 return (
                   <div
                     key={f.id}
                     onClick={() => {
-                      if (selectMode) toggleSel(f.id);
-                      else if (onOpenFile) onOpenFile(f.id);
+                      if (onOpenFile) onOpenFile(f.id);
                       else void downloadOne(f);
                     }}
                     className="group relative flex aspect-square cursor-pointer flex-col overflow-hidden rounded-xl border border-hairline bg-card p-3 transition hover:border-ink/20"
                   >
-                    {selectMode && (
-                      <div className="absolute left-2 top-2 z-10 rounded-full bg-background/80 p-0.5">
-                        {isSel ? (
-                          <CheckSquare className="h-4 w-4 text-primary" />
-                        ) : (
-                          <Square className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    )}
 
                     <div className="flex flex-1 items-center justify-center">
                       <FileText className="h-12 w-12 text-muted-foreground/60" strokeWidth={1.25} />
