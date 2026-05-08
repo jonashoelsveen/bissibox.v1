@@ -382,23 +382,11 @@ export function GroupMembersPage() {
       </div>
 
       {activeTab ? (
-        <div className="grid gap-6 pt-4 md:grid-cols-[1fr_240px]">
-          <div className="min-w-0">
-            <MemberContentView
-              key={activeTab.user_id}
-              userId={activeTab.user_id}
-              name={activeTab.name}
-              subTab={subTab}
-            />
-          </div>
-          <aside className="md:sticky md:top-28 md:self-start">
-            <MemberDataPanel
-              name={activeTab.name}
-              subTab={subTab}
-              onSubTabChange={setSubTab}
-            />
-          </aside>
-        </div>
+        <MemberWorkspace
+          key={activeTab.user_id}
+          userId={activeTab.user_id}
+          name={activeTab.name}
+        />
       ) : (
         <div className="grid gap-6 pt-4 md:grid-cols-[200px_1fr]">
           <aside className="md:sticky md:top-28 md:self-start">
