@@ -109,14 +109,14 @@ export function StravaMapPanel({
     return () => { cancelled = true; if (map) map.remove(); };
   }, [coords, styleId]);
 
-  // Real elevation profile from Strava streams when available, otherwise
-  // a synthetic bell curve scaled to total elevation gain as a fallback.
+  // Real elevation profile from Strava streams. We deliberately skip the
+  // synthetic-fallback curve when an activity id is present so we never flash
+  // a fake "bell curve" before the real streams arrive.
   const elevationData = useMemo(() => {
     if (streams && streams.altitude.length > 1) {
       const alt = streams.altitude;
       const dist = streams.distance;
       const haveDist = dist.length === alt.length;
-      // Downsample to ~200 points for chart performance.
       const N = Math.min(200, alt.length);
       const step = alt.length / N;
       const points: { km: number; m: number }[] = [];
@@ -127,6 +127,8 @@ export function StravaMapPanel({
       }
       return points;
     }
+    // If we have an activity id, wait for streams instead of drawing a fake.
+    if (stravaActivityId) return [];
     if (!elevationGainM || elevationGainM <= 0) return [];
     const N = 60;
     const km = distanceKm || 1;
@@ -135,7 +137,9 @@ export function StravaMapPanel({
       const y = elevationGainM * Math.sin(Math.PI * x);
       return { km: Number((x * km).toFixed(2)), m: Math.round(y) };
     });
-  }, [streams, elevationGainM, distanceKm]);
+  }, [streams, elevationGainM, distanceKm, stravaActivityId]);
+
+  const elevationLoading = !!stravaActivityId && !streams;
 
   if (!polyline) {
     return (
@@ -148,7 +152,12 @@ export function StravaMapPanel({
   return (
     <div className="space-y-3">
       <div ref={ref} className="h-[320px] w-full overflow-hidden rounded-lg border border-hairline" />
-      {elevationData.length > 0 && (
+      {elevationLoading && (
+        <div className="flex h-[140px] w-full items-center justify-center rounded-lg border border-hairline bg-card text-[11px] text-muted-foreground">
+          Loading elevation…
+        </div>
+      )}
+      {!elevationLoading && elevationData.length > 0 && (
         <div className="h-[140px] w-full rounded-lg border border-hairline bg-card p-2">
           <div className="mb-1 flex items-center justify-between px-1 text-[11px] text-muted-foreground">
             <span className="mono uppercase tracking-widest">Elevation</span>
