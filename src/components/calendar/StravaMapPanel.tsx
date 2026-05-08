@@ -33,15 +33,32 @@ export function StravaMapPanel({
   polyline,
   elevationGainM,
   distanceKm,
+  stravaActivityId,
 }: {
   polyline?: string | null;
   elevationGainM?: number | null;
   distanceKm?: number | null;
+  stravaActivityId?: number | null;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [styleId] = useMapStyle("strava-activity");
+  const [streams, setStreams] = useState<{ altitude: number[]; distance: number[] } | null>(null);
 
   const coords = useMemo(() => (polyline ? decodePolyline(polyline) : []), [polyline]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setStreams(null);
+    if (!stravaActivityId) return;
+    (async () => {
+      const { data, error } = await supabase.functions.invoke("strava-activity-streams", {
+        body: { activityId: stravaActivityId },
+      });
+      if (cancelled || error || !data?.altitude?.length) return;
+      setStreams({ altitude: data.altitude, distance: data.distance ?? [] });
+    })();
+    return () => { cancelled = true; };
+  }, [stravaActivityId]);
 
   useEffect(() => {
     let map: any = null;
