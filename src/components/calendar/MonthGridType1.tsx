@@ -597,7 +597,7 @@ export function MonthGridType1({
                     "hover:bg-secondary/40",
                   ].join(" ")}
                   data-day-anchor=""
-                  style={{ cursor: d.inMonth ? "cell" : "default" }}
+                  style={{ cursor: "default" }}
                 >
                   {/* Day number — small, top-right, muted */}
                   <div className="flex items-start justify-between px-2 pt-1.5">
@@ -1084,7 +1084,7 @@ function MiniDurationColumn({
                   beginAt(i);
                 }}
                 onMouseEnter={() => extendTo(i)}
-                className={`relative grid h-full cursor-cell select-none ${
+                className={`relative grid h-full select-none ${
                   i > 0 ? "border-t border-hairline/60" : ""
                 }`}
                 style={{
