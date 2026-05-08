@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
 import { X, Plus, MapPin, StickyNote, Info, Paperclip, Pencil, Check, Lock } from "lucide-react";
 import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import { useLibrarySetting, diaryAutosyncKey } from "@/lib/library-settings";
@@ -104,12 +104,16 @@ export function SessionDetailsModal({
     [value],
   );
   const [confirmClose, setConfirmClose] = useState(false);
-  const [pulse, setPulse] = useState(0);
+  const pulseControls = useAnimationControls();
 
   const requestClose = () => {
     if (isDirty && !readOnly) {
-      if (confirmClose) setPulse((p) => p + 1);
-      else setConfirmClose(true);
+      if (confirmClose) {
+        pulseControls.start({
+          scale: [1, 1.025, 1],
+          transition: { duration: 0.22, ease: [0.2, 0, 0, 1], times: [0, 0.45, 1] },
+        });
+      } else setConfirmClose(true);
     } else onClose();
   };
 
@@ -147,20 +151,15 @@ export function SessionDetailsModal({
         onClick={requestClose}
       >
         <motion.div
-          className="relative flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-hairline bg-card shadow-2xl"
           initial={{ scale: 0.96, opacity: 0, y: 8 }}
-          animate={
-            pulse > 0
-              ? { scale: [1, 1.025, 1], opacity: 1, y: 0 }
-              : { scale: 1, opacity: 1, y: 0 }
-          }
+          animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.97, opacity: 0 }}
-          transition={
-            pulse > 0
-              ? { duration: 0.22, ease: [0.2, 0, 0, 1], times: [0, 0.45, 1] }
-              : { duration: 0.18, ease: [0.2, 0, 0, 1] }
-          }
+          transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
           onClick={(e) => e.stopPropagation()}
+        >
+        <motion.div
+          className="relative flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-hairline bg-card shadow-2xl"
+          animate={pulseControls}
         >
           {/* Header */}
           <div className="flex items-center justify-between gap-3 border-b border-hairline bg-muted/40 px-4 py-3">
@@ -356,6 +355,7 @@ export function SessionDetailsModal({
           )}
           </div>
 
+        </motion.div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
