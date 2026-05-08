@@ -11,6 +11,7 @@ import { NotesPage } from "@/components/library/NotesPage";
 import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
 import { PreviousPage, type PreviousNewKind } from "@/components/library/PreviousPage";
+import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { MeetingsListPage } from "@/components/library/MeetingsListPage";
 import { getUnsaved } from "@/lib/library-settings";
