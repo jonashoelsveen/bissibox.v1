@@ -124,9 +124,7 @@ export function DayNoteButton({
     if (!has) return;
     const btn = btnRef.current;
     if (!btn) return;
-    const anchor =
-      (btn.closest(anchorSelector) as HTMLElement | null) ?? btn;
-    anchorElRef.current = anchor;
+    anchorElRef.current = btn;
     const onEnter = () => {
       cancelClose();
       setMode((m) => (m === "edit" ? m : "preview"));
