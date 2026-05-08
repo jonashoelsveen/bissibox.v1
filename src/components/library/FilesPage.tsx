@@ -93,6 +93,13 @@ export function FilesPage({
   const setView = setInternalView;
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const lastFolderSigRef = useRef<number | undefined>(newFolderSignal);
+  useEffect(() => {
+    if (newFolderSignal === undefined) return;
+    if (lastFolderSigRef.current === newFolderSignal) return;
+    lastFolderSigRef.current = newFolderSignal;
+    setCreateOpen(true);
+  }, [newFolderSignal]);
   const [importOpen, setImportOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
