@@ -63,6 +63,8 @@ export function FilesPage({
   hideNewActions,
   onOpenFile,
   onCreate,
+  onCreateContainer,
+  newFolderSignal,
   showMeetingOption,
 }: {
   actionsMount?: HTMLDivElement | null;
@@ -71,6 +73,8 @@ export function FilesPage({
   hideNewActions?: boolean;
   onOpenFile?: (id: string) => void;
   onCreate?: (kind: PreviousNewKind) => void;
+  onCreateContainer?: (kind: PreviousNewKind) => void;
+  newFolderSignal?: number;
   showMeetingOption?: boolean;
 } = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
