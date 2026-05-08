@@ -12,6 +12,7 @@ import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
 import { PreviousPage, type PreviousNewKind } from "@/components/library/PreviousPage";
 import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
+import { CreateContainerDialog } from "@/components/library/CreateContainerDialog";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { MeetingsListPage } from "@/components/library/MeetingsListPage";
 import { getUnsaved } from "@/lib/library-settings";
@@ -94,34 +95,14 @@ function LibraryPage() {
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
   const [newNoteOpen, setNewNoteOpen] = useState(false);
   const [newMeetingSignal, setNewMeetingSignal] = useState(0);
-  const [newMeetingFolderSignal, setNewMeetingFolderSignal] = useState(0);
-  const [newNoteFolderSignal, setNewNoteFolderSignal] = useState(0);
-  const [newFilesFolderSignal, setNewFilesFolderSignal] = useState(0);
-  const [newMediaAlbumSignal, setNewMediaAlbumSignal] = useState(0);
+  const [createContainerKind, setCreateContainerKind] = useState<PreviousNewKind | null>(null);
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
 
   const handleCreateContainerFromPrevious = (kind: PreviousNewKind) => {
-    setActiveNoteId(null);
-    if (kind === "meeting") {
-      navigate({ to: "/media", search: { tab: "meetings" }, replace: true });
-      setNewMeetingFolderSignal((n) => n + 1);
-      return;
-    }
-    if (kind === "note") {
-      navigate({ to: "/media", search: { tab: "notes" }, replace: true });
-      setNewNoteFolderSignal((n) => n + 1);
-      return;
-    }
-    if (kind === "files") {
-      navigate({ to: "/media", search: { tab: "files" }, replace: true });
-      setNewFilesFolderSignal((n) => n + 1);
-      return;
-    }
-    if (kind === "media") {
-      navigate({ to: "/media", search: { tab: "media" }, replace: true });
-      setNewMediaAlbumSignal((n) => n + 1);
-      return;
-    }
+    // Open the parent-level create dialog WITHOUT navigating away from the
+    // current tab. The new folder/album appears in the side nav immediately
+    // via the shared `library:refresh` event.
+    setCreateContainerKind(kind);
   };
 
   const handleCreateFromPrevious = (kind: PreviousNewKind) => {
@@ -675,7 +656,7 @@ function LibraryPage() {
               actionsMount={actionsMount}
               externalView={externalMeetingsView ?? { type: "all" }}
               newMeetingSignal={newMeetingSignal}
-              newFolderSignal={newMeetingFolderSignal}
+              newFolderSignal={0}
               onOpenMeeting={(m) => openMeetingTab(m, "earlier")}
               onMeetingCreated={(m) => openMeetingTab(m, "new")}
               onCreate={handleCreateFromPrevious}
@@ -690,7 +671,7 @@ function LibraryPage() {
               externalView={externalNotesView}
               onCreate={handleCreateFromPrevious}
               onCreateContainer={handleCreateContainerFromPrevious}
-              newFolderSignal={newNoteFolderSignal}
+              newFolderSignal={0}
               showMeetingOption={isTeamMode}
             />
           ) : baseTab === "files" ? (
@@ -700,7 +681,7 @@ function LibraryPage() {
               externalView={externalFilesView}
               onCreate={handleCreateFromPrevious}
               onCreateContainer={handleCreateContainerFromPrevious}
-              newFolderSignal={newFilesFolderSignal}
+              newFolderSignal={0}
               showMeetingOption={isTeamMode}
             />
           ) : (
@@ -711,13 +692,19 @@ function LibraryPage() {
               onOpenMediaTab={openMediaTab}
               onCreate={handleCreateFromPrevious}
               onCreateContainer={handleCreateContainerFromPrevious}
-              newAlbumSignal={newMediaAlbumSignal}
+              newAlbumSignal={0}
               showMeetingOption={isTeamMode}
             />
           )}
         </div>
       </div>
       {newNoteOpen && <NewNoteOverlay onClose={() => setNewNoteOpen(false)} />}
+      {createContainerKind && (
+        <CreateContainerDialog
+          kind={createContainerKind}
+          onClose={() => setCreateContainerKind(null)}
+        />
+      )}
       {unsavedPrompt && (
         <UnsavedChangesDialog
           title={unsavedPrompt.title}
@@ -1726,7 +1713,6 @@ function CreateAlbumDialog({
   teamId: string | null;
 }) {
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
 
   const create = async () => {
@@ -1744,7 +1730,6 @@ function CreateAlbumDialog({
         user_id: userId,
         team_id: teamId,
         name: name.trim(),
-        description: description.trim() || null,
         sort_order: nextOrder,
       });
     setBusy(false);
@@ -1760,7 +1745,6 @@ function CreateAlbumDialog({
   return (
     <Modal title="New album" onClose={onClose}>
       <Field label="Name" value={name} onChange={setName} autoFocus onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void create(); } }} />
-      <Field label="Description" value={description} onChange={setDescription} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void create(); } }} />
       <div className="mt-6 flex justify-end gap-2">
         <button
           onClick={onClose}
@@ -2943,7 +2927,7 @@ function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg text-ink">{title}</h2>
+          <h2 className="text-sm font-medium text-ink">{title}</h2>
           <button
             onClick={onClose}
             className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
