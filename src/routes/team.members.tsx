@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { OrganizationSideNav, ORG_TABS, type OrgTabId } from "@/components/team/OrganizationSideNav";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -81,111 +80,7 @@ interface MemberRow {
 function TeamMembersPage() {
   const { user, loading: authLoading, mode, activeEntityId } = useAuth();
   const nav = useNavigate();
-  const [tab, setTab] = useState<OrgTabId | null>(null);
-  const [openTabs, setOpenTabs] = useState<OrgTabId[]>([]);
-
-  const selectTab = useCallback((id: OrgTabId) => {
-    setOpenTabs((prev) => (prev.includes(id) ? prev : [...prev, id]));
-    setTab(id);
-  }, []);
-  const closeTab = useCallback((id: OrgTabId) => {
-    setOpenTabs((prev) => {
-      const idx = prev.indexOf(id);
-      const next = prev.filter((t) => t !== id);
-      setTab((cur) => {
-        if (cur !== id) return cur;
-        if (next.length === 0) return null;
-        return next[Math.max(0, idx - 1)];
-      });
-      return next;
-    });
-  }, []);
-
-  // ── Top-tab DnD (pointer based, mirrors organizer.library) ──────────────────
-  const tabStripRef = useRef<HTMLDivElement | null>(null);
-  const tabRefs = useRef<Map<OrgTabId, HTMLDivElement>>(new Map());
-  const [dragTabId, setDragTabId] = useState<OrgTabId | null>(null);
-  const [dragDx, setDragDx] = useState(0);
-  const dragStateRef = useRef<{
-    id: OrgTabId; startX: number; startIndex: number; currentIndex: number; width: number; offsets: number[]; moved: boolean;
-  } | null>(null);
-  const flipRef = useRef<{ id: OrgTabId; fromLeft: number } | null>(null);
-
-  useLayoutEffect(() => {
-    const flip = flipRef.current;
-    if (!flip) return;
-    flipRef.current = null;
-    const el = tabRefs.current.get(flip.id);
-    if (!el) return;
-    const newLeft = el.getBoundingClientRect().left;
-    const delta = flip.fromLeft - newLeft;
-    if (Math.abs(delta) < 0.5) return;
-    el.style.transition = "none";
-    el.style.transform = `translate3d(${delta}px,0,0)`;
-    void el.offsetWidth;
-    el.style.transition = "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)";
-    el.style.transform = "translate3d(0,0,0)";
-    const cleanup = () => {
-      el.style.transition = ""; el.style.transform = "";
-      el.removeEventListener("transitionend", cleanup);
-    };
-    el.addEventListener("transitionend", cleanup);
-  });
-
-  const onTabPointerDown = (e: React.PointerEvent<HTMLDivElement>, id: OrgTabId) => {
-    if (e.button !== 0) return;
-    const target = e.target as HTMLElement;
-    if (target.closest("[data-tab-close]")) return;
-    setTab(id);
-    const strip = tabStripRef.current; if (!strip) return;
-    const tabsArr = openTabs;
-    const startIndex = tabsArr.indexOf(id); if (startIndex < 0) return;
-    const els = tabsArr.map((t) => tabRefs.current.get(t)).filter((b): b is HTMLDivElement => !!b);
-    if (els.length !== tabsArr.length) return;
-    const stripRect = strip.getBoundingClientRect();
-    const offsets = els.map((b) => b.getBoundingClientRect().left - stripRect.left + strip.scrollLeft);
-    const width = els[startIndex].getBoundingClientRect().width;
-    dragStateRef.current = { id, startX: e.clientX, startIndex, currentIndex: startIndex, width, offsets, moved: false };
-
-    const onMove = (ev: PointerEvent) => {
-      const st = dragStateRef.current; if (!st) return;
-      const dx = ev.clientX - st.startX;
-      if (!st.moved && Math.abs(dx) < 4) return;
-      st.moved = true;
-      if (dragTabId !== st.id) setDragTabId(st.id);
-      setDragDx(dx);
-      const stripEl = tabStripRef.current; if (!stripEl) return;
-      const pointerXInStrip = ev.clientX - stripEl.getBoundingClientRect().left + stripEl.scrollLeft;
-      let newIdx = 0;
-      for (let i = 0; i < st.offsets.length; i++) {
-        const mid = st.offsets[i] + st.width / 2;
-        if (pointerXInStrip < mid) { newIdx = i; break; }
-        newIdx = i;
-      }
-      if (newIdx !== st.currentIndex) st.currentIndex = newIdx;
-    };
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-      const st = dragStateRef.current; dragStateRef.current = null;
-      const willReorder = !!(st && st.moved && st.currentIndex !== st.startIndex);
-      if (willReorder && st) {
-        const el = tabRefs.current.get(st.id);
-        if (el) flipRef.current = { id: st.id, fromLeft: el.getBoundingClientRect().left };
-        setOpenTabs((prev) => {
-          const next = prev.slice();
-          const [moved] = next.splice(st.startIndex, 1);
-          next.splice(st.currentIndex, 0, moved);
-          return next;
-        });
-      }
-      setDragTabId(null); setDragDx(0);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-  };
+  const [tab, setTab] = useState<"board" | "coaches" | "memberships" | "groups" | "members" | "chart">("board");
   const [teamId, setTeamId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -839,126 +734,41 @@ function TeamMembersPage() {
 
   return (
     <div className="px-4 md:px-6">
-      {/* Top tab bar — mirrors organizer.library */}
-      <div className="sticky top-14 z-20 -mx-4 flex items-end gap-1 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
-        <button
-          onClick={() => setTab(null)}
-          className={`-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 py-2.5 pl-0 pr-4 text-sm font-medium transition ${
-            tab === null
-              ? "border-primary text-ink"
-              : "border-transparent text-muted-foreground hover:text-ink"
-          }`}
-          style={{ width: 240 }}
-        >
-          <Briefcase className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
-          <span className="truncate">Organization</span>
-        </button>
-
-        <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
-          {openTabs.length > 0 && (
-            <div
-              ref={tabStripRef}
-              className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              style={{ scrollBehavior: "smooth" }}
-            >
-              {openTabs.map((id, idx) => {
-                const def = ORG_TABS.find((t) => t.id === id)!;
-                const Icon = def.icon;
-                const active = tab === id;
-                const isDragging = dragTabId === id;
-                let translateX = 0;
-                if (dragTabId && !isDragging) {
-                  const st = dragStateRef.current;
-                  if (st) {
-                    const from = st.startIndex;
-                    const to = st.currentIndex;
-                    if (to > from && idx > from && idx <= to) translateX = -st.width;
-                    else if (to < from && idx >= to && idx < from) translateX = st.width;
-                  }
-                }
-                const dragStyle: React.CSSProperties = isDragging
-                  ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
-                  : { transform: `translate3d(${translateX}px,0,0)` };
-                return (
-                  <div
-                    key={id}
-                    ref={(el) => {
-                      if (el) tabRefs.current.set(id, el);
-                      else tabRefs.current.delete(id);
-                    }}
-                    onPointerDown={(e) => onTabPointerDown(e, id)}
-                    onClick={() => setTab(id)}
-                    style={{
-                      flex: "1 1 200px",
-                      minWidth: 140,
-                      maxWidth: 240,
-                      touchAction: "pan-y",
-                      ...dragStyle,
-                      transition: isDragging
-                        ? "none"
-                        : dragTabId
-                          ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
-                          : "color 150ms, border-color 150ms",
-                    }}
-                    className={`group -mb-px inline-flex shrink-0 cursor-default select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
-                      active
-                        ? "border-primary text-ink font-medium"
-                        : "border-transparent text-muted-foreground hover:text-ink"
-                    }`}
-                    title={def.label}
-                  >
-                    <Icon className="h-3.5 w-3.5 opacity-70" />
-                    <span className="min-w-0 flex-1 truncate text-left">{def.label}</span>
-                    <span
-                      data-tab-close
-                      role="button"
-                      tabIndex={0}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={(e) => { e.stopPropagation(); closeTab(id); }}
-                      className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
-                    >
-                      ✕
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </nav>
-
-        <div className="flex shrink-0 items-center gap-2 pb-1">
-          <button
-            onClick={save}
-            disabled={busy}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
-          >
-            <Save className="h-3.5 w-3.5" />
-            {busy ? "Saving…" : "Save"}
-          </button>
+      <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
+        <div>
+          <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Team</p>
+          <h1 className="mt-2 text-3xl text-ink md:text-4xl">Organization</h1>
         </div>
-      </div>
+        <button
+          onClick={save}
+          disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+        >
+          <Save className="h-4 w-4" />
+          {busy ? "Saving…" : "Save"}
+        </button>
+      </header>
 
-      <div className="grid gap-6 pt-4 md:grid-cols-[240px_1fr]">
-        <aside className="md:sticky md:top-28 md:self-start">
-          <OrganizationSideNav
-            active={tab}
-            onSelect={selectTab}
-            rootActive={tab === null}
-            onRootClick={() => setTab(null)}
-          />
-        </aside>
-
-        <div className="min-w-0">
-          {tab === null && (
-            <div className="rounded-xl border border-dashed border-hairline bg-card/60 p-10 text-center">
-              <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Team</p>
-              <h1 className="mt-3 text-3xl text-ink md:text-4xl">Organization</h1>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Pick a category from the side menu to start managing your team.
-              </p>
-            </div>
-          )}
-
+      <nav className="mt-7 flex border-b border-hairline">
+        <TabBtn active={tab === "board"} onClick={() => setTab("board")} icon={<Briefcase className="h-3.5 w-3.5" />}>
+          Board
+        </TabBtn>
+        <TabBtn active={tab === "coaches"} onClick={() => setTab("coaches")} icon={<UserCog className="h-3.5 w-3.5" />}>
+          Group leaders
+        </TabBtn>
+        <TabBtn active={tab === "groups"} onClick={() => setTab("groups")} icon={<Layers className="h-3.5 w-3.5" />}>
+          Groups
+        </TabBtn>
+        <TabBtn active={tab === "memberships"} onClick={() => setTab("memberships")} icon={<Wallet className="h-3.5 w-3.5" />}>
+          Memberships
+        </TabBtn>
+        <TabBtn active={tab === "members"} onClick={() => setTab("members")} icon={<UsersIcon className="h-3.5 w-3.5" />}>
+          Members
+        </TabBtn>
+        <TabBtn active={tab === "chart"} onClick={() => setTab("chart")} icon={<Network className="h-3.5 w-3.5" />}>
+          Chart
+        </TabBtn>
+      </nav>
 
       {tab === "board" && (
         <Panel>
@@ -1440,8 +1250,6 @@ function TeamMembersPage() {
           </div>
         </Panel>
       )}
-        </div>
-      </div>
     </div>
   );
 }
