@@ -381,68 +381,70 @@ export function GroupMembersPage() {
         </nav>
       </div>
 
-      {activeTab ? (
-        <MemberWorkspace
-          key={activeTab.user_id}
-          userId={activeTab.user_id}
-          name={activeTab.name}
-        />
-      ) : (
-        <div className="grid gap-6 pt-4 md:grid-cols-[200px_1fr]">
-          <aside className="md:sticky md:top-28 md:self-start">
-            <div className="flex flex-col gap-2">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search members"
-                  className="h-7 w-full rounded-md border border-hairline bg-transparent pl-7 pr-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ink/30"
-                />
-              </div>
-              <div className="flex flex-col gap-0.5">
-                {loading && (
-                  <div className="px-2 py-1.5 text-[11px] text-muted-foreground">Loading…</div>
-                )}
-                {!loading && filtered.length === 0 && (
-                  <div className="px-2 py-1.5 text-[11px] text-muted-foreground">No members yet.</div>
-                )}
-                {filtered.map((m) => {
-                  const name = memberName(m);
-                  return (
-                    <div
-                      key={`${m.group_id}-${m.user_id}`}
-                      className="group flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs text-ink transition hover:bg-secondary/60"
-                      title={name}
-                    >
-                      {m.avatar_url ? (
-                        <img src={m.avatar_url} alt="" className="h-5 w-5 shrink-0 rounded-full object-cover" />
-                      ) : (
-                        <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-secondary text-[9px] uppercase text-muted-foreground">
-                          {name.slice(0, 1)}
-                        </span>
-                      )}
-                      <span className="min-w-0 flex-1 truncate">{name}</span>
-                      <button
-                        onClick={() => openMemberTab(m)}
-                        aria-label={`Open ${name}`}
-                        title="Open as tab"
-                        className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground opacity-0 transition hover:bg-secondary hover:text-ink group-hover:opacity-100"
-                      >
-                        <ArrowUpRight className="h-3 w-3" strokeWidth={2.25} />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+      <div className="grid gap-6 pt-4 md:grid-cols-[200px_1fr]">
+        <aside className="md:sticky md:top-28 md:self-start">
+          <div className="flex flex-col gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search members"
+                className="h-7 w-full rounded-md border border-hairline bg-transparent pl-7 pr-2 text-xs outline-none placeholder:text-muted-foreground focus:border-ink/30"
+              />
             </div>
-          </aside>
-          <div className="min-w-0 px-2 py-12 text-sm text-muted-foreground">
-            Select a member to view their data.
+            <div className="flex flex-col gap-0.5">
+              {loading && (
+                <div className="px-2 py-1.5 text-[11px] text-muted-foreground">Loading…</div>
+              )}
+              {!loading && filtered.length === 0 && (
+                <div className="px-2 py-1.5 text-[11px] text-muted-foreground">No members yet.</div>
+              )}
+              {filtered.map((m) => {
+                const name = memberName(m);
+                return (
+                  <div
+                    key={`${m.group_id}-${m.user_id}`}
+                    className="group flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs text-ink transition hover:bg-secondary/60"
+                    title={name}
+                  >
+                    {m.avatar_url ? (
+                      <img src={m.avatar_url} alt="" className="h-5 w-5 shrink-0 rounded-full object-cover" />
+                    ) : (
+                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-secondary text-[9px] uppercase text-muted-foreground">
+                        {name.slice(0, 1)}
+                      </span>
+                    )}
+                    <span className="min-w-0 flex-1 truncate">{name}</span>
+                    <button
+                      onClick={() => openMemberTab(m)}
+                      aria-label={`Open ${name}`}
+                      title="Open as tab"
+                      className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground opacity-0 transition hover:bg-secondary hover:text-ink group-hover:opacity-100"
+                    >
+                      <ArrowUpRight className="h-3 w-3" strokeWidth={2.25} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+        </aside>
+        <div className="min-w-0">
+          {activeTab ? (
+            <MemberWorkspace
+              key={activeTab.user_id}
+              userId={activeTab.user_id}
+              name={activeTab.name}
+            />
+          ) : (
+            <div className="px-2 py-12 text-sm text-muted-foreground">
+              Select a member to view their data.
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
