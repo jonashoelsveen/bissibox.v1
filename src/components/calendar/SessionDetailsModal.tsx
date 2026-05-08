@@ -486,19 +486,7 @@ function ActivityRow({
     return () => clearTimeout(t);
   }, [showLockedMsg]);
 
-  const [editDuration, setEditDuration] = useState(false);
 
-  const dur = activity.durationMin ?? 0;
-  const durH = Math.floor(dur / 60);
-  const durM = dur % 60;
-
-  const lockedClick = (msg: string) => {
-    if (stravaLocked || readOnly) {
-      setShowLockedMsg(msg);
-      return true;
-    }
-    return false;
-  };
 
   const [editing, setEditing] = useState(false);
   const dur = activity.durationMin ?? 0;
