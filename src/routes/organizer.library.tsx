@@ -65,6 +65,32 @@ function EventsPage() {
   const [rowMenuFor, setRowMenuFor] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
 
+  // Chrome-like tab DnD (pointer-based, X-axis only) — mirrors /media
+  const tabStripRef = useRef<HTMLDivElement | null>(null);
+  const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [dragTabId, setDragTabId] = useState<string | null>(null);
+  const [dragDx, setDragDx] = useState(0);
+  const dragStateRef = useRef<{
+    id: string;
+    startX: number;
+    startIndex: number;
+    currentIndex: number;
+    width: number;
+    offsets: number[];
+    moved: boolean;
+  } | null>(null);
+  const flipRef = useRef<{ id: string; fromLeft: number } | null>(null);
+  const [edgeFade, setEdgeFade] = useState({ left: false, right: false });
+
+  const updateEdgeFade = useCallback(() => {
+    const el = tabStripRef.current;
+    if (!el) return;
+    setEdgeFade({
+      left: el.scrollLeft > 2,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 2,
+    });
+  }, []);
+
   useEffect(() => {
     if (!loading && !user) nav({ to: "/auth" });
   }, [loading, user, nav]);
