@@ -278,19 +278,16 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
       <div>
         <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
           <div className="flex items-start gap-3">
-            <button
-              onClick={() => nav({ to: "/organizer/library" })}
-              aria-label="Back to your events"
-              title="Back to your events"
-              className="-ml-2 inline-flex items-center justify-center p-2 text-muted-foreground transition hover:text-ink"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
             <div>
               <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
                 Organizer · {mode === "create" ? "New event" : "Edit event"}
               </p>
-              <h1 className="mt-2 text-3xl text-ink md:text-4xl">{title || "Untitled event"}</h1>
+              <h1
+                className="mt-2 text-3xl text-ink md:text-4xl"
+                style={{ fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif' }}
+              >
+                {title || "Untitled event"}
+              </h1>
             </div>
           </div>
           <div className="flex items-center gap-2">
