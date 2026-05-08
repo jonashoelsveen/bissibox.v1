@@ -188,14 +188,14 @@ export function SessionDetailsModal({
           {/* Header */}
           <div className="flex items-center justify-between gap-3 border-b border-hairline bg-muted/40 px-4 py-3">
             <div className="flex items-center gap-2">
-              {!readOnly && isEdit && onDelete ? (
+              {!readOnly ? (
                 <button
                   type="button"
+                  aria-label="Delete session"
                   onClick={() => setConfirmDelete(true)}
-                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  className="inline-flex items-center justify-center rounded-md bg-secondary p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete
+                  <Trash2 className="h-4 w-4" />
                 </button>
               ) : (
                 <h2 className="text-sm font-semibold text-ink">{headerTitle}</h2>
