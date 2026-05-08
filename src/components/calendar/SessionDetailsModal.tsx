@@ -12,11 +12,21 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
-import { X, Plus, MapPin, StickyNote, Info, Paperclip, Pencil, Check, Lock, Activity } from "lucide-react";
+import { X, Plus, MapPin, StickyNote, Info, Paperclip, Pencil, Check, Lock, Activity, Trash2 } from "lucide-react";
 import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import { useLibrarySetting, diaryAutosyncKey } from "@/lib/library-settings";
 import { StravaMapPanel } from "./StravaMapPanel";
 import { colorForActivity } from "@/lib/activity-colors";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export interface SessionDetailsValue {
   title: string;
@@ -73,6 +83,7 @@ export function SessionDetailsModal({
   onChange,
   onClose,
   onSave,
+  onDelete,
   strava,
   date,
   readOnly = false,
@@ -82,6 +93,7 @@ export function SessionDetailsModal({
   onChange: (v: SessionDetailsValue) => void;
   onClose: () => void;
   onSave: (v: SessionDetailsValue) => void;
+  onDelete?: () => void;
   strava?: {
     polyline?: string | null;
     elevationGainM?: number | null;
@@ -104,7 +116,18 @@ export function SessionDetailsModal({
     [value],
   );
   const [confirmClose, setConfirmClose] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const pulseControls = useAnimationControls();
+
+  const revertChanges = () => {
+    try {
+      const initial = JSON.parse(initialRef.current) as SessionDetailsValue;
+      onChange(initial);
+    } catch {
+      /* noop */
+    }
+    setConfirmClose(false);
+  };
 
   const requestClose = () => {
     if (isDirty && !readOnly) {
@@ -164,25 +187,35 @@ export function SessionDetailsModal({
         >
           {/* Header */}
           <div className="flex items-center justify-between gap-3 border-b border-hairline bg-muted/40 px-4 py-3">
-            <h2 className="text-sm font-semibold text-ink">{headerTitle}</h2>
+            <div className="flex items-center gap-2">
+              {!readOnly && isEdit && onDelete ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </button>
+              ) : (
+                <h2 className="text-sm font-semibold text-ink">{headerTitle}</h2>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               {!readOnly && (
                 <AnimatePresence initial={false}>
-                  {confirmClose && (
+                  {isDirty && (
                     <motion.button
-                      key="discard"
+                      key="cancel"
                       type="button"
                       initial={{ opacity: 0, x: 8 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 8 }}
                       transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-                      onClick={() => {
-                        setConfirmClose(false);
-                        onClose();
-                      }}
-                      className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      onClick={revertChanges}
+                      className="whitespace-nowrap rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary/80 hover:text-ink"
                     >
-                      Discard changes
+                      Cancel
                     </motion.button>
                   )}
                 </AnimatePresence>
@@ -204,16 +237,31 @@ export function SessionDetailsModal({
                   {autosync ? "Autosync" : isEdit ? "Save" : "Add"}
                 </button>
               )}
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={requestClose}
-                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
-              >
-                <X className="h-4 w-4" />
-              </button>
             </div>
           </div>
+
+          <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to delete this session?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. The session and its details will be permanently removed from your diary.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    setConfirmDelete(false);
+                    onDelete?.();
+                  }}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete session
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <div
             className={`flex flex-1 flex-col overflow-hidden transition-opacity duration-150 ${
@@ -237,9 +285,9 @@ export function SessionDetailsModal({
           ) : (
             <>
               {/* Top fields — three trustful cards: Session name / Start of session / Session duration */}
-              <div className="grid grid-cols-1 gap-3 border-b border-hairline px-4 py-4 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-3">
                 <FieldStack label="Session name">
-                  <div className="rounded-lg border border-hairline bg-background px-3 py-2.5">
+                  <div className="rounded-md border border-hairline bg-background px-3 py-2">
                     <input
                       value={value.title}
                       onChange={(e) => set("title", e.target.value)}
@@ -259,7 +307,7 @@ export function SessionDetailsModal({
                       : "Start time is set by Strava and can't be edited here."
                   }
                 >
-                  <div className="rounded-lg border border-hairline bg-background px-3 py-2.5">
+                  <div className="rounded-md border border-hairline bg-background px-3 py-2">
                     <input
                       value={startStr}
                       onChange={(e) => {
@@ -277,7 +325,7 @@ export function SessionDetailsModal({
                 </FieldStack>
 
                 <FieldStack label="Session duration" locked={isStravaSynced} lockedMessage="Duration is set by Strava and can't be edited here.">
-                  <div className="rounded-lg border border-hairline bg-background px-3 py-2.5">
+                  <div className="rounded-md border border-hairline bg-background px-3 py-2">
                     <div className="text-sm tabular-nums text-ink">
                       {durationMin > 0 ? fmtHM(durationMin) : "—"}
                     </div>
@@ -385,7 +433,7 @@ function FieldStack({
 
   return (
     <div className="relative flex flex-col gap-1.5">
-      <span className="flex items-center gap-1 text-sm font-semibold text-ink">
+      <span className="flex items-center gap-1 text-xs font-semibold text-ink">
         {label}
         {locked && <Lock className="h-3 w-3 text-muted-foreground/70" />}
       </span>

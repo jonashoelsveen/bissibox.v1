@@ -368,6 +368,10 @@ export function DiaryPopoverEditor({
             setActivities(v.activities ?? []);
           }}
           onClose={() => setShowDetails(false)}
+          onDelete={isEdit ? () => {
+            setShowDetails(false);
+            onCommit(buildValue(), { delete: true });
+          } : undefined}
           onSave={(v) => {
             // sync local state from modal then commit
             const merged: DiaryPopoverValue = {
