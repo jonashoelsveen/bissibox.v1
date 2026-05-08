@@ -313,7 +313,7 @@ export function SessionDetailsModal({
               </div>
 
               {/* Tab body */}
-              <div className="min-h-[280px] flex-1 overflow-y-auto px-4 py-4">
+              <div className="h-[520px] flex-none overflow-y-auto px-4 py-4">
                 {tab === "about" && (
                   <AboutTab
                     activities={value.activities}
