@@ -152,32 +152,16 @@ export function SessionDetailsModal({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between gap-3 border-b border-hairline px-4 py-3">
+          <div className="flex items-center justify-between gap-3 border-b border-hairline bg-muted/40 px-4 py-3">
             <h2 className="text-sm font-semibold text-ink">{headerTitle}</h2>
-            <div className="flex items-center gap-2">
-              {!readOnly && (
-                <button
-                  type="button"
-                  onClick={() => onSave(value)}
-                  disabled={saveDisabled}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-opacity ${
-                    saveDisabled
-                      ? "bg-secondary text-muted-foreground/70 cursor-not-allowed"
-                      : "bg-primary text-primary-foreground hover:opacity-90"
-                  }`}
-                >
-                  {autosync ? "Autosync" : isEdit ? "Save" : "Add"}
-                </button>
-              )}
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={requestClose}
-                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={requestClose}
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
 
           {isNote ? (
@@ -307,6 +291,31 @@ export function SessionDetailsModal({
                 )}
               </div>
             </>
+          )}
+
+          {/* Footer — always visible: Cancel (left), Save (right, toned down when no changes) */}
+          {!readOnly && (
+            <div className="flex items-center justify-between border-t border-hairline bg-muted/40 px-4 py-3">
+              <button
+                type="button"
+                onClick={requestClose}
+                className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => onSave(value)}
+                disabled={saveDisabled}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-opacity ${
+                  saveDisabled
+                    ? "bg-secondary text-muted-foreground/70 cursor-not-allowed"
+                    : "bg-primary text-primary-foreground hover:opacity-90"
+                }`}
+              >
+                {autosync ? "Autosync" : isEdit ? "Save changes" : "Add"}
+              </button>
+            </div>
           )}
 
           {/* Confirm-close overlay */}
