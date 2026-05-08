@@ -192,17 +192,19 @@ export function SessionDetailsModal({
             <>
               {/* Top fields — three trustful cards: Session name / Start of session / Session duration */}
               <div className="grid grid-cols-1 gap-3 border-b border-hairline px-4 py-4 md:grid-cols-3">
-                <BoldField label="Session name">
-                  <input
-                    value={value.title}
-                    onChange={(e) => set("title", e.target.value)}
-                    placeholder="Morning run"
-                    disabled={locked}
-                    className="block w-full bg-transparent text-sm text-ink outline-none disabled:cursor-not-allowed"
-                  />
-                </BoldField>
+                <FieldStack label="Session name">
+                  <div className="rounded-lg border border-hairline bg-background px-3 py-2.5">
+                    <input
+                      value={value.title}
+                      onChange={(e) => set("title", e.target.value)}
+                      placeholder="Morning run"
+                      disabled={locked}
+                      className="block w-full bg-transparent text-sm text-ink outline-none disabled:cursor-not-allowed"
+                    />
+                  </div>
+                </FieldStack>
 
-                <LockableField
+                <FieldStack
                   label="Start of session"
                   locked={isStravaSynced || readOnly}
                   lockedMessage={
@@ -211,29 +213,30 @@ export function SessionDetailsModal({
                       : "Start time is set by Strava and can't be edited here."
                   }
                 >
-                  <input
-                    value={startStr}
-                    onChange={(e) => {
-                      if (isStravaSynced || readOnly) return;
-                      const sm = parseHHMM(e.target.value);
-                      if (sm == null) return;
-                      const dur = durationMin || 60;
-                      set("time", { startMin: sm, endMin: sm + dur });
-                    }}
-                    placeholder="07:00"
-                    readOnly={isStravaSynced || readOnly}
-                    className="mono block w-full bg-transparent text-sm tabular-nums text-ink outline-none"
-                  />
-                </LockableField>
-
-                <BoldField label="Session duration">
-                  <div className="flex items-center gap-1.5 text-sm tabular-nums text-ink">
-                    <span>{durationMin > 0 ? fmtHM(durationMin) : "—"}</span>
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      auto
-                    </span>
+                  <div className="rounded-lg border border-hairline bg-background px-3 py-2.5">
+                    <input
+                      value={startStr}
+                      onChange={(e) => {
+                        if (isStravaSynced || readOnly) return;
+                        const sm = parseHHMM(e.target.value);
+                        if (sm == null) return;
+                        const dur = durationMin || 60;
+                        set("time", { startMin: sm, endMin: sm + dur });
+                      }}
+                      placeholder="07:00"
+                      readOnly={isStravaSynced || readOnly}
+                      className="mono block w-full bg-transparent text-sm tabular-nums text-ink outline-none"
+                    />
                   </div>
-                </BoldField>
+                </FieldStack>
+
+                <FieldStack label="Session duration" locked={isStravaSynced} lockedMessage="Duration is set by Strava and can't be edited here.">
+                  <div className="rounded-lg border border-hairline bg-background px-3 py-2.5">
+                    <div className="text-sm tabular-nums text-ink">
+                      {durationMin > 0 ? fmtHM(durationMin) : "—"}
+                    </div>
+                  </div>
+                </FieldStack>
               </div>
 
               {/* Tabs header */}
