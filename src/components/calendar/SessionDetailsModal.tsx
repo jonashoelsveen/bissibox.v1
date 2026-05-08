@@ -598,6 +598,7 @@ function ActivityRow({
                   onKeyDown={(e) => handleArrowNav(e, null, mRef)}
                   className={`${inputCls} w-12 text-center`}
                 />
+                <span className="text-xs font-bold text-ink">h</span>
                 <input
                   ref={mRef}
                   type="text"
@@ -612,6 +613,7 @@ function ActivityRow({
                   onKeyDown={(e) => handleArrowNav(e, hRef, isEndurance ? kmRef : null)}
                   className={`${inputCls} w-12 text-center`}
                 />
+                <span className="text-xs font-bold text-ink">m</span>
               </>
             )}
           </div>
@@ -619,7 +621,7 @@ function ActivityRow({
           {isEndurance && (
             <>
               {/* Distance — fixed slot */}
-              <div className="flex w-[90px] items-center justify-end">
+              <div className="flex w-[110px] items-center justify-end gap-1">
                 {!editing ? (
                   <span className="text-sm font-bold tabular-nums text-ink">
                     {activity.distanceKm != null
@@ -627,19 +629,22 @@ function ActivityRow({
                       : "—"}
                   </span>
                 ) : (
-                  <input
-                    ref={kmRef}
-                    type="text"
-                    inputMode="decimal"
-                    value={activity.distanceKm ?? ""}
-                    disabled={stravaLocked || readOnly}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/[^\d.]/g, "");
-                      onChange({ distanceKm: v === "" ? undefined : Number(v) });
-                    }}
-                    onKeyDown={(e) => handleArrowNav(e, mRef, null)}
-                    className={`${inputCls} w-20 text-right`}
-                  />
+                  <>
+                    <input
+                      ref={kmRef}
+                      type="text"
+                      inputMode="decimal"
+                      value={activity.distanceKm ?? ""}
+                      disabled={stravaLocked || readOnly}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[^\d.]/g, "");
+                        onChange({ distanceKm: v === "" ? undefined : Number(v) });
+                      }}
+                      onKeyDown={(e) => handleArrowNav(e, mRef, null)}
+                      className={`${inputCls} w-20 text-right`}
+                    />
+                    <span className="text-xs font-bold text-ink">km</span>
+                  </>
                 )}
               </div>
 
