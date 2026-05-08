@@ -241,6 +241,7 @@ export function SessionDetailsModal({
                   polyline={strava.polyline}
                   elevationGainM={strava.elevationGainM ?? null}
                   distanceKm={strava.distanceKm ?? value.distanceKm ?? null}
+                  stravaActivityId={strava.stravaActivityId ?? null}
                 />
               ) : (
                 <div className="grid place-items-center rounded-lg border border-dashed border-hairline bg-muted/20 py-16 text-center">
