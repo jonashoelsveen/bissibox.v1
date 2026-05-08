@@ -148,18 +148,18 @@ export function NotesPage({
   externalView,
   hideNewActions,
   onCreate,
+  onCreateContainer,
+  newFolderSignal,
   showMeetingOption,
 }: {
   actionsMount?: HTMLDivElement | null;
   onOpenNote?: (id: string, kind: "new" | "earlier") => void;
-  /** When true, hide the internal left nav column (parent renders LibrarySideNav). */
   hideSideNav?: boolean;
-  /** When set, drives the view from outside (parent URL state). */
   externalView?: { type: "all" } | { type: "folder"; name: string | null };
-  /** When true, hide the "New folder" / "New note" action buttons (parent renders unified ones). */
   hideNewActions?: boolean;
-  /** Wired from parent to drive the unified "+" dropdown menu. */
   onCreate?: (kind: PreviousNewKind) => void;
+  onCreateContainer?: (kind: PreviousNewKind) => void;
+  newFolderSignal?: number;
   showMeetingOption?: boolean;
 }) {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
