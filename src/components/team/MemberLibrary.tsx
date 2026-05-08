@@ -80,11 +80,6 @@ export function MemberLibraryMain({
 
   return (
     <div className="mt-2">
-      <div className="mb-3 flex items-end gap-3 border-b border-hairline">
-        <div className="-mb-px border-b-2 border-primary px-1 py-2 text-sm font-medium text-ink">
-          Media
-        </div>
-      </div>
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-20 text-center text-sm text-muted-foreground">
           No media.
