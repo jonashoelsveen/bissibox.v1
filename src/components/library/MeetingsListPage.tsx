@@ -372,6 +372,14 @@ export function MeetingsListPage({
     setNewMeetingOpen(true);
   }, [newMeetingSignal]);
 
+  const lastFolderSigRef = useRef<number | undefined>(newFolderSignal);
+  useEffect(() => {
+    if (newFolderSignal === undefined) return;
+    if (lastFolderSigRef.current === newFolderSignal) return;
+    lastFolderSigRef.current = newFolderSignal;
+    setNewFolderOpen(true);
+  }, [newFolderSignal]);
+
   if (authLoading || !user) return null;
 
   const actions = (
