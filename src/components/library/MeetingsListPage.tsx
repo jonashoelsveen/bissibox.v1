@@ -6,13 +6,13 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import {
   Briefcase,
-  CheckSquare,
   Plus,
   Search as SearchIcon,
-  Trash2,
   X,
 } from "lucide-react";
 import { meetingTables, type MeetingKind } from "@/lib/meeting-kind";
+import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
+import type { PreviousNewKind } from "@/components/library/PreviousPage";
 
 // Supabase generated types only know the literal table names, so we cast to
 // `any` when the table name is computed dynamically from `kind`.
@@ -36,10 +36,14 @@ export function MeetingsListPage({
   onOpenMeeting,
   onMeetingCreated,
   newMeetingSignal,
+  onCreate,
+  showMeetingOption,
 }: {
   kind?: MeetingKind;
   actionsMount?: HTMLDivElement | null;
   hideNewActions?: boolean;
+  onCreate?: (kind: PreviousNewKind) => void;
+  showMeetingOption?: boolean;
   /** "all" or filter by folder name (null = unsorted, string = folder name). */
   externalView?: { type: "all" } | { type: "folder"; name: string | null };
   /** When provided, clicking a meeting card calls this instead of navigating. */
@@ -62,8 +66,6 @@ export function MeetingsListPage({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // new meeting modal
   const [newMeetingOpen, setNewMeetingOpen] = useState(false);
