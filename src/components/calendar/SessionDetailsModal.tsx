@@ -83,6 +83,7 @@ export function SessionDetailsModal({
   onChange,
   onClose,
   onSave,
+  onDelete,
   strava,
   date,
   readOnly = false,
@@ -92,6 +93,7 @@ export function SessionDetailsModal({
   onChange: (v: SessionDetailsValue) => void;
   onClose: () => void;
   onSave: (v: SessionDetailsValue) => void;
+  onDelete?: () => void;
   strava?: {
     polyline?: string | null;
     elevationGainM?: number | null;
