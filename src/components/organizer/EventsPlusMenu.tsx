@@ -70,37 +70,6 @@ export function EventsPlusMenu({
   );
 }
 
-/** Centered "New folder" dialog used by the EventsPlusMenu. */
-export function NewEventFolderDialog({
-  onClose,
-  onCreated,
-}: {
-  onClose: () => void;
-  onCreated: () => void;
-}) {
-  const [name, setName] = useState("");
-  const [busy, setBusy] = useState(false);
-  const ref = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    const t = setTimeout(() => ref.current?.focus(), 30);
-    return () => clearTimeout(t);
-  }, []);
-
-  const submit = async () => {
-    if (!name.trim() || busy) return;
-    setBusy(true);
-    const { supabase } = await import("@/integrations/supabase/client");
-    const { useAuthRaw } = await import("@/lib/auth-helpers"); // optional, fallback below
-    void useAuthRaw;
-    onClose();
-    onCreated();
-  };
-  void submit; // unused — actual creation handled by parent passing onCreated() via FolderCreator below
-
-  return null;
-}
-
 /**
  * Inline event-folder creator that doesn't need extra files. Used directly by
  * the page so the auth context is in scope.
