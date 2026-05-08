@@ -261,17 +261,7 @@ export function SessionDetailsModal({
             </AlertDialogContent>
           </AlertDialog>
 
-          <div
-            className={`flex flex-1 flex-col overflow-hidden transition-opacity duration-150 ${
-              confirmClose ? "opacity-50" : ""
-            }`}
-            onClickCapture={(e) => {
-              if (confirmClose) {
-                e.stopPropagation();
-                setConfirmClose(false);
-              }
-            }}
-          >
+          <div className="flex flex-1 flex-col overflow-hidden">
           {isNote ? (
             <NoteBody
               title={value.title}
