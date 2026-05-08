@@ -8,8 +8,6 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
-  CheckSquare,
-  Square,
   X,
   Trash2,
   MoreVertical,
@@ -22,6 +20,8 @@ import {
   Search as SearchIcon,
   Folder as FolderIcon,
 } from "lucide-react";
+import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
+import type { PreviousNewKind } from "@/components/library/PreviousPage";
 
 /* ───────── search helpers ───────── */
 
@@ -147,6 +147,8 @@ export function NotesPage({
   hideSideNav,
   externalView,
   hideNewActions,
+  onCreate,
+  showMeetingOption,
 }: {
   actionsMount?: HTMLDivElement | null;
   onOpenNote?: (id: string, kind: "new" | "earlier") => void;
@@ -156,6 +158,9 @@ export function NotesPage({
   externalView?: { type: "all" } | { type: "folder"; name: string | null };
   /** When true, hide the "New folder" / "New note" action buttons (parent renders unified ones). */
   hideNewActions?: boolean;
+  /** Wired from parent to drive the unified "+" dropdown menu. */
+  onCreate?: (kind: PreviousNewKind) => void;
+  showMeetingOption?: boolean;
 }) {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
