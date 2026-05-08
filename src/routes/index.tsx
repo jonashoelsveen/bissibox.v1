@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/format";
 import { Search, SlidersHorizontal, ArrowUpDown, X, Check } from "lucide-react";
 import { RaceListItem } from "@/components/RaceListItem";
+import { SearchModeToggle } from "@/components/SearchModeToggle";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/")({
