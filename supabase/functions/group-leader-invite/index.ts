@@ -158,6 +158,7 @@ Deno.serve(async (req) => {
         invited_at: new Date().toISOString(),
         status: "pending",
         invited_by: userData.user.id,
+        invite_token: token,
       })
       .eq("id", leader.id);
 
