@@ -163,7 +163,7 @@ export function StravaMapPanel({
                 </linearGradient>
               </defs>
               <XAxis dataKey="km" tickLine={false} axisLine={false} fontSize={10} />
-              <YAxis hide />
+              <YAxis hide domain={["dataMin", "dataMax"]} />
               <Tooltip
                 contentStyle={{ fontSize: 11, padding: "4px 8px" }}
                 formatter={(v: any) => [`${v} m`, "Elev"]}
