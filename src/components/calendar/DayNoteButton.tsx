@@ -118,21 +118,23 @@ export function DayNoteButton({
     }
   };
 
-  // Auto-preview when parent anchor is hovered AND note exists.
+  // Auto-preview only when the icon itself is hovered (not the whole cell),
+  // so the note panel doesn't pop open every time the cursor enters the day cell.
   useEffect(() => {
     if (!has) return;
+    const btn = btnRef.current;
+    if (!btn) return;
     const anchor =
-      btnRef.current?.closest(anchorSelector) as HTMLElement | null;
-    if (!anchor) return;
+      (btn.closest(anchorSelector) as HTMLElement | null) ?? btn;
     anchorElRef.current = anchor;
     const onEnter = () => {
       cancelClose();
       setMode((m) => (m === "edit" ? m : "preview"));
       refreshRect();
     };
-    anchor.addEventListener("mouseenter", onEnter);
+    btn.addEventListener("mouseenter", onEnter);
     return () => {
-      anchor.removeEventListener("mouseenter", onEnter);
+      btn.removeEventListener("mouseenter", onEnter);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [has, anchorSelector]);
