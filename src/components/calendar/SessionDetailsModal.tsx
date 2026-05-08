@@ -12,7 +12,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, MapPin, NotebookPen, Info, Paperclip, Pencil, Check, Lock } from "lucide-react";
+import { X, Plus, MapPin, StickyNote, Info, Paperclip, Pencil, Check, Lock } from "lucide-react";
 import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import { useLibrarySetting, diaryAutosyncKey } from "@/lib/library-settings";
 import { StravaMapPanel } from "./StravaMapPanel";
