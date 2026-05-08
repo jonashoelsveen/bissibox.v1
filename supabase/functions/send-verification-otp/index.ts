@@ -18,7 +18,6 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend/emails";
 const FROM_EMAIL = "onboarding@resend.dev";
-const SANDBOX_TO_EMAIL = "jonashoelsveen@outlook.com";
 
 interface Body {
   channel: "email" | "sms";
