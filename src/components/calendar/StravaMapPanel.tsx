@@ -5,10 +5,11 @@
  * Real per-point elevation/time streams are not pulled (deferred to a
  * later round); we use total_elevation_gain to render a smooth profile.
  */
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { loadMapbox } from "@/lib/mapbox";
 import { useMapStyle, MAP_STYLES } from "@/lib/mapbox";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
 
 // Google polyline decoder (Encoded Polyline Algorithm Format)
 function decodePolyline(str: string): [number, number][] {
