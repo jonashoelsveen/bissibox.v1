@@ -289,7 +289,7 @@ export function SessionDetailsModal({
               <div className="flex items-end gap-1 border-b border-hairline px-4">
                 {(
                   [
-                    { id: "about", label: "About", Icon: Info },
+                    { id: "about", label: "Activity", Icon: Activity },
                     { id: "map", label: "Map", Icon: MapPin },
                     { id: "note", label: "Note", Icon: StickyNote },
                   ] as const
