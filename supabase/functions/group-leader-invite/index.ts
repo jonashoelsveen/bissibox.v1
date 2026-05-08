@@ -105,9 +105,9 @@ Deno.serve(async (req) => {
         ${groupLine}
         <p>As a group leader you'll get access to your group's meetings page, notes and files inside the team.</p>
         <p style="margin: 28px 0;">
-          <a href="${appUrl}/auth"
+          <a href="${acceptUrl}"
              style="display: inline-block; padding: 12px 20px; background: #111; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">
-            Sign in to accept
+            Accept invitation
           </a>
         </p>
         <p style="font-size: 13px; color: #666;">If you weren't expecting this invitation you can safely ignore this email.</p>
