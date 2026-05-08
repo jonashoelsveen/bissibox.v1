@@ -253,7 +253,8 @@ export function SessionDetailsModal({
                 <AlertDialogAction
                   onClick={() => {
                     setConfirmDelete(false);
-                    onDelete?.();
+                    if (onDelete) onDelete();
+                    else onClose();
                   }}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
