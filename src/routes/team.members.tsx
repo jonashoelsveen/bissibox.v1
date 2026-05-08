@@ -1440,6 +1440,8 @@ function TeamMembersPage() {
           </div>
         </Panel>
       )}
+        </div>
+      </div>
     </div>
   );
 }
