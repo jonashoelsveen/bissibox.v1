@@ -507,12 +507,16 @@ function ActivityRow({
     }
   }, [editing]);
 
-  const handleArrowNav = (e: React.KeyboardEvent<HTMLInputElement>, prev: React.RefObject<HTMLInputElement>, next: React.RefObject<HTMLInputElement>) => {
-    if (e.key === "ArrowRight" && next.current) {
+  const handleArrowNav = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    prev: React.RefObject<HTMLInputElement | null> | null,
+    next: React.RefObject<HTMLInputElement | null> | null,
+  ) => {
+    if (e.key === "ArrowRight" && next?.current) {
       e.preventDefault();
       next.current.focus();
       next.current.select();
-    } else if (e.key === "ArrowLeft" && prev.current) {
+    } else if (e.key === "ArrowLeft" && prev?.current) {
       e.preventDefault();
       prev.current.focus();
       prev.current.select();
