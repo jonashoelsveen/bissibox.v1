@@ -338,7 +338,7 @@ export function OrganizerEventEditor({ mode, eventId, onSaved }: Props) {
               onClick={() => setTab("subevents")}
               icon={<ListTree className="h-3.5 w-3.5" />}
             >
-              {eventType === "event" ? "Tickets" : "Subevents"}
+              {eventType === "event" ? "Tickets" : "Races"}
             </TabBtn>
           )}
           <TabBtn active={tab === "map"} onClick={() => setTab("map")} icon={<MapIcon className="h-3.5 w-3.5" />}>
