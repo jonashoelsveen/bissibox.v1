@@ -215,6 +215,39 @@ export type Database = {
           },
         ]
       }
+      event_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          pinned: boolean
+          sort_order: number
+          team_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          pinned?: boolean
+          sort_order?: number
+          team_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          pinned?: boolean
+          sort_order?: number
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       event_likes: {
         Row: {
           created_at: string
@@ -352,6 +385,7 @@ export type Database = {
           description: string | null
           event_type: Database["public"]["Enums"]["event_type"]
           featured: boolean
+          folder: string | null
           id: string
           location: string | null
           media_contact_email: string | null
@@ -383,6 +417,7 @@ export type Database = {
           description?: string | null
           event_type?: Database["public"]["Enums"]["event_type"]
           featured?: boolean
+          folder?: string | null
           id?: string
           location?: string | null
           media_contact_email?: string | null
@@ -414,6 +449,7 @@ export type Database = {
           description?: string | null
           event_type?: Database["public"]["Enums"]["event_type"]
           featured?: boolean
+          folder?: string | null
           id?: string
           location?: string | null
           media_contact_email?: string | null

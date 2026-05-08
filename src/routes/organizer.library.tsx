@@ -1,23 +1,22 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
-import { Plus, Copy, Pencil, Globe, Search as SearchIcon, ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
+import {
+  CalendarRange,
+  Search as SearchIcon,
+  Globe,
+  MoreVertical,
+  Copy,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
-
-type SortKey = "updated_at" | "starts_at" | "title";
-type SortDir = "asc" | "desc";
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "updated_at", label: "Last edited" },
-  { key: "starts_at", label: "Event date" },
-  { key: "title", label: "Title" },
-];
-
-export const Route = createFileRoute("/organizer/library")({
-  component: LibraryPage,
-  head: () => ({ meta: [{ title: "Event library · Raceline Organizer" }] }),
-});
+import { OrganizerEventEditor } from "@/components/OrganizerEventEditor";
+import { EventsSideNav, type EventsSideNavValue } from "@/components/organizer/EventsSideNav";
+import { EventsPlusMenu, FolderCreatorDialog } from "@/components/organizer/EventsPlusMenu";
+import { CopyEventDialog } from "@/components/organizer/CopyEventDialog";
 
 interface OrgEvent {
   id: string;
@@ -31,52 +30,57 @@ interface OrgEvent {
   race_types: string[];
   featured: boolean;
   published: boolean;
+  folder: string | null;
 }
 
-function LibraryPage() {
-  const { user, loading, activeEntityId } = useAuth();
+interface OpenEventTab {
+  id: string;
+  title: string;
+}
+
+export const Route = createFileRoute("/organizer/library")({
+  component: EventsPage,
+  validateSearch: (s: Record<string, unknown>): { folder?: string; open?: string } => ({
+    folder: typeof s.folder === "string" ? (s.folder as string) : undefined,
+    open: typeof s.open === "string" ? (s.open as string) : undefined,
+  }),
+  head: () => ({ meta: [{ title: "Your events · Raceline Organizer" }] }),
+});
+
+function EventsPage() {
+  const { user, loading, activeEntityId, mode } = useAuth();
+  const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
   const nav = useNavigate();
+
   const [events, setEvents] = useState<OrgEvent[]>([]);
   const [busy, setBusy] = useState(false);
+  const [folder, setFolder] = useState<string>(""); // "" = all, "__unsorted__" = no folder, else folder name
+  const [openTabs, setOpenTabs] = useState<OpenEventTab[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("updated_at");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [sortOpen, setSortOpen] = useState(false);
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
+  const [folderBusy, setFolderBusy] = useState(false);
+  const [copySource, setCopySource] = useState<OrgEvent | null>(null);
+  const [rowMenuFor, setRowMenuFor] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!loading && !user) nav({ to: "/auth" });
   }, [loading, user, nav]);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!user) return;
-    void load();
-    // Reload when the active entity changes so each entity has its own list.
-  }, [user, activeEntityId]);
-
-  const load = async () => {
-    if (!user) return;
-
     if (activeEntityId) {
-      // Entity mode: show only events that belong to this entity.
       const { data } = await supabase
-        .from("events")
-        .select("*")
+        .from("events").select("*")
         .eq("team_id", activeEntityId)
         .order("starts_at", { ascending: false });
       setEvents((data as OrgEvent[]) ?? []);
       return;
     }
-
-    // Individual mode: events the user owns directly (no team) plus co-organized.
-    const ownedReq = supabase
-      .from("events")
-      .select("*")
-      .eq("owner_id", user.id)
-      .is("team_id", null);
-    const coReq = supabase
-      .from("event_co_organizers")
-      .select("event_id")
-      .eq("user_id", user.id);
+    const ownedReq = supabase.from("events").select("*").eq("owner_id", user.id).is("team_id", null);
+    const coReq = supabase.from("event_co_organizers").select("event_id").eq("user_id", user.id);
     const [{ data: owned }, { data: co }] = await Promise.all([ownedReq, coReq]);
     let coEvents: OrgEvent[] = [];
     const coIds = (co ?? []).map((r) => r.event_id);
@@ -90,49 +94,69 @@ function LibraryPage() {
       (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime(),
     );
     setEvents(list);
+  }, [user, activeEntityId]);
+
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const onR = () => void load();
+    window.addEventListener("events:refresh", onR);
+    return () => window.removeEventListener("events:refresh", onR);
+  }, [load]);
+
+  // Keep tab titles in sync with event titles when they change.
+  useEffect(() => {
+    setOpenTabs((tabs) =>
+      tabs.map((t) => {
+        const ev = events.find((e) => e.id === t.id);
+        return ev ? { ...t, title: ev.title } : t;
+      }),
+    );
+  }, [events]);
+
+  useEffect(() => {
+    if (searchOpen) setTimeout(() => searchRef.current?.focus(), 30);
+  }, [searchOpen]);
+
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    let arr = events;
+    if (folder === "__unsorted__") {
+      arr = arr.filter((e) => !e.folder);
+    } else if (folder) {
+      arr = arr.filter((e) => e.folder === folder);
+    }
+    if (term) {
+      arr = arr.filter((e) =>
+        e.title.toLowerCase().includes(term) ||
+        e.organizer.toLowerCase().includes(term) ||
+        (e.location ?? "").toLowerCase().includes(term),
+      );
+    }
+    return arr;
+  }, [events, folder, q]);
+
+  const openEventTab = (e: OrgEvent) => {
+    setOpenTabs((prev) => {
+      if (prev.some((t) => t.id === e.id)) return prev;
+      if (prev.length >= 10) {
+        toast.error("You can have at most 10 event tabs open at once.");
+        return prev;
+      }
+      return [...prev, { id: e.id, title: e.title }];
+    });
+    setActiveId(e.id);
   };
 
-  const duplicate = async (sourceId: string) => {
-    if (!user) return;
-    setBusy(true);
-    try {
-      const { data: src } = await supabase.from("events").select("*").eq("id", sourceId).single();
-      if (!src) throw new Error("Not found");
-      const { id: _id, created_at: _c, updated_at: _u, ...rest } = src as Record<string, unknown>;
-      const insert = {
-        ...rest,
-        title: `${(rest as { title: string }).title} (copy)`,
-        owner_id: user.id,
-        team_id: activeEntityId ?? null,
-        featured: false,
-      };
-      const { data: inserted, error } = await supabase
-        .from("events")
-        .insert(insert as never)
-        .select("id")
-        .single();
-      if (error) throw error;
-
-      const [{ data: classes }, { data: subs }] = await Promise.all([
-        supabase.from("event_classes").select("code,label,sort_order").eq("event_id", sourceId),
-        supabase.from("event_subevents").select("name,starts_at,distance_km,bib_from,bib_to,max_participants,class_codes,sort_order,course_path,split_points").eq("event_id", sourceId),
-      ]);
-      if (classes?.length)
-        await supabase.from("event_classes").insert(
-          classes.map((c) => ({ ...c, event_id: inserted!.id })) as never
-        );
-      if (subs?.length)
-        await supabase.from("event_subevents").insert(
-          subs.map((s) => ({ ...s, event_id: inserted!.id })) as never
-        );
-
-      toast.success("Event duplicated.");
-      await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not duplicate.");
-    } finally {
-      setBusy(false);
-    }
+  const closeTab = (id: string) => {
+    setOpenTabs((prev) => {
+      const idx = prev.findIndex((t) => t.id === id);
+      const next = prev.filter((t) => t.id !== id);
+      if (activeId === id) {
+        if (next.length === 0) setActiveId(null);
+        else setActiveId(next[Math.max(0, (idx === -1 ? 0 : idx) - 1)].id);
+      }
+      return next;
+    });
   };
 
   const togglePublish = async (id: string, next: boolean) => {
@@ -145,206 +169,290 @@ function LibraryPage() {
   };
 
   const removeEvent = async (id: string, title: string) => {
-    const ok = window.confirm(`Delete event "${title}"? This cannot be undone.`);
-    if (!ok) return;
+    setRowMenuFor(null);
+    if (!window.confirm(`Delete event "${title}"? This cannot be undone.`)) return;
     setBusy(true);
     const { error } = await supabase.from("events").delete().eq("id", id);
     setBusy(false);
     if (error) return toast.error(error.message);
     setEvents((arr) => arr.filter((x) => x.id !== id));
+    closeTab(id);
     toast.success("Event deleted.");
   };
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    let arr = events;
-    if (term) {
-      arr = arr.filter(
-        (e) =>
-          e.title.toLowerCase().includes(term) ||
-          e.organizer.toLowerCase().includes(term) ||
-          (e.location ?? "").toLowerCase().includes(term) ||
-          e.race_types.some((t) => t.toLowerCase().includes(term))
-      );
-    }
-    const sorted = [...arr].sort((a, b) => {
-      let cmp = 0;
-      if (sortKey === "title") cmp = a.title.localeCompare(b.title);
-      else cmp = new Date(a[sortKey]).getTime() - new Date(b[sortKey]).getTime();
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-    return sorted;
-  }, [events, q, sortKey, sortDir]);
 
-  const currentSortLabel = SORT_OPTIONS.find((s) => s.key === sortKey)?.label ?? "Sort";
+  const createFolder = async (name: string) => {
+    if (!user) return;
+    setFolderBusy(true);
+    let teamId: string | null = null;
+    if (isTeamMode) {
+      if (activeEntityId) teamId = activeEntityId;
+      else {
+        const { data } = await supabase.from("teams").select("id").eq("owner_id", user.id)
+          .order("created_at", { ascending: true }).limit(1).maybeSingle();
+        teamId = data?.id ?? null;
+      }
+    }
+    const { error } = await supabase.from("event_folders").insert({
+      user_id: user.id,
+      team_id: teamId,
+      name,
+    } as never);
+    setFolderBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Folder created");
+    setFolderDialogOpen(false);
+    window.dispatchEvent(new Event("events:refresh"));
+  };
+
+  const sideValue: EventsSideNavValue = { folder };
+  const onSideChange = (v: EventsSideNavValue) => {
+    setActiveId(null);
+    setFolder(v.folder);
+  };
+
+  const folderLabel =
+    folder === "" ? "All events"
+      : folder === "__unsorted__" ? "Unsorted"
+        : folder;
 
   if (!user) return <div className="mx-auto max-w-4xl px-6 py-16 text-muted-foreground">Loading…</div>;
 
   return (
     <div className="px-4 md:px-6">
-      <header className="flex flex-wrap items-center justify-between gap-4 pt-6 pb-4">
-        <div>
-          <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Organizer · Library</p>
-          <h1 className="mt-2 text-3xl text-ink md:text-4xl">Your events</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Past and upcoming events. Duplicate to use as a template.
-          </p>
-        </div>
-
-        <Link
-          to="/organizer/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+      {/* Top tab bar */}
+      <div className="sticky top-14 z-20 -mx-4 flex items-end gap-1 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
+        {/* Fixed Events tab */}
+        <button
+          onClick={() => { setActiveId(null); setFolder(""); }}
+          className={`-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 py-2.5 pl-0 pr-4 text-sm font-medium transition ${
+            activeId === null
+              ? "border-primary text-ink"
+              : "border-transparent text-muted-foreground hover:text-ink"
+          }`}
+          style={{ width: 240 }}
         >
-          <Plus className="h-4 w-4" /> New event
-        </Link>
-      </header>
+          <CalendarRange className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
+          <span className="truncate">{folderLabel}</span>
+        </button>
 
-      <div className="border-b border-hairline" />
-
-      <div className="mx-auto max-w-5xl pt-6">
-        <div className="flex items-center gap-2">
-          <label className="flex flex-1 items-center gap-3 rounded-full border border-hairline bg-card px-5 py-2.5 ring-soft focus-within:border-primary">
-            <SearchIcon className="h-4 w-4 text-muted-foreground" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search your events…"
-              className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground"
-            />
-            {q && (
-              <button
-                onClick={() => setQ("")}
-                className="mono text-xs uppercase tracking-widest text-muted-foreground hover:text-ink"
+        {/* Open event tabs */}
+        <div className="flex flex-1 items-end gap-1 overflow-x-auto">
+          {openTabs.map((t) => {
+            const active = activeId === t.id;
+            return (
+              <div
+                key={t.id}
+                className={`-mb-px group inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 py-2.5 pl-3 pr-1.5 text-sm transition ${
+                  active ? "border-primary text-ink font-medium" : "border-transparent text-muted-foreground hover:text-ink"
+                }`}
+                style={{ maxWidth: 220 }}
               >
-                clear
-              </button>
-            )}
-          </label>
-          <div className="relative">
-            <button
-              onClick={() => setSortOpen((o) => !o)}
-              aria-label="Sort"
-              title={`Sort: ${currentSortLabel} (${sortDir})`}
-              className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-3 py-2.5 text-xs text-muted-foreground transition hover:text-ink"
-            >
-              <ArrowUpDown className="h-4 w-4" />
-              <span className="hidden sm:inline">{currentSortLabel}</span>
-              {sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-            </button>
-            {sortOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setSortOpen(false)} />
-                <div className="absolute right-0 top-full z-20 mt-1 w-52 overflow-hidden rounded-lg border border-hairline bg-card shadow-lg">
-                  {SORT_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.key}
-                      onClick={() => {
-                        setSortKey(opt.key);
-                        setSortOpen(false);
-                      }}
-                      className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition hover:bg-secondary ${
-                        sortKey === opt.key ? "text-ink" : "text-muted-foreground"
-                      }`}
-                    >
-                      {opt.label}
-                      {sortKey === opt.key && <span className="mono text-[9px] uppercase">active</span>}
-                    </button>
-                  ))}
-                  <div className="border-t border-hairline" />
-                  <button
-                    onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-muted-foreground transition hover:bg-secondary"
-                  >
-                    Direction
-                    <span className="mono text-[10px] uppercase">{sortDir}</span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+                <button onClick={() => setActiveId(t.id)} className="truncate text-left">
+                  {t.title || "Untitled event"}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); closeTab(t.id); }}
+                  className="rounded p-0.5 text-muted-foreground/60 opacity-0 transition group-hover:opacity-100 hover:bg-secondary hover:text-ink"
+                  aria-label="Close tab"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
         </div>
 
-        <section className="pt-6">
-          {events.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-hairline bg-card/60 p-10 text-center">
-              <p className="text-sm text-muted-foreground">No events yet.</p>
-              <Link
-                to="/organizer/new"
-                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"
+        {/* Right side: search + plus */}
+        <div className="flex shrink-0 items-center gap-1 pb-1">
+          {searchOpen ? (
+            <div className="flex items-center gap-1 rounded-full border border-hairline bg-card px-3 py-1.5">
+              <SearchIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                ref={searchRef}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search events…"
+                className="w-48 bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground"
+              />
+              <button
+                onClick={() => { setQ(""); setSearchOpen(false); }}
+                className="rounded p-0.5 text-muted-foreground hover:text-ink"
+                aria-label="Close search"
               >
-                <Plus className="h-4 w-4" /> Create your first event
-              </Link>
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
-          ) : filtered.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground">No events match that search.</p>
           ) : (
-            <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-card">
-              {filtered.map((e) => (
-                <li key={e.id} className="flex items-center gap-4 px-5 py-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-ink">{e.title}</span>
-                      <span
-                        className={`mono shrink-0 rounded-sm px-1.5 py-0.5 text-[9px] uppercase tracking-widest ${
-                          e.published
-                            ? "bg-primary/10 text-primary"
-                            : "bg-secondary text-muted-foreground"
-                        }`}
-                      >
-                        {e.published ? "Published" : "Draft"}
-                      </span>
-                    </div>
-                    <div className="truncate text-xs text-muted-foreground">
-                      {e.organizer} · {e.location ?? "—"} · {e.race_types.join(", ")}
-                    </div>
-                  </div>
-                  <span className="num w-28 shrink-0 text-right text-sm text-ink">{formatDate(e.starts_at)}</span>
-                  <div className="flex w-[280px] shrink-0 items-center justify-end gap-1">
-                    <Link
-                      to="/organizer/$eventId/edit"
-                      params={{ eventId: e.id }}
-                      aria-label="Edit"
-                      className="rounded-md border border-hairline bg-background p-2 text-muted-foreground transition hover:text-ink"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Link>
-                    <button
-                      onClick={() => duplicate(e.id)}
-                      disabled={busy}
-                      aria-label="Duplicate"
-                      className="rounded-md border border-hairline bg-background p-2 text-muted-foreground transition hover:text-ink disabled:opacity-50"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => togglePublish(e.id, !e.published)}
-                      disabled={busy}
-                      aria-label={e.published ? "Unpublish" : "Publish"}
-                      title={e.published ? "Unpublish" : "Publish"}
-                      className={`inline-flex w-[120px] items-center justify-center gap-1.5 rounded-md border px-2.5 py-2 text-xs transition disabled:opacity-50 ${
-                        e.published
-                          ? "border-hairline bg-background text-muted-foreground hover:text-ink"
-                          : "border-primary bg-card text-primary hover:bg-primary/5"
-                      }`}
-                    >
-                      <Globe className="h-4 w-4" />
-                      {e.published ? "Unpublish" : "Publish"}
-                    </button>
-                    <button
-                      onClick={() => removeEvent(e.id, e.title)}
-                      disabled={busy}
-                      aria-label="Delete"
-                      title="Delete"
-                      className="rounded-md border border-hairline bg-background p-2 text-muted-foreground transition hover:border-destructive/50 hover:text-destructive disabled:opacity-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <button
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search events"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-secondary hover:text-ink"
+            >
+              <SearchIcon className="h-[18px] w-[18px]" strokeWidth={2.25} />
+            </button>
           )}
-        </section>
+          <EventsPlusMenu
+            onNewEvent={() => nav({ to: "/organizer/new" })}
+            onNewFolder={() => setFolderDialogOpen(true)}
+          />
+        </div>
       </div>
+
+      <div className="grid gap-6 pt-4 md:grid-cols-[240px_1fr]">
+        <aside className="md:sticky md:top-28 md:self-start">
+          <EventsSideNav value={sideValue} onChange={onSideChange} />
+        </aside>
+
+        <div className="min-w-0">
+          {activeId ? (
+            <OrganizerEventEditor mode="edit" eventId={activeId} />
+          ) : (
+            <EventsList
+              items={filtered}
+              onOpen={openEventTab}
+              onCopy={(e) => setCopySource(e)}
+              onDelete={(e) => void removeEvent(e.id, e.title)}
+              onTogglePublish={togglePublish}
+              busy={busy}
+              rowMenuFor={rowMenuFor}
+              setRowMenuFor={setRowMenuFor}
+            />
+          )}
+        </div>
+      </div>
+
+      {folderDialogOpen && (
+        <FolderCreatorDialog
+          onClose={() => setFolderDialogOpen(false)}
+          onCreate={createFolder}
+          busy={folderBusy}
+        />
+      )}
+      {copySource && (
+        <CopyEventDialog
+          sourceId={copySource.id}
+          sourceTitle={copySource.title}
+          initialFolder={copySource.folder}
+          onClose={() => setCopySource(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Events list (MS Word-like, professional) ---------------- */
+
+function EventsList({
+  items,
+  onOpen,
+  onCopy,
+  onDelete,
+  onTogglePublish,
+  busy,
+  rowMenuFor,
+  setRowMenuFor,
+}: {
+  items: OrgEvent[];
+  onOpen: (e: OrgEvent) => void;
+  onCopy: (e: OrgEvent) => void;
+  onDelete: (e: OrgEvent) => void;
+  onTogglePublish: (id: string, next: boolean) => void;
+  busy: boolean;
+  rowMenuFor: string | null;
+  setRowMenuFor: (id: string | null) => void;
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-hairline bg-card/60 p-10 text-center">
+        <p className="text-sm text-muted-foreground">No events here yet.</p>
+        <p className="mt-1 text-xs text-muted-foreground/70">
+          Use the <span className="text-ink">+</span> menu in the top bar to create a new event or folder.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-hairline bg-card">
+      {/* Header row */}
+      <div className="grid grid-cols-[1fr_140px_220px] items-center gap-4 border-b border-hairline bg-secondary/30 px-5 py-2.5">
+        <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Title</span>
+        <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Date</span>
+        <span className="mono text-[10px] uppercase tracking-widest text-right text-muted-foreground">Actions</span>
+      </div>
+
+      <ul className="divide-y divide-hairline">
+        {items.map((e) => (
+          <li
+            key={e.id}
+            onDoubleClick={() => onOpen(e)}
+            className="group grid cursor-default grid-cols-[1fr_140px_220px] items-center gap-4 px-5 py-3 transition hover:bg-secondary/30"
+          >
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="truncate text-sm text-ink">{e.title}</span>
+                <span
+                  className={`mono shrink-0 rounded-sm px-1.5 py-0.5 text-[9px] uppercase tracking-widest ${
+                    e.published
+                      ? "bg-primary/10 text-primary"
+                      : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  {e.published ? "Published" : "Draft"}
+                </span>
+              </div>
+              <div className="truncate text-xs text-muted-foreground">
+                {e.organizer}{e.location ? ` · ${e.location}` : ""}{e.race_types.length ? ` · ${e.race_types.join(", ")}` : ""}
+              </div>
+            </div>
+            <span className="num text-sm text-ink">{formatDate(e.starts_at)}</span>
+            <div className="flex items-center justify-end gap-1">
+              <button
+                onClick={() => onTogglePublish(e.id, !e.published)}
+                disabled={busy}
+                title={e.published ? "Unpublish" : "Publish"}
+                className={`inline-flex w-[120px] items-center justify-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs transition disabled:opacity-50 ${
+                  e.published
+                    ? "border-hairline bg-background text-muted-foreground hover:text-ink"
+                    : "border-primary bg-card text-primary hover:bg-primary/5"
+                }`}
+              >
+                <Globe className="h-3.5 w-3.5" />
+                {e.published ? "Unpublish" : "Publish"}
+              </button>
+
+              <div className="relative">
+                <button
+                  onClick={() => setRowMenuFor(rowMenuFor === e.id ? null : e.id)}
+                  aria-label="More actions"
+                  className="rounded-md border border-hairline bg-background p-1.5 text-muted-foreground transition hover:text-ink"
+                >
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </button>
+                {rowMenuFor === e.id && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setRowMenuFor(null)} />
+                    <div className="absolute right-0 top-full z-20 mt-1 w-32 overflow-hidden rounded-md border border-hairline bg-popover shadow-lg">
+                      <button
+                        onClick={() => { setRowMenuFor(null); onCopy(e); }}
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-ink hover:bg-secondary"
+                      >
+                        <Copy className="h-3 w-3" /> Copy
+                      </button>
+                      <button
+                        onClick={() => onDelete(e)}
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-destructive hover:bg-secondary"
+                      >
+                        <Trash2 className="h-3 w-3" /> Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
