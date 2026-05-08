@@ -855,6 +855,13 @@ function MediaPage({
   const setView = setInternalView;
   const [albumsOpen, setAlbumsOpen] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const lastAlbumSigRef = useRef<number | undefined>(newAlbumSignal);
+  useEffect(() => {
+    if (newAlbumSignal === undefined) return;
+    if (lastAlbumSigRef.current === newAlbumSignal) return;
+    lastAlbumSigRef.current = newAlbumSignal;
+    setCreateOpen(true);
+  }, [newAlbumSignal]);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
