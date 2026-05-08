@@ -152,7 +152,12 @@ export function StravaMapPanel({
   return (
     <div className="space-y-3">
       <div ref={ref} className="h-[320px] w-full overflow-hidden rounded-lg border border-hairline" />
-      {elevationData.length > 0 && (
+      {elevationLoading && (
+        <div className="flex h-[140px] w-full items-center justify-center rounded-lg border border-hairline bg-card text-[11px] text-muted-foreground">
+          Loading elevation…
+        </div>
+      )}
+      {!elevationLoading && elevationData.length > 0 && (
         <div className="h-[140px] w-full rounded-lg border border-hairline bg-card p-2">
           <div className="mb-1 flex items-center justify-between px-1 text-[11px] text-muted-foreground">
             <span className="mono uppercase tracking-widest">Elevation</span>
