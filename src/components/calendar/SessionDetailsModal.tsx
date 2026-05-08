@@ -12,7 +12,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
-import { X, Plus, MapPin, StickyNote, Info, Paperclip, Pencil, Check, Lock } from "lucide-react";
+import { X, Plus, MapPin, StickyNote, Info, Paperclip, Pencil, Check, Lock, Activity } from "lucide-react";
 import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import { useLibrarySetting, diaryAutosyncKey } from "@/lib/library-settings";
 import { StravaMapPanel } from "./StravaMapPanel";
@@ -289,7 +289,7 @@ export function SessionDetailsModal({
               <div className="flex items-end gap-1 border-b border-hairline px-4">
                 {(
                   [
-                    { id: "about", label: "About", Icon: Info },
+                    { id: "about", label: "Activity", Icon: Activity },
                     { id: "map", label: "Map", Icon: MapPin },
                     { id: "note", label: "Note", Icon: StickyNote },
                   ] as const
