@@ -493,6 +493,36 @@ function ActivityRow({
   const durH = Math.floor(dur / 60);
   const durM = dur % 60;
 
+  const hRef = useRef<HTMLInputElement>(null);
+  const mRef = useRef<HTMLInputElement>(null);
+  const kmRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) {
+      // focus hour input on entering edit mode
+      requestAnimationFrame(() => {
+        hRef.current?.focus();
+        hRef.current?.select();
+      });
+    }
+  }, [editing]);
+
+  const handleArrowNav = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    prev: React.RefObject<HTMLInputElement | null> | null,
+    next: React.RefObject<HTMLInputElement | null> | null,
+  ) => {
+    if (e.key === "ArrowRight" && next?.current) {
+      e.preventDefault();
+      next.current.focus();
+      next.current.select();
+    } else if (e.key === "ArrowLeft" && prev?.current) {
+      e.preventDefault();
+      prev.current.focus();
+      prev.current.select();
+    }
+  };
+
   const pace = useMemo(() => {
     if (!activity.durationMin || !activity.distanceKm || activity.distanceKm <= 0) return null;
     const secPerKm = Math.round((activity.durationMin * 60) / activity.distanceKm);
@@ -511,8 +541,9 @@ function ActivityRow({
   };
 
   // Excel-ish input look: thin border, very subtle radius, tabular numbers, bold.
+  // [&::-webkit-inner-spin-button]:appearance-none removes spinner arrows.
   const inputCls =
-    "mono rounded-[3px] border border-input bg-background px-1.5 py-0.5 text-sm font-bold tabular-nums text-ink outline-none focus:border-primary disabled:cursor-not-allowed";
+    "mono rounded-[3px] border border-input bg-background px-1.5 py-0.5 text-sm font-bold tabular-nums text-ink outline-none focus:border-primary disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
   return (
     <div
@@ -544,74 +575,80 @@ function ActivityRow({
           )}
         </select>
 
-        <div className="ml-auto flex items-center gap-4">
-          {/* Duration */}
-          {!editing ? (
-            <span className="text-sm font-bold tabular-nums text-ink">
-              {dur > 0 ? fmtHM(dur) : "—"}
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1">
-              <input
-                type="number"
-                min={0}
-                value={durH || ""}
-                disabled={stravaLocked || readOnly}
-                onChange={(e) => {
-                  const h = e.target.value === "" ? 0 : Math.max(0, Number(e.target.value));
-                  onChange({ durationMin: h * 60 + durM });
-                }}
-                className={`${inputCls} w-12 text-center`}
-                placeholder="h"
-              />
-              <span className="text-xs text-muted-foreground">h</span>
-              <input
-                type="number"
-                min={0}
-                max={59}
-                value={durM || ""}
-                disabled={stravaLocked || readOnly}
-                onChange={(e) => {
-                  const m = e.target.value === "" ? 0 : Math.max(0, Math.min(59, Number(e.target.value)));
-                  onChange({ durationMin: durH * 60 + m });
-                }}
-                className={`${inputCls} w-12 text-center`}
-                placeholder="m"
-              />
-              <span className="text-xs text-muted-foreground">m</span>
-            </span>
-          )}
+        <div className="ml-auto flex items-center gap-8">
+          {/* Duration — fixed slot to keep position stable between view/edit */}
+          <div className="flex w-[120px] items-center justify-end gap-1">
+            {!editing ? (
+              <span className="text-sm font-bold tabular-nums text-ink">
+                {dur > 0 ? fmtHM(dur) : "—"}
+              </span>
+            ) : (
+              <>
+                <input
+                  ref={hRef}
+                  type="text"
+                  inputMode="numeric"
+                  value={durH || ""}
+                  disabled={stravaLocked || readOnly}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "");
+                    const h = v === "" ? 0 : Math.max(0, Number(v));
+                    onChange({ durationMin: h * 60 + durM });
+                  }}
+                  onKeyDown={(e) => handleArrowNav(e, null, mRef)}
+                  className={`${inputCls} w-12 text-center`}
+                />
+                <input
+                  ref={mRef}
+                  type="text"
+                  inputMode="numeric"
+                  value={durM || ""}
+                  disabled={stravaLocked || readOnly}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "");
+                    const m = v === "" ? 0 : Math.max(0, Math.min(59, Number(v)));
+                    onChange({ durationMin: durH * 60 + m });
+                  }}
+                  onKeyDown={(e) => handleArrowNav(e, hRef, isEndurance ? kmRef : null)}
+                  className={`${inputCls} w-12 text-center`}
+                />
+              </>
+            )}
+          </div>
 
           {isEndurance && (
             <>
-              {/* Distance */}
-              {!editing ? (
-                <span className="text-sm font-bold tabular-nums text-ink">
-                  {activity.distanceKm != null
-                    ? `${activity.distanceKm.toFixed(1)} km`
-                    : "—"}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1">
+              {/* Distance — fixed slot */}
+              <div className="flex w-[90px] items-center justify-end">
+                {!editing ? (
+                  <span className="text-sm font-bold tabular-nums text-ink">
+                    {activity.distanceKm != null
+                      ? `${activity.distanceKm.toFixed(1)} km`
+                      : "—"}
+                  </span>
+                ) : (
                   <input
-                    type="number"
-                    step="0.1"
+                    ref={kmRef}
+                    type="text"
+                    inputMode="decimal"
                     value={activity.distanceKm ?? ""}
                     disabled={stravaLocked || readOnly}
-                    onChange={(e) =>
-                      onChange({ distanceKm: e.target.value === "" ? undefined : Number(e.target.value) })
-                    }
-                    placeholder="km"
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/[^\d.]/g, "");
+                      onChange({ distanceKm: v === "" ? undefined : Number(v) });
+                    }}
+                    onKeyDown={(e) => handleArrowNav(e, mRef, null)}
                     className={`${inputCls} w-20 text-right`}
                   />
-                  <span className="text-xs text-muted-foreground">km</span>
-                </span>
-              )}
+                )}
+              </div>
 
-              {/* Pace (auto, read-only) */}
-              <span className="text-sm font-bold tabular-nums text-ink">
-                {pace ? `${pace} /km` : "—"}
-              </span>
+              {/* Pace (auto, read-only) — fixed slot */}
+              <div className="flex w-[90px] items-center justify-end">
+                <span className="text-sm font-bold tabular-nums text-ink">
+                  {pace ? `${pace} /km` : "—"}
+                </span>
+              </div>
             </>
           )}
 
