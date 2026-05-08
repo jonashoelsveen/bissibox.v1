@@ -670,7 +670,7 @@ function LibraryPage() {
               externalView={externalNotesView}
               onCreate={handleCreateFromPrevious}
               onCreateContainer={handleCreateContainerFromPrevious}
-              newFolderSignal={newNoteFolderSignal}
+              newFolderSignal={0}
               showMeetingOption={isTeamMode}
             />
           ) : baseTab === "files" ? (
