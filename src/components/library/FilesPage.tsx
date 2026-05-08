@@ -263,32 +263,6 @@ export function FilesPage({
     setSearchOpen(false);
   };
 
-  const toggleSel = (id: string) => {
-    setSelected((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
-  };
-
-  const exitSelect = () => {
-    setSelectMode(false);
-    setSelected(new Set());
-  };
-
-  const handleDelete = async () => {
-    if (selected.size === 0) return;
-    if (!confirm(`Delete ${selected.size} item(s)? This cannot be undone.`)) return;
-    const ids = Array.from(selected);
-    const paths = files.filter((f) => ids.includes(f.id)).map((f) => f.storage_path);
-    await supabase.storage.from("documents").remove(paths);
-    await supabase.from("files").delete().in("id", ids);
-    toast.success("Deleted");
-    exitSelect();
-    void load();
-  };
-
   const downloadOne = async (f: FileRow) => {
     setMenuFor(null);
     const { data, error } = await supabase.storage
