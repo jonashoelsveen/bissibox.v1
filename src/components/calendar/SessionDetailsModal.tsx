@@ -187,25 +187,35 @@ export function SessionDetailsModal({
         >
           {/* Header */}
           <div className="flex items-center justify-between gap-3 border-b border-hairline bg-muted/40 px-4 py-3">
-            <h2 className="text-sm font-semibold text-ink">{headerTitle}</h2>
+            <div className="flex items-center gap-2">
+              {!readOnly && isEdit && onDelete ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </button>
+              ) : (
+                <h2 className="text-sm font-semibold text-ink">{headerTitle}</h2>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               {!readOnly && (
                 <AnimatePresence initial={false}>
-                  {confirmClose && (
+                  {isDirty && (
                     <motion.button
-                      key="discard"
+                      key="cancel"
                       type="button"
                       initial={{ opacity: 0, x: 8 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 8 }}
                       transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-                      onClick={() => {
-                        setConfirmClose(false);
-                        onClose();
-                      }}
-                      className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      onClick={revertChanges}
+                      className="whitespace-nowrap rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary/80 hover:text-ink"
                     >
-                      Discard changes
+                      Cancel
                     </motion.button>
                   )}
                 </AnimatePresence>
@@ -227,16 +237,31 @@ export function SessionDetailsModal({
                   {autosync ? "Autosync" : isEdit ? "Save" : "Add"}
                 </button>
               )}
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={requestClose}
-                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
-              >
-                <X className="h-4 w-4" />
-              </button>
             </div>
           </div>
+
+          <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to delete this session?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. The session and its details will be permanently removed from your diary.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    setConfirmDelete(false);
+                    onDelete?.();
+                  }}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete session
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <div
             className={`flex flex-1 flex-col overflow-hidden transition-opacity duration-150 ${
