@@ -153,17 +153,9 @@ export function SessionDetailsModal({
         <motion.div
           className="relative flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-hairline bg-card shadow-2xl"
           initial={{ scale: 0.96, opacity: 0, y: 8 }}
-          animate={
-            pulse > 0
-              ? { scale: [1, 1.025, 1], opacity: 1, y: 0 }
-              : { scale: 1, opacity: 1, y: 0 }
-          }
+          animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.97, opacity: 0 }}
-          transition={
-            pulse > 0
-              ? { duration: 0.22, ease: [0.2, 0, 0, 1], times: [0, 0.45, 1] }
-              : { duration: 0.18, ease: [0.2, 0, 0, 1] }
-          }
+          transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
