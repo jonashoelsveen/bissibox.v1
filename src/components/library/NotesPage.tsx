@@ -148,18 +148,18 @@ export function NotesPage({
   externalView,
   hideNewActions,
   onCreate,
+  onCreateContainer,
+  newFolderSignal,
   showMeetingOption,
 }: {
   actionsMount?: HTMLDivElement | null;
   onOpenNote?: (id: string, kind: "new" | "earlier") => void;
-  /** When true, hide the internal left nav column (parent renders LibrarySideNav). */
   hideSideNav?: boolean;
-  /** When set, drives the view from outside (parent URL state). */
   externalView?: { type: "all" } | { type: "folder"; name: string | null };
-  /** When true, hide the "New folder" / "New note" action buttons (parent renders unified ones). */
   hideNewActions?: boolean;
-  /** Wired from parent to drive the unified "+" dropdown menu. */
   onCreate?: (kind: PreviousNewKind) => void;
+  onCreateContainer?: (kind: PreviousNewKind) => void;
+  newFolderSignal?: number;
   showMeetingOption?: boolean;
 }) {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
@@ -176,6 +176,13 @@ export function NotesPage({
   const setView = setInternalView;
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const lastFolderSigRef = useRef<number | undefined>(newFolderSignal);
+  useEffect(() => {
+    if (newFolderSignal === undefined) return;
+    if (lastFolderSigRef.current === newFolderSignal) return;
+    lastFolderSigRef.current = newFolderSignal;
+    setCreateFolderOpen(true);
+  }, [newFolderSignal]);
   const [newNoteOpen, setNewNoteOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -420,7 +427,11 @@ export function NotesPage({
         )}
       </div>
       {onCreate && (
-        <LibraryPlusMenu onCreate={onCreate} showMeetingOption={showMeetingOption} />
+        <LibraryPlusMenu
+          onCreate={onCreate}
+          onCreateContainer={onCreateContainer}
+          showMeetingOption={showMeetingOption}
+        />
       )}
     </>
   );

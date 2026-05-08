@@ -94,7 +94,35 @@ function LibraryPage() {
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
   const [newNoteOpen, setNewNoteOpen] = useState(false);
   const [newMeetingSignal, setNewMeetingSignal] = useState(0);
+  const [newMeetingFolderSignal, setNewMeetingFolderSignal] = useState(0);
+  const [newNoteFolderSignal, setNewNoteFolderSignal] = useState(0);
+  const [newFilesFolderSignal, setNewFilesFolderSignal] = useState(0);
+  const [newMediaAlbumSignal, setNewMediaAlbumSignal] = useState(0);
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
+
+  const handleCreateContainerFromPrevious = (kind: PreviousNewKind) => {
+    setActiveNoteId(null);
+    if (kind === "meeting") {
+      navigate({ to: "/media", search: { tab: "meetings" }, replace: true });
+      setNewMeetingFolderSignal((n) => n + 1);
+      return;
+    }
+    if (kind === "note") {
+      navigate({ to: "/media", search: { tab: "notes" }, replace: true });
+      setNewNoteFolderSignal((n) => n + 1);
+      return;
+    }
+    if (kind === "files") {
+      navigate({ to: "/media", search: { tab: "files" }, replace: true });
+      setNewFilesFolderSignal((n) => n + 1);
+      return;
+    }
+    if (kind === "media") {
+      navigate({ to: "/media", search: { tab: "media" }, replace: true });
+      setNewMediaAlbumSignal((n) => n + 1);
+      return;
+    }
+  };
 
   const handleCreateFromPrevious = (kind: PreviousNewKind) => {
     if (kind === "meeting") {
@@ -647,9 +675,11 @@ function LibraryPage() {
               actionsMount={actionsMount}
               externalView={externalMeetingsView ?? { type: "all" }}
               newMeetingSignal={newMeetingSignal}
+              newFolderSignal={newMeetingFolderSignal}
               onOpenMeeting={(m) => openMeetingTab(m, "earlier")}
               onMeetingCreated={(m) => openMeetingTab(m, "new")}
               onCreate={handleCreateFromPrevious}
+              onCreateContainer={handleCreateContainerFromPrevious}
               showMeetingOption={isTeamMode}
             />
           ) : baseTab === "notes" ? (
@@ -659,6 +689,8 @@ function LibraryPage() {
               hideSideNav
               externalView={externalNotesView}
               onCreate={handleCreateFromPrevious}
+              onCreateContainer={handleCreateContainerFromPrevious}
+              newFolderSignal={newNoteFolderSignal}
               showMeetingOption={isTeamMode}
             />
           ) : baseTab === "files" ? (
@@ -667,6 +699,8 @@ function LibraryPage() {
               hideSideNav
               externalView={externalFilesView}
               onCreate={handleCreateFromPrevious}
+              onCreateContainer={handleCreateContainerFromPrevious}
+              newFolderSignal={newFilesFolderSignal}
               showMeetingOption={isTeamMode}
             />
           ) : (
@@ -676,6 +710,8 @@ function LibraryPage() {
               externalView={externalMediaView}
               onOpenMediaTab={openMediaTab}
               onCreate={handleCreateFromPrevious}
+              onCreateContainer={handleCreateContainerFromPrevious}
+              newAlbumSignal={newMediaAlbumSignal}
               showMeetingOption={isTeamMode}
             />
           )}
@@ -788,6 +824,8 @@ function MediaPage({
   onOpenMedia,
   onOpenMediaTab,
   onCreate,
+  onCreateContainer,
+  newAlbumSignal,
   showMeetingOption,
 }: {
   actionsMount?: HTMLDivElement | null;
@@ -797,6 +835,8 @@ function MediaPage({
   onOpenMedia?: (id: string) => void;
   onOpenMediaTab?: (tabId: string, title: string, mediaIds: string[]) => void;
   onCreate?: (kind: PreviousNewKind) => void;
+  onCreateContainer?: (kind: PreviousNewKind) => void;
+  newAlbumSignal?: number;
   showMeetingOption?: boolean;
 } = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
@@ -815,6 +855,13 @@ function MediaPage({
   const setView = setInternalView;
   const [albumsOpen, setAlbumsOpen] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const lastAlbumSigRef = useRef<number | undefined>(newAlbumSignal);
+  useEffect(() => {
+    if (newAlbumSignal === undefined) return;
+    if (lastAlbumSigRef.current === newAlbumSignal) return;
+    lastAlbumSigRef.current = newAlbumSignal;
+    setCreateOpen(true);
+  }, [newAlbumSignal]);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -1222,7 +1269,11 @@ function MediaPage({
         )}
       </div>
       {onCreate && (
-        <LibraryPlusMenu onCreate={onCreate} showMeetingOption={showMeetingOption} />
+        <LibraryPlusMenu
+          onCreate={onCreate}
+          onCreateContainer={onCreateContainer}
+          showMeetingOption={showMeetingOption}
+        />
       )}
     </>
   );

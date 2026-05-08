@@ -63,6 +63,8 @@ export function FilesPage({
   hideNewActions,
   onOpenFile,
   onCreate,
+  onCreateContainer,
+  newFolderSignal,
   showMeetingOption,
 }: {
   actionsMount?: HTMLDivElement | null;
@@ -71,6 +73,8 @@ export function FilesPage({
   hideNewActions?: boolean;
   onOpenFile?: (id: string) => void;
   onCreate?: (kind: PreviousNewKind) => void;
+  onCreateContainer?: (kind: PreviousNewKind) => void;
+  newFolderSignal?: number;
   showMeetingOption?: boolean;
 } = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
@@ -89,6 +93,13 @@ export function FilesPage({
   const setView = setInternalView;
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const lastFolderSigRef = useRef<number | undefined>(newFolderSignal);
+  useEffect(() => {
+    if (newFolderSignal === undefined) return;
+    if (lastFolderSigRef.current === newFolderSignal) return;
+    lastFolderSigRef.current = newFolderSignal;
+    setCreateOpen(true);
+  }, [newFolderSignal]);
   const [importOpen, setImportOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -324,7 +335,11 @@ export function FilesPage({
         )}
       </div>
       {onCreate && (
-        <LibraryPlusMenu onCreate={onCreate} showMeetingOption={showMeetingOption} />
+        <LibraryPlusMenu
+          onCreate={onCreate}
+          onCreateContainer={onCreateContainer}
+          showMeetingOption={showMeetingOption}
+        />
       )}
     </>
   );

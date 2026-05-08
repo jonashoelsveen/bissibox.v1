@@ -36,13 +36,16 @@ export function MeetingsListPage({
   onOpenMeeting,
   onMeetingCreated,
   newMeetingSignal,
+  newFolderSignal,
   onCreate,
+  onCreateContainer,
   showMeetingOption,
 }: {
   kind?: MeetingKind;
   actionsMount?: HTMLDivElement | null;
   hideNewActions?: boolean;
   onCreate?: (kind: PreviousNewKind) => void;
+  onCreateContainer?: (kind: PreviousNewKind) => void;
   showMeetingOption?: boolean;
   /** "all" or filter by folder name (null = unsorted, string = folder name). */
   externalView?: { type: "all" } | { type: "folder"; name: string | null };
@@ -52,6 +55,8 @@ export function MeetingsListPage({
   onMeetingCreated?: (m: { id: string; title: string; folder: string | null }) => void;
   /** Trigger the "new meeting" dialog from the parent (counter increments). */
   newMeetingSignal?: number;
+  /** Trigger the "new folder" dialog from the parent (counter increments). */
+  newFolderSignal?: number;
 } = {}) {
   const tables = meetingTables(kind);
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
@@ -367,6 +372,14 @@ export function MeetingsListPage({
     setNewMeetingOpen(true);
   }, [newMeetingSignal]);
 
+  const lastFolderSigRef = useRef<number | undefined>(newFolderSignal);
+  useEffect(() => {
+    if (newFolderSignal === undefined) return;
+    if (lastFolderSigRef.current === newFolderSignal) return;
+    lastFolderSigRef.current = newFolderSignal;
+    setNewFolderOpen(true);
+  }, [newFolderSignal]);
+
   if (authLoading || !user) return null;
 
   const actions = (
@@ -416,7 +429,11 @@ export function MeetingsListPage({
         )}
       </div>
       {onCreate && (
-        <LibraryPlusMenu onCreate={onCreate} showMeetingOption={showMeetingOption} />
+        <LibraryPlusMenu
+          onCreate={onCreate}
+          onCreateContainer={onCreateContainer}
+          showMeetingOption={showMeetingOption}
+        />
       )}
     </>
   );
