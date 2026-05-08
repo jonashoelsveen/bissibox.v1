@@ -119,25 +119,11 @@ export function SessionDetailsModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const pulseControls = useAnimationControls();
 
-  const revertChanges = () => {
-    try {
-      const initial = JSON.parse(initialRef.current) as SessionDetailsValue;
-      onChange(initial);
-    } catch {
-      /* noop */
-    }
-    setConfirmClose(false);
-  };
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const requestClose = () => {
-    if (isDirty && !readOnly) {
-      if (confirmClose) {
-        pulseControls.start({
-          scale: [1, 1.025, 1],
-          transition: { duration: 0.22, ease: [0.2, 0, 0, 1], times: [0, 0.45, 1] },
-        });
-      } else setConfirmClose(true);
-    } else onClose();
+    if (isDirty && !readOnly) setConfirmCancel(true);
+    else onClose();
   };
 
   useEffect(() => {
@@ -203,30 +189,18 @@ export function SessionDetailsModal({
             </div>
             <div className="flex items-center gap-2">
               {!readOnly && (
-                <AnimatePresence initial={false}>
-                  {isDirty && (
-                    <motion.button
-                      key="cancel"
-                      type="button"
-                      initial={{ opacity: 0, x: 8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 8 }}
-                      transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-                      onClick={revertChanges}
-                      className="whitespace-nowrap rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary/80 hover:text-ink"
-                    >
-                      Cancel
-                    </motion.button>
-                  )}
-                </AnimatePresence>
+                <button
+                  type="button"
+                  onClick={requestClose}
+                  className="whitespace-nowrap rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary/80 hover:text-ink"
+                >
+                  Cancel
+                </button>
               )}
               {!readOnly && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setConfirmClose(false);
-                    onSave(value);
-                  }}
+                  onClick={() => onSave(value)}
                   disabled={saveDisabled}
                   className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium ${
                     saveDisabled
@@ -264,17 +238,30 @@ export function SessionDetailsModal({
             </AlertDialogContent>
           </AlertDialog>
 
-          <div
-            className={`flex flex-1 flex-col overflow-hidden transition-opacity duration-150 ${
-              confirmClose ? "opacity-50" : ""
-            }`}
-            onClickCapture={(e) => {
-              if (confirmClose) {
-                e.stopPropagation();
-                setConfirmClose(false);
-              }
-            }}
-          >
+          <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You have unsaved changes. If you cancel now, your edits to this session will be lost.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep editing</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    setConfirmCancel(false);
+                    onClose();
+                  }}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Discard changes
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <div className="flex flex-1 flex-col overflow-hidden">
           {isNote ? (
             <NoteBody
               title={value.title}
