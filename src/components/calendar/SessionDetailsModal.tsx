@@ -537,8 +537,9 @@ function ActivityRow({
   };
 
   // Excel-ish input look: thin border, very subtle radius, tabular numbers, bold.
+  // [&::-webkit-inner-spin-button]:appearance-none removes spinner arrows.
   const inputCls =
-    "mono rounded-[3px] border border-input bg-background px-1.5 py-0.5 text-sm font-bold tabular-nums text-ink outline-none focus:border-primary disabled:cursor-not-allowed";
+    "mono rounded-[3px] border border-input bg-background px-1.5 py-0.5 text-sm font-bold tabular-nums text-ink outline-none focus:border-primary disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
   return (
     <div
