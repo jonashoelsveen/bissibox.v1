@@ -28,7 +28,7 @@ function AcceptLeaderInvitePage() {
       setMessage("Missing invitation token.");
       return;
     }
-    if (user === undefined) return; // auth still loading
+    if (loading) return;
     if (!user) {
       const redirect = `/accept-leader-invite?token=${encodeURIComponent(token)}`;
       navigate({ to: "/auth", search: { redirect } });
