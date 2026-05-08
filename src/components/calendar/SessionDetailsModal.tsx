@@ -154,31 +154,68 @@ export function SessionDetailsModal({
           {/* Header */}
           <div className="flex items-center justify-between gap-3 border-b border-hairline bg-muted/40 px-4 py-3">
             <h2 className="text-sm font-semibold text-ink">{headerTitle}</h2>
-            <button
-              type="button"
-              aria-label="Close"
-              onClick={requestClose}
-              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              {!readOnly && (
+                <AnimatePresence initial={false}>
+                  {confirmClose && (
+                    <motion.button
+                      key="discard"
+                      type="button"
+                      initial={{ opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 8 }}
+                      transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+                      onClick={() => {
+                        setConfirmClose(false);
+                        onClose();
+                      }}
+                      className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      Discard changes
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              )}
+              {!readOnly && (
+                <motion.button
+                  type="button"
+                  layout
+                  onClick={() => {
+                    setConfirmClose(false);
+                    onSave(value);
+                  }}
+                  disabled={!confirmClose && saveDisabled}
+                  transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+                  className={`overflow-hidden whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium ${
+                    !confirmClose && saveDisabled
+                      ? "bg-secondary text-muted-foreground/70 cursor-not-allowed"
+                      : "bg-primary text-primary-foreground hover:opacity-90"
+                  }`}
+                >
+                  {confirmClose ? "Save changes" : autosync ? "Autosync" : isEdit ? "Save" : "Add"}
+                </motion.button>
+              )}
+              <AnimatePresence initial={false}>
+                {!confirmClose && (
+                  <motion.button
+                    key="close"
+                    type="button"
+                    aria-label="Close"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.15 }}
+                    onClick={requestClose}
+                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+                  >
+                    <X className="h-4 w-4" />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
-          <div
-            className={`flex flex-1 flex-col overflow-hidden transition-opacity ${
-              confirmClose ? "pointer-events-none opacity-50" : ""
-            }`}
-            onClickCapture={
-              confirmClose
-                ? (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setConfirmClose(false);
-                  }
-                : undefined
-            }
-            style={confirmClose ? { pointerEvents: "auto" } : undefined}
-          >
+          <div className="flex flex-1 flex-col overflow-hidden">
           {isNote ? (
             <NoteBody
               title={value.title}
