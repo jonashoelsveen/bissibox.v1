@@ -104,12 +104,16 @@ export function SessionDetailsModal({
     [value],
   );
   const [confirmClose, setConfirmClose] = useState(false);
-  const [pulse, setPulse] = useState(0);
+  const pulseControls = useAnimationControls();
 
   const requestClose = () => {
     if (isDirty && !readOnly) {
-      if (confirmClose) setPulse((p) => p + 1);
-      else setConfirmClose(true);
+      if (confirmClose) {
+        pulseControls.start({
+          scale: [1, 1.025, 1],
+          transition: { duration: 0.22, ease: [0.2, 0, 0, 1], times: [0, 0.45, 1] },
+        });
+      } else setConfirmClose(true);
     } else onClose();
   };
 
