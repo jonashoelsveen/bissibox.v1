@@ -228,26 +228,6 @@ export function MeetingsListPage({
     setSearchOpen(false);
   };
 
-  const toggleSel = (id: string) => {
-    setSelected((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id); else n.add(id);
-      return n;
-    });
-  };
-  const exitSelect = () => { setSelectMode(false); setSelected(new Set()); };
-
-  const handleDelete = async () => {
-    if (selected.size === 0) return;
-    if (!confirm(`Delete ${selected.size} meeting(s)? This cannot be undone.`)) return;
-    const ids = Array.from(selected);
-    const { error } = await sb.from(tables.meetings).delete().in("id", ids);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Deleted");
-    exitSelect();
-    void load();
-  };
-
   async function createMeeting() {
     if (!teamId || !user) {
       toast.error("No active team");
@@ -391,88 +371,52 @@ export function MeetingsListPage({
 
   const actions = (
     <>
-      {!selectMode && (
-        <div
-          className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
-            searchOpen
-              ? "w-64 border-hairline bg-card pl-3 pr-1"
-              : "w-9 hover:border-hairline hover:bg-card"
-          }`}
+      <div
+        className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
+          searchOpen
+            ? "w-64 border-hairline bg-card pl-3 pr-1"
+            : "w-9 hover:border-hairline hover:bg-card"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            if (!searchOpen) setSearchOpen(true);
+            else searchInputRef.current?.focus();
+          }}
+          aria-label="Search meetings"
+          className="grid h-9 w-9 shrink-0 place-items-center text-muted-foreground transition hover:text-ink"
         >
+          <SearchIcon className="h-4 w-4" />
+        </button>
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") closeSearch();
+          }}
+          placeholder="Search meetings"
+          className={`min-w-0 flex-1 border-b border-hairline bg-transparent py-1 text-xs text-ink outline-none transition placeholder:text-muted-foreground/70 focus:border-ink/40 ${
+            searchOpen ? "opacity-100" : "pointer-events-none w-0 opacity-0"
+          }`}
+        />
+        {searchOpen && (
           <button
             type="button"
-            onClick={() => {
-              if (!searchOpen) setSearchOpen(true);
-              else searchInputRef.current?.focus();
-            }}
-            aria-label="Search meetings"
-            className="grid h-9 w-9 shrink-0 place-items-center text-muted-foreground transition hover:text-ink"
-          >
-            <SearchIcon className="h-4 w-4" />
-          </button>
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") closeSearch();
-            }}
-            placeholder="Search meetings"
-            className={`min-w-0 flex-1 border-b border-hairline bg-transparent py-1 text-xs text-ink outline-none transition placeholder:text-muted-foreground/70 focus:border-ink/40 ${
-              searchOpen ? "opacity-100" : "pointer-events-none w-0 opacity-0"
+            onClick={closeSearch}
+            aria-label="Clear search"
+            className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-ink ${
+              searchQuery ? "opacity-100" : "opacity-60"
             }`}
-          />
-          {searchOpen && (
-            <button
-              type="button"
-              onClick={closeSearch}
-              aria-label="Clear search"
-              className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-ink ${
-                searchQuery ? "opacity-100" : "opacity-60"
-              }`}
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-      )}
-      {selectMode ? (
-        <div className="flex items-center gap-2 rounded-full border border-hairline bg-card p-1 pr-2">
-          <button
-            onClick={handleDelete}
-            disabled={selected.size === 0}
-            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-40"
           >
-            <Trash2 className="h-3.5 w-3.5" /> Delete ({selected.size})
-          </button>
-          <button onClick={exitSelect} className="ml-1 rounded-full p-1.5 text-muted-foreground hover:bg-secondary">
             <X className="h-3.5 w-3.5" />
           </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setSelectMode(true)}
-          className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
-        >
-          <CheckSquare className="h-3.5 w-3.5" /> Select
-        </button>
-      )}
-      {!hideNewActions && (
-        <>
-          <button
-            onClick={() => { setNewFolderName(""); setNewFolderOpen(true); }}
-            className="flex items-center gap-1.5 rounded-full border border-hairline bg-card px-4 py-2 text-xs text-ink hover:bg-secondary"
-          >
-            <Plus className="h-3.5 w-3.5" /> New folder
-          </button>
-          <button
-            onClick={() => setNewMeetingOpen(true)}
-            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs text-primary-foreground hover:opacity-90"
-          >
-            <Plus className="h-3.5 w-3.5" /> New meeting
-          </button>
-        </>
+        )}
+      </div>
+      {onCreate && (
+        <LibraryPlusMenu onCreate={onCreate} showMeetingOption={showMeetingOption} />
       )}
     </>
   );
@@ -496,17 +440,11 @@ export function MeetingsListPage({
       ) : (
         <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((m) => {
-            const isSel = selected.has(m.id);
             return (
               <li key={m.id}>
                 <button
-                  onClick={() => {
-                    if (selectMode) toggleSel(m.id);
-                    else openMeeting(m.id);
-                  }}
-                  className={`group flex w-full flex-col gap-2 rounded-lg border p-4 text-left transition hover:bg-secondary/50 ${
-                    isSel ? "border-primary bg-secondary/40" : "border-hairline bg-card"
-                  }`}
+                  onClick={() => openMeeting(m.id)}
+                  className="group flex w-full flex-col gap-2 rounded-lg border border-hairline bg-card p-4 text-left transition hover:bg-secondary/50"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2.25} />
