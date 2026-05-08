@@ -357,32 +357,15 @@ export function SessionDetailsModal({
 
 /* ----------------------------- Field helpers ----------------------------- */
 
-function BoldField({
+function FieldStack({
   label,
-  children,
-  className,
-}: {
-  label: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <label className={`flex flex-col gap-1.5 rounded-lg border border-hairline bg-background px-3 py-2.5 ${className ?? ""}`}>
-      <span className="text-sm font-semibold text-ink">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function LockableField({
-  label,
-  locked,
+  locked = false,
   lockedMessage,
   children,
 }: {
   label: string;
-  locked: boolean;
-  lockedMessage: string;
+  locked?: boolean;
+  lockedMessage?: string;
   children: React.ReactNode;
 }) {
   const [showMsg, setShowMsg] = useState(false);
@@ -393,19 +376,19 @@ function LockableField({
   }, [showMsg]);
 
   return (
-    <div
-      className={`relative flex flex-col gap-1.5 rounded-lg border border-hairline bg-background px-3 py-2.5 ${
-        locked ? "cursor-not-allowed" : ""
-      }`}
-      onClick={() => locked && setShowMsg(true)}
-    >
+    <div className="relative flex flex-col gap-1.5">
       <span className="flex items-center gap-1 text-sm font-semibold text-ink">
         {label}
         {locked && <Lock className="h-3 w-3 text-muted-foreground/70" />}
       </span>
-      <div className={locked ? "pointer-events-none opacity-80" : ""}>{children}</div>
+      <div
+        className={locked ? "cursor-not-allowed" : ""}
+        onClick={() => locked && lockedMessage && setShowMsg(true)}
+      >
+        <div className={locked ? "pointer-events-none opacity-80" : ""}>{children}</div>
+      </div>
       <AnimatePresence>
-        {showMsg && (
+        {showMsg && lockedMessage && (
           <motion.div
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
