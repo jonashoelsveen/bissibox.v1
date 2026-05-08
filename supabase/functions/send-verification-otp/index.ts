@@ -18,7 +18,6 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend/emails";
 const FROM_EMAIL = "onboarding@resend.dev";
-const SANDBOX_TO_EMAIL = "jonashoelsveen@outlook.com";
 
 interface Body {
   channel: "email" | "sms";
@@ -50,7 +49,7 @@ async function sendEmail(to: string, code: string) {
 
   const payload = {
     from: FROM_EMAIL,
-    to: SANDBOX_TO_EMAIL,
+    to: to,
     subject: `Your verification code: ${code}`,
     html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#0f172a">
       <h1 style="font-size:18px;margin:0 0 16px">Verify it's you</h1>
@@ -63,8 +62,7 @@ async function sendEmail(to: string, code: string) {
   try {
     console.log("send-verification-otp gateway request", {
       url: GATEWAY_URL,
-      requestedTo: to,
-      actualTo: SANDBOX_TO_EMAIL,
+      to: to,
       from: FROM_EMAIL,
       hasAuthorizationBearer: true,
       hasLovableApiKey: Boolean(LOVABLE_API_KEY),

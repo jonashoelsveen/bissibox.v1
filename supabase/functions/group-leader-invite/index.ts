@@ -85,11 +85,17 @@ Deno.serve(async (req) => {
       ? `<p>You will be the group leader for <strong>${escapeHtml(leader.group_name)}</strong>.</p>`
       : "";
 
+    // Generate a cryptographically random invite token (48 hex chars).
+    const tokenBytes = new Uint8Array(24);
+    crypto.getRandomValues(tokenBytes);
+    const token = Array.from(tokenBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+
     // Best-effort app URL for the accept link.
     const appUrl =
       Deno.env.get("APP_URL") ||
       req.headers.get("origin") ||
       "https://raceline.lovable.app";
+    const acceptUrl = `${appUrl}/accept-leader-invite?token=${token}`;
 
     const html = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
@@ -99,9 +105,9 @@ Deno.serve(async (req) => {
         ${groupLine}
         <p>As a group leader you'll get access to your group's meetings page, notes and files inside the team.</p>
         <p style="margin: 28px 0;">
-          <a href="${appUrl}/auth"
+          <a href="${acceptUrl}"
              style="display: inline-block; padding: 12px 20px; background: #111; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">
-            Sign in to accept
+            Accept invitation
           </a>
         </p>
         <p style="font-size: 13px; color: #666;">If you weren't expecting this invitation you can safely ignore this email.</p>
@@ -152,6 +158,7 @@ Deno.serve(async (req) => {
         invited_at: new Date().toISOString(),
         status: "pending",
         invited_by: userData.user.id,
+        invite_token: token,
       })
       .eq("id", leader.id);
 
