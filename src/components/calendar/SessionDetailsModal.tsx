@@ -493,6 +493,32 @@ function ActivityRow({
   const durH = Math.floor(dur / 60);
   const durM = dur % 60;
 
+  const hRef = useRef<HTMLInputElement>(null);
+  const mRef = useRef<HTMLInputElement>(null);
+  const kmRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) {
+      // focus hour input on entering edit mode
+      requestAnimationFrame(() => {
+        hRef.current?.focus();
+        hRef.current?.select();
+      });
+    }
+  }, [editing]);
+
+  const handleArrowNav = (e: React.KeyboardEvent<HTMLInputElement>, prev: React.RefObject<HTMLInputElement>, next: React.RefObject<HTMLInputElement>) => {
+    if (e.key === "ArrowRight" && next.current) {
+      e.preventDefault();
+      next.current.focus();
+      next.current.select();
+    } else if (e.key === "ArrowLeft" && prev.current) {
+      e.preventDefault();
+      prev.current.focus();
+      prev.current.select();
+    }
+  };
+
   const pace = useMemo(() => {
     if (!activity.durationMin || !activity.distanceKm || activity.distanceKm <= 0) return null;
     const secPerKm = Math.round((activity.durationMin * 60) / activity.distanceKm);
