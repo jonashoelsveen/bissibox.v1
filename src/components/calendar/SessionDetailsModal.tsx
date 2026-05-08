@@ -346,58 +346,6 @@ export function SessionDetailsModal({
           )}
           </div>
 
-          {/* Footer — always visible. Switches to Discard / Save when user attempts to close with unsaved changes. */}
-          {!readOnly && (
-            <div className="flex items-center justify-between border-t border-hairline bg-muted/40 px-4 py-3">
-              {confirmClose ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setConfirmClose(false);
-                      onClose();
-                    }}
-                    className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    Discard changes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setConfirmClose(false);
-                      onSave(value);
-                    }}
-                    className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
-                  >
-                    Save changes
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={requestClose}
-                    className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSave(value)}
-                    disabled={saveDisabled}
-                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition-opacity ${
-                      saveDisabled
-                        ? "bg-secondary text-muted-foreground/70 cursor-not-allowed"
-                        : "bg-primary text-primary-foreground hover:opacity-90"
-                    }`}
-                  >
-                    {autosync ? "Autosync" : isEdit ? "Save changes" : "Add"}
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-
         </motion.div>
       </motion.div>
     </AnimatePresence>
