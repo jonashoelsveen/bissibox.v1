@@ -691,7 +691,7 @@ function LibraryPage() {
               onOpenMediaTab={openMediaTab}
               onCreate={handleCreateFromPrevious}
               onCreateContainer={handleCreateContainerFromPrevious}
-              newAlbumSignal={newMediaAlbumSignal}
+              newAlbumSignal={0}
               showMeetingOption={isTeamMode}
             />
           )}
