@@ -285,9 +285,9 @@ export function SessionDetailsModal({
           ) : (
             <>
               {/* Top fields — three trustful cards: Session name / Start of session / Session duration */}
-              <div className="grid grid-cols-1 gap-3 border-b border-hairline px-4 py-4 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-3">
                 <FieldStack label="Session name">
-                  <div className="rounded-lg border border-hairline bg-background px-3 py-2.5">
+                  <div className="rounded-md border border-hairline bg-background px-3 py-2">
                     <input
                       value={value.title}
                       onChange={(e) => set("title", e.target.value)}
@@ -307,7 +307,7 @@ export function SessionDetailsModal({
                       : "Start time is set by Strava and can't be edited here."
                   }
                 >
-                  <div className="rounded-lg border border-hairline bg-background px-3 py-2.5">
+                  <div className="rounded-md border border-hairline bg-background px-3 py-2">
                     <input
                       value={startStr}
                       onChange={(e) => {
@@ -325,7 +325,7 @@ export function SessionDetailsModal({
                 </FieldStack>
 
                 <FieldStack label="Session duration" locked={isStravaSynced} lockedMessage="Duration is set by Strava and can't be edited here.">
-                  <div className="rounded-lg border border-hairline bg-background px-3 py-2.5">
+                  <div className="rounded-md border border-hairline bg-background px-3 py-2">
                     <div className="text-sm tabular-nums text-ink">
                       {durationMin > 0 ? fmtHM(durationMin) : "—"}
                     </div>
