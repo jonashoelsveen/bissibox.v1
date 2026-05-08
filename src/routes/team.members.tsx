@@ -839,41 +839,126 @@ function TeamMembersPage() {
 
   return (
     <div className="px-4 md:px-6">
-      <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
-        <div>
-          <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Team</p>
-          <h1 className="mt-2 text-3xl text-ink md:text-4xl">Organization</h1>
-        </div>
+      {/* Top tab bar — mirrors organizer.library */}
+      <div className="sticky top-14 z-20 -mx-4 flex items-end gap-1 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
         <button
-          onClick={save}
-          disabled={busy}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+          onClick={() => setTab(null)}
+          className={`-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 py-2.5 pl-0 pr-4 text-sm font-medium transition ${
+            tab === null
+              ? "border-primary text-ink"
+              : "border-transparent text-muted-foreground hover:text-ink"
+          }`}
+          style={{ width: 240 }}
         >
-          <Save className="h-4 w-4" />
-          {busy ? "Saving…" : "Save"}
+          <Briefcase className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
+          <span className="truncate">Organization</span>
         </button>
-      </header>
 
-      <nav className="mt-7 flex border-b border-hairline">
-        <TabBtn active={tab === "board"} onClick={() => setTab("board")} icon={<Briefcase className="h-3.5 w-3.5" />}>
-          Board
-        </TabBtn>
-        <TabBtn active={tab === "coaches"} onClick={() => setTab("coaches")} icon={<UserCog className="h-3.5 w-3.5" />}>
-          Group leaders
-        </TabBtn>
-        <TabBtn active={tab === "groups"} onClick={() => setTab("groups")} icon={<Layers className="h-3.5 w-3.5" />}>
-          Groups
-        </TabBtn>
-        <TabBtn active={tab === "memberships"} onClick={() => setTab("memberships")} icon={<Wallet className="h-3.5 w-3.5" />}>
-          Memberships
-        </TabBtn>
-        <TabBtn active={tab === "members"} onClick={() => setTab("members")} icon={<UsersIcon className="h-3.5 w-3.5" />}>
-          Members
-        </TabBtn>
-        <TabBtn active={tab === "chart"} onClick={() => setTab("chart")} icon={<Network className="h-3.5 w-3.5" />}>
-          Chart
-        </TabBtn>
-      </nav>
+        <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
+          {openTabs.length > 0 && (
+            <div
+              ref={tabStripRef}
+              className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              style={{ scrollBehavior: "smooth" }}
+            >
+              {openTabs.map((id, idx) => {
+                const def = ORG_TABS.find((t) => t.id === id)!;
+                const Icon = def.icon;
+                const active = tab === id;
+                const isDragging = dragTabId === id;
+                let translateX = 0;
+                if (dragTabId && !isDragging) {
+                  const st = dragStateRef.current;
+                  if (st) {
+                    const from = st.startIndex;
+                    const to = st.currentIndex;
+                    if (to > from && idx > from && idx <= to) translateX = -st.width;
+                    else if (to < from && idx >= to && idx < from) translateX = st.width;
+                  }
+                }
+                const dragStyle: React.CSSProperties = isDragging
+                  ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
+                  : { transform: `translate3d(${translateX}px,0,0)` };
+                return (
+                  <div
+                    key={id}
+                    ref={(el) => {
+                      if (el) tabRefs.current.set(id, el);
+                      else tabRefs.current.delete(id);
+                    }}
+                    onPointerDown={(e) => onTabPointerDown(e, id)}
+                    onClick={() => setTab(id)}
+                    style={{
+                      flex: "1 1 200px",
+                      minWidth: 140,
+                      maxWidth: 240,
+                      touchAction: "pan-y",
+                      ...dragStyle,
+                      transition: isDragging
+                        ? "none"
+                        : dragTabId
+                          ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
+                          : "color 150ms, border-color 150ms",
+                    }}
+                    className={`group -mb-px inline-flex shrink-0 cursor-default select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
+                      active
+                        ? "border-primary text-ink font-medium"
+                        : "border-transparent text-muted-foreground hover:text-ink"
+                    }`}
+                    title={def.label}
+                  >
+                    <Icon className="h-3.5 w-3.5 opacity-70" />
+                    <span className="min-w-0 flex-1 truncate text-left">{def.label}</span>
+                    <span
+                      data-tab-close
+                      role="button"
+                      tabIndex={0}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); closeTab(id); }}
+                      className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                    >
+                      ✕
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </nav>
+
+        <div className="flex shrink-0 items-center gap-2 pb-1">
+          <button
+            onClick={save}
+            disabled={busy}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+          >
+            <Save className="h-3.5 w-3.5" />
+            {busy ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-6 pt-4 md:grid-cols-[240px_1fr]">
+        <aside className="md:sticky md:top-28 md:self-start">
+          <OrganizationSideNav
+            active={tab}
+            onSelect={selectTab}
+            rootActive={tab === null}
+            onRootClick={() => setTab(null)}
+          />
+        </aside>
+
+        <div className="min-w-0">
+          {tab === null && (
+            <div className="rounded-xl border border-dashed border-hairline bg-card/60 p-10 text-center">
+              <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Team</p>
+              <h1 className="mt-3 text-3xl text-ink md:text-4xl">Organization</h1>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Pick a category from the side menu to start managing your team.
+              </p>
+            </div>
+          )}
+
 
       {tab === "board" && (
         <Panel>
