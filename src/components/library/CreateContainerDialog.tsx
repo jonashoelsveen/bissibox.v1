@@ -53,7 +53,7 @@ export function CreateContainerDialog({
     const userId = user.id;
     const tId = isTeamMode ? teamId : null;
 
-    const nextSortOrder = async (table: "meeting_folders" | "note_folders" | "file_folders" | "media_albums") => {
+    const nextSortOrder = async (table: "note_folders" | "file_folders" | "media_albums") => {
       const q = supabase.from(table).select("sort_order").order("sort_order", { ascending: false }).limit(1);
       const { data } = tId ? await q.eq("team_id", tId) : await q.is("team_id", null).eq("user_id", userId);
       return ((data?.[0]?.sort_order as number | undefined) ?? -1) + 1;
@@ -61,8 +61,8 @@ export function CreateContainerDialog({
 
     let error: { message: string } | null = null;
     if (kind === "meeting") {
-      const sort_order = await nextSortOrder("meeting_folders");
-      ({ error } = await supabase.from("meeting_folders").insert({ user_id: userId, team_id: tId, name: name.trim(), sort_order }));
+      if (!tId) { setBusy(false); toast.error("No active team"); return; }
+      ({ error } = await supabase.from("meeting_folders").insert({ team_id: tId, name: name.trim() }));
     } else if (kind === "note") {
       const sort_order = await nextSortOrder("note_folders");
       ({ error } = await supabase.from("note_folders").insert({ user_id: userId, team_id: tId, name: name.trim(), sort_order }));
