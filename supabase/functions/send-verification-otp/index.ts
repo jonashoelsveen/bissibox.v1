@@ -62,8 +62,7 @@ async function sendEmail(to: string, code: string) {
   try {
     console.log("send-verification-otp gateway request", {
       url: GATEWAY_URL,
-      requestedTo: to,
-      actualTo: SANDBOX_TO_EMAIL,
+      to: to,
       from: FROM_EMAIL,
       hasAuthorizationBearer: true,
       hasLovableApiKey: Boolean(LOVABLE_API_KEY),
