@@ -156,9 +156,10 @@ export function SessionDetailsModal({
           exit={{ scale: 0.97, opacity: 0 }}
           transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
           onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-3xl px-4"
         >
         <motion.div
-          className="relative flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-hairline bg-card shadow-2xl"
+          className="relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded-xl border border-hairline bg-card shadow-2xl"
           animate={pulseControls}
         >
           {/* Header */}
