@@ -176,6 +176,13 @@ export function NotesPage({
   const setView = setInternalView;
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const lastFolderSigRef = useRef<number | undefined>(newFolderSignal);
+  useEffect(() => {
+    if (newFolderSignal === undefined) return;
+    if (lastFolderSigRef.current === newFolderSignal) return;
+    lastFolderSigRef.current = newFolderSignal;
+    setCreateFolderOpen(true);
+  }, [newFolderSignal]);
   const [newNoteOpen, setNewNoteOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
