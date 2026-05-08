@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Search, ArrowLeft, User, Users, Building2, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { SearchModeToggle } from "@/components/SearchModeToggle";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/discover")({
