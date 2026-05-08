@@ -291,7 +291,7 @@ export function SessionDetailsModal({
                   [
                     { id: "about", label: "About", Icon: Info },
                     { id: "map", label: "Map", Icon: MapPin },
-                    { id: "note", label: "Session note", Icon: StickyNote },
+                    { id: "note", label: "Note", Icon: StickyNote },
                   ] as const
                 ).map((t) => {
                   const active = tab === t.id;
