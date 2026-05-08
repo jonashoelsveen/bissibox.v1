@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/format";
 import { Search, SlidersHorizontal, ArrowUpDown, X, Check } from "lucide-react";
 import { RaceListItem } from "@/components/RaceListItem";
+import { SearchModeToggle } from "@/components/SearchModeToggle";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/")({
@@ -199,6 +200,11 @@ function Index() {
 
   return (
     <div className="px-4 md:px-6">
+      {user && mode !== "organizer" && mode !== "team" && (
+        <div className="pt-6">
+          <SearchModeToggle active="races" />
+        </div>
+      )}
       <header className="flex justify-center pt-8">
         <div className="flex w-full max-w-2xl items-center gap-2">
           <label className="flex flex-1 items-center gap-3 rounded-full border border-hairline bg-card px-6 py-4 ring-soft focus-within:border-primary">

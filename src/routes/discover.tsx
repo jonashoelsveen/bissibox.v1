@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Search, ArrowLeft, User, Users, Building2, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { SearchModeToggle } from "@/components/SearchModeToggle";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/discover")({
@@ -94,6 +95,9 @@ function DiscoverPage() {
 
   return (
     <div className="px-4 md:px-6">
+      <div className="pt-6">
+        <SearchModeToggle active="teams" />
+      </div>
       <div className="mx-auto max-w-3xl pt-6 pr-14">
         <div className="relative">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
