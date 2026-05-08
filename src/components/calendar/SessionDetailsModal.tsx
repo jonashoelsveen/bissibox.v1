@@ -188,45 +188,44 @@ export function SessionDetailsModal({
                 </AnimatePresence>
               )}
               {!readOnly && (
-                <motion.button
+                <button
                   type="button"
-                  layout
                   onClick={() => {
                     setConfirmClose(false);
                     onSave(value);
                   }}
-                  disabled={!confirmClose && saveDisabled}
-                  transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
-                  className={`overflow-hidden whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium ${
-                    !confirmClose && saveDisabled
+                  disabled={saveDisabled}
+                  className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium ${
+                    saveDisabled
                       ? "bg-secondary text-muted-foreground/70 cursor-not-allowed"
                       : "bg-primary text-primary-foreground hover:opacity-90"
                   }`}
                 >
-                  {confirmClose ? "Save changes" : autosync ? "Autosync" : isEdit ? "Save" : "Add"}
-                </motion.button>
+                  {autosync ? "Autosync" : isEdit ? "Save" : "Add"}
+                </button>
               )}
-              <AnimatePresence initial={false}>
-                {!confirmClose && (
-                  <motion.button
-                    key="close"
-                    type="button"
-                    aria-label="Close"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.15 }}
-                    onClick={requestClose}
-                    className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
-                  >
-                    <X className="h-4 w-4" />
-                  </motion.button>
-                )}
-              </AnimatePresence>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={requestClose}
+                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
 
-          <div className="flex flex-1 flex-col overflow-hidden">
+          <div
+            className={`flex flex-1 flex-col overflow-hidden transition-opacity duration-150 ${
+              confirmClose ? "opacity-50" : ""
+            }`}
+            onClickCapture={(e) => {
+              if (confirmClose) {
+                e.stopPropagation();
+                setConfirmClose(false);
+              }
+            }}
+          >
           {isNote ? (
             <NoteBody
               title={value.title}
