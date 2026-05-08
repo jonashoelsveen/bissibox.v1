@@ -85,11 +85,17 @@ Deno.serve(async (req) => {
       ? `<p>You will be the group leader for <strong>${escapeHtml(leader.group_name)}</strong>.</p>`
       : "";
 
+    // Generate a cryptographically random invite token (48 hex chars).
+    const tokenBytes = new Uint8Array(24);
+    crypto.getRandomValues(tokenBytes);
+    const token = Array.from(tokenBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+
     // Best-effort app URL for the accept link.
     const appUrl =
       Deno.env.get("APP_URL") ||
       req.headers.get("origin") ||
       "https://raceline.lovable.app";
+    const acceptUrl = `${appUrl}/accept-leader-invite?token=${token}`;
 
     const html = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
