@@ -699,6 +699,12 @@ function LibraryPage() {
         </div>
       </div>
       {newNoteOpen && <NewNoteOverlay onClose={() => setNewNoteOpen(false)} />}
+      {createContainerKind && (
+        <CreateContainerDialog
+          kind={createContainerKind}
+          onClose={() => setCreateContainerKind(null)}
+        />
+      )}
       {unsavedPrompt && (
         <UnsavedChangesDialog
           title={unsavedPrompt.title}
