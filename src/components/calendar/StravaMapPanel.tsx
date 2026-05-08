@@ -109,18 +109,33 @@ export function StravaMapPanel({
     return () => { cancelled = true; if (map) map.remove(); };
   }, [coords, styleId]);
 
-  // Synthetic elevation profile when only gain is known.
+  // Real elevation profile from Strava streams when available, otherwise
+  // a synthetic bell curve scaled to total elevation gain as a fallback.
   const elevationData = useMemo(() => {
+    if (streams && streams.altitude.length > 1) {
+      const alt = streams.altitude;
+      const dist = streams.distance;
+      const haveDist = dist.length === alt.length;
+      // Downsample to ~200 points for chart performance.
+      const N = Math.min(200, alt.length);
+      const step = alt.length / N;
+      const points: { km: number; m: number }[] = [];
+      for (let i = 0; i < N; i++) {
+        const idx = Math.min(alt.length - 1, Math.floor(i * step));
+        const km = haveDist ? dist[idx] / 1000 : (i / (N - 1)) * (distanceKm || 1);
+        points.push({ km: Number(km.toFixed(2)), m: Math.round(alt[idx]) });
+      }
+      return points;
+    }
     if (!elevationGainM || elevationGainM <= 0) return [];
     const N = 60;
     const km = distanceKm || 1;
     return Array.from({ length: N }, (_, i) => {
       const x = i / (N - 1);
-      // gentle bell curve scaled to total gain
       const y = elevationGainM * Math.sin(Math.PI * x);
       return { km: Number((x * km).toFixed(2)), m: Math.round(y) };
     });
-  }, [elevationGainM, distanceKm]);
+  }, [streams, elevationGainM, distanceKm]);
 
   if (!polyline) {
     return (
