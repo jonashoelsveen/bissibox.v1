@@ -649,6 +649,8 @@ function LibraryPage() {
               newMeetingSignal={newMeetingSignal}
               onOpenMeeting={(m) => openMeetingTab(m, "earlier")}
               onMeetingCreated={(m) => openMeetingTab(m, "new")}
+              onCreate={handleCreateFromPrevious}
+              showMeetingOption={isTeamMode}
             />
           ) : baseTab === "notes" ? (
             <NotesPage
@@ -656,11 +658,26 @@ function LibraryPage() {
               onOpenNote={(id, kind) => void openNote(id, kind)}
               hideSideNav
               externalView={externalNotesView}
+              onCreate={handleCreateFromPrevious}
+              showMeetingOption={isTeamMode}
             />
           ) : baseTab === "files" ? (
-            <FilesPage actionsMount={actionsMount} hideSideNav externalView={externalFilesView} />
+            <FilesPage
+              actionsMount={actionsMount}
+              hideSideNav
+              externalView={externalFilesView}
+              onCreate={handleCreateFromPrevious}
+              showMeetingOption={isTeamMode}
+            />
           ) : (
-            <MediaPage actionsMount={actionsMount} hideSideNav externalView={externalMediaView} onOpenMediaTab={openMediaTab} />
+            <MediaPage
+              actionsMount={actionsMount}
+              hideSideNav
+              externalView={externalMediaView}
+              onOpenMediaTab={openMediaTab}
+              onCreate={handleCreateFromPrevious}
+              showMeetingOption={isTeamMode}
+            />
           )}
         </div>
       </div>
