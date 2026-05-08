@@ -116,7 +116,18 @@ export function SessionDetailsModal({
     [value],
   );
   const [confirmClose, setConfirmClose] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const pulseControls = useAnimationControls();
+
+  const revertChanges = () => {
+    try {
+      const initial = JSON.parse(initialRef.current) as SessionDetailsValue;
+      onChange(initial);
+    } catch {
+      /* noop */
+    }
+    setConfirmClose(false);
+  };
 
   const requestClose = () => {
     if (isDirty && !readOnly) {
