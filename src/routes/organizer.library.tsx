@@ -236,7 +236,7 @@ function EventsPage() {
         </button>
 
         {/* Open event tabs */}
-        <div className="flex flex-1 items-end gap-1 overflow-x-auto">
+        <div className="flex flex-1 items-end gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {openTabs.map((t) => {
             const active = activeId === t.id;
             return (
@@ -264,33 +264,50 @@ function EventsPage() {
 
         {/* Right side: search + plus */}
         <div className="flex shrink-0 items-center gap-1 pb-1">
-          {searchOpen ? (
-            <div className="flex items-center gap-1 rounded-full border border-hairline bg-card px-3 py-1.5">
-              <SearchIcon className="h-3.5 w-3.5 text-muted-foreground" />
-              <input
-                ref={searchRef}
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search events…"
-                className="w-48 bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground"
-              />
+          <div
+            className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
+              searchOpen
+                ? "w-64 border-hairline bg-card pl-3 pr-1"
+                : "w-9 hover:border-hairline hover:bg-card"
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                if (!searchOpen) setSearchOpen(true);
+                else searchRef.current?.focus();
+              }}
+              aria-label="Search events"
+              className="grid h-9 w-9 shrink-0 place-items-center text-muted-foreground transition hover:text-ink"
+            >
+              <SearchIcon className="h-4 w-4" />
+            </button>
+            <input
+              ref={searchRef}
+              type="text"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") { setQ(""); setSearchOpen(false); }
+              }}
+              placeholder="Search events"
+              className={`min-w-0 flex-1 border-b border-hairline bg-transparent py-1 text-xs text-ink outline-none transition placeholder:text-muted-foreground/70 focus:border-ink/40 ${
+                searchOpen ? "opacity-100" : "pointer-events-none w-0 opacity-0"
+              }`}
+            />
+            {searchOpen && (
               <button
+                type="button"
                 onClick={() => { setQ(""); setSearchOpen(false); }}
-                className="rounded p-0.5 text-muted-foreground hover:text-ink"
-                aria-label="Close search"
+                aria-label="Clear search"
+                className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-ink ${
+                  q ? "opacity-100" : "opacity-60"
+                }`}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setSearchOpen(true)}
-              aria-label="Search events"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-secondary hover:text-ink"
-            >
-              <SearchIcon className="h-[18px] w-[18px]" strokeWidth={2.25} />
-            </button>
-          )}
+            )}
+          </div>
           <EventsPlusMenu
             onNewEvent={() => nav({ to: "/organizer/new" })}
             onNewFolder={() => setFolderDialogOpen(true)}
