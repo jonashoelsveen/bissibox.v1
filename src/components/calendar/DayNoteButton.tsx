@@ -428,7 +428,8 @@ export function NotePanel({
             <textarea
               ref={taRef}
               value={val}
-              onChange={(e) => setVal(e.target.value)}
+              onChange={(e) => { setVal(e.target.value); if (footerHidden) setFooterHidden(false); }}
+              onFocus={() => { if (footerHidden) setFooterHidden(false); }}
               placeholder="Skriv notat…"
               className="block w-full resize-none bg-transparent text-[12px] leading-snug text-ink outline-none placeholder:text-muted-foreground/60"
               style={{ minHeight: defaultBodyHeight + extra }}
