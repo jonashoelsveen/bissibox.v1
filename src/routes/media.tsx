@@ -675,9 +675,11 @@ function LibraryPage() {
               actionsMount={actionsMount}
               externalView={externalMeetingsView ?? { type: "all" }}
               newMeetingSignal={newMeetingSignal}
+              newFolderSignal={newMeetingFolderSignal}
               onOpenMeeting={(m) => openMeetingTab(m, "earlier")}
               onMeetingCreated={(m) => openMeetingTab(m, "new")}
               onCreate={handleCreateFromPrevious}
+              onCreateContainer={handleCreateContainerFromPrevious}
               showMeetingOption={isTeamMode}
             />
           ) : baseTab === "notes" ? (
@@ -687,6 +689,8 @@ function LibraryPage() {
               hideSideNav
               externalView={externalNotesView}
               onCreate={handleCreateFromPrevious}
+              onCreateContainer={handleCreateContainerFromPrevious}
+              newFolderSignal={newNoteFolderSignal}
               showMeetingOption={isTeamMode}
             />
           ) : baseTab === "files" ? (
@@ -695,6 +699,8 @@ function LibraryPage() {
               hideSideNav
               externalView={externalFilesView}
               onCreate={handleCreateFromPrevious}
+              onCreateContainer={handleCreateContainerFromPrevious}
+              newFolderSignal={newFilesFolderSignal}
               showMeetingOption={isTeamMode}
             />
           ) : (
@@ -704,6 +710,8 @@ function LibraryPage() {
               externalView={externalMediaView}
               onOpenMediaTab={openMediaTab}
               onCreate={handleCreateFromPrevious}
+              onCreateContainer={handleCreateContainerFromPrevious}
+              newAlbumSignal={newMediaAlbumSignal}
               showMeetingOption={isTeamMode}
             />
           )}
