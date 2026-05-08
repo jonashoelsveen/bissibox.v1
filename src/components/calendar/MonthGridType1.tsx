@@ -1084,7 +1084,7 @@ function MiniDurationColumn({
                   beginAt(i);
                 }}
                 onMouseEnter={() => extendTo(i)}
-                className={`relative grid h-full cursor-cell select-none ${
+                className={`relative grid h-full select-none ${
                   i > 0 ? "border-t border-hairline/60" : ""
                 }`}
                 style={{
