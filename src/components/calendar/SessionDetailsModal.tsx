@@ -472,12 +472,14 @@ function ActivityRow({
   activity,
   stravaLocked,
   readOnly,
+  startEditing,
   onChange,
   onRemove,
 }: {
   activity: SessionDetailsValue["activities"][number];
   stravaLocked: boolean;
   readOnly: boolean;
+  startEditing?: boolean;
   onChange: (patch: Partial<SessionDetailsValue["activities"][number]>) => void;
   onRemove: () => void;
 }) {
@@ -499,7 +501,7 @@ function ActivityRow({
 
 
 
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(!!startEditing && !readOnly && !stravaLocked);
   const dur = activity.durationMin ?? 0;
   const durH = Math.floor(dur / 60);
   const durM = dur % 60;
