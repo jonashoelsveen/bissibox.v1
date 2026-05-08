@@ -11,8 +11,6 @@ import {
   ChevronRight,
   Plus,
   Upload,
-  CheckSquare,
-  Square,
   X,
   Trash2,
   MoreVertical,
@@ -24,7 +22,10 @@ import {
   ShieldAlert,
   Loader2,
   Download,
+  Search as SearchIcon,
 } from "lucide-react";
+import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
+import type { PreviousNewKind } from "@/components/library/PreviousPage";
 
 interface Folder {
   id: string;
@@ -61,12 +62,16 @@ export function FilesPage({
   externalView,
   hideNewActions,
   onOpenFile,
+  onCreate,
+  showMeetingOption,
 }: {
   actionsMount?: HTMLDivElement | null;
   hideSideNav?: boolean;
   externalView?: { type: "all" } | { type: "folder"; id: string | null };
   hideNewActions?: boolean;
   onOpenFile?: (id: string) => void;
+  onCreate?: (kind: PreviousNewKind) => void;
+  showMeetingOption?: boolean;
 } = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
