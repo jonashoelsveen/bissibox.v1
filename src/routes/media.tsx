@@ -769,6 +769,8 @@ function MediaPage({
   hideNewActions,
   onOpenMedia,
   onOpenMediaTab,
+  onCreate,
+  showMeetingOption,
 }: {
   actionsMount?: HTMLDivElement | null;
   hideSideNav?: boolean;
@@ -776,6 +778,8 @@ function MediaPage({
   hideNewActions?: boolean;
   onOpenMedia?: (id: string) => void;
   onOpenMediaTab?: (tabId: string, title: string, mediaIds: string[]) => void;
+  onCreate?: (kind: PreviousNewKind) => void;
+  showMeetingOption?: boolean;
 } = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -807,7 +811,9 @@ function MediaPage({
   const [albumDragId, setAlbumDragId] = useState<string | null>(null);
   const [albumDragHandle, setAlbumDragHandle] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Album | null>(null);
-
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const persistAlbumOrder = useCallback(async (next: Album[]) => {
     // Write sort_order based on current array index (pinned first already handled by sort)
     await Promise.all(
