@@ -2927,7 +2927,7 @@ function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg text-ink">{title}</h2>
+          <h2 className="text-sm font-medium text-ink">{title}</h2>
           <button
             onClick={onClose}
             className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
