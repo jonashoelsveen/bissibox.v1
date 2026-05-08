@@ -90,8 +90,9 @@ export function FilesPage({
   const [foldersOpen, setFoldersOpen] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [folderMenuFor, setFolderMenuFor] = useState<string | null>(null);
   const [folderDragId, setFolderDragId] = useState<string | null>(null);
@@ -239,10 +240,28 @@ export function FilesPage({
   }, [accessToken, files, load, runPoll]);
 
   const filtered = useMemo(() => {
-    if (view.type === "all") return files;
-    if (view.id === null) return files.filter((f) => !f.folder_id);
-    return files.filter((f) => f.folder_id === view.id);
-  }, [files, view]);
+    let list = files;
+    if (view.type === "folder") {
+      list = view.id === null
+        ? list.filter((f) => !f.folder_id)
+        : list.filter((f) => f.folder_id === view.id);
+    }
+    const q = searchQuery.trim().toLowerCase();
+    if (q) list = list.filter((f) => f.file_name.toLowerCase().includes(q));
+    return list;
+  }, [files, view, searchQuery]);
+
+  useEffect(() => {
+    if (searchOpen) {
+      const t = setTimeout(() => searchInputRef.current?.focus(), 60);
+      return () => clearTimeout(t);
+    }
+  }, [searchOpen]);
+
+  const closeSearch = () => {
+    setSearchQuery("");
+    setSearchOpen(false);
+  };
 
   const toggleSel = (id: string) => {
     setSelected((s) => {
