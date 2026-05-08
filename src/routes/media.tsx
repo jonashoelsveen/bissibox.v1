@@ -680,7 +680,7 @@ function LibraryPage() {
               externalView={externalFilesView}
               onCreate={handleCreateFromPrevious}
               onCreateContainer={handleCreateContainerFromPrevious}
-              newFolderSignal={newFilesFolderSignal}
+              newFolderSignal={0}
               showMeetingOption={isTeamMode}
             />
           ) : (
