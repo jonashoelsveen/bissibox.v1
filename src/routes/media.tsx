@@ -655,7 +655,7 @@ function LibraryPage() {
               actionsMount={actionsMount}
               externalView={externalMeetingsView ?? { type: "all" }}
               newMeetingSignal={newMeetingSignal}
-              newFolderSignal={newMeetingFolderSignal}
+              newFolderSignal={0}
               onOpenMeeting={(m) => openMeetingTab(m, "earlier")}
               onMeetingCreated={(m) => openMeetingTab(m, "new")}
               onCreate={handleCreateFromPrevious}
