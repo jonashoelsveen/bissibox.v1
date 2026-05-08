@@ -238,6 +238,29 @@ export function SessionDetailsModal({
             </AlertDialogContent>
           </AlertDialog>
 
+          <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You have unsaved changes. If you cancel now, your edits to this session will be lost.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep editing</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    setConfirmCancel(false);
+                    onClose();
+                  }}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Discard changes
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           <div
             className={`flex flex-1 flex-col overflow-hidden transition-opacity duration-150 ${
               confirmClose ? "opacity-50" : ""
