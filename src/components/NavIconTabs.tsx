@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
+import { ProfileTab } from "@/components/ProfileTab";
 
 type NavKey =
   | "library"
@@ -115,10 +116,16 @@ function useOrderedItems(items: NavItem[]): [NavItem[], (next: NavItem[]) => voi
   return [ordered, persist];
 }
 
-export function NavIconTabs({ activeKey }: { activeKey: NavKey }) {
+export function NavIconTabs({
+  activeKey,
+  onActiveClick,
+}: {
+  activeKey: NavKey;
+  onActiveClick?: () => void;
+}) {
   const items = useNavItems();
   const [ordered, persist] = useOrderedItems(items);
-  const visible = ordered.filter((i) => i.key !== activeKey);
+  const visible = ordered;
 
   const stripRef = useRef<HTMLDivElement | null>(null);
   const btnRefs = useRef<Map<string, HTMLDivElement>>(new Map());
