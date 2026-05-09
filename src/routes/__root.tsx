@@ -72,7 +72,8 @@ function RootComponent() {
   return (
     <AuthProvider>
       <TopBar />
-      <main className="min-h-screen pb-16 pt-14">
+      <GlobalTopTabBar />
+      <main className="min-h-screen pb-16 pt-[100px]">
         <Outlet />
       </main>
       <Toaster />
