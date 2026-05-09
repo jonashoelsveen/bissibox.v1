@@ -1885,7 +1885,6 @@ function measureWeekOverlayGeometry(container: HTMLDivElement | null) {
 
   const containerRect = container.getBoundingClientRect();
   const scrollLeft = container.scrollLeft;
-  const scrollTop = container.scrollTop;
   const cols: Array<{ left: number; width: number }> = [];
   let headerBottom = 0;
 
@@ -1897,7 +1896,11 @@ function measureWeekOverlayGeometry(container: HTMLDivElement | null) {
       left: rect.left - containerRect.left + scrollLeft,
       width: rect.width,
     });
-    headerBottom = Math.max(headerBottom, rect.bottom - containerRect.top + scrollTop);
+    // Use offsetTop+offsetHeight so the value is in scroll-content coordinates
+    // and stays stable while the user scrolls (sticky headers don't move in
+    // content coords, only visually). Falls back to rect math at scrollTop=0.
+    const contentBottom = header.offsetTop + header.offsetHeight;
+    headerBottom = Math.max(headerBottom, contentBottom);
   }
 
   return { cols, headerBottom };
