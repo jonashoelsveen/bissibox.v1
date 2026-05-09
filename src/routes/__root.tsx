@@ -72,12 +72,14 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   return (
     <AuthProvider>
-      <TopBar />
-      <GlobalTopTabBar />
-      <main className="min-h-screen pb-16 pt-[100px]">
-        <Outlet />
-      </main>
-      <Toaster />
+      <TopBarSlotProvider>
+        <TopBar />
+        <GlobalTopTabBar />
+        <main className="min-h-screen pb-16 pt-[100px]">
+          <Outlet />
+        </main>
+        <Toaster />
+      </TopBarSlotProvider>
     </AuthProvider>
   );
 }
