@@ -191,47 +191,21 @@ export function GlobalTopTabBar() {
 function Item({
   icon,
   label,
-  hint,
   onClick,
-  onHintClick,
 }: {
   icon: React.ReactNode;
   label: string;
-  hint?: string;
   onClick: () => void;
-  onHintClick?: () => void;
 }) {
   return (
-    <div
+    <button
+      type="button"
       role="menuitem"
-      className="group flex w-full items-center gap-2 rounded-lg pl-3 pr-1 text-left text-sm text-ink transition hover:bg-secondary"
+      onClick={onClick}
+      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
     >
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex flex-1 items-center gap-2 py-2 text-left"
-      >
-        <span className="text-muted-foreground">{icon}</span>
-        <span className="flex-1">{label}</span>
-      </button>
-      {hint &&
-        (onHintClick ? (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onHintClick();
-            }}
-            aria-label={`New ${hint.toLowerCase()}`}
-            className="rounded-md px-2 py-1 text-sm text-muted-foreground/60 opacity-0 transition group-hover:opacity-100 hover:bg-secondary-foreground/5 hover:text-ink"
-          >
-            {hint}
-          </button>
-        ) : (
-          <span className="px-2 py-1 text-sm text-muted-foreground/60 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-            {hint}
-          </span>
-        ))}
-    </div>
+      <span className="text-muted-foreground">{icon}</span>
+      <span className="flex-1">{label}</span>
+    </button>
   );
 }
