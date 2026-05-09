@@ -80,6 +80,7 @@ function RootComponent() {
           <Outlet />
         </main>
         <Toaster />
+        <GlobalCreateOverlay />
       </TopBarSlotProvider>
     </AuthProvider>
   );
