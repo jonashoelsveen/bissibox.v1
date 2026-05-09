@@ -2,8 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { X, Plus } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+
+export type OpenTabPayload =
+  | { type: "note"; id: string; title: string; folder: string | null }
+  | { type: "meeting"; id: string; title: string; folder: string | null }
+  | { type: "media"; id: string; title: string }
+  | { type: "file"; id: string; title: string };
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -104,6 +111,7 @@ function CreateBody({
   isEntity: boolean;
   onClose: () => void;
 }) {
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -163,14 +171,27 @@ function CreateBody({
     if (busy) return;
     setBusy(true);
     try {
+      let payload: OpenTabPayload | null = null;
       if (cfg.upload) {
-        await uploadItems(kind, files, folder, { userId, teamId });
+        payload = await uploadItems(kind, files, folder, { userId, teamId });
       } else {
-        await createItem(kind, name.trim(), folder, { userId, teamId });
+        payload = await createItem(kind, name.trim(), folder, { userId, teamId });
       }
       toast.success("Created");
       dispatchRefresh(kind);
       onClose();
+      if (payload) {
+        const tabFor: Record<OpenTabPayload["type"], "notes" | "meetings" | "media" | "files"> = {
+          note: "notes",
+          meeting: "meetings",
+          media: "media",
+          file: "files",
+        };
+        await navigate({ to: "/media", search: { tab: tabFor[payload.type] } });
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("library:open-tab", { detail: payload }));
+        }, 50);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -403,22 +424,26 @@ async function createContainer(
   }
 }
 
-async function createItem(kind: Kind, name: string, folder: string, ctx: Ctx) {
+async function createItem(
+  kind: Kind,
+  name: string,
+  folder: string,
+  ctx: Ctx,
+): Promise<OpenTabPayload | null> {
   if (!name) throw new Error("Title is required");
   switch (kind) {
     case "note": {
-      // notes.folder is a text column (folder name)
       const folderName = folder
         ? (await resolveFolderName(kind, folder, ctx))
         : null;
-      const { error } = await sb.from("notes").insert({
+      const { data, error } = await sb.from("notes").insert({
         user_id: ctx.userId,
         team_id: ctx.teamId,
         title: name,
         folder: folderName,
-      });
+      }).select("id,title,folder").single();
       if (error) throw error;
-      return;
+      return { type: "note", id: data.id, title: data.title, folder: data.folder };
     }
     case "event": {
       let organizer = "";
@@ -446,7 +471,7 @@ async function createItem(kind: Kind, name: string, folder: string, ctx: Ctx) {
         folder: folderName,
       });
       if (error) throw error;
-      return;
+      return null;
     }
     case "meeting": {
       if (!ctx.teamId) throw new Error("Switch to an entity to create meetings.");
@@ -460,16 +485,16 @@ async function createItem(kind: Kind, name: string, folder: string, ctx: Ctx) {
       const folderName = folder
         ? await resolveFolderName(kind, folder, ctx)
         : null;
-      const { error } = await sb.from("team_group_meetings").insert({
+      const { data, error } = await sb.from("team_group_meetings").insert({
         team_id: ctx.teamId,
         title: name,
         created_by: ctx.userId,
         group_id: group?.id ?? null,
         meeting_date: new Date().toISOString().slice(0, 10),
         folder: folderName,
-      });
+      }).select("id,title,folder").single();
       if (error) throw error;
-      return;
+      return { type: "meeting", id: data.id, title: data.title, folder: data.folder };
     }
     case "map-location":
     case "map-course":
@@ -478,6 +503,7 @@ async function createItem(kind: Kind, name: string, folder: string, ctx: Ctx) {
     case "media":
       throw new Error("Use the upload picker.");
   }
+  return null;
 }
 
 async function resolveFolderName(kind: Kind, value: string, ctx: Ctx): Promise<string> {
@@ -493,17 +519,18 @@ async function uploadItems(
   files: File[],
   folderValue: string,
   ctx: Ctx,
-) {
+): Promise<OpenTabPayload | null> {
   if (files.length === 0) throw new Error("Select at least one file");
   if (kind === "file") {
     const folderId = folderValue || null;
+    let lastFile: { id: string; title: string } | null = null;
     for (const file of files) {
       const path = `${ctx.userId}/${crypto.randomUUID()}-${file.name}`;
       const { error: upErr } = await supabase.storage
         .from("documents")
         .upload(path, file, { contentType: file.type });
       if (upErr) throw upErr;
-      const { error } = await sb.from("files").insert({
+      const { data, error } = await sb.from("files").insert({
         user_id: ctx.userId,
         team_id: ctx.teamId,
         folder_id: folderId,
@@ -511,13 +538,15 @@ async function uploadItems(
         storage_path: path,
         mime_type: file.type,
         file_size: file.size,
-      });
+      }).select("id,file_name").single();
       if (error) throw error;
+      lastFile = { id: data.id, title: data.file_name };
     }
-    return;
+    return lastFile ? { type: "file", id: lastFile.id, title: lastFile.title } : null;
   }
   if (kind === "media") {
     const albumId = folderValue || null;
+    let lastMedia: { id: string; title: string } | null = null;
     for (const file of files) {
       const ext = file.name.split(".").pop();
       const path = `${ctx.userId}/${crypto.randomUUID()}.${ext}`;
@@ -544,9 +573,11 @@ async function uploadItems(
       if (albumId && mi?.id) {
         await sb.from("media_item_albums").insert({ media_item_id: mi.id, album_id: albumId });
       }
+      if (mi?.id) lastMedia = { id: mi.id, title: file.name };
     }
-    return;
+    return lastMedia ? { type: "media", id: lastMedia.id, title: lastMedia.title } : null;
   }
+  return null;
 }
 
 function dispatchRefresh(kind: Kind) {

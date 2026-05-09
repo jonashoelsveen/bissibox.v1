@@ -135,7 +135,7 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
 
   return (
     <div
-      className="select-none rounded-md bg-card p-2.5"
+      className="select-none rounded-md bg-transparent p-2.5"
       style={{ width: 240, fontSize: 12 }}
       onMouseDown={(e) => e.stopPropagation()}
     >
