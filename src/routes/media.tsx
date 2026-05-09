@@ -14,6 +14,7 @@ import { PreviousPage, type PreviousNewKind } from "@/components/library/Previou
 import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
 import { CreateContainerDialog } from "@/components/library/CreateContainerDialog";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
+import { TopBarSlot } from "@/components/TopBarSlot";
 import { MeetingsListPage } from "@/components/library/MeetingsListPage";
 import { getUnsaved } from "@/lib/library-settings";
 import { TeamBoardPage } from "@/routes/team.board";
