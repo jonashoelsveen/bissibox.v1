@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { NavIconTabs } from "@/components/NavIconTabs";
+import { ProfileTab } from "@/components/ProfileTab";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -333,20 +334,8 @@ function EventsPage() {
     <div className="px-4 md:px-6">
       {/* Top tab bar */}
       <div className="sticky top-14 z-20 -mx-4 flex items-end gap-1 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
-        {/* Fixed Events tab */}
-        <button
-          onClick={() => { setActiveId(null); setFolder(""); }}
-          className={`-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 py-2.5 pl-0 pr-4 text-sm font-medium transition ${
-            activeId === null
-              ? "border-primary text-ink"
-              : "border-transparent text-muted-foreground hover:text-ink"
-          }`}
-          style={{ width: 240 }}
-        >
-          <CalendarRange className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
-          <span className="truncate">{folderLabel}</span>
-        </button>
-        <NavIconTabs activeKey="events" />
+        <ProfileTab />
+        <NavIconTabs activeKey="events" onActiveClick={() => { setActiveId(null); setFolder(""); }} />
 
         {/* Open event tabs */}
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
@@ -482,7 +471,7 @@ function EventsPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 pt-4 md:grid-cols-[240px_1fr]">
+      <div className="grid gap-6 pt-4 md:grid-cols-[220px_1fr]">
         <aside className="md:sticky md:top-28 md:self-start">
           <EventsSideNav value={sideValue} onChange={onSideChange} />
         </aside>
