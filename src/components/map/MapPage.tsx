@@ -447,6 +447,7 @@ export function MapPage() {
           <MapIcon className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
           <span>Map</span>
         </button>
+        <NavIconTabs activeKey="map" />
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
           {openTabs.length > 0 && (
             <div className="relative min-w-0 flex-1">

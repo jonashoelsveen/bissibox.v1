@@ -156,6 +156,7 @@ export function CalendarPage() {
           <CalendarDays className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
           <span className="truncate">{calTitle}</span>
         </div>
+        <NavIconTabs activeKey="calendar" />
         <div className="flex-1" />
       </div>
 

@@ -345,6 +345,7 @@ function EventsPage() {
           <CalendarRange className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
           <span className="truncate">{folderLabel}</span>
         </button>
+        <NavIconTabs activeKey="events" />
 
         {/* Open event tabs */}
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">

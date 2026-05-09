@@ -292,6 +292,7 @@ export function GroupMembersPage() {
           <UsersRound className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
           <span>Group members</span>
         </button>
+        <NavIconTabs activeKey="group-members" />
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
           {openTabs.length > 0 && (
             <div className="relative min-w-0 flex-1">
