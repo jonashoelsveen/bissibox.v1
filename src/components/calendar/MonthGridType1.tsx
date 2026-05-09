@@ -39,6 +39,7 @@ import { makeCellId } from "./yearStore";
 import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, isoWeekNumber } from "./dateUtils";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
 import { DayNoteButton } from "./DayNoteButton";
+import { useUserCategories } from "@/hooks/useUserCategories";
 
 // Individual session categories. Three have fixed colors + icons for
 // consistent UX across the platform; "Else" lets the user pick from the 8
@@ -1275,96 +1276,12 @@ export function PopoverEditor({
           />
 
           {/* Category dropdown — full-width with vertical color bar at left */}
-          {(() => {
-            const indCat = categoryFromColor(color);
-            const indEntry = INDIVIDUAL_CATEGORIES.find((c) => c.value === indCat)!;
-            const sideColor =
-              seat === "admin"
-                ? ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!.color
-                : indEntry.color ?? color ?? "transparent";
-            return (
-              <div className="relative border-t border-hairline">
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
-                  style={{ background: sideColor }}
-                />
-                {seat === "admin" ? (
-                  <select
-                    value={adminCategory}
-                    onChange={(e) => {
-                      const next = e.target.value as AdminCategory;
-                      const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
-                      setColor(cat.color);
-                    }}
-                    className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
-                  >
-                    {ADMIN_CATEGORIES.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="flex items-center gap-2 pl-4 pr-2 py-1.5">
-                    <indEntry.Icon className="h-4 w-4 shrink-0" style={{ color: indEntry.color ?? "currentColor" }} />
-                    <select
-                      value={indCat}
-                      onChange={(e) => {
-                        const next = e.target.value as IndividualCategory;
-                        const cat = INDIVIDUAL_CATEGORIES.find((c) => c.value === next)!;
-                        if (next === "else") {
-                          // Default to first palette color if none chosen yet,
-                          // otherwise keep the existing custom color if it's not
-                          // one of the fixed category colors.
-                          const fixed = [CAT_TRAINING_COLOR, CAT_SCHOOL_COLOR, CAT_WORK_COLOR]
-                            .map((c) => c.toLowerCase());
-                          if (!color || fixed.includes(color.toLowerCase())) {
-                            setColor(GROUP_COLOR_PALETTE[0].value);
-                          }
-                        } else {
-                          setColor(cat.color);
-                        }
-                      }}
-                      className="block flex-1 bg-transparent py-1 pr-3 text-[12px] text-ink outline-none"
-                    >
-                      {INDIVIDUAL_CATEGORIES.map((c) => (
-                        <option key={c.value} value={c.value}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Individual + "Else" only: 8-color picker */}
-          {seat === "individual" && categoryFromColor(color) === "else" && (
-            <div className="flex items-center justify-between gap-2 border-t border-hairline px-3 py-3">
-              {GROUP_COLOR_PALETTE.map((c) => {
-                const selected = color?.toLowerCase() === c.value.toLowerCase();
-                return (
-                  <button
-                    key={c.value}
-                    type="button"
-                    title={c.name}
-                    aria-label={c.name}
-                    aria-pressed={selected}
-                    onClick={() => setColor(c.value)}
-                    className={[
-                      "h-3.5 w-3.5 rounded-full border transition-transform hover:scale-125",
-                      selected
-                        ? "border-ink/70 ring-2 ring-ink/30 ring-offset-1 ring-offset-card"
-                        : "border-black/15",
-                    ].join(" ")}
-                    style={{ background: c.value }}
-                  />
-                );
-              })}
-            </div>
-          )}
+          <CategoryDropdownRow
+            seat={seat}
+            color={color}
+            adminCategory={adminCategory}
+            onSetColor={setColor}
+          />
 
           <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
             {isEdit ? (
@@ -1412,6 +1329,78 @@ export function PopoverEditor({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function CategoryDropdownRow({
+  seat,
+  color,
+  adminCategory,
+  onSetColor,
+}: {
+  seat: CalendarSeat;
+  color: string | null;
+  adminCategory: AdminCategory;
+  onSetColor: (c: string) => void;
+}) {
+  const { categories } = useUserCategories();
+
+  if (seat === "admin") {
+    const sideColor = ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!.color;
+    return (
+      <div className="relative border-t border-hairline">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
+          style={{ background: sideColor }}
+        />
+        <select
+          value={adminCategory}
+          onChange={(e) => {
+            const next = e.target.value as AdminCategory;
+            const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
+            onSetColor(cat.color);
+          }}
+          className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
+        >
+          {ADMIN_CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  // Individual seat — list user's "Me" categories.
+  const lcColor = (color ?? "").toLowerCase();
+  const matched = categories.find((c) => c.color.toLowerCase() === lcColor);
+  const selectedId = matched?.id ?? categories[0]?.id ?? "";
+  const sideColor = matched?.color ?? color ?? "transparent";
+
+  return (
+    <div className="relative border-t border-hairline">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
+        style={{ background: sideColor }}
+      />
+      <select
+        value={selectedId}
+        onChange={(e) => {
+          const cat = categories.find((c) => c.id === e.target.value);
+          if (cat) onSetColor(cat.color);
+        }}
+        className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
+      >
+        {categories.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
