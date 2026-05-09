@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Search,
   Library,
@@ -11,8 +11,15 @@ import {
   Armchair,
   CalendarDays,
   Map as MapIcon,
+  MapPin,
+  Route as RouteIcon,
   BookOpen,
   Briefcase,
+  StickyNote,
+  FolderClosed,
+  Image as ImageIcon,
+  Plus,
+  ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
@@ -278,24 +285,191 @@ export function NavIconTabs({
   );
 }
 
-export function UniversalTopBar({
-  activeKey,
-  rightSlot,
+/**
+ * Right-side pinned actions for the universal top tab bar:
+ * a Search shortcut (jumps to "/") and a Plus menu with
+ * Meeting (entity only) / Note / File / Media / Map → Location|Course / Event.
+ */
+function PlusMenu() {
+  const navigate = useNavigate();
+  const { user, mode } = useAuth();
+  const isOrganizer = (mode === "organizer" || mode === "team") && !!user;
+  const [open, setOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) {
+        setOpen(false);
+        setMapOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        setMapOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const close = () => {
+    setOpen(false);
+    setMapOpen(false);
+  };
+
+  const go = (path: string, kind: string) => {
+    close();
+    navigate({ to: path, search: { new: kind } as never });
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Create new"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-secondary hover:text-ink"
+      >
+        <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-50 mt-1 w-52 origin-top-right overflow-visible rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
+          onMouseLeave={() => setMapOpen(false)}
+        >
+          {isOrganizer && (
+            <PlusItem
+              icon={<Briefcase className="h-3.5 w-3.5" />}
+              label="Meeting"
+              onClick={() => go("/media", "meeting")}
+            />
+          )}
+          <PlusItem
+            icon={<StickyNote className="h-3.5 w-3.5" />}
+            label="Note"
+            onClick={() => go("/media", "note")}
+          />
+          <PlusItem
+            icon={<FolderClosed className="h-3.5 w-3.5" />}
+            label="File"
+            onClick={() => go("/media", "files")}
+          />
+          <PlusItem
+            icon={<ImageIcon className="h-3.5 w-3.5" />}
+            label="Media"
+            onClick={() => go("/media", "media")}
+          />
+          <div
+            className="relative"
+            onMouseEnter={() => setMapOpen(true)}
+          >
+            <PlusItem
+              icon={<MapIcon className="h-3.5 w-3.5" />}
+              label="Map"
+              hasSubmenu
+              onClick={() => setMapOpen((v) => !v)}
+            />
+            {mapOpen && (
+              <div
+                role="menu"
+                className="absolute right-full top-0 z-50 mr-1 w-44 overflow-hidden rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-right-1 duration-150"
+              >
+                <PlusItem
+                  icon={<MapPin className="h-3.5 w-3.5" />}
+                  label="Location"
+                  onClick={() => go("/map", "location")}
+                />
+                <PlusItem
+                  icon={<RouteIcon className="h-3.5 w-3.5" />}
+                  label="Course"
+                  onClick={() => go("/map", "course")}
+                />
+              </div>
+            )}
+          </div>
+          <PlusItem
+            icon={<Tent className="h-3.5 w-3.5" />}
+            label="Event"
+            onClick={() => go(isOrganizer ? "/organizer/library" : "/", "event")}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlusItem({
+  icon,
+  label,
+  onClick,
+  hasSubmenu,
 }: {
-  activeKey: NavKey;
-  /** kept for backwards-compat; unused now that the page title is no longer rendered */
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  hasSubmenu?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
+    >
+      <span className="text-muted-foreground">{icon}</span>
+      <span className="flex-1">{label}</span>
+      {hasSubmenu && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+    </button>
+  );
+}
+
+/**
+ * Fixed, universal top tab bar. Sits directly under the colored TopBar (h-14)
+ * and is present on every page. Contains the ProfileTab on the left, the
+ * draggable nav-icon strip, and the pinned Search + Plus actions on the right.
+ */
+export function UniversalNavBar() {
+  const { user } = useAuth();
+  const activeKey = useActiveNavKey();
+  if (!user) return null;
+  return (
+    <div className="fixed left-0 right-0 top-14 z-40 flex h-[42px] items-end gap-1 border-b border-hairline bg-background pl-4 pr-4 md:pl-6 md:pr-6">
+      <ProfileTab />
+      <NavIconTabs activeKey={activeKey} />
+      <div className="flex-1" />
+      <Link
+        to="/"
+        aria-label="Search"
+        title="Search"
+        className="-mb-px flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
+      >
+        <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
+      </Link>
+      <div className="-mb-px">
+        <PlusMenu />
+      </div>
+    </div>
+  );
+}
+
+/** @deprecated Kept as a no-op shim for pages still importing it. */
+export function UniversalTopBar(_props: {
+  activeKey?: NavKey;
   title?: string;
   icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   rightSlot?: React.ReactNode;
 }) {
-  return (
-    <div className="sticky top-14 z-20 -mx-4 flex items-end gap-1 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
-      <ProfileTab />
-      <NavIconTabs activeKey={activeKey} />
-      <div className="flex-1" />
-      {rightSlot}
-    </div>
-  );
+  return null;
 }
 
 export function useActiveNavKey(): NavKey {
