@@ -1405,6 +1405,7 @@ export function PopoverEditor({
               color={color}
               onCommit={(t) => {
                 setTime(t);
+                onTimeChange?.(t);
                 setShowDuration(false);
               }}
               onClose={() => setShowDuration(false)}
