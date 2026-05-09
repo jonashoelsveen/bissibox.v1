@@ -145,19 +145,8 @@ function YearCalendarViewInner({
       : [...events, ...stravaUnique];
     if (!visibleCategories) return base;
     return base.filter((e) => {
-      // Diary training sessions (incl. Strava imports with custom activity
-      // colors like track/strength/else) should follow the "Training"
-      // category toggle, not the color-derived fallback.
       if (e.diaryType === "training") return visibleCategories.has("ind:training");
-      const key = categoryKeyFromColor(e.color);
-      // Unknown me:* keys (e.g. a category created mid-session) default to
-      // visible — only explicit toggles hide an event.
-      if (key.startsWith("me:") && !visibleCategories.has(key)) {
-        // We only hide when we have ever seen this key in the set with a
-        // toggle-off; absence means default-visible.
-        return true;
-      }
-      return visibleCategories.has(key);
+      return visibleCategories.has(categoryKeyFromColor(e.color));
     });
   }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind]);
   const [selected, setSelected] = useState<CellKey | null>(null);
