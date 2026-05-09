@@ -1254,7 +1254,8 @@ function MediaPage({
 
   return (
     <div>
-      {actionsMount && createPortal(actions, actionsMount)}
+      {/* Per-page Search/Plus removed — using the global top tab bar's actions instead. */}
+      {false && actionsMount && createPortal(actions, actionsMount)}
 
       <div className={`mt-4 grid gap-8 ${hideSideNav ? "md:grid-cols-1" : "md:grid-cols-[200px_1fr]"}`}>
         {!hideSideNav && (
