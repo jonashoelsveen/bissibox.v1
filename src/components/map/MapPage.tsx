@@ -15,8 +15,6 @@
  * backend is wired (matches the Calendar page approach).
  */
 
-import { NavIconTabs } from "@/components/NavIconTabs";
-import { ProfileTab } from "@/components/ProfileTab";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useSearch } from "@tanstack/react-router";
