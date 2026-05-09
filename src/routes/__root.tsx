@@ -1,4 +1,12 @@
-import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/react-router";
+import {
+  Outlet,
+  createRootRoute,
+  HeadContent,
+  Scripts,
+  Link,
+  useRouterState,
+} from "@tanstack/react-router";
+import { useEffect } from "react";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TopChrome } from "@/components/Chrome";
@@ -69,11 +77,40 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const isCalendarWorkspace = pathname.startsWith("/calendar") || pathname.startsWith("/diary");
+
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+
+    if (isCalendarWorkspace) {
+      html.style.overflow = "hidden";
+      body.style.overflow = "hidden";
+    } else {
+      html.style.overflow = "";
+      body.style.overflow = "";
+    }
+
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+    };
+  }, [isCalendarWorkspace]);
+
   return (
     <AuthProvider>
       <TopBar />
       <TopChrome />
-      <main className="min-h-screen pb-16 pl-20 pt-20 md:pl-24">
+      <main
+        className={
+          isCalendarWorkspace
+            ? "box-border h-dvh overflow-hidden pl-20 pt-20 md:pl-24"
+            : "min-h-screen pb-16 pl-20 pt-20 md:pl-24"
+        }
+      >
         <Outlet />
       </main>
       <Toaster />

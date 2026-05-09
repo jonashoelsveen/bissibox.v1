@@ -42,7 +42,7 @@ export function DiaryPage() {
     });
 
   return (
-    <div className="flex h-[calc(100dvh-3.5rem)] flex-col px-4 md:px-6">
+    <div className="flex h-[calc(100dvh-5rem)] flex-col overflow-hidden px-4 md:px-6">
       <div className="-mx-4 flex shrink-0 items-end justify-between gap-2 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
         <div
           className="-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 border-primary py-2.5 pl-0 pr-4 text-sm font-medium text-ink"

@@ -129,7 +129,12 @@ export function CalendarPage() {
       .channel(`calendar-page-categories-${user.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "calendar_categories", filter: `user_id=eq.${user.id}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "calendar_categories",
+          filter: `user_id=eq.${user.id}`,
+        },
         () => {
           void supabase
             .from("calendar_categories")
@@ -146,7 +151,7 @@ export function CalendarPage() {
   }, [user]);
 
   return (
-    <div className="flex h-[calc(100dvh-3.5rem)] flex-col px-4 md:px-6">
+    <div className="flex h-[calc(100dvh-5rem)] flex-col overflow-hidden px-4 md:px-6">
       {/* Top header strip */}
       <div className="-mx-4 flex shrink-0 items-end justify-between gap-2 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
         <div
