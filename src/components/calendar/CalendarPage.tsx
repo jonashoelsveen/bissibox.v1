@@ -1,5 +1,4 @@
 /**
-import { NavIconTabs } from "@/components/NavIconTabs";
  * Calendar — UI shell.
  *
  * Each profile has exactly ONE calendar (no folders, no tabs, no "Previous"
@@ -14,6 +13,7 @@ import { NavIconTabs } from "@/components/NavIconTabs";
  * and the grid stay in lockstep.
  */
 
+import { NavIconTabs } from "@/components/NavIconTabs";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { useAuth } from "@/lib/auth";

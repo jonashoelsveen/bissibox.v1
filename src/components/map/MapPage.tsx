@@ -1,5 +1,4 @@
 /**
-import { NavIconTabs } from "@/components/NavIconTabs";
  * Map — UI shell that mirrors the Library/Calendar page exactly.
  *
  * Structure:
@@ -16,6 +15,7 @@ import { NavIconTabs } from "@/components/NavIconTabs";
  * backend is wired (matches the Calendar page approach).
  */
 
+import { NavIconTabs } from "@/components/NavIconTabs";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useSearch } from "@tanstack/react-router";

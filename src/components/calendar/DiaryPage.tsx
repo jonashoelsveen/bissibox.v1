@@ -1,9 +1,9 @@
 /**
-import { NavIconTabs } from "@/components/NavIconTabs";
  * Diary — replica of the Calendar page restricted to logging past sessions.
  * Individual seat only; no entity tabs; week + month only.
  */
 
+import { NavIconTabs } from "@/components/NavIconTabs";
 import { useMemo, useState } from "react";
 import { BookOpen } from "lucide-react";
 import { useAuth } from "@/lib/auth";
