@@ -83,7 +83,8 @@ export function CalendarPage() {
   });
   const [viewMode, setViewMode] = useState<ViewMode>("month");
 
-  // Default: every category visible.
+  // Default: every category visible. Categories load lazily; new keys are
+  // added to the visible set as soon as we encounter them in the grid filter.
   const [visibleCategories, setVisibleCategories] = useState<Set<CategoryKey>>(() => {
     const all = new Set<CategoryKey>();
     INDIVIDUAL_SIDENAV_CATEGORIES.forEach((c) => all.add(c.key));
@@ -97,6 +98,52 @@ export function CalendarPage() {
       else next.add(k);
       return next;
     });
+
+  // Load user categories so unknown me:* keys are pre-seeded according to
+  // their persisted `hidden` flag. Subscribes for live updates.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const apply = (rows: Array<{ color: string; hidden: boolean; default_key: string | null }>) => {
+      if (cancelled) return;
+      setVisibleCategories((prev) => {
+        const next = new Set(prev);
+        for (const row of rows) {
+          const key = `me:${row.color.toLowerCase()}` as CategoryKey;
+          if (row.hidden) next.delete(key);
+          else next.add(key);
+          if (row.default_key === "training") {
+            if (row.hidden) next.delete("ind:training");
+            else next.add("ind:training");
+          }
+        }
+        return next;
+      });
+    };
+    void supabase
+      .from("calendar_categories")
+      .select("color,hidden,default_key")
+      .eq("user_id", user.id)
+      .then(({ data }) => apply((data ?? []) as never));
+    const ch = supabase
+      .channel(`calendar-page-categories-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "calendar_categories", filter: `user_id=eq.${user.id}` },
+        () => {
+          void supabase
+            .from("calendar_categories")
+            .select("color,hidden,default_key")
+            .eq("user_id", user.id)
+            .then(({ data }) => apply((data ?? []) as never));
+        },
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(ch);
+    };
+  }, [user]);
 
   return (
     <div className="px-4 md:px-6">

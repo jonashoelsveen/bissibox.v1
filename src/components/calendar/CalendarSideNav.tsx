@@ -22,6 +22,8 @@ import {
   CAT_SCHOOL_COLOR,
   CAT_WORK_COLOR,
 } from "./MonthGridType1";
+import { MeCategorySection } from "./MeCategorySection";
+import { useUserCategories } from "@/hooks/useUserCategories";
 
 /* ---------- Category keys & colors ---------- */
 
@@ -44,7 +46,8 @@ export const INDIVIDUAL_SIDENAV_CATEGORIES = INDIVIDUAL_CATEGORIES.map((c) => ({
 
 type IndCatKey = `ind:${"training" | "school" | "work" | "else"}`;
 type AdminCatKey = `admin:${"meeting" | "event" | "race"}`;
-export type CategoryKey = IndCatKey | AdminCatKey;
+type MeCatKey = `me:${string}`;
+export type CategoryKey = IndCatKey | AdminCatKey | MeCatKey;
 
 /** Map an event color to a stable category key (used for filtering). */
 export function categoryKeyFromColor(color: string | null | undefined): CategoryKey {
@@ -52,10 +55,7 @@ export function categoryKeyFromColor(color: string | null | undefined): Category
   if (c === CAT_MEETING.toLowerCase()) return "admin:meeting";
   if (c === CAT_EVENT.toLowerCase()) return "admin:event";
   if (c === CAT_RACE.toLowerCase()) return "admin:race";
-  if (c === CAT_TRAINING_COLOR.toLowerCase()) return "ind:training";
-  if (c === CAT_SCHOOL_COLOR.toLowerCase()) return "ind:school";
-  if (c === CAT_WORK_COLOR.toLowerCase()) return "ind:work";
-  return "ind:else";
+  return `me:${c}` as MeCatKey;
 }
 
 export interface SideNavEntity {
@@ -128,24 +128,13 @@ export function CalendarSideNav({
 
       {/* Category filters */}
       <div className="flex flex-col gap-0.5 pb-4">
-        <div className="px-3 pb-1 pt-1 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted-foreground/80">
-          Kategorier
-        </div>
-
         {seat === "admin" ? (
-          <CategoryList
-            items={ADMIN_SIDENAV_CATEGORIES.map((c) => ({
-              key: c.key,
-              label: c.label,
-              color: c.color,
-            }))}
-            visible={visibleCategories}
-            onToggle={onToggleCategory}
-          />
-        ) : (
           <>
+            <div className="px-3 pb-1 pt-1 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted-foreground/80">
+              Kategorier
+            </div>
             <CategoryList
-              items={INDIVIDUAL_SIDENAV_CATEGORIES.map((c) => ({
+              items={ADMIN_SIDENAV_CATEGORIES.map((c) => ({
                 key: c.key,
                 label: c.label,
                 color: c.color,
@@ -153,6 +142,10 @@ export function CalendarSideNav({
               visible={visibleCategories}
               onToggle={onToggleCategory}
             />
+          </>
+        ) : (
+          <>
+            <MeCategorySectionAdapter />
 
             {entities.map((e) => (
               <EntityGroup
@@ -169,6 +162,21 @@ export function CalendarSideNav({
       </div>
     </nav>
   );
+}
+
+/** Reads category visibility from DB and writes the `hidden` flag back so the
+ * grid filter (driven by visibleCategories in CalendarPage's effect) updates
+ * via realtime. */
+function MeCategorySectionAdapter() {
+  const { categories, update } = useUserCategories();
+  const hidden = new Set<string>();
+  for (const c of categories) if (c.hidden) hidden.add(c.id);
+  const handleToggleHidden = (id: string) => {
+    const c = categories.find((x) => x.id === id);
+    if (!c) return;
+    void update(c.id, { hidden: !c.hidden });
+  };
+  return <MeCategorySection hidden={hidden} onToggleHidden={handleToggleHidden} />;
 }
 
 /* ---------- Pieces ---------- */
