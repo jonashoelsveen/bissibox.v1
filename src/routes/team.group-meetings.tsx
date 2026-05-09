@@ -137,7 +137,7 @@ function GroupMeetingsPage() {
   }
 
   return (
-    <div className="px-4 md:px-6">
+    <div className="h-full overflow-hidden px-4 md:px-6">
       <TopBarSlot>
         <nav className="flex min-w-0 flex-1 items-end overflow-x-auto">
           {openTabs.map((t) => {
@@ -183,8 +183,8 @@ function GroupMeetingsPage() {
         <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5 pl-2" />
       </TopBarSlot>
 
-      <div className="grid gap-6 pt-4 md:grid-cols-[220px_1fr]">
-        <aside className="md:sticky md:top-28 md:self-start">
+      <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[220px_1fr]">
+        <aside className="md:h-full md:overflow-y-auto md:pr-1">
           <GroupFoldersSideNav
             activeFolder={folder}
             onSelect={setFolder}
@@ -194,7 +194,7 @@ function GroupMeetingsPage() {
             }}
           />
         </aside>
-        <div className="min-w-0">
+        <div className="min-w-0 md:h-full md:overflow-y-auto">
           {showingMeeting && activeId ? (
             <TeamBoardPage
               key={activeId}

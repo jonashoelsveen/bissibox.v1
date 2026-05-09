@@ -41,9 +41,9 @@ export function DiaryPage() {
     });
 
   return (
-    <div className="px-4 md:px-6">
-      <div className="grid gap-6 pt-4 md:grid-cols-[220px_1fr]">
-        <aside className="md:sticky md:top-28 md:self-start">
+    <div className="h-full overflow-hidden px-4 md:px-6">
+      <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[220px_1fr]">
+        <aside className="md:h-full md:overflow-y-auto md:pr-1">
           <DiarySideNav
             currentDate={currentDate}
             currentRange={currentRange}
@@ -57,7 +57,7 @@ export function DiaryPage() {
           />
         </aside>
 
-        <div className="min-w-0">
+        <div className="min-w-0 md:h-full md:overflow-y-auto">
           <YearCalendarView
             calId={calId}
             defaultTitle={calTitle}

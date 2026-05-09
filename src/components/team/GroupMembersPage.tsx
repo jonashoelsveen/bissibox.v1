@@ -278,7 +278,7 @@ export function GroupMembersPage() {
     : null;
 
   return (
-    <div className="px-4 md:px-6">
+    <div className="h-full overflow-hidden px-4 md:px-6">
       <TopBarSlot>
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
           {openTabs.length > 0 && (
@@ -369,8 +369,8 @@ export function GroupMembersPage() {
         </nav>
       </TopBarSlot>
 
-      <div className="grid gap-6 pt-4 md:grid-cols-[200px_1fr]">
-        <aside className="md:sticky md:top-28 md:self-start">
+      <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[200px_1fr]">
+        <aside className="md:h-full md:overflow-y-auto md:pr-1">
           <div className="flex flex-col gap-2">
             <div className="relative">
               <Search className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
