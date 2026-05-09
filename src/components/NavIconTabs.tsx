@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Search,
   Library,
@@ -11,8 +11,15 @@ import {
   Armchair,
   CalendarDays,
   Map as MapIcon,
+  MapPin,
+  Route as RouteIcon,
   BookOpen,
   Briefcase,
+  StickyNote,
+  FolderClosed,
+  Image as ImageIcon,
+  Plus,
+  ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
