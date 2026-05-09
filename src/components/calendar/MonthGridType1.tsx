@@ -1152,6 +1152,7 @@ export function PopoverEditor({
   enableDuration = false,
   onClose,
   onCommit,
+  onTimeChange,
 }: PopoverEditorProps) {
   const [value, setValue] = useState(initialText);
   // Resolve initial color according to seat
