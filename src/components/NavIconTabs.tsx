@@ -280,24 +280,17 @@ export function NavIconTabs({
 
 export function UniversalTopBar({
   activeKey,
-  title,
-  icon: Icon,
   rightSlot,
 }: {
   activeKey: NavKey;
-  title: string;
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  /** kept for backwards-compat; unused now that the page title is no longer rendered */
+  title?: string;
+  icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   rightSlot?: React.ReactNode;
 }) {
   return (
     <div className="sticky top-14 z-20 -mx-4 flex items-end gap-1 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
-      <div
-        className="-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 border-primary py-2.5 pl-0 pr-4 text-sm font-medium text-ink"
-        style={{ width: 240 }}
-      >
-        <Icon className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
-        <span className="truncate">{title}</span>
-      </div>
+      <ProfileTab />
       <NavIconTabs activeKey={activeKey} />
       <div className="flex-1" />
       {rightSlot}
