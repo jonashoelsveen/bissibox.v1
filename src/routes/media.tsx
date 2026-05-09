@@ -593,7 +593,7 @@ function LibraryPage() {
             </div>
           )}
         </nav>
-        <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5 pl-2" />
+        {/* Per-page Search/Plus mount removed — global top tab bar provides them. */}
       </TopBarSlot>
 
       <div className="grid gap-6 pt-4 md:grid-cols-[220px_1fr]">
