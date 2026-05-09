@@ -756,7 +756,7 @@ export function UnifiedElasticGrid({
   return (
     <div
       ref={containerRef}
-      className="relative h-full min-h-0 w-full flex-1 overflow-hidden rounded-md border border-hairline bg-card"
+      className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden"
     >
       {/* Top-right control cluster: [Mode ▾] [‹ 📅 ›].
           When the parent controls viewMode it also renders these controls
@@ -1760,6 +1760,29 @@ function DurationCell({ initial, onCommit }: DurationCellProps) {
  * column's offsetLeft/Width so it stays accurate through grid track
  * animations.
  */
+function measureWeekOverlayGeometry(container: HTMLDivElement | null) {
+  if (!container) return null;
+
+  const containerRect = container.getBoundingClientRect();
+  const scrollLeft = container.scrollLeft;
+  const scrollTop = container.scrollTop;
+  const cols: Array<{ left: number; width: number }> = [];
+  let headerBottom = 0;
+
+  for (let i = 0; i < 7; i++) {
+    const header = container.querySelector<HTMLElement>(`[data-month-col="${i}"]`);
+    if (!header) return null;
+    const rect = header.getBoundingClientRect();
+    cols.push({
+      left: rect.left - containerRect.left + scrollLeft,
+      width: rect.width,
+    });
+    headerBottom = Math.max(headerBottom, rect.bottom - containerRect.top + scrollTop);
+  }
+
+  return { cols, headerBottom };
+}
+
 function NowLine({
   scrollRef,
   colIdx,
@@ -1777,24 +1800,44 @@ function NowLine({
   );
 
   useLayoutEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    let raf = 0;
     const measure = () => {
-      const c = scrollRef.current;
-      if (!c) return;
-      // First match for data-month-col is the sticky day-column header.
-      const header = c.querySelector<HTMLElement>(`[data-month-col="${colIdx}"]`);
-      if (!header) return;
-      setBox({
-        left: header.offsetLeft,
-        width: header.offsetWidth,
-        headerBottom: header.offsetTop + header.offsetHeight,
+      const geometry = measureWeekOverlayGeometry(scrollRef.current);
+      if (!geometry) return;
+      const col = geometry.cols[colIdx];
+      if (!col) return;
+      setBox((prev) => {
+        const next = { left: col.left, width: col.width, headerBottom: geometry.headerBottom };
+        if (
+          prev &&
+          Math.abs(prev.left - next.left) < 0.5 &&
+          Math.abs(prev.width - next.width) < 0.5 &&
+          Math.abs(prev.headerBottom - next.headerBottom) < 0.5
+        ) {
+          return prev;
+        }
+        return next;
       });
     };
-    measure();
-    const id = window.setInterval(measure, 500);
-    window.addEventListener("resize", measure);
+    const scheduleMeasure = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(measure);
+    };
+
+    scheduleMeasure();
+    const resizeObserver = new ResizeObserver(scheduleMeasure);
+    resizeObserver.observe(container);
+    container.addEventListener("scroll", scheduleMeasure, { passive: true });
+    window.addEventListener("resize", scheduleMeasure);
+
     return () => {
-      window.clearInterval(id);
-      window.removeEventListener("resize", measure);
+      cancelAnimationFrame(raf);
+      resizeObserver.disconnect();
+      container.removeEventListener("scroll", scheduleMeasure);
+      window.removeEventListener("resize", scheduleMeasure);
     };
   }, [colIdx, scrollRef]);
 
@@ -1897,28 +1940,47 @@ function WeekEventsOverlay({
   const [headerBottom, setHeaderBottom] = useState(0);
 
   useLayoutEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    let raf = 0;
     const measure = () => {
-      const c = scrollRef.current;
-      if (!c) return;
-      const next: Box[] = [];
-      let hb = 0;
-      for (let i = 0; i < 7; i++) {
-        // First match for data-month-col is the sticky header for that column.
-        const cell = c.querySelector<HTMLElement>(`[data-month-col="${i}"]`);
-        if (cell) {
-          next.push({ left: cell.offsetLeft, width: cell.offsetWidth });
-          hb = Math.max(hb, cell.offsetTop + cell.offsetHeight);
+      const geometry = measureWeekOverlayGeometry(scrollRef.current);
+      if (!geometry) return;
+      setCols((prev) => {
+        const next = geometry.cols as Box[];
+        if (
+          prev.length === next.length &&
+          prev.every(
+            (col, idx) =>
+              Math.abs(col.left - next[idx].left) < 0.5 &&
+              Math.abs(col.width - next[idx].width) < 0.5,
+          )
+        ) {
+          return prev;
         }
-      }
-      if (next.length === 7) setCols(next);
-      setHeaderBottom(hb);
+        return next;
+      });
+      setHeaderBottom((prev) =>
+        Math.abs(prev - geometry.headerBottom) < 0.5 ? prev : geometry.headerBottom,
+      );
     };
-    measure();
-    const id = window.setInterval(measure, 500);
-    window.addEventListener("resize", measure);
+    const scheduleMeasure = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(measure);
+    };
+
+    scheduleMeasure();
+    const resizeObserver = new ResizeObserver(scheduleMeasure);
+    resizeObserver.observe(container);
+    container.addEventListener("scroll", scheduleMeasure, { passive: true });
+    window.addEventListener("resize", scheduleMeasure);
+
     return () => {
-      window.clearInterval(id);
-      window.removeEventListener("resize", measure);
+      cancelAnimationFrame(raf);
+      resizeObserver.disconnect();
+      container.removeEventListener("scroll", scheduleMeasure);
+      window.removeEventListener("resize", scheduleMeasure);
     };
   }, [scrollRef]);
 
