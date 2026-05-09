@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MediaRouteImport } from './routes/media'
-import { Route as MapRouteImport } from './routes/map'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as DiaryRouteImport } from './routes/diary'
 import { Route as CalendarRouteImport } from './routes/calendar'
@@ -46,11 +45,6 @@ const ProfileRoute = ProfileRouteImport.update({
 const MediaRoute = MediaRouteImport.update({
   id: '/media',
   path: '/media',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MapRoute = MapRouteImport.update({
-  id: '/map',
-  path: '/map',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiscoverRoute = DiscoverRouteImport.update({
@@ -157,7 +151,6 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof CalendarRoute
   '/diary': typeof DiaryRoute
   '/discover': typeof DiscoverRoute
-  '/map': typeof MapRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
@@ -182,7 +175,6 @@ export interface FileRoutesByTo {
   '/calendar': typeof CalendarRoute
   '/diary': typeof DiaryRoute
   '/discover': typeof DiscoverRoute
-  '/map': typeof MapRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
@@ -208,7 +200,6 @@ export interface FileRoutesById {
   '/calendar': typeof CalendarRoute
   '/diary': typeof DiaryRoute
   '/discover': typeof DiscoverRoute
-  '/map': typeof MapRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
@@ -235,7 +226,6 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/diary'
     | '/discover'
-    | '/map'
     | '/media'
     | '/profile'
     | '/settings'
@@ -260,7 +250,6 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/diary'
     | '/discover'
-    | '/map'
     | '/media'
     | '/profile'
     | '/settings'
@@ -285,7 +274,6 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/diary'
     | '/discover'
-    | '/map'
     | '/media'
     | '/profile'
     | '/settings'
@@ -311,7 +299,6 @@ export interface RootRouteChildren {
   CalendarRoute: typeof CalendarRoute
   DiaryRoute: typeof DiaryRoute
   DiscoverRoute: typeof DiscoverRoute
-  MapRoute: typeof MapRoute
   MediaRoute: typeof MediaRoute
   ProfileRoute: typeof ProfileRoute
   SettingsRoute: typeof SettingsRoute
@@ -351,13 +338,6 @@ declare module '@tanstack/react-router' {
       path: '/media'
       fullPath: '/media'
       preLoaderRoute: typeof MediaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/map': {
-      id: '/map'
-      path: '/map'
-      fullPath: '/map'
-      preLoaderRoute: typeof MapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/discover': {
@@ -503,7 +483,6 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarRoute: CalendarRoute,
   DiaryRoute: DiaryRoute,
   DiscoverRoute: DiscoverRoute,
-  MapRoute: MapRoute,
   MediaRoute: MediaRoute,
   ProfileRoute: ProfileRoute,
   SettingsRoute: SettingsRoute,
@@ -524,3 +503,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
