@@ -331,144 +331,88 @@ function EventsPage() {
 
   return (
     <div className="px-4 md:px-6">
-      {/* Top tab bar */}
-      <div className="sticky top-[100px] z-20 -mx-4 flex items-end gap-1 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
-        {/* Open event tabs (rendered into the global top tab bar) */}
-        <TopBarSlot>
-          <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
-            {openTabs.length > 0 && (
-              <div className="relative min-w-0 flex-1">
-                {edgeFade.left && (
-                  <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent" />
-                )}
-                {edgeFade.right && (
-                  <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent" />
-                )}
-                <div
-                  ref={tabStripRef}
-                  onScroll={updateEdgeFade}
-                  className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                  style={{ scrollBehavior: "smooth" }}
-                >
-                  {openTabs.map((t, idx) => {
-                    const active = activeId === t.id;
-                    const isDragging = dragTabId === t.id;
-                    let translateX = 0;
-                    if (dragTabId && !isDragging) {
-                      const st = dragStateRef.current;
-                      if (st) {
-                        const from = st.startIndex;
-                        const to = st.currentIndex;
-                        if (to > from && idx > from && idx <= to) translateX = -st.width;
-                        else if (to < from && idx >= to && idx < from) translateX = st.width;
-                      }
-                    }
-                    const dragStyle: React.CSSProperties = isDragging
-                      ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
-                      : { transform: `translate3d(${translateX}px,0,0)` };
-                    return (
-                      <div
-                        key={t.id}
-                        ref={(el) => {
-                          if (el) tabRefs.current.set(t.id, el);
-                          else tabRefs.current.delete(t.id);
-                        }}
-                        onPointerDown={(e) => onTabPointerDown(e, t.id)}
-                        onClick={() => setActiveId(t.id)}
-                        style={{
-                          flex: "1 1 200px",
-                          minWidth: 140,
-                          maxWidth: 240,
-                          touchAction: "pan-y",
-                          ...dragStyle,
-                          transition: isDragging
-                            ? "none"
-                            : dragTabId
-                              ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
-                              : "color 150ms, border-color 150ms",
-                        }}
-                        className={`group -mb-px inline-flex shrink-0 cursor-default select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
-                          active
-                            ? "border-primary text-ink font-medium"
-                            : "border-transparent text-muted-foreground hover:text-ink"
-                        }`}
-                        title={t.title}
-                      >
-                        <span className="min-w-0 flex-1 truncate text-left">
-                          {t.title || "Untitled event"}
-                        </span>
-                        <span
-                          data-tab-close
-                          role="button"
-                          tabIndex={0}
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onClick={(e) => { e.stopPropagation(); closeTab(t.id); }}
-                          className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
-                        >
-                          ✕
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </nav>
-        </TopBarSlot>
-        <div className="flex-1" />
-
-        {/* Right side: search + plus */}
-        <div className="flex shrink-0 items-center gap-1 pb-1">
-          <div
-            className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
-              searchOpen
-                ? "w-64 border-hairline bg-card pl-3 pr-1"
-                : "w-9 hover:border-hairline hover:bg-card"
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                if (!searchOpen) setSearchOpen(true);
-                else searchRef.current?.focus();
-              }}
-              aria-label="Search events"
-              className="grid h-9 w-9 shrink-0 place-items-center text-muted-foreground transition hover:text-ink"
-            >
-              <SearchIcon className="h-4 w-4" />
-            </button>
-            <input
-              ref={searchRef}
-              type="text"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") { setQ(""); setSearchOpen(false); }
-              }}
-              placeholder="Search events"
-              className={`min-w-0 flex-1 border-b border-hairline bg-transparent py-1 text-xs text-ink outline-none transition placeholder:text-muted-foreground/70 focus:border-ink/40 ${
-                searchOpen ? "opacity-100" : "pointer-events-none w-0 opacity-0"
-              }`}
-            />
-            {searchOpen && (
-              <button
-                type="button"
-                onClick={() => { setQ(""); setSearchOpen(false); }}
-                aria-label="Clear search"
-                className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-ink ${
-                  q ? "opacity-100" : "opacity-60"
-                }`}
+      {/* Open event tabs (rendered into the global top tab bar) */}
+      <TopBarSlot>
+        <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
+          {openTabs.length > 0 && (
+            <div className="relative min-w-0 flex-1">
+              {edgeFade.left && (
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent" />
+              )}
+              {edgeFade.right && (
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent" />
+              )}
+              <div
+                ref={tabStripRef}
+                onScroll={updateEdgeFade}
+                className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                style={{ scrollBehavior: "smooth" }}
               >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-          <EventsPlusMenu
-            onNewEvent={() => nav({ to: "/organizer/new" })}
-            onNewFolder={() => setFolderDialogOpen(true)}
-          />
-        </div>
-      </div>
+                {openTabs.map((t, idx) => {
+                  const active = activeId === t.id;
+                  const isDragging = dragTabId === t.id;
+                  let translateX = 0;
+                  if (dragTabId && !isDragging) {
+                    const st = dragStateRef.current;
+                    if (st) {
+                      const from = st.startIndex;
+                      const to = st.currentIndex;
+                      if (to > from && idx > from && idx <= to) translateX = -st.width;
+                      else if (to < from && idx >= to && idx < from) translateX = st.width;
+                    }
+                  }
+                  const dragStyle: React.CSSProperties = isDragging
+                    ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
+                    : { transform: `translate3d(${translateX}px,0,0)` };
+                  return (
+                    <div
+                      key={t.id}
+                      ref={(el) => {
+                        if (el) tabRefs.current.set(t.id, el);
+                        else tabRefs.current.delete(t.id);
+                      }}
+                      onPointerDown={(e) => onTabPointerDown(e, t.id)}
+                      onClick={() => setActiveId(t.id)}
+                      style={{
+                        flex: "1 1 200px",
+                        minWidth: 140,
+                        maxWidth: 240,
+                        touchAction: "pan-y",
+                        ...dragStyle,
+                        transition: isDragging
+                          ? "none"
+                          : dragTabId
+                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
+                            : "color 150ms, border-color 150ms",
+                      }}
+                      className={`group -mb-px inline-flex shrink-0 cursor-default select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
+                        active
+                          ? "border-primary text-ink font-medium"
+                          : "border-transparent text-muted-foreground hover:text-ink"
+                      }`}
+                      title={t.title}
+                    >
+                      <span className="min-w-0 flex-1 truncate text-left">
+                        {t.title || "Untitled event"}
+                      </span>
+                      <span
+                        data-tab-close
+                        role="button"
+                        tabIndex={0}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); closeTab(t.id); }}
+                        className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                      >
+                        ✕
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </nav>
+      </TopBarSlot>
 
       <div className="grid gap-6 pt-4 md:grid-cols-[220px_1fr]">
         <aside className="md:sticky md:top-28 md:self-start">
