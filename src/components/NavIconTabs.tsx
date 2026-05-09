@@ -37,6 +37,7 @@ interface NavItem {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  search?: Record<string, string>;
 }
 
 function useNavItems(): NavItem[] {
@@ -64,7 +65,7 @@ function useNavItems(): NavItem[] {
     items.push({ key: "search", to: "/", label: "Search", icon: Search });
   }
   if (isOrganizer) {
-    items.push({ key: "map", to: "/map", label: "Map", icon: MapIcon });
+    items.push({ key: "map", to: "/media", label: "Map", icon: MapIcon, search: { tab: "map" } });
     items.push({ key: "events", to: "/organizer/library", label: "My events", icon: Tent });
   }
   items.push({ key: "settings", to: "/settings", label: "Settings", icon: Settings });
@@ -250,6 +251,7 @@ export function NavIconTabs({
           >
             <Link
               to={item.to}
+              search={item.search as never}
               aria-label={item.label}
               title={item.label}
               onPointerDown={(e) => onPointerDown(e, item.key)}

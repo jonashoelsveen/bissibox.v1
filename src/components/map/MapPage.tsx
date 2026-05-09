@@ -128,7 +128,8 @@ interface OpenItemTab {
 
 const MAX_TABS = 10;
 
-export function MapPage({ embedded = false }: { embedded?: boolean } = {}) {
+export function MapPage({ embedded = true }: { embedded?: boolean } = {}) {
+  void embedded; // map is now always rendered embedded inside /media
   const navigate = useNavigate();
   const rawSearch = useSearch({ strict: false }) as {
     folder?: string;
@@ -137,18 +138,13 @@ export function MapPage({ embedded = false }: { embedded?: boolean } = {}) {
     view?: "previous";
   };
   const search = rawSearch;
-  // Build a navigation that targets the right route depending on whether we're
-  // embedded inside /media (Library) or rendered standalone at /map.
+  // Map is always embedded in /media now — navigate within the Library shell.
   const navMap = useCallback(
     (s: { folder?: string; open?: string; edit?: string; view?: "previous" }, replace = true) => {
-      if (embedded) {
-        const next: Record<string, string | undefined> = { tab: "map", ...s };
-        navigate({ to: "/media", search: next as never, replace } as NavigateOptions);
-      } else {
-        navigate({ to: "/map", search: s as never, replace } as NavigateOptions);
-      }
+      const next: Record<string, string | undefined> = { tab: "map", ...s };
+      navigate({ to: "/media", search: next as never, replace } as NavigateOptions);
     },
-    [navigate, embedded],
+    [navigate],
   );
   const { user, mode, activeEntityId } = useAuth();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;

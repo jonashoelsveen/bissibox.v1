@@ -50,8 +50,31 @@ export interface LibrarySideNavValue {
   folder: string;
 }
 
-type SectionKey = "meetings" | "notes" | "files" | "media";
+type SectionKey = "meetings" | "notes" | "files" | "media" | "map";
 type TableName = "meeting_folders" | "note_folders" | "file_folders" | "media_albums";
+
+/** Mirrors MapPage's MapFolder shape (subset). */
+interface MapFolderLite {
+  id: string;
+  name: string;
+  pinned: boolean;
+  sort_order: number;
+}
+const mapFoldersKey = (scope: string) => `map:folders:${scope}`;
+function readMapFolders(scope: string): MapFolderLite[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(mapFoldersKey(scope));
+    return raw ? (JSON.parse(raw) as MapFolderLite[]) : [];
+  } catch {
+    return [];
+  }
+}
+function writeMapFolders(scope: string, next: MapFolderLite[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(mapFoldersKey(scope), JSON.stringify(next));
+  window.dispatchEvent(new CustomEvent("map:refresh"));
+}
 
 export function LibrarySideNav({
   value,
@@ -67,11 +90,14 @@ export function LibrarySideNav({
   const [fileFolders, setFileFolders] = useState<FolderLite[]>([]);
   const [mediaAlbums, setMediaAlbums] = useState<FolderLite[]>([]);
   const [meetingFolders, setMeetingFolders] = useState<FolderLite[]>([]);
+  const [mapFolders, setMapFolders] = useState<FolderLite[]>([]);
+  const [mapScope, setMapScope] = useState<string>("anon");
   const [open, setOpen] = useState<Record<SectionKey, boolean>>({
     meetings: true,
     notes: true,
     files: true,
     media: true,
+    map: true,
   });
 
   const [menuFor, setMenuFor] = useState<string | null>(null);
@@ -153,6 +179,16 @@ export function LibrarySideNav({
     } else {
       setMeetingFolders([]);
     }
+
+    // Map folders live in localStorage (mirrors MapPage scope).
+    const scope = isTeamMode ? `team:${teamId ?? "none"}` : `user:${user.id}`;
+    setMapScope(scope);
+    const mfRaw = readMapFolders(scope);
+    const sorted = [...mfRaw].sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+    });
+    setMapFolders(sorted.map((f) => ({ id: f.id, name: f.name, pinned: !!f.pinned })));
   }, [user, isTeamMode, activeEntityId]);
 
   useEffect(() => {
@@ -167,9 +203,11 @@ export function LibrarySideNav({
       .subscribe();
     const onLocal = () => void load();
     window.addEventListener("library:refresh", onLocal);
+    window.addEventListener("map:refresh", onLocal);
     return () => {
       void supabase.removeChannel(ch);
       window.removeEventListener("library:refresh", onLocal);
+      window.removeEventListener("map:refresh", onLocal);
     };
   }, [load, user?.id]);
 
@@ -186,9 +224,30 @@ export function LibrarySideNav({
     else if (section === "files") setFileFolders(next);
     else if (section === "media") setMediaAlbums(next);
     else if (section === "meetings") setMeetingFolders(next);
+    else if (section === "map") setMapFolders(next);
+  };
+
+  /** Map folders are stored in localStorage, not Supabase. */
+  const updateMapFolders = (mutator: (prev: MapFolderLite[]) => MapFolderLite[]) => {
+    const current = readMapFolders(mapScope);
+    const next = mutator(current);
+    writeMapFolders(mapScope, next);
   };
 
   const persistOrder = async (section: SectionKey, next: FolderLite[]) => {
+    if (section === "map") {
+      updateMapFolders((prev) => {
+        const byId = new Map(prev.map((f) => [f.id, f]));
+        return next
+          .map((f, idx) => {
+            const existing = byId.get(f.id);
+            if (!existing) return null;
+            return { ...existing, sort_order: idx };
+          })
+          .filter((f): f is MapFolderLite => !!f);
+      });
+      return;
+    }
     const table = tableFor(section);
     if (!table) return;
     await Promise.all(
@@ -199,6 +258,12 @@ export function LibrarySideNav({
 
   const togglePin = async (section: SectionKey, folder: FolderLite) => {
     setMenuFor(null);
+    if (section === "map") {
+      updateMapFolders((prev) =>
+        prev.map((f) => (f.id === folder.id ? { ...f, pinned: !folder.pinned } : f)),
+      );
+      return;
+    }
     const table = tableFor(section);
     if (!table) return;
     const { error } = await supabase
@@ -222,6 +287,33 @@ export function LibrarySideNav({
     const newName = renameValue.trim();
     setRenamingId(null);
     if (!newName || newName === folder.name) return;
+    if (section === "map") {
+      const current = readMapFolders(mapScope);
+      if (current.some((f) => f.id !== folder.id && f.name.toLowerCase() === newName.toLowerCase())) {
+        toast.error("A folder with this name already exists");
+        return;
+      }
+      const oldName = folder.name;
+      writeMapFolders(
+        mapScope,
+        current.map((f) => (f.id === folder.id ? { ...f, name: newName } : f)),
+      );
+      // Cascade rename to map items referencing this folder by name.
+      try {
+        const itemsKey = `map:items:${mapScope}`;
+        const raw = localStorage.getItem(itemsKey);
+        if (raw) {
+          const items = JSON.parse(raw) as Array<{ folder: string | null }>;
+          const next = items.map((it) =>
+            it.folder === oldName ? { ...it, folder: newName } : it,
+          );
+          localStorage.setItem(itemsKey, JSON.stringify(next));
+          window.dispatchEvent(new CustomEvent("map:refresh"));
+        }
+      } catch { /* ignore */ }
+      toast.success("Renamed");
+      return;
+    }
     const table = tableFor(section);
     if (!table) return;
     const { error } = await supabase
@@ -245,6 +337,25 @@ export function LibrarySideNav({
     if (!confirmDelete) return;
     const { section, folder } = confirmDelete;
     setConfirmDelete(null);
+    if (section === "map") {
+      const current = readMapFolders(mapScope);
+      writeMapFolders(mapScope, current.filter((f) => f.id !== folder.id));
+      // Detach map items in this folder.
+      try {
+        const itemsKey = `map:items:${mapScope}`;
+        const raw = localStorage.getItem(itemsKey);
+        if (raw) {
+          const items = JSON.parse(raw) as Array<{ folder: string | null; folderId: string | null }>;
+          const next = items.map((it) =>
+            it.folderId === folder.id ? { ...it, folder: null, folderId: null } : it,
+          );
+          localStorage.setItem(itemsKey, JSON.stringify(next));
+          window.dispatchEvent(new CustomEvent("map:refresh"));
+        }
+      } catch { /* ignore */ }
+      toast.success("Deleted");
+      return;
+    }
     const table = tableFor(section);
     if (!table) return;
     if (section === "meetings") {
@@ -306,11 +417,18 @@ export function LibrarySideNav({
       folderLabel: "Albums",
       folderKey: (f) => f.id,
     },
+    {
+      key: "map",
+      label: "Map",
+      icon: <MapIcon className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      folders: mapFolders,
+      folderLabel: "Folders",
+      folderKey: (f) => f.id,
+    },
   ];
   const sections = allSections.filter((s) => !s.teamOnly || isTeamMode);
 
   const isPreviousActive = value.category === "previous";
-  const isMapActive = value.category === "map";
 
   // dnd-kit sensors — small activation distance so click vs drag is clean
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
@@ -348,17 +466,6 @@ export function LibrarySideNav({
         <span className="ml-2 min-w-0 flex-1 truncate">Previous</span>
       </button>
 
-      <button
-        onClick={() => onChange({ category: "map", folder: "" })}
-        className={`group flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition ${
-          isMapActive ? "bg-secondary font-medium text-ink" : "text-ink hover:bg-secondary/60"
-        }`}
-      >
-        <span className="grid h-5 w-5 shrink-0 place-items-center text-muted-foreground">
-          <MapIcon className="h-3.5 w-3.5" strokeWidth={2.25} />
-        </span>
-        <span className="ml-2 min-w-0 flex-1 truncate">Map</span>
-      </button>
 
       {sections.map((s) => {
         const isCategoryActive = value.category === s.key;
