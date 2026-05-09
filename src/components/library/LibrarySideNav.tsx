@@ -179,6 +179,16 @@ export function LibrarySideNav({
     } else {
       setMeetingFolders([]);
     }
+
+    // Map folders live in localStorage (mirrors MapPage scope).
+    const scope = isTeamMode ? `team:${teamId ?? "none"}` : `user:${user.id}`;
+    setMapScope(scope);
+    const mfRaw = readMapFolders(scope);
+    const sorted = [...mfRaw].sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+    });
+    setMapFolders(sorted.map((f) => ({ id: f.id, name: f.name, pinned: !!f.pinned })));
   }, [user, isTeamMode, activeEntityId]);
 
   useEffect(() => {
@@ -193,9 +203,11 @@ export function LibrarySideNav({
       .subscribe();
     const onLocal = () => void load();
     window.addEventListener("library:refresh", onLocal);
+    window.addEventListener("map:refresh", onLocal);
     return () => {
       void supabase.removeChannel(ch);
       window.removeEventListener("library:refresh", onLocal);
+      window.removeEventListener("map:refresh", onLocal);
     };
   }, [load, user?.id]);
 
