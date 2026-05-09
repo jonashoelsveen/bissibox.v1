@@ -1572,9 +1572,7 @@ function DayCellPair(props: DayCellPairProps) {
                 <Plus className="h-5 w-5" strokeWidth={2} />
               </button>
             )}
-            {isSelected && (
-              <span className="pointer-events-none absolute inset-0 z-[2] rounded-[2px] outline outline-2 outline-primary outline-offset-[-2px]" />
-            )}
+            {/* Selection outline removed — keep marking subtle (gray fill only) */}
 
             {false && showCompact && null}
 
