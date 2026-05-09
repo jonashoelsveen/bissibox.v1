@@ -10,7 +10,7 @@ import {
   UsersRound,
   Armchair,
   CalendarDays,
-  Map as MapIcon,
+  Map as MapIcon, // eslint-disable-line @typescript-eslint/no-unused-vars
   BookOpen,
   Briefcase,
 } from "lucide-react";
