@@ -3,8 +3,6 @@
  * Individual seat only; no entity tabs; week + month only.
  */
 
-import { NavIconTabs } from "@/components/NavIconTabs";
-import { ProfileTab } from "@/components/ProfileTab";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import type { CategoryKey } from "./CalendarSideNav";
