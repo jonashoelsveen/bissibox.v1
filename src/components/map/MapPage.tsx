@@ -278,7 +278,7 @@ export function MapPage({ embedded = false }: { embedded?: boolean } = {}) {
     if (search.open) {
       const it = items.find((x) => x.id === search.open);
       if (it) openItem(it);
-      navigate({ to: "/map", search: {}, replace: true });
+      navMap({});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.open, items.length]);
@@ -292,10 +292,10 @@ export function MapPage({ embedded = false }: { embedded?: boolean } = {}) {
   const onSideChange = (v: MapSideNavValue) => {
     setActiveId(null);
     if (v.category === "previous") {
-      navigate({ to: "/map", search: { view: "previous" }, replace: true });
+      navMap({ view: "previous" });
       return;
     }
-    navigate({ to: "/map", search: { folder: v.folder || undefined }, replace: true });
+    navMap({ folder: v.folder || undefined });
   };
 
   /* ----- tab DnD (replica of /calendar) ----- */
@@ -571,13 +571,9 @@ export function MapPage({ embedded = false }: { embedded?: boolean } = {}) {
             onItemsChange={persistItems}
             editId={search.edit ?? null}
             onSetEdit={(id) => {
-              navigate({
-                to: "/map",
-                search: {
-                  folder: sideValue.folder || undefined,
-                  edit: id ?? undefined,
-                },
-                replace: true,
+              navMap({
+                folder: sideValue.folder || undefined,
+                edit: id ?? undefined,
               });
             }}
             onFolderRename={(folderId, newName) => {
@@ -671,7 +667,7 @@ export function MapPage({ embedded = false }: { embedded?: boolean } = {}) {
             setNewItemOpen(null);
             // Route into the parent folder view in edit mode.
             if (folderId) {
-              navigate({ to: "/map", search: { folder: folderId, edit: it.id }, replace: false });
+              navMap({ folder: folderId, edit: it.id });
             } else {
               openItem(it);
             }
