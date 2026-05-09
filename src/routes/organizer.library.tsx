@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { TopBarSlot } from "@/components/TopBarSlot";
 import { useAuth } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import {
