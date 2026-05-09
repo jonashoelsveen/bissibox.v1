@@ -417,6 +417,14 @@ export function LibrarySideNav({
       folderLabel: "Albums",
       folderKey: (f) => f.id,
     },
+    {
+      key: "map",
+      label: "Map",
+      icon: <MapIcon className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      folders: mapFolders,
+      folderLabel: "Folders",
+      folderKey: (f) => f.id,
+    },
   ];
   const sections = allSections.filter((s) => !s.teamOnly || isTeamMode);
 
