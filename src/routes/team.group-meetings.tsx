@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { TopBarSlot } from "@/components/TopBarSlot";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   DndContext,
