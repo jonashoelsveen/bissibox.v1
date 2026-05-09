@@ -46,7 +46,8 @@ export const INDIVIDUAL_SIDENAV_CATEGORIES = INDIVIDUAL_CATEGORIES.map((c) => ({
 
 type IndCatKey = `ind:${"training" | "school" | "work" | "else"}`;
 type AdminCatKey = `admin:${"meeting" | "event" | "race"}`;
-export type CategoryKey = IndCatKey | AdminCatKey;
+type MeCatKey = `me:${string}`;
+export type CategoryKey = IndCatKey | AdminCatKey | MeCatKey;
 
 /** Map an event color to a stable category key (used for filtering). */
 export function categoryKeyFromColor(color: string | null | undefined): CategoryKey {
@@ -54,10 +55,7 @@ export function categoryKeyFromColor(color: string | null | undefined): Category
   if (c === CAT_MEETING.toLowerCase()) return "admin:meeting";
   if (c === CAT_EVENT.toLowerCase()) return "admin:event";
   if (c === CAT_RACE.toLowerCase()) return "admin:race";
-  if (c === CAT_TRAINING_COLOR.toLowerCase()) return "ind:training";
-  if (c === CAT_SCHOOL_COLOR.toLowerCase()) return "ind:school";
-  if (c === CAT_WORK_COLOR.toLowerCase()) return "ind:work";
-  return "ind:else";
+  return `me:${c}` as MeCatKey;
 }
 
 export interface SideNavEntity {
