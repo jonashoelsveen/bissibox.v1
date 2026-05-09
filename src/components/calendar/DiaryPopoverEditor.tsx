@@ -176,13 +176,13 @@ export function DiaryPopoverEditor({
   const POPOVER_W = 280;
   const POPOVER_H = diaryType === "training" ? (hasSubs ? 280 : 250) : 320;
   const margin = 8;
-  let top = anchor.bottom + margin;
-  let left = anchor.left;
-  if (top + POPOVER_H > window.innerHeight) {
-    top = Math.max(margin, anchor.top - POPOVER_H - margin);
-  }
+  let top = anchor.top;
+  let left = anchor.right + margin;
   if (left + POPOVER_W > window.innerWidth) {
-    left = Math.max(margin, window.innerWidth - POPOVER_W - margin);
+    left = Math.max(margin, anchor.left - POPOVER_W - margin);
+  }
+  if (top + POPOVER_H > window.innerHeight) {
+    top = Math.max(margin, window.innerHeight - POPOVER_H - margin);
   }
 
   const accent =
