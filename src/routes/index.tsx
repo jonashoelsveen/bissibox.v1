@@ -6,7 +6,7 @@ import { Search, SlidersHorizontal, ArrowUpDown, X, Check } from "lucide-react";
 import { RaceListItem } from "@/components/RaceListItem";
 import { SearchModeToggle } from "@/components/SearchModeToggle";
 import { useAuth } from "@/lib/auth";
-import { UniversalTopBar } from "@/components/NavIconTabs";
+
 
 export const Route = createFileRoute("/")({
   component: Index,
