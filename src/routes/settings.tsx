@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 import { RolesPanel } from "@/components/RolesPanel";
 import { ChevronDown, ChevronRight, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network, Settings as SettingsIcon } from "lucide-react";
-import { UniversalTopBar } from "@/components/NavIconTabs";
+
 import { TopBarColorPicker } from "@/components/appearance/TopBarColorPicker";
 import {
   PROFILE_VISIBILITY_ITEMS,
