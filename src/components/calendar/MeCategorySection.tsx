@@ -185,7 +185,14 @@ function SortableCategoryRow(props: {
       style={style}
       {...attributes}
       {...listeners}
-      className={`group flex items-center gap-2 rounded-md px-2 py-1 text-xs transition hover:bg-secondary/60 ${
+      onClick={(e) => {
+        if (props.renaming) return;
+        // Ignore clicks that originated on action buttons (they stopPropagation already, but guard anyway)
+        const tgt = e.target as HTMLElement;
+        if (tgt.closest("button")) return;
+        props.onToggleHidden();
+      }}
+      className={`group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs transition hover:bg-secondary/60 ${
         props.hidden ? "text-muted-foreground" : "text-ink"
       }`}
     >
