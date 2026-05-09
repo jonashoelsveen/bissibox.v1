@@ -352,6 +352,30 @@ function LibraryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.open]);
 
+  // Global "open as new tab" event — fired by the global + create overlay
+  // after a new note / meeting / media item is created so it appears as an
+  // open tab in the top tab bar (mirrors the previous per-page behaviour).
+  useEffect(() => {
+    const onOpenTab = (e: Event) => {
+      const d = (e as CustomEvent).detail as
+        | { type: "note"; id: string; title: string; folder: string | null }
+        | { type: "meeting"; id: string; title: string; folder: string | null }
+        | { type: "media"; id: string; title: string }
+        | { type: "file"; id: string; title: string };
+      if (!d) return;
+      if (d.type === "note") {
+        void openNote(d.id, "new");
+      } else if (d.type === "meeting") {
+        openMeetingTab({ id: d.id, title: d.title, folder: d.folder }, "new");
+      } else if (d.type === "media") {
+        openMediaTab(`media:${d.id}`, d.title, [d.id]);
+      }
+      // files: no per-file editor tab — skipped intentionally.
+    };
+    window.addEventListener("library:open-tab", onOpenTab);
+    return () => window.removeEventListener("library:open-tab", onOpenTab);
+  }, [openNote, openMeetingTab, openMediaTab]);
+
   const showingNote = activeNoteId !== null;
   const activeTabEntry = activeNoteId ? openNoteTabs.find((t) => t.id === activeNoteId) ?? null : null;
   const showingMeeting = !!activeTabEntry && activeTabEntry.type === "meeting";
