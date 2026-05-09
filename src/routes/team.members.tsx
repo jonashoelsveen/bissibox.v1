@@ -735,7 +735,7 @@ function TeamMembersPage() {
 
   return (
     <div className="px-4 md:px-6">
-      <UniversalTopBar activeKey="members" title="Members" icon={UsersIcon} />
+      
       <header className="flex flex-wrap items-start justify-between gap-4 pt-3">
         <div>
           <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Team</p>
