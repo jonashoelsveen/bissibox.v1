@@ -14,6 +14,7 @@ import { PreviousPage, type PreviousNewKind } from "@/components/library/Previou
 import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
 import { CreateContainerDialog } from "@/components/library/CreateContainerDialog";
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
+import { TopBarSlot } from "@/components/TopBarSlot";
 import { MeetingsListPage } from "@/components/library/MeetingsListPage";
 import { getUnsaved } from "@/lib/library-settings";
 import { TeamBoardPage } from "@/routes/team.board";
@@ -493,8 +494,7 @@ function LibraryPage() {
 
   return (
     <div className="px-4 md:px-6">
-      {/* Top-level horizontal tab bar — spans full width above sidebar + main */}
-      <div className="sticky top-[100px] z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
+      <TopBarSlot>
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
           {openNoteTabs.length > 0 && (
             <div className="relative min-w-0 flex-1">
@@ -594,7 +594,7 @@ function LibraryPage() {
           )}
         </nav>
         <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5 pl-2" />
-      </div>
+      </TopBarSlot>
 
       <div className="grid gap-6 pt-4 md:grid-cols-[220px_1fr]">
         <aside className="md:sticky md:top-28 md:self-start">

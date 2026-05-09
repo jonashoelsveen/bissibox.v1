@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { ProfileTab } from "@/components/ProfileTab";
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
+import { TopBarSlotMount } from "@/components/TopBarSlot";
 
 type CreateKind =
   | "meeting"
@@ -28,12 +29,14 @@ type CreateKind =
 
 /**
  * Universal top tab bar fixed under the colored TopBar. Shown on every page.
- * Hosts: ProfileTab + draggable section icons + Search + Plus menu.
+ * Hosts: ProfileTab + section icons + page-provided open tabs (slot) +
+ * Search + Plus menu.
  */
 export function GlobalTopTabBar() {
   const { user, mode } = useAuth();
   const activeKey = useActiveNavKey();
   const navigate = useNavigate();
+  
   const isEntity = mode === "team" || mode === "organizer";
 
   const [plusOpen, setPlusOpen] = useState(false);
@@ -65,9 +68,13 @@ export function GlobalTopTabBar() {
 
   if (!user) return null;
 
-  const trigger = (kind: CreateKind) => {
+  const close = () => {
     setPlusOpen(false);
     setMapHover(false);
+  };
+
+  const trigger = (kind: CreateKind) => {
+    close();
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("global-create", { detail: { kind } }));
     }
@@ -96,23 +103,58 @@ export function GlobalTopTabBar() {
     }
   };
 
+  const triggerContainer = (kind: CreateKind) => {
+    close();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("global-create-container", { detail: { kind } }),
+      );
+    }
+    // Navigate to the relevant page so the user lands where the new
+    // folder/album will live.
+    switch (kind) {
+      case "meeting":
+        navigate({ to: "/team/group-meetings", search: { newFolder: "meeting" } as any });
+        break;
+      case "note":
+        navigate({ to: "/media", search: { newFolder: "note" } as any });
+        break;
+      case "file":
+        navigate({ to: "/media", search: { newFolder: "files" } as any });
+        break;
+      case "media":
+        navigate({ to: "/media", search: { newFolder: "media" } as any });
+        break;
+      case "map-location":
+        navigate({ to: "/map", search: { newFolder: "location" } as any });
+        break;
+      case "map-course":
+        navigate({ to: "/map", search: { newFolder: "course" } as any });
+        break;
+      case "event":
+        navigate({ to: "/organizer/library", search: { newFolder: "event" } as any });
+        break;
+    }
+  };
+
   return (
     <div className="fixed left-0 right-0 top-14 z-40 border-b border-hairline bg-background">
       <div className="flex items-end gap-1 px-4 md:px-6">
         <ProfileTab />
         <NavIconTabs activeKey={activeKey} />
-        <div className="flex-1" />
+        {/* Page-provided slot — open notes/event tabs etc. */}
+        <TopBarSlotMount className="flex min-w-0 flex-1 items-end pl-2" />
         {/* Search */}
         <Link
           to="/"
           aria-label="Search"
           title="Search"
-          className="-mb-px mb-1 flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
+          className="mb-1 flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
         >
           <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
         </Link>
         {/* Plus */}
-        <div className="relative -mb-px mb-1" ref={plusRef}>
+        <div className="relative mb-1" ref={plusRef}>
           <button
             onClick={() => setPlusOpen((v) => !v)}
             aria-label="Create new"
@@ -125,29 +167,37 @@ export function GlobalTopTabBar() {
           {plusOpen && (
             <div
               role="menu"
-              className="absolute right-0 top-full z-50 mt-2 w-48 origin-top-right overflow-visible rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
+              className="absolute right-0 top-full z-50 mt-2 w-52 origin-top-right overflow-visible rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
             >
               {isEntity && (
                 <Item
                   icon={<Briefcase className="h-3.5 w-3.5" />}
                   label="Meeting"
+                  hint="Folder"
                   onClick={() => trigger("meeting")}
+                  onHintClick={() => triggerContainer("meeting")}
                 />
               )}
               <Item
                 icon={<StickyNote className="h-3.5 w-3.5" />}
                 label="Note"
+                hint="Folder"
                 onClick={() => trigger("note")}
+                onHintClick={() => triggerContainer("note")}
               />
               <Item
                 icon={<FolderClosed className="h-3.5 w-3.5" />}
                 label="File"
+                hint="Folder"
                 onClick={() => trigger("file")}
+                onHintClick={() => triggerContainer("file")}
               />
               <Item
                 icon={<ImageIcon className="h-3.5 w-3.5" />}
                 label="Media"
+                hint="Album"
                 onClick={() => trigger("media")}
+                onHintClick={() => triggerContainer("media")}
               />
               {/* Map with submenu */}
               <div
@@ -167,27 +217,38 @@ export function GlobalTopTabBar() {
                   <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
                 {mapHover && (
-                  <div
-                    role="menu"
-                    className="absolute right-full top-0 z-50 mr-1 w-40 overflow-hidden rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-right-1 duration-150"
-                  >
-                    <Item
-                      icon={<MapPin className="h-3.5 w-3.5" />}
-                      label="Location"
-                      onClick={() => trigger("map-location")}
-                    />
-                    <Item
-                      icon={<RouteIcon className="h-3.5 w-3.5" />}
-                      label="Course"
-                      onClick={() => trigger("map-course")}
-                    />
-                  </div>
+                  <>
+                    {/* invisible bridge so cursor can cross to submenu without leaving */}
+                    <div className="absolute right-full top-0 h-full w-2" />
+                    <div
+                      role="menu"
+                      className="absolute right-full top-0 z-50 w-44 overflow-hidden rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-right-1 duration-150"
+                      style={{ marginRight: 8 }}
+                    >
+                      <Item
+                        icon={<MapPin className="h-3.5 w-3.5" />}
+                        label="Location"
+                        hint="Folder"
+                        onClick={() => trigger("map-location")}
+                        onHintClick={() => triggerContainer("map-location")}
+                      />
+                      <Item
+                        icon={<RouteIcon className="h-3.5 w-3.5" />}
+                        label="Course"
+                        hint="Folder"
+                        onClick={() => trigger("map-course")}
+                        onHintClick={() => triggerContainer("map-course")}
+                      />
+                    </div>
+                  </>
                 )}
               </div>
               <Item
                 icon={<Tent className="h-3.5 w-3.5" />}
                 label="Event"
+                hint="Folder"
                 onClick={() => trigger("event")}
+                onHintClick={() => triggerContainer("event")}
               />
             </div>
           )}
@@ -200,21 +261,47 @@ export function GlobalTopTabBar() {
 function Item({
   icon,
   label,
+  hint,
   onClick,
+  onHintClick,
 }: {
   icon: React.ReactNode;
   label: string;
+  hint?: string;
   onClick: () => void;
+  onHintClick?: () => void;
 }) {
   return (
-    <button
+    <div
       role="menuitem"
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
+      className="group flex w-full items-center gap-2 rounded-lg pl-3 pr-1 text-left text-sm text-ink transition hover:bg-secondary"
     >
-      <span className="text-muted-foreground">{icon}</span>
-      <span className="flex-1">{label}</span>
-    </button>
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex flex-1 items-center gap-2 py-2 text-left"
+      >
+        <span className="text-muted-foreground">{icon}</span>
+        <span className="flex-1">{label}</span>
+      </button>
+      {hint &&
+        (onHintClick ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onHintClick();
+            }}
+            aria-label={`New ${hint.toLowerCase()}`}
+            className="rounded-md px-2 py-1 text-sm text-muted-foreground/60 opacity-0 transition group-hover:opacity-100 hover:bg-secondary-foreground/5 hover:text-ink"
+          >
+            {hint}
+          </button>
+        ) : (
+          <span className="px-2 py-1 text-sm text-muted-foreground/60 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+            {hint}
+          </span>
+        ))}
+    </div>
   );
 }
