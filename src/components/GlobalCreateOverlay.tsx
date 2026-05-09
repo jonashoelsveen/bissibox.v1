@@ -519,17 +519,18 @@ async function uploadItems(
   files: File[],
   folderValue: string,
   ctx: Ctx,
-) {
+): Promise<OpenTabPayload | null> {
   if (files.length === 0) throw new Error("Select at least one file");
   if (kind === "file") {
     const folderId = folderValue || null;
+    let lastFile: { id: string; title: string } | null = null;
     for (const file of files) {
       const path = `${ctx.userId}/${crypto.randomUUID()}-${file.name}`;
       const { error: upErr } = await supabase.storage
         .from("documents")
         .upload(path, file, { contentType: file.type });
       if (upErr) throw upErr;
-      const { error } = await sb.from("files").insert({
+      const { data, error } = await sb.from("files").insert({
         user_id: ctx.userId,
         team_id: ctx.teamId,
         folder_id: folderId,
@@ -537,13 +538,15 @@ async function uploadItems(
         storage_path: path,
         mime_type: file.type,
         file_size: file.size,
-      });
+      }).select("id,file_name").single();
       if (error) throw error;
+      lastFile = { id: data.id, title: data.file_name };
     }
-    return;
+    return lastFile ? { type: "file", id: lastFile.id, title: lastFile.title } : null;
   }
   if (kind === "media") {
     const albumId = folderValue || null;
+    let lastMedia: { id: string; title: string } | null = null;
     for (const file of files) {
       const ext = file.name.split(".").pop();
       const path = `${ctx.userId}/${crypto.randomUUID()}.${ext}`;
@@ -570,9 +573,11 @@ async function uploadItems(
       if (albumId && mi?.id) {
         await sb.from("media_item_albums").insert({ media_item_id: mi.id, album_id: albumId });
       }
+      if (mi?.id) lastMedia = { id: mi.id, title: file.name };
     }
-    return;
+    return lastMedia ? { type: "media", id: lastMedia.id, title: lastMedia.title } : null;
   }
+  return null;
 }
 
 function dispatchRefresh(kind: Kind) {
