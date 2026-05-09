@@ -2,8 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { X, Plus } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+
+export type OpenTabPayload =
+  | { type: "note"; id: string; title: string; folder: string | null }
+  | { type: "meeting"; id: string; title: string; folder: string | null }
+  | { type: "media"; id: string; title: string }
+  | { type: "file"; id: string; title: string };
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
