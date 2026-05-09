@@ -204,7 +204,8 @@ function getWeekHeaderCells(container: HTMLDivElement | null): HTMLElement[] {
     (node): node is HTMLElement => node instanceof HTMLElement,
   );
   if (children.length < 8) return [];
-  return children.slice(1, 8);
+  const firstRow = children.slice(0, 8);
+  return firstRow.slice(1, 8);
 }
 
 // Monday-anchored start-of-week for a given date.
@@ -1894,25 +1895,33 @@ function DurationCell({ initial, onCommit }: DurationCellProps) {
 function measureWeekOverlayGeometry(container: HTMLDivElement | null) {
   if (!container) return null;
 
-  const containerRect = container.getBoundingClientRect();
-  const scrollLeft = container.scrollLeft;
-  const cols: Array<{ left: number; width: number }> = [];
+  const grid = container.firstElementChild;
+  if (!(grid instanceof HTMLElement)) return null;
+
+  let cols: Array<{ left: number; width: number }> = [];
   let headerBottom = 0;
   const headers = getWeekHeaderCells(container);
 
   if (headers.length !== 7) return null;
 
   for (const header of headers) {
-    const rect = header.getBoundingClientRect();
-    cols.push({
-      left: rect.left - containerRect.left + scrollLeft,
-      width: rect.width,
-    });
-    // Use offsetTop+offsetHeight so the value is in scroll-content coordinates
-    // and stays stable while the user scrolls (sticky headers don't move in
-    // content coords, only visually). Falls back to rect math at scrollTop=0.
+    const width = header.offsetWidth || header.getBoundingClientRect().width;
+    const left = header.offsetLeft;
+    if (width > 0) {
+      cols.push({ left, width });
+    }
     const contentBottom = header.offsetTop + header.offsetHeight;
     headerBottom = Math.max(headerBottom, contentBottom);
+  }
+
+  if (cols.length !== 7) {
+    const gutter = grid.firstElementChild instanceof HTMLElement ? grid.firstElementChild.offsetWidth : 48;
+    const contentWidth = grid.scrollWidth || container.scrollWidth || container.clientWidth;
+    const dayWidth = Math.max(0, (contentWidth - gutter) / 7);
+    cols = Array.from({ length: 7 }, (_, idx) => ({
+      left: gutter + idx * dayWidth,
+      width: dayWidth,
+    }));
   }
 
   return { cols, headerBottom };
