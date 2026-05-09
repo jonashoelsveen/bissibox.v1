@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
@@ -18,74 +18,26 @@ type Kind =
   | "map-course"
   | "event";
 
-type Mode = "item" | "container";
-
-interface Active {
-  kind: Kind;
-  mode: Mode;
-}
-
-/* ------------------------------------------------------------------ */
-/* Configuration per kind                                              */
-/* ------------------------------------------------------------------ */
-
 interface KindConfig {
-  itemLabel: string;
-  containerLabel: string; // "Folder" or "Album"
-  itemPlaceholder: string;
-  containerPlaceholder: string;
-  /** When true, item creation requires a file picker rather than a name. */
-  itemIsUpload?: "files" | "media";
-  /** When true, item creation requires entity (team) mode. */
+  modalTitle: string;
+  namePlaceholder: string;
+  containerLabel: "Folder" | "Album";
+  /** Skip name field: pure file upload (file/media). */
+  upload?: "files" | "media";
+  /** Item only valid in entity mode. */
   entityOnly?: boolean;
+  /** No folder/album concept — only Name (used by map). */
+  noContainer?: boolean;
 }
 
 const CONFIG: Record<Kind, KindConfig> = {
-  meeting: {
-    itemLabel: "New meeting",
-    containerLabel: "New meeting folder",
-    itemPlaceholder: "Meeting title",
-    containerPlaceholder: "Folder name",
-    entityOnly: true,
-  },
-  note: {
-    itemLabel: "New note",
-    containerLabel: "New note folder",
-    itemPlaceholder: "Note title",
-    containerPlaceholder: "Folder name",
-  },
-  file: {
-    itemLabel: "Upload file",
-    containerLabel: "New files folder",
-    itemPlaceholder: "Pick a file…",
-    containerPlaceholder: "Folder name",
-    itemIsUpload: "files",
-  },
-  media: {
-    itemLabel: "Upload media",
-    containerLabel: "New album",
-    itemPlaceholder: "Pick photos or videos…",
-    containerPlaceholder: "Album name",
-    itemIsUpload: "media",
-  },
-  "map-location": {
-    itemLabel: "New location",
-    containerLabel: "New location folder",
-    itemPlaceholder: "Location name",
-    containerPlaceholder: "Folder name",
-  },
-  "map-course": {
-    itemLabel: "New course",
-    containerLabel: "New course folder",
-    itemPlaceholder: "Course name",
-    containerPlaceholder: "Folder name",
-  },
-  event: {
-    itemLabel: "New event",
-    containerLabel: "New event folder",
-    itemPlaceholder: "Event title",
-    containerPlaceholder: "Folder name",
-  },
+  note: { modalTitle: "New note", namePlaceholder: "Note title", containerLabel: "Folder" },
+  meeting: { modalTitle: "New meeting", namePlaceholder: "Meeting title", containerLabel: "Folder", entityOnly: true },
+  event: { modalTitle: "New event", namePlaceholder: "Event title", containerLabel: "Folder", entityOnly: true },
+  file: { modalTitle: "New file", namePlaceholder: "Pick a file…", containerLabel: "Folder", upload: "files" },
+  media: { modalTitle: "New media", namePlaceholder: "Pick photos or videos…", containerLabel: "Album", upload: "media" },
+  "map-location": { modalTitle: "New location", namePlaceholder: "Location name", containerLabel: "Folder", noContainer: true },
+  "map-course": { modalTitle: "New course", namePlaceholder: "Course name", containerLabel: "Folder", noContainer: true },
 };
 
 /* ------------------------------------------------------------------ */
@@ -97,38 +49,26 @@ export function GlobalCreateOverlay() {
   const isEntity = mode === "team" || mode === "organizer" || !!activeEntityId;
   const teamId = isEntity ? activeEntityId : null;
 
-  const [active, setActive] = useState<Active | null>(null);
+  const [active, setActive] = useState<Kind | null>(null);
 
   useEffect(() => {
     const onItem = (e: Event) => {
       const detail = (e as CustomEvent<{ kind: Kind }>).detail;
-      if (detail?.kind) setActive({ kind: detail.kind, mode: "item" });
-    };
-    const onContainer = (e: Event) => {
-      const detail = (e as CustomEvent<{ kind: Kind }>).detail;
-      if (detail?.kind) setActive({ kind: detail.kind, mode: "container" });
+      if (detail?.kind) setActive(detail.kind);
     };
     window.addEventListener("global-create", onItem);
-    window.addEventListener("global-create-container", onContainer);
-    return () => {
-      window.removeEventListener("global-create", onItem);
-      window.removeEventListener("global-create-container", onContainer);
-    };
+    return () => window.removeEventListener("global-create", onItem);
   }, []);
 
   if (!user || !active) return null;
 
-  const cfg = CONFIG[active.kind];
+  const cfg = CONFIG[active];
   const close = () => setActive(null);
 
   return createPortal(
-    <Modal
-      title={active.mode === "container" ? cfg.containerLabel : cfg.itemLabel}
-      onClose={close}
-    >
+    <Modal title={cfg.modalTitle} onClose={close}>
       <CreateBody
-        kind={active.kind}
-        mode={active.mode}
+        kind={active}
         cfg={cfg}
         userId={user.id}
         teamId={teamId}
@@ -144,9 +84,13 @@ export function GlobalCreateOverlay() {
 /* Body                                                                */
 /* ------------------------------------------------------------------ */
 
+interface FolderOpt {
+  id?: string;
+  name: string;
+}
+
 function CreateBody({
   kind,
-  mode,
   cfg,
   userId,
   teamId,
@@ -154,7 +98,6 @@ function CreateBody({
   onClose,
 }: {
   kind: Kind;
-  mode: Mode;
   cfg: KindConfig;
   userId: string;
   teamId: string | null;
@@ -166,15 +109,28 @@ function CreateBody({
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Block when item requires entity mode but user is in individual mode.
-  if (mode === "item" && cfg.entityOnly && !isEntity) {
+  const [folders, setFolders] = useState<FolderOpt[]>([]);
+  const [folder, setFolder] = useState(""); // stores name OR id depending on kind
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [draftFolder, setDraftFolder] = useState("");
+
+  // Block when item requires entity mode.
+  const blocked = cfg.entityOnly && !isEntity;
+
+  // Load folders list
+  useEffect(() => {
+    if (cfg.noContainer || blocked) return;
+    void loadFolders(kind, { userId, teamId }).then(setFolders);
+  }, [kind, userId, teamId, cfg.noContainer, blocked]);
+
+  if (blocked) {
     return (
       <div className="text-sm text-muted-foreground">
         This is only available in entity mode.
-        <div className="mt-4 flex justify-end">
+        <div className="mt-6 flex justify-end">
           <button
             onClick={onClose}
-            className="rounded-full bg-primary px-4 py-1.5 text-xs text-primary-foreground"
+            className="rounded-full bg-primary px-5 py-2 text-xs text-primary-foreground"
           >
             OK
           </button>
@@ -183,18 +139,36 @@ function CreateBody({
     );
   }
 
+  const commitFolder = async () => {
+    const fname = draftFolder.trim();
+    if (!fname) { toast.error(`${cfg.containerLabel} name is required`); return; }
+    if (folders.some((f) => f.name.toLowerCase() === fname.toLowerCase())) {
+      toast.error(`A ${cfg.containerLabel.toLowerCase()} with that name already exists`); return;
+    }
+    try {
+      const created = await createContainer(kind, fname, { userId, teamId });
+      const next = await loadFolders(kind, { userId, teamId });
+      setFolders(next);
+      setFolder(created.id ?? created.name);
+      setDraftFolder("");
+      setCreatingFolder(false);
+      window.dispatchEvent(new Event("library:refresh"));
+      toast.success(`${cfg.containerLabel} "${fname}" created`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to create");
+    }
+  };
+
   const submit = async () => {
     if (busy) return;
     setBusy(true);
     try {
-      if (mode === "container") {
-        await createContainer(kind, name.trim(), { userId, teamId });
-      } else if (cfg.itemIsUpload) {
-        await uploadItems(kind, files, { userId, teamId });
+      if (cfg.upload) {
+        await uploadItems(kind, files, folder, { userId, teamId });
       } else {
-        await createItem(kind, name.trim(), { userId, teamId });
+        await createItem(kind, name.trim(), folder, { userId, teamId });
       }
-      toast.success(`${mode === "container" ? "Created" : "Created"} successfully`);
+      toast.success("Created");
       dispatchRefresh(kind);
       onClose();
     } catch (e) {
@@ -204,61 +178,111 @@ function CreateBody({
     }
   };
 
-  const canSubmit =
-    mode === "container"
-      ? name.trim().length > 0
-      : cfg.itemIsUpload
-        ? files.length > 0
-        : name.trim().length > 0;
+  const canSubmit = cfg.upload ? files.length > 0 : name.trim().length > 0;
 
   return (
-    <div className="flex flex-col gap-4">
-      {mode === "item" && cfg.itemIsUpload ? (
-        <>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="rounded-md border border-dashed border-hairline bg-background px-3 py-6 text-sm text-muted-foreground hover:border-ink hover:text-ink"
-          >
-            {files.length === 0
-              ? cfg.itemPlaceholder
-              : `${files.length} file${files.length === 1 ? "" : "s"} selected`}
-          </button>
+    <div>
+      {/* Name / upload field */}
+      <label className="block">
+        <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          Name
+        </span>
+        {cfg.upload ? (
+          <>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-1 w-full rounded-xl border border-dashed border-hairline bg-background px-4 py-3 text-left text-sm text-muted-foreground hover:border-ink hover:text-ink"
+            >
+              {files.length === 0
+                ? cfg.namePlaceholder
+                : `${files.length} file${files.length === 1 ? "" : "s"} selected`}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept={cfg.upload === "media" ? "image/*,video/*" : undefined}
+              className="hidden"
+              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+            />
+          </>
+        ) : (
           <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept={cfg.itemIsUpload === "media" ? "image/*,video/*" : undefined}
-            className="hidden"
-            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && canSubmit) void submit(); }}
+            placeholder={cfg.namePlaceholder}
+            className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
           />
-        </>
-      ) : (
-        <input
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && canSubmit) void submit();
-          }}
-          placeholder={
-            mode === "container" ? cfg.containerPlaceholder : cfg.itemPlaceholder
-          }
-          className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-ink"
-        />
+        )}
+      </label>
+
+      {/* Folder / album picker */}
+      {!cfg.noContainer && (
+        <div className="mt-4">
+          <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            {cfg.containerLabel}
+          </span>
+          {creatingFolder ? (
+            <div className="mt-1 flex items-center gap-2 rounded-xl border border-hairline bg-background pr-1 focus-within:border-primary">
+              <input
+                autoFocus
+                value={draftFolder}
+                onChange={(e) => setDraftFolder(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); void commitFolder(); }
+                  else if (e.key === "Escape") { setDraftFolder(""); setCreatingFolder(false); }
+                }}
+                placeholder={`New ${cfg.containerLabel.toLowerCase()} name`}
+                className="flex-1 bg-transparent px-4 py-2.5 text-sm text-ink outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => void commitFolder()}
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+              >
+                Add {cfg.containerLabel.toLowerCase()}
+              </button>
+            </div>
+          ) : (
+            <div className="mt-1 flex items-center gap-2">
+              <select
+                value={folder}
+                onChange={(e) => setFolder(e.target.value)}
+                className="flex-1 rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
+              >
+                <option value="">None</option>
+                {folders.map((f) => (
+                  <option key={f.id ?? f.name} value={f.id ?? f.name}>{f.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => { setDraftFolder(""); setCreatingFolder(true); }}
+                title={`Add ${cfg.containerLabel.toLowerCase()}`}
+                aria-label={`Add ${cfg.containerLabel.toLowerCase()}`}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-hairline bg-background text-ink hover:bg-muted"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
-      <div className="flex justify-end gap-2">
+      <div className="mt-6 flex justify-end gap-2">
         <button
           onClick={onClose}
-          className="rounded-md border border-hairline bg-card px-3 py-1.5 text-xs text-muted-foreground hover:text-ink"
+          className="rounded-full border border-hairline bg-card px-4 py-2 text-xs text-muted-foreground hover:text-ink"
         >
           Cancel
         </button>
         <button
-          onClick={submit}
+          onClick={() => void submit()}
           disabled={!canSubmit || busy}
-          className="rounded-md bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          className="rounded-full bg-primary px-5 py-2 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
           {busy ? "Creating…" : "Create"}
         </button>
@@ -279,63 +303,124 @@ interface Ctx {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sb = supabase as any;
 
-async function createContainer(kind: Kind, name: string, ctx: Ctx) {
-  if (!name) throw new Error("Name is required");
+async function loadFolders(kind: Kind, ctx: Ctx): Promise<FolderOpt[]> {
   switch (kind) {
     case "note": {
-      const { error } = await sb
-        .from("note_folders")
-        .insert({ user_id: ctx.userId, team_id: ctx.teamId, name });
-      if (error) throw error;
-      return;
+      const q = sb.from("note_folders").select("id,name");
+      const { data } = ctx.teamId
+        ? await q.eq("team_id", ctx.teamId)
+        : await q.is("team_id", null).eq("user_id", ctx.userId);
+      return (data ?? []) as FolderOpt[];
     }
     case "file": {
-      const { error } = await sb
-        .from("file_folders")
-        .insert({ user_id: ctx.userId, team_id: ctx.teamId, name });
-      if (error) throw error;
-      return;
+      const q = sb.from("file_folders").select("id,name");
+      const { data } = ctx.teamId
+        ? await q.eq("team_id", ctx.teamId)
+        : await q.is("team_id", null).eq("user_id", ctx.userId);
+      return (data ?? []) as FolderOpt[];
     }
     case "media": {
-      const { error } = await sb
-        .from("media_albums")
-        .insert({ user_id: ctx.userId, team_id: ctx.teamId, name });
-      if (error) throw error;
-      return;
+      const q = sb.from("media_albums").select("id,name");
+      const { data } = ctx.teamId
+        ? await q.eq("team_id", ctx.teamId)
+        : await q.is("team_id", null).eq("user_id", ctx.userId);
+      return (data ?? []) as FolderOpt[];
     }
     case "event": {
-      const { error } = await sb
-        .from("event_folders")
-        .insert({ user_id: ctx.userId, team_id: ctx.teamId, name });
-      if (error) throw error;
-      return;
+      const q = sb.from("event_folders").select("id,name");
+      const { data } = ctx.teamId
+        ? await q.eq("team_id", ctx.teamId)
+        : await q.is("team_id", null).eq("user_id", ctx.userId);
+      return (data ?? []) as FolderOpt[];
     }
     case "meeting": {
-      if (!ctx.teamId) throw new Error("Switch to an entity to create meeting folders.");
-      const { error } = await sb
+      if (!ctx.teamId) return [];
+      const { data } = await sb
         .from("team_group_meeting_folders")
-        .insert({ team_id: ctx.teamId, name });
-      if (error) throw error;
-      return;
+        .select("id,name")
+        .eq("team_id", ctx.teamId);
+      return (data ?? []) as FolderOpt[];
     }
-    case "map-location":
-    case "map-course":
-      throw new Error("Map folders are managed inside the Map page.");
+    default:
+      return [];
   }
 }
 
-async function createItem(kind: Kind, name: string, ctx: Ctx) {
+async function createContainer(
+  kind: Kind,
+  name: string,
+  ctx: Ctx,
+): Promise<FolderOpt> {
+  switch (kind) {
+    case "note": {
+      const { data, error } = await sb
+        .from("note_folders")
+        .insert({ user_id: ctx.userId, team_id: ctx.teamId, name })
+        .select("id,name")
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    case "file": {
+      const { data, error } = await sb
+        .from("file_folders")
+        .insert({ user_id: ctx.userId, team_id: ctx.teamId, name })
+        .select("id,name")
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    case "media": {
+      const { data, error } = await sb
+        .from("media_albums")
+        .insert({ user_id: ctx.userId, team_id: ctx.teamId, name })
+        .select("id,name")
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    case "event": {
+      const { data, error } = await sb
+        .from("event_folders")
+        .insert({ user_id: ctx.userId, team_id: ctx.teamId, name })
+        .select("id,name")
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    case "meeting": {
+      if (!ctx.teamId) throw new Error("Switch to an entity to create meeting folders.");
+      const { data, error } = await sb
+        .from("team_group_meeting_folders")
+        .insert({ team_id: ctx.teamId, name })
+        .select("id,name")
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    default:
+      throw new Error("Folders not supported for this type.");
+  }
+}
+
+async function createItem(kind: Kind, name: string, folder: string, ctx: Ctx) {
   if (!name) throw new Error("Title is required");
   switch (kind) {
     case "note": {
-      const { error } = await sb
-        .from("notes")
-        .insert({ user_id: ctx.userId, team_id: ctx.teamId, title: name });
+      // notes.folder is a text column (folder name)
+      const folderName = folder
+        ? (await resolveFolderName(kind, folder, ctx))
+        : null;
+      const { error } = await sb.from("notes").insert({
+        user_id: ctx.userId,
+        team_id: ctx.teamId,
+        title: name,
+        folder: folderName,
+      });
       if (error) throw error;
       return;
     }
     case "event": {
-      // Resolve organizer name from team or profile.
       let organizer = "";
       if (ctx.teamId) {
         const { data } = await sb.from("teams").select("name").eq("id", ctx.teamId).maybeSingle();
@@ -348,6 +433,9 @@ async function createItem(kind: Kind, name: string, ctx: Ctx) {
           .maybeSingle();
         organizer = `${data?.first_name ?? ""} ${data?.last_name ?? ""}`.trim() || "Organizer";
       }
+      const folderName = folder
+        ? await resolveFolderName(kind, folder, ctx)
+        : null;
       const startsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
       const { error } = await sb.from("events").insert({
         title: name,
@@ -355,13 +443,13 @@ async function createItem(kind: Kind, name: string, ctx: Ctx) {
         starts_at: startsAt,
         owner_id: ctx.teamId ? null : ctx.userId,
         team_id: ctx.teamId,
+        folder: folderName,
       });
       if (error) throw error;
       return;
     }
     case "meeting": {
       if (!ctx.teamId) throw new Error("Switch to an entity to create meetings.");
-      // Pick an arbitrary group for the team, falling back to null.
       const { data: group } = await sb
         .from("team_groups")
         .select("id")
@@ -369,28 +457,46 @@ async function createItem(kind: Kind, name: string, ctx: Ctx) {
         .order("sort_order", { ascending: true })
         .limit(1)
         .maybeSingle();
+      const folderName = folder
+        ? await resolveFolderName(kind, folder, ctx)
+        : null;
       const { error } = await sb.from("team_group_meetings").insert({
         team_id: ctx.teamId,
         title: name,
         created_by: ctx.userId,
         group_id: group?.id ?? null,
         meeting_date: new Date().toISOString().slice(0, 10),
+        folder: folderName,
       });
       if (error) throw error;
       return;
     }
     case "map-location":
     case "map-course":
-      throw new Error("Open the Map page to create locations and courses.");
+      throw new Error("Open the Map page to draw locations and courses.");
     case "file":
     case "media":
       throw new Error("Use the upload picker.");
   }
 }
 
-async function uploadItems(kind: Kind, files: File[], ctx: Ctx) {
+async function resolveFolderName(kind: Kind, value: string, ctx: Ctx): Promise<string> {
+  // value may be id or already-name; if uuid-like, look up name.
+  const looksLikeUuid = /^[0-9a-f-]{36}$/i.test(value);
+  if (!looksLikeUuid) return value;
+  const folders = await loadFolders(kind, ctx);
+  return folders.find((f) => f.id === value)?.name ?? value;
+}
+
+async function uploadItems(
+  kind: Kind,
+  files: File[],
+  folderValue: string,
+  ctx: Ctx,
+) {
   if (files.length === 0) throw new Error("Select at least one file");
   if (kind === "file") {
+    const folderId = folderValue || null;
     for (const file of files) {
       const path = `${ctx.userId}/${crypto.randomUUID()}-${file.name}`;
       const { error: upErr } = await supabase.storage
@@ -400,6 +506,7 @@ async function uploadItems(kind: Kind, files: File[], ctx: Ctx) {
       const { error } = await sb.from("files").insert({
         user_id: ctx.userId,
         team_id: ctx.teamId,
+        folder_id: folderId,
         file_name: file.name,
         storage_path: path,
         mime_type: file.type,
@@ -410,6 +517,7 @@ async function uploadItems(kind: Kind, files: File[], ctx: Ctx) {
     return;
   }
   if (kind === "media") {
+    const albumId = folderValue || null;
     for (const file of files) {
       const ext = file.name.split(".").pop();
       const path = `${ctx.userId}/${crypto.randomUUID()}.${ext}`;
@@ -418,33 +526,39 @@ async function uploadItems(kind: Kind, files: File[], ctx: Ctx) {
         .upload(path, file, { contentType: file.type });
       if (upErr) throw upErr;
       const isVideo = file.type.startsWith("video");
-      const { error } = await sb.from("media_items").insert({
-        user_id: ctx.userId,
-        team_id: ctx.teamId,
-        storage_path: path,
-        media_type: isVideo ? "video" : "photo",
-        mime_type: file.type,
-        file_size: file.size,
-        uploaded_in_mode: ctx.teamId ? "team" : "participant",
-      });
+      const { data: mi, error } = await sb
+        .from("media_items")
+        .insert({
+          user_id: ctx.userId,
+          team_id: ctx.teamId,
+          album_id: albumId,
+          storage_path: path,
+          media_type: isVideo ? "video" : "photo",
+          mime_type: file.type,
+          file_size: file.size,
+          uploaded_in_mode: ctx.teamId ? "team" : "participant",
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      if (albumId && mi?.id) {
+        await sb.from("media_item_albums").insert({ media_item_id: mi.id, album_id: albumId });
+      }
     }
     return;
   }
 }
 
 function dispatchRefresh(kind: Kind) {
-  // Pages listen for these and reload their data.
   const events: string[] = ["library:refresh"];
   if (kind === "event") events.push("events:refresh");
   if (kind === "meeting") events.push("meetings:refresh");
-  if (kind === "media" || kind === "file" || kind === "note") events.push("library:refresh");
   if (kind === "map-location" || kind === "map-course") events.push("map:refresh");
   for (const name of events) window.dispatchEvent(new Event(name));
 }
 
 /* ------------------------------------------------------------------ */
-/* Modal                                                               */
+/* Modal — same style as NewNoteDialog                                 */
 /* ------------------------------------------------------------------ */
 
 function Modal({
@@ -457,28 +571,27 @@ function Modal({
   children: React.ReactNode;
 }) {
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in"
       onClick={onClose}
     >
+      <div className="absolute inset-0 bg-black/60" />
       <div
-        className="w-full max-w-sm rounded-2xl border border-hairline bg-popover p-5 shadow-xl animate-in zoom-in-95 duration-150"
+        className="relative z-10 w-full max-w-md rounded-2xl border border-hairline bg-card p-6 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-2 duration-200 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 className="text-base font-medium text-ink">{title}</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-ink">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="rounded-md p-1 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+            className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
           >
             <X className="h-4 w-4" />
           </button>
