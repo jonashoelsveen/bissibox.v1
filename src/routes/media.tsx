@@ -696,6 +696,8 @@ function LibraryPage() {
               newFolderSignal={0}
               showMeetingOption={isTeamMode}
             />
+          ) : baseTab === "map" ? (
+            <MapPage embedded />
           ) : (
             <MediaPage
               actionsMount={actionsMount}
