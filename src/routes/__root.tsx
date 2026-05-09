@@ -1,4 +1,4 @@
-import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/react-router";
+import { Outlet, createRootRoute, HeadContent, Scripts, Link, useRouterState } from "@tanstack/react-router";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TopChrome } from "@/components/Chrome";
@@ -69,11 +69,16 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const isCalendarWorkspace = pathname.startsWith("/calendar") || pathname.startsWith("/diary");
+
   return (
     <AuthProvider>
       <TopBar />
       <TopChrome />
-      <main className="min-h-screen pb-16 pl-20 pt-20 md:pl-24">
+      <main
+        className={isCalendarWorkspace ? "h-dvh overflow-hidden pl-20 pt-20 md:pl-24" : "min-h-screen pb-16 pl-20 pt-20 md:pl-24"}
+      >
         <Outlet />
       </main>
       <Toaster />
