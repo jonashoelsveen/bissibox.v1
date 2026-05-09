@@ -25,42 +25,18 @@
  */
 
 import type React from "react";
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Plus, Footprints, Bike, Dumbbell, Snowflake, Waves } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, Session, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
-import {
-  MonthGridType1,
-  PopoverEditor,
-  splitColor,
-  joinColor,
-  iconForColor,
-  contrastTextOn,
-  categoryFromColor,
-} from "./MonthGridType1";
+import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, contrastTextOn, categoryFromColor } from "./MonthGridType1";
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 import { DayNoteButton } from "./DayNoteButton";
 import { SessionHoverMenu } from "./SessionHoverMenu";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
-import {
-  sameDay,
-  setHM,
-  addMinutes,
-  toISOLocal,
-  fromISOLocal,
-  diffMinutes,
-  isoWeekNumber,
-} from "./dateUtils";
+import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoWeekNumber } from "./dateUtils";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSessionTileDesign } from "@/lib/session-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
@@ -196,43 +172,6 @@ function isWeekend(year: number, month: number, day: number) {
   return d === 0 || d === 6;
 }
 
-function findWeekGrid(container: HTMLDivElement | null): HTMLElement | null {
-  if (!container) return null;
-  const stack: Array<{ el: HTMLElement; depth: number }> = [{ el: container, depth: 0 }];
-  while (stack.length > 0) {
-    const { el, depth } = stack.pop()!;
-    if (el.children.length >= 8) {
-      const first = el.children[0];
-      const second = el.children[1] as HTMLElement | undefined;
-      if (
-        first instanceof HTMLButtonElement &&
-        second instanceof HTMLElement &&
-        second.dataset.monthCol === "0"
-      ) {
-        return el;
-      }
-    }
-    if (depth < 4) {
-      for (const child of Array.from(el.children)) {
-        if (child instanceof HTMLElement) stack.push({ el: child, depth: depth + 1 });
-      }
-    }
-  }
-  return container.firstElementChild instanceof HTMLElement ? container.firstElementChild : null;
-}
-
-function getWeekHeaderCells(container: HTMLDivElement | null): HTMLElement[] {
-  if (!container) return [];
-  const grid = findWeekGrid(container);
-  if (!grid) return [];
-  const children = Array.from(grid.children).filter(
-    (node): node is HTMLElement => node instanceof HTMLElement,
-  );
-  if (children.length < 8) return [];
-  const firstRow = children.slice(0, 8);
-  return firstRow.slice(1, 8);
-}
-
 // Monday-anchored start-of-week for a given date.
 function startOfWeekMon(d: Date): Date {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -265,10 +204,7 @@ export interface UnifiedElasticGridProps {
       | (Partial<CalendarEvent> & Pick<CalendarEvent, "startISO" | "endISO" | "title">)
       | (Partial<CalendarEvent> & { id: string }),
   ) => CalendarEvent;
-  onMoveEvent: (
-    id: string,
-    patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>,
-  ) => void;
+  onMoveEvent: (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => void;
   onDeleteEvent: (id: string) => void;
   /** Shared "what is the calendar showing?" anchor date. */
   currentDate: Date;
@@ -381,8 +317,7 @@ export function UnifiedElasticGrid({
   const moveSelection = useCallback(
     (dx: number, dy: number) => {
       if (!selected) return;
-      const { year: y } = selected;
-      let { month, day, session } = selected;
+      let { year: y, month, day, session } = selected;
       if (dy !== 0) {
         let rank = day * 2 + session + dy;
         const dim = daysInMonth(y, month);
@@ -556,9 +491,7 @@ export function UnifiedElasticGrid({
   );
 
   const markInfo = useCallback(
-    (
-      k: CellKey,
-    ): { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number } => {
+    (k: CellKey): { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number } => {
       if (!markRange || k.month !== markRange.month)
         return { in: false, isFirst: false, isLast: false, isPlus: false, size: 0 };
       const r = k.day * 2 + k.session;
@@ -592,20 +525,17 @@ export function UnifiedElasticGrid({
     setMarkRange({ month: k.month, lo: Math.min(a, r), hi: Math.max(a, r) });
   }, []);
 
-  const beginMarkDrag = useCallback(
-    (k: CellKey) => {
-      if (!markRange) return;
-      const grabRank = k.day * 2 + k.session;
-      markDragRef.current = {
-        grabRank,
-        grabMonth: k.month,
-        size: markRange.hi - markRange.lo + 1,
-        offset: grabRank - markRange.lo,
-      };
-      setIsDraggingMark(true);
-    },
-    [markRange],
-  );
+  const beginMarkDrag = useCallback((k: CellKey) => {
+    if (!markRange) return;
+    const grabRank = k.day * 2 + k.session;
+    markDragRef.current = {
+      grabRank,
+      grabMonth: k.month,
+      size: markRange.hi - markRange.lo + 1,
+      offset: grabRank - markRange.lo,
+    };
+    setIsDraggingMark(true);
+  }, [markRange]);
 
   // While dragging the marked range, hover-over cells determine the new
   // column + rank position. Reuses the existing mark-cell hover via a global
@@ -629,14 +559,8 @@ export function UnifiedElasticGrid({
       let newHi = newLo + drag.size - 1;
       // Clamp to slot range. In week view rows = 19 days × 2 sessions = 38.
       const maxRank = 19 * 2 - 1;
-      if (newLo < 0) {
-        newHi -= newLo;
-        newLo = 0;
-      }
-      if (newHi > maxRank) {
-        newLo -= newHi - maxRank;
-        newHi = maxRank;
-      }
+      if (newLo < 0) { newHi -= newLo; newLo = 0; }
+      if (newHi > maxRank) { newLo -= (newHi - maxRank); newHi = maxRank; }
       setMarkRange({ month: newMonth, lo: newLo, hi: newHi });
     };
     const onUp = () => {
@@ -705,7 +629,7 @@ export function UnifiedElasticGrid({
     let raf = 0;
 
     const tick = (now: number) => {
-      const focused = getWeekHeaderCells(c)[targetMonth] ?? null;
+      const focused = c.querySelector<HTMLElement>(`[data-month-col="${targetMonth}"]`);
       if (focused) {
         const width = focused.offsetWidth;
         const left = focused.offsetLeft;
@@ -775,7 +699,8 @@ export function UnifiedElasticGrid({
   // sub-minute precision so the indicator advances smoothly between ticks.
   const nowMinutesSinceStart = useMemo(() => {
     if (mode.kind !== "year") return null;
-    const minutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+    const minutes =
+      now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
     const since6 = minutes - 6 * 60;
     if (since6 < 0 || since6 > 19 * 60) return null;
     return since6;
@@ -831,7 +756,8 @@ export function UnifiedElasticGrid({
   return (
     <div
       ref={containerRef}
-      className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden"
+      className="relative w-full overflow-hidden rounded-md border border-hairline bg-card"
+      style={{ height: "calc(100vh - 280px)" }}
     >
       {/* Top-right control cluster: [Mode ▾] [‹ 📅 ›].
           When the parent controls viewMode it also renders these controls
@@ -860,322 +786,294 @@ export function UnifiedElasticGrid({
       )}
 
       <LayoutGroup id="cal-zoom">
-        <AnimatePresence mode="wait" initial={false}>
-          {viewMode === "month" ? (
-            <motion.div
-              key="month"
-              className="h-full w-full"
-              initial={{ opacity: 0, scaleY: 0.85 }}
-              animate={{ opacity: 1, scaleY: 1 }}
-              exit={{ opacity: 0, scaleY: 0.85 }}
-              transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
-              style={{ originY: 0 }}
-            >
-              <MonthGridType1
-                calId={calId}
-                year={currentDate.getFullYear()}
-                month={currentDate.getMonth()}
-                data={data}
-                seat={seat}
-                appKind={appKind}
-                events={events}
-                onUpsertEvent={onUpsertEvent}
-                onMoveEvent={onMoveEvent}
-                onDeleteEvent={onDeleteEvent}
-                onPrevMonth={() => {
-                  const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-                  onCurrentDateChange(d, { start: d, end: d });
+      <AnimatePresence mode="wait" initial={false}>
+      {viewMode === "month" ? (
+        <motion.div
+          key="month"
+          className="h-full w-full"
+          initial={{ opacity: 0, scaleY: 0.85 }}
+          animate={{ opacity: 1, scaleY: 1 }}
+          exit={{ opacity: 0, scaleY: 0.85 }}
+          transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+          style={{ originY: 0 }}
+        >
+        <MonthGridType1
+          calId={calId}
+          year={currentDate.getFullYear()}
+          month={currentDate.getMonth()}
+          data={data}
+          seat={seat}
+          appKind={appKind}
+          events={events}
+          onUpsertEvent={onUpsertEvent}
+          onMoveEvent={onMoveEvent}
+          onDeleteEvent={onDeleteEvent}
+          onPrevMonth={() => {
+            const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+            onCurrentDateChange(d, { start: d, end: d });
+          }}
+          onNextMonth={() => {
+            const d = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+            onCurrentDateChange(d, { start: d, end: d });
+          }}
+          onCommitText={(k, text) => onCommitText(k, text)}
+          onWeekClick={(anchor) => {
+            // Update the anchor date so Week view lands on the clicked week,
+            // then morph the visible mode.
+            onCurrentDateChange(anchor, { start: anchor, end: anchor });
+            handleViewModeChange("week");
+          }}
+          selectedDate={currentDate}
+          onSelectDate={(d) => onCurrentDateChange(d, { start: d, end: d })}
+        />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="week"
+          className="h-full w-full"
+          initial={{ opacity: 0, scaleY: 0.85 }}
+          animate={{ opacity: 1, scaleY: 1 }}
+          exit={{ opacity: 0, scaleY: 0.85 }}
+          transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
+          style={{ originY: 0 }}
+        >
+        <div
+          ref={scrollRef}
+          className="relative h-full w-full overflow-auto"
+          style={{ scrollbarGutter: "stable" }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleSelect(null);
+          }}
+          tabIndex={0}
+        >
+          <div
+            className="grid"
+            style={{
+              gridTemplateColumns,
+              transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
+              willChange: "grid-template-columns",
+            }}
+          >
+            {/* Week-number gutter header (clickable to zoom OUT to month). */}
+            {mode.kind === "year" && (
+              <button
+                key="wn-header"
+                type="button"
+                onClick={() => handleViewModeChange("month")}
+                title={`Uke ${isoWeekNumber(weekDates[0] ?? new Date())} — klikk for å zoome ut`}
+                className="sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-1 py-2 text-center text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+                ref={(el) => {
+                  headerRef.current = el;
                 }}
-                onNextMonth={() => {
-                  const d = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-                  onCurrentDateChange(d, { start: d, end: d });
-                }}
-                onCommitText={(k, text) => onCommitText(k, text)}
-                onWeekClick={(anchor) => {
-                  // Update the anchor date so Week view lands on the clicked week,
-                  // then morph the visible mode.
-                  onCurrentDateChange(anchor, { start: anchor, end: anchor });
-                  handleViewModeChange("week");
-                }}
-                selectedDate={currentDate}
-                onSelectDate={(d) => onCurrentDateChange(d, { start: d, end: d })}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="week"
-              className="h-full w-full"
-              initial={{ opacity: 0, scaleY: 0.85 }}
-              animate={{ opacity: 1, scaleY: 1 }}
-              exit={{ opacity: 0, scaleY: 0.85 }}
-              transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
-              style={{ originY: 0 }}
-            >
-              <div
-                ref={scrollRef}
-                className="relative h-full w-full overflow-auto"
-                style={{ scrollbarGutter: "stable" }}
-                onClick={(e) => {
-                  if (e.target === e.currentTarget) handleSelect(null);
-                }}
-                tabIndex={0}
               >
+                {isoWeekNumber(weekDates[0] ?? new Date())}
+              </button>
+            )}
+            {months.map((m) => {
+              const colDate = weekDates[m.idx];
+              const isToday = mode.kind === "year" && colDate && sameDay(colDate, now);
+              return (
                 <div
-                  className="grid"
-                  style={{
-                    gridTemplateColumns,
-                    transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
-                    willChange: "grid-template-columns",
-                  }}
+                  key={`h-${m.idx}`}
+                  data-month-col={m.idx}
+                  data-day-anchor=""
+                  className={`group/daynote-anchor sticky top-0 z-20 select-none border-b border-r border-hairline px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${
+                    isToday ? "bg-secondary text-ink" : "bg-card text-muted-foreground"
+                  } ${appKind === "diary" ? "relative" : ""}`}
                 >
-                  {/* Week-number gutter header (clickable to zoom OUT to month). */}
-                  {mode.kind === "year" && (
-                    <button
-                      key="wn-header"
-                      type="button"
-                      onClick={() => handleViewModeChange("month")}
-                      title={`Uke ${isoWeekNumber(weekDates[0] ?? new Date())} — klikk for å zoome ut`}
-                      className="sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-1 py-2 text-center text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
-                      ref={(el) => {
-                        headerRef.current = el;
-                      }}
-                    >
-                      {isoWeekNumber(weekDates[0] ?? new Date())}
-                    </button>
+                  {appKind === "diary" && colDate && (
+                    <DayNoteButton calId={calId} date={colDate} variant="week" />
                   )}
-                  {months.map((m) => {
-                    const colDate = weekDates[m.idx];
-                    const isToday = mode.kind === "year" && colDate && sameDay(colDate, now);
-                    return (
-                      <div
-                        key={`h-${m.idx}`}
-                        data-month-col={m.idx}
-                        data-day-anchor=""
-                        className={`group/daynote-anchor sticky top-0 z-20 select-none border-b border-r border-hairline px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${
-                          isToday ? "bg-secondary text-ink" : "bg-card text-muted-foreground"
-                        } ${appKind === "diary" ? "relative" : ""}`}
-                      >
-                        {appKind === "diary" && colDate && (
-                          <DayNoteButton calId={calId} date={colDate} variant="week" />
-                        )}
-                        <span>
-                          {m.label}
-                          {mode.kind === "year" && colDate && (
-                            <span className="ml-1.5 text-ink">{colDate.getDate()}</span>
-                          )}
-                        </span>
-                      </div>
-                    );
-                  })}
-
-                  {Array.from(
-                    // Week view (compact / kind:"year") renders hour-rows of a
-                    // single weekday: 06:00 → 24:30 in 30-min slots = 38 rows
-                    // = 19 "days" × 2 sessions. Day view keeps the original
-                    // 31-day envelope.
-                    { length: mode.kind === "year" ? 19 : 31 },
-                    (_, i) => i + 1,
-                  ).map((day) => (
-                    <Fragment key={day}>
-                      {mode.kind === "year" &&
-                        (() => {
-                          const hh = 5 + day;
-                          const label = `${String(hh).padStart(2, "0")}:00`;
-                          return (
-                            <div
-                              className="border-b border-r border-hairline bg-card pl-1.5 pt-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
-                              style={{ height: rowHeight * 2 }}
-                              aria-hidden
-                            >
-                              {label}
-                            </div>
-                          );
-                        })()}
-                      <DayRow
-                        day={day}
-                        months={months}
-                        year={year}
-                        calId={calId}
-                        data={data}
-                        mode={mode}
-                        rowHeight={rowHeight}
-                        selected={selected}
-                        selectedId={selectedId}
-                        editingId={editingId}
-                        editValue={editValue}
-                        setEditValue={setEditValue}
-                        onSelect={handleSelect}
-                        onBeginEdit={beginEdit}
-                        onCommitEdit={commitEdit}
-                        onCommitDuration={onCommitDuration}
-                        onMoveAfterCommit={moveSelection}
-                        inDragRange={inDragRange}
-                        onCellMouseEnter={(k) => {
-                          if (dragStartRef.current && k.month === dragStartRef.current.month) {
-                            setDragRange({
-                              month: dragStartRef.current.month,
-                              toDay: k.day,
-                              toSession: k.session,
-                            });
-                          }
-                          extendMark(k);
-                        }}
-                        onHandleDown={(k) => {
-                          dragStartRef.current = k;
-                          setDragRange({ month: k.month, toDay: k.day, toSession: k.session });
-                        }}
-                        isMonthFocused={isMonthFocused}
-                        isMonthPeriph={isMonthPeriph}
-                        markInfo={markInfo}
-                        onMarkBegin={beginMark}
-                        onMarkDragBegin={beginMarkDrag}
-                        isDraggingMark={isDraggingMark}
-                        onOpenPopover={openPopover}
-                        allowMark={mode.kind === "year"}
-                        markReleased={markReleased}
-                      />
-                    </Fragment>
-                  ))}
+                  <span>
+                    {m.label}
+                    {mode.kind === "year" && colDate && (
+                      <span className="ml-1.5 text-ink">{colDate.getDate()}</span>
+                    )}
+                  </span>
                 </div>
-                {mode.kind === "year" && (
-                  <WeekEventsOverlay
-                    scrollRef={scrollRef}
-                    events={weekEvents}
-                    weekDates={weekDates}
-                    headerH={headerH}
-                    rowHeight={rowHeight}
-                    startHour={WEEK_START_HOUR}
-                    appKind={appKind}
-                    onEventClick={(ev, anchor) => {
-                      setPopover({
-                        key: { year, month: 0, day: 1, session: 0 },
-                        rect: anchor.getBoundingClientRect(),
-                        initialText: ev.title,
-                        initialColor: ev.color,
-                        isEdit: true,
-                        eventId: ev.id,
+              );
+            })}
+
+            {Array.from(
+              // Week view (compact / kind:"year") renders hour-rows of a
+              // single weekday: 06:00 → 24:30 in 30-min slots = 38 rows
+              // = 19 "days" × 2 sessions. Day view keeps the original
+              // 31-day envelope.
+              { length: mode.kind === "year" ? 19 : 31 },
+              (_, i) => i + 1,
+            ).map((day) => (
+              <Fragment key={day}>
+                {mode.kind === "year" && (() => {
+                  const hh = 5 + day;
+                  const label = `${String(hh).padStart(2, "0")}:00`;
+                  return (
+                    <div
+                      className="border-b border-r border-hairline bg-card pl-1.5 pt-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
+                      style={{ height: rowHeight * 2 }}
+                      aria-hidden
+                    >
+                      {label}
+                    </div>
+                  );
+                })()}
+                <DayRow
+                  day={day}
+                  months={months}
+                  year={year}
+                  calId={calId}
+                  data={data}
+                  mode={mode}
+                  rowHeight={rowHeight}
+                  selected={selected}
+                  selectedId={selectedId}
+                  editingId={editingId}
+                  editValue={editValue}
+                  setEditValue={setEditValue}
+                  onSelect={handleSelect}
+                  onBeginEdit={beginEdit}
+                  onCommitEdit={commitEdit}
+                  onCommitDuration={onCommitDuration}
+                  onMoveAfterCommit={moveSelection}
+                  inDragRange={inDragRange}
+                  onCellMouseEnter={(k) => {
+                    if (dragStartRef.current && k.month === dragStartRef.current.month) {
+                      setDragRange({
+                        month: dragStartRef.current.month,
+                        toDay: k.day,
+                        toSession: k.session,
                       });
-                    }}
-                    onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
-                      const ev = events.find((e) => e.id === id);
-                      if (!ev) return;
-                      setPopover({
-                        key: { year, month: 0, day: 1, session: 0 },
-                        rect: (anchor ?? document.body).getBoundingClientRect(),
-                        initialText: ev.title,
-                        initialColor: ev.color,
-                        isEdit: true,
-                        eventId: id,
-                        pendingDate: newDate,
-                        pendingTime: { startMin: newStartMin, endMin: newStartMin + durationMin },
-                      });
-                    }}
-                    onDeleteEvent={onDeleteEvent}
-                    onSaveSessionNote={(id, note) =>
-                      onUpsertEvent({ id, sessionNote: note || undefined })
                     }
-                    onUpsertSession={(patch) => onUpsertEvent(patch)}
-                  />
-                )}
-                {mode.kind === "year" && todayColIdx >= 0 && nowMinutesSinceStart !== null && (
-                  <NowLine
-                    scrollRef={scrollRef}
-                    colIdx={todayColIdx}
-                    nowMinutesSinceStart={nowMinutesSinceStart}
-                    rowHeight={rowHeight}
-                    headerH={headerH}
-                  />
-                )}
-              </div>
-            </motion.div>
+                    extendMark(k);
+                  }}
+                  onHandleDown={(k) => {
+                    dragStartRef.current = k;
+                    setDragRange({ month: k.month, toDay: k.day, toSession: k.session });
+                  }}
+                  isMonthFocused={isMonthFocused}
+                  isMonthPeriph={isMonthPeriph}
+                  markInfo={markInfo}
+                  onMarkBegin={beginMark}
+                  onMarkDragBegin={beginMarkDrag}
+                  isDraggingMark={isDraggingMark}
+                  onOpenPopover={openPopover}
+                  allowMark={mode.kind === "year"}
+                  markReleased={markReleased}
+                />
+              </Fragment>
+            ))}
+          </div>
+          {mode.kind === "year" && (
+            <WeekEventsOverlay
+              scrollRef={scrollRef}
+              events={weekEvents}
+              weekDates={weekDates}
+              headerH={headerH}
+              rowHeight={rowHeight}
+              startHour={WEEK_START_HOUR}
+              appKind={appKind}
+              onEventClick={(ev, anchor) => {
+                setPopover({
+                  key: { year, month: 0, day: 1, session: 0 },
+                  rect: anchor.getBoundingClientRect(),
+                  initialText: ev.title,
+                  initialColor: ev.color,
+                  isEdit: true,
+                  eventId: ev.id,
+                });
+              }}
+              onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
+                const ev = events.find((e) => e.id === id);
+                if (!ev) return;
+                setPopover({
+                  key: { year, month: 0, day: 1, session: 0 },
+                  rect: (anchor ?? document.body).getBoundingClientRect(),
+                  initialText: ev.title,
+                  initialColor: ev.color,
+                  isEdit: true,
+                  eventId: id,
+                  pendingDate: newDate,
+                  pendingTime: { startMin: newStartMin, endMin: newStartMin + durationMin },
+                });
+              }}
+              onDeleteEvent={onDeleteEvent}
+              onSaveSessionNote={(id, note) =>
+                onUpsertEvent({ id, sessionNote: note || undefined })
+              }
+              onUpsertSession={(patch) => onUpsertEvent(patch)}
+            />
           )}
-        </AnimatePresence>
+          {mode.kind === "year" && todayColIdx >= 0 && nowMinutesSinceStart !== null && (
+            <NowLine
+              scrollRef={scrollRef}
+              colIdx={todayColIdx}
+              nowMinutesSinceStart={nowMinutesSinceStart}
+              rowHeight={rowHeight}
+            />
+          )}
+        </div>
+        </motion.div>
+      )}
+      </AnimatePresence>
       </LayoutGroup>
 
-      {popover &&
-        appKind === "diary" &&
-        mode.kind === "year" &&
-        (() => {
-          const existingEv = popover.eventId ? events.find((e) => e.id === popover.eventId) : null;
-          const initialTime = (() => {
-            if (existingEv && !existingEv.allDay) {
-              const s = fromISOLocal(existingEv.startISO);
-              const e = fromISOLocal(existingEv.endISO);
-              return {
-                startMin: s.getHours() * 60 + s.getMinutes(),
-                endMin: e.getHours() * 60 + e.getMinutes(),
-              };
-            }
-            if (markRange) {
-              return {
-                startMin: WEEK_START_HOUR * 60 + (markRange.lo - 2) * 30,
-                endMin: WEEK_START_HOUR * 60 + (markRange.hi - 2 + 1) * 30,
-              };
-            }
-            const lo = popover.key.day * 2 + popover.key.session;
-            const startMin = WEEK_START_HOUR * 60 + (lo - 2) * 30;
-            return { startMin, endMin: startMin + 30 };
-          })();
-          return (
-            <DiaryPopoverEditor
-              initialEvent={existingEv ?? { title: popover.initialText }}
-              isEdit={popover.isEdit}
-              anchor={popover.rect}
-              initialTime={initialTime}
-              date={
-                existingEv
-                  ? fromISOLocal(existingEv.startISO)
-                  : markRange
-                    ? weekDates[markRange.month]
-                    : weekDates[popover.key.month]
-              }
-              onClose={closePopover}
-              onCommit={(v: DiaryPopoverValue, opts) => {
-                const date = markRange
+      {popover && appKind === "diary" && mode.kind === "year" && (() => {
+        const existingEv = popover.eventId ? events.find((e) => e.id === popover.eventId) : null;
+        const initialTime = (() => {
+          if (existingEv && !existingEv.allDay) {
+            const s = fromISOLocal(existingEv.startISO);
+            const e = fromISOLocal(existingEv.endISO);
+            return { startMin: s.getHours() * 60 + s.getMinutes(), endMin: e.getHours() * 60 + e.getMinutes() };
+          }
+          if (markRange) {
+            return {
+              startMin: WEEK_START_HOUR * 60 + (markRange.lo - 2) * 30,
+              endMin: WEEK_START_HOUR * 60 + (markRange.hi - 2 + 1) * 30,
+            };
+          }
+          const lo = popover.key.day * 2 + popover.key.session;
+          const startMin = WEEK_START_HOUR * 60 + (lo - 2) * 30;
+          return { startMin, endMin: startMin + 30 };
+        })();
+        return (
+          <DiaryPopoverEditor
+            initialEvent={existingEv ?? { title: popover.initialText }}
+            isEdit={popover.isEdit}
+            anchor={popover.rect}
+            initialTime={initialTime}
+            date={
+              existingEv
+                ? fromISOLocal(existingEv.startISO)
+                : markRange
                   ? weekDates[markRange.month]
-                  : existingEv
-                    ? fromISOLocal(existingEv.startISO)
-                    : weekDates[popover.key.month];
-                if (!date) {
-                  closePopover();
-                  return;
-                }
-                if (opts?.delete && popover.eventId) {
+                  : weekDates[popover.key.month]
+            }
+            onClose={closePopover}
+            onCommit={(v: DiaryPopoverValue, opts) => {
+              const date = markRange
+                ? weekDates[markRange.month]
+                : existingEv
+                  ? fromISOLocal(existingEv.startISO)
+                  : weekDates[popover.key.month];
+              if (!date) {
+                closePopover();
+                return;
+              }
+              if (opts?.delete && popover.eventId) {
+                onDeleteEvent(popover.eventId);
+                setMarkRange(null);
+                setMarkReleased(false);
+                closePopover();
+                return;
+              }
+              const time = v.time ?? initialTime;
+              const startISO = toISOLocal(setHM(date, Math.floor(time.startMin / 60), time.startMin % 60));
+              const endISO = toISOLocal(setHM(date, Math.floor(time.endMin / 60), time.endMin % 60));
+              if (popover.eventId) {
+                if (!v.title) {
                   onDeleteEvent(popover.eventId);
-                  setMarkRange(null);
-                  setMarkReleased(false);
-                  closePopover();
-                  return;
-                }
-                const time = v.time ?? initialTime;
-                const startISO = toISOLocal(
-                  setHM(date, Math.floor(time.startMin / 60), time.startMin % 60),
-                );
-                const endISO = toISOLocal(
-                  setHM(date, Math.floor(time.endMin / 60), time.endMin % 60),
-                );
-                if (popover.eventId) {
-                  if (!v.title) {
-                    onDeleteEvent(popover.eventId);
-                  } else {
-                    onUpsertEvent({
-                      id: popover.eventId,
-                      title: v.title,
-                      color: v.color,
-                      startISO,
-                      endISO,
-                      allDay: false,
-                      diaryType: v.diaryType,
-                      diaryGroup: v.diaryGroup,
-                      diarySub: v.diarySub,
-                      distanceKm: v.distanceKm,
-                      paceSecPerKm: v.paceSecPerKm,
-                      sessionNote: v.sessionNote,
-                      activities: v.activities,
-                    });
-                  }
-                } else if (v.title) {
+                } else {
                   onUpsertEvent({
+                    id: popover.eventId,
                     title: v.title,
                     color: v.color,
                     startISO,
@@ -1190,13 +1088,29 @@ export function UnifiedElasticGrid({
                     activities: v.activities,
                   });
                 }
-                setMarkRange(null);
-                setMarkReleased(false);
-                closePopover();
-              }}
-            />
-          );
-        })()}
+              } else if (v.title) {
+                onUpsertEvent({
+                  title: v.title,
+                  color: v.color,
+                  startISO,
+                  endISO,
+                  allDay: false,
+                  diaryType: v.diaryType,
+                  diaryGroup: v.diaryGroup,
+                  diarySub: v.diarySub,
+                  distanceKm: v.distanceKm,
+                  paceSecPerKm: v.paceSecPerKm,
+                  sessionNote: v.sessionNote,
+                  activities: v.activities,
+                });
+              }
+              setMarkRange(null);
+              setMarkReleased(false);
+              closePopover();
+            }}
+          />
+        );
+      })()}
 
       {popover && !(appKind === "diary" && mode.kind === "year") && (
         <PopoverEditor
@@ -1289,9 +1203,7 @@ export function UnifiedElasticGrid({
                       id: popover.eventId,
                       title: t,
                       color,
-                      ...(markRange || time || popover.pendingDate || popover.pendingTime
-                        ? { startISO, endISO }
-                        : {}),
+                      ...(markRange || time || popover.pendingDate || popover.pendingTime ? { startISO, endISO } : {}),
                       allDay: false,
                     });
                   }
@@ -1359,13 +1271,7 @@ interface DayRowProps {
   onHandleDown: (k: CellKey) => void;
   isMonthFocused: (m: number) => boolean;
   isMonthPeriph: (m: number) => boolean;
-  markInfo: (k: CellKey) => {
-    in: boolean;
-    isFirst: boolean;
-    isLast: boolean;
-    isPlus: boolean;
-    size: number;
-  };
+  markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number };
   onMarkBegin: (k: CellKey) => void;
   onMarkDragBegin: (k: CellKey) => void;
   isDraggingMark: boolean;
@@ -1376,35 +1282,11 @@ interface DayRowProps {
 
 function DayRow(props: DayRowProps) {
   const {
-    day,
-    year,
-    months,
-    calId,
-    data,
-    mode,
-    rowHeight,
-    selected,
-    selectedId,
-    editingId,
-    editValue,
-    setEditValue,
-    onSelect,
-    onBeginEdit,
-    onCommitEdit,
-    onCommitDuration,
-    onMoveAfterCommit,
-    inDragRange,
-    onCellMouseEnter,
-    onHandleDown,
-    isMonthFocused,
-    isMonthPeriph,
-    markInfo,
-    onMarkBegin,
-    onMarkDragBegin,
-    isDraggingMark,
-    onOpenPopover,
-    allowMark,
-    markReleased,
+    day, year, months, calId, data, mode, rowHeight,
+    selected, selectedId, editingId, editValue, setEditValue,
+    onSelect, onBeginEdit, onCommitEdit, onCommitDuration, onMoveAfterCommit,
+    inDragRange, onCellMouseEnter, onHandleDown, isMonthFocused, isMonthPeriph,
+    markInfo, onMarkBegin, onMarkDragBegin, isDraggingMark, onOpenPopover, allowMark, markReleased,
   } = props;
 
   return (
@@ -1434,21 +1316,15 @@ function DayRow(props: DayRowProps) {
         // If the last session of this day shares a color with the first
         // session of the next day in the same column, hide the bottom
         // border so the session block reads as a single continuous fill.
-        const lastSessionRaw =
-          data[makeCellId(calId, { year, month: m.idx, day, session: 1 })]?.text ?? "";
-        const nextDayFirstRaw =
-          day < m.dim
-            ? (data[makeCellId(calId, { year, month: m.idx, day: day + 1, session: 0 })]?.text ??
-              "")
-            : "";
+        const lastSessionRaw = data[makeCellId(calId, { year, month: m.idx, day, session: 1 })]?.text ?? "";
+        const nextDayFirstRaw = day < m.dim
+          ? data[makeCellId(calId, { year, month: m.idx, day: day + 1, session: 0 })]?.text ?? ""
+          : "";
         const lastSessionColor = splitColor(lastSessionRaw).color;
         const nextDayFirstColor = splitColor(nextDayFirstRaw).color;
         const lastMarked = markInfo({ year, month: m.idx, day, session: 1 }).in;
-        const nextMarked =
-          day < m.dim ? markInfo({ year, month: m.idx, day: day + 1, session: 0 }).in : false;
-        const mergeBelow =
-          (!!lastSessionColor && lastSessionColor === nextDayFirstColor) ||
-          (lastMarked && nextMarked);
+        const nextMarked = day < m.dim ? markInfo({ year, month: m.idx, day: day + 1, session: 0 }).in : false;
+        const mergeBelow = (!!lastSessionColor && lastSessionColor === nextDayFirstColor) || (lastMarked && nextMarked);
         return (
           <div
             key={`c-${m.idx}-${day}`}
@@ -1524,13 +1400,7 @@ interface DayCellPairProps {
   inDragRange: (k: CellKey) => boolean;
   onCellMouseEnter: (k: CellKey) => void;
   onHandleDown: (k: CellKey) => void;
-  markInfo: (k: CellKey) => {
-    in: boolean;
-    isFirst: boolean;
-    isLast: boolean;
-    isPlus: boolean;
-    size: number;
-  };
+  markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number };
   onMarkBegin: (k: CellKey) => void;
   onMarkDragBegin: (k: CellKey) => void;
   isDraggingMark: boolean;
@@ -1541,35 +1411,12 @@ interface DayCellPairProps {
 
 function DayCellPair(props: DayCellPairProps) {
   const {
-    calId,
-    year,
-    month,
-    day,
-    weekend,
-    data,
-    focused,
-    periph,
-    mode,
-    rowHeight,
-    selectedId,
-    editingId,
-    editValue,
-    setEditValue,
-    onSelect,
-    onBeginEdit,
-    onCommitEdit,
-    onCommitDuration,
-    onMoveAfterCommit,
-    inDragRange,
-    onCellMouseEnter,
-    onHandleDown,
-    markInfo,
-    onMarkBegin,
-    onMarkDragBegin,
-    isDraggingMark,
-    onOpenPopover,
-    allowMark,
-    markReleased,
+    calId, year, month, day, weekend, data,
+    focused, periph, mode, rowHeight, selectedId,
+    editingId, editValue, setEditValue,
+    onSelect, onBeginEdit, onCommitEdit, onCommitDuration, onMoveAfterCommit,
+    inDragRange, onCellMouseEnter, onHandleDown,
+    markInfo, onMarkBegin, onMarkDragBegin, isDraggingMark, onOpenPopover, allowMark, markReleased,
   } = props;
 
   const sessions: Session[] = [0, 1];
@@ -1597,15 +1444,15 @@ function DayCellPair(props: DayCellPairProps) {
         const cellLabel = parsed.text;
 
         // Outlook/Motion style: soft tinted body, bright left edge accent.
-        const bg = cellColor ? `color-mix(in srgb, ${cellColor} 18%, white)` : undefined;
+        const bg = cellColor
+          ? `color-mix(in srgb, ${cellColor} 18%, white)`
+          : undefined;
 
         // Merge with neighbouring sessions of the same color so a multi-cell
         // session reads as one continuous block (no inner divider lines).
         const prevRaw = isFirst
-          ? day > 1
-            ? (data[makeCellId(calId, { year, month, day: day - 1, session: 1 })]?.text ?? "")
-            : ""
-          : (data[makeCellId(calId, { year, month, day, session: 0 })]?.text ?? "");
+          ? (day > 1 ? data[makeCellId(calId, { year, month, day: day - 1, session: 1 })]?.text ?? "" : "")
+          : data[makeCellId(calId, { year, month, day, session: 0 })]?.text ?? "";
         const prevColor = splitColor(prevRaw).color;
         const sameAbove = !!cellColor && cellColor === prevColor;
 
@@ -1683,7 +1530,7 @@ function DayCellPair(props: DayCellPairProps) {
                     top: mk.isFirst ? 3 : 0,
                     // If this is the plus cell, leave a 28px gap in the
                     // middle for the icon — render only the upper band.
-                    bottom: mk.isPlus ? "calc(50% + 14px)" : mk.isLast ? 3 : 0,
+                    bottom: mk.isPlus ? "calc(50% + 14px)" : (mk.isLast ? 3 : 0),
                     cursor: isDraggingMark ? "grabbing" : "grab",
                   }}
                 />
@@ -1726,6 +1573,8 @@ function DayCellPair(props: DayCellPairProps) {
               </button>
             )}
             {/* Selection outline removed — keep marking subtle (gray fill only) */}
+
+            {false && showCompact && null}
 
             {showRich && (
               <div
@@ -1789,34 +1638,28 @@ function DayCellPair(props: DayCellPairProps) {
               </div>
             )}
 
-            {showCompact &&
-              !isEditing &&
-              (() => {
-                const Icon = iconForColor(cellColor);
-                const labelColor = "hsl(var(--ink, 220 13% 13%))";
-                const iconColor = cellColor ?? labelColor;
-                return (
-                  <span
-                    className={`pointer-events-none absolute left-14 right-1.5 top-0.5 flex items-center gap-1 truncate text-[12px] ${
-                      cell?.bold ? "font-semibold" : ""
-                    } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
-                    style={{
-                      opacity: focused ? 0 : 1,
-                      transition: `opacity ${DUR_MS}ms ${EASE}`,
-                      color: labelColor,
-                    }}
-                  >
-                    {!sameAbove && Icon && cellColor && (
-                      <Icon
-                        className="h-3 w-3 shrink-0"
-                        strokeWidth={2.25}
-                        style={{ color: iconColor }}
-                      />
-                    )}
-                    <span className="truncate">{sameAbove ? "" : cellLabel}</span>
-                  </span>
-                );
-              })()}
+            {showCompact && !isEditing && (() => {
+              const Icon = iconForColor(cellColor);
+              const labelColor = "hsl(var(--ink, 220 13% 13%))";
+              const iconColor = cellColor ?? labelColor;
+              return (
+                <span
+                  className={`pointer-events-none absolute left-14 right-1.5 top-0.5 flex items-center gap-1 truncate text-[12px] ${
+                    cell?.bold ? "font-semibold" : ""
+                  } ${cell?.italic ? "italic" : ""} ${cell?.underline ? "underline" : ""}`}
+                  style={{
+                    opacity: focused ? 0 : 1,
+                    transition: `opacity ${DUR_MS}ms ${EASE}`,
+                    color: labelColor,
+                  }}
+                >
+                  {!sameAbove && Icon && cellColor && (
+                    <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: iconColor }} />
+                  )}
+                  <span className="truncate">{sameAbove ? "" : cellLabel}</span>
+                </span>
+              );
+            })()}
 
             {showCompact && isEditing && (
               <input
@@ -1918,111 +1761,43 @@ function DurationCell({ initial, onCommit }: DurationCellProps) {
  * column's offsetLeft/Width so it stays accurate through grid track
  * animations.
  */
-function measureWeekOverlayGeometry(
-  container: HTMLDivElement | null,
-  fallbackHeaderBottom = 0,
-) {
-  if (!container) return null;
-
-  const grid = findWeekGrid(container);
-  if (!grid) return null;
-
-  let cols: Array<{ left: number; width: number }> = [];
-  let headerBottom = fallbackHeaderBottom;
-  const headers = getWeekHeaderCells(container);
-
-  if (headers.length === 7) {
-    for (const header of headers) {
-      const width = header.offsetWidth || header.getBoundingClientRect().width;
-      const left = header.offsetLeft;
-      if (width > 0) {
-        cols.push({ left, width });
-      }
-      const contentBottom = header.offsetTop + header.offsetHeight;
-      headerBottom = Math.max(headerBottom, contentBottom);
-    }
-  }
-
-  if (cols.length !== 7) {
-    const gutter = grid.firstElementChild instanceof HTMLElement ? grid.firstElementChild.offsetWidth : 48;
-    const contentWidth = grid.clientWidth || container.clientWidth || grid.scrollWidth || container.scrollWidth;
-    const dayWidth = Math.max(0, (contentWidth - gutter) / 7);
-    cols = Array.from({ length: 7 }, (_, idx) => ({
-      left: gutter + idx * dayWidth,
-      width: dayWidth,
-    }));
-  }
-
-  if (headerBottom <= 0) {
-    const fallbackHeader = grid.firstElementChild instanceof HTMLElement ? grid.firstElementChild.offsetHeight : 36;
-    headerBottom = Math.max(fallbackHeaderBottom, fallbackHeader);
-  }
-
-  return { cols, headerBottom };
-}
-
 function NowLine({
   scrollRef,
   colIdx,
   nowMinutesSinceStart,
   rowHeight,
-  headerH,
 }: {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   colIdx: number;
   /** Minutes elapsed since the grid's start hour (e.g. 06:00). */
   nowMinutesSinceStart: number;
   rowHeight: number;
-  headerH: number;
 }) {
   const [box, setBox] = useState<{ left: number; width: number; headerBottom: number } | null>(
     null,
   );
 
   useLayoutEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-
-    let raf = 0;
     const measure = () => {
-      const geometry = measureWeekOverlayGeometry(scrollRef.current, headerH);
-      if (!geometry) return;
-      const col = geometry.cols[colIdx];
-      if (!col) return;
-      setBox((prev) => {
-        const next = { left: col.left, width: col.width, headerBottom: geometry.headerBottom };
-        if (
-          prev &&
-          Math.abs(prev.left - next.left) < 0.5 &&
-          Math.abs(prev.width - next.width) < 0.5 &&
-          Math.abs(prev.headerBottom - next.headerBottom) < 0.5
-        ) {
-          return prev;
-        }
-        return next;
+      const c = scrollRef.current;
+      if (!c) return;
+      // First match for data-month-col is the sticky day-column header.
+      const header = c.querySelector<HTMLElement>(`[data-month-col="${colIdx}"]`);
+      if (!header) return;
+      setBox({
+        left: header.offsetLeft,
+        width: header.offsetWidth,
+        headerBottom: header.offsetTop + header.offsetHeight,
       });
     };
-    const scheduleMeasure = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(measure);
-    };
-
-    scheduleMeasure();
-    const resizeObserver = new ResizeObserver(scheduleMeasure);
-    resizeObserver.observe(container);
-    if (container.firstElementChild instanceof HTMLElement) {
-      resizeObserver.observe(container.firstElementChild);
-    }
-    container.addEventListener("scroll", scheduleMeasure, { passive: true });
-    window.addEventListener("resize", scheduleMeasure);
-
+    measure();
+    const id = window.setInterval(measure, 500);
+    window.addEventListener("resize", measure);
     return () => {
-      cancelAnimationFrame(raf);
-      resizeObserver.disconnect();
-      container.removeEventListener("scroll", scheduleMeasure);
-      window.removeEventListener("resize", scheduleMeasure);
+      window.clearInterval(id);
+      window.removeEventListener("resize", measure);
     };
-  }, [colIdx, headerH, rowHeight, scrollRef]);
+  }, [colIdx, scrollRef]);
 
   if (!box) return null;
   // 30-min slot maps to one rowHeight; convert minutes precisely.
@@ -2095,13 +1870,7 @@ function WeekEventsOverlay({
   startHour: number;
   appKind?: "calendar" | "diary";
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
-  onEventDrop: (
-    id: string,
-    newDate: Date,
-    newStartMin: number,
-    durationMin: number,
-    anchor?: HTMLElement,
-  ) => void;
+  onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
   onDeleteEvent?: (id: string) => void;
   onSaveSessionNote?: (id: string, note: string) => void;
   onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
@@ -2109,12 +1878,7 @@ function WeekEventsOverlay({
   const [tileDesign] = useSessionTileDesign();
   const [unit] = useDistanceUnit();
   const [hoverId, setHoverId] = useState<string | null>(null);
-  const [hoverRect, setHoverRect] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  } | null>(null);
+  const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const closeTimerRef = useRef<number | null>(null);
   const cancelClose = useCallback(() => {
     if (closeTimerRef.current != null) {
@@ -2134,52 +1898,30 @@ function WeekEventsOverlay({
   const [headerBottom, setHeaderBottom] = useState(0);
 
   useLayoutEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-
-    let raf = 0;
     const measure = () => {
-      const geometry = measureWeekOverlayGeometry(scrollRef.current, headerH);
-      if (!geometry) return;
-      setCols((prev) => {
-        const next = geometry.cols as Box[];
-        if (
-          prev.length === next.length &&
-          prev.every(
-            (col, idx) =>
-              Math.abs(col.left - next[idx].left) < 0.5 &&
-              Math.abs(col.width - next[idx].width) < 0.5,
-          )
-        ) {
-          return prev;
+      const c = scrollRef.current;
+      if (!c) return;
+      const next: Box[] = [];
+      let hb = 0;
+      for (let i = 0; i < 7; i++) {
+        // First match for data-month-col is the sticky header for that column.
+        const cell = c.querySelector<HTMLElement>(`[data-month-col="${i}"]`);
+        if (cell) {
+          next.push({ left: cell.offsetLeft, width: cell.offsetWidth });
+          hb = Math.max(hb, cell.offsetTop + cell.offsetHeight);
         }
-        return next;
-      });
-      setHeaderBottom((prev) =>
-        Math.abs(prev - geometry.headerBottom) < 0.5 ? prev : geometry.headerBottom,
-      );
+      }
+      if (next.length === 7) setCols(next);
+      setHeaderBottom(hb);
     };
-    const scheduleMeasure = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(measure);
-    };
-
-    scheduleMeasure();
-    const resizeObserver = new ResizeObserver(scheduleMeasure);
-    resizeObserver.observe(container);
-    if (container.firstElementChild instanceof HTMLElement) {
-      resizeObserver.observe(container.firstElementChild);
-    }
-    container.addEventListener("scroll", scheduleMeasure, { passive: true });
-    window.addEventListener("resize", scheduleMeasure);
-
+    measure();
+    const id = window.setInterval(measure, 500);
+    window.addEventListener("resize", measure);
     return () => {
-      cancelAnimationFrame(raf);
-      resizeObserver.disconnect();
-      container.removeEventListener("scroll", scheduleMeasure);
-      window.removeEventListener("resize", scheduleMeasure);
+      window.clearInterval(id);
+      window.removeEventListener("resize", measure);
     };
-  }, [headerH, scrollRef]);
+  }, [scrollRef]);
 
   const [drag, setDrag] = useState<{
     id: string;
@@ -2204,8 +1946,8 @@ function WeekEventsOverlay({
       if (drag.moved && cols.length === 7) {
         // Compute drop column based on horizontal delta.
         const colW = cols[0].width;
-        const colShift = Math.round(drag.delta.dx / colW);
-        const newCol = Math.max(0, Math.min(6, drag.originColIdx + colShift));
+        let colShift = Math.round(drag.delta.dx / colW);
+        let newCol = Math.max(0, Math.min(6, drag.originColIdx + colShift));
         // Compute new start minute from vertical delta (snap to 30-min grid).
         const minShift = Math.round(drag.delta.dy / rowHeight) * 30;
         let newStart = drag.originStartMin + minShift;
@@ -2213,13 +1955,7 @@ function WeekEventsOverlay({
         const minStart = startHour * 60;
         const maxStart = startHour * 60 + 19 * 60 - drag.durationMin;
         newStart = Math.max(minStart, Math.min(maxStart, newStart));
-        onEventDrop(
-          drag.id,
-          weekDates[newCol],
-          newStart,
-          drag.durationMin,
-          drag.anchor ?? undefined,
-        );
+        onEventDrop(drag.id, weekDates[newCol], newStart, drag.durationMin, drag.anchor ?? undefined);
       }
       setDrag(null);
     };
@@ -2240,22 +1976,11 @@ function WeekEventsOverlay({
         const end = fromISOLocal(ev.endISO);
         const colIdx = weekDates.findIndex((d) => sameDay(d, start));
         if (colIdx < 0) return null;
-        let startMin = start.getHours() * 60 + start.getMinutes();
-        let endMin = end.getHours() * 60 + end.getMinutes();
-        // All-day events: pin to the top of the day column at 06:00 with a 30-min visual block.
-        if (ev.allDay) {
-          startMin = startHour * 60;
-          endMin = startMin + 30;
-        }
-        let since = startMin - startHour * 60;
-        let dur = Math.max(30, endMin - startMin);
-        // Started before the visible window (e.g. 05:30) → clamp into view.
-        if (since < 0) {
-          dur = Math.max(30, dur + since); // shrink by the clipped amount
-          since = 0;
-        }
-        // Started after the visible window (after 01:00 next day) — out of range.
-        if (since >= 19 * 60) return null;
+        const startMin = start.getHours() * 60 + start.getMinutes();
+        const endMin = end.getHours() * 60 + end.getMinutes();
+        const since = startMin - startHour * 60;
+        const dur = Math.max(30, endMin - startMin);
+        if (since < 0 || since >= 19 * 60) return null;
         const top = headerBottom + (since / 30) * rowHeight;
         const height = (dur / 30) * rowHeight;
         const box = cols[colIdx];
@@ -2285,8 +2010,7 @@ function WeekEventsOverlay({
             onMouseLeave={(e) => {
               if (isGhost || appKind !== "diary") return;
               const related = e.relatedTarget as Node | null;
-              const goingIntoMenu =
-                related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
+              const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
               if (goingIntoMenu) return;
               scheduleClose();
             }}
@@ -2337,21 +2061,16 @@ function WeekEventsOverlay({
               (() => {
                 const actKey = (ev.activity || ev.diarySub || "").toLowerCase();
                 const ActIcon: LucideIcon =
-                  actKey === "cycling" || actKey === "bike"
-                    ? Bike
-                    : actKey === "swimming" || actKey === "swim"
-                      ? Waves
-                      : actKey === "strength"
-                        ? Dumbbell
-                        : actKey === "xcskiing"
-                          ? Snowflake
-                          : Footprints;
+                  actKey === "cycling" || actKey === "bike" ? Bike :
+                  actKey === "swimming" || actKey === "swim" ? Waves :
+                  actKey === "strength" ? Dumbbell :
+                  actKey === "xcskiing" ? Snowflake :
+                  Footprints;
                 const durStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
                 const km = ev.distanceKm;
                 const distVal = km != null ? kmToUnit(km, unit) : null;
                 const isStrength = actKey === "strength";
-                const isNorwegian =
-                  typeof navigator !== "undefined" && /^nb|^nn|^no/i.test(navigator.language || "");
+                const isNorwegian = typeof navigator !== "undefined" && /^nb|^nn|^no/i.test(navigator.language || "");
                 const hourSuffix = isNorwegian ? "t" : "h";
                 const totalMin = Math.max(0, endMin - startMin);
                 const durH = Math.floor(totalMin / 60);
@@ -2359,9 +2078,7 @@ function WeekEventsOverlay({
                 const strengthLabel = durH > 0 ? `${durH}${hourSuffix} ${durM}m` : `${durM}m`;
                 const distLabel = isStrength
                   ? strengthLabel
-                  : distVal != null
-                    ? `${distVal.toFixed(1)} ${unitLabel(unit)}`
-                    : "—";
+                  : distVal != null ? `${distVal.toFixed(1)} ${unitLabel(unit)}` : "—";
                 const iconHalfBg = ev.color
                   ? `color-mix(in srgb, ${ev.color} 40%, white)`
                   : "rgba(0,0,0,0.05)";
@@ -2369,11 +2086,7 @@ function WeekEventsOverlay({
                 if (tileDesign === "icon") {
                   return (
                     <div className="flex h-full w-full items-center justify-center pl-1">
-                      <ActIcon
-                        className="h-5 w-5 shrink-0"
-                        strokeWidth={2.25}
-                        style={{ color: accent }}
-                      />
+                      <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
                     </div>
                   );
                 }
@@ -2384,17 +2097,11 @@ function WeekEventsOverlay({
                         className="flex w-1/2 items-center justify-center"
                         style={{ background: iconHalfBg }}
                       >
-                        <ActIcon
-                          className="h-5 w-5 shrink-0"
-                          strokeWidth={2.25}
-                          style={{ color: accent }}
-                        />
+                        <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
                       </div>
                       <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
                         <span className="truncate text-[12px] font-semibold">{ev.title}</span>
-                        <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
-                          {durStr}
-                        </span>
+                        <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{durStr}</span>
                         {!isStrength && (
                           <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
                             {distLabel}
@@ -2411,11 +2118,7 @@ function WeekEventsOverlay({
                       className="flex w-1/2 items-center justify-center"
                       style={{ background: iconHalfBg }}
                     >
-                      <ActIcon
-                        className="h-7 w-7 shrink-0"
-                        strokeWidth={2.25}
-                        style={{ color: accent }}
-                      />
+                      <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
                     </div>
                     <div
                       className="flex w-1/2 items-center justify-center text-ink"
@@ -2434,9 +2137,7 @@ function WeekEventsOverlay({
                           {durH > 0 && (
                             <>
                               <span>{durH}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>
-                                {hourSuffix}
-                              </span>
+                              <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{hourSuffix}</span>
                             </>
                           )}
                           <span>{durM}</span>
@@ -2472,9 +2173,7 @@ function WeekEventsOverlay({
               })()
             ) : (
               <div className="flex items-center gap-1">
-                {Icon && (
-                  <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
-                )}
+                {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: accent }} />}
                 <span className="truncate font-medium">{ev.title}</span>
                 <span className="ml-auto shrink-0 pl-1 mono text-[10.5px] tabular-nums opacity-70">
                   {`${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`}
@@ -2484,36 +2183,36 @@ function WeekEventsOverlay({
           </div>
         );
       })}
-      {appKind === "diary" &&
-        hoverId &&
-        hoverRect &&
-        (() => {
-          const ev = events.find((e) => e.id === hoverId);
-          if (!ev) return null;
-          return (
-            <SessionHoverMenu
-              ev={ev}
-              blockRect={hoverRect}
-              rowHeight={rowHeight}
-              visible={hoverId === ev.id}
-              onMenuEnter={cancelClose}
-              onMenuLeave={scheduleClose}
-              onForceClose={() => {
-                cancelClose();
-                setHoverId(null);
-                setHoverRect(null);
-              }}
-              onDelete={() => {
-                cancelClose();
-                setHoverId(null);
-                setHoverRect(null);
-                onDeleteEvent?.(ev.id);
-              }}
-              onSaveNote={(note) => onUpsertSession?.({ ...ev, sessionNote: note || undefined })}
-              onUpsert={(patch) => onUpsertSession?.(patch)}
-            />
-          );
-        })()}
+      {appKind === "diary" && hoverId && hoverRect && (() => {
+        const ev = events.find((e) => e.id === hoverId);
+        if (!ev) return null;
+        return (
+          <SessionHoverMenu
+            ev={ev}
+            blockRect={hoverRect}
+            rowHeight={rowHeight}
+            visible={hoverId === ev.id}
+            onMenuEnter={cancelClose}
+            onMenuLeave={scheduleClose}
+            onForceClose={() => {
+              cancelClose();
+              setHoverId(null);
+              setHoverRect(null);
+            }}
+            onDelete={() => {
+              cancelClose();
+              setHoverId(null);
+              setHoverRect(null);
+              onDeleteEvent?.(ev.id);
+            }}
+            onSaveNote={(note) =>
+              onUpsertSession?.({ ...ev, sessionNote: note || undefined })
+            }
+            onUpsert={(patch) => onUpsertSession?.(patch)}
+          />
+        );
+      })()}
     </>
   );
 }
+
