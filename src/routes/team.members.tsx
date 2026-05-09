@@ -19,7 +19,7 @@ import {
   User as UserIcon,
   UserCog,
 } from "lucide-react";
-import { UniversalTopBar } from "@/components/NavIconTabs";
+
 import { OrgChart, type OrgPerson, type OrgGroup } from "@/components/OrgChart";
 import { GroupColorPicker } from "@/components/GroupColorPicker";
 import { Switch } from "@/components/ui/switch";
