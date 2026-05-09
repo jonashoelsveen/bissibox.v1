@@ -35,8 +35,8 @@ type CreateKind =
 export function GlobalTopTabBar() {
   const { user, mode } = useAuth();
   const activeKey = useActiveNavKey();
-  const navigate = useNavigate();
-  
+
+
   const isEntity = mode === "team" || mode === "organizer";
 
   const [plusOpen, setPlusOpen] = useState(false);
