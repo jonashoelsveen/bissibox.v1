@@ -36,7 +36,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-export type LibraryCategory = "previous" | "meetings" | "notes" | "files" | "media";
+export type LibraryCategory = "previous" | "meetings" | "notes" | "files" | "media" | "map";
 
 interface FolderLite {
   id: string;
