@@ -50,8 +50,31 @@ export interface LibrarySideNavValue {
   folder: string;
 }
 
-type SectionKey = "meetings" | "notes" | "files" | "media";
+type SectionKey = "meetings" | "notes" | "files" | "media" | "map";
 type TableName = "meeting_folders" | "note_folders" | "file_folders" | "media_albums";
+
+/** Mirrors MapPage's MapFolder shape (subset). */
+interface MapFolderLite {
+  id: string;
+  name: string;
+  pinned: boolean;
+  sort_order: number;
+}
+const mapFoldersKey = (scope: string) => `map:folders:${scope}`;
+function readMapFolders(scope: string): MapFolderLite[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(mapFoldersKey(scope));
+    return raw ? (JSON.parse(raw) as MapFolderLite[]) : [];
+  } catch {
+    return [];
+  }
+}
+function writeMapFolders(scope: string, next: MapFolderLite[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(mapFoldersKey(scope), JSON.stringify(next));
+  window.dispatchEvent(new CustomEvent("map:refresh"));
+}
 
 export function LibrarySideNav({
   value,
@@ -67,11 +90,14 @@ export function LibrarySideNav({
   const [fileFolders, setFileFolders] = useState<FolderLite[]>([]);
   const [mediaAlbums, setMediaAlbums] = useState<FolderLite[]>([]);
   const [meetingFolders, setMeetingFolders] = useState<FolderLite[]>([]);
+  const [mapFolders, setMapFolders] = useState<FolderLite[]>([]);
+  const [mapScope, setMapScope] = useState<string>("anon");
   const [open, setOpen] = useState<Record<SectionKey, boolean>>({
     meetings: true,
     notes: true,
     files: true,
     media: true,
+    map: true,
   });
 
   const [menuFor, setMenuFor] = useState<string | null>(null);
