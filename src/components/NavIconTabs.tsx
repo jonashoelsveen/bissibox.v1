@@ -10,7 +10,7 @@ import {
   UsersRound,
   Armchair,
   CalendarDays,
-  Map as MapIcon,
+  
   BookOpen,
   Briefcase,
 } from "lucide-react";
@@ -65,7 +65,6 @@ function useNavItems(): NavItem[] {
     items.push({ key: "search", to: "/", label: "Search", icon: Search });
   }
   if (isOrganizer) {
-    items.push({ key: "map", to: "/media", label: "Map", icon: MapIcon, search: { tab: "map" } });
     items.push({ key: "events", to: "/organizer/library", label: "My events", icon: Tent });
   }
   items.push({ key: "settings", to: "/settings", label: "Settings", icon: Settings });
@@ -308,12 +307,10 @@ export function useActiveNavKey(): NavKey {
   if (path.startsWith("/team/group-members")) return "group-members";
   if (path.startsWith("/team/members")) return "members";
   if (path.startsWith("/media")) {
-    if (search && search.tab === "map") return "map";
     return "library";
   }
   if (path.startsWith("/calendar")) return "calendar";
   if (path.startsWith("/diary")) return "diary";
-  if (path.startsWith("/map")) return "map";
   if (path.startsWith("/organizer")) return "events";
   if (path.startsWith("/desk")) return "desk";
   if (path.startsWith("/settings")) return "settings";
