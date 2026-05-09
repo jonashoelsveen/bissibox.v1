@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { TopBarSlot } from "@/components/TopBarSlot";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import {
   FolderClosed,
