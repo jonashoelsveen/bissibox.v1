@@ -1,37 +1,35 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 type Ctx = {
-  node: ReactNode;
-  setNode: (n: ReactNode) => void;
+  el: HTMLElement | null;
+  setEl: (el: HTMLElement | null) => void;
 };
 
 const TopBarSlotContext = createContext<Ctx | null>(null);
 
 export function TopBarSlotProvider({ children }: { children: ReactNode }) {
-  const [node, setNode] = useState<ReactNode>(null);
+  const [el, setEl] = useState<HTMLElement | null>(null);
   return (
-    <TopBarSlotContext.Provider value={{ node, setNode }}>
+    <TopBarSlotContext.Provider value={{ el, setEl }}>
       {children}
     </TopBarSlotContext.Provider>
   );
 }
 
-export function useTopBarSlotNode(): ReactNode {
+/** Mount point inside GlobalTopTabBar — captures the host DOM node. */
+export function TopBarSlotMount({ className }: { className?: string }) {
   const ctx = useContext(TopBarSlotContext);
-  return ctx?.node ?? null;
+  if (!ctx) return null;
+  return <div ref={ctx.setEl} className={className} />;
 }
 
 /**
- * Pages call this to publish a node (e.g. their open-tab strip) into the
- * universal top tab bar between the section icons and the search/plus icons.
- * The node is cleared automatically when the page unmounts or deps change.
+ * Pages render this and pass children to publish them into the universal
+ * top tab bar between the section icons and the search/plus icons.
  */
-export function useTopBarSlot(node: ReactNode, deps: React.DependencyList) {
+export function TopBarSlot({ children }: { children: ReactNode }) {
   const ctx = useContext(TopBarSlotContext);
-  useEffect(() => {
-    if (!ctx) return;
-    ctx.setNode(node);
-    return () => ctx.setNode(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  if (!ctx?.el) return null;
+  return createPortal(children, ctx.el);
 }
