@@ -1145,6 +1145,26 @@ export function UnifiedElasticGrid({
             return { startMin, endMin: startMin + 30 };
           })()}
           onClose={closePopover}
+          onTimeChange={(t) => {
+            if (mode.kind !== "year" || !t) return;
+            const monthCol = markRange?.month ?? popover.key.month;
+            const newLo = Math.max(2, Math.round((t.startMin - WEEK_START_HOUR * 60) / 30) + 2);
+            const newHi = Math.max(newLo, Math.round((t.endMin - WEEK_START_HOUR * 60) / 30) + 1);
+            // Reflect the new duration in the highlighted (marked) area
+            // immediately, so the calendar visually matches the duration the
+            // user just chose — without moving the popover itself.
+            setMarkRange({ month: monthCol, lo: newLo, hi: newHi });
+            setMarkReleased(true);
+            setPopover((p) => (p ? { ...p, pendingTime: t } : p));
+            // Scroll the calendar (not the popover) so the updated range
+            // sits inside the viewport.
+            requestAnimationFrame(() => {
+              const target = containerRef.current?.querySelector(
+                `[data-mark-cell='1']`,
+              ) as HTMLElement | null;
+              target?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            });
+          }}
           onCommit={(text, color, time) => {
             const t = text.trim();
 
