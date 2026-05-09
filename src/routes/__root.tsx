@@ -3,6 +3,7 @@ import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TopBar } from "@/components/TopBar";
 import { GlobalTopTabBar } from "@/components/GlobalTopTabBar";
+import { GlobalCreateOverlay } from "@/components/GlobalCreateOverlay";
 import { TopBarSlotProvider } from "@/components/TopBarSlot";
 import { Toaster } from "@/components/ui/sonner";
 
