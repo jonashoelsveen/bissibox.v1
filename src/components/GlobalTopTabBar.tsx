@@ -195,13 +195,15 @@ export function GlobalTopTabBar() {
                   </>
                 )}
               </div>
-              <Item
-                icon={<Tent className="h-3.5 w-3.5" />}
-                label="Event"
-                hint="Folder"
-                onClick={() => trigger("event")}
-                onHintClick={() => triggerContainer("event")}
-              />
+              {isEntity && (
+                <Item
+                  icon={<Tent className="h-3.5 w-3.5" />}
+                  label="Event"
+                  hint="Folder"
+                  onClick={() => trigger("event")}
+                  onHintClick={() => triggerContainer("event")}
+                />
+              )}
             </div>
           )}
         </div>
