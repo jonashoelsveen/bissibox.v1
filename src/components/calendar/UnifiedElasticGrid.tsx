@@ -196,6 +196,17 @@ function isWeekend(year: number, month: number, day: number) {
   return d === 0 || d === 6;
 }
 
+function getWeekHeaderCells(container: HTMLDivElement | null): HTMLElement[] {
+  if (!container) return [];
+  const grid = container.firstElementChild;
+  if (!(grid instanceof HTMLElement)) return [];
+  const children = Array.from(grid.children).filter(
+    (node): node is HTMLElement => node instanceof HTMLElement,
+  );
+  if (children.length < 8) return [];
+  return children.slice(1, 8);
+}
+
 // Monday-anchored start-of-week for a given date.
 function startOfWeekMon(d: Date): Date {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -668,7 +679,7 @@ export function UnifiedElasticGrid({
     let raf = 0;
 
     const tick = (now: number) => {
-      const focused = c.querySelector<HTMLElement>(`[data-month-col="${targetMonth}"]`);
+      const focused = getWeekHeaderCells(c)[targetMonth] ?? null;
       if (focused) {
         const width = focused.offsetWidth;
         const left = focused.offsetLeft;
@@ -1887,10 +1898,11 @@ function measureWeekOverlayGeometry(container: HTMLDivElement | null) {
   const scrollLeft = container.scrollLeft;
   const cols: Array<{ left: number; width: number }> = [];
   let headerBottom = 0;
+  const headers = getWeekHeaderCells(container);
 
-  for (let i = 0; i < 7; i++) {
-    const header = container.querySelector<HTMLElement>(`[data-month-col="${i}"]`);
-    if (!header) return null;
+  if (headers.length !== 7) return null;
+
+  for (const header of headers) {
     const rect = header.getBoundingClientRect();
     cols.push({
       left: rect.left - containerRect.left + scrollLeft,
