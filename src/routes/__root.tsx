@@ -76,7 +76,7 @@ function RootComponent() {
       <TopBarSlotProvider>
         <TopBar />
         <GlobalTopTabBar />
-        <main className="min-h-screen pb-16 pt-[100px]">
+        <main className="min-h-screen pb-16 pt-[57px]">
           <Outlet />
         </main>
         <Toaster />
