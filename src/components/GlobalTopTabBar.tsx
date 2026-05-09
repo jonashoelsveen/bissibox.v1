@@ -80,15 +80,6 @@ export function GlobalTopTabBar() {
     }
   };
 
-  const triggerContainer = (kind: CreateKind) => {
-    close();
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("global-create-container", { detail: { kind } }),
-      );
-    }
-  };
-
   return (
     <div className="fixed left-0 right-0 top-[11px] z-40 border-b border-hairline bg-background">
       <div className="flex items-end gap-1 px-4 md:px-6">
