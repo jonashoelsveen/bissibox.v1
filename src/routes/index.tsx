@@ -201,7 +201,7 @@ function Index() {
 
   return (
     <div className="px-4 md:px-6">
-      {user && <UniversalTopBar activeKey="search" title="Search" icon={Search} />}
+      
       {user && mode !== "organizer" && mode !== "team" && (
         <div className="pt-6">
           <SearchModeToggle active="races" />
