@@ -99,23 +99,50 @@ export function CalendarPage() {
       return next;
     });
 
-  // Load user categories so unknown me:* keys are pre-seeded as visible.
+  // Load user categories so unknown me:* keys are pre-seeded according to
+  // their persisted `hidden` flag. Subscribes for live updates.
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
+    const apply = (rows: Array<{ color: string; hidden: boolean; default_key: string | null }>) => {
+      if (cancelled) return;
+      setVisibleCategories((prev) => {
+        const next = new Set(prev);
+        for (const row of rows) {
+          const key = `me:${row.color.toLowerCase()}` as CategoryKey;
+          if (row.hidden) next.delete(key);
+          else next.add(key);
+          if (row.default_key === "training") {
+            if (row.hidden) next.delete("ind:training");
+            else next.add("ind:training");
+          }
+        }
+        return next;
+      });
+    };
     void supabase
       .from("calendar_categories")
-      .select("color")
+      .select("color,hidden,default_key")
       .eq("user_id", user.id)
-      .then(({ data }) => {
-        if (!data) return;
-        setVisibleCategories((prev) => {
-          const next = new Set(prev);
-          for (const row of data) {
-            next.add(`me:${(row.color as string).toLowerCase()}` as CategoryKey);
-          }
-          return next;
-        });
-      });
+      .then(({ data }) => apply((data ?? []) as never));
+    const ch = supabase
+      .channel(`calendar-page-categories-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "calendar_categories", filter: `user_id=eq.${user.id}` },
+        () => {
+          void supabase
+            .from("calendar_categories")
+            .select("color,hidden,default_key")
+            .eq("user_id", user.id)
+            .then(({ data }) => apply((data ?? []) as never));
+        },
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(ch);
+    };
   }, [user]);
 
   return (
