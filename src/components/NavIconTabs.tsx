@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
-import { ProfileTab } from "@/components/ProfileTab";
 
 type NavKey =
   | "library"
@@ -116,16 +115,10 @@ function useOrderedItems(items: NavItem[]): [NavItem[], (next: NavItem[]) => voi
   return [ordered, persist];
 }
 
-export function NavIconTabs({
-  activeKey,
-  onActiveClick,
-}: {
-  activeKey: NavKey;
-  onActiveClick?: () => void;
-}) {
+export function NavIconTabs({ activeKey }: { activeKey: NavKey }) {
   const items = useNavItems();
   const [ordered, persist] = useOrderedItems(items);
-  const visible = ordered;
+  const visible = ordered.filter((i) => i.key !== activeKey);
 
   const stripRef = useRef<HTMLDivElement | null>(null);
   const btnRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -195,9 +188,19 @@ export function NavIconTabs({
       const st = stateRef.current;
       stateRef.current = null;
       if (st && st.moved && st.currentIndex !== st.startIndex) {
-        const next = visible.slice();
-        const [moved] = next.splice(st.startIndex, 1);
-        next.splice(st.currentIndex, 0, moved);
+        const nextVisible = visible.slice();
+        const [moved] = nextVisible.splice(st.startIndex, 1);
+        nextVisible.splice(st.currentIndex, 0, moved);
+        const activeItem = ordered.find((i) => i.key === activeKey);
+        const next: NavItem[] = [];
+        let vi = 0;
+        for (const it of ordered) {
+          if (it.key === activeKey) {
+            next.push(activeItem!);
+          } else {
+            next.push(nextVisible[vi++]);
+          }
+        }
         persist(next);
       } else if (st && !st.moved) {
         const target = ev.target as HTMLElement;
@@ -237,7 +240,6 @@ export function NavIconTabs({
                 ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)"
                 : undefined,
             };
-        const isActive = item.key === activeKey;
         return (
           <div
             key={item.key}
@@ -254,20 +256,9 @@ export function NavIconTabs({
               title={item.label}
               onPointerDown={(e) => onPointerDown(e, item.key)}
               onClick={(e) => {
-                if (stateRef.current?.moved) {
-                  e.preventDefault();
-                  return;
-                }
-                if (isActive && onActiveClick) {
-                  e.preventDefault();
-                  onActiveClick();
-                }
+                if (stateRef.current?.moved) e.preventDefault();
               }}
-              className={`-mb-px flex h-9 w-9 select-none items-center justify-center rounded-md border-b-2 transition hover:bg-secondary/60 ${
-                isActive
-                  ? "border-primary text-ink"
-                  : "border-transparent text-muted-foreground hover:text-ink"
-              }`}
+              className="-mb-px flex h-9 w-9 select-none items-center justify-center rounded-md border-b-2 border-transparent text-muted-foreground transition hover:bg-secondary/60 hover:text-ink"
             >
               <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
             </Link>
@@ -280,17 +271,24 @@ export function NavIconTabs({
 
 export function UniversalTopBar({
   activeKey,
+  title,
+  icon: Icon,
   rightSlot,
 }: {
   activeKey: NavKey;
-  /** kept for backwards-compat; unused now that the page title is no longer rendered */
-  title?: string;
-  icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  title: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   rightSlot?: React.ReactNode;
 }) {
   return (
     <div className="sticky top-14 z-20 -mx-4 flex items-end gap-1 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
-      <ProfileTab />
+      <div
+        className="-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 border-primary py-2.5 pl-0 pr-4 text-sm font-medium text-ink"
+        style={{ width: 240 }}
+      >
+        <Icon className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
+        <span className="truncate">{title}</span>
+      </div>
       <NavIconTabs activeKey={activeKey} />
       <div className="flex-1" />
       {rightSlot}

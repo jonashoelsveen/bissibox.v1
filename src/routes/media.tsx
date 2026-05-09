@@ -11,7 +11,6 @@ import { NotesPage } from "@/components/library/NotesPage";
 import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
 import { NavIconTabs } from "@/components/NavIconTabs";
-import { ProfileTab } from "@/components/ProfileTab";
 import { PreviousPage, type PreviousNewKind } from "@/components/library/PreviousPage";
 import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
 import { CreateContainerDialog } from "@/components/library/CreateContainerDialog";
@@ -497,8 +496,20 @@ function LibraryPage() {
     <div className="px-4 md:px-6">
       {/* Top-level horizontal tab bar — spans full width above sidebar + main */}
       <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
-        <ProfileTab />
-        <NavIconTabs activeKey="library" onActiveClick={() => setActiveNoteId(null)} />
+        <button
+          onClick={() => setActiveNoteId(null)}
+          className={`-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 py-2.5 pl-0 pr-4 text-sm font-medium ${
+            showingNote
+              ? "border-transparent text-muted-foreground hover:text-ink"
+              : "border-primary text-ink"
+          }`}
+          style={{ width: 220, justifyContent: "flex-start" }}
+          title="Library"
+        >
+          <Library className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
+          <span>Library</span>
+        </button>
+        <NavIconTabs activeKey="library" />
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
           {openNoteTabs.length > 0 && (
             <div className="relative min-w-0 flex-1">

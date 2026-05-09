@@ -4,8 +4,8 @@
  */
 
 import { NavIconTabs } from "@/components/NavIconTabs";
-import { ProfileTab } from "@/components/ProfileTab";
 import { useMemo, useState } from "react";
+import { BookOpen } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import type { CategoryKey } from "./CalendarSideNav";
 import { DiarySideNav } from "./DiarySideNav";
@@ -45,12 +45,18 @@ export function DiaryPage() {
   return (
     <div className="px-4 md:px-6">
       <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-2 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
-        <ProfileTab />
+        <div
+          className="-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 border-primary py-2.5 pl-0 pr-4 text-sm font-medium text-ink"
+          style={{ width: 240 }}
+        >
+          <BookOpen className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
+          <span className="truncate">Diary</span>
+        </div>
         <NavIconTabs activeKey="diary" />
         <div className="flex-1" />
       </div>
 
-      <div className="grid gap-6 pt-4 md:grid-cols-[220px_1fr]">
+      <div className="grid gap-6 pt-4 md:grid-cols-[240px_1fr]">
         <aside className="md:sticky md:top-28 md:self-start">
           <DiarySideNav
             currentDate={currentDate}

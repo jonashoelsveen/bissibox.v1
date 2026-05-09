@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { NavIconTabs } from "@/components/NavIconTabs";
-import { ProfileTab } from "@/components/ProfileTab";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -141,8 +140,20 @@ function GroupMeetingsPage() {
     <div className="px-4 md:px-6">
       {/* Top tab bar — single fixed "Meetings" + open meeting tabs */}
       <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
-        <ProfileTab />
-        <NavIconTabs activeKey="group-meetings" onActiveClick={() => setActiveId(null)} />
+        <button
+          onClick={() => setActiveId(null)}
+          className={`-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 py-2.5 pl-0 pr-4 text-sm font-medium ${
+            showingMeeting
+              ? "border-transparent text-muted-foreground hover:text-ink"
+              : "border-primary text-ink"
+          }`}
+          style={{ width: 220, justifyContent: "flex-start" }}
+          title="Group Meetings"
+        >
+          <Briefcase className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
+          <span>Meetings</span>
+        </button>
+        <NavIconTabs activeKey="group-meetings" />
         <nav className="flex min-w-0 flex-1 items-end overflow-x-auto pl-2">
           {openTabs.map((t) => {
             const isActive = activeId === t.id;
