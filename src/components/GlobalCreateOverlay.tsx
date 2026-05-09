@@ -171,14 +171,27 @@ function CreateBody({
     if (busy) return;
     setBusy(true);
     try {
+      let payload: OpenTabPayload | null = null;
       if (cfg.upload) {
-        await uploadItems(kind, files, folder, { userId, teamId });
+        payload = await uploadItems(kind, files, folder, { userId, teamId });
       } else {
-        await createItem(kind, name.trim(), folder, { userId, teamId });
+        payload = await createItem(kind, name.trim(), folder, { userId, teamId });
       }
       toast.success("Created");
       dispatchRefresh(kind);
       onClose();
+      if (payload) {
+        const tabFor: Record<OpenTabPayload["type"], "notes" | "meetings" | "media" | "files"> = {
+          note: "notes",
+          meeting: "meetings",
+          media: "media",
+          file: "files",
+        };
+        await navigate({ to: "/media", search: { tab: tabFor[payload.type] } });
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("library:open-tab", { detail: payload }));
+        }, 50);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Something went wrong");
     } finally {
