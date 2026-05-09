@@ -1572,9 +1572,7 @@ function DayCellPair(props: DayCellPairProps) {
                 <Plus className="h-5 w-5" strokeWidth={2} />
               </button>
             )}
-            {isSelected && (
-              <span className="pointer-events-none absolute inset-0 z-[2] rounded-[2px] outline outline-2 outline-primary outline-offset-[-2px]" />
-            )}
+            {/* Selection outline removed — keep marking subtle (gray fill only) */}
 
             {false && showCompact && null}
 
@@ -1686,18 +1684,7 @@ function DayCellPair(props: DayCellPairProps) {
               />
             )}
 
-            {isSelected && !isEditing && !periph && (
-              <span
-                data-role="fill-handle"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  onHandleDown(k);
-                }}
-                className="absolute -bottom-[3px] -right-[3px] z-[3] h-2 w-2 cursor-ns-resize rounded-[1px] border border-background bg-primary"
-                title="Dra ned for å fylle"
-              />
-            )}
+            {/* Fill-handle (excel-style tip) removed per design */}
 
             {weekend && !cellColor && (
               <span className="pointer-events-none absolute inset-0 bg-muted/20" />

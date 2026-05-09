@@ -728,10 +728,7 @@ export function MonthGridType1({
                     <DayNoteButton calId={calId} date={d.date} variant="month" />
                   )}
 
-                  {/* Excel focus ring */}
-                  {focused && d.inMonth && (
-                    <span className="pointer-events-none absolute inset-0 z-[2] rounded-[2px] outline outline-2 outline-primary outline-offset-[-2px]" />
-                  )}
+                  {/* Focus ring intentionally removed — keep selection subtle */}
                 </div>
               );
             })}
@@ -1209,13 +1206,15 @@ export function PopoverEditor({
   const POPOVER_W = 280;
   const POPOVER_H = seat === "individual" ? 220 : 190;
   const margin = 8;
-  let top = anchor.bottom + margin;
-  let left = anchor.left;
-  if (top + POPOVER_H > window.innerHeight) {
-    top = Math.max(margin, anchor.top - POPOVER_H - margin);
-  }
+  // Position beside the anchor: right by default, flip left if no room
+  // (e.g. Sunday column). Top edge aligns with the anchor's top edge.
+  let top = anchor.top;
+  let left = anchor.right + margin;
   if (left + POPOVER_W > window.innerWidth) {
-    left = Math.max(margin, window.innerWidth - POPOVER_W - margin);
+    left = Math.max(margin, anchor.left - POPOVER_W - margin);
+  }
+  if (top + POPOVER_H > window.innerHeight) {
+    top = Math.max(margin, window.innerHeight - POPOVER_H - margin);
   }
 
   // Mini duration column geometry.
