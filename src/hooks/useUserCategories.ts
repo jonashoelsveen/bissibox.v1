@@ -38,7 +38,7 @@ export function useUserCategories() {
     void load();
     if (!user) return;
     const ch = supabase
-      .channel(`calendar-categories-${user.id}`)
+      .channel(`calendar-categories-${user.id}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "calendar_categories", filter: `user_id=eq.${user.id}` },
