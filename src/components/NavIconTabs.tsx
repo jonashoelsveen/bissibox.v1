@@ -307,12 +307,10 @@ export function useActiveNavKey(): NavKey {
   if (path.startsWith("/team/group-members")) return "group-members";
   if (path.startsWith("/team/members")) return "members";
   if (path.startsWith("/media")) {
-    if (search && search.tab === "map") return "map";
     return "library";
   }
   if (path.startsWith("/calendar")) return "calendar";
   if (path.startsWith("/diary")) return "diary";
-  if (path.startsWith("/map")) return "map";
   if (path.startsWith("/organizer")) return "events";
   if (path.startsWith("/desk")) return "desk";
   if (path.startsWith("/settings")) return "settings";
