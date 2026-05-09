@@ -1,5 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { UniversalTopBar } from "@/components/NavIconTabs";
+import { Armchair } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -366,6 +368,7 @@ function DeskPage() {
 
   return (
     <div className="px-4 md:px-6">
+      <UniversalTopBar activeKey="desk" title="Desk" icon={Armchair} />
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center justify-between gap-2 pt-4">
           <div className="flex items-baseline gap-2">

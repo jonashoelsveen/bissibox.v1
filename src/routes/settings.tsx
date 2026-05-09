@@ -5,7 +5,8 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 import { RolesPanel } from "@/components/RolesPanel";
-import { ChevronDown, ChevronRight, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network, Settings as SettingsIcon } from "lucide-react";
+import { UniversalTopBar } from "@/components/NavIconTabs";
 import { TopBarColorPicker } from "@/components/appearance/TopBarColorPicker";
 import {
   PROFILE_VISIBILITY_ITEMS,
@@ -365,6 +366,7 @@ function SettingsPage() {
 
   return (
     <div className="px-4 md:px-6">
+      <UniversalTopBar activeKey="settings" title="Settings" icon={SettingsIcon} />
       <div>
         <div className="flex items-center justify-between gap-2 pt-4 pr-14">
           <div className="flex items-baseline gap-2">
