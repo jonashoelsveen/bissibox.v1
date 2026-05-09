@@ -130,30 +130,26 @@ export function CalendarSideNav({
 
       {/* Category filters */}
       <div className="flex flex-col gap-0.5 pb-4">
-        <div className="px-3 pb-1 pt-1 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted-foreground/80">
-          Kategorier
-        </div>
-
         {seat === "admin" ? (
-          <CategoryList
-            items={ADMIN_SIDENAV_CATEGORIES.map((c) => ({
-              key: c.key,
-              label: c.label,
-              color: c.color,
-            }))}
-            visible={visibleCategories}
-            onToggle={onToggleCategory}
-          />
-        ) : (
           <>
+            <div className="px-3 pb-1 pt-1 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted-foreground/80">
+              Kategorier
+            </div>
             <CategoryList
-              items={INDIVIDUAL_SIDENAV_CATEGORIES.map((c) => ({
+              items={ADMIN_SIDENAV_CATEGORIES.map((c) => ({
                 key: c.key,
                 label: c.label,
                 color: c.color,
               }))}
               visible={visibleCategories}
               onToggle={onToggleCategory}
+            />
+          </>
+        ) : (
+          <>
+            <MeCategorySectionAdapter
+              visibleCategories={visibleCategories}
+              onToggleCategory={onToggleCategory}
             />
 
             {entities.map((e) => (
@@ -171,6 +167,33 @@ export function CalendarSideNav({
       </div>
     </nav>
   );
+}
+
+/** Bridges MeCategorySection's per-id hidden set to the legacy
+ * visibleCategories<CategoryKey> set used by the grid filter. We key
+ * categories by `me:${color}` and also include `ind:training` whenever the
+ * Training default row is visible (so diary-training events stay matched). */
+function MeCategorySectionAdapter({
+  visibleCategories,
+  onToggleCategory,
+}: {
+  visibleCategories: Set<CategoryKey>;
+  onToggleCategory: (k: CategoryKey) => void;
+}) {
+  const { categories } = useUserCategories();
+  const hidden = new Set<string>();
+  for (const c of categories) {
+    const key = `me:${c.color.toLowerCase()}`;
+    if (!visibleCategories.has(key)) hidden.add(c.id);
+  }
+  const handleToggleHidden = (id: string) => {
+    const c = categories.find((x) => x.id === id);
+    if (!c) return;
+    const key = `me:${c.color.toLowerCase()}` as CategoryKey;
+    onToggleCategory(key);
+    if (c.default_key === "training") onToggleCategory("ind:training");
+  };
+  return <MeCategorySection hidden={hidden} onToggleHidden={handleToggleHidden} />;
 }
 
 /* ---------- Pieces ---------- */
