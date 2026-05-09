@@ -1484,7 +1484,7 @@ function DayCellPair(props: DayCellPairProps) {
             }}
             className={`relative flex-1 select-none text-[12px] leading-tight ${
               !isFirst && !hideTopDivider ? "border-t border-hairline/60" : ""
-            } ${ranged && !isSelected ? "bg-primary/10" : ""}`}
+            } ${(ranged || isSelected) && !mk.in ? "bg-muted-foreground/15" : ""} transition-colors`}
             style={{
               background: mk.in ? undefined : bg,
               minHeight: rowHeight,
