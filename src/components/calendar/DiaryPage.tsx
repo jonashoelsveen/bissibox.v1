@@ -3,6 +3,7 @@
  * Individual seat only; no entity tabs; week + month only.
  */
 
+import { NavIconTabs } from "@/components/NavIconTabs";
 import { useMemo, useState } from "react";
 import { BookOpen } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -51,6 +52,7 @@ export function DiaryPage() {
           <BookOpen className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
           <span className="truncate">Diary</span>
         </div>
+        <NavIconTabs activeKey="diary" />
         <div className="flex-1" />
       </div>
 

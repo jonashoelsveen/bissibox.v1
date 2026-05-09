@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { NavIconTabs } from "@/components/NavIconTabs";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowUpRight, Search, UsersRound, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -292,6 +293,7 @@ export function GroupMembersPage() {
           <UsersRound className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
           <span>Group members</span>
         </button>
+        <NavIconTabs activeKey="group-members" />
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
           {openTabs.length > 0 && (
             <div className="relative min-w-0 flex-1">

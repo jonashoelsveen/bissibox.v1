@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { NavIconTabs } from "@/components/NavIconTabs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -152,6 +153,7 @@ function GroupMeetingsPage() {
           <Briefcase className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
           <span>Meetings</span>
         </button>
+        <NavIconTabs activeKey="group-meetings" />
         <nav className="flex min-w-0 flex-1 items-end overflow-x-auto pl-2">
           {openTabs.map((t) => {
             const isActive = activeId === t.id;

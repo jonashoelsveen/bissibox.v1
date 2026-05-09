@@ -10,6 +10,7 @@ import { FilesPage } from "@/components/library/FilesPage";
 import { NotesPage } from "@/components/library/NotesPage";
 import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
+import { NavIconTabs } from "@/components/NavIconTabs";
 import { PreviousPage, type PreviousNewKind } from "@/components/library/PreviousPage";
 import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
 import { CreateContainerDialog } from "@/components/library/CreateContainerDialog";
@@ -508,6 +509,7 @@ function LibraryPage() {
           <Library className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
           <span>Library</span>
         </button>
+        <NavIconTabs activeKey="library" />
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
           {openNoteTabs.length > 0 && (
             <div className="relative min-w-0 flex-1">

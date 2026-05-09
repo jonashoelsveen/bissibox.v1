@@ -13,6 +13,7 @@
  * and the grid stay in lockstep.
  */
 
+import { NavIconTabs } from "@/components/NavIconTabs";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -156,6 +157,7 @@ export function CalendarPage() {
           <CalendarDays className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
           <span className="truncate">{calTitle}</span>
         </div>
+        <NavIconTabs activeKey="calendar" />
         <div className="flex-1" />
       </div>
 
