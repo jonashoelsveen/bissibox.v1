@@ -251,6 +251,7 @@ export function NavIconTabs({
           >
             <Link
               to={item.to}
+              search={item.search as never}
               aria-label={item.label}
               title={item.label}
               onPointerDown={(e) => onPointerDown(e, item.key)}
