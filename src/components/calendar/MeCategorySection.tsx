@@ -365,7 +365,7 @@ function CategoryMenu({
                 <button
                   key={hex}
                   type="button"
-                  onClick={() => { setColorPinned(true); onColor(hex); }}
+                  onClick={() => { setColorPinned(false); onColor(hex); }}
                   className={`h-5 w-5 rounded-full border transition-transform hover:scale-110 ${
                     selected ? "border-ink ring-2 ring-ink/30" : "border-black/10"
                   }`}
