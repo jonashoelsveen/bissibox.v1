@@ -74,13 +74,18 @@ export function MeCategorySection({
 
   return (
     <div className="flex flex-col">
-      {/* Header row */}
-      <div className="group flex w-full items-center rounded-md px-3 py-2 text-sm transition hover:bg-secondary/60">
+      {/* Header row — chevron LEFT (entity-style), plus on the RIGHT */}
+      <div className="group flex w-full items-center gap-1.5 rounded-md px-3 py-2 text-sm transition hover:bg-secondary/60">
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-label={open ? "Collapse" : "Expand"}
           className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-ink"
         >
+          <ChevronRight
+            className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-90" : ""}`}
+          />
           <span className="min-w-0 flex-1 truncate font-medium">Me</span>
         </button>
         <button
@@ -90,14 +95,6 @@ export function MeCategorySection({
           className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground hover:bg-secondary hover:text-ink"
         >
           <Plus className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-label={open ? "Collapse" : "Expand"}
-          className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground hover:bg-secondary"
-        >
-          <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
         </button>
       </div>
 
