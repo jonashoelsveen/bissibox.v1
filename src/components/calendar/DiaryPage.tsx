@@ -44,12 +44,6 @@ export function DiaryPage() {
 
   return (
     <div className="px-4 md:px-6">
-      <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-2 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
-        <ProfileTab />
-        <NavIconTabs activeKey="diary" />
-        <div className="flex-1" />
-      </div>
-
       <div className="grid gap-6 pt-4 md:grid-cols-[220px_1fr]">
         <aside className="md:sticky md:top-28 md:self-start">
           <DiarySideNav
