@@ -18,6 +18,7 @@ import { TopBarSlot } from "@/components/TopBarSlot";
 import { MeetingsListPage } from "@/components/library/MeetingsListPage";
 import { getUnsaved } from "@/lib/library-settings";
 import { TeamBoardPage } from "@/routes/team.board";
+import { MapPage } from "@/components/map/MapPage";
 import { toast } from "sonner";
 import {
   ChevronDown,
