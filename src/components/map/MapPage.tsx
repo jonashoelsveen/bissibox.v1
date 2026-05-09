@@ -450,96 +450,157 @@ export function MapPage({ embedded = false }: { embedded?: boolean } = {}) {
     return items;
   }, [items, folderFilter, folders]);
 
+  const tabStripUI = (
+    <>
+      <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
+        {openTabs.length > 0 && (
+          <div className="relative min-w-0 flex-1">
+            {edgeFade.left && (
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent" />
+            )}
+            {edgeFade.right && (
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent" />
+            )}
+            <div
+              ref={tabStripRef}
+              onScroll={updateEdgeFade}
+              className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              style={{ scrollBehavior: "smooth" }}
+            >
+              {openTabs.map((t, idx) => {
+                const isActive = activeId === t.id;
+                const colorActive = "border-muted-foreground text-ink";
+                const colorIdle = "border-transparent text-muted-foreground hover:text-ink";
+                const isDragging = dragId === t.id;
+                let translateX = 0;
+                if (dragId && !isDragging) {
+                  const st = dragStateRef.current;
+                  if (st) {
+                    const from = st.startIndex;
+                    const to = st.currentIndex;
+                    if (to > from && idx > from && idx <= to) translateX = -st.width;
+                    else if (to < from && idx >= to && idx < from) translateX = st.width;
+                  }
+                }
+                const dragStyle: React.CSSProperties = isDragging
+                  ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
+                  : { transform: `translate3d(${translateX}px,0,0)` };
+                const TabIcon = t.kind === "course" ? RouteIcon : MapPin;
+                return (
+                  <button
+                    key={t.id}
+                    ref={(el) => {
+                      if (el) tabRefs.current.set(t.id, el);
+                      else tabRefs.current.delete(t.id);
+                    }}
+                    onPointerDown={(e) => onTabPointerDown(e, t.id)}
+                    onClick={() => setActiveId(t.id)}
+                    style={{
+                      flex: "1 1 200px",
+                      minWidth: 140,
+                      maxWidth: 240,
+                      touchAction: "pan-y",
+                      ...dragStyle,
+                      transition: isDragging
+                        ? "none"
+                        : dragId
+                          ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
+                          : "color 150ms, border-color 150ms",
+                    }}
+                    className={`group -mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
+                      isActive ? colorActive : colorIdle
+                    }`}
+                    title={t.name}
+                  >
+                    <TabIcon className="h-3 w-3 shrink-0 opacity-70" />
+                    <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/60" />
+                    <span className="min-w-0 flex-1 truncate text-left">
+                      {t.folder ? `${t.folder} · ${t.name}` : t.name}
+                    </span>
+                    <span
+                      data-tab-close
+                      role="button"
+                      tabIndex={0}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeTab(t.id);
+                      }}
+                      className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                    >
+                      ✕
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </nav>
+      <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5 pl-2" />
+    </>
+  );
+
+  const bodyUI = (
+    <MapBody
+      actionsMount={actionsMount}
+      showingItem={showingItem}
+      activeItem={activeItem}
+      previousList={previousList}
+      onOpenItem={openItem}
+      onNewFolder={() => setNewFolderOpen(true)}
+      onNewItem={(kind) => setNewItemOpen(kind)}
+      activeFolder={
+        sideValue.category === "map" &&
+        sideValue.folder &&
+        sideValue.folder !== "__unsorted__"
+          ? folders.find((f) => f.id === sideValue.folder) ?? null
+          : null
+      }
+      allItems={items}
+      onItemsChange={persistItems}
+      editId={search.edit ?? null}
+      onSetEdit={(id) => {
+        navMap({
+          folder: sideValue.folder || undefined,
+          edit: id ?? undefined,
+        });
+      }}
+      onFolderRename={(folderId, newName) => {
+        const trimmed = newName.trim();
+        if (!trimmed) return;
+        if (folders.some((f) => f.id !== folderId && f.name.toLowerCase() === trimmed.toLowerCase())) {
+          toast.error("A folder with this name already exists");
+          return;
+        }
+        const oldName = folders.find((f) => f.id === folderId)?.name ?? null;
+        persistFolders(folders.map((f) => (f.id === folderId ? { ...f, name: trimmed } : f)));
+        if (oldName && oldName !== trimmed) {
+          persistItems(items.map((i) => (i.folder === oldName ? { ...i, folder: trimmed } : i)));
+        }
+      }}
+      onFolderUpdateView={(folderId, view) => {
+        persistFolders(folders.map((f) => (f.id === folderId ? { ...f, defaultView: view } : f)));
+      }}
+    />
+  );
+
+  if (embedded) {
+    // Inside /media — Library shell provides outer wrapper, side nav, and
+    // top tab bar. Render the tab strip inline at the top of the body so it
+    // doesn't fight the Library page's own TopBarSlot tabs.
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="flex items-end border-b border-hairline">{tabStripUI}</div>
+        <div className="min-w-0 flex-1 overflow-y-auto">{bodyUI}</div>
+        {renderDialogs()}
+      </div>
+    );
+  }
+
   return (
     <div className="h-full overflow-hidden px-4 md:px-6">
-      <TopBarSlot>
-        <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
-          {openTabs.length > 0 && (
-            <div className="relative min-w-0 flex-1">
-              {edgeFade.left && (
-                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent" />
-              )}
-              {edgeFade.right && (
-                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent" />
-              )}
-              <div
-                ref={tabStripRef}
-                onScroll={updateEdgeFade}
-                className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                style={{ scrollBehavior: "smooth" }}
-              >
-                {openTabs.map((t, idx) => {
-                  const isActive = activeId === t.id;
-                  const colorActive = "border-muted-foreground text-ink";
-                  const colorIdle = "border-transparent text-muted-foreground hover:text-ink";
-                  const isDragging = dragId === t.id;
-                  let translateX = 0;
-                  if (dragId && !isDragging) {
-                    const st = dragStateRef.current;
-                    if (st) {
-                      const from = st.startIndex;
-                      const to = st.currentIndex;
-                      if (to > from && idx > from && idx <= to) translateX = -st.width;
-                      else if (to < from && idx >= to && idx < from) translateX = st.width;
-                    }
-                  }
-                  const dragStyle: React.CSSProperties = isDragging
-                    ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
-                    : { transform: `translate3d(${translateX}px,0,0)` };
-                  const TabIcon = t.kind === "course" ? RouteIcon : MapPin;
-                  return (
-                    <button
-                      key={t.id}
-                      ref={(el) => {
-                        if (el) tabRefs.current.set(t.id, el);
-                        else tabRefs.current.delete(t.id);
-                      }}
-                      onPointerDown={(e) => onTabPointerDown(e, t.id)}
-                      onClick={() => setActiveId(t.id)}
-                      style={{
-                        flex: "1 1 200px",
-                        minWidth: 140,
-                        maxWidth: 240,
-                        touchAction: "pan-y",
-                        ...dragStyle,
-                        transition: isDragging
-                          ? "none"
-                          : dragId
-                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
-                            : "color 150ms, border-color 150ms",
-                      }}
-                      className={`group -mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
-                        isActive ? colorActive : colorIdle
-                      }`}
-                      title={t.name}
-                    >
-                      <TabIcon className="h-3 w-3 shrink-0 opacity-70" />
-                      <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/60" />
-                      <span className="min-w-0 flex-1 truncate text-left">
-                        {t.folder ? `${t.folder} · ${t.name}` : t.name}
-                      </span>
-                      <span
-                        data-tab-close
-                        role="button"
-                        tabIndex={0}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          closeTab(t.id);
-                        }}
-                        className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
-                      >
-                        ✕
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </nav>
-        <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5 pl-2" />
-      </TopBarSlot>
+      <TopBarSlot>{tabStripUI}</TopBarSlot>
 
       <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[220px_1fr]">
         <aside className="md:h-full md:overflow-y-auto md:pr-1">
@@ -551,58 +612,23 @@ export function MapPage({ embedded = false }: { embedded?: boolean } = {}) {
           />
         </aside>
 
-        <div className="min-w-0 md:h-full md:overflow-y-auto">
-          <MapBody
-            actionsMount={actionsMount}
-            showingItem={showingItem}
-            activeItem={activeItem}
-            previousList={previousList}
-            onOpenItem={openItem}
-            onNewFolder={() => setNewFolderOpen(true)}
-            onNewItem={(kind) => setNewItemOpen(kind)}
-            activeFolder={
-              sideValue.category === "map" &&
-              sideValue.folder &&
-              sideValue.folder !== "__unsorted__"
-                ? folders.find((f) => f.id === sideValue.folder) ?? null
-                : null
-            }
-            allItems={items}
-            onItemsChange={persistItems}
-            editId={search.edit ?? null}
-            onSetEdit={(id) => {
-              navMap({
-                folder: sideValue.folder || undefined,
-                edit: id ?? undefined,
-              });
-            }}
-            onFolderRename={(folderId, newName) => {
-              const trimmed = newName.trim();
-              if (!trimmed) return;
-              if (folders.some((f) => f.id !== folderId && f.name.toLowerCase() === trimmed.toLowerCase())) {
-                toast.error("A folder with this name already exists");
-                return;
-              }
-              const oldName = folders.find((f) => f.id === folderId)?.name ?? null;
-              persistFolders(folders.map((f) => (f.id === folderId ? { ...f, name: trimmed } : f)));
-              if (oldName && oldName !== trimmed) {
-                persistItems(items.map((i) => (i.folder === oldName ? { ...i, folder: trimmed } : i)));
-              }
-            }}
-            onFolderUpdateView={(folderId, view) => {
-              persistFolders(folders.map((f) => (f.id === folderId ? { ...f, defaultView: view } : f)));
-            }}
-          />
-        </div>
+        <div className="min-w-0 md:h-full md:overflow-y-auto">{bodyUI}</div>
       </div>
 
-      {newFolderOpen && (
-        <NewFolderDialog
-          onClose={() => setNewFolderOpen(false)}
-          onSubmit={(name) => {
-            const trimmed = name.trim();
-            if (!trimmed) return;
-            if (folders.some((f) => f.name.toLowerCase() === trimmed.toLowerCase())) {
+      {renderDialogs()}
+    </div>
+  );
+
+  function renderDialogs() {
+    return (
+      <>
+        {newFolderOpen && (
+          <NewFolderDialog
+            onClose={() => setNewFolderOpen(false)}
+            onSubmit={(name) => {
+              const trimmed = name.trim();
+              if (!trimmed) return;
+              if (folders.some((f) => f.name.toLowerCase() === trimmed.toLowerCase())) {
               toast.error("A folder with this name already exists");
               return;
             }
