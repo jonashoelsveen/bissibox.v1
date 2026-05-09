@@ -137,8 +137,7 @@ function GroupMeetingsPage() {
 
   return (
     <div className="px-4 md:px-6">
-      {/* Top tab bar — single fixed "Meetings" + open meeting tabs */}
-      <div className="sticky top-[100px] z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
+      <TopBarSlot>
         <nav className="flex min-w-0 flex-1 items-end overflow-x-auto">
           {openTabs.map((t) => {
             const isActive = activeId === t.id;
@@ -181,7 +180,7 @@ function GroupMeetingsPage() {
           })}
         </nav>
         <div ref={setActionsMount} className="flex shrink-0 items-center gap-2 pb-1.5 pl-2" />
-      </div>
+      </TopBarSlot>
 
       <div className="grid gap-6 pt-4 md:grid-cols-[220px_1fr]">
         <aside className="md:sticky md:top-28 md:self-start">
