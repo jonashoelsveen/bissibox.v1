@@ -22,6 +22,8 @@ import {
   CAT_SCHOOL_COLOR,
   CAT_WORK_COLOR,
 } from "./MonthGridType1";
+import { MeCategorySection } from "./MeCategorySection";
+import { useUserCategories } from "@/hooks/useUserCategories";
 
 /* ---------- Category keys & colors ---------- */
 
