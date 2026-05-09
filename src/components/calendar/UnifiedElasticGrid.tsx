@@ -2189,11 +2189,22 @@ function WeekEventsOverlay({
         const end = fromISOLocal(ev.endISO);
         const colIdx = weekDates.findIndex((d) => sameDay(d, start));
         if (colIdx < 0) return null;
-        const startMin = start.getHours() * 60 + start.getMinutes();
-        const endMin = end.getHours() * 60 + end.getMinutes();
-        const since = startMin - startHour * 60;
-        const dur = Math.max(30, endMin - startMin);
-        if (since < 0 || since >= 19 * 60) return null;
+        let startMin = start.getHours() * 60 + start.getMinutes();
+        let endMin = end.getHours() * 60 + end.getMinutes();
+        // All-day events: pin to the top of the day column at 06:00 with a 30-min visual block.
+        if (ev.allDay) {
+          startMin = startHour * 60;
+          endMin = startMin + 30;
+        }
+        let since = startMin - startHour * 60;
+        let dur = Math.max(30, endMin - startMin);
+        // Started before the visible window (e.g. 05:30) → clamp into view.
+        if (since < 0) {
+          dur = Math.max(30, dur + since); // shrink by the clipped amount
+          since = 0;
+        }
+        // Started after the visible window (after 01:00 next day) — out of range.
+        if (since >= 19 * 60) return null;
         const top = headerBottom + (since / 30) * rowHeight;
         const height = (dur / 30) * rowHeight;
         const box = cols[colIdx];
