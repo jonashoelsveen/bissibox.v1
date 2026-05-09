@@ -181,7 +181,7 @@ function MeCategorySectionAdapter({
   const { categories } = useUserCategories();
   const hidden = new Set<string>();
   for (const c of categories) {
-    const key = `me:${c.color.toLowerCase()}`;
+    const key = `me:${c.color.toLowerCase()}` as CategoryKey;
     if (!visibleCategories.has(key)) hidden.add(c.id);
   }
   const handleToggleHidden = (id: string) => {
