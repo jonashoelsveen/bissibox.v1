@@ -37,6 +37,7 @@ interface NavItem {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  search?: Record<string, string>;
 }
 
 function useNavItems(): NavItem[] {
