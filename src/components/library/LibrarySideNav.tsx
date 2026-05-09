@@ -429,7 +429,6 @@ export function LibrarySideNav({
   const sections = allSections.filter((s) => !s.teamOnly || isTeamMode);
 
   const isPreviousActive = value.category === "previous";
-  const isMapActive = value.category === "map";
 
   // dnd-kit sensors — small activation distance so click vs drag is clean
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
