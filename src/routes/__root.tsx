@@ -2,6 +2,7 @@ import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/r
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TopBar } from "@/components/TopBar";
+import { GlobalTopTabBar } from "@/components/GlobalTopTabBar";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -71,7 +72,8 @@ function RootComponent() {
   return (
     <AuthProvider>
       <TopBar />
-      <main className="min-h-screen pb-16 pt-14">
+      <GlobalTopTabBar />
+      <main className="min-h-screen pb-16 pt-[100px]">
         <Outlet />
       </main>
       <Toaster />

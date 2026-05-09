@@ -1,0 +1,220 @@
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import {
+  Search,
+  Plus,
+  Briefcase,
+  StickyNote,
+  FolderClosed,
+  Image as ImageIcon,
+  Map as MapIcon,
+  Tent,
+  ChevronRight,
+  MapPin,
+  Route as RouteIcon,
+} from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { ProfileTab } from "@/components/ProfileTab";
+import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
+
+type CreateKind =
+  | "meeting"
+  | "note"
+  | "file"
+  | "media"
+  | "map-location"
+  | "map-course"
+  | "event";
+
+/**
+ * Universal top tab bar fixed under the colored TopBar. Shown on every page.
+ * Hosts: ProfileTab + draggable section icons + Search + Plus menu.
+ */
+export function GlobalTopTabBar() {
+  const { user, mode } = useAuth();
+  const activeKey = useActiveNavKey();
+  const navigate = useNavigate();
+  const isEntity = mode === "team" || mode === "organizer";
+
+  const [plusOpen, setPlusOpen] = useState(false);
+  const [mapHover, setMapHover] = useState(false);
+  const plusRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!plusOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!plusRef.current) return;
+      if (!plusRef.current.contains(e.target as Node)) {
+        setPlusOpen(false);
+        setMapHover(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPlusOpen(false);
+        setMapHover(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [plusOpen]);
+
+  if (!user) return null;
+
+  const trigger = (kind: CreateKind) => {
+    setPlusOpen(false);
+    setMapHover(false);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("global-create", { detail: { kind } }));
+    }
+    switch (kind) {
+      case "meeting":
+        navigate({ to: "/team/group-meetings", search: { new: 1 } as any });
+        break;
+      case "note":
+        navigate({ to: "/media", search: { new: "note" } as any });
+        break;
+      case "file":
+        navigate({ to: "/media", search: { new: "files" } as any });
+        break;
+      case "media":
+        navigate({ to: "/media", search: { new: "media" } as any });
+        break;
+      case "map-location":
+        navigate({ to: "/map", search: { new: "location" } as any });
+        break;
+      case "map-course":
+        navigate({ to: "/map", search: { new: "course" } as any });
+        break;
+      case "event":
+        navigate({ to: "/organizer/library", search: { new: "event" } as any });
+        break;
+    }
+  };
+
+  return (
+    <div className="fixed left-0 right-0 top-14 z-40 border-b border-hairline bg-background">
+      <div className="flex items-end gap-1 px-4 md:px-6">
+        <ProfileTab />
+        <NavIconTabs activeKey={activeKey} />
+        <div className="flex-1" />
+        {/* Search */}
+        <Link
+          to="/"
+          aria-label="Search"
+          title="Search"
+          className="-mb-px mb-1 flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
+        >
+          <Search className="h-[18px] w-[18px]" strokeWidth={2.25} />
+        </Link>
+        {/* Plus */}
+        <div className="relative -mb-px mb-1" ref={plusRef}>
+          <button
+            onClick={() => setPlusOpen((v) => !v)}
+            aria-label="Create new"
+            aria-haspopup="menu"
+            aria-expanded={plusOpen}
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
+          >
+            <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </button>
+          {plusOpen && (
+            <div
+              role="menu"
+              className="absolute right-0 top-full z-50 mt-2 w-48 origin-top-right overflow-visible rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
+            >
+              {isEntity && (
+                <Item
+                  icon={<Briefcase className="h-3.5 w-3.5" />}
+                  label="Meeting"
+                  onClick={() => trigger("meeting")}
+                />
+              )}
+              <Item
+                icon={<StickyNote className="h-3.5 w-3.5" />}
+                label="Note"
+                onClick={() => trigger("note")}
+              />
+              <Item
+                icon={<FolderClosed className="h-3.5 w-3.5" />}
+                label="File"
+                onClick={() => trigger("file")}
+              />
+              <Item
+                icon={<ImageIcon className="h-3.5 w-3.5" />}
+                label="Media"
+                onClick={() => trigger("media")}
+              />
+              {/* Map with submenu */}
+              <div
+                className="relative"
+                onMouseEnter={() => setMapHover(true)}
+                onMouseLeave={() => setMapHover(false)}
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
+                >
+                  <span className="text-muted-foreground">
+                    <MapIcon className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="flex-1">Map</span>
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+                {mapHover && (
+                  <div
+                    role="menu"
+                    className="absolute right-full top-0 z-50 mr-1 w-40 overflow-hidden rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-right-1 duration-150"
+                  >
+                    <Item
+                      icon={<MapPin className="h-3.5 w-3.5" />}
+                      label="Location"
+                      onClick={() => trigger("map-location")}
+                    />
+                    <Item
+                      icon={<RouteIcon className="h-3.5 w-3.5" />}
+                      label="Course"
+                      onClick={() => trigger("map-course")}
+                    />
+                  </div>
+                )}
+              </div>
+              <Item
+                icon={<Tent className="h-3.5 w-3.5" />}
+                label="Event"
+                onClick={() => trigger("event")}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Item({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      role="menuitem"
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
+    >
+      <span className="text-muted-foreground">{icon}</span>
+      <span className="flex-1">{label}</span>
+    </button>
+  );
+}

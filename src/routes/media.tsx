@@ -10,8 +10,6 @@ import { FilesPage } from "@/components/library/FilesPage";
 import { NotesPage } from "@/components/library/NotesPage";
 import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
-import { NavIconTabs } from "@/components/NavIconTabs";
-import { ProfileTab } from "@/components/ProfileTab";
 import { PreviousPage, type PreviousNewKind } from "@/components/library/PreviousPage";
 import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
 import { CreateContainerDialog } from "@/components/library/CreateContainerDialog";
@@ -496,10 +494,8 @@ function LibraryPage() {
   return (
     <div className="px-4 md:px-6">
       {/* Top-level horizontal tab bar — spans full width above sidebar + main */}
-      <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
-        <ProfileTab />
-        <NavIconTabs activeKey="library" onActiveClick={() => setActiveNoteId(null)} />
-        <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
+      <div className="sticky top-[100px] z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
+        <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
           {openNoteTabs.length > 0 && (
             <div className="relative min-w-0 flex-1">
               {edgeFade.left && (
