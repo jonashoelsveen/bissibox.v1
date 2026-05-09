@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { NavIconTabs } from "@/components/NavIconTabs";
+
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowUpRight, Search, UsersRound, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
