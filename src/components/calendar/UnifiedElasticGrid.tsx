@@ -1058,6 +1058,7 @@ export function UnifiedElasticGrid({
                     colIdx={todayColIdx}
                     nowMinutesSinceStart={nowMinutesSinceStart}
                     rowHeight={rowHeight}
+                    headerH={headerH}
                   />
                 )}
               </div>
@@ -2113,7 +2114,7 @@ function WeekEventsOverlay({
 
     let raf = 0;
     const measure = () => {
-      const geometry = measureWeekOverlayGeometry(scrollRef.current);
+      const geometry = measureWeekOverlayGeometry(scrollRef.current, headerH);
       if (!geometry) return;
       setCols((prev) => {
         const next = geometry.cols as Box[];
@@ -2141,6 +2142,9 @@ function WeekEventsOverlay({
     scheduleMeasure();
     const resizeObserver = new ResizeObserver(scheduleMeasure);
     resizeObserver.observe(container);
+    if (container.firstElementChild instanceof HTMLElement) {
+      resizeObserver.observe(container.firstElementChild);
+    }
     container.addEventListener("scroll", scheduleMeasure, { passive: true });
     window.addEventListener("resize", scheduleMeasure);
 
@@ -2150,7 +2154,7 @@ function WeekEventsOverlay({
       container.removeEventListener("scroll", scheduleMeasure);
       window.removeEventListener("resize", scheduleMeasure);
     };
-  }, [scrollRef]);
+  }, [headerH, scrollRef]);
 
   const [drag, setDrag] = useState<{
     id: string;
