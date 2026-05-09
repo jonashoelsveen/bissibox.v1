@@ -1,4 +1,5 @@
 /**
+import { NavIconTabs } from "@/components/NavIconTabs";
  * Calendar — UI shell.
  *
  * Each profile has exactly ONE calendar (no folders, no tabs, no "Previous"

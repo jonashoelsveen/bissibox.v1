@@ -1,4 +1,5 @@
 /**
+import { NavIconTabs } from "@/components/NavIconTabs";
  * Map — UI shell that mirrors the Library/Calendar page exactly.
  *
  * Structure:

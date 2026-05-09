@@ -1,4 +1,5 @@
 /**
+import { NavIconTabs } from "@/components/NavIconTabs";
  * Diary — replica of the Calendar page restricted to logging past sessions.
  * Individual seat only; no entity tabs; week + month only.
  */
