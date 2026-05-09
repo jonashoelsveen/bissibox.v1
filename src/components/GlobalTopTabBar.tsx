@@ -143,7 +143,7 @@ export function GlobalTopTabBar() {
         <ProfileTab />
         <NavIconTabs activeKey={activeKey} />
         {/* Page-provided slot — open notes/event tabs etc. */}
-        <div className="flex min-w-0 flex-1 items-end pl-2">{slotNode}</div>
+        <TopBarSlotMount className="flex min-w-0 flex-1 items-end pl-2" />
         {/* Search */}
         <Link
           to="/"
