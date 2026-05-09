@@ -1058,6 +1058,7 @@ export function UnifiedElasticGrid({
                     colIdx={todayColIdx}
                     nowMinutesSinceStart={nowMinutesSinceStart}
                     rowHeight={rowHeight}
+                    headerH={headerH}
                   />
                 )}
               </div>
@@ -1892,36 +1893,44 @@ function DurationCell({ initial, onCommit }: DurationCellProps) {
  * column's offsetLeft/Width so it stays accurate through grid track
  * animations.
  */
-function measureWeekOverlayGeometry(container: HTMLDivElement | null) {
+function measureWeekOverlayGeometry(
+  container: HTMLDivElement | null,
+  fallbackHeaderBottom = 0,
+) {
   if (!container) return null;
 
   const grid = container.firstElementChild;
   if (!(grid instanceof HTMLElement)) return null;
 
   let cols: Array<{ left: number; width: number }> = [];
-  let headerBottom = 0;
+  let headerBottom = fallbackHeaderBottom;
   const headers = getWeekHeaderCells(container);
 
-  if (headers.length !== 7) return null;
-
-  for (const header of headers) {
-    const width = header.offsetWidth || header.getBoundingClientRect().width;
-    const left = header.offsetLeft;
-    if (width > 0) {
-      cols.push({ left, width });
+  if (headers.length === 7) {
+    for (const header of headers) {
+      const width = header.offsetWidth || header.getBoundingClientRect().width;
+      const left = header.offsetLeft;
+      if (width > 0) {
+        cols.push({ left, width });
+      }
+      const contentBottom = header.offsetTop + header.offsetHeight;
+      headerBottom = Math.max(headerBottom, contentBottom);
     }
-    const contentBottom = header.offsetTop + header.offsetHeight;
-    headerBottom = Math.max(headerBottom, contentBottom);
   }
 
   if (cols.length !== 7) {
     const gutter = grid.firstElementChild instanceof HTMLElement ? grid.firstElementChild.offsetWidth : 48;
-    const contentWidth = grid.scrollWidth || container.scrollWidth || container.clientWidth;
+    const contentWidth = grid.clientWidth || container.clientWidth || grid.scrollWidth || container.scrollWidth;
     const dayWidth = Math.max(0, (contentWidth - gutter) / 7);
     cols = Array.from({ length: 7 }, (_, idx) => ({
       left: gutter + idx * dayWidth,
       width: dayWidth,
     }));
+  }
+
+  if (headerBottom <= 0) {
+    const fallbackHeader = grid.firstElementChild instanceof HTMLElement ? grid.firstElementChild.offsetHeight : 36;
+    headerBottom = Math.max(fallbackHeaderBottom, fallbackHeader);
   }
 
   return { cols, headerBottom };
@@ -1932,12 +1941,14 @@ function NowLine({
   colIdx,
   nowMinutesSinceStart,
   rowHeight,
+  headerH,
 }: {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   colIdx: number;
   /** Minutes elapsed since the grid's start hour (e.g. 06:00). */
   nowMinutesSinceStart: number;
   rowHeight: number;
+  headerH: number;
 }) {
   const [box, setBox] = useState<{ left: number; width: number; headerBottom: number } | null>(
     null,
@@ -1949,7 +1960,7 @@ function NowLine({
 
     let raf = 0;
     const measure = () => {
-      const geometry = measureWeekOverlayGeometry(scrollRef.current);
+      const geometry = measureWeekOverlayGeometry(scrollRef.current, headerH);
       if (!geometry) return;
       const col = geometry.cols[colIdx];
       if (!col) return;
@@ -1974,6 +1985,9 @@ function NowLine({
     scheduleMeasure();
     const resizeObserver = new ResizeObserver(scheduleMeasure);
     resizeObserver.observe(container);
+    if (container.firstElementChild instanceof HTMLElement) {
+      resizeObserver.observe(container.firstElementChild);
+    }
     container.addEventListener("scroll", scheduleMeasure, { passive: true });
     window.addEventListener("resize", scheduleMeasure);
 
@@ -1983,7 +1997,7 @@ function NowLine({
       container.removeEventListener("scroll", scheduleMeasure);
       window.removeEventListener("resize", scheduleMeasure);
     };
-  }, [colIdx, scrollRef]);
+  }, [colIdx, headerH, rowHeight, scrollRef]);
 
   if (!box) return null;
   // 30-min slot maps to one rowHeight; convert minutes precisely.
@@ -2100,7 +2114,7 @@ function WeekEventsOverlay({
 
     let raf = 0;
     const measure = () => {
-      const geometry = measureWeekOverlayGeometry(scrollRef.current);
+      const geometry = measureWeekOverlayGeometry(scrollRef.current, headerH);
       if (!geometry) return;
       setCols((prev) => {
         const next = geometry.cols as Box[];
@@ -2128,6 +2142,9 @@ function WeekEventsOverlay({
     scheduleMeasure();
     const resizeObserver = new ResizeObserver(scheduleMeasure);
     resizeObserver.observe(container);
+    if (container.firstElementChild instanceof HTMLElement) {
+      resizeObserver.observe(container.firstElementChild);
+    }
     container.addEventListener("scroll", scheduleMeasure, { passive: true });
     window.addEventListener("resize", scheduleMeasure);
 
@@ -2137,7 +2154,7 @@ function WeekEventsOverlay({
       container.removeEventListener("scroll", scheduleMeasure);
       window.removeEventListener("resize", scheduleMeasure);
     };
-  }, [scrollRef]);
+  }, [headerH, scrollRef]);
 
   const [drag, setDrag] = useState<{
     id: string;
