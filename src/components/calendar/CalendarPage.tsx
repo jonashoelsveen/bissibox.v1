@@ -83,7 +83,8 @@ export function CalendarPage() {
   });
   const [viewMode, setViewMode] = useState<ViewMode>("month");
 
-  // Default: every category visible.
+  // Default: every category visible. Categories load lazily; new keys are
+  // added to the visible set as soon as we encounter them in the grid filter.
   const [visibleCategories, setVisibleCategories] = useState<Set<CategoryKey>>(() => {
     const all = new Set<CategoryKey>();
     INDIVIDUAL_SIDENAV_CATEGORIES.forEach((c) => all.add(c.key));
@@ -97,6 +98,25 @@ export function CalendarPage() {
       else next.add(k);
       return next;
     });
+
+  // Load user categories so unknown me:* keys are pre-seeded as visible.
+  useEffect(() => {
+    if (!user) return;
+    void supabase
+      .from("calendar_categories")
+      .select("color")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        if (!data) return;
+        setVisibleCategories((prev) => {
+          const next = new Set(prev);
+          for (const row of data) {
+            next.add(`me:${(row.color as string).toLowerCase()}` as CategoryKey);
+          }
+          return next;
+        });
+      });
+  }, [user]);
 
   return (
     <div className="px-4 md:px-6">
