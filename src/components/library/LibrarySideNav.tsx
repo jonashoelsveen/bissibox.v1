@@ -310,6 +310,7 @@ export function LibrarySideNav({
   const sections = allSections.filter((s) => !s.teamOnly || isTeamMode);
 
   const isPreviousActive = value.category === "previous";
+  const isMapActive = value.category === "map";
 
   // dnd-kit sensors — small activation distance so click vs drag is clean
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
@@ -345,6 +346,18 @@ export function LibrarySideNav({
           <History className="h-3.5 w-3.5" strokeWidth={2.25} />
         </span>
         <span className="ml-2 min-w-0 flex-1 truncate">Previous</span>
+      </button>
+
+      <button
+        onClick={() => onChange({ category: "map", folder: "" })}
+        className={`group flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition ${
+          isMapActive ? "bg-secondary font-medium text-ink" : "text-ink hover:bg-secondary/60"
+        }`}
+      >
+        <span className="grid h-5 w-5 shrink-0 place-items-center text-muted-foreground">
+          <MapIcon className="h-3.5 w-3.5" strokeWidth={2.25} />
+        </span>
+        <span className="ml-2 min-w-0 flex-1 truncate">Map</span>
       </button>
 
       {sections.map((s) => {
