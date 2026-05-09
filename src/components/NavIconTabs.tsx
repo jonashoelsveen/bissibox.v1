@@ -195,19 +195,9 @@ export function NavIconTabs({
       const st = stateRef.current;
       stateRef.current = null;
       if (st && st.moved && st.currentIndex !== st.startIndex) {
-        const nextVisible = visible.slice();
-        const [moved] = nextVisible.splice(st.startIndex, 1);
-        nextVisible.splice(st.currentIndex, 0, moved);
-        const activeItem = ordered.find((i) => i.key === activeKey);
-        const next: NavItem[] = [];
-        let vi = 0;
-        for (const it of ordered) {
-          if (it.key === activeKey) {
-            next.push(activeItem!);
-          } else {
-            next.push(nextVisible[vi++]);
-          }
-        }
+        const next = visible.slice();
+        const [moved] = next.splice(st.startIndex, 1);
+        next.splice(st.currentIndex, 0, moved);
         persist(next);
       } else if (st && !st.moved) {
         const target = ev.target as HTMLElement;
@@ -247,6 +237,7 @@ export function NavIconTabs({
                 ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)"
                 : undefined,
             };
+        const isActive = item.key === activeKey;
         return (
           <div
             key={item.key}
@@ -263,9 +254,20 @@ export function NavIconTabs({
               title={item.label}
               onPointerDown={(e) => onPointerDown(e, item.key)}
               onClick={(e) => {
-                if (stateRef.current?.moved) e.preventDefault();
+                if (stateRef.current?.moved) {
+                  e.preventDefault();
+                  return;
+                }
+                if (isActive && onActiveClick) {
+                  e.preventDefault();
+                  onActiveClick();
+                }
               }}
-              className="-mb-px flex h-9 w-9 select-none items-center justify-center rounded-md border-b-2 border-transparent text-muted-foreground transition hover:bg-secondary/60 hover:text-ink"
+              className={`-mb-px flex h-9 w-9 select-none items-center justify-center rounded-md border-b-2 transition hover:bg-secondary/60 ${
+                isActive
+                  ? "border-primary text-ink"
+                  : "border-transparent text-muted-foreground hover:text-ink"
+              }`}
             >
               <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
             </Link>
