@@ -296,18 +296,25 @@ function CategoryMenu({
   };
 
   useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
-      const t = e.target as Node;
+    const onDocPointer = (e: PointerEvent | MouseEvent) => {
+      const t = e.target as Node | null;
+      if (!t) return;
       if (rootRef.current?.contains(t)) return;
       if (document.getElementById("__cat_color_menu")?.contains(t)) return;
       if (document.getElementById("__cat_custom_menu")?.contains(t)) return;
       onClose();
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("mousedown", onDocClick);
+    // Defer registration so the opening click doesn't immediately close us.
+    const id = window.setTimeout(() => {
+      document.addEventListener("pointerdown", onDocPointer, true);
+      document.addEventListener("mousedown", onDocPointer, true);
+    }, 0);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("mousedown", onDocClick);
+      window.clearTimeout(id);
+      document.removeEventListener("pointerdown", onDocPointer, true);
+      document.removeEventListener("mousedown", onDocPointer, true);
       document.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
