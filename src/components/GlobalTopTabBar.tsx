@@ -116,31 +116,23 @@ export function GlobalTopTabBar() {
                 <Item
                   icon={<Briefcase className="h-3.5 w-3.5" />}
                   label="Meeting"
-                  hint="Folder"
                   onClick={() => trigger("meeting")}
-                  onHintClick={() => triggerContainer("meeting")}
                 />
               )}
               <Item
                 icon={<StickyNote className="h-3.5 w-3.5" />}
                 label="Note"
-                hint="Folder"
                 onClick={() => trigger("note")}
-                onHintClick={() => triggerContainer("note")}
               />
               <Item
                 icon={<FolderClosed className="h-3.5 w-3.5" />}
                 label="File"
-                hint="Folder"
                 onClick={() => trigger("file")}
-                onHintClick={() => triggerContainer("file")}
               />
               <Item
                 icon={<ImageIcon className="h-3.5 w-3.5" />}
                 label="Media"
-                hint="Album"
                 onClick={() => trigger("media")}
-                onHintClick={() => triggerContainer("media")}
               />
               {/* Map with submenu */}
               <div
@@ -161,7 +153,6 @@ export function GlobalTopTabBar() {
                 </button>
                 {mapHover && (
                   <>
-                    {/* invisible bridge so cursor can cross to submenu without leaving */}
                     <div className="absolute right-full top-0 h-full w-2" />
                     <div
                       role="menu"
@@ -171,16 +162,12 @@ export function GlobalTopTabBar() {
                       <Item
                         icon={<MapPin className="h-3.5 w-3.5" />}
                         label="Location"
-                        hint="Folder"
                         onClick={() => trigger("map-location")}
-                        onHintClick={() => triggerContainer("map-location")}
                       />
                       <Item
                         icon={<RouteIcon className="h-3.5 w-3.5" />}
                         label="Course"
-                        hint="Folder"
                         onClick={() => trigger("map-course")}
-                        onHintClick={() => triggerContainer("map-course")}
                       />
                     </div>
                   </>
@@ -190,9 +177,7 @@ export function GlobalTopTabBar() {
                 <Item
                   icon={<Tent className="h-3.5 w-3.5" />}
                   label="Event"
-                  hint="Folder"
                   onClick={() => trigger("event")}
-                  onHintClick={() => triggerContainer("event")}
                 />
               )}
             </div>
