@@ -1375,10 +1375,26 @@ function CategoryDropdownRow({
   }
 
   // Individual seat — list user's "Me" categories.
+  // Track selection by category id locally so identically-colored categories
+  // remain distinguishable after picking.
   const lcColor = (color ?? "").toLowerCase();
-  const matched = categories.find((c) => c.color.toLowerCase() === lcColor);
-  const selectedId = matched?.id ?? categories[0]?.id ?? "";
-  const sideColor = matched?.color ?? color ?? "transparent";
+  const initialId = useMemo(
+    () => categories.find((c) => c.color.toLowerCase() === lcColor)?.id ?? categories[0]?.id ?? "",
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  const [selectedId, setSelectedId] = useState<string>(initialId);
+
+  // If the list loads after mount and selectedId is still empty, hydrate it.
+  useEffect(() => {
+    if (!selectedId && categories.length > 0) {
+      const fromColor = categories.find((c) => c.color.toLowerCase() === lcColor)?.id;
+      setSelectedId(fromColor ?? categories[0].id);
+    }
+  }, [categories, lcColor, selectedId]);
+
+  const selectedCat = categories.find((c) => c.id === selectedId);
+  const sideColor = selectedCat?.color ?? color ?? "transparent";
 
   return (
     <div className="relative border-t border-hairline">
@@ -1390,7 +1406,9 @@ function CategoryDropdownRow({
       <select
         value={selectedId}
         onChange={(e) => {
-          const cat = categories.find((c) => c.id === e.target.value);
+          const id = e.target.value;
+          setSelectedId(id);
+          const cat = categories.find((c) => c.id === id);
           if (cat) onSetColor(cat.color);
         }}
         className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
