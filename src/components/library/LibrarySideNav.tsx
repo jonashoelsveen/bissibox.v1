@@ -30,6 +30,7 @@ import {
   Pin,
   PinOff,
   History,
+  Map as MapIcon,
   Briefcase,
   MoreHorizontal,
   Pencil,
