@@ -1,8 +1,7 @@
 import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/react-router";
 import appCss from "../styles.css?url";
-import { AuthProvider, useAuth } from "@/lib/auth";
+import { AuthProvider } from "@/lib/auth";
 import { TopBar } from "@/components/TopBar";
-import { UniversalNavBar } from "@/components/NavIconTabs";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -72,18 +71,10 @@ function RootComponent() {
   return (
     <AuthProvider>
       <TopBar />
-      <UniversalNavBar />
-      <AppMain />
+      <main className="min-h-screen pb-16 pt-14">
+        <Outlet />
+      </main>
       <Toaster />
     </AuthProvider>
-  );
-}
-
-function AppMain() {
-  const { user } = useAuth();
-  return (
-    <main className={`min-h-screen pb-16 ${user ? "pt-[98px]" : ""}`}>
-      <Outlet />
-    </main>
   );
 }

@@ -6,7 +6,7 @@ import { Search, SlidersHorizontal, ArrowUpDown, X, Check } from "lucide-react";
 import { RaceListItem } from "@/components/RaceListItem";
 import { SearchModeToggle } from "@/components/SearchModeToggle";
 import { useAuth } from "@/lib/auth";
-
+import { UniversalTopBar } from "@/components/NavIconTabs";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -201,7 +201,7 @@ function Index() {
 
   return (
     <div className="px-4 md:px-6">
-      
+      {user && <UniversalTopBar activeKey="search" title="Search" icon={Search} />}
       {user && mode !== "organizer" && mode !== "team" && (
         <div className="pt-6">
           <SearchModeToggle active="races" />

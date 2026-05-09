@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { NavIconTabs } from "@/components/NavIconTabs";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowUpRight, Search, UsersRound, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -278,7 +279,7 @@ export function GroupMembersPage() {
   return (
     <div className="px-4 md:px-6">
       {/* Sticky horizontal tab bar */}
-      <div className="sticky top-[98px] z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
+      <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
         <button
           onClick={() => setActiveMemberId(null)}
           className={`-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 py-2.5 pl-0 pr-4 text-sm font-medium ${
@@ -292,6 +293,7 @@ export function GroupMembersPage() {
           <UsersRound className="h-3.5 w-3.5 opacity-70" strokeWidth={2.25} />
           <span>Group members</span>
         </button>
+        <NavIconTabs activeKey="group-members" />
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
           {openTabs.length > 0 && (
             <div className="relative min-w-0 flex-1">

@@ -15,6 +15,8 @@
  * backend is wired (matches the Calendar page approach).
  */
 
+import { NavIconTabs } from "@/components/NavIconTabs";
+import { ProfileTab } from "@/components/ProfileTab";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -433,8 +435,10 @@ export function MapPage() {
   return (
     <div className="px-4 md:px-6">
       {/* Sticky horizontal tab bar */}
-      <div className="sticky top-[98px] z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
-        <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
+      <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-0 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
+        <ProfileTab />
+        <NavIconTabs activeKey="map" onActiveClick={() => setActiveId(null)} />
+        <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
           {openTabs.length > 0 && (
             <div className="relative min-w-0 flex-1">
               {edgeFade.left && (

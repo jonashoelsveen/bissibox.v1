@@ -13,6 +13,8 @@
  * and the grid stay in lockstep.
  */
 
+import { NavIconTabs } from "@/components/NavIconTabs";
+import { ProfileTab } from "@/components/ProfileTab";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -147,7 +149,9 @@ export function CalendarPage() {
   return (
     <div className="px-4 md:px-6">
       {/* Top header strip */}
-      <div className="sticky top-[98px] z-20 -mx-4 flex items-end justify-between gap-2 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
+      <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-2 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
+        <ProfileTab />
+        <NavIconTabs activeKey="calendar" />
         <div className="flex-1" />
       </div>
 

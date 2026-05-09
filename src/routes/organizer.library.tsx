@@ -1,4 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { NavIconTabs } from "@/components/NavIconTabs";
+import { ProfileTab } from "@/components/ProfileTab";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -331,9 +333,12 @@ function EventsPage() {
   return (
     <div className="px-4 md:px-6">
       {/* Top tab bar */}
-      <div className="sticky top-[98px] z-20 -mx-4 flex items-end gap-1 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
+      <div className="sticky top-14 z-20 -mx-4 flex items-end gap-1 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
+        <ProfileTab />
+        <NavIconTabs activeKey="events" onActiveClick={() => { setActiveId(null); setFolder(""); }} />
+
         {/* Open event tabs */}
-        <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
+        <nav className="flex min-w-0 flex-1 items-end overflow-hidden pl-2">
           {openTabs.length > 0 && (
             <div className="relative min-w-0 flex-1">
               {edgeFade.left && (
