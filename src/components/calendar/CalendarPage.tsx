@@ -146,9 +146,9 @@ export function CalendarPage() {
   }, [user]);
 
   return (
-    <div className="px-4 md:px-6">
+    <div className="flex h-[calc(100dvh-3.5rem)] flex-col px-4 md:px-6">
       {/* Top header strip */}
-      <div className="sticky top-14 z-20 -mx-4 flex items-end justify-between gap-2 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
+      <div className="-mx-4 flex shrink-0 items-end justify-between gap-2 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
         <div
           className="-mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 border-primary py-2.5 pl-0 pr-4 text-sm font-medium text-ink"
           style={{ width: 240 }}
@@ -159,8 +159,8 @@ export function CalendarPage() {
         <div className="flex-1" />
       </div>
 
-      <div className="grid gap-6 pt-4 md:grid-cols-[240px_1fr]">
-        <aside className="md:sticky md:top-28 md:self-start">
+      <div className="grid min-h-0 flex-1 gap-6 overflow-hidden pt-4 md:grid-cols-[240px_1fr]">
+        <aside className="min-h-0 overflow-y-auto md:self-stretch">
           <CalendarSideNav
             currentDate={currentDate}
             currentRange={currentRange}
@@ -176,7 +176,7 @@ export function CalendarPage() {
           />
         </aside>
 
-        <div className="min-w-0">
+        <div className="flex min-h-0 min-w-0 flex-col">
           <YearCalendarView
             calId={calId}
             defaultTitle={calTitle}
