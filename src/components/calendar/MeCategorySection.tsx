@@ -74,13 +74,18 @@ export function MeCategorySection({
 
   return (
     <div className="flex flex-col">
-      {/* Header row */}
-      <div className="group flex w-full items-center rounded-md px-3 py-2 text-sm transition hover:bg-secondary/60">
+      {/* Header row — chevron LEFT (entity-style), plus on the RIGHT */}
+      <div className="group flex w-full items-center gap-1.5 rounded-md px-3 py-2 text-sm transition hover:bg-secondary/60">
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-label={open ? "Collapse" : "Expand"}
           className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-ink"
         >
+          <ChevronRight
+            className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-90" : ""}`}
+          />
           <span className="min-w-0 flex-1 truncate font-medium">Me</span>
         </button>
         <button
@@ -90,14 +95,6 @@ export function MeCategorySection({
           className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground hover:bg-secondary hover:text-ink"
         >
           <Plus className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-label={open ? "Collapse" : "Expand"}
-          className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground hover:bg-secondary"
-        >
-          <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
         </button>
       </div>
 
@@ -269,11 +266,27 @@ function CategoryMenu({
 }) {
   const [colorOpen, setColorOpen] = useState(false);
   const [colorAnchor, setColorAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [colorPinned, setColorPinned] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [customAnchor, setCustomAnchor] = useState<{ x: number; y: number } | null>(null);
-  const colorRowRef = useRef<HTMLButtonElement>(null);
-  const customRowRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const closeTimer = useRef<number | null>(null);
+
+  const cancelClose = () => {
+    if (closeTimer.current !== null) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = window.setTimeout(() => {
+      if (!colorPinned) {
+        setColorOpen(false);
+        setCustomOpen(false);
+      }
+    }, 120);
+  };
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
@@ -292,38 +305,38 @@ function CategoryMenu({
     };
   }, [onClose]);
 
+  const openColor = (rect: DOMRect) => {
+    cancelClose();
+    setColorAnchor({ x: rect.right + 4, y: rect.top });
+    setColorOpen(true);
+  };
+
   return createPortal(
     <>
       <div
         ref={rootRef}
-        className="fixed z-50 min-w-[160px] border border-hairline bg-popover py-1 text-xs shadow-lg"
+        className="fixed z-50 min-w-[170px] overflow-hidden rounded-xl border border-hairline bg-popover p-1 text-xs shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
         style={{ left: anchor.x, top: anchor.y }}
       >
-        <button onClick={onPin} className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-secondary">
+        <button onClick={onPin} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-ink hover:bg-secondary">
           {cat.pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
           {cat.pinned ? "Unpin" : "Pin to top"}
         </button>
         <button
           onClick={onRename}
           disabled={cat.is_default}
-          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-ink hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Pencil className="h-3 w-3" /> Rename
         </button>
         <button
-          ref={colorRowRef}
-          onMouseEnter={(e) => {
-            const r = e.currentTarget.getBoundingClientRect();
-            setColorAnchor({ x: r.right + 2, y: r.top });
-            setColorOpen(true);
-            setCustomOpen(false);
-          }}
+          onMouseEnter={(e) => openColor(e.currentTarget.getBoundingClientRect())}
+          onMouseLeave={scheduleClose}
           onClick={(e) => {
-            const r = e.currentTarget.getBoundingClientRect();
-            setColorAnchor({ x: r.right + 2, y: r.top });
-            setColorOpen(true);
+            openColor(e.currentTarget.getBoundingClientRect());
+            setColorPinned(true);
           }}
-          className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-secondary"
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-ink hover:bg-secondary"
         >
           <Palette className="h-3 w-3" /> Color
           <ChevronRight className="ml-auto h-3 w-3" />
@@ -331,7 +344,7 @@ function CategoryMenu({
         <button
           onClick={onDelete}
           disabled={cat.is_default}
-          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-destructive hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-destructive hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Trash2 className="h-3 w-3" /> Delete
         </button>
@@ -340,7 +353,9 @@ function CategoryMenu({
       {colorOpen && colorAnchor && (
         <div
           id="__cat_color_menu"
-          className="fixed z-50 border border-hairline bg-popover p-2 shadow-lg"
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
+          className="fixed z-50 overflow-hidden rounded-xl border border-hairline bg-popover p-2 shadow-xl animate-in fade-in zoom-in-95 duration-150"
           style={{ left: colorAnchor.x, top: colorAnchor.y }}
         >
           <div className="grid grid-cols-4 gap-1.5">
@@ -350,7 +365,7 @@ function CategoryMenu({
                 <button
                   key={hex}
                   type="button"
-                  onClick={() => onColor(hex)}
+                  onClick={() => { setColorPinned(true); onColor(hex); }}
                   className={`h-5 w-5 rounded-full border transition-transform hover:scale-110 ${
                     selected ? "border-ink ring-2 ring-ink/30" : "border-black/10"
                   }`}
@@ -361,13 +376,13 @@ function CategoryMenu({
             })}
           </div>
           <button
-            ref={customRowRef}
             onClick={(e) => {
               const r = e.currentTarget.getBoundingClientRect();
               setCustomAnchor({ x: r.right + 6, y: r.top });
               setCustomOpen(true);
+              setColorPinned(true);
             }}
-            className="mt-2 flex w-full items-center justify-between rounded px-2 py-1 text-[11px] hover:bg-secondary"
+            className="mt-2 flex w-full items-center justify-between rounded-lg px-2 py-1 text-[11px] text-ink hover:bg-secondary"
           >
             Custom
             <ChevronRight className="h-3 w-3" />
@@ -376,7 +391,12 @@ function CategoryMenu({
       )}
 
       {customOpen && customAnchor && (
-        <div id="__cat_custom_menu" className="fixed z-50" style={{ left: customAnchor.x, top: customAnchor.y }}>
+        <div
+          id="__cat_custom_menu"
+          onMouseEnter={cancelClose}
+          className="fixed z-50 overflow-hidden rounded-xl border border-hairline bg-popover shadow-xl animate-in fade-in zoom-in-95 duration-150"
+          style={{ left: customAnchor.x, top: customAnchor.y }}
+        >
           <MiniColorPicker
             initial={cat.color}
             onPreview={(hex) => onColor(hex)}

@@ -64,20 +64,24 @@ export function useUserCategories() {
         })
         .select()
         .single();
-      if (error) return null;
-      return data as UserCategory;
+      if (error || !data) return null;
+      const created = data as UserCategory;
+      setCategories((prev) => (prev.some((c) => c.id === created.id) ? prev : [...prev, created]));
+      return created;
     },
     [user, categories],
   );
 
   const update = useCallback(
     async (id: string, patch: Partial<Pick<UserCategory, "name" | "color" | "pinned" | "hidden">>) => {
+      setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
       await supabase.from("calendar_categories").update(patch).eq("id", id);
     },
     [],
   );
 
   const remove = useCallback(async (id: string) => {
+    setCategories((prev) => prev.filter((c) => c.id !== id));
     await supabase.from("calendar_categories").delete().eq("id", id);
   }, []);
 
