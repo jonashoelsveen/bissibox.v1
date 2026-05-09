@@ -884,6 +884,12 @@ export interface PopoverEditorProps {
     color: string | null,
     time?: { startMin: number; endMin: number } | null,
   ) => void;
+  /**
+   * Fires the moment the user commits the inline duration picker (clock icon),
+   * BEFORE the whole popover is saved. Lets the parent reflect the change in
+   * its marked range immediately so the calendar stays in sync.
+   */
+  onTimeChange?: (time: { startMin: number; endMin: number } | null) => void;
 }
 
 // Category defaults — color is the source of truth.
@@ -1146,6 +1152,7 @@ export function PopoverEditor({
   enableDuration = false,
   onClose,
   onCommit,
+  onTimeChange,
 }: PopoverEditorProps) {
   const [value, setValue] = useState(initialText);
   // Resolve initial color according to seat
@@ -1398,6 +1405,7 @@ export function PopoverEditor({
               color={color}
               onCommit={(t) => {
                 setTime(t);
+                onTimeChange?.(t);
                 setShowDuration(false);
               }}
               onClose={() => setShowDuration(false)}
