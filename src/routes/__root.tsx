@@ -1,4 +1,11 @@
-import { Outlet, createRootRoute, HeadContent, Scripts, Link, useRouterState } from "@tanstack/react-router";
+import {
+  Outlet,
+  createRootRoute,
+  HeadContent,
+  Scripts,
+  Link,
+  useRouterState,
+} from "@tanstack/react-router";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TopChrome } from "@/components/Chrome";
@@ -77,7 +84,11 @@ function RootComponent() {
       <TopBar />
       <TopChrome />
       <main
-        className={isCalendarWorkspace ? "h-dvh overflow-hidden pl-20 pt-20 md:pl-24" : "min-h-screen pb-16 pl-20 pt-20 md:pl-24"}
+        className={
+          isCalendarWorkspace
+            ? "h-dvh overflow-hidden pl-20 pt-20 md:pl-24"
+            : "min-h-screen pb-16 pl-20 pt-20 md:pl-24"
+        }
       >
         <Outlet />
       </main>

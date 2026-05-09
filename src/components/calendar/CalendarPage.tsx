@@ -129,7 +129,12 @@ export function CalendarPage() {
       .channel(`calendar-page-categories-${user.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "calendar_categories", filter: `user_id=eq.${user.id}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "calendar_categories",
+          filter: `user_id=eq.${user.id}`,
+        },
         () => {
           void supabase
             .from("calendar_categories")
