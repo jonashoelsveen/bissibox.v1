@@ -366,7 +366,7 @@ function SettingsPage() {
 
   return (
     <div className="px-4 md:px-6">
-      <UniversalTopBar activeKey="settings" title="Settings" icon={SettingsIcon} />
+      
       <div>
         <div className="flex items-center justify-between gap-2 pt-4 pr-14">
           <div className="flex items-baseline gap-2">
