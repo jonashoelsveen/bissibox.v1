@@ -86,7 +86,7 @@ function RootComponent() {
       <main
         className={
           isCalendarWorkspace
-            ? "h-dvh overflow-hidden pl-20 pt-20 md:pl-24"
+            ? "box-border h-dvh overflow-hidden pl-20 pt-20 md:pl-24"
             : "min-h-screen pb-16 pl-20 pt-20 md:pl-24"
         }
       >
