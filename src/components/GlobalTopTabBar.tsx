@@ -80,15 +80,6 @@ export function GlobalTopTabBar() {
     }
   };
 
-  const triggerContainer = (kind: CreateKind) => {
-    close();
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("global-create-container", { detail: { kind } }),
-      );
-    }
-  };
-
   return (
     <div className="fixed left-0 right-0 top-[11px] z-40 border-b border-hairline bg-background">
       <div className="flex items-end gap-1 px-4 md:px-6">
@@ -125,31 +116,23 @@ export function GlobalTopTabBar() {
                 <Item
                   icon={<Briefcase className="h-3.5 w-3.5" />}
                   label="Meeting"
-                  hint="Folder"
                   onClick={() => trigger("meeting")}
-                  onHintClick={() => triggerContainer("meeting")}
                 />
               )}
               <Item
                 icon={<StickyNote className="h-3.5 w-3.5" />}
                 label="Note"
-                hint="Folder"
                 onClick={() => trigger("note")}
-                onHintClick={() => triggerContainer("note")}
               />
               <Item
                 icon={<FolderClosed className="h-3.5 w-3.5" />}
                 label="File"
-                hint="Folder"
                 onClick={() => trigger("file")}
-                onHintClick={() => triggerContainer("file")}
               />
               <Item
                 icon={<ImageIcon className="h-3.5 w-3.5" />}
                 label="Media"
-                hint="Album"
                 onClick={() => trigger("media")}
-                onHintClick={() => triggerContainer("media")}
               />
               {/* Map with submenu */}
               <div
@@ -170,7 +153,6 @@ export function GlobalTopTabBar() {
                 </button>
                 {mapHover && (
                   <>
-                    {/* invisible bridge so cursor can cross to submenu without leaving */}
                     <div className="absolute right-full top-0 h-full w-2" />
                     <div
                       role="menu"
@@ -180,16 +162,12 @@ export function GlobalTopTabBar() {
                       <Item
                         icon={<MapPin className="h-3.5 w-3.5" />}
                         label="Location"
-                        hint="Folder"
                         onClick={() => trigger("map-location")}
-                        onHintClick={() => triggerContainer("map-location")}
                       />
                       <Item
                         icon={<RouteIcon className="h-3.5 w-3.5" />}
                         label="Course"
-                        hint="Folder"
                         onClick={() => trigger("map-course")}
-                        onHintClick={() => triggerContainer("map-course")}
                       />
                     </div>
                   </>
@@ -199,9 +177,7 @@ export function GlobalTopTabBar() {
                 <Item
                   icon={<Tent className="h-3.5 w-3.5" />}
                   label="Event"
-                  hint="Folder"
                   onClick={() => trigger("event")}
-                  onHintClick={() => triggerContainer("event")}
                 />
               )}
             </div>
@@ -215,47 +191,21 @@ export function GlobalTopTabBar() {
 function Item({
   icon,
   label,
-  hint,
   onClick,
-  onHintClick,
 }: {
   icon: React.ReactNode;
   label: string;
-  hint?: string;
   onClick: () => void;
-  onHintClick?: () => void;
 }) {
   return (
-    <div
+    <button
+      type="button"
       role="menuitem"
-      className="group flex w-full items-center gap-2 rounded-lg pl-3 pr-1 text-left text-sm text-ink transition hover:bg-secondary"
+      onClick={onClick}
+      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
     >
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex flex-1 items-center gap-2 py-2 text-left"
-      >
-        <span className="text-muted-foreground">{icon}</span>
-        <span className="flex-1">{label}</span>
-      </button>
-      {hint &&
-        (onHintClick ? (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onHintClick();
-            }}
-            aria-label={`New ${hint.toLowerCase()}`}
-            className="rounded-md px-2 py-1 text-sm text-muted-foreground/60 opacity-0 transition group-hover:opacity-100 hover:bg-secondary-foreground/5 hover:text-ink"
-          >
-            {hint}
-          </button>
-        ) : (
-          <span className="px-2 py-1 text-sm text-muted-foreground/60 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-            {hint}
-          </span>
-        ))}
-    </div>
+      <span className="text-muted-foreground">{icon}</span>
+      <span className="flex-1">{label}</span>
+    </button>
   );
 }
