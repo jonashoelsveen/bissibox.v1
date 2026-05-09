@@ -330,7 +330,7 @@ function EventsPage() {
   if (!user) return <div className="mx-auto max-w-4xl px-6 py-16 text-muted-foreground">Loading…</div>;
 
   return (
-    <div className="px-4 md:px-6">
+    <div className="h-full overflow-hidden px-4 md:px-6">
       {/* Open event tabs (rendered into the global top tab bar) */}
       <TopBarSlot>
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
@@ -414,12 +414,12 @@ function EventsPage() {
         </nav>
       </TopBarSlot>
 
-      <div className="grid gap-6 pt-4 md:grid-cols-[220px_1fr]">
-        <aside className="md:sticky md:top-28 md:self-start">
+      <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[220px_1fr]">
+        <aside className="md:h-full md:overflow-y-auto md:pr-1">
           <EventsSideNav value={sideValue} onChange={onSideChange} />
         </aside>
 
-        <div className="min-w-0">
+        <div className="min-w-0 md:h-full md:overflow-y-auto">
           {activeId ? (
             <OrganizerEventEditor mode="edit" eventId={activeId} />
           ) : (

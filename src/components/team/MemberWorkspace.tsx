@@ -57,8 +57,8 @@ export function MemberWorkspace({ userId, name }: Props) {
   };
 
   return (
-    <div className="grid gap-6 pt-4 md:grid-cols-[1fr_240px]">
-      <div className="min-w-0">
+    <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[1fr_240px]">
+      <div className="min-w-0 md:h-full md:overflow-y-auto">
         {subTab === "library" ? (
           <MemberLibraryMain userId={userId} albums={albums} view={libView} />
         ) : (
@@ -80,7 +80,7 @@ export function MemberWorkspace({ userId, name }: Props) {
         )}
       </div>
 
-      <aside className="md:sticky md:top-28 md:self-start">
+      <aside className="md:h-full md:overflow-y-auto md:pl-1">
         <nav className="flex max-h-[calc(100vh-8rem)] flex-col gap-3 overflow-y-auto pr-1 [scrollbar-width:thin]">
           <div className="px-1">
             <div className="truncate text-base font-semibold text-ink">{name}</div>
