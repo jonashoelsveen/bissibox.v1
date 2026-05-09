@@ -171,6 +171,18 @@ function CreateBody({
     if (busy) return;
     setBusy(true);
     try {
+      // Map items are created inside the embedded Map view; just open it.
+      if (kind === "map-location" || kind === "map-course") {
+        onClose();
+        await navigate({
+          to: "/media",
+          search: {
+            tab: "map" as const,
+            edit: kind === "map-course" ? "new-course" : "new-location",
+          },
+        });
+        return;
+      }
       let payload: OpenTabPayload | null = null;
       if (cfg.upload) {
         payload = await uploadItems(kind, files, folder, { userId, teamId });
