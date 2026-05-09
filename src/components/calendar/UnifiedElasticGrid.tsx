@@ -196,10 +196,35 @@ function isWeekend(year: number, month: number, day: number) {
   return d === 0 || d === 6;
 }
 
+function findWeekGrid(container: HTMLDivElement | null): HTMLElement | null {
+  if (!container) return null;
+  const stack: Array<{ el: HTMLElement; depth: number }> = [{ el: container, depth: 0 }];
+  while (stack.length > 0) {
+    const { el, depth } = stack.pop()!;
+    if (el.children.length >= 8) {
+      const first = el.children[0];
+      const second = el.children[1] as HTMLElement | undefined;
+      if (
+        first instanceof HTMLButtonElement &&
+        second instanceof HTMLElement &&
+        second.dataset.monthCol === "0"
+      ) {
+        return el;
+      }
+    }
+    if (depth < 4) {
+      for (const child of Array.from(el.children)) {
+        if (child instanceof HTMLElement) stack.push({ el: child, depth: depth + 1 });
+      }
+    }
+  }
+  return container.firstElementChild instanceof HTMLElement ? container.firstElementChild : null;
+}
+
 function getWeekHeaderCells(container: HTMLDivElement | null): HTMLElement[] {
   if (!container) return [];
-  const grid = container.firstElementChild;
-  if (!(grid instanceof HTMLElement)) return [];
+  const grid = findWeekGrid(container);
+  if (!grid) return [];
   const children = Array.from(grid.children).filter(
     (node): node is HTMLElement => node instanceof HTMLElement,
   );
@@ -1899,8 +1924,8 @@ function measureWeekOverlayGeometry(
 ) {
   if (!container) return null;
 
-  const grid = container.firstElementChild;
-  if (!(grid instanceof HTMLElement)) return null;
+  const grid = findWeekGrid(container);
+  if (!grid) return null;
 
   let cols: Array<{ left: number; width: number }> = [];
   let headerBottom = fallbackHeaderBottom;
