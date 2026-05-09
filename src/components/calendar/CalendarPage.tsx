@@ -146,7 +146,7 @@ export function CalendarPage() {
 
   return (
     <div className="h-full overflow-hidden px-4 md:px-6">
-      <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[220px_1fr]">
+      <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[260px_1fr]">
         <aside className="md:h-full md:overflow-y-auto md:pr-1">
           <CalendarSideNav
             currentDate={currentDate}
