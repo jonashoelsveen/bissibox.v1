@@ -1378,15 +1378,15 @@ function CategoryDropdownRow({
   // Track selection by category id locally so identically-colored categories
   // remain distinguishable after picking.
   const lcColor = (color ?? "").toLowerCase();
-  const initialId = React.useMemo(
+  const initialId = useMemo(
     () => categories.find((c) => c.color.toLowerCase() === lcColor)?.id ?? categories[0]?.id ?? "",
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-  const [selectedId, setSelectedId] = React.useState<string>(initialId);
+  const [selectedId, setSelectedId] = useState<string>(initialId);
 
   // If the list loads after mount and selectedId is still empty, hydrate it.
-  React.useEffect(() => {
+  useEffect(() => {
     if (!selectedId && categories.length > 0) {
       const fromColor = categories.find((c) => c.color.toLowerCase() === lcColor)?.id;
       setSelectedId(fromColor ?? categories[0].id);
