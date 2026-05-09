@@ -424,22 +424,26 @@ async function createContainer(
   }
 }
 
-async function createItem(kind: Kind, name: string, folder: string, ctx: Ctx) {
+async function createItem(
+  kind: Kind,
+  name: string,
+  folder: string,
+  ctx: Ctx,
+): Promise<OpenTabPayload | null> {
   if (!name) throw new Error("Title is required");
   switch (kind) {
     case "note": {
-      // notes.folder is a text column (folder name)
       const folderName = folder
         ? (await resolveFolderName(kind, folder, ctx))
         : null;
-      const { error } = await sb.from("notes").insert({
+      const { data, error } = await sb.from("notes").insert({
         user_id: ctx.userId,
         team_id: ctx.teamId,
         title: name,
         folder: folderName,
-      });
+      }).select("id,title,folder").single();
       if (error) throw error;
-      return;
+      return { type: "note", id: data.id, title: data.title, folder: data.folder };
     }
     case "event": {
       let organizer = "";
@@ -467,7 +471,7 @@ async function createItem(kind: Kind, name: string, folder: string, ctx: Ctx) {
         folder: folderName,
       });
       if (error) throw error;
-      return;
+      return null;
     }
     case "meeting": {
       if (!ctx.teamId) throw new Error("Switch to an entity to create meetings.");
@@ -481,16 +485,16 @@ async function createItem(kind: Kind, name: string, folder: string, ctx: Ctx) {
       const folderName = folder
         ? await resolveFolderName(kind, folder, ctx)
         : null;
-      const { error } = await sb.from("team_group_meetings").insert({
+      const { data, error } = await sb.from("team_group_meetings").insert({
         team_id: ctx.teamId,
         title: name,
         created_by: ctx.userId,
         group_id: group?.id ?? null,
         meeting_date: new Date().toISOString().slice(0, 10),
         folder: folderName,
-      });
+      }).select("id,title,folder").single();
       if (error) throw error;
-      return;
+      return { type: "meeting", id: data.id, title: data.title, folder: data.folder };
     }
     case "map-location":
     case "map-course":
@@ -499,6 +503,7 @@ async function createItem(kind: Kind, name: string, folder: string, ctx: Ctx) {
     case "media":
       throw new Error("Use the upload picker.");
   }
+  return null;
 }
 
 async function resolveFolderName(kind: Kind, value: string, ctx: Ctx): Promise<string> {
