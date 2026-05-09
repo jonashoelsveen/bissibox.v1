@@ -39,6 +39,7 @@ import { makeCellId } from "./yearStore";
 import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, isoWeekNumber } from "./dateUtils";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
 import { DayNoteButton } from "./DayNoteButton";
+import { useUserCategories } from "@/hooks/useUserCategories";
 
 // Individual session categories. Three have fixed colors + icons for
 // consistent UX across the platform; "Else" lets the user pick from the 8
