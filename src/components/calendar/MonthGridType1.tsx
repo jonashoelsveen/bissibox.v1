@@ -593,7 +593,7 @@ export function MonthGridType1({
                     "first:border-l-0", // first column has no left border (parent supplies)
                     isWeekend ? "bg-muted/20" : "bg-card",
                     !d.inMonth ? "bg-muted/40 text-muted-foreground/60" : "",
-                    isInRange ? "bg-primary/10" : "",
+                    isInRange || (focused && d.inMonth) ? "bg-muted-foreground/15" : "",
                     "hover:bg-secondary/40",
                   ].join(" ")}
                   data-day-anchor=""
