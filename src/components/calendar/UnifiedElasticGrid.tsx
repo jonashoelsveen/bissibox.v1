@@ -344,7 +344,8 @@ export function UnifiedElasticGrid({
   const moveSelection = useCallback(
     (dx: number, dy: number) => {
       if (!selected) return;
-      let { year: y, month, day, session } = selected;
+      const { year: y } = selected;
+      let { month, day, session } = selected;
       if (dy !== 0) {
         let rank = day * 2 + session + dy;
         const dim = daysInMonth(y, month);
@@ -1688,8 +1689,6 @@ function DayCellPair(props: DayCellPairProps) {
             )}
             {/* Selection outline removed — keep marking subtle (gray fill only) */}
 
-            {false && showCompact && null}
-
             {showRich && (
               <div
                 className="grid h-full w-full items-center"
@@ -2139,8 +2138,8 @@ function WeekEventsOverlay({
       if (drag.moved && cols.length === 7) {
         // Compute drop column based on horizontal delta.
         const colW = cols[0].width;
-        let colShift = Math.round(drag.delta.dx / colW);
-        let newCol = Math.max(0, Math.min(6, drag.originColIdx + colShift));
+        const colShift = Math.round(drag.delta.dx / colW);
+        const newCol = Math.max(0, Math.min(6, drag.originColIdx + colShift));
         // Compute new start minute from vertical delta (snap to 30-min grid).
         const minShift = Math.round(drag.delta.dy / rowHeight) * 30;
         let newStart = drag.originStartMin + minShift;
