@@ -145,10 +145,7 @@ export function CalendarSideNav({
           </>
         ) : (
           <>
-            <MeCategorySectionAdapter
-              visibleCategories={visibleCategories}
-              onToggleCategory={onToggleCategory}
-            />
+            <MeCategorySectionAdapter />
 
             {entities.map((e) => (
               <EntityGroup
@@ -167,29 +164,17 @@ export function CalendarSideNav({
   );
 }
 
-/** Bridges MeCategorySection's per-id hidden set to the legacy
- * visibleCategories<CategoryKey> set used by the grid filter. We key
- * categories by `me:${color}` and also include `ind:training` whenever the
- * Training default row is visible (so diary-training events stay matched). */
-function MeCategorySectionAdapter({
-  visibleCategories,
-  onToggleCategory,
-}: {
-  visibleCategories: Set<CategoryKey>;
-  onToggleCategory: (k: CategoryKey) => void;
-}) {
-  const { categories } = useUserCategories();
+/** Reads category visibility from DB and writes the `hidden` flag back so the
+ * grid filter (driven by visibleCategories in CalendarPage's effect) updates
+ * via realtime. */
+function MeCategorySectionAdapter() {
+  const { categories, update } = useUserCategories();
   const hidden = new Set<string>();
-  for (const c of categories) {
-    const key = `me:${c.color.toLowerCase()}` as CategoryKey;
-    if (!visibleCategories.has(key)) hidden.add(c.id);
-  }
+  for (const c of categories) if (c.hidden) hidden.add(c.id);
   const handleToggleHidden = (id: string) => {
     const c = categories.find((x) => x.id === id);
     if (!c) return;
-    const key = `me:${c.color.toLowerCase()}` as CategoryKey;
-    onToggleCategory(key);
-    if (c.default_key === "training") onToggleCategory("ind:training");
+    void update(c.id, { hidden: !c.hidden });
   };
   return <MeCategorySection hidden={hidden} onToggleHidden={handleToggleHidden} />;
 }
