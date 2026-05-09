@@ -66,9 +66,6 @@ function useNavItems(): NavItem[] {
     items.push({ key: "map", to: "/map", label: "Map", icon: MapIcon });
     items.push({ key: "events", to: "/organizer/library", label: "My events", icon: Tent });
   }
-  if (isIndividual) {
-    items.push({ key: "desk", to: "/desk", label: "Desk", icon: Armchair });
-  }
   items.push({ key: "settings", to: "/settings", label: "Settings", icon: Settings });
   return items;
 }

@@ -15,7 +15,6 @@ import { Route as MediaRouteImport } from './routes/media'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as DiaryRouteImport } from './routes/diary'
-import { Route as DeskRouteImport } from './routes/desk'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AcceptLeaderInviteRouteImport } from './routes/accept-leader-invite'
@@ -62,11 +61,6 @@ const DiscoverRoute = DiscoverRouteImport.update({
 const DiaryRoute = DiaryRouteImport.update({
   id: '/diary',
   path: '/diary',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DeskRoute = DeskRouteImport.update({
-  id: '/desk',
-  path: '/desk',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CalendarRoute = CalendarRouteImport.update({
@@ -161,7 +155,6 @@ export interface FileRoutesByFullPath {
   '/accept-leader-invite': typeof AcceptLeaderInviteRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
-  '/desk': typeof DeskRoute
   '/diary': typeof DiaryRoute
   '/discover': typeof DiscoverRoute
   '/map': typeof MapRoute
@@ -187,7 +180,6 @@ export interface FileRoutesByTo {
   '/accept-leader-invite': typeof AcceptLeaderInviteRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
-  '/desk': typeof DeskRoute
   '/diary': typeof DiaryRoute
   '/discover': typeof DiscoverRoute
   '/map': typeof MapRoute
@@ -214,7 +206,6 @@ export interface FileRoutesById {
   '/accept-leader-invite': typeof AcceptLeaderInviteRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
-  '/desk': typeof DeskRoute
   '/diary': typeof DiaryRoute
   '/discover': typeof DiscoverRoute
   '/map': typeof MapRoute
@@ -242,7 +233,6 @@ export interface FileRouteTypes {
     | '/accept-leader-invite'
     | '/auth'
     | '/calendar'
-    | '/desk'
     | '/diary'
     | '/discover'
     | '/map'
@@ -268,7 +258,6 @@ export interface FileRouteTypes {
     | '/accept-leader-invite'
     | '/auth'
     | '/calendar'
-    | '/desk'
     | '/diary'
     | '/discover'
     | '/map'
@@ -294,7 +283,6 @@ export interface FileRouteTypes {
     | '/accept-leader-invite'
     | '/auth'
     | '/calendar'
-    | '/desk'
     | '/diary'
     | '/discover'
     | '/map'
@@ -321,7 +309,6 @@ export interface RootRouteChildren {
   AcceptLeaderInviteRoute: typeof AcceptLeaderInviteRoute
   AuthRoute: typeof AuthRoute
   CalendarRoute: typeof CalendarRoute
-  DeskRoute: typeof DeskRoute
   DiaryRoute: typeof DiaryRoute
   DiscoverRoute: typeof DiscoverRoute
   MapRoute: typeof MapRoute
@@ -385,13 +372,6 @@ declare module '@tanstack/react-router' {
       path: '/diary'
       fullPath: '/diary'
       preLoaderRoute: typeof DiaryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/desk': {
-      id: '/desk'
-      path: '/desk'
-      fullPath: '/desk'
-      preLoaderRoute: typeof DeskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/calendar': {
@@ -521,7 +501,6 @@ const rootRouteChildren: RootRouteChildren = {
   AcceptLeaderInviteRoute: AcceptLeaderInviteRoute,
   AuthRoute: AuthRoute,
   CalendarRoute: CalendarRoute,
-  DeskRoute: DeskRoute,
   DiaryRoute: DiaryRoute,
   DiscoverRoute: DiscoverRoute,
   MapRoute: MapRoute,
@@ -545,3 +524,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
