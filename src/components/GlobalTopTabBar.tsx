@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import {
   Search,
   Plus,
@@ -35,8 +35,8 @@ type CreateKind =
 export function GlobalTopTabBar() {
   const { user, mode } = useAuth();
   const activeKey = useActiveNavKey();
-  const navigate = useNavigate();
-  
+
+
   const isEntity = mode === "team" || mode === "organizer";
 
   const [plusOpen, setPlusOpen] = useState(false);
@@ -78,29 +78,6 @@ export function GlobalTopTabBar() {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("global-create", { detail: { kind } }));
     }
-    switch (kind) {
-      case "meeting":
-        navigate({ to: "/team/group-meetings", search: { new: 1 } as any });
-        break;
-      case "note":
-        navigate({ to: "/media", search: { new: "note" } as any });
-        break;
-      case "file":
-        navigate({ to: "/media", search: { new: "files" } as any });
-        break;
-      case "media":
-        navigate({ to: "/media", search: { new: "media" } as any });
-        break;
-      case "map-location":
-        navigate({ to: "/map", search: { new: "location" } as any });
-        break;
-      case "map-course":
-        navigate({ to: "/map", search: { new: "course" } as any });
-        break;
-      case "event":
-        navigate({ to: "/organizer/library", search: { new: "event" } as any });
-        break;
-    }
   };
 
   const triggerContainer = (kind: CreateKind) => {
@@ -109,31 +86,6 @@ export function GlobalTopTabBar() {
       window.dispatchEvent(
         new CustomEvent("global-create-container", { detail: { kind } }),
       );
-    }
-    // Navigate to the relevant page so the user lands where the new
-    // folder/album will live.
-    switch (kind) {
-      case "meeting":
-        navigate({ to: "/team/group-meetings", search: { newFolder: "meeting" } as any });
-        break;
-      case "note":
-        navigate({ to: "/media", search: { newFolder: "note" } as any });
-        break;
-      case "file":
-        navigate({ to: "/media", search: { newFolder: "files" } as any });
-        break;
-      case "media":
-        navigate({ to: "/media", search: { newFolder: "media" } as any });
-        break;
-      case "map-location":
-        navigate({ to: "/map", search: { newFolder: "location" } as any });
-        break;
-      case "map-course":
-        navigate({ to: "/map", search: { newFolder: "course" } as any });
-        break;
-      case "event":
-        navigate({ to: "/organizer/library", search: { newFolder: "event" } as any });
-        break;
     }
   };
 
@@ -243,13 +195,15 @@ export function GlobalTopTabBar() {
                   </>
                 )}
               </div>
-              <Item
-                icon={<Tent className="h-3.5 w-3.5" />}
-                label="Event"
-                hint="Folder"
-                onClick={() => trigger("event")}
-                onHintClick={() => triggerContainer("event")}
-              />
+              {isEntity && (
+                <Item
+                  icon={<Tent className="h-3.5 w-3.5" />}
+                  label="Event"
+                  hint="Folder"
+                  onClick={() => trigger("event")}
+                  onHintClick={() => triggerContainer("event")}
+                />
+              )}
             </div>
           )}
         </div>
