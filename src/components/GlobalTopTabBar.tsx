@@ -16,7 +16,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { ProfileTab } from "@/components/ProfileTab";
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
-import { useTopBarSlotNode } from "@/components/TopBarSlot";
+import { TopBarSlotMount } from "@/components/TopBarSlot";
 
 type CreateKind =
   | "meeting"
