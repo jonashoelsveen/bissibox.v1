@@ -45,7 +45,7 @@ export function TopBar() {
 
   return (
     <div
-      className="pointer-events-none fixed left-0 right-0 top-0 z-50 h-14"
+      className="pointer-events-none fixed left-0 right-0 top-0 z-50 h-[11px]"
       style={{ background: activeColor || "transparent" }}
     />
   );
