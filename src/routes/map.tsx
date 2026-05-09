@@ -1,8 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { MapPage } from "@/components/map/MapPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/map")({
-  component: MapPage,
   validateSearch: (
     s: Record<string, unknown>,
   ): { folder?: string; open?: string; edit?: string; view?: "previous" } => ({
@@ -11,5 +9,10 @@ export const Route = createFileRoute("/map")({
     edit: typeof s.edit === "string" ? (s.edit as string) : undefined,
     view: s.view === "previous" ? "previous" : undefined,
   }),
-  head: () => ({ meta: [{ title: "Map · Raceline" }] }),
+  beforeLoad: ({ search }) => {
+    throw redirect({
+      to: "/media",
+      search: { tab: "map" as const, ...search },
+    });
+  },
 });
