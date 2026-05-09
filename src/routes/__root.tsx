@@ -2,6 +2,7 @@ import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/r
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TopBar } from "@/components/TopBar";
+import { GlobalTopTabBar } from "@/components/GlobalTopTabBar";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
