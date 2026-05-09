@@ -111,6 +111,7 @@ function CreateBody({
   isEntity: boolean;
   onClose: () => void;
 }) {
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
