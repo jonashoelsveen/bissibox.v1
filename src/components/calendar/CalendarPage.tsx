@@ -159,8 +159,8 @@ export function CalendarPage() {
         <div className="flex-1" />
       </div>
 
-      <div className="grid gap-6 pt-4 md:grid-cols-[240px_1fr]">
-        <aside className="md:sticky md:top-28 md:self-start">
+      <div className="grid min-h-0 flex-1 gap-6 overflow-hidden pt-4 md:grid-cols-[240px_1fr]">
+        <aside className="min-h-0 overflow-y-auto md:self-stretch">
           <CalendarSideNav
             currentDate={currentDate}
             currentRange={currentRange}
@@ -176,7 +176,7 @@ export function CalendarPage() {
           />
         </aside>
 
-        <div className="min-w-0">
+        <div className="flex min-h-0 min-w-0 flex-col">
           <YearCalendarView
             calId={calId}
             defaultTitle={calTitle}
