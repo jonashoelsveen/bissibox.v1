@@ -92,6 +92,8 @@ export function CalendarSideNav({
   onToggleCategory,
   seat,
   entities = [],
+  teamId = null,
+  teamName,
 }: CalendarSideNavProps) {
   // Per-entity visibility state (independent across entities).
   const [entityHidden, setEntityHidden] = useState<Record<string, Set<AdminCatKey>>>({});
