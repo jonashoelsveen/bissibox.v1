@@ -167,13 +167,44 @@ export function SessionHoverMenu({
   // Member-side preview panel: shown when member has a note and menu is visible,
   // OR when the owner is editing their note.
   const showMemberPanel = (hasNote && menuVisible) || (isOwner && noteEdit);
-  // Leader-side panel: visible when a leader note exists or non-owner edits one.
-  const showLeaderPanel = (hasLeaderNote && menuVisible) || leaderNoteEdit;
+
+  // Build the list of leader-side panels rendered to the right of the menu.
+  // Includes the viewer's own note (when non-owner & editable) plus every
+  // other leader / follower note. Each gets its own author-named header.
+  type LeaderPanelItem = {
+    key: string;
+    header: string;
+    value: string;
+    mode: "preview" | "edit";
+    onSave: (text: string) => void;
+    onRequestEdit?: () => void;
+  };
+  const leaderPanels: LeaderPanelItem[] = [];
+  if (!isOwner && (leader.viewerNote.trim() || leaderNoteEdit || (leader.canEdit && menuVisible))) {
+    leaderPanels.push({
+      key: "viewer",
+      header: viewerName ? `${baseHeader} · ${viewerName}` : baseHeader,
+      value: leader.viewerNote,
+      mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
+      onSave: (text) => { void leader.saveViewerNote(text); },
+      onRequestEdit: leader.canEdit ? () => setLeaderNoteEdit(true) : undefined,
+    });
+  }
+  for (const n of leader.leaderNotes) {
+    leaderPanels.push({
+      key: `leader-${n.authorId}`,
+      header: n.authorName ? `${baseHeader} · ${n.authorName}` : baseHeader,
+      value: n.body,
+      mode: "preview",
+      onSave: () => {},
+    });
+  }
+  const showLeaderPanels = menuVisible && leaderPanels.length > 0;
   const menuW = showMemberPanel ? NOTE_PANEL_W : compactW;
 
   const gap = 4;
   let left = blockRect.left + blockRect.width + gap;
-  const rightSlot = showLeaderPanel ? NOTE_PANEL_W + 6 : 0;
+  const rightSlot = showLeaderPanels ? leaderPanels.length * (NOTE_PANEL_W + 6) : 0;
   const widestNeeded = menuW + rightSlot;
   if (left + widestNeeded > window.innerWidth - 8) {
     left = Math.max(8, blockRect.left - widestNeeded - gap);
