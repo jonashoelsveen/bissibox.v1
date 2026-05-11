@@ -123,7 +123,8 @@ export function SessionHoverMenu({
   const ICON_W = 32;
   const PADDING_X = 6 * 2;
   const GAP = 2 * 2;
-  const compactW = ICON_W * 3 + GAP + PADDING_X;
+  const iconCount = isOwner ? 3 : 2;
+  const compactW = ICON_W * iconCount + GAP + PADDING_X;
   const showNote = (hasNote && menuVisible) || noteEdit;
   const menuW = showNote ? NOTE_PANEL_W : compactW;
 
@@ -181,22 +182,24 @@ export function SessionHoverMenu({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
+            <MenuBtn label="Detaljer" onClick={() => setShowDetails(true)}>
+              <Pencil className="h-4 w-4" strokeWidth={2.25} />
+            </MenuBtn>
             <MenuBtn
               label={hasNote ? "Rediger notat" : "Legg til notat"}
               onClick={() => setNoteEdit(true)}
             >
               <StickyNote className="h-4 w-4" strokeWidth={2.25} />
             </MenuBtn>
-            <MenuBtn label="Detaljer" onClick={() => setShowDetails(true)}>
-              <Pencil className="h-4 w-4" strokeWidth={2.25} />
-            </MenuBtn>
-            <MenuBtn
-              label="Slett"
-              destructive
-              onClick={() => setConfirm(true)}
-            >
-              <Trash2 className="h-4 w-4" strokeWidth={2.25} />
-            </MenuBtn>
+            {isOwner && (
+              <MenuBtn
+                label="Slett"
+                destructive
+                onClick={() => setConfirm(true)}
+              >
+                <Trash2 className="h-4 w-4" strokeWidth={2.25} />
+              </MenuBtn>
+            )}
           </div>,
           document.body,
         )
