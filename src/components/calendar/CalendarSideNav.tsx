@@ -77,6 +77,10 @@ export interface CalendarSideNavProps {
   seat: "individual" | "admin";
   /** Optional entity list shown as collapsible groups (individual seat). */
   entities?: SideNavEntity[];
+  /** Active team id (admin seat only). Scopes the team's categories. */
+  teamId?: string | null;
+  /** Active team name (admin seat only). Used as the section header. */
+  teamName?: string;
 }
 
 export function CalendarSideNav({
