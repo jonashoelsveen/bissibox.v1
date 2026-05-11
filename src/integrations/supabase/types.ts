@@ -204,6 +204,66 @@ export type Database = {
           },
         ]
       }
+      diary_day_notes: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          day: string
+          id: string
+          member_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body?: string
+          created_at?: string
+          day: string
+          id?: string
+          member_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          day?: string
+          id?: string
+          member_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      diary_session_notes: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          event_id: string
+          id: string
+          member_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body?: string
+          created_at?: string
+          event_id: string
+          id?: string
+          member_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          member_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_classes: {
         Row: {
           code: string
@@ -1355,6 +1415,33 @@ export type Database = {
         }
         Relationships: []
       }
+      team_active_followers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          follower_id: string
+          id: string
+          member_id: string
+          team_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          follower_id: string
+          id?: string
+          member_id: string
+          team_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          follower_id?: string
+          id?: string
+          member_id?: string
+          team_id?: string | null
+        }
+        Relationships: []
+      }
       team_board_meeting_attachments: {
         Row: {
           created_at: string
@@ -1565,6 +1652,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      team_followers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          follower_id: string
+          id: string
+          member_id: string
+          team_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          follower_id: string
+          id?: string
+          member_id: string
+          team_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          follower_id?: string
+          id?: string
+          member_id?: string
+          team_id?: string | null
+        }
+        Relationships: []
       }
       team_follows: {
         Row: {
@@ -2238,6 +2352,9 @@ export type Database = {
     }
     Functions: {
       calc_word_count: { Args: { _body: string }; Returns: number }
+      can_annotate_member: { Args: { _member: string }; Returns: boolean }
+      can_view_member: { Args: { _member: string }; Returns: boolean }
+      get_member_viewer_role: { Args: { _member: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2245,6 +2362,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_active_follower_of_member: {
+        Args: { _member: string }
+        Returns: boolean
+      }
+      is_follower_of_member: { Args: { _member: string }; Returns: boolean }
+      is_group_leader_of_member: { Args: { _member: string }; Returns: boolean }
       is_media_in_team_profile_album: {
         Args: { _media_id: string }
         Returns: boolean
