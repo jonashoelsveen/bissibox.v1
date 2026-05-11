@@ -1006,6 +1006,8 @@ export function UnifiedElasticGrid({
                 onUpsertEvent({ id, sessionNote: note || undefined })
               }
               onUpsertSession={(patch) => onUpsertEvent(patch)}
+              memberId={memberId}
+              viewerRole={viewerRole}
             />
           )}
           {mode.kind === "year" && todayColIdx >= 0 && nowMinutesSinceStart !== null && (
@@ -1867,6 +1869,8 @@ function WeekEventsOverlay({
   onDeleteEvent,
   onSaveSessionNote,
   onUpsertSession,
+  memberId,
+  viewerRole = "owner",
 }: {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   events: CalendarEvent[];
@@ -1880,6 +1884,8 @@ function WeekEventsOverlay({
   onDeleteEvent?: (id: string) => void;
   onSaveSessionNote?: (id: string, note: string) => void;
   onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
+  memberId?: string;
+  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }) {
   const [tileDesign] = useSessionTileDesign();
   const [unit] = useDistanceUnit();
