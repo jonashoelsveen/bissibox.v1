@@ -239,6 +239,21 @@ export function GlobalTopTabBar() {
   );
 }
 
+function AppsIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      {[5, 12, 19].flatMap((y) =>
+        [5, 12, 19].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.6" />)
+      )}
+    </svg>
+  );
+}
+
 function Item({
   icon,
   label,
