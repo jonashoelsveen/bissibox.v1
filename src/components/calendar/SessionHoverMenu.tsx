@@ -51,13 +51,21 @@ export function SessionHoverMenu({
   onMenuEnter,
   onMenuLeave,
   onForceClose,
+  memberId,
   viewerRole = "owner",
 }: SessionHoverMenuProps) {
   const isOwner = viewerRole === "owner";
   const [confirm, setConfirm] = useState(false);
   const [noteEdit, setNoteEdit] = useState(false);
+  const [leaderNoteEdit, setLeaderNoteEdit] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const hasNote = !!ev.sessionNote?.trim();
+
+  // Leader / active-follower note (Supabase). For owners this returns the
+  // first leader-authored note as `viewerNote` (read-only); for non-owners it
+  // returns the current user's own note (editable).
+  const leader = useDiarySessionNote(ev.id, memberId ?? "", viewerRole);
+  const hasLeaderNote = !!leader.viewerNote.trim() || leader.hasLeaderNote;
 
   // Initialize the SessionDetailsValue from the event.
   const [detailsValue, setDetailsValue] = useState<SessionDetailsValue | null>(null);
