@@ -249,6 +249,8 @@ export interface NotePanelProps {
   closeOnOutsideClick?: boolean;
   /** Default true: shows the bottom Save bar in edit mode. */
   showFooter?: boolean;
+  /** Visual tone of the left side-line. Defaults to gray (member); "leader" uses brand primary blue. */
+  tone?: "gray" | "leader";
   onSave: (text: string) => void;
   onClose: () => void;
   onRequestEdit?: () => void;
@@ -267,6 +269,7 @@ export function NotePanel({
   closeOnEnter = true,
   closeOnOutsideClick = true,
   showFooter = true,
+  tone = "gray",
   onSave,
   onClose,
   onRequestEdit,
@@ -418,7 +421,7 @@ export function NotePanel({
         <span
           aria-hidden
           className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
-          style={{ background: "#9CA3AF" }}
+          style={{ background: tone === "leader" ? "hsl(var(--primary))" : "#9CA3AF" }}
         />
         {headerLabel ? (
           <div className="flex items-center justify-between border-b border-hairline pl-4 pr-3 py-1.5">
