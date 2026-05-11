@@ -812,6 +812,8 @@ export function UnifiedElasticGrid({
           onUpsertEvent={onUpsertEvent}
           onMoveEvent={onMoveEvent}
           onDeleteEvent={onDeleteEvent}
+          memberId={memberId}
+          viewerRole={viewerRole}
           onPrevMonth={() => {
             const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
             onCurrentDateChange(d, { start: d, end: d });
@@ -886,7 +888,7 @@ export function UnifiedElasticGrid({
                   } ${appKind === "diary" ? "relative" : ""}`}
                 >
                   {appKind === "diary" && colDate && (
-                    <DayNoteButton calId={calId} date={colDate} variant="week" />
+                    <DayNoteButton calId={calId} date={colDate} variant="week" memberId={memberId} viewerRole={viewerRole} />
                   )}
                   <span>
                     {m.label}
@@ -2196,6 +2198,8 @@ function WeekEventsOverlay({
             blockRect={hoverRect}
             rowHeight={rowHeight}
             visible={hoverId === ev.id}
+            memberId={memberId}
+            viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
             onForceClose={() => {
