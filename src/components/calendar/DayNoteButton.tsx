@@ -269,6 +269,7 @@ export function NotePanel({
   closeOnEnter = true,
   closeOnOutsideClick = true,
   showFooter = true,
+  tone = "gray",
   onSave,
   onClose,
   onRequestEdit,
