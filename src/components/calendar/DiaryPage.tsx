@@ -72,6 +72,8 @@ export function DiaryPage() {
             viewMode={viewMode}
             onViewModeChange={(v) => setViewMode(v === "day" ? "week" : v)}
             visibleCategories={visibleCategories}
+            memberId={user?.id}
+            viewerRole="owner"
           />
         </div>
       </div>
