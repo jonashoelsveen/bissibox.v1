@@ -78,6 +78,8 @@ interface DayNoteButtonProps {
   date: Date;
   variant: "week" | "month";
   anchorSelector?: string;
+  memberId?: string;
+  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
 
 export function DayNoteButton({
@@ -85,6 +87,8 @@ export function DayNoteButton({
   date,
   variant,
   anchorSelector = "[data-day-anchor]",
+  memberId,
+  viewerRole = "owner",
 }: DayNoteButtonProps) {
   const note = useDayNote(calId, date);
   const has = !!note.trim();
