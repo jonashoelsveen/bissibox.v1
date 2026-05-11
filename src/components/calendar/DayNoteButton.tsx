@@ -249,6 +249,8 @@ export interface NotePanelProps {
   closeOnOutsideClick?: boolean;
   /** Default true: shows the bottom Save bar in edit mode. */
   showFooter?: boolean;
+  /** Visual tone of the left side-line. Defaults to gray (member); "leader" uses brand primary blue. */
+  tone?: "gray" | "leader";
   onSave: (text: string) => void;
   onClose: () => void;
   onRequestEdit?: () => void;
