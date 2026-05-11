@@ -6,6 +6,7 @@ import { YearCalendarView } from "@/components/calendar/YearCalendarView";
 import type { ViewMode } from "@/components/calendar/UnifiedElasticGrid";
 import type { CategoryKey } from "@/components/calendar/CalendarSideNav";
 import { MemberLibraryMain, type LibraryView, type Album } from "./MemberLibrary";
+import { useViewerRole } from "@/hooks/useViewerRole";
 
 export type MemberSubTab = "calendar" | "diary" | "library";
 
