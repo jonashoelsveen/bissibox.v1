@@ -135,20 +135,7 @@ export function CalendarSideNav({
       {/* Category filters */}
       <div className="flex flex-col gap-0.5 pb-4">
         {seat === "admin" ? (
-          <>
-            <div className="px-3 pb-1 pt-1 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted-foreground/80">
-              Kategorier
-            </div>
-            <CategoryList
-              items={ADMIN_SIDENAV_CATEGORIES.map((c) => ({
-                key: c.key,
-                label: c.label,
-                color: c.color,
-              }))}
-              visible={visibleCategories}
-              onToggle={onToggleCategory}
-            />
-          </>
+          <TeamCategorySectionAdapter teamId={teamId} title={teamName ?? "Categories"} />
         ) : (
           <>
             <MeCategorySectionAdapter />
@@ -167,6 +154,26 @@ export function CalendarSideNav({
         )}
       </div>
     </nav>
+  );
+}
+
+/** Same as MeCategorySectionAdapter but scoped to a team. */
+function TeamCategorySectionAdapter({ teamId, title }: { teamId: string | null; title: string }) {
+  const { categories, update } = useUserCategories({ teamId });
+  const hidden = new Set<string>();
+  for (const c of categories) if (c.hidden) hidden.add(c.id);
+  const handleToggleHidden = (id: string) => {
+    const c = categories.find((x) => x.id === id);
+    if (!c) return;
+    void update(c.id, { hidden: !c.hidden });
+  };
+  return (
+    <MeCategorySection
+      hidden={hidden}
+      onToggleHidden={handleToggleHidden}
+      teamId={teamId}
+      title={title}
+    />
   );
 }
 
