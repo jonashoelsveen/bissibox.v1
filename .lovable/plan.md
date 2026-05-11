@@ -1,20 +1,20 @@
-## Goal
+## Problem
 
-Make the mini calendar in the Calendar and Diary left menus blend in (no card background) and tighten the side nav width to hug the mini calendar's edges.
+The mini calendar has a hard-coded `width: 240px` plus `p-2.5` (10px) padding, but the side rail column is 220px and the `<aside>` adds `pr-1`. The mini calendar is wider than its container, forcing horizontal scroll.
 
 ## Changes
 
-1. **Mini calendar wrapper — remove background and border**
-   - `src/components/calendar/CalendarSideNav.tsx` (line 121): replace `<div className="rounded-lg border border-hairline bg-card">` with a plain wrapper (no `bg-card`, no `border`, no `rounded-lg`) so only the day numbers and weekday letters show against the page.
-   - `src/components/calendar/DiarySideNav.tsx` (line 154): same change.
-   - Keep the existing inner `MiniCalendar` padding (`p-2.5`) intact; selected-day pill, today-dot, and hover states already use semantic tokens and remain visible.
+1. **Make MiniCalendar fluid** — `src/components/calendar/MiniCalendar.tsx` (line 137-139)
+   - Remove the fixed inline `style={{ width: 240, fontSize: 12 }}`; keep `fontSize` via a Tailwind class (`text-[12px]`).
+   - Change padding from `p-2.5` to `p-1` so the calendar hugs its container.
+   - Result: the calendar fills whatever width the rail gives it.
 
-2. **Tighten left-column width**
-   - `src/components/calendar/CalendarPage.tsx` (line 149): change grid template from `md:grid-cols-[260px_1fr]` to `md:grid-cols-[220px_1fr]`.
-   - `src/components/calendar/DiaryPage.tsx` (line 45): same change.
-   - 220px matches the mini calendar's natural width (7 cells × ~26px + padding) so the rail visually ends right at the calendar's edge. Category rows and section headers below still fit (they use `truncate` / flexible widths).
+2. **Trim aside padding** — `src/components/calendar/CalendarPage.tsx` (line 150) and `src/components/calendar/DiaryPage.tsx` (equivalent aside)
+   - Replace `md:pr-1` with `md:pr-0` so the rail extends to the column edge.
+
+3. **Keep rail at 220px** — no further width change needed; the day cells naturally size to fit.
 
 ## Out of scope
 
-- No changes to MiniCalendar internals, day-cell sizing, or color tokens.
-- No changes to the Library sidebar width or its new right border.
+- No change to outer page padding (`px-4 md:px-6`) — that's the page gutter, not the rail.
+- No change to category rows, headers, or the Library sidebar.
