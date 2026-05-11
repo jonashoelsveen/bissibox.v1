@@ -108,25 +108,26 @@ export function SessionHoverMenu({
   }, [visible, noteEdit, showDetails, confirm]);
 
   // Lock the menu open while note edit / details / confirm is in flight.
-  const sticky = noteEdit || showDetails || confirm;
+  const sticky = noteEdit || leaderNoteEdit || showDetails || confirm;
   const menuVisible = visible || sticky;
 
   // Outside-click closes everything when the note panel is open.
   const menuRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (!noteEdit) return;
+    if (!noteEdit && !leaderNoteEdit) return;
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node | null;
       const inMenu = menuRef.current?.contains(t as Node);
       const inNote = (t as HTMLElement | null)?.closest('[data-note-panel="1"]');
       if (!inMenu && !inNote) {
         setNoteEdit(false);
+        setLeaderNoteEdit(false);
         onForceClose?.();
       }
     };
     window.addEventListener("mousedown", onDown);
     return () => window.removeEventListener("mousedown", onDown);
-  }, [noteEdit, onForceClose]);
+  }, [noteEdit, leaderNoteEdit, onForceClose]);
 
   const menuH = Math.max(28, rowHeight * 1.4);
   const ICON_W = 32;
@@ -134,12 +135,17 @@ export function SessionHoverMenu({
   const GAP = 2 * 2;
   const iconCount = isOwner ? 3 : 2;
   const compactW = ICON_W * iconCount + GAP + PADDING_X;
-  const showNote = (hasNote && menuVisible) || noteEdit;
-  const menuW = showNote ? NOTE_PANEL_W : compactW;
+  // Member-side preview panel: shown when member has a note and menu is visible,
+  // OR when the owner is editing their note.
+  const showMemberPanel = (hasNote && menuVisible) || (isOwner && noteEdit);
+  // Leader-side panel: visible when a leader note exists or non-owner edits one.
+  const showLeaderPanel = (hasLeaderNote && menuVisible) || leaderNoteEdit;
+  const menuW = showMemberPanel ? NOTE_PANEL_W : compactW;
 
   const gap = 4;
   let left = blockRect.left + blockRect.width + gap;
-  const widestNeeded = Math.max(menuW, showNote ? NOTE_PANEL_W : compactW);
+  const rightSlot = showLeaderPanel ? NOTE_PANEL_W + 6 : 0;
+  const widestNeeded = menuW + rightSlot;
   if (left + widestNeeded > window.innerWidth - 8) {
     left = Math.max(8, blockRect.left - widestNeeded - gap);
   }
