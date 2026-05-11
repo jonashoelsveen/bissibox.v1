@@ -218,6 +218,8 @@ export interface UnifiedElasticGridProps {
   viewMode?: ViewMode;
   onViewModeChange?: (v: ViewMode) => void;
   appKind?: "calendar" | "diary";
+  memberId?: string;
+  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
 
 type Mode = { kind: "year" } | { kind: "month"; month: number };
@@ -243,6 +245,8 @@ export function UnifiedElasticGrid({
   viewMode: viewModeProp,
   onViewModeChange,
   appKind = "calendar",
+  memberId,
+  viewerRole = "owner",
 }: UnifiedElasticGridProps) {
   // viewMode is the only user-facing toggle now. There are no "types".
   //   - "day"   → 7-column rich spreadsheet (one row per 30-min slot)
