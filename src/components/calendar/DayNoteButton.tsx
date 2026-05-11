@@ -421,7 +421,7 @@ export function NotePanel({
         <span
           aria-hidden
           className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
-          style={{ background: "#9CA3AF" }}
+          style={{ background: tone === "leader" ? "hsl(var(--primary))" : "#9CA3AF" }}
         />
         {headerLabel ? (
           <div className="flex items-center justify-between border-b border-hairline pl-4 pr-3 py-1.5">
