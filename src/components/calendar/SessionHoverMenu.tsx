@@ -21,6 +21,7 @@ import { colorForActivity } from "@/lib/activity-colors";
 import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import type { CalendarEvent } from "./yearStore";
 import { fromISOLocal, toISOLocal, setHM } from "./dateUtils";
+import { useDiarySessionNote } from "@/hooks/useDiarySessionNote";
 
 const NOTE_PANEL_W = 280;
 
