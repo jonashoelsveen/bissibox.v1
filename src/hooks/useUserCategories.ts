@@ -13,7 +13,14 @@ export interface UserCategory {
   default_key: string | null;
 }
 
-export function useUserCategories() {
+/**
+ * Manage calendar categories for either the current user (personal) or a
+ * given team (entity scope). When `teamId` is provided, queries/inserts are
+ * scoped to that team; otherwise they are scoped to the user's personal
+ * (team_id IS NULL) categories.
+ */
+export function useUserCategories(opts?: { teamId?: string | null }) {
+  const teamId = opts?.teamId ?? null;
   const { user } = useAuth();
   const [categories, setCategories] = useState<UserCategory[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -24,31 +31,34 @@ export function useUserCategories() {
       setLoaded(true);
       return;
     }
-    const { data } = await supabase
+    let q = supabase
       .from("calendar_categories")
-      .select("id,name,color,pinned,hidden,sort_order,is_default,default_key")
-      .eq("user_id", user.id)
+      .select("id,name,color,pinned,hidden,sort_order,is_default,default_key");
+    if (teamId) q = q.eq("team_id", teamId);
+    else q = q.is("team_id", null).eq("user_id", user.id);
+    const { data } = await q
       .order("pinned", { ascending: false })
       .order("sort_order", { ascending: true });
     setCategories((data ?? []) as UserCategory[]);
     setLoaded(true);
-  }, [user]);
+  }, [user, teamId]);
 
   useEffect(() => {
     void load();
     if (!user) return;
+    const filter = teamId ? `team_id=eq.${teamId}` : `user_id=eq.${user.id}`;
     const ch = supabase
-      .channel(`calendar-categories-${user.id}-${Math.random().toString(36).slice(2)}`)
+      .channel(`calendar-categories-${teamId ?? user.id}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "calendar_categories", filter: `user_id=eq.${user.id}` },
+        { event: "*", schema: "public", table: "calendar_categories", filter },
         () => void load(),
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [load, user]);
+  }, [load, user, teamId]);
 
   const create = useCallback(
     async (name: string, color: string): Promise<UserCategory | null> => {
@@ -58,6 +68,7 @@ export function useUserCategories() {
         .from("calendar_categories")
         .insert({
           user_id: user.id,
+          team_id: teamId,
           name,
           color,
           sort_order: maxOrder + 1,
@@ -69,7 +80,7 @@ export function useUserCategories() {
       setCategories((prev) => (prev.some((c) => c.id === created.id) ? prev : [...prev, created]));
       return created;
     },
-    [user, categories],
+    [user, teamId, categories],
   );
 
   const update = useCallback(

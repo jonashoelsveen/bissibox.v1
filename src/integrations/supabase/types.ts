@@ -100,6 +100,7 @@ export type Database = {
           name: string
           pinned: boolean
           sort_order: number
+          team_id: string | null
           updated_at: string
           user_id: string
         }
@@ -113,6 +114,7 @@ export type Database = {
           name: string
           pinned?: boolean
           sort_order?: number
+          team_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -126,10 +128,19 @@ export type Database = {
           name?: string
           pinned?: boolean
           sort_order?: number
+          team_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "calendar_categories_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       companies: {
         Row: {

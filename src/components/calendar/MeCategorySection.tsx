@@ -24,11 +24,17 @@ import { MiniColorPicker, DEFAULT_SWATCHES } from "./MiniColorPicker";
 export function MeCategorySection({
   hidden,
   onToggleHidden,
+  teamId,
+  title = "Me",
 }: {
   hidden: Set<string>; // category ids that are hidden
   onToggleHidden: (id: string) => void;
+  /** When set, scopes categories to this team. */
+  teamId?: string | null;
+  /** Header label for the section. Defaults to "Me". */
+  title?: string;
 }) {
-  const { categories, create, update, remove, reorder } = useUserCategories();
+  const { categories, create, update, remove, reorder } = useUserCategories({ teamId });
   const [open, setOpen] = useState(true);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -86,7 +92,7 @@ export function MeCategorySection({
           <ChevronRight
             className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-90" : ""}`}
           />
-          <span className="min-w-0 flex-1 truncate font-medium">Me</span>
+          <span className="min-w-0 flex-1 truncate font-medium">{title}</span>
         </button>
         <button
           type="button"
