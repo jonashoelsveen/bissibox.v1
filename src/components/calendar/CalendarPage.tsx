@@ -164,6 +164,8 @@ export function CalendarPage() {
             onToggleCategory={toggleCategory}
             seat={seat}
             entities={seat === "individual" ? entities : []}
+            teamId={teamId}
+            teamName={entityName}
           />
         </aside>
 
