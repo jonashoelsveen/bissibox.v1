@@ -92,7 +92,7 @@ export function MeCategorySection({
           <ChevronRight
             className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-90" : ""}`}
           />
-          <span className="min-w-0 flex-1 truncate font-medium">Me</span>
+          <span className="min-w-0 flex-1 truncate font-medium">{title}</span>
         </button>
         <button
           type="button"
