@@ -218,6 +218,8 @@ export interface UnifiedElasticGridProps {
   viewMode?: ViewMode;
   onViewModeChange?: (v: ViewMode) => void;
   appKind?: "calendar" | "diary";
+  memberId?: string;
+  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
 
 type Mode = { kind: "year" } | { kind: "month"; month: number };
@@ -243,6 +245,8 @@ export function UnifiedElasticGrid({
   viewMode: viewModeProp,
   onViewModeChange,
   appKind = "calendar",
+  memberId,
+  viewerRole = "owner",
 }: UnifiedElasticGridProps) {
   // viewMode is the only user-facing toggle now. There are no "types".
   //   - "day"   → 7-column rich spreadsheet (one row per 30-min slot)
@@ -808,6 +812,8 @@ export function UnifiedElasticGrid({
           onUpsertEvent={onUpsertEvent}
           onMoveEvent={onMoveEvent}
           onDeleteEvent={onDeleteEvent}
+          memberId={memberId}
+          viewerRole={viewerRole}
           onPrevMonth={() => {
             const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
             onCurrentDateChange(d, { start: d, end: d });
@@ -882,7 +888,7 @@ export function UnifiedElasticGrid({
                   } ${appKind === "diary" ? "relative" : ""}`}
                 >
                   {appKind === "diary" && colDate && (
-                    <DayNoteButton calId={calId} date={colDate} variant="week" />
+                    <DayNoteButton calId={calId} date={colDate} variant="week" memberId={memberId} viewerRole={viewerRole} />
                   )}
                   <span>
                     {m.label}
@@ -1000,6 +1006,8 @@ export function UnifiedElasticGrid({
                 onUpsertEvent({ id, sessionNote: note || undefined })
               }
               onUpsertSession={(patch) => onUpsertEvent(patch)}
+              memberId={memberId}
+              viewerRole={viewerRole}
             />
           )}
           {mode.kind === "year" && todayColIdx >= 0 && nowMinutesSinceStart !== null && (
@@ -1861,6 +1869,8 @@ function WeekEventsOverlay({
   onDeleteEvent,
   onSaveSessionNote,
   onUpsertSession,
+  memberId,
+  viewerRole = "owner",
 }: {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   events: CalendarEvent[];
@@ -1874,6 +1884,8 @@ function WeekEventsOverlay({
   onDeleteEvent?: (id: string) => void;
   onSaveSessionNote?: (id: string, note: string) => void;
   onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
+  memberId?: string;
+  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }) {
   const [tileDesign] = useSessionTileDesign();
   const [unit] = useDistanceUnit();
@@ -2192,6 +2204,8 @@ function WeekEventsOverlay({
             blockRect={hoverRect}
             rowHeight={rowHeight}
             visible={hoverId === ev.id}
+            memberId={memberId}
+            viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
             onForceClose={() => {

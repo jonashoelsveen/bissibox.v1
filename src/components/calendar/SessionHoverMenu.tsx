@@ -26,20 +26,17 @@ const NOTE_PANEL_W = 280;
 
 export interface SessionHoverMenuProps {
   ev: CalendarEvent;
-  /** Bounding rect of the session block (viewport coords). */
   blockRect: { left: number; top: number; width: number; height: number };
   rowHeight: number;
   onDelete: () => void;
   onSaveNote: (text: string) => void;
-  /** Persist a full edit from the SessionDetailsModal. */
   onUpsert: (patch: Partial<CalendarEvent> & { id: string }) => void;
   visible: boolean;
-  /** Called when the cursor enters the menu — parent should cancel its close timer. */
   onMenuEnter?: () => void;
-  /** Called when the cursor leaves the menu — parent should start its close timer. */
   onMenuLeave?: () => void;
-  /** Called by parent to force-close the menu (e.g. after a destructive action). */
   onForceClose?: () => void;
+  memberId?: string;
+  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
 
 export function SessionHoverMenu({
@@ -53,7 +50,9 @@ export function SessionHoverMenu({
   onMenuEnter,
   onMenuLeave,
   onForceClose,
+  viewerRole = "owner",
 }: SessionHoverMenuProps) {
+  const isOwner = viewerRole === "owner";
   const [confirm, setConfirm] = useState(false);
   const [noteEdit, setNoteEdit] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -124,7 +123,8 @@ export function SessionHoverMenu({
   const ICON_W = 32;
   const PADDING_X = 6 * 2;
   const GAP = 2 * 2;
-  const compactW = ICON_W * 3 + GAP + PADDING_X;
+  const iconCount = isOwner ? 3 : 2;
+  const compactW = ICON_W * iconCount + GAP + PADDING_X;
   const showNote = (hasNote && menuVisible) || noteEdit;
   const menuW = showNote ? NOTE_PANEL_W : compactW;
 
@@ -182,22 +182,24 @@ export function SessionHoverMenu({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
+            <MenuBtn label="Detaljer" onClick={() => setShowDetails(true)}>
+              <Pencil className="h-4 w-4" strokeWidth={2.25} />
+            </MenuBtn>
             <MenuBtn
               label={hasNote ? "Rediger notat" : "Legg til notat"}
               onClick={() => setNoteEdit(true)}
             >
               <StickyNote className="h-4 w-4" strokeWidth={2.25} />
             </MenuBtn>
-            <MenuBtn label="Detaljer" onClick={() => setShowDetails(true)}>
-              <Pencil className="h-4 w-4" strokeWidth={2.25} />
-            </MenuBtn>
-            <MenuBtn
-              label="Slett"
-              destructive
-              onClick={() => setConfirm(true)}
-            >
-              <Trash2 className="h-4 w-4" strokeWidth={2.25} />
-            </MenuBtn>
+            {isOwner && (
+              <MenuBtn
+                label="Slett"
+                destructive
+                onClick={() => setConfirm(true)}
+              >
+                <Trash2 className="h-4 w-4" strokeWidth={2.25} />
+              </MenuBtn>
+            )}
           </div>,
           document.body,
         )

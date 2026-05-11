@@ -142,6 +142,8 @@ export interface MonthGridType1Props {
   selectedDate?: Date | null;
   /** Notify parent when a day cell is clicked. */
   onSelectDate?: (date: Date) => void;
+  memberId?: string;
+  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
 
 interface DayItem {
@@ -184,6 +186,8 @@ export function MonthGridType1({
   onWeekClick,
   selectedDate,
   onSelectDate,
+  memberId,
+  viewerRole = "owner",
 }: MonthGridType1Props) {
   const dim = daysInMonth(year, month);
   const firstDow = dowMon0(new Date(year, month, 1));
@@ -726,7 +730,7 @@ export function MonthGridType1({
 
                   {/* Diary: per-day note (bottom-right corner) */}
                   {appKind === "diary" && d.inMonth && (
-                    <DayNoteButton calId={calId} date={d.date} variant="month" />
+                    <DayNoteButton calId={calId} date={d.date} variant="month" memberId={memberId} viewerRole={viewerRole} />
                   )}
 
                   {/* Focus ring intentionally removed — keep selection subtle */}
