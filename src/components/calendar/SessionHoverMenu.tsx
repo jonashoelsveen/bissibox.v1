@@ -22,6 +22,34 @@ import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import type { CalendarEvent } from "./yearStore";
 import { fromISOLocal, toISOLocal, setHM } from "./dateUtils";
 import { useDiarySessionNote } from "@/hooks/useDiarySessionNote";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
+
+function dayLabel(date: Date): string {
+  return `${String(date.getDate()).padStart(2, "0")}.${String(
+    date.getMonth() + 1,
+  ).padStart(2, "0")}.${String(date.getFullYear() % 100).padStart(2, "0")}`;
+}
+
+function useViewerName(): string {
+  const { user } = useAuth();
+  const [name, setName] = useState("");
+  useEffect(() => {
+    if (!user) { setName(""); return; }
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("first_name,last_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      setName(`${data?.first_name ?? ""} ${data?.last_name ?? ""}`.trim());
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+  return name;
+}
 
 const NOTE_PANEL_W = 280;
 
@@ -61,11 +89,12 @@ export function SessionHoverMenu({
   const [showDetails, setShowDetails] = useState(false);
   const hasNote = !!ev.sessionNote?.trim();
 
-  // Leader / active-follower note (Supabase). For owners this returns the
-  // first leader-authored note as `viewerNote` (read-only); for non-owners it
-  // returns the current user's own note (editable).
+  // Leader / active-follower notes (Supabase).
   const leader = useDiarySessionNote(ev.id, memberId ?? "", viewerRole);
-  const hasLeaderNote = !!leader.viewerNote.trim() || leader.hasLeaderNote;
+  const viewerName = useViewerName();
+  const sessionDate = fromISOLocal(ev.startISO);
+  const baseHeader = `Note ${dayLabel(sessionDate)}`;
+  const hasLeaderNote = leader.leaderNotes.length > 0 || !!leader.viewerNote.trim();
 
   // Initialize the SessionDetailsValue from the event.
   const [detailsValue, setDetailsValue] = useState<SessionDetailsValue | null>(null);
