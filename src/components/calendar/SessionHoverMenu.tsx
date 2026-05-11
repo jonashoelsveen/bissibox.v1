@@ -26,20 +26,17 @@ const NOTE_PANEL_W = 280;
 
 export interface SessionHoverMenuProps {
   ev: CalendarEvent;
-  /** Bounding rect of the session block (viewport coords). */
   blockRect: { left: number; top: number; width: number; height: number };
   rowHeight: number;
   onDelete: () => void;
   onSaveNote: (text: string) => void;
-  /** Persist a full edit from the SessionDetailsModal. */
   onUpsert: (patch: Partial<CalendarEvent> & { id: string }) => void;
   visible: boolean;
-  /** Called when the cursor enters the menu — parent should cancel its close timer. */
   onMenuEnter?: () => void;
-  /** Called when the cursor leaves the menu — parent should start its close timer. */
   onMenuLeave?: () => void;
-  /** Called by parent to force-close the menu (e.g. after a destructive action). */
   onForceClose?: () => void;
+  memberId?: string;
+  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
 
 export function SessionHoverMenu({
@@ -53,7 +50,9 @@ export function SessionHoverMenu({
   onMenuEnter,
   onMenuLeave,
   onForceClose,
+  viewerRole = "owner",
 }: SessionHoverMenuProps) {
+  const isOwner = viewerRole === "owner";
   const [confirm, setConfirm] = useState(false);
   const [noteEdit, setNoteEdit] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
