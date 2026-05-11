@@ -189,7 +189,7 @@ export function SessionHoverMenu({
             data-session-hover-menu="1"
             className={[
               "fixed z-[20] flex items-stretch gap-1 border border-hairline bg-card/95 px-1.5 shadow-md backdrop-blur transition-[width] duration-150",
-              showNote ? "rounded-t-md border-b-0" : "rounded-md",
+              showMemberPanel ? "rounded-t-md border-b-0" : "rounded-md",
             ].join(" ")}
             style={{ left, top, width: menuW, height: menuH }}
             onMouseEnter={onMenuEnter}
@@ -201,8 +201,15 @@ export function SessionHoverMenu({
               <Pencil className="h-4 w-4" strokeWidth={2.25} />
             </MenuBtn>
             <MenuBtn
-              label={hasNote ? "Rediger notat" : "Legg til notat"}
-              onClick={() => setNoteEdit(true)}
+              label={
+                isOwner
+                  ? hasNote ? "Rediger notat" : "Legg til notat"
+                  : leader.viewerNote.trim() ? "Rediger ditt notat" : "Legg til notat"
+              }
+              onClick={() => {
+                if (isOwner) setNoteEdit(true);
+                else if (leader.canEdit) setLeaderNoteEdit(true);
+              }}
             >
               <StickyNote className="h-4 w-4" strokeWidth={2.25} />
             </MenuBtn>
@@ -220,7 +227,7 @@ export function SessionHoverMenu({
         )
       )}
 
-      {showNote && (
+      {showMemberPanel && (
         <div
           data-session-note-panel="1"
           onMouseEnter={onMenuEnter}
@@ -241,7 +248,7 @@ export function SessionHoverMenu({
               } as DOMRect
             }
             initialValue={ev.sessionNote ?? ""}
-            mode={noteEdit ? "edit" : "preview"}
+            mode={isOwner && noteEdit ? "edit" : "preview"}
             defaultBodyHeight={140}
             panelWidth={NOTE_PANEL_W}
             closeOnEnter={false}
@@ -251,7 +258,45 @@ export function SessionHoverMenu({
               setNoteEdit(false);
               onForceClose?.();
             }}
-            onRequestEdit={() => setNoteEdit(true)}
+            onRequestEdit={isOwner ? () => setNoteEdit(true) : undefined}
+          />
+        </div>
+      )}
+
+      {showLeaderPanel && (
+        <div
+          data-session-note-panel="1"
+          onMouseEnter={onMenuEnter}
+          onMouseLeave={() => { if (!sticky) onMenuLeave?.(); }}
+        >
+          <NotePanel
+            anchorRect={
+              {
+                left: left + menuW,
+                right: left + menuW + NOTE_PANEL_W,
+                top: top,
+                bottom: top + menuH,
+                width: 0,
+                height: menuH,
+                x: left + menuW,
+                y: top,
+                toJSON: () => ({}),
+              } as DOMRect
+            }
+            initialValue={leader.viewerNote}
+            mode={leaderNoteEdit && leader.canEdit ? "edit" : "preview"}
+            defaultBodyHeight={140}
+            panelWidth={NOTE_PANEL_W}
+            placement="right-of-anchor-top"
+            closeOnEnter={false}
+            closeOnOutsideClick={false}
+            tone="leader"
+            onSave={(text) => { void leader.saveViewerNote(text); }}
+            onClose={() => {
+              setLeaderNoteEdit(false);
+              onForceClose?.();
+            }}
+            onRequestEdit={leader.canEdit ? () => setLeaderNoteEdit(true) : undefined}
           />
         </div>
       )}
