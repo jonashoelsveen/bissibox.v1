@@ -98,8 +98,11 @@ export function CalendarPage() {
       return next;
     });
 
-  // Load user categories so unknown me:* keys are pre-seeded according to
-  // their persisted `hidden` flag. Subscribes for live updates.
+  // Load category rows so unknown me:* keys are pre-seeded according to
+  // their persisted `hidden` flag. Subscribes for live updates. In team
+  // mode, loads the active team's categories; otherwise the user's
+  // personal categories.
+  const teamId: string | null = isTeamMode ? (activeEntityId ?? entities[0]?.id ?? null) : null;
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -119,22 +122,23 @@ export function CalendarPage() {
         return next;
       });
     };
-    void supabase
-      .from("calendar_categories")
-      .select("color,hidden,default_key")
-      .eq("user_id", user.id)
-      .then(({ data }) => apply((data ?? []) as never));
+    const baseQuery = () => {
+      let q = supabase
+        .from("calendar_categories")
+        .select("color,hidden,default_key");
+      if (teamId) q = q.eq("team_id", teamId);
+      else q = q.is("team_id", null).eq("user_id", user.id);
+      return q;
+    };
+    void baseQuery().then(({ data }) => apply((data ?? []) as never));
+    const filter = teamId ? `team_id=eq.${teamId}` : `user_id=eq.${user.id}`;
     const ch = supabase
-      .channel(`calendar-page-categories-${user.id}`)
+      .channel(`calendar-page-categories-${teamId ?? user.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "calendar_categories", filter: `user_id=eq.${user.id}` },
+        { event: "*", schema: "public", table: "calendar_categories", filter },
         () => {
-          void supabase
-            .from("calendar_categories")
-            .select("color,hidden,default_key")
-            .eq("user_id", user.id)
-            .then(({ data }) => apply((data ?? []) as never));
+          void baseQuery().then(({ data }) => apply((data ?? []) as never));
         },
       )
       .subscribe();
@@ -142,7 +146,7 @@ export function CalendarPage() {
       cancelled = true;
       void supabase.removeChannel(ch);
     };
-  }, [user]);
+  }, [user, teamId]);
 
   return (
     <div className="h-full overflow-hidden px-4 md:px-6">
