@@ -41,7 +41,9 @@ export function GlobalTopTabBar() {
 
   const [plusOpen, setPlusOpen] = useState(false);
   const [mapHover, setMapHover] = useState(false);
+  const [appsOpen, setAppsOpen] = useState(false);
   const plusRef = useRef<HTMLDivElement | null>(null);
+  const appsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!plusOpen) return;
@@ -65,6 +67,23 @@ export function GlobalTopTabBar() {
       document.removeEventListener("keydown", onKey);
     };
   }, [plusOpen]);
+
+  useEffect(() => {
+    if (!appsOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!appsRef.current) return;
+      if (!appsRef.current.contains(e.target as Node)) setAppsOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAppsOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [appsOpen]);
 
   if (!user) return null;
 
