@@ -41,7 +41,9 @@ export function GlobalTopTabBar() {
 
   const [plusOpen, setPlusOpen] = useState(false);
   const [mapHover, setMapHover] = useState(false);
+  const [appsOpen, setAppsOpen] = useState(false);
   const plusRef = useRef<HTMLDivElement | null>(null);
+  const appsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!plusOpen) return;
@@ -65,6 +67,23 @@ export function GlobalTopTabBar() {
       document.removeEventListener("keydown", onKey);
     };
   }, [plusOpen]);
+
+  useEffect(() => {
+    if (!appsOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!appsRef.current) return;
+      if (!appsRef.current.contains(e.target as Node)) setAppsOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAppsOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [appsOpen]);
 
   if (!user) return null;
 
@@ -99,7 +118,7 @@ export function GlobalTopTabBar() {
         {/* Plus */}
         <div className="relative mb-1" ref={plusRef}>
           <button
-            onClick={() => setPlusOpen((v) => !v)}
+            onClick={() => { setAppsOpen(false); setPlusOpen((v) => !v); }}
             aria-label="Create new"
             aria-haspopup="menu"
             aria-expanded={plusOpen}
@@ -183,8 +202,55 @@ export function GlobalTopTabBar() {
             </div>
           )}
         </div>
+        {/* Apps */}
+        <div className="relative mb-1" ref={appsRef}>
+          <button
+            onClick={() => { setPlusOpen(false); setMapHover(false); setAppsOpen((v) => !v); }}
+            aria-label="Apps"
+            aria-haspopup="menu"
+            aria-expanded={appsOpen}
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
+          >
+            <AppsIcon className="h-[18px] w-[18px]" />
+          </button>
+          {appsOpen && (
+            <div
+              role="menu"
+              className="absolute right-0 top-full z-50 mt-2 w-56 origin-top-right rounded-xl border border-hairline bg-popover p-3 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
+            >
+              <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
+              <div className="grid grid-cols-2 gap-2">
+                {[1, 2, 3, 4].map((n) => (
+                  <a
+                    key={n}
+                    href="#"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`App ${n}`}
+                    className="aspect-square rounded-xl bg-foreground transition hover:opacity-90"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
+  );
+}
+
+function AppsIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      {[5, 12, 19].flatMap((y) =>
+        [5, 12, 19].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.6" />)
+      )}
+    </svg>
   );
 }
 
