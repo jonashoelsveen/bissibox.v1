@@ -623,7 +623,7 @@ function LibraryPage() {
       </TopBarSlot>
 
       <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[220px_1fr]">
-        <aside className="md:h-full md:overflow-y-auto md:pr-1">
+        <aside className="md:h-full md:overflow-y-auto md:border-r md:border-border/60 md:pr-4">
           <LibrarySideNav value={sideValue} onChange={onSideChange} />
         </aside>
 
