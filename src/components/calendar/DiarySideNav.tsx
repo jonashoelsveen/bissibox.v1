@@ -151,7 +151,7 @@ export function DiarySideNav({
 
   return (
     <nav className="flex max-h-[calc(100vh-8rem)] flex-col gap-3 overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
-      <div className="rounded-lg border border-hairline bg-card">
+      <div>
         <MiniCalendar
           selectedRange={currentRange ?? { start: currentDate, end: currentDate }}
           onSelectRange={(r) => onCurrentDateChange(r.start, r)}
