@@ -75,6 +75,10 @@ export interface YearCalendarViewProps {
   visibleCategories?: Set<CategoryKey>;
   /** "diary" hides import + undo/redo, restricts to week/month, blocks future logging. */
   appKind?: CalendarAppKind;
+  /** When viewing a member's diary as a leader/follower, the member's user_id. */
+  memberId?: string;
+  /** Viewer's relationship to the member; defaults to "owner". */
+  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
 
 export function YearCalendarView(props: YearCalendarViewProps) {
@@ -96,6 +100,8 @@ function YearCalendarViewInner({
   onViewModeChange,
   visibleCategories,
   appKind = "calendar",
+  memberId,
+  viewerRole = "owner",
 }: YearCalendarViewProps) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta, undo, redo, canUndo, canRedo } =
     useYearStore(calId, defaultTitle);
@@ -331,6 +337,8 @@ function YearCalendarViewInner({
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           appKind={appKind}
+          memberId={memberId}
+          viewerRole={viewerRole}
         />
       </div>
     </div>
