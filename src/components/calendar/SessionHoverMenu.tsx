@@ -349,11 +349,13 @@ function MenuBtn({
   children,
   label,
   destructive,
+  accent,
   onClick,
 }: {
   children: React.ReactNode;
   label: string;
   destructive?: boolean;
+  accent?: "leader";
   onClick: () => void;
 }) {
   return (
@@ -369,7 +371,9 @@ function MenuBtn({
         "grid h-full w-8 place-items-center rounded transition-colors",
         destructive
           ? "text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-          : "text-muted-foreground hover:bg-secondary hover:text-ink",
+          : accent === "leader"
+            ? "text-primary hover:bg-primary/10"
+            : "text-muted-foreground hover:bg-secondary hover:text-ink",
       ].join(" ")}
     >
       {children}
