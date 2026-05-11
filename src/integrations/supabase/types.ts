@@ -1415,33 +1415,6 @@ export type Database = {
         }
         Relationships: []
       }
-      team_active_followers: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          follower_id: string
-          id: string
-          member_id: string
-          team_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          follower_id: string
-          id?: string
-          member_id: string
-          team_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          follower_id?: string
-          id?: string
-          member_id?: string
-          team_id?: string | null
-        }
-        Relationships: []
-      }
       team_board_meeting_attachments: {
         Row: {
           created_at: string
@@ -2239,6 +2212,30 @@ export type Database = {
           top_bar_color?: string | null
           updated_at?: string
           website?: string | null
+        }
+        Relationships: []
+      }
+      user_active_followers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          follower_id: string
+          id: string
+          member_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          follower_id: string
+          id?: string
+          member_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          follower_id?: string
+          id?: string
+          member_id?: string
         }
         Relationships: []
       }
