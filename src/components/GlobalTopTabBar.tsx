@@ -118,7 +118,7 @@ export function GlobalTopTabBar() {
         {/* Plus */}
         <div className="relative mb-1" ref={plusRef}>
           <button
-            onClick={() => setPlusOpen((v) => !v)}
+            onClick={() => { setAppsOpen(false); setPlusOpen((v) => !v); }}
             aria-label="Create new"
             aria-haspopup="menu"
             aria-expanded={plusOpen}
