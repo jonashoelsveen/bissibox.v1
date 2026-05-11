@@ -1,15 +1,27 @@
 /**
- * Per-session leader/follower note backed by Supabase (`diary_session_notes`).
+ * Per-session leader/follower notes backed by Supabase (`diary_session_notes`).
+ *
  * The member's own session note continues to live on the event itself
- * (`event.sessionNote`) — this hook only handles the additional notes written
- * by leaders / active followers about a member's session.
+ * (`event.sessionNote`). This hook returns the additional notes written by
+ * leaders / active followers (and the current viewer's own note if non-owner).
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { canAnnotate, type ViewerRole } from "./useViewerRole";
+import type { AuthoredNote } from "./useDiaryDayNote";
 
 const CHANGE_EVENT = "diary-sessionnote-changed";
+
+interface State {
+  rows: { author_id: string; body: string }[];
+  names: Record<string, string>;
+}
+
+function fmtName(p: { first_name: string | null; last_name: string | null } | undefined): string {
+  if (!p) return "";
+  return `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim();
+}
 
 export function useDiarySessionNote(
   eventId: string,
@@ -18,8 +30,7 @@ export function useDiarySessionNote(
 ) {
   const { user } = useAuth();
   const viewerId = user?.id ?? null;
-  const [viewerNote, setViewerNote] = useState<string>("");
-  const [otherNotes, setOtherNotes] = useState<{ author_id: string; body: string }[]>([]);
+  const [state, setState] = useState<State>({ rows: [], names: {} });
 
   const reload = useCallback(async () => {
     if (!eventId || !memberId) return;
@@ -29,9 +40,17 @@ export function useDiarySessionNote(
       .eq("event_id", eventId)
       .eq("member_id", memberId);
     const rows = (data ?? []) as { author_id: string; body: string }[];
-    setViewerNote(viewerId ? rows.find((r) => r.author_id === viewerId)?.body ?? "" : "");
-    setOtherNotes(viewerId ? rows.filter((r) => r.author_id !== viewerId) : rows);
-  }, [eventId, memberId, viewerId]);
+    const names: Record<string, string> = {};
+    const ids = rows.map((r) => r.author_id);
+    if (ids.length) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id,first_name,last_name")
+        .in("id", ids);
+      for (const p of profs ?? []) names[p.id] = fmtName(p);
+    }
+    setState({ rows, names });
+  }, [eventId, memberId]);
 
   useEffect(() => {
     void reload();
@@ -47,8 +66,7 @@ export function useDiarySessionNote(
     async (text: string) => {
       if (!viewerId) return;
       if (!canAnnotate(role)) return;
-      // Owner writes their note to the event itself, not here.
-      if (role === "owner") return;
+      if (role === "owner") return; // owner uses event.sessionNote
       const trimmed = text.trim();
       if (!trimmed) {
         await supabase
@@ -67,21 +85,38 @@ export function useDiarySessionNote(
           { onConflict: "event_id,author_id" },
         );
       }
-      window.dispatchEvent(
-        new CustomEvent(CHANGE_EVENT, { detail: { eventId } }),
-      );
+      window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: { eventId } }));
     },
     [eventId, memberId, viewerId, role],
   );
 
-  // For the member viewing their own diary, "viewerNote" should be the
-  // first leader/follower note (if any) so it renders to the right.
-  const leaderNoteForOwner = role === "owner" ? otherNotes[0]?.body ?? "" : "";
+  const isOwner = role === "owner";
+
+  const viewerNote = useMemo(
+    () =>
+      !isOwner && viewerId
+        ? state.rows.find((r) => r.author_id === viewerId)?.body ?? ""
+        : "",
+    [state.rows, viewerId, isOwner],
+  );
+
+  /** All other-authored notes (excluding current viewer's own row). */
+  const leaderNotes: AuthoredNote[] = useMemo(
+    () =>
+      state.rows
+        .filter((r) => r.author_id !== viewerId)
+        .map((r) => ({
+          authorId: r.author_id,
+          authorName: state.names[r.author_id] ?? "",
+          body: r.body,
+        })),
+    [state.rows, state.names, viewerId],
+  );
 
   return {
-    viewerNote: role === "owner" ? leaderNoteForOwner : viewerNote,
-    /** True when there is any leader/follower-authored note worth showing. */
-    hasLeaderNote: role === "owner" ? otherNotes.length > 0 : !!viewerNote.trim(),
+    viewerNote,
+    leaderNotes,
+    isOwner,
     canEdit: canAnnotate(role) && role !== "owner",
     saveViewerNote,
   };

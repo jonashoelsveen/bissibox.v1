@@ -22,6 +22,34 @@ import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import type { CalendarEvent } from "./yearStore";
 import { fromISOLocal, toISOLocal, setHM } from "./dateUtils";
 import { useDiarySessionNote } from "@/hooks/useDiarySessionNote";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
+
+function dayLabel(date: Date): string {
+  return `${String(date.getDate()).padStart(2, "0")}.${String(
+    date.getMonth() + 1,
+  ).padStart(2, "0")}.${String(date.getFullYear() % 100).padStart(2, "0")}`;
+}
+
+function useViewerName(): string {
+  const { user } = useAuth();
+  const [name, setName] = useState("");
+  useEffect(() => {
+    if (!user) { setName(""); return; }
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("first_name,last_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      setName(`${data?.first_name ?? ""} ${data?.last_name ?? ""}`.trim());
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+  return name;
+}
 
 const NOTE_PANEL_W = 280;
 
@@ -61,11 +89,12 @@ export function SessionHoverMenu({
   const [showDetails, setShowDetails] = useState(false);
   const hasNote = !!ev.sessionNote?.trim();
 
-  // Leader / active-follower note (Supabase). For owners this returns the
-  // first leader-authored note as `viewerNote` (read-only); for non-owners it
-  // returns the current user's own note (editable).
+  // Leader / active-follower notes (Supabase).
   const leader = useDiarySessionNote(ev.id, memberId ?? "", viewerRole);
-  const hasLeaderNote = !!leader.viewerNote.trim() || leader.hasLeaderNote;
+  const viewerName = useViewerName();
+  const sessionDate = fromISOLocal(ev.startISO);
+  const baseHeader = `Note ${dayLabel(sessionDate)}`;
+  const hasLeaderNote = leader.leaderNotes.length > 0 || !!leader.viewerNote.trim();
 
   // Initialize the SessionDetailsValue from the event.
   const [detailsValue, setDetailsValue] = useState<SessionDetailsValue | null>(null);
@@ -138,13 +167,44 @@ export function SessionHoverMenu({
   // Member-side preview panel: shown when member has a note and menu is visible,
   // OR when the owner is editing their note.
   const showMemberPanel = (hasNote && menuVisible) || (isOwner && noteEdit);
-  // Leader-side panel: visible when a leader note exists or non-owner edits one.
-  const showLeaderPanel = (hasLeaderNote && menuVisible) || leaderNoteEdit;
+
+  // Build the list of leader-side panels rendered to the right of the menu.
+  // Includes the viewer's own note (when non-owner & editable) plus every
+  // other leader / follower note. Each gets its own author-named header.
+  type LeaderPanelItem = {
+    key: string;
+    header: string;
+    value: string;
+    mode: "preview" | "edit";
+    onSave: (text: string) => void;
+    onRequestEdit?: () => void;
+  };
+  const leaderPanels: LeaderPanelItem[] = [];
+  if (!isOwner && (leader.viewerNote.trim() || leaderNoteEdit || (leader.canEdit && menuVisible))) {
+    leaderPanels.push({
+      key: "viewer",
+      header: viewerName ? `${baseHeader} · ${viewerName}` : baseHeader,
+      value: leader.viewerNote,
+      mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
+      onSave: (text) => { void leader.saveViewerNote(text); },
+      onRequestEdit: leader.canEdit ? () => setLeaderNoteEdit(true) : undefined,
+    });
+  }
+  for (const n of leader.leaderNotes) {
+    leaderPanels.push({
+      key: `leader-${n.authorId}`,
+      header: n.authorName ? `${baseHeader} · ${n.authorName}` : baseHeader,
+      value: n.body,
+      mode: "preview",
+      onSave: () => {},
+    });
+  }
+  const showLeaderPanels = menuVisible && leaderPanels.length > 0;
   const menuW = showMemberPanel ? NOTE_PANEL_W : compactW;
 
   const gap = 4;
   let left = blockRect.left + blockRect.width + gap;
-  const rightSlot = showLeaderPanel ? NOTE_PANEL_W + 6 : 0;
+  const rightSlot = showLeaderPanels ? leaderPanels.length * (NOTE_PANEL_W + 6) : 0;
   const widestNeeded = menuW + rightSlot;
   if (left + widestNeeded > window.innerWidth - 8) {
     left = Math.max(8, blockRect.left - widestNeeded - gap);
@@ -248,6 +308,7 @@ export function SessionHoverMenu({
                 toJSON: () => ({}),
               } as DOMRect
             }
+            headerLabel={baseHeader}
             initialValue={ev.sessionNote ?? ""}
             mode={isOwner && noteEdit ? "edit" : "preview"}
             defaultBodyHeight={140}
@@ -264,43 +325,49 @@ export function SessionHoverMenu({
         </div>
       )}
 
-      {showLeaderPanel && (
-        <div
-          data-session-note-panel="1"
-          onMouseEnter={onMenuEnter}
-          onMouseLeave={() => { if (!sticky) onMenuLeave?.(); }}
-        >
-          <NotePanel
-            anchorRect={
-              {
-                left: left + menuW,
-                right: left + menuW + NOTE_PANEL_W,
-                top: top,
-                bottom: top + menuH,
-                width: 0,
-                height: menuH,
-                x: left + menuW,
-                y: top,
-                toJSON: () => ({}),
-              } as DOMRect
-            }
-            initialValue={leader.viewerNote}
-            mode={leaderNoteEdit && leader.canEdit ? "edit" : "preview"}
-            defaultBodyHeight={140}
-            panelWidth={NOTE_PANEL_W}
-            placement="right-of-anchor-top"
-            closeOnEnter={false}
-            closeOnOutsideClick={false}
-            tone="leader"
-            onSave={(text) => { void leader.saveViewerNote(text); }}
-            onClose={() => {
-              setLeaderNoteEdit(false);
-              onForceClose?.();
-            }}
-            onRequestEdit={leader.canEdit ? () => setLeaderNoteEdit(true) : undefined}
-          />
-        </div>
-      )}
+      {showLeaderPanels &&
+        leaderPanels.map((p, idx) => {
+          const panelLeft = left + menuW + idx * (NOTE_PANEL_W + 6);
+          return (
+            <div
+              key={p.key}
+              data-session-note-panel="1"
+              onMouseEnter={onMenuEnter}
+              onMouseLeave={() => { if (!sticky) onMenuLeave?.(); }}
+            >
+              <NotePanel
+                anchorRect={
+                  {
+                    left: panelLeft - 6,
+                    right: panelLeft - 6,
+                    top: top,
+                    bottom: top + menuH,
+                    width: 0,
+                    height: menuH,
+                    x: panelLeft - 6,
+                    y: top,
+                    toJSON: () => ({}),
+                  } as DOMRect
+                }
+                headerLabel={p.header}
+                initialValue={p.value}
+                mode={p.mode}
+                defaultBodyHeight={140}
+                panelWidth={NOTE_PANEL_W}
+                placement="right-of-anchor-top"
+                closeOnEnter={false}
+                closeOnOutsideClick={false}
+                tone="leader"
+                onSave={p.onSave}
+                onClose={() => {
+                  setLeaderNoteEdit(false);
+                  onForceClose?.();
+                }}
+                onRequestEdit={p.onRequestEdit}
+              />
+            </div>
+          );
+        })}
 
       {showDetails && detailsValue && (
         <SessionDetailsModal

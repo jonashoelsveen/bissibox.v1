@@ -1,21 +1,25 @@
 /**
- * DayNoteButton + NotePanel — diary "note for the day" affordance and a
- * reusable read-only / editable note panel used by both day-notes and
- * session-notes.
+ * DayNoteButton + NotePanel.
  *
- * Hover behaviour:
- *  - Empty: icon invisible until parent `[data-day-anchor]` is hovered →
- *    light gray. Clicking opens the editable panel.
- *  - Has note: icon permanently light gray. Hovering the parent anchor
- *    auto-opens the panel in PREVIEW mode (read-only, no cursor, light gray
- *    background). Clicking the icon switches the panel into EDIT mode.
+ * The button is the small "sticky note" affordance shown inside a day cell
+ * in the diary's monthly view. Notes are persisted via Supabase
+ * (`diary_day_notes`). Three kinds of notes can exist for a single day:
  *
- * Storage: localStorage under `diary:daynotes:{calId}` keyed by ISO day.
+ *   1. The member's own note          → gray side-line, header `Note dd.mm.yy`
+ *   2. The current viewer's note       → blue side-line (when viewer is a
+ *                                        leader / active follower), header
+ *                                        `Note dd.mm.yy · <viewer name>`
+ *   3. Other leader / follower notes  → blue side-line, read-only,
+ *                                        header `Note dd.mm.yy · <author name>`
+ *
+ * Panels render below the icon, laid out horizontally so multiple leader
+ * notes appear next to one another.
  */
 
 import {
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -23,55 +27,10 @@ import {
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { StickyNote } from "lucide-react";
-
-const STORAGE_PREFIX = "diary:daynotes:";
-const CHANGE_EVENT = "diary-daynote-changed";
-
-function dayKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function readAll(calId: string): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(STORAGE_PREFIX + calId);
-    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeNote(calId: string, date: Date, text: string) {
-  if (typeof window === "undefined") return;
-  try {
-    const obj = readAll(calId);
-    const k = dayKey(date);
-    if (text.trim()) obj[k] = text;
-    else delete obj[k];
-    window.localStorage.setItem(STORAGE_PREFIX + calId, JSON.stringify(obj));
-    window.dispatchEvent(
-      new CustomEvent(CHANGE_EVENT, { detail: { calId } }),
-    );
-  } catch {
-    /* ignore */
-  }
-}
-
-export function useDayNote(calId: string, date: Date): string {
-  const [val, setVal] = useState<string>(() => readAll(calId)[dayKey(date)] ?? "");
-  useEffect(() => {
-    setVal(readAll(calId)[dayKey(date)] ?? "");
-    const onChange = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { calId?: string } | undefined;
-      if (detail?.calId === calId) {
-        setVal(readAll(calId)[dayKey(date)] ?? "");
-      }
-    };
-    window.addEventListener(CHANGE_EVENT, onChange);
-    return () => window.removeEventListener(CHANGE_EVENT, onChange);
-  }, [calId, date]);
-  return val;
-}
+import { useDiaryDayNote, type AuthoredNote } from "@/hooks/useDiaryDayNote";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
+import type { ViewerRole } from "@/hooks/useViewerRole";
 
 interface DayNoteButtonProps {
   calId: string;
@@ -79,25 +38,71 @@ interface DayNoteButtonProps {
   variant: "week" | "month";
   anchorSelector?: string;
   memberId?: string;
-  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
+  viewerRole?: ViewerRole;
+}
+
+const PANEL_W = 280;
+const PANEL_GAP = 6;
+
+function dayLabel(date: Date): string {
+  return `${String(date.getDate()).padStart(2, "0")}.${String(
+    date.getMonth() + 1,
+  ).padStart(2, "0")}.${String(date.getFullYear() % 100).padStart(2, "0")}`;
+}
+
+/** Lookup the current viewer's display name, used in the header of their note. */
+function useViewerName(): string {
+  const { user } = useAuth();
+  const [name, setName] = useState<string>("");
+  useEffect(() => {
+    if (!user) {
+      setName("");
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("first_name,last_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      setName(`${data?.first_name ?? ""} ${data?.last_name ?? ""}`.trim());
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+  return name;
 }
 
 export function DayNoteButton({
-  calId,
+  calId: _calId,
   date,
   variant,
   anchorSelector = "[data-day-anchor]",
   memberId,
   viewerRole = "owner",
 }: DayNoteButtonProps) {
-  const note = useDayNote(calId, date);
-  const has = !!note.trim();
-  // mode: null = closed, "preview" = hover read-only, "edit" = clicked
-  const [mode, setMode] = useState<null | "preview" | "edit">(null);
+  const effectiveMemberId = memberId ?? "";
+  const { memberNote, viewerNote, leaderNotes, isOwner, canEdit, saveViewerNote } =
+    useDiaryDayNote(effectiveMemberId, date, viewerRole);
+  const viewerName = useViewerName();
+
+  // Editing state per panel (member panel only owner can edit; viewer panel
+  // editable for non-owner annotators).
+  const [editingMember, setEditingMember] = useState(false);
+  const [editingViewer, setEditingViewer] = useState(false);
+  const [open, setOpen] = useState(false); // hover/preview open
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const anchorElRef = useRef<HTMLElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
+
+  const hasMemberNote = !!memberNote.trim();
+  const hasViewerNote = !!viewerNote.trim();
+  const hasAnyNote = hasMemberNote || hasViewerNote || leaderNotes.length > 0;
+
   const cancelClose = () => {
     if (closeTimerRef.current != null) {
       window.clearTimeout(closeTimerRef.current);
@@ -107,13 +112,12 @@ export function DayNoteButton({
   const scheduleClose = () => {
     cancelClose();
     closeTimerRef.current = window.setTimeout(() => {
-      setMode((m) => (m === "edit" ? m : null));
+      if (!editingMember && !editingViewer) setOpen(false);
     }, 120);
   };
 
   const refreshRect = () => {
-    const anchor =
-      btnRef.current?.closest(anchorSelector) as HTMLElement | null;
+    const anchor = btnRef.current?.closest(anchorSelector) as HTMLElement | null;
     if (anchor) {
       anchorElRef.current = anchor;
       setAnchorRect(anchor.getBoundingClientRect());
@@ -122,33 +126,27 @@ export function DayNoteButton({
     }
   };
 
-  // Auto-preview only when the icon itself is hovered (not the whole cell),
-  // so the note panel doesn't pop open every time the cursor enters the day cell.
+  // Hover the icon → open in preview mode (only if there's something to preview).
   useEffect(() => {
-    if (!has) return;
+    if (!hasAnyNote) return;
     const btn = btnRef.current;
     if (!btn) return;
     anchorElRef.current = btn;
     const onEnter = () => {
       cancelClose();
-      setMode((m) => (m === "edit" ? m : "preview"));
+      setOpen(true);
       refreshRect();
     };
     btn.addEventListener("mouseenter", onEnter);
-    return () => {
-      btn.removeEventListener("mouseenter", onEnter);
-    };
+    return () => btn.removeEventListener("mouseenter", onEnter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [has, anchorSelector]);
+  }, [hasAnyNote, anchorSelector]);
 
-  // While preview is open, close only when cursor leaves BOTH the anchor
-  // and the floating panel (with a small bridge tolerance).
+  // Close when leaving both anchor and any open panel.
   useEffect(() => {
-    if (mode !== "preview") return;
+    if (!open || editingMember || editingViewer) return;
     const onMove = (e: MouseEvent) => {
-      const anchor = anchorElRef.current;
-      const panel = document.querySelector('[data-note-panel="1"]') as HTMLElement | null;
-      const inside = (el: HTMLElement | null) => {
+      const inside = (el: Element | null) => {
         if (!el) return false;
         const r = el.getBoundingClientRect();
         const pad = 6;
@@ -159,45 +157,156 @@ export function DayNoteButton({
           e.clientY <= r.bottom + pad
         );
       };
-      if (!inside(anchor) && !inside(panel)) {
-        scheduleClose();
-      } else {
-        cancelClose();
-      }
+      const anchor = anchorElRef.current;
+      const panels = Array.from(document.querySelectorAll('[data-note-panel="1"]'));
+      if (!inside(anchor) && !panels.some(inside)) scheduleClose();
+      else cancelClose();
     };
     window.addEventListener("mousemove", onMove);
     return () => window.removeEventListener("mousemove", onMove);
-  }, [mode]);
+  }, [open, editingMember, editingViewer]);
+
+  // Close panels on outside click while editing.
+  useEffect(() => {
+    if (!editingMember && !editingViewer) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node | null;
+      const inside = (sel: string) => !!(t as HTMLElement | null)?.closest(sel);
+      if (!inside('[data-note-panel="1"]') && !inside("[data-day-note-btn]")) {
+        setEditingMember(false);
+        setEditingViewer(false);
+      }
+    };
+    window.addEventListener("mousedown", onDown);
+    return () => window.removeEventListener("mousedown", onDown);
+  }, [editingMember, editingViewer]);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     refreshRect();
-    setMode("edit");
+    setOpen(true);
+    if (isOwner) setEditingMember(true);
+    else if (canEdit) setEditingViewer(true);
   };
 
-  const visibility = has
+  // Icon visibility / tone.
+  const visibility = hasAnyNote
     ? "opacity-100"
     : "opacity-0 group-hover/daynote-anchor:opacity-100";
-  const tone = "text-muted-foreground/45 hover:text-muted-foreground";
+  const tone = isOwner
+    ? "text-muted-foreground/45 hover:text-muted-foreground"
+    : "text-primary/70 hover:text-primary";
 
   const positionClass =
     variant === "week"
       ? "absolute left-1 top-1/2 -translate-y-1/2"
       : "absolute left-1 bottom-1";
 
-  const dateLabel = `${String(date.getDate()).padStart(2, "0")}.${String(
-    date.getMonth() + 1,
-  ).padStart(2, "0")}.${String(date.getFullYear() % 100).padStart(2, "0")}`;
+  // Compute anchor rects for all panels (laid out horizontally below the cell).
+  const panels = useMemo(() => {
+    if (!anchorRect) return [];
+    type Item = {
+      key: string;
+      tone: "gray" | "leader";
+      header: string;
+      value: string;
+      mode: "preview" | "edit";
+      onSave: (text: string) => void;
+      onRequestEdit?: () => void;
+    };
+    const items: Item[] = [];
+    const baseHeader = `Note ${dayLabel(date)}`;
+
+    // 1. Member panel (only render if there's content OR if owner is editing).
+    if (hasMemberNote || (isOwner && (editingMember || open))) {
+      items.push({
+        key: "member",
+        tone: "gray",
+        header: baseHeader,
+        value: memberNote,
+        mode: isOwner && editingMember ? "edit" : "preview",
+        onSave: isOwner ? (text) => void saveViewerNote(text) : () => {},
+        onRequestEdit: isOwner ? () => setEditingMember(true) : undefined,
+      });
+    }
+
+    // 2. Current viewer's own note (when not the owner).
+    if (!isOwner && (hasViewerNote || (canEdit && (editingViewer || open)))) {
+      items.push({
+        key: "viewer",
+        tone: "leader",
+        header: viewerName ? `${baseHeader} · ${viewerName}` : baseHeader,
+        value: viewerNote,
+        mode: editingViewer && canEdit ? "edit" : "preview",
+        onSave: (text) => void saveViewerNote(text),
+        onRequestEdit: canEdit ? () => setEditingViewer(true) : undefined,
+      });
+    }
+
+    // 3. Other leader / follower notes (read-only).
+    for (const n of leaderNotes) {
+      items.push({
+        key: `leader-${n.authorId}`,
+        tone: "leader",
+        header: n.authorName ? `${baseHeader} · ${n.authorName}` : baseHeader,
+        value: n.body,
+        mode: "preview",
+        onSave: () => {},
+      });
+    }
+
+    // Compute left offsets — keep panels inside the viewport.
+    const totalW = items.length * PANEL_W + (items.length - 1) * PANEL_GAP;
+    let startLeft = anchorRect.left;
+    if (startLeft + totalW > window.innerWidth - 8) {
+      startLeft = Math.max(8, window.innerWidth - totalW - 8);
+    }
+    const top = anchorRect.bottom;
+
+    return items.map((it, i) => {
+      const left = startLeft + i * (PANEL_W + PANEL_GAP);
+      const rect = {
+        left,
+        right: left + PANEL_W,
+        top,
+        bottom: top,
+        width: PANEL_W,
+        height: 0,
+        x: left,
+        y: top,
+        toJSON: () => ({}),
+      } as DOMRect;
+      return { ...it, rect };
+    });
+  }, [
+    anchorRect,
+    date,
+    hasMemberNote,
+    isOwner,
+    editingMember,
+    open,
+    memberNote,
+    saveViewerNote,
+    hasViewerNote,
+    canEdit,
+    editingViewer,
+    viewerName,
+    viewerNote,
+    leaderNotes,
+  ]);
+
+  const showPanels = (open || editingMember || editingViewer) && panels.length > 0;
 
   return (
     <>
       <button
         ref={btnRef}
         type="button"
+        data-day-note-btn="1"
         onMouseDown={(e) => e.stopPropagation()}
         onClick={handleClick}
-        aria-label={has ? "Rediger dagsnotat" : "Legg til dagsnotat"}
-        title={has ? "Rediger dagsnotat" : "Legg til dagsnotat"}
+        aria-label={hasAnyNote ? "Vis dagsnotater" : "Legg til dagsnotat"}
+        title={hasAnyNote ? "Vis dagsnotater" : "Legg til dagsnotat"}
         className={[
           positionClass,
           "z-[3] grid h-5 w-5 place-items-center rounded transition-colors",
@@ -207,24 +316,32 @@ export function DayNoteButton({
       >
         <StickyNote className="h-3 w-3" strokeWidth={2.25} />
       </button>
-      {mode && anchorRect && (
-        <NotePanel
-          anchorRect={anchorRect}
-          headerLabel={`Note ${dateLabel}`}
-          initialValue={note}
-          mode={mode}
-          defaultBodyHeight={variant === "week" ? 240 : 160}
-          closeOnEnter={false}
-          onSave={(text) => writeNote(calId, date, text)}
-          onClose={() => setMode(null)}
-          onRequestEdit={() => { cancelClose(); setMode("edit"); }}
-          onPanelMouseEnter={() => {
-            cancelClose();
-            if (has) setMode((m) => (m === "edit" ? m : "preview"));
-          }}
-          onPanelMouseLeave={() => scheduleClose()}
-        />
-      )}
+      {showPanels &&
+        panels.map((p) => (
+          <NotePanel
+            key={p.key}
+            anchorRect={p.rect}
+            headerLabel={p.header}
+            initialValue={p.value}
+            mode={p.mode}
+            tone={p.tone}
+            defaultBodyHeight={variant === "week" ? 240 : 160}
+            closeOnEnter={false}
+            closeOnOutsideClick={false}
+            onSave={p.onSave}
+            onClose={() => {
+              if (p.key === "member") setEditingMember(false);
+              else if (p.key === "viewer") setEditingViewer(false);
+              setOpen(false);
+            }}
+            onRequestEdit={p.onRequestEdit}
+            onPanelMouseEnter={() => {
+              cancelClose();
+              setOpen(true);
+            }}
+            onPanelMouseLeave={() => scheduleClose()}
+          />
+        ))}
     </>
   );
 }
@@ -239,17 +356,12 @@ export interface NotePanelProps {
   initialValue: string;
   mode: "preview" | "edit";
   defaultBodyHeight?: number;
-  /** Width override (defaults to 280, matching the new-session popover). */
   panelWidth?: number;
-  /** Custom anchor placement: defaults to anchorRect.bottom + anchorRect.left. */
   placement?: "below-anchor-left" | "right-of-anchor-top";
-  /** Default true: Enter saves and closes. Set false to allow newlines and let parent handle persistence. */
   closeOnEnter?: boolean;
-  /** Default true: clicking outside saves and closes. Set false when parent owns dismissal. */
   closeOnOutsideClick?: boolean;
-  /** Default true: shows the bottom Save bar in edit mode. */
   showFooter?: boolean;
-  /** Visual tone of the left side-line. Defaults to gray (member); "leader" uses brand primary blue. */
+  /** Side-line tone. "gray" = member; "leader" = brand primary blue. */
   tone?: "gray" | "leader";
   onSave: (text: string) => void;
   onClose: () => void;
@@ -287,7 +399,6 @@ export function NotePanel({
     if (mode === "preview") setVal(initialValue);
   }, [initialValue, mode]);
 
-  // When entering edit mode, place caret at end of existing text.
   useEffect(() => {
     if (!isEdit) return;
     const ta = taRef.current;
@@ -311,7 +422,6 @@ export function NotePanel({
     ta.style.height = next + "px";
   }, [val, extra, defaultBodyHeight]);
 
-  // Outside click + keys only matter in edit mode.
   useEffect(() => {
     if (!isEdit) return;
     const onDown = (e: MouseEvent) => {
@@ -333,9 +443,6 @@ export function NotePanel({
           onSave(val);
           onClose();
         } else {
-          // Save current text, hide the footer and blur the textarea so the
-          // caret disappears. The panel stays open; the user can click back
-          // into the textarea to keep editing.
           e.preventDefault();
           onSave(val);
           setFooterHidden(true);
@@ -387,19 +494,17 @@ export function NotePanel({
       left = Math.max(margin, window.innerWidth - panelWidth - margin);
     }
   }
-  const style: CSSProperties = {
-    top,
-    left,
-    width: panelWidth,
-    transformOrigin,
-  };
+  const style: CSSProperties = { top, left, width: panelWidth, transformOrigin };
 
-  const previewBg = "color-mix(in srgb, hsl(var(--muted-foreground)) 10%, transparent)";
+  // Use the raw token value: --primary is `oklch(...)` already, so it must
+  // be substituted directly, not wrapped in `hsl(...)` (which yields invalid color).
+  const sideLineColor = tone === "leader" ? "var(--primary)" : "#9CA3AF";
 
   return createPortal(
     <motion.div
       ref={ref}
       data-note-panel="1"
+      data-note-tone={tone}
       className="fixed z-50"
       style={style}
       initial={{ opacity: 0, scaleY: 0.6, y: -4 }}
@@ -415,17 +520,23 @@ export function NotePanel({
         }
       }}
     >
-      <div
-        className="relative overflow-hidden rounded-b-md border border-t border-ink/15 bg-card shadow-lg"
-      >
+      <div className="relative overflow-hidden rounded-b-md border border-t border-ink/15 bg-card shadow-lg">
         <span
           aria-hidden
           className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
-          style={{ background: tone === "leader" ? "hsl(var(--primary))" : "#9CA3AF" }}
+          style={{ background: sideLineColor }}
         />
         {headerLabel ? (
           <div className="flex items-center justify-between border-b border-hairline pl-4 pr-3 py-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            <span
+              className="text-[11px] font-medium uppercase tracking-[0.08em]"
+              style={{
+                color:
+                  tone === "leader"
+                    ? "var(--primary)"
+                    : "hsl(var(--muted-foreground))",
+              }}
+            >
               {headerLabel}
             </span>
           </div>
@@ -435,8 +546,13 @@ export function NotePanel({
             <textarea
               ref={taRef}
               value={val}
-              onChange={(e) => { setVal(e.target.value); if (footerHidden) setFooterHidden(false); }}
-              onFocus={() => { if (footerHidden) setFooterHidden(false); }}
+              onChange={(e) => {
+                setVal(e.target.value);
+                if (footerHidden) setFooterHidden(false);
+              }}
+              onFocus={() => {
+                if (footerHidden) setFooterHidden(false);
+              }}
               placeholder="Skriv notat…"
               className="block w-full resize-none bg-transparent text-[12px] leading-snug text-ink outline-none placeholder:text-muted-foreground/60"
               style={{ minHeight: defaultBodyHeight + extra }}
@@ -444,7 +560,7 @@ export function NotePanel({
           ) : (
             <div
               className="block w-full whitespace-pre-wrap text-[12px] leading-snug text-ink"
-              style={{ minHeight: defaultBodyHeight, cursor: "text" }}
+              style={{ minHeight: defaultBodyHeight, cursor: onRequestEdit ? "text" : "default" }}
             >
               {initialValue || (
                 <span className="text-muted-foreground/60">Skriv notat…</span>
