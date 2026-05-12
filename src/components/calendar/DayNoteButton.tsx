@@ -567,7 +567,12 @@ export function NotePanel({
         }
       }}
     >
-      <div className="relative overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg">
+      <div
+        className={[
+          "relative overflow-hidden border-x border-b border-ink/15 bg-card shadow-lg rounded-b-md",
+          attached ? "" : "border-t rounded-t-md",
+        ].join(" ")}
+      >
         <span
           aria-hidden
           className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
