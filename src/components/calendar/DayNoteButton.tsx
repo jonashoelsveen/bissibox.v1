@@ -357,7 +357,7 @@ export function DayNoteButton({
               <NotePanel
                 key={p.key}
                 inline
-                attached={idx > 0}
+                attached={false}
                 headerLabel={p.header}
                 initialValue={p.value}
                 mode={p.mode}
