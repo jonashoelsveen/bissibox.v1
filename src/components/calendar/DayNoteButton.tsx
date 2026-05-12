@@ -598,12 +598,15 @@ export function NotePanel({
               }}
               placeholder="Skriv notat…"
               className="block w-full resize-none bg-transparent text-[12px] leading-snug text-ink outline-none placeholder:text-muted-foreground/60"
-              style={{ minHeight: defaultBodyHeight + extra }}
+              style={{ minHeight: effectiveBodyHeight + extra }}
             />
           ) : (
             <div
               className="block w-full whitespace-pre-wrap text-[12px] leading-snug text-ink"
-              style={{ minHeight: defaultBodyHeight, cursor: onRequestEdit ? "text" : "default" }}
+              style={{
+                minHeight: inline ? undefined : effectiveBodyHeight,
+                cursor: onRequestEdit ? "text" : "default",
+              }}
             >
               {initialValue || (
                 <span className="text-muted-foreground/60">Skriv notat…</span>
@@ -635,7 +638,8 @@ export function NotePanel({
           />
         )}
       </div>
-    </motion.div>,
-    document.body,
+    </motion.div>
   );
+
+  return inline ? content : createPortal(content, document.body);
 }
