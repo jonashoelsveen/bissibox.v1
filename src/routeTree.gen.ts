@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MediaRouteImport } from './routes/media'
 import { Route as DiscoverRouteImport } from './routes/discover'
@@ -36,6 +37,11 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/discover': typeof DiscoverRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
+  '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
   '/events/$eventId': typeof EventsEventIdRoute
@@ -185,6 +192,7 @@ export interface FileRoutesByTo {
   '/discover': typeof DiscoverRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
+  '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
   '/events/$eventId': typeof EventsEventIdRoute
@@ -211,6 +219,7 @@ export interface FileRoutesById {
   '/discover': typeof DiscoverRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
+  '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
   '/events/$eventId': typeof EventsEventIdRoute
@@ -238,6 +247,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/media'
     | '/profile'
+    | '/search'
     | '/settings'
     | '/c/$companyId'
     | '/events/$eventId'
@@ -263,6 +273,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/media'
     | '/profile'
+    | '/search'
     | '/settings'
     | '/c/$companyId'
     | '/events/$eventId'
@@ -288,6 +299,7 @@ export interface FileRouteTypes {
     | '/discover'
     | '/media'
     | '/profile'
+    | '/search'
     | '/settings'
     | '/c/$companyId'
     | '/events/$eventId'
@@ -314,6 +326,7 @@ export interface RootRouteChildren {
   DiscoverRoute: typeof DiscoverRoute
   MediaRoute: typeof MediaRoute
   ProfileRoute: typeof ProfileRoute
+  SearchRoute: typeof SearchRoute
   SettingsRoute: typeof SettingsRoute
   CCompanyIdRoute: typeof CCompanyIdRoute
   EventsEventIdRoute: typeof EventsEventIdRoute
@@ -338,6 +351,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -506,6 +526,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiscoverRoute: DiscoverRoute,
   MediaRoute: MediaRoute,
   ProfileRoute: ProfileRoute,
+  SearchRoute: SearchRoute,
   SettingsRoute: SettingsRoute,
   CCompanyIdRoute: CCompanyIdRoute,
   EventsEventIdRoute: EventsEventIdRoute,
