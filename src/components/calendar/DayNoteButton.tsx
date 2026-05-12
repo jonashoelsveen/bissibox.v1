@@ -397,6 +397,8 @@ export interface NotePanelProps {
   showFooter?: boolean;
   /** When true, render inline (no portal, no fixed positioning). */
   inline?: boolean;
+  /** When true, this panel is stacked beneath another — drop top border + radius. */
+  attached?: boolean;
   /** Side-line tone. "gray" = member; "leader" = brand primary blue. */
   tone?: "gray" | "leader";
   onSave: (text: string) => void;
