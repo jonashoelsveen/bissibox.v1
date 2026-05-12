@@ -168,9 +168,9 @@ export function SessionHoverMenu({
   // OR when the owner is editing their note.
   const showMemberPanel = (hasNote && menuVisible) || (isOwner && noteEdit);
 
-  // Build the list of leader-side panels rendered to the right of the menu.
+  // Build the list of leader-side panels rendered BELOW the member panel.
   // Includes the viewer's own note (when non-owner & editable) plus every
-  // other leader / follower note. Each gets its own author-named header.
+  // other leader / follower note. Each gets just the author's name as header.
   type LeaderPanelItem = {
     key: string;
     header: string;
@@ -183,7 +183,7 @@ export function SessionHoverMenu({
   if (!isOwner && (leader.viewerNote.trim() || leaderNoteEdit || (leader.canEdit && menuVisible))) {
     leaderPanels.push({
       key: "viewer",
-      header: viewerName ? `${baseHeader} · ${viewerName}` : baseHeader,
+      header: viewerName || "Notat",
       value: leader.viewerNote,
       mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
       onSave: (text) => { void leader.saveViewerNote(text); },
@@ -193,23 +193,35 @@ export function SessionHoverMenu({
   for (const n of leader.leaderNotes) {
     leaderPanels.push({
       key: `leader-${n.authorId}`,
-      header: n.authorName ? `${baseHeader} · ${n.authorName}` : baseHeader,
+      header: n.authorName || "Notat",
       value: n.body,
       mode: "preview",
       onSave: () => {},
     });
   }
   const showLeaderPanels = menuVisible && leaderPanels.length > 0;
-  const menuW = showMemberPanel ? NOTE_PANEL_W : compactW;
+  const showAnyPanel = showMemberPanel || showLeaderPanels;
+  const menuW = showAnyPanel ? NOTE_PANEL_W : compactW;
+
+  // Estimate stack height for collision-aware vertical placement.
+  const PANEL_EST_H = 200;
+  const panelCount = (showMemberPanel ? 1 : 0) + (showLeaderPanels ? leaderPanels.length : 0);
+  const totalH = menuH + panelCount * PANEL_EST_H;
 
   const gap = 4;
   let left = blockRect.left + blockRect.width + gap;
-  const rightSlot = showLeaderPanels ? leaderPanels.length * (NOTE_PANEL_W + 6) : 0;
-  const widestNeeded = menuW + rightSlot;
-  if (left + widestNeeded > window.innerWidth - 8) {
-    left = Math.max(8, blockRect.left - widestNeeded - gap);
+  if (left + menuW > window.innerWidth - 8) {
+    // Flip to the left side of the block when there's no room on the right.
+    left = Math.max(8, blockRect.left - menuW - gap);
   }
-  const top = blockRect.top;
+  // Vertical: prefer aligning with the block top, but shift up if the full
+  // stack would overflow the viewport bottom (sessions near the bottom or on
+  // the right side of the week grid).
+  let top = blockRect.top;
+  const vh = window.innerHeight;
+  if (top + totalH > vh - 8) {
+    top = Math.max(8, vh - 8 - totalH);
+  }
 
   const buildEventPatchFromDetails = (v: SessionDetailsValue): Partial<CalendarEvent> & { id: string } => {
     const start = fromISOLocal(ev.startISO);
