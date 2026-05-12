@@ -300,86 +300,59 @@ export function SessionHoverMenu({
         )
       )}
 
-      {showMemberPanel && (
-        <div
-          data-session-note-panel="1"
-          onMouseEnter={onMenuEnter}
-          onMouseLeave={() => { if (!sticky) onMenuLeave?.(); }}
-        >
-          <NotePanel
-            anchorRect={
-              {
-                left,
-                right: left + NOTE_PANEL_W,
-                top: top + menuH,
-                bottom: top + menuH,
-                width: NOTE_PANEL_W,
-                height: 0,
-                x: left,
-                y: top + menuH,
-                toJSON: () => ({}),
-              } as DOMRect
-            }
-            headerLabel={baseHeader}
-            initialValue={ev.sessionNote ?? ""}
-            mode={isOwner && noteEdit ? "edit" : "preview"}
-            defaultBodyHeight={140}
-            panelWidth={NOTE_PANEL_W}
-            closeOnEnter={false}
-            closeOnOutsideClick={false}
-            onSave={(text) => onSaveNote(text)}
-            onClose={() => {
-              setNoteEdit(false);
-              onForceClose?.();
-            }}
-            onRequestEdit={isOwner ? () => setNoteEdit(true) : undefined}
-          />
-        </div>
-      )}
-
-      {showLeaderPanels &&
-        leaderPanels.map((p, idx) => {
-          const panelLeft = left + menuW + idx * (NOTE_PANEL_W + 6);
-          return (
-            <div
-              key={p.key}
-              data-session-note-panel="1"
-              onMouseEnter={onMenuEnter}
-              onMouseLeave={() => { if (!sticky) onMenuLeave?.(); }}
-            >
+      {showAnyPanel &&
+        createPortal(
+          <div
+            data-session-note-panel="1"
+            className="fixed z-[20] flex flex-col"
+            style={{ left, top: top + menuH, width: NOTE_PANEL_W }}
+            onMouseEnter={onMenuEnter}
+            onMouseLeave={() => { if (!sticky) onMenuLeave?.(); }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {showMemberPanel && (
               <NotePanel
-                anchorRect={
-                  {
-                    left: panelLeft - 6,
-                    right: panelLeft - 6,
-                    top: top,
-                    bottom: top + menuH,
-                    width: 0,
-                    height: menuH,
-                    x: panelLeft - 6,
-                    y: top,
-                    toJSON: () => ({}),
-                  } as DOMRect
-                }
-                headerLabel={p.header}
-                initialValue={p.value}
-                mode={p.mode}
+                inline
+                headerLabel={baseHeader}
+                initialValue={ev.sessionNote ?? ""}
+                mode={isOwner && noteEdit ? "edit" : "preview"}
                 defaultBodyHeight={140}
                 panelWidth={NOTE_PANEL_W}
-                placement="right-of-anchor-top"
                 closeOnEnter={false}
                 closeOnOutsideClick={false}
-                tone="leader"
-                onSave={p.onSave}
+                onSave={(text) => onSaveNote(text)}
                 onClose={() => {
-                  setLeaderNoteEdit(false);
+                  setNoteEdit(false);
                   onForceClose?.();
                 }}
-                onRequestEdit={p.onRequestEdit}
+                onRequestEdit={isOwner ? () => setNoteEdit(true) : undefined}
               />
-            </div>
-          );
-        })}
+            )}
+            {showLeaderPanels &&
+              leaderPanels.map((p, idx) => (
+                <NotePanel
+                  key={p.key}
+                  inline
+                  attached={showMemberPanel || idx > 0}
+                  headerLabel={p.header}
+                  initialValue={p.value}
+                  mode={p.mode}
+                  defaultBodyHeight={140}
+                  panelWidth={NOTE_PANEL_W}
+                  closeOnEnter={false}
+                  closeOnOutsideClick={false}
+                  tone="leader"
+                  onSave={p.onSave}
+                  onClose={() => {
+                    setLeaderNoteEdit(false);
+                    onForceClose?.();
+                  }}
+                  onRequestEdit={p.onRequestEdit}
+                />
+              ))}
+          </div>,
+          document.body,
+        )}
 
       {showDetails && detailsValue && (
         <SessionDetailsModal
