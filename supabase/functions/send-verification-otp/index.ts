@@ -15,9 +15,9 @@ async function hashCode(code: string): Promise<string> {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend/emails";
-const FROM_EMAIL = "onboarding@resend.dev";
+const LOVABLE_EMAIL_URL = "https://api.lovable.dev/v1/messaging/email/send";
+const SENDER_DOMAIN = "notify.dev.aponna.com";
+const FROM_EMAIL = `Aponna <noreply@${SENDER_DOMAIN}>`;
 
 interface Body {
   channel: "email" | "sms";
@@ -43,62 +43,40 @@ async function sendEmail(to: string, code: string) {
   if (!LOVABLE_API_KEY) {
     throw new Error("LOVABLE_API_KEY is not configured");
   }
-  if (!RESEND_API_KEY) {
-    throw new Error("RESEND_API_KEY is not configured");
-  }
 
+  const messageId = crypto.randomUUID();
   const payload = {
+    to,
     from: FROM_EMAIL,
-    to: to,
+    sender_domain: SENDER_DOMAIN,
     subject: `Your verification code: ${code}`,
-    html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#0f172a">
+    html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#0f172a;background:#ffffff">
       <h1 style="font-size:18px;margin:0 0 16px">Verify it's you</h1>
-      <p style="margin:0 0 12px;color:#475569">Enter this 6-digit code to complete your sign up:</p>
+      <p style="margin:0 0 12px;color:#475569">Enter this 6-digit code to complete verification:</p>
       <p style="font-size:32px;letter-spacing:8px;font-weight:600;margin:24px 0;text-align:center">${code}</p>
       <p style="margin:0;color:#94a3b8;font-size:12px">This code expires in 10 minutes. If you didn't request it, you can ignore this email.</p>
     </div>`,
+    purpose: "transactional",
+    label: "verification_otp",
+    message_id: messageId,
+    idempotency_key: messageId,
   };
 
-  try {
-    console.log("send-verification-otp gateway request", {
-      url: GATEWAY_URL,
-      to: to,
-      from: FROM_EMAIL,
-      hasAuthorizationBearer: true,
-      hasLovableApiKey: Boolean(LOVABLE_API_KEY),
-      hasConnectionApiKey: Boolean(RESEND_API_KEY),
-    });
-
-    const res = await fetch(GATEWAY_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": RESEND_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const responseText = await res.text();
-
-    if (!res.ok) {
-      console.error("Resend gateway error", {
-        status: res.status,
-        statusText: res.statusText,
-        body: responseText,
-        payload,
-      });
-      throw new Error(`Resend error ${res.status}: ${responseText}`);
-    }
-
-    console.log("Resend gateway success", {
-      status: res.status,
-      body: responseText,
-    });
-  } catch (error) {
-    console.error("Error sending email via Resend gateway", error);
-    throw error;
+  const res = await fetch(LOVABLE_EMAIL_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": messageId,
+    },
+    body: JSON.stringify(payload),
+  });
+  const responseText = await res.text();
+  if (!res.ok) {
+    console.error("Lovable email error", { status: res.status, body: responseText });
+    throw new Error(`Lovable email error ${res.status}: ${responseText}`);
   }
+  console.log("Lovable email sent", { status: res.status });
 }
 
 Deno.serve(async (req) => {
