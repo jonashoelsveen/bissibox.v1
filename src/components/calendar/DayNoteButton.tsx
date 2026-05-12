@@ -43,6 +43,8 @@ interface DayNoteButtonProps {
 
 const PANEL_W = 280;
 const PANEL_GAP = 6;
+const PANEL_H_DEFAULT = 220; // includes header + body + footer approx
+const PANEL_H_MIN = 90;
 
 function dayLabel(date: Date): string {
   return `${String(date.getDate()).padStart(2, "0")}.${String(
@@ -95,7 +97,7 @@ export function DayNoteButton({
   const [editingViewer, setEditingViewer] = useState(false);
   const [open, setOpen] = useState(false); // hover/preview open
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
-  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const btnRef = useRef<HTMLDivElement | null>(null);
   const anchorElRef = useRef<HTMLElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
 
@@ -199,10 +201,12 @@ export function DayNoteButton({
 
   const positionClass =
     variant === "week"
-      ? "absolute left-1 top-1/2 -translate-y-1/2"
-      : "absolute left-1 bottom-1";
+      ? "absolute left-1 top-1/2 -translate-y-1/2 flex flex-row items-center gap-0.5"
+      : "absolute left-1 bottom-1 flex flex-row items-center gap-0.5";
 
-  // Compute anchor rects for all panels (laid out horizontally below the cell).
+  const hasLeaderNotes = leaderNotes.length > 0 || hasViewerNote;
+
+  // Compute anchor rects for all panels (stacked vertically below the cell).
   const panels = useMemo(() => {
     if (!anchorRect) return [];
     type Item = {
@@ -255,28 +259,38 @@ export function DayNoteButton({
       });
     }
 
-    // Compute left offsets — keep panels inside the viewport.
-    const totalW = items.length * PANEL_W + (items.length - 1) * PANEL_GAP;
-    let startLeft = anchorRect.left;
-    if (startLeft + totalW > window.innerWidth - 8) {
-      startLeft = Math.max(8, window.innerWidth - totalW - 8);
-    }
+    // Stack vertically; compress per-panel height if total would exceed viewport.
+    const margin = 8;
     const top = anchorRect.bottom;
+    const available = Math.max(PANEL_H_MIN, window.innerHeight - top - margin);
+    const idealTotal = items.length * PANEL_H_DEFAULT + (items.length - 1) * PANEL_GAP;
+    const perPanel =
+      idealTotal <= available
+        ? PANEL_H_DEFAULT
+        : Math.max(
+            PANEL_H_MIN,
+            Math.floor((available - (items.length - 1) * PANEL_GAP) / items.length),
+          );
+
+    let left = anchorRect.left;
+    if (left + PANEL_W > window.innerWidth - margin) {
+      left = Math.max(margin, window.innerWidth - PANEL_W - margin);
+    }
 
     return items.map((it, i) => {
-      const left = startLeft + i * (PANEL_W + PANEL_GAP);
+      const t = top + i * (perPanel + PANEL_GAP);
       const rect = {
         left,
         right: left + PANEL_W,
-        top,
-        bottom: top,
+        top: t,
+        bottom: t,
         width: PANEL_W,
         height: 0,
         x: left,
-        y: top,
+        y: t,
         toJSON: () => ({}),
       } as DOMRect;
-      return { ...it, rect };
+      return { ...it, rect, bodyHeight: Math.max(60, perPanel - 60) };
     });
   }, [
     anchorRect,
@@ -297,25 +311,56 @@ export function DayNoteButton({
 
   const showPanels = (open || editingMember || editingViewer) && panels.length > 0;
 
+  // Member icon visibility: shown when there's a member note, or when the
+  // viewer is the owner (always interactive on hover).
+  const memberIconVisible = hasMemberNote || isOwner;
+  const memberIconClass = hasMemberNote
+    ? "opacity-100"
+    : "opacity-0 group-hover/daynote-anchor:opacity-100";
+
   return (
     <>
-      <button
-        ref={btnRef}
-        type="button"
-        data-day-note-btn="1"
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={handleClick}
-        aria-label={hasAnyNote ? "Vis dagsnotater" : "Legg til dagsnotat"}
-        title={hasAnyNote ? "Vis dagsnotater" : "Legg til dagsnotat"}
-        className={[
-          positionClass,
-          "z-[3] grid h-5 w-5 place-items-center rounded transition-colors",
-          visibility,
-          tone,
-        ].join(" ")}
-      >
-        <StickyNote className="h-3 w-3" strokeWidth={2.25} />
-      </button>
+      <div ref={btnRef} className={positionClass} data-day-note-btn="1">
+        {memberIconVisible && (
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              refreshRect();
+              setOpen(true);
+              if (isOwner) setEditingMember(true);
+              else if (canEdit) setEditingViewer(true);
+            }}
+            aria-label={hasAnyNote ? "Vis dagsnotater" : "Legg til dagsnotat"}
+            title={hasAnyNote ? "Vis dagsnotater" : "Legg til dagsnotat"}
+            className={[
+              "z-[3] grid h-5 w-5 place-items-center rounded transition-colors",
+              memberIconClass,
+              "text-muted-foreground/45 hover:text-muted-foreground",
+            ].join(" ")}
+          >
+            <StickyNote className="h-3 w-3" strokeWidth={2.25} />
+          </button>
+        )}
+        {hasLeaderNotes && (
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              refreshRect();
+              setOpen(true);
+              if (canEdit && !isOwner) setEditingViewer(true);
+            }}
+            aria-label="Vis notater fra andre"
+            title="Notater fra andre"
+            className="z-[3] grid h-5 w-5 place-items-center rounded text-ink/80 hover:text-ink transition-colors"
+          >
+            <StickyNote className="h-3 w-3" strokeWidth={2.25} />
+          </button>
+        )}
+      </div>
       {showPanels &&
         panels.map((p) => (
           <NotePanel
@@ -325,7 +370,7 @@ export function DayNoteButton({
             initialValue={p.value}
             mode={p.mode}
             tone={p.tone}
-            defaultBodyHeight={variant === "week" ? 240 : 160}
+            defaultBodyHeight={p.bodyHeight}
             closeOnEnter={false}
             closeOnOutsideClick={false}
             onSave={p.onSave}
