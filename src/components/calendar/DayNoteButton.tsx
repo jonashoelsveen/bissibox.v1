@@ -230,7 +230,7 @@ export function DayNoteButton({
       items.push({
         key: "viewer",
         tone: "leader",
-        header: viewerName ? `${baseHeader} · ${viewerName}` : baseHeader,
+        header: viewerName || "Notat",
         value: viewerNote,
         mode: editingViewer ? "edit" : "preview",
         onSave: (text) => void saveViewerNote(text),
@@ -243,7 +243,7 @@ export function DayNoteButton({
       items.push({
         key: `leader-${n.authorId}`,
         tone: "leader",
-        header: n.authorName ? `${baseHeader} · ${n.authorName}` : baseHeader,
+        header: n.authorName || "Notat",
         value: n.body,
         mode: "preview",
         onSave: () => {},
@@ -353,10 +353,11 @@ export function DayNoteButton({
             }}
             onMouseLeave={() => scheduleClose()}
           >
-            {panelItems.map((p) => (
+            {panelItems.map((p, idx) => (
               <NotePanel
                 key={p.key}
                 inline
+                attached={idx > 0}
                 headerLabel={p.header}
                 initialValue={p.value}
                 mode={p.mode}
@@ -396,6 +397,8 @@ export interface NotePanelProps {
   showFooter?: boolean;
   /** When true, render inline (no portal, no fixed positioning). */
   inline?: boolean;
+  /** When true, this panel is stacked beneath another — drop top border + radius. */
+  attached?: boolean;
   /** Side-line tone. "gray" = member; "leader" = brand primary blue. */
   tone?: "gray" | "leader";
   onSave: (text: string) => void;
@@ -417,6 +420,7 @@ export function NotePanel({
   closeOnOutsideClick = true,
   showFooter = true,
   inline = false,
+  attached = false,
   tone = "gray",
   onSave,
   onClose,
@@ -563,7 +567,12 @@ export function NotePanel({
         }
       }}
     >
-      <div className="relative overflow-hidden rounded-b-md border border-t border-ink/15 bg-card shadow-lg">
+      <div
+        className={[
+          "relative overflow-hidden rounded-b-md border-x border-b border-ink/15 bg-card shadow-lg",
+          attached ? "" : "border-t",
+        ].join(" ")}
+      >
         <span
           aria-hidden
           className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
