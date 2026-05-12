@@ -131,17 +131,22 @@ export function useDiaryDayNote(memberId: string, date: Date, role: ViewerRole) 
     [state.rows, viewerId, isOwner],
   );
 
-  /** All other leader-notes (excluding the current viewer's own leader-note). */
+  /**
+   * Leader-notes to display alongside the member note.
+   * - Non-owner viewer: excludes their own leader-note (shown separately as `viewerNote`).
+   * - Owner viewer: includes ALL leader-notes, including any they authored on
+   *   themselves while in a leader context.
+   */
   const leaderNotes: AuthoredNote[] = useMemo(
     () =>
       state.rows
-        .filter((r) => r.kind === "leader" && r.author_id !== viewerId)
+        .filter((r) => r.kind === "leader" && (isOwner || r.author_id !== viewerId))
         .map((r) => ({
           authorId: r.author_id,
           authorName: state.names[r.author_id] ?? "",
           body: r.body,
         })),
-    [state.rows, state.names, viewerId],
+    [state.rows, state.names, viewerId, isOwner],
   );
 
   return {
