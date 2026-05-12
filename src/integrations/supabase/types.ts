@@ -211,6 +211,7 @@ export type Database = {
           created_at: string
           day: string
           id: string
+          kind: string
           member_id: string
           updated_at: string
         }
@@ -220,6 +221,7 @@ export type Database = {
           created_at?: string
           day: string
           id?: string
+          kind?: string
           member_id: string
           updated_at?: string
         }
@@ -229,6 +231,7 @@ export type Database = {
           created_at?: string
           day?: string
           id?: string
+          kind?: string
           member_id?: string
           updated_at?: string
         }
@@ -241,6 +244,7 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
+          kind: string
           member_id: string
           updated_at: string
         }
@@ -250,6 +254,7 @@ export type Database = {
           created_at?: string
           event_id: string
           id?: string
+          kind?: string
           member_id: string
           updated_at?: string
         }
@@ -259,6 +264,7 @@ export type Database = {
           created_at?: string
           event_id?: string
           id?: string
+          kind?: string
           member_id?: string
           updated_at?: string
         }
@@ -2471,6 +2477,10 @@ export type Database = {
         Returns: number
       }
       get_member_viewer_role: { Args: { _member: string }; Returns: string }
+      get_member_viewer_role_for_leader: {
+        Args: { _member: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

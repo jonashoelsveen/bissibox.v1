@@ -1,117 +1,53 @@
-# Leader / Follower view of member diary
+## Goal
 
-## 1. Backend: schema + access model
+When a group leader is also a member of their own group, the leader role and the member role should behave as two independent personas — even though they share the same user account.
 
-New tables (all RLS-on, with `updated_at` triggers using `public.set_updated_at_now`):
+- Opening their own profile from the **group members** page → they act as **leader**: they see their own member-notes (read-only) and can write a separate **leader-note**.
+- Opening their own diary from **individual mode** → they act as **owner**: they edit their member-note and see any leader-notes (including ones they wrote about themselves) as "notes from others", read-only.
 
-### `team_followers`
-View-only followers of a member's calendar/diary.
-- `id`, `member_id` (uuid → profiles.id), `follower_id` (uuid → profiles.id), `team_id` (uuid, nullable — null = personal), `created_at`, `created_by`
-- Unique (`member_id`, `follower_id`, `team_id`)
+Today the database can only store one note per `(member_id, author_id, day)`, so the same user can never have both a member-note and a leader-note on the same day. We need to introduce a *kind* dimension.
 
-### `team_active_followers`
-Followers who can also annotate (write notes) but not edit sessions. Group leaders of OTHER groups in the same team and any explicitly-promoted user end up here.
-- Same shape as `team_followers`
+## Changes
 
-### Helper SECURITY DEFINER functions (in `public`, `SET search_path = public`):
-- `is_group_leader_of_member(_member uuid)` → true when caller leads the same team_group as `_member` (matches by `team_group_leaders.user_id` OR `lower(email)` like `useIsGroupLeader`).
-- `can_annotate_member(_member uuid)` → `auth.uid() = _member` OR `is_group_leader_of_member(_member)` OR row exists in `team_active_followers` for caller.
-- `can_view_member(_member uuid)` → `can_annotate_member` OR row exists in `team_followers`.
+### 1. Database (migration)
 
-### `diary_day_notes`
-Replaces `localStorage` day notes.
-- `id`, `member_id` (uuid, owner of the diary), `author_id` (uuid, who wrote the note), `day` (date), `body` (text), `created_at`, `updated_at`
-- Unique (`member_id`, `author_id`, `day`) — one note per (member, author, day). Lets the member and each leader/follower hold their own note for the same day.
+Add a `kind` column to both diary note tables to distinguish notes authored as the member vs. as a leader/active-follower:
 
-### `diary_session_notes`
-Replaces the leader-side note for a session (member-side note already lives on `events.session_note` — see §2).
-- `id`, `event_id` (uuid), `member_id` (uuid), `author_id` (uuid), `body` (text), `created_at`, `updated_at`
-- Unique (`event_id`, `author_id`)
+- `diary_day_notes`: add `kind text not null default 'member'` with check `kind in ('member','leader')`.
+- `diary_session_notes`: same column.
+- Replace the existing unique constraints:
+  - `diary_day_notes`: `unique (member_id, author_id, day, kind)`
+  - `diary_session_notes`: `unique (member_id, author_id, event_id, kind)`
+- Update INSERT/UPDATE RLS `WITH CHECK` so:
+  - `kind = 'member'` is only allowed when `author_id = member_id` (and `author_id = auth.uid()`).
+  - `kind = 'leader'` is only allowed when `can_annotate_member(member_id)` (and `author_id = auth.uid()`). This permits self-leader rows for someone who is both.
+- Add a new SECURITY DEFINER function `get_member_viewer_role_for_leader(_member uuid)` that returns `'leader' | 'active_follower' | 'follower' | 'none'` *without* the owner short-circuit, so the leader-context UI can ask "what's my non-owner role on this member?".
 
-### RLS for both note tables
-- SELECT: `author_id = auth.uid()` OR `member_id = auth.uid()` OR `can_view_member(member_id)`
-- INSERT/UPDATE/DELETE: `author_id = auth.uid()` AND `can_annotate_member(member_id)`
+### 2. Viewer role hook
 
-### Server-side write lockdown for sessions (UI + backend)
-Today the diary's events live in localStorage via `yearStore`. Per scope, we keep that as-is for now; backend-policy enforcement applies to the new note tables. A short note: when sessions move to Supabase later (already foreshadowed by the schema), the same `can_annotate_member` / owner-only split will gate writes.
+`src/hooks/useViewerRole.ts`:
 
-> If you want me to also migrate sessions in this pass, say so — that's another ~2× scope.
+- Add an options arg: `useViewerRole(memberId, { context?: 'auto' | 'leader' })`. Default `'auto'` keeps current behaviour.
+- When `context === 'leader'`, skip the `memberId === user.id` → `'owner'` short-circuit and call `get_member_viewer_role_for_leader` instead. Result is whatever leader/follower role applies (could be `'leader'` for self).
 
-## 2. Member-side day note migration
+### 3. MemberWorkspace + diary note hooks
 
-Migrate `useDayNote` to query `diary_day_notes` filtered by `member_id = currentMember`, `author_id = auth.uid()`. The hook returns `{ memberNote, viewerNote, canEdit, canViewMemberNote }`. localStorage stays as a one-time read-and-clear fallback (best-effort migration on first mount).
+- `src/components/team/MemberWorkspace.tsx`: pass `{ context: 'leader' }` to `useViewerRole(userId, …)`. This is the "viewing through the group members page" surface, so the persona is leader even on yourself.
+- `src/hooks/useDiaryDayNote.ts` and `src/hooks/useDiarySessionNote.ts`:
+  - Include `kind` in select/insert/update/delete.
+  - `memberNote` reads the row where `author_id = member_id AND kind = 'member'`.
+  - `viewerNote` (leader/active-follower row) reads `author_id = viewerId AND kind = 'leader'`. This works even when `viewerId === memberId`.
+  - `leaderNotes` reads everything where `kind = 'leader' AND author_id != viewerId` (so a leader sees other leaders' notes plus the member-note above).
+  - `saveViewerNote(text)` always upserts with `kind: isOwner ? 'member' : 'leader'`. With the new conflict key `(member_id, author_id, day, kind)`, a self-leader can have both rows side-by-side.
+- `DayNoteButton` keeps the same icon logic — gray = member-note, black = leader-notes — and now correctly shows both icons for a self-leader.
 
-The same hook serves both:
-- The member viewing their own diary (`memberNote` = their own row, `viewerNote` = null)
-- A leader/active-follower viewing the member (`memberNote` = member's row, read-only; `viewerNote` = leader's own row)
+### 4. Individual mode parity
 
-## 3. Diary viewer-mode plumbing
+In individual mode (`/diary`, `/calendar`), `useViewerRole` stays in `'auto'`, so the same user is `owner` of themselves and edits their member-note. Any leader-note rows they wrote about themselves through the group surface will now appear under the black icon as a read-only "note from others" — exactly the desired round-trip.
 
-Add a new prop chain `viewerRole: "owner" | "leader" | "follower"` and `memberId: uuid` from `MemberWorkspace` → `YearCalendarView` → `UnifiedElasticGrid` → `SessionHoverMenu` / `DayNoteButton`.
+## Technical notes
 
-`MemberWorkspace` resolves the role on mount via a single RPC: `select role from get_member_viewer_role(member_id)` returning `'owner' | 'leader' | 'follower' | 'none'`. (`follower` and `none` both render the diary read-only with no annotation; only `owner` and `leader` can write notes; only `owner` can edit sessions.)
-
-`DiaryPage` (the member's own `/diary` route) passes `viewerRole="owner"`, `memberId=auth.uid()`.
-
-## 4. SessionHoverMenu changes
-
-Two layouts:
-
-**Owner (today's behavior, reordered):**
-```
-[Details] [Note]            (no Delete here in the menu — Delete moves into
-                             the Details modal, matching the spec: "the
-                             delete button is not there" when leader hovers,
-                             implying Delete is always inside Details)
-```
-
-Actually re-reading: "they cannot ... add sessions or edit sessions. Therefore, when they hover the sessions created by the user in Diary, the delete button is not there." So Delete is hidden only for leaders. Owner keeps Delete.
-
-- Owner menu: `[Details] [Note]` left/right + `[Delete]` slot rendered only when `viewerRole === "owner"`.
-- Leader/follower menu: `[Details (read-only)] [Note]` only.
-
-The Note icon on the right opens the leader/follower's OWN note panel (`diary_session_notes`). The member's note (`events.session_note`) stays where it is — rendered as the existing read-only/preview panel attached to the member-side icon.
-
-### Side-by-side panels
-When both notes exist (or one is being edited):
-- Member-side note panel renders at the existing position (left of menu, attached to member icon).
-- Leader-side note panel renders to the right of the menu, top edge aligned with menu top, ~6px gap.
-- Leader panel uses a 3px LEFT border in the platform's dark blue (`hsl(var(--primary))` or whichever of the 8 brand colors is the dark blue — I'll use the primary token; if you want a specific one of the 8, say which).
-- Member panel keeps its existing gray left border.
-
-The member viewing their own diary sees the same layout: their own note on the left, leader's note (if any) on the right with the blue border.
-
-## 5. DayNoteButton changes
-
-Same idea: when a leader/follower note exists (or is being edited), render a second `NotePanel` to the right of the member panel, blue left border. The right-side icon to open it lives mirrored on the day cell (same icon, right-aligned).
-
-## 6. Read-only Details modal
-
-`SessionDetailsModal` gets a `readOnly` prop. When true: no editable inputs (text becomes plain spans), no Save button, footer shows just a Close button. Delete button removed for leaders (already not present in their hover menu).
-
-## 7. Files touched
-
-**New**
-- `supabase/migrations/<ts>_followers_and_diary_notes.sql`
-- `src/hooks/useDiaryDayNote.ts` (replaces direct `useDayNote` localStorage usage)
-- `src/hooks/useDiarySessionNote.ts`
-- `src/hooks/useViewerRole.ts`
-
-**Edited**
-- `src/components/team/MemberWorkspace.tsx` — resolve viewerRole, pass through
-- `src/components/calendar/DiaryPage.tsx` — pass `viewerRole="owner"`
-- `src/components/calendar/YearCalendarView.tsx` — forward props
-- `src/components/calendar/UnifiedElasticGrid.tsx` — forward props, hide owner-only affordances
-- `src/components/calendar/SessionHoverMenu.tsx` — leader layout + dual panel
-- `src/components/calendar/DayNoteButton.tsx` — swap localStorage hook for Supabase, dual panel
-- `src/components/calendar/SessionDetailsModal.tsx` — `readOnly` prop
-
-## 8. Scope I'm explicitly NOT doing this round (per your message)
-
-- UI to add/remove followers and active_followers (you said you'll give further instructions).
-- Migrating diary sessions/events from localStorage to Supabase.
-- Calendar-page leader view (only Diary in this pass; mention if you want Calendar covered too — same plumbing).
-
-## 9. Open detail to confirm
-
-The "dark blue" — the codebase doesn't have a single named "8-color brand palette" I can see at a glance. I'll use `hsl(var(--primary))` unless you point me at a specific token (e.g. one of the activity colors in `lib/activity-colors.ts`).
+- Existing rows are migrated with `default 'member'` for member-authored rows (`author_id = member_id`) and `'leader'` for everything else, in a single `UPDATE` inside the migration.
+- `useDiaryDayNote.reload` only changes the SELECT/UPSERT shape; the `CHANGE_EVENT` channel and dispatch are unchanged.
+- No edge-function changes; all of this is RLS + hook code.
+- `types.ts` will regenerate automatically after the migration.

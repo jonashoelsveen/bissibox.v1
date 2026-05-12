@@ -1,8 +1,12 @@
 /**
  * Diary day notes backed by Supabase (`diary_day_notes`).
  *
- * Returns per-author rows so the UI can render the member's note plus any
- * number of leader / active-follower notes side-by-side.
+ * Notes are split by `kind`:
+ *  - 'member' — authored by the member themselves (gray icon)
+ *  - 'leader' — authored by a group leader / active follower (black icon)
+ *
+ * A user who is BOTH the member and a leader of their own group can have
+ * one row of each kind for the same day.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,8 +25,14 @@ export interface AuthoredNote {
   body: string;
 }
 
+interface Row {
+  author_id: string;
+  body: string;
+  kind: "member" | "leader";
+}
+
 interface State {
-  rows: { author_id: string; body: string }[];
+  rows: Row[];
   names: Record<string, string>;
   loading: boolean;
 }
@@ -41,13 +51,15 @@ export function useDiaryDayNote(memberId: string, date: Date, role: ViewerRole) 
     if (!memberId) return;
     const { data } = await supabase
       .from("diary_day_notes")
-      .select("author_id,body")
+      .select("author_id,body,kind")
       .eq("member_id", memberId)
       .eq("day", dayKey(date));
-    const rows = (data ?? []) as { author_id: string; body: string }[];
+    const rows = (data ?? []) as Row[];
 
     const names: Record<string, string> = {};
-    const otherIds = rows.map((r) => r.author_id).filter((id) => id !== memberId);
+    const otherIds = Array.from(
+      new Set(rows.filter((r) => r.kind === "leader").map((r) => r.author_id)),
+    );
     if (otherIds.length) {
       const { data: profs } = await supabase
         .from("profiles")
@@ -68,6 +80,9 @@ export function useDiaryDayNote(memberId: string, date: Date, role: ViewerRole) 
     return () => window.removeEventListener(CHANGE_EVENT, onChange);
   }, [reload, memberId, date]);
 
+  const isOwner = role === "owner";
+  const viewerKind: "member" | "leader" = isOwner ? "member" : "leader";
+
   const saveViewerNote = useCallback(
     async (text: string) => {
       if (!viewerId) return;
@@ -79,7 +94,8 @@ export function useDiaryDayNote(memberId: string, date: Date, role: ViewerRole) 
           .delete()
           .eq("member_id", memberId)
           .eq("author_id", viewerId)
-          .eq("day", dayKey(date));
+          .eq("day", dayKey(date))
+          .eq("kind", viewerKind);
       } else {
         await supabase.from("diary_day_notes").upsert(
           {
@@ -87,43 +103,45 @@ export function useDiaryDayNote(memberId: string, date: Date, role: ViewerRole) 
             author_id: viewerId,
             day: dayKey(date),
             body: text,
+            kind: viewerKind,
           },
-          { onConflict: "member_id,author_id,day" },
+          { onConflict: "member_id,author_id,day,kind" },
         );
       }
       window.dispatchEvent(
         new CustomEvent(CHANGE_EVENT, { detail: { memberId, day: dayKey(date) } }),
       );
     },
-    [memberId, date, viewerId, role],
+    [memberId, date, viewerId, role, viewerKind],
   );
 
-  const isOwner = role === "owner";
-
+  /** The member's own (gray) note, regardless of the current viewer. */
   const memberNote = useMemo(
-    () => state.rows.find((r) => r.author_id === memberId)?.body ?? "",
+    () =>
+      state.rows.find((r) => r.kind === "member" && r.author_id === memberId)?.body ?? "",
     [state.rows, memberId],
   );
 
+  /** The current viewer's leader-note (only meaningful for non-owners). */
   const viewerNote = useMemo(
     () =>
       !isOwner && viewerId
-        ? state.rows.find((r) => r.author_id === viewerId)?.body ?? ""
+        ? state.rows.find((r) => r.kind === "leader" && r.author_id === viewerId)?.body ?? ""
         : "",
     [state.rows, viewerId, isOwner],
   );
 
-  /** All leader/follower-authored notes that are NOT the current viewer's note. */
+  /** All other leader-notes (excluding the current viewer's own leader-note). */
   const leaderNotes: AuthoredNote[] = useMemo(
     () =>
       state.rows
-        .filter((r) => r.author_id !== memberId && r.author_id !== viewerId)
+        .filter((r) => r.kind === "leader" && r.author_id !== viewerId)
         .map((r) => ({
           authorId: r.author_id,
           authorName: state.names[r.author_id] ?? "",
           body: r.body,
         })),
-    [state.rows, state.names, memberId, viewerId],
+    [state.rows, state.names, viewerId],
   );
 
   return {

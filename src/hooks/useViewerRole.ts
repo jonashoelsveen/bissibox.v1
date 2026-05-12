@@ -4,16 +4,26 @@ import { useAuth } from "@/lib/auth";
 
 export type ViewerRole = "owner" | "leader" | "active_follower" | "follower" | "none";
 
+export interface UseViewerRoleOptions {
+  /**
+   * "auto" (default) — viewing your own member id resolves to "owner".
+   * "leader"        — never resolves to "owner"; asks the DB for the
+   *                   leader/follower-side role even when viewing yourself.
+   *                   Use this from leader/group-members surfaces so a
+   *                   self-leader keeps the leader persona.
+   */
+  context?: "auto" | "leader";
+}
+
 /**
  * Resolves the calling user's relationship to `memberId`.
- *  - "owner": the user is viewing their own diary
- *  - "leader": group leader of a group containing the member
- *  - "active_follower": explicitly granted annotate access
- *  - "follower": view-only
- *  - "none": no access (treated as read-only locally; backend will reject writes)
  */
-export function useViewerRole(memberId: string | null | undefined): ViewerRole {
+export function useViewerRole(
+  memberId: string | null | undefined,
+  options: UseViewerRoleOptions = {},
+): ViewerRole {
   const { user } = useAuth();
+  const context = options.context ?? "auto";
   const [role, setRole] = useState<ViewerRole>("none");
 
   useEffect(() => {
@@ -21,15 +31,17 @@ export function useViewerRole(memberId: string | null | undefined): ViewerRole {
       setRole("none");
       return;
     }
-    if (memberId === user.id) {
+    if (context === "auto" && memberId === user.id) {
       setRole("owner");
       return;
     }
     let cancelled = false;
     void (async () => {
-      const { data, error } = await supabase.rpc("get_member_viewer_role", {
-        _member: memberId,
-      });
+      const rpcName =
+        context === "leader"
+          ? "get_member_viewer_role_for_leader"
+          : "get_member_viewer_role";
+      const { data, error } = await supabase.rpc(rpcName, { _member: memberId });
       if (cancelled) return;
       if (error || !data) setRole("none");
       else setRole(data as ViewerRole);
@@ -37,7 +49,7 @@ export function useViewerRole(memberId: string | null | undefined): ViewerRole {
     return () => {
       cancelled = true;
     };
-  }, [memberId, user]);
+  }, [memberId, user, context]);
 
   return role;
 }
