@@ -43,6 +43,8 @@ interface DayNoteButtonProps {
 
 const PANEL_W = 280;
 const PANEL_GAP = 6;
+const PANEL_H_DEFAULT = 220; // includes header + body + footer approx
+const PANEL_H_MIN = 90;
 
 function dayLabel(date: Date): string {
   return `${String(date.getDate()).padStart(2, "0")}.${String(
