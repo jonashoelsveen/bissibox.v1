@@ -108,7 +108,7 @@ export function GlobalTopTabBar() {
         <TopBarSlotMount className="flex min-w-0 flex-1 items-end pl-2" />
         {/* Search */}
         <Link
-          to="/"
+          to="/search"
           aria-label="Search"
           title="Search"
           className="mb-1 flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
