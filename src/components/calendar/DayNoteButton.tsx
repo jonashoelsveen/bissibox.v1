@@ -384,7 +384,7 @@ export function DayNoteButton({
  * ============================================================ */
 
 export interface NotePanelProps {
-  anchorRect: DOMRect;
+  anchorRect?: DOMRect;
   headerLabel?: string;
   initialValue: string;
   mode: "preview" | "edit";
@@ -394,6 +394,8 @@ export interface NotePanelProps {
   closeOnEnter?: boolean;
   closeOnOutsideClick?: boolean;
   showFooter?: boolean;
+  /** When true, render inline (no portal, no fixed positioning). */
+  inline?: boolean;
   /** Side-line tone. "gray" = member; "leader" = brand primary blue. */
   tone?: "gray" | "leader";
   onSave: (text: string) => void;
@@ -408,12 +410,13 @@ export function NotePanel({
   headerLabel,
   initialValue,
   mode,
-  defaultBodyHeight = 240,
+  defaultBodyHeight,
   panelWidth = 280,
   placement = "below-anchor-left",
   closeOnEnter = true,
   closeOnOutsideClick = true,
   showFooter = true,
+  inline = false,
   tone = "gray",
   onSave,
   onClose,
@@ -421,6 +424,7 @@ export function NotePanel({
   onPanelMouseEnter,
   onPanelMouseLeave,
 }: NotePanelProps) {
+  const effectiveBodyHeight = defaultBodyHeight ?? (inline ? 80 : 240);
   const [val, setVal] = useState(initialValue);
   const ref = useRef<HTMLDivElement | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
