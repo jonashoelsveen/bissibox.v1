@@ -137,7 +137,7 @@ export function useStravaActivities(targetUserId?: string): {
       const { data } = await supabase
         .from("activities")
         .select("*")
-        .eq("user_id", auth.user.id)
+        .eq("user_id", queryUserId)
         .eq("source", "strava")
         .order("start_date", { ascending: false });
       if (active) {
@@ -145,18 +145,17 @@ export function useStravaActivities(targetUserId?: string): {
         setLoading(false);
       }
 
-      // Fire-and-forget background re-sync so any activity edits made in
-      // Strava (e.g. sport_type changes) get pulled in without requiring the
-      // user to press "Re-sync". Realtime will propagate the resulting
-      // updates to this component.
-      supabase.functions.invoke("strava-sync-recent", { body: { days: 90 } })
-        .catch(() => { /* ignore — user may not be connected */ });
+      // Only re-sync from Strava for the signed-in user's own diary.
+      if (queryUserId === auth.user.id) {
+        supabase.functions.invoke("strava-sync-recent", { body: { days: 90 } })
+          .catch(() => { /* ignore — user may not be connected */ });
+      }
 
       channel = supabase
-        .channel(`activities:${auth.user.id}:${Math.random().toString(36).slice(2)}`)
+        .channel(`activities:${queryUserId}:${Math.random().toString(36).slice(2)}`)
         .on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "activities", filter: `user_id=eq.${auth.user.id}` },
+          { event: "*", schema: "public", table: "activities", filter: `user_id=eq.${queryUserId}` },
           (payload) => {
             setRows((prev) => {
               const next = [...prev];
@@ -178,7 +177,7 @@ export function useStravaActivities(targetUserId?: string): {
       active = false;
       if (channel) supabase.removeChannel(channel);
     };
-  }, []);
+  }, [targetUserId]);
 
   const events = mergeAdjacentSessions(
     rows
