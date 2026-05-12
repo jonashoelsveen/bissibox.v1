@@ -118,7 +118,7 @@ export function mergeAdjacentSessions(events: CalendarEvent[]): CalendarEvent[] 
 // Silence unused-import linter for colorForActivity (kept for backward compat).
 void colorForActivity;
 
-export function useStravaActivities(): {
+export function useStravaActivities(targetUserId?: string): {
   events: CalendarEvent[];
   rows: Record<string, StravaActivityRow>;
   loading: boolean;
@@ -133,6 +133,7 @@ export function useStravaActivities(): {
     (async () => {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth?.user) { if (active) { setRows([]); setLoading(false); } return; }
+      const queryUserId = targetUserId ?? auth.user.id;
       const { data } = await supabase
         .from("activities")
         .select("*")
