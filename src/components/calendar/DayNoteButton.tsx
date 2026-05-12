@@ -97,7 +97,7 @@ export function DayNoteButton({
   const [editingViewer, setEditingViewer] = useState(false);
   const [open, setOpen] = useState(false); // hover/preview open
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
-  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const btnRef = useRef<HTMLDivElement | null>(null);
   const anchorElRef = useRef<HTMLElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
 
