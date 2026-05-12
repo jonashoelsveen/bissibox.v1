@@ -42,7 +42,7 @@ interface DayNoteButtonProps {
 }
 
 const PANEL_W = 280;
-const PANEL_GAP = 0;
+const PANEL_GAP = 4;
 
 function dayLabel(date: Date): string {
   return `${String(date.getDate()).padStart(2, "0")}.${String(
