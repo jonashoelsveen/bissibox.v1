@@ -514,35 +514,41 @@ export function NotePanel({
   };
 
   const margin = 8;
-  let left: number;
-  let top: number;
-  let transformOrigin = "top left";
-  if (placement === "right-of-anchor-top") {
-    left = anchorRect.right + 6;
-    top = anchorRect.top;
-    if (left + panelWidth > window.innerWidth - margin) {
-      left = Math.max(margin, anchorRect.left - panelWidth - 6);
-      transformOrigin = "top right";
-    }
+  let style: CSSProperties;
+  if (inline) {
+    style = { width: "100%" };
   } else {
-    left = anchorRect.left;
-    top = anchorRect.bottom;
-    if (left + panelWidth > window.innerWidth - margin) {
-      left = Math.max(margin, window.innerWidth - panelWidth - margin);
+    const ar = anchorRect!;
+    let left: number;
+    let top: number;
+    let transformOrigin = "top left";
+    if (placement === "right-of-anchor-top") {
+      left = ar.right + 6;
+      top = ar.top;
+      if (left + panelWidth > window.innerWidth - margin) {
+        left = Math.max(margin, ar.left - panelWidth - 6);
+        transformOrigin = "top right";
+      }
+    } else {
+      left = ar.left;
+      top = ar.bottom;
+      if (left + panelWidth > window.innerWidth - margin) {
+        left = Math.max(margin, window.innerWidth - panelWidth - margin);
+      }
     }
+    style = { top, left, width: panelWidth, transformOrigin };
   }
-  const style: CSSProperties = { top, left, width: panelWidth, transformOrigin };
 
   // Use the raw token value: --primary is `oklch(...)` already, so it must
   // be substituted directly, not wrapped in `hsl(...)` (which yields invalid color).
   const sideLineColor = tone === "leader" ? "var(--primary)" : "#9CA3AF";
 
-  return createPortal(
+  const content = (
     <motion.div
       ref={ref}
       data-note-panel="1"
       data-note-tone={tone}
-      className="fixed z-50"
+      className={inline ? "relative" : "fixed z-50"}
       style={style}
       initial={{ opacity: 0, scaleY: 0.6, y: -4 }}
       animate={{ opacity: 1, scaleY: 1, y: 0 }}
