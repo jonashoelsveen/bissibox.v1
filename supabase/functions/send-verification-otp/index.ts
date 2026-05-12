@@ -103,14 +103,17 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // Rate limit: max 3 sends per user per 10 minutes
+    // Rate limit: max 5 sends per user per destination+target per 10 minutes
     const since = new Date(Date.now() - 10 * 60_000).toISOString();
     const { count } = await admin
       .from("verification_attempts")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
+      .eq("destination", body.destination)
+      .eq("target_kind", body.target_kind)
+      .eq("target_id", body.target_id)
       .gte("created_at", since);
-    if ((count ?? 0) >= 3) {
+    if ((count ?? 0) >= 5) {
       return new Response(JSON.stringify({ error: "Too many requests. Try again in a few minutes." }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
