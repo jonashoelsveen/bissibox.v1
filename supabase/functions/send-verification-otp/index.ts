@@ -45,11 +45,19 @@ async function sendEmail(to: string, code: string) {
   }
 
   const messageId = crypto.randomUUID();
+  const text = [
+    "Verify it's you",
+    "",
+    `Enter this 6-digit code to complete verification: ${code}`,
+    "",
+    "This code expires in 10 minutes. If you didn't request it, you can ignore this email.",
+  ].join("\n");
   const payload = {
     to,
     from: FROM_EMAIL,
     sender_domain: SENDER_DOMAIN,
     subject: `Your verification code: ${code}`,
+    text,
     html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#0f172a;background:#ffffff">
       <h1 style="font-size:18px;margin:0 0 16px">Verify it's you</h1>
       <p style="margin:0 0 12px;color:#475569">Enter this 6-digit code to complete verification:</p>
@@ -140,7 +148,12 @@ Deno.serve(async (req) => {
       .single();
     if (insertErr) throw insertErr;
 
-    await sendEmail(body.destination, code);
+    try {
+      await sendEmail(body.destination, code);
+    } catch (emailErr) {
+      await admin.from("verification_attempts").delete().eq("id", insertData.id);
+      throw emailErr;
+    }
 
     return new Response(
       JSON.stringify({ ok: true, attempt_id: insertData.id, masked: maskEmail(body.destination) }),
