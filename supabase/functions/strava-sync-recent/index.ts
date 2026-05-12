@@ -28,7 +28,15 @@ Deno.serve(async (req) => {
 
     if (!userId) return json({ error: "no user" }, 400);
 
-    const accessToken = await getValidAccessToken(userId);
+    let accessToken: string;
+    try {
+      accessToken = await getValidAccessToken(userId);
+    } catch (e) {
+      if (String((e as Error)?.message || e).includes("not connected")) {
+        return json({ ok: true, synced: 0, skipped: "not_connected" });
+      }
+      throw e;
+    }
     const after = Math.floor(Date.now() / 1000) - days * 86400;
 
     const sb = adminClient();
