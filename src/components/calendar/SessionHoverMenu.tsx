@@ -51,7 +51,7 @@ function useViewerName(): string {
   return name;
 }
 
-const NOTE_PANEL_W = 248;
+const NOTE_PANEL_W = 264;
 
 export interface SessionHoverMenuProps {
   ev: CalendarEvent;
