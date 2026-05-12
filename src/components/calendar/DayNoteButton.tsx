@@ -455,9 +455,9 @@ export function NotePanel({
     const ta = taRef.current;
     if (!ta) return;
     ta.style.height = "auto";
-    const next = Math.max(defaultBodyHeight + extra, ta.scrollHeight);
+    const next = Math.max(effectiveBodyHeight + extra, ta.scrollHeight);
     ta.style.height = next + "px";
-  }, [val, extra, defaultBodyHeight]);
+  }, [val, extra, effectiveBodyHeight]);
 
   useEffect(() => {
     if (!isEdit) return;
