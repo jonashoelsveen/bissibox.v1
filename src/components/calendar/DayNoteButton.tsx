@@ -361,7 +361,7 @@ export function DayNoteButton({
                 initialValue={p.value}
                 mode={p.mode}
                 tone={p.tone}
-                closeOnEnter={false}
+                closeOnEnter={true}
                 closeOnOutsideClick={false}
                 onSave={p.onSave}
                 onClose={() => {
