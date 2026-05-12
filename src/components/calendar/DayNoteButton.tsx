@@ -361,7 +361,7 @@ export function DayNoteButton({
                 initialValue={p.value}
                 mode={p.mode}
                 tone={p.tone}
-                closeOnEnter={true}
+                closeOnEnter={false}
                 closeOnOutsideClick={false}
                 onSave={p.onSave}
                 onClose={() => {
@@ -622,7 +622,8 @@ export function NotePanel({
               onMouseDown={(e) => e.stopPropagation()}
               onClick={() => {
                 onSave(val);
-                onClose();
+                setFooterHidden(true);
+                taRef.current?.blur();
               }}
               className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
             >
