@@ -15,9 +15,9 @@ async function hashCode(code: string): Promise<string> {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend/emails";
-const FROM_EMAIL = "onboarding@resend.dev";
+const LOVABLE_EMAIL_URL = "https://api.lovable.dev/v1/messaging/email/send";
+const SENDER_DOMAIN = "notify.dev.aponna.com";
+const FROM_EMAIL = `Aponna <noreply@${SENDER_DOMAIN}>`;
 
 interface Body {
   channel: "email" | "sms";
