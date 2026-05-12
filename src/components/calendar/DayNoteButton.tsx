@@ -420,6 +420,7 @@ export function NotePanel({
   closeOnOutsideClick = true,
   showFooter = true,
   inline = false,
+  attached = false,
   tone = "gray",
   onSave,
   onClose,
