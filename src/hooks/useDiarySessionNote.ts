@@ -112,16 +112,18 @@ export function useDiarySessionNote(
     [state.rows, viewerId, isOwner],
   );
 
+  // Owner viewer: include every leader-note (incl. their own self-leader notes).
+  // Non-owner viewer: exclude their own leader-note (shown as `viewerNote`).
   const leaderNotes: AuthoredNote[] = useMemo(
     () =>
       state.rows
-        .filter((r) => r.author_id !== viewerId)
+        .filter((r) => isOwner || r.author_id !== viewerId)
         .map((r) => ({
           authorId: r.author_id,
           authorName: state.names[r.author_id] ?? "",
           body: r.body,
         })),
-    [state.rows, state.names, viewerId],
+    [state.rows, state.names, viewerId, isOwner],
   );
 
   return {
