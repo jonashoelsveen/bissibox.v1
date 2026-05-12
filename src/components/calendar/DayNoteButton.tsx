@@ -41,7 +41,7 @@ interface DayNoteButtonProps {
   viewerRole?: ViewerRole;
 }
 
-const PANEL_W = 248;
+const PANEL_W = 264;
 const PANEL_GAP = 4;
 
 function dayLabel(date: Date): string {
