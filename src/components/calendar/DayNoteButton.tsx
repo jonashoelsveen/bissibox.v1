@@ -230,7 +230,7 @@ export function DayNoteButton({
       items.push({
         key: "viewer",
         tone: "leader",
-        header: viewerName ? `${baseHeader} · ${viewerName}` : baseHeader,
+        header: viewerName || "Notat",
         value: viewerNote,
         mode: editingViewer ? "edit" : "preview",
         onSave: (text) => void saveViewerNote(text),
@@ -243,7 +243,7 @@ export function DayNoteButton({
       items.push({
         key: `leader-${n.authorId}`,
         tone: "leader",
-        header: n.authorName ? `${baseHeader} · ${n.authorName}` : baseHeader,
+        header: n.authorName || "Notat",
         value: n.body,
         mode: "preview",
         onSave: () => {},
