@@ -189,24 +189,16 @@ export function DayNoteButton({
     else if (canEdit) setEditingViewer(true);
   };
 
-  // Icon visibility / tone.
-  const visibility = hasAnyNote
-    ? "opacity-100"
-    : "opacity-0 group-hover/daynote-anchor:opacity-100";
-  const tone = isOwner
-    ? "text-muted-foreground/45 hover:text-muted-foreground"
-    : "text-primary/70 hover:text-primary";
-
   const positionClass =
     variant === "week"
       ? "absolute left-1 top-1/2 -translate-y-1/2 flex flex-row items-center gap-0.5"
       : "absolute left-1 bottom-1 flex flex-row items-center gap-0.5";
 
-  const hasLeaderNotes = leaderNotes.length > 0 || hasViewerNote;
+  const hasOtherNotes = leaderNotes.length > 0 || hasViewerNote;
 
-  // Compute anchor rects for all panels (stacked vertically below the cell).
-  const panels = useMemo(() => {
-    if (!anchorRect) return [];
+  // Build the panel list (top-down). Member's own note is ALWAYS on top
+  // when present. Owner-as-viewer also gets a member edit slot when opening.
+  const panelItems = useMemo(() => {
     type Item = {
       key: string;
       tone: "gray" | "leader";
@@ -219,7 +211,7 @@ export function DayNoteButton({
     const items: Item[] = [];
     const baseHeader = `Note ${dayLabel(date)}`;
 
-    // 1. Member panel (only render if there's content OR if owner is editing).
+    // 1. Member panel
     if (hasMemberNote || (isOwner && (editingMember || open))) {
       items.push({
         key: "member",
@@ -232,16 +224,17 @@ export function DayNoteButton({
       });
     }
 
-    // 2. Current viewer's own note (when not the owner).
-    if (!isOwner && (hasViewerNote || (canEdit && (editingViewer || open)))) {
+    // 2. Current viewer's own note (when not the owner). Always rendered for
+    //    leader/active-follower so they can compose even when no notes exist.
+    if (!isOwner && canEdit) {
       items.push({
         key: "viewer",
         tone: "leader",
         header: viewerName ? `${baseHeader} · ${viewerName}` : baseHeader,
         value: viewerNote,
-        mode: editingViewer && canEdit ? "edit" : "preview",
+        mode: editingViewer ? "edit" : "preview",
         onSave: (text) => void saveViewerNote(text),
-        onRequestEdit: canEdit ? () => setEditingViewer(true) : undefined,
+        onRequestEdit: () => setEditingViewer(true),
       });
     }
 
@@ -256,42 +249,8 @@ export function DayNoteButton({
         onSave: () => {},
       });
     }
-
-    // Stack vertically; compress per-panel height if total would exceed viewport.
-    const margin = 8;
-    const top = anchorRect.bottom;
-    const available = Math.max(PANEL_H_MIN, window.innerHeight - top - margin);
-    const idealTotal = items.length * PANEL_H_DEFAULT + (items.length - 1) * PANEL_GAP;
-    const perPanel =
-      idealTotal <= available
-        ? PANEL_H_DEFAULT
-        : Math.max(
-            PANEL_H_MIN,
-            Math.floor((available - (items.length - 1) * PANEL_GAP) / items.length),
-          );
-
-    let left = anchorRect.left;
-    if (left + PANEL_W > window.innerWidth - margin) {
-      left = Math.max(margin, window.innerWidth - PANEL_W - margin);
-    }
-
-    return items.map((it, i) => {
-      const t = top + i * (perPanel + PANEL_GAP);
-      const rect = {
-        left,
-        right: left + PANEL_W,
-        top: t,
-        bottom: t,
-        width: PANEL_W,
-        height: 0,
-        x: left,
-        y: t,
-        toJSON: () => ({}),
-      } as DOMRect;
-      return { ...it, rect, bodyHeight: Math.max(60, perPanel - 60) };
-    });
+    return items;
   }, [
-    anchorRect,
     date,
     hasMemberNote,
     isOwner,
@@ -299,7 +258,6 @@ export function DayNoteButton({
     open,
     memberNote,
     saveViewerNote,
-    hasViewerNote,
     canEdit,
     editingViewer,
     viewerName,
@@ -307,14 +265,23 @@ export function DayNoteButton({
     leaderNotes,
   ]);
 
-  const showPanels = (open || editingMember || editingViewer) && panels.length > 0;
+  const showPanels =
+    (open || editingMember || editingViewer) && panelItems.length > 0 && !!anchorRect;
 
-  // Member icon visibility: shown when there's a member note, or when the
-  // viewer is the owner (always interactive on hover).
-  const memberIconVisible = hasMemberNote || isOwner;
-  const memberIconClass = hasMemberNote
-    ? "opacity-100"
-    : "opacity-0 group-hover/daynote-anchor:opacity-100";
+  // Icon visibility:
+  // - Owner: gray icon always shown; black icon only if others have written.
+  // - Leader/active-follower: black icon always shown; gray only if member wrote.
+  const memberIconVisible = isOwner || hasMemberNote;
+  const otherIconVisible = isOwner ? hasOtherNotes : true;
+
+  // Container position for the stack of panels.
+  const margin = 8;
+  let stackLeft = anchorRect?.left ?? 0;
+  if (anchorRect && stackLeft + PANEL_W > window.innerWidth - margin) {
+    stackLeft = Math.max(margin, window.innerWidth - PANEL_W - margin);
+  }
+  const stackTop = anchorRect?.bottom ?? 0;
+  const stackMaxH = anchorRect ? Math.max(120, window.innerHeight - stackTop - margin) : 400;
 
   return (
     <>
@@ -334,14 +301,16 @@ export function DayNoteButton({
             title={hasAnyNote ? "Vis dagsnotater" : "Legg til dagsnotat"}
             className={[
               "z-[3] grid h-5 w-5 place-items-center rounded transition-colors",
-              memberIconClass,
+              hasMemberNote
+                ? "opacity-100"
+                : "opacity-0 group-hover/daynote-anchor:opacity-100",
               "text-muted-foreground/45 hover:text-muted-foreground",
             ].join(" ")}
           >
             <StickyNote className="h-3 w-3" strokeWidth={2.25} />
           </button>
         )}
-        {hasLeaderNotes && (
+        {otherIconVisible && (
           <button
             type="button"
             onMouseDown={(e) => e.stopPropagation()}
@@ -353,38 +322,59 @@ export function DayNoteButton({
             }}
             aria-label="Vis notater fra andre"
             title="Notater fra andre"
-            className="z-[3] grid h-5 w-5 place-items-center rounded text-ink/80 hover:text-ink transition-colors"
+            className={[
+              "z-[3] grid h-5 w-5 place-items-center rounded transition-colors",
+              hasOtherNotes
+                ? "opacity-100"
+                : "opacity-0 group-hover/daynote-anchor:opacity-100",
+              "text-ink/80 hover:text-ink",
+            ].join(" ")}
           >
             <StickyNote className="h-3 w-3" strokeWidth={2.25} />
           </button>
         )}
       </div>
       {showPanels &&
-        panels.map((p) => (
-          <NotePanel
-            key={p.key}
-            anchorRect={p.rect}
-            headerLabel={p.header}
-            initialValue={p.value}
-            mode={p.mode}
-            tone={p.tone}
-            defaultBodyHeight={p.bodyHeight}
-            closeOnEnter={false}
-            closeOnOutsideClick={false}
-            onSave={p.onSave}
-            onClose={() => {
-              if (p.key === "member") setEditingMember(false);
-              else if (p.key === "viewer") setEditingViewer(false);
-              setOpen(false);
+        createPortal(
+          <div
+            data-note-panel-stack="1"
+            className="fixed z-50 flex flex-col"
+            style={{
+              top: stackTop,
+              left: stackLeft,
+              width: PANEL_W,
+              maxHeight: stackMaxH,
+              overflowY: "auto",
+              gap: PANEL_GAP,
             }}
-            onRequestEdit={p.onRequestEdit}
-            onPanelMouseEnter={() => {
+            onMouseEnter={() => {
               cancelClose();
               setOpen(true);
             }}
-            onPanelMouseLeave={() => scheduleClose()}
-          />
-        ))}
+            onMouseLeave={() => scheduleClose()}
+          >
+            {panelItems.map((p) => (
+              <NotePanel
+                key={p.key}
+                inline
+                headerLabel={p.header}
+                initialValue={p.value}
+                mode={p.mode}
+                tone={p.tone}
+                closeOnEnter={false}
+                closeOnOutsideClick={false}
+                onSave={p.onSave}
+                onClose={() => {
+                  if (p.key === "member") setEditingMember(false);
+                  else if (p.key === "viewer") setEditingViewer(false);
+                  setOpen(false);
+                }}
+                onRequestEdit={p.onRequestEdit}
+              />
+            ))}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
