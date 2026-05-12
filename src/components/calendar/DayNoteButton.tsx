@@ -42,7 +42,7 @@ interface DayNoteButtonProps {
 }
 
 const PANEL_W = 280;
-const PANEL_GAP = 0;
+const PANEL_GAP = 4;
 
 function dayLabel(date: Date): string {
   return `${String(date.getDate()).padStart(2, "0")}.${String(
@@ -357,7 +357,7 @@ export function DayNoteButton({
               <NotePanel
                 key={p.key}
                 inline
-                attached={idx > 0}
+                attached={false}
                 headerLabel={p.header}
                 initialValue={p.value}
                 mode={p.mode}
@@ -569,8 +569,8 @@ export function NotePanel({
     >
       <div
         className={[
-          "relative overflow-hidden rounded-b-md border-x border-b border-ink/15 bg-card shadow-lg",
-          attached ? "" : "border-t",
+          "relative overflow-hidden border-x border-b border-ink/15 bg-card shadow-lg rounded-b-md",
+          attached ? "" : "border-t rounded-t-md",
         ].join(" ")}
       >
         <span

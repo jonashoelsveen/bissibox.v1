@@ -313,6 +313,7 @@ export function SessionHoverMenu({
             {showMemberPanel && (
               <NotePanel
                 inline
+                attached
                 headerLabel={baseHeader}
                 initialValue={ev.sessionNote ?? ""}
                 mode={isOwner && noteEdit ? "edit" : "preview"}
@@ -329,26 +330,26 @@ export function SessionHoverMenu({
               />
             )}
             {showLeaderPanels &&
-              leaderPanels.map((p, idx) => (
-                <NotePanel
-                  key={p.key}
-                  inline
-                  attached={showMemberPanel || idx > 0}
-                  headerLabel={p.header}
-                  initialValue={p.value}
-                  mode={p.mode}
-                  defaultBodyHeight={140}
-                  panelWidth={NOTE_PANEL_W}
-                  closeOnEnter={false}
-                  closeOnOutsideClick={false}
-                  tone="leader"
-                  onSave={p.onSave}
-                  onClose={() => {
-                    setLeaderNoteEdit(false);
-                    onForceClose?.();
-                  }}
-                  onRequestEdit={p.onRequestEdit}
-                />
+              leaderPanels.map((p) => (
+                <div key={p.key} style={{ marginTop: 4 }}>
+                  <NotePanel
+                    inline
+                    headerLabel={p.header}
+                    initialValue={p.value}
+                    mode={p.mode}
+                    defaultBodyHeight={140}
+                    panelWidth={NOTE_PANEL_W}
+                    closeOnEnter={false}
+                    closeOnOutsideClick={false}
+                    tone="leader"
+                    onSave={p.onSave}
+                    onClose={() => {
+                      setLeaderNoteEdit(false);
+                      onForceClose?.();
+                    }}
+                    onRequestEdit={p.onRequestEdit}
+                  />
+                </div>
               ))}
           </div>,
           document.body,
