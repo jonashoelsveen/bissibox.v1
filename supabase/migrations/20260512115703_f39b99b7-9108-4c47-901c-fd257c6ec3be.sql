@@ -1,0 +1,1 @@
+CREATE POLICY "activities: viewers can select" ON public.activities FOR SELECT USING (public.can_view_member(user_id));
