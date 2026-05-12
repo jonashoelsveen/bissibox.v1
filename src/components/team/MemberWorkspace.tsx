@@ -17,7 +17,9 @@ interface Props {
 
 export function MemberWorkspace({ userId, name }: Props) {
   const [subTab, setSubTab] = useState<MemberSubTab>("calendar");
-  const viewerRole = useViewerRole(userId);
+  // Group-members surface: keep the leader persona even when a leader is
+  // viewing their own profile so they can author a separate leader-note.
+  const viewerRole = useViewerRole(userId, { context: "leader" });
 
   /* shared calendar/diary state */
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
