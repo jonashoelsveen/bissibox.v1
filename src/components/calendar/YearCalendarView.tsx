@@ -140,7 +140,7 @@ function YearCalendarViewInner({
     ],
   );
   const previewActive = overlay.events !== null;
-  const { events: stravaEvents } = useStravaActivities();
+  const { events: stravaEvents } = useStravaActivities(memberId);
   const mergedEvents = useMemo(() => {
     const stravaForDiary = appKind === "diary" ? stravaEvents : [];
     // De-duplicate: a manually-logged event with the same id (strava:<id>) takes precedence.
