@@ -320,14 +320,10 @@ export function DayNoteButton({
 
   return (
     <>
-      <div ref={btnRef as never} className={positionClass} data-day-note-btn="1">
+      <div ref={btnRef} className={positionClass} data-day-note-btn="1">
         {memberIconVisible && (
           <button
             type="button"
-            ref={(el) => {
-              // anchor element used for hover open
-              if (el && !btnRef.current) (btnRef as { current: HTMLButtonElement | null }).current = el;
-            }}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
