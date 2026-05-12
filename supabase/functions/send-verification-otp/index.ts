@@ -39,17 +39,46 @@ function generateCode(): string {
   return String(buf[0] % 1_000_000).padStart(6, "0");
 }
 
-async function sendEmail(to: string, code: string) {
+async function getOrCreateUnsubscribeToken(admin: ReturnType<typeof createClient>, email: string): Promise<string> {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const { data: existing, error: existingErr } = await admin
+    .from("email_unsubscribe_tokens")
+    .select("token")
+    .eq("email", normalizedEmail)
+    .maybeSingle();
+
+  if (existingErr) throw existingErr;
+  if (existing?.token) return existing.token;
+
+  const token = crypto.randomUUID();
+  const { error: insertErr } = await admin
+    .from("email_unsubscribe_tokens")
+    .insert({ email: normalizedEmail, token });
+
+  if (insertErr) throw insertErr;
+  return token;
+}
+
+async function sendEmail(to: string, code: string, unsubscribeToken: string) {
   if (!LOVABLE_API_KEY) {
     throw new Error("LOVABLE_API_KEY is not configured");
   }
 
   const messageId = crypto.randomUUID();
+  const text = [
+    "Verify it's you",
+    "",
+    `Enter this 6-digit code to complete verification: ${code}`,
+    "",
+    "This code expires in 10 minutes. If you didn't request it, you can ignore this email.",
+  ].join("\n");
   const payload = {
     to,
     from: FROM_EMAIL,
     sender_domain: SENDER_DOMAIN,
     subject: `Your verification code: ${code}`,
+    text,
     html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#0f172a;background:#ffffff">
       <h1 style="font-size:18px;margin:0 0 16px">Verify it's you</h1>
       <p style="margin:0 0 12px;color:#475569">Enter this 6-digit code to complete verification:</p>
@@ -58,6 +87,7 @@ async function sendEmail(to: string, code: string) {
     </div>`,
     purpose: "transactional",
     label: "verification_otp",
+    unsubscribe_token: unsubscribeToken,
     message_id: messageId,
     idempotency_key: messageId,
   };
@@ -102,6 +132,7 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const unsubscribeToken = await getOrCreateUnsubscribeToken(admin, body.destination);
 
     // Rate limit: max 5 sends per user per destination+target per 10 minutes
     const since = new Date(Date.now() - 10 * 60_000).toISOString();
@@ -140,7 +171,12 @@ Deno.serve(async (req) => {
       .single();
     if (insertErr) throw insertErr;
 
-    await sendEmail(body.destination, code);
+    try {
+      await sendEmail(body.destination, code, unsubscribeToken);
+    } catch (emailErr) {
+      await admin.from("verification_attempts").delete().eq("id", insertData.id);
+      throw emailErr;
+    }
 
     return new Response(
       JSON.stringify({ ok: true, attempt_id: insertData.id, masked: maskEmail(body.destination) }),
