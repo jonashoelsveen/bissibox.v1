@@ -1,9 +1,12 @@
 /**
  * Per-session leader/follower notes backed by Supabase (`diary_session_notes`).
  *
- * The member's own session note continues to live on the event itself
- * (`event.sessionNote`). This hook returns the additional notes written by
- * leaders / active followers (and the current viewer's own note if non-owner).
+ * Rows are split by `kind`:
+ *  - 'member' — authored by the member themselves (their own session note)
+ *  - 'leader' — authored by a group leader / active follower
+ *
+ * The member's own session note still also lives on `event.sessionNote`;
+ * this hook only manages the leader-side rows.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,8 +16,14 @@ import type { AuthoredNote } from "./useDiaryDayNote";
 
 const CHANGE_EVENT = "diary-sessionnote-changed";
 
+interface Row {
+  author_id: string;
+  body: string;
+  kind: "member" | "leader";
+}
+
 interface State {
-  rows: { author_id: string; body: string }[];
+  rows: Row[];
   names: Record<string, string>;
 }
 
@@ -36,12 +45,13 @@ export function useDiarySessionNote(
     if (!eventId || !memberId) return;
     const { data } = await supabase
       .from("diary_session_notes")
-      .select("author_id,body")
+      .select("author_id,body,kind")
       .eq("event_id", eventId)
-      .eq("member_id", memberId);
-    const rows = (data ?? []) as { author_id: string; body: string }[];
+      .eq("member_id", memberId)
+      .eq("kind", "leader");
+    const rows = (data ?? []) as Row[];
     const names: Record<string, string> = {};
-    const ids = rows.map((r) => r.author_id);
+    const ids = Array.from(new Set(rows.map((r) => r.author_id)));
     if (ids.length) {
       const { data: profs } = await supabase
         .from("profiles")
@@ -73,7 +83,8 @@ export function useDiarySessionNote(
           .from("diary_session_notes")
           .delete()
           .eq("event_id", eventId)
-          .eq("author_id", viewerId);
+          .eq("author_id", viewerId)
+          .eq("kind", "leader");
       } else {
         await supabase.from("diary_session_notes").upsert(
           {
@@ -81,8 +92,9 @@ export function useDiarySessionNote(
             member_id: memberId,
             author_id: viewerId,
             body: text,
+            kind: "leader",
           },
-          { onConflict: "event_id,author_id" },
+          { onConflict: "event_id,author_id,kind" },
         );
       }
       window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: { eventId } }));
@@ -100,7 +112,6 @@ export function useDiarySessionNote(
     [state.rows, viewerId, isOwner],
   );
 
-  /** All other-authored notes (excluding current viewer's own row). */
   const leaderNotes: AuthoredNote[] = useMemo(
     () =>
       state.rows
