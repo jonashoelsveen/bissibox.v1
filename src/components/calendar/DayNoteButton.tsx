@@ -353,10 +353,11 @@ export function DayNoteButton({
             }}
             onMouseLeave={() => scheduleClose()}
           >
-            {panelItems.map((p) => (
+            {panelItems.map((p, idx) => (
               <NotePanel
                 key={p.key}
                 inline
+                attached={idx > 0}
                 headerLabel={p.header}
                 initialValue={p.value}
                 mode={p.mode}
