@@ -31,6 +31,7 @@ import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
 import { Route as CCompanyIdRouteImport } from './routes/c.$companyId'
 import { Route as OrganizerEventIdParticipantsRouteImport } from './routes/organizer.$eventId.participants'
 import { Route as OrganizerEventIdEditRouteImport } from './routes/organizer.$eventId.edit'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -143,6 +144,12 @@ const OrganizerEventIdEditRoute = OrganizerEventIdEditRouteImport.update({
   path: '/organizer/$eventId/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/u/$userId': typeof UUserIdRoute
   '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
   '/organizer/$eventId/participants': typeof OrganizerEventIdParticipantsRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -191,6 +199,7 @@ export interface FileRoutesByTo {
   '/u/$userId': typeof UUserIdRoute
   '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
   '/organizer/$eventId/participants': typeof OrganizerEventIdParticipantsRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -216,6 +225,7 @@ export interface FileRoutesById {
   '/u/$userId': typeof UUserIdRoute
   '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
   '/organizer/$eventId/participants': typeof OrganizerEventIdParticipantsRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/u/$userId'
     | '/organizer/$eventId/edit'
     | '/organizer/$eventId/participants'
+    | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/u/$userId'
     | '/organizer/$eventId/edit'
     | '/organizer/$eventId/participants'
+    | '/lovable/email/queue/process'
   id:
     | '__root__'
     | '/'
@@ -290,6 +302,7 @@ export interface FileRouteTypes {
     | '/u/$userId'
     | '/organizer/$eventId/edit'
     | '/organizer/$eventId/participants'
+    | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -315,6 +328,7 @@ export interface RootRouteChildren {
   UUserIdRoute: typeof UUserIdRoute
   OrganizerEventIdEditRoute: typeof OrganizerEventIdEditRoute
   OrganizerEventIdParticipantsRoute: typeof OrganizerEventIdParticipantsRoute
+  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -473,6 +487,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrganizerEventIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -499,16 +520,8 @@ const rootRouteChildren: RootRouteChildren = {
   UUserIdRoute: UUserIdRoute,
   OrganizerEventIdEditRoute: OrganizerEventIdEditRoute,
   OrganizerEventIdParticipantsRoute: OrganizerEventIdParticipantsRoute,
+  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
