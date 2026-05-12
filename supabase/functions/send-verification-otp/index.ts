@@ -39,7 +39,28 @@ function generateCode(): string {
   return String(buf[0] % 1_000_000).padStart(6, "0");
 }
 
-async function sendEmail(to: string, code: string) {
+async function getOrCreateUnsubscribeToken(admin: ReturnType<typeof createClient>, email: string): Promise<string> {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const { data: existing, error: existingErr } = await admin
+    .from("email_unsubscribe_tokens")
+    .select("token")
+    .eq("email", normalizedEmail)
+    .maybeSingle();
+
+  if (existingErr) throw existingErr;
+  if (existing?.token) return existing.token;
+
+  const token = crypto.randomUUID();
+  const { error: insertErr } = await admin
+    .from("email_unsubscribe_tokens")
+    .insert({ email: normalizedEmail, token });
+
+  if (insertErr) throw insertErr;
+  return token;
+}
+
+async function sendEmail(to: string, code: string, unsubscribeToken: string) {
   if (!LOVABLE_API_KEY) {
     throw new Error("LOVABLE_API_KEY is not configured");
   }
@@ -66,6 +87,7 @@ async function sendEmail(to: string, code: string) {
     </div>`,
     purpose: "transactional",
     label: "verification_otp",
+    unsubscribe_token: unsubscribeToken,
     message_id: messageId,
     idempotency_key: messageId,
   };
@@ -110,6 +132,7 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const unsubscribeToken = await getOrCreateUnsubscribeToken(admin, body.destination);
 
     // Rate limit: max 5 sends per user per destination+target per 10 minutes
     const since = new Date(Date.now() - 10 * 60_000).toISOString();
@@ -149,7 +172,7 @@ Deno.serve(async (req) => {
     if (insertErr) throw insertErr;
 
     try {
-      await sendEmail(body.destination, code);
+      await sendEmail(body.destination, code, unsubscribeToken);
     } catch (emailErr) {
       await admin.from("verification_attempts").delete().eq("id", insertData.id);
       throw emailErr;
