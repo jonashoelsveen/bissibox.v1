@@ -82,6 +82,7 @@ function RootComponent() {
         </main>
         <Toaster />
         <GlobalCreateOverlay />
+        <SettingsModal />
       </TopBarSlotProvider>
     </AuthProvider>
   );
