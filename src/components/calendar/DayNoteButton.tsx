@@ -388,6 +388,7 @@ export function DayNoteButton({
                 attached={false}
                 headerLabel={p.header}
                 headerTime={p.headerTime}
+                headerTimeUpdatedAt={p.headerTimeUpdatedAt}
                 initialValue={p.value}
                 mode={p.mode}
                 tone={p.tone}
