@@ -571,16 +571,9 @@ export function FilesPage({
           userId={user.id}
           teamId={isTeamMode ? teamId : null}
           onClose={() => setImportOpen(false)}
-          onUploaded={(insertedIds) => {
+          onUploaded={() => {
             setImportOpen(false);
             void load();
-            // Trigger verification in background; status pill will reflect outcome
-            if (!accessToken) return;
-            insertedIds.forEach((id) => {
-              runScan({ data: { kind: "file", id, accessToken } }).catch(() => {
-                /* error reflected via scan_status="error" pill */
-              });
-            });
           }}
         />
       )}
