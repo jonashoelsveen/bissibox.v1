@@ -5,6 +5,7 @@ import { TopBar } from "@/components/TopBar";
 import { GlobalTopTabBar } from "@/components/GlobalTopTabBar";
 import { GlobalCreateOverlay } from "@/components/GlobalCreateOverlay";
 import { TopBarSlotProvider } from "@/components/TopBarSlot";
+import { SettingsModal } from "@/components/SettingsModal";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -81,6 +82,7 @@ function RootComponent() {
         </main>
         <Toaster />
         <GlobalCreateOverlay />
+        <SettingsModal />
       </TopBarSlotProvider>
     </AuthProvider>
   );

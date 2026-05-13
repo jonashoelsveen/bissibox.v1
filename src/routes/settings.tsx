@@ -32,6 +32,10 @@ export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings · Raceline" }] }),
 });
 
+function SettingsPage() {
+  return <SettingsView />;
+}
+
 interface Profile {
   first_name: string | null;
   last_name: string | null;
@@ -111,7 +115,7 @@ interface EntityRow {
   entity_type: "team" | "company" | "cooperation";
 }
 
-function SettingsPage() {
+export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   const { user, loading: authLoading, activeEntityId, setActiveEntity, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -364,270 +368,314 @@ function SettingsPage() {
     }
   };
 
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      {!isTeamMode && (
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-md bg-ink px-4 py-2 text-xs font-medium text-background transition hover:opacity-90"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Create new entity
+        </button>
+      )}
+      <button
+        onClick={save}
+        disabled={saving || !isDirty}
+        className={`inline-flex items-center gap-1.5 rounded-md border px-4 py-2 text-xs font-medium transition ${
+          isDirty && !saving
+            ? "border-ink bg-ink text-background hover:opacity-90"
+            : "border-hairline bg-secondary text-muted-foreground cursor-not-allowed"
+        }`}
+      >
+        {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
+      </button>
+    </div>
+  );
+
+  const navEl = (
+    <nav className="-ml-2 flex flex-row gap-1 md:flex-col md:gap-0.5">
+      {navItems.map((item) =>
+        item.startsWith("divider-") ? (
+          <div key={item} className="my-1 hidden h-px w-full bg-hairline md:block" />
+        ) : (
+          <button
+            key={item}
+            onClick={() => setTab(item as Tab)}
+            className={`rounded-md px-3 py-2 text-left text-sm transition ${
+              tab === item
+                ? "bg-secondary font-medium text-ink"
+                : "text-muted-foreground hover:text-ink"
+            }`}
+          >
+            {tabLabel(item as Tab)}
+          </button>
+        ),
+      )}
+      <div className="my-1 hidden h-px w-full bg-hairline md:block" />
+      <button
+        onClick={async () => {
+          await signOut();
+          navigate({ to: "/" });
+        }}
+        className="rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition hover:text-destructive"
+      >
+        Sign out
+      </button>
+    </nav>
+  );
+
+  const contentEl = (
+    <div>
+      {tab === "account" && !isTeamMode && (
+        <div className="space-y-6">
+          <Card>
+            <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">General</h3>
+            <div className="mt-4">
+              <Grid>
+                <Field label="First name" value={profile.first_name ?? ""} onChange={(v) => updateProfile("first_name", v)} />
+                <Field label="Last name" value={profile.last_name ?? ""} onChange={(v) => updateProfile("last_name", v)} />
+                <Select
+                  label="Gender"
+                  value={profile.gender ?? ""}
+                  onChange={(v) => updateProfile("gender", v || null)}
+                  options={[
+                    { value: "", label: "—" },
+                    { value: "male", label: "Male" },
+                    { value: "female", label: "Female" },
+                    { value: "other", label: "Other" },
+                  ]}
+                />
+                <Field
+                  label="Birth date"
+                  type="date"
+                  value={profile.birth_date ?? ""}
+                  onChange={(v) => updateProfile("birth_date", v || null)}
+                />
+                <Field label="Team" value={profile.team ?? ""} onChange={(v) => updateProfile("team", v)} />
+                <Field label="License" value={profile.license ?? ""} onChange={(v) => updateProfile("license", v)} />
+              </Grid>
+              <Anonymous value={profile.anonymous} onChange={(v) => updateProfile("anonymous", v)} />
+            </div>
+          </Card>
+
+          <Card>
+            <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Contact &amp; address</h3>
+            <div className="mt-4">
+              <Grid>
+                <Field label="Address" value={profile.address ?? ""} onChange={(v) => updateProfile("address", v)} />
+                <Field label="Postal code" value={profile.postal_code ?? ""} onChange={(v) => updateProfile("postal_code", v)} />
+                <Field label="Postal place" value={profile.postal_place ?? ""} onChange={(v) => updateProfile("postal_place", v)} />
+                <Field label="Country" value={profile.country ?? ""} onChange={(v) => updateProfile("country", v)} />
+                <Field label="Nationality" value={profile.nationality ?? ""} onChange={(v) => updateProfile("nationality", v)} />
+                <Field label="Mobile" value={profile.mobile ?? ""} onChange={(v) => updateProfile("mobile", v)} />
+                <Field label="Emergency contact" value={profile.emergency_contact ?? ""} onChange={(v) => updateProfile("emergency_contact", v)} />
+                <Field label="Emergency phone" value={profile.emergency_phone ?? ""} onChange={(v) => updateProfile("emergency_phone", v)} />
+              </Grid>
+            </div>
+          </Card>
+
+          <Card>
+            <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Profiles</h3>
+            <div className="mt-4 space-y-2">
+              {profileEntities.length === 0 ? (
+                <p className="text-xs text-muted-foreground">You are not part of any entity yet.</p>
+              ) : (
+                profileEntities.map((e) => (
+                  <div key={e.id} className="flex items-center justify-between rounded-xl border border-hairline bg-background px-4 py-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm text-ink">{e.name}</div>
+                      <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                        {ENTITY_LABEL[e.entity_type as EntityType] ?? e.entity_type}
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {e.roles.join(", ")}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {tab === "entity-profile" && isTeamMode && team && (
+        <div className="space-y-6">
+          <ProfileVisibilityPanel
+            scopeKey={`entity:${team.id}`}
+            active={team.active}
+            onActiveChange={async (v) => {
+              updateTeam("active", v);
+              await supabase.from("teams").update({ active: v }).eq("id", team.id);
+            }}
+          />
+        </div>
+      )}
+
+      {tab === "entity-general" && isTeamMode && team && (
+        <div className="space-y-6">
+          <Card>
+            <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">About</h3>
+            <div className="mt-4">
+              <Grid>
+                <Field label="Team name" value={team.name ?? ""} onChange={(v) => updateTeam("name", v)} />
+                <Field label="NIF ID" value={team.nif_id ?? ""} onChange={(v) => updateTeam("nif_id", v || null)} />
+                <Field label="Website" value={team.website ?? ""} onChange={(v) => updateTeam("website", v || null)} />
+              </Grid>
+              <div className="mt-4">
+                <label className="block">
+                  <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Description</span>
+                  <textarea
+                    value={team.description ?? ""}
+                    onChange={(e) => updateTeam("description", e.target.value || null)}
+                    rows={3}
+                    className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none transition focus:border-primary"
+                  />
+                </label>
+              </div>
+            </div>
+          </Card>
+          <Card>
+            <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Contact &amp; address</h3>
+            <div className="mt-4">
+              <Grid>
+                <Field label="Address" value={team.address ?? ""} onChange={(v) => updateTeam("address", v || null)} />
+                <Field label="Postal code" value={team.postal_code ?? ""} onChange={(v) => updateTeam("postal_code", v || null)} />
+                <Field label="Postal place" value={team.postal_place ?? ""} onChange={(v) => updateTeam("postal_place", v || null)} />
+                <Field label="Country" value={team.country ?? ""} onChange={(v) => updateTeam("country", v || null)} />
+                <Field label="Contact email" value={team.contact_email ?? ""} onChange={(v) => updateTeam("contact_email", v || null)} />
+                <Field label="Contact phone" value={team.contact_phone ?? ""} onChange={(v) => updateTeam("contact_phone", v || null)} />
+              </Grid>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {tab === "profiles" && !isTeamMode && (
+        <ProfileVisibilityPanel
+          scopeKey={`user:${user.id}`}
+          active={profile.athlete_active}
+          onActiveChange={async (v) => {
+            updateProfile("athlete_active", v);
+            await supabase.from("profiles").update({ athlete_active: v }).eq("id", user.id);
+          }}
+        />
+      )}
+
+      {tab === "calendar" && !isTeamMode && (
+        <Card>
+          <h3 className="text-sm font-semibold text-ink">Calendar</h3>
+          <p className="mt-2 text-xs text-muted-foreground">Calendar settings will appear here.</p>
+        </Card>
+      )}
+
+      {tab === "diary" && !isTeamMode && (
+        <DiarySettingsPanel scopeKey={`user:${user.id}`} />
+      )}
+
+      {tab === "library" && !isTeamMode && (
+        <LibrarySettingsPanel scopeKey={`user:${user.id}`} />
+      )}
+
+      {tab === "connectors" && <ConnectorsPanel />}
+
+      {tab === "system" && <SystemPanel />}
+
+      {tab === "appearance" && <AppearancePanel />}
+
+      {tab === "entity-organization" && isTeamMode && (
+        <Card>
+          <h3 className="text-sm font-semibold text-ink">Organization</h3>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Settings related to your organization page will appear here.
+          </p>
+        </Card>
+      )}
+
+      {tab === "entity-calendar" && isTeamMode && (
+        <Card>
+          <h3 className="text-sm font-semibold text-ink">Calendar</h3>
+          <p className="mt-2 text-xs text-muted-foreground">Calendar settings will appear here.</p>
+        </Card>
+      )}
+
+      {tab === "entity-map" && isTeamMode && <MapSettingsPanel />}
+
+      {tab === "entity-events" && isTeamMode && (
+        <Card>
+          <h3 className="text-sm font-semibold text-ink">Events</h3>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Settings related to events will appear here.
+          </p>
+        </Card>
+      )}
+
+      {tab === "entity-library" && isTeamMode && team && (
+        <LibrarySettingsPanel scopeKey={`entity:${team.id}`} />
+      )}
+    </div>
+  );
+
+  const createModalEl = createOpen && user && (
+    <CreateEntityModal
+      ownerId={user.id}
+      onClose={() => setCreateOpen(false)}
+      onCreated={onEntityCreated}
+    />
+  );
+
+  if (onClose) {
+    return (
+      <div
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6"
+        onClick={onClose}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="relative grid h-[85vh] w-[min(1100px,95vw)] grid-cols-[220px_1fr] overflow-hidden rounded-xl bg-background shadow-2xl"
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close settings"
+            className="absolute right-3 top-3 z-10 rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <aside className="overflow-y-auto border-r border-hairline bg-secondary/60 px-3 py-5">
+            <div className="px-2 pb-3 text-sm font-semibold text-ink">Settings</div>
+            {navEl}
+          </aside>
+          <section className="overflow-y-auto bg-background">
+            <div className="sticky top-0 z-[1] flex items-center justify-end gap-2 border-b border-hairline bg-background px-6 py-3 pr-14">
+              {headerActions}
+            </div>
+            <div className="px-6 pb-10 pt-6">{contentEl}</div>
+          </section>
+        </div>
+        {createModalEl}
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 md:px-6">
-      
       <div>
         <div className="flex items-center justify-between gap-2 pt-4 pr-14">
           <div className="flex items-baseline gap-2">
-            <span className="text-base font-semibold text-ink">
-              Settings
-            </span>
+            <span className="text-base font-semibold text-ink">Settings</span>
           </div>
-          <div className="flex items-center gap-2">
-            {!isTeamMode && (
-              <button
-                onClick={() => setCreateOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-md bg-ink px-4 py-2 text-xs font-medium text-background transition hover:opacity-90"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Create new entity
-              </button>
-            )}
-            <button
-              onClick={save}
-              disabled={saving || !isDirty}
-              className={`inline-flex items-center gap-1.5 rounded-md border px-4 py-2 text-xs font-medium transition ${
-                isDirty && !saving
-                  ? "border-ink bg-ink text-background hover:opacity-90"
-                  : "border-hairline bg-secondary text-muted-foreground cursor-not-allowed"
-              }`}
-            >
-              {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
-            </button>
-          </div>
+          {headerActions}
         </div>
 
         <div className="mt-8 grid gap-10 md:grid-cols-[180px_1fr]">
-          <nav className="-ml-2 flex flex-row gap-1 md:flex-col md:gap-0.5">
-            {navItems.map((item) =>
-              item.startsWith("divider-") ? (
-                <div key={item} className="my-1 hidden h-px w-full bg-hairline md:block" />
-              ) : (
-                <button
-                  key={item}
-                  onClick={() => setTab(item as Tab)}
-                  className={`rounded-md px-3 py-2 text-left text-sm transition ${
-                    tab === item
-                      ? "bg-secondary font-medium text-ink"
-                      : "text-muted-foreground hover:text-ink"
-                  }`}
-                >
-                  {tabLabel(item as Tab)}
-                </button>
-              ),
-            )}
-            <div className="my-1 hidden h-px w-full bg-hairline md:block" />
-            <button
-              onClick={async () => {
-                await signOut();
-                navigate({ to: "/" });
-              }}
-              className="rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition hover:text-destructive"
-            >
-              Sign out
-            </button>
-          </nav>
-
-          <div>
-            {tab === "account" && !isTeamMode && (
-              <div className="space-y-6">
-                <Card>
-                  <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">General</h3>
-                  <div className="mt-4">
-                    <Grid>
-                      <Field label="First name" value={profile.first_name ?? ""} onChange={(v) => updateProfile("first_name", v)} />
-                      <Field label="Last name" value={profile.last_name ?? ""} onChange={(v) => updateProfile("last_name", v)} />
-                      <Select
-                        label="Gender"
-                        value={profile.gender ?? ""}
-                        onChange={(v) => updateProfile("gender", v || null)}
-                        options={[
-                          { value: "", label: "—" },
-                          { value: "male", label: "Male" },
-                          { value: "female", label: "Female" },
-                          { value: "other", label: "Other" },
-                        ]}
-                      />
-                      <Field
-                        label="Birth date"
-                        type="date"
-                        value={profile.birth_date ?? ""}
-                        onChange={(v) => updateProfile("birth_date", v || null)}
-                      />
-                      <Field label="Team" value={profile.team ?? ""} onChange={(v) => updateProfile("team", v)} />
-                      <Field label="License" value={profile.license ?? ""} onChange={(v) => updateProfile("license", v)} />
-                    </Grid>
-                    <Anonymous value={profile.anonymous} onChange={(v) => updateProfile("anonymous", v)} />
-                  </div>
-                </Card>
-
-                <Card>
-                  <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Contact &amp; address</h3>
-                  <div className="mt-4">
-                    <Grid>
-                      <Field label="Address" value={profile.address ?? ""} onChange={(v) => updateProfile("address", v)} />
-                      <Field label="Postal code" value={profile.postal_code ?? ""} onChange={(v) => updateProfile("postal_code", v)} />
-                      <Field label="Postal place" value={profile.postal_place ?? ""} onChange={(v) => updateProfile("postal_place", v)} />
-                      <Field label="Country" value={profile.country ?? ""} onChange={(v) => updateProfile("country", v)} />
-                      <Field label="Nationality" value={profile.nationality ?? ""} onChange={(v) => updateProfile("nationality", v)} />
-                      <Field label="Mobile" value={profile.mobile ?? ""} onChange={(v) => updateProfile("mobile", v)} />
-                      <Field label="Emergency contact" value={profile.emergency_contact ?? ""} onChange={(v) => updateProfile("emergency_contact", v)} />
-                      <Field label="Emergency phone" value={profile.emergency_phone ?? ""} onChange={(v) => updateProfile("emergency_phone", v)} />
-                    </Grid>
-                  </div>
-                </Card>
-
-                <Card>
-                  <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Profiles</h3>
-                  <div className="mt-4 space-y-2">
-                    {profileEntities.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">You are not part of any entity yet.</p>
-                    ) : (
-                      profileEntities.map((e) => (
-                        <div key={e.id} className="flex items-center justify-between rounded-xl border border-hairline bg-background px-4 py-3">
-                          <div className="min-w-0">
-                            <div className="truncate text-sm text-ink">{e.name}</div>
-                            <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                              {ENTITY_LABEL[e.entity_type as EntityType] ?? e.entity_type}
-                            </div>
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {e.roles.join(", ")}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </Card>
-              </div>
-            )}
-
-            {tab === "entity-profile" && isTeamMode && team && (
-              <div className="space-y-6">
-                <ProfileVisibilityPanel
-                  scopeKey={`entity:${team.id}`}
-                  active={team.active}
-                  onActiveChange={async (v) => {
-                    updateTeam("active", v);
-                    await supabase.from("teams").update({ active: v }).eq("id", team.id);
-                  }}
-                />
-              </div>
-            )}
-
-            {tab === "entity-general" && isTeamMode && team && (
-              <div className="space-y-6">
-                <Card>
-                  <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">About</h3>
-                  <div className="mt-4">
-                    <Grid>
-                      <Field label="Team name" value={team.name ?? ""} onChange={(v) => updateTeam("name", v)} />
-                      <Field label="NIF ID" value={team.nif_id ?? ""} onChange={(v) => updateTeam("nif_id", v || null)} />
-                      <Field label="Website" value={team.website ?? ""} onChange={(v) => updateTeam("website", v || null)} />
-                    </Grid>
-                    <div className="mt-4">
-                      <label className="block">
-                        <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Description</span>
-                        <textarea
-                          value={team.description ?? ""}
-                          onChange={(e) => updateTeam("description", e.target.value || null)}
-                          rows={3}
-                          className="mt-1 w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none transition focus:border-primary"
-                        />
-                      </label>
-                    </div>
-                  </div>
-                </Card>
-                <Card>
-                  <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Contact &amp; address</h3>
-                  <div className="mt-4">
-                    <Grid>
-                      <Field label="Address" value={team.address ?? ""} onChange={(v) => updateTeam("address", v || null)} />
-                      <Field label="Postal code" value={team.postal_code ?? ""} onChange={(v) => updateTeam("postal_code", v || null)} />
-                      <Field label="Postal place" value={team.postal_place ?? ""} onChange={(v) => updateTeam("postal_place", v || null)} />
-                      <Field label="Country" value={team.country ?? ""} onChange={(v) => updateTeam("country", v || null)} />
-                      <Field label="Contact email" value={team.contact_email ?? ""} onChange={(v) => updateTeam("contact_email", v || null)} />
-                      <Field label="Contact phone" value={team.contact_phone ?? ""} onChange={(v) => updateTeam("contact_phone", v || null)} />
-                    </Grid>
-                  </div>
-                </Card>
-              </div>
-            )}
-
-            {tab === "profiles" && !isTeamMode && (
-              <ProfileVisibilityPanel
-                scopeKey={`user:${user.id}`}
-                active={profile.athlete_active}
-                onActiveChange={async (v) => {
-                  updateProfile("athlete_active", v);
-                  await supabase.from("profiles").update({ athlete_active: v }).eq("id", user.id);
-                }}
-              />
-            )}
-
-            {tab === "calendar" && !isTeamMode && (
-              <Card>
-                <h3 className="text-sm font-semibold text-ink">Calendar</h3>
-                <p className="mt-2 text-xs text-muted-foreground">Calendar settings will appear here.</p>
-              </Card>
-            )}
-
-            {tab === "diary" && !isTeamMode && (
-              <DiarySettingsPanel scopeKey={`user:${user.id}`} />
-            )}
-
-            {tab === "library" && !isTeamMode && (
-              <LibrarySettingsPanel scopeKey={`user:${user.id}`} />
-            )}
-
-            {tab === "connectors" && <ConnectorsPanel />}
-
-            {tab === "system" && <SystemPanel />}
-
-            {tab === "appearance" && <AppearancePanel />}
-
-            {tab === "entity-organization" && isTeamMode && (
-              <Card>
-                <h3 className="text-sm font-semibold text-ink">Organization</h3>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Settings related to your organization page will appear here.
-                </p>
-              </Card>
-            )}
-
-            {tab === "entity-calendar" && isTeamMode && (
-              <Card>
-                <h3 className="text-sm font-semibold text-ink">Calendar</h3>
-                <p className="mt-2 text-xs text-muted-foreground">Calendar settings will appear here.</p>
-              </Card>
-            )}
-
-            {tab === "entity-map" && isTeamMode && <MapSettingsPanel />}
-
-            {tab === "entity-events" && isTeamMode && (
-              <Card>
-                <h3 className="text-sm font-semibold text-ink">Events</h3>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Settings related to events will appear here.
-                </p>
-              </Card>
-            )}
-
-            {tab === "entity-library" && isTeamMode && team && (
-              <LibrarySettingsPanel scopeKey={`entity:${team.id}`} />
-            )}
-          </div>
+          {navEl}
+          {contentEl}
         </div>
       </div>
 
-      {createOpen && user && (
-        <CreateEntityModal
-          ownerId={user.id}
-          onClose={() => setCreateOpen(false)}
-          onCreated={onEntityCreated}
-        />
-      )}
+      {createModalEl}
     </div>
   );
 }
