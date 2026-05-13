@@ -484,6 +484,7 @@ export interface NotePanelProps {
 export function NotePanel({
   anchorRect,
   headerLabel,
+  headerName,
   headerTime,
   headerTimeFresh,
   initialValue,
