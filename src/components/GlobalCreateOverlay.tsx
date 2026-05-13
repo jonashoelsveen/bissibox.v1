@@ -174,6 +174,7 @@ function CreateBody({
   const submit = async () => {
     if (busy) return;
     setBusy(true);
+    setFileProgress({});
     try {
       // Map items are created inside the embedded Map view; just open it.
       if (kind === "map-location" || kind === "map-course") {
@@ -188,7 +189,11 @@ function CreateBody({
         return;
       }
       let payload: OpenTabPayload | null = null;
-      if (cfg.upload) {
+      if (kind === "media") {
+        const accessToken = session?.access_token;
+        if (!accessToken) throw new Error("Not signed in");
+        payload = await uploadMediaParallel(files, folder, { userId, teamId }, accessToken, setFileProgress);
+      } else if (cfg.upload) {
         payload = await uploadItems(kind, files, folder, { userId, teamId });
       } else {
         payload = await createItem(kind, name.trim(), folder, { userId, teamId });
@@ -212,6 +217,7 @@ function CreateBody({
       toast.error(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setBusy(false);
+      setFileProgress({});
     }
   };
 
