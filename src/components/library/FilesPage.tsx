@@ -818,10 +818,6 @@ function ImportDialog({
         </select>
       </div>
 
-      <p className="mt-4 text-[11px] text-muted-foreground">
-        Every file is automatically verified for integrity before it becomes available to share.
-      </p>
-
       <div className="mt-6 flex justify-end gap-2">
         <button
           onClick={onClose}
@@ -835,9 +831,7 @@ function ImportDialog({
           className="rounded-full bg-primary px-5 py-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
           {busy
-            ? progress
-              ? `Importing ${progress.done}/${progress.total}…`
-              : "Importing…"
+            ? `Importing ${doneCount}/${picked.length}…`
             : picked.length > 1
               ? `Import ${picked.length} files`
               : "Import"}
