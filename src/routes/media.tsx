@@ -1661,7 +1661,7 @@ function MediaPage({
       {openItems && (
         <Lightbox
           items={openItems}
-          urls={urls}
+          urls={lightboxUrls}
           albums={albums}
           attended={attended}
           userName={userName}
