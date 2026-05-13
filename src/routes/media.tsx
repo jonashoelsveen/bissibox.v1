@@ -3861,13 +3861,22 @@ function MediaTabView({
       "";
     setUserName(nm);
 
-    // Signed URLs (lightbox-quality for the in-tab viewer)
+    // Signed URLs (lightbox-quality + thumbnail for LQIP)
     const urlMap: Record<string, string> = {};
-    for (const it of list) {
-      const u = await signedLightboxUrl(it.storage_path, it.media_type === "photo");
-      if (u) urlMap[it.id] = u;
-    }
+    const thumbMap: Record<string, string> = {};
+    await Promise.all(
+      list.map(async (it) => {
+        const isPhoto = it.media_type === "photo";
+        const [full, thumb] = await Promise.all([
+          signedLightboxUrl(it.storage_path, isPhoto),
+          signedThumbUrl(it.storage_path, isPhoto),
+        ]);
+        if (full) urlMap[it.id] = full;
+        if (thumb) thumbMap[it.id] = thumb;
+      }),
+    );
     setUrls(urlMap);
+    setThumbUrls(thumbMap);
   }, [user, mediaIds, isTeamMode]);
 
   useEffect(() => {
