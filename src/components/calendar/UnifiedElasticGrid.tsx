@@ -2217,6 +2217,28 @@ function WeekEventsOverlay({
               </div>
             )}
           </div>
+          {appKind === "diary" && showBadge && (
+            <div
+              className="pointer-events-none absolute z-[15]"
+              style={{
+                left: box.left + box.width - 16,
+                top: top - 6,
+                width: hasUnseenOwnerLeader(u) ? 36 : 18,
+                height: 18,
+              }}
+            >
+              <SessionUnseenBadge
+                hasUnseenOwner={u.hasUnseenOwner}
+                hasUnseenLeader={u.hasUnseenLeader}
+                dismissing={dismissingId === ev.id}
+                onSeen={() => {
+                  void markSeen(ev.id);
+                  setDismissingId((cur) => (cur === ev.id ? null : cur));
+                }}
+              />
+            </div>
+          )}
+          </Fragment>
         );
       })}
       {appKind === "diary" && hoverId && hoverRect && (() => {
