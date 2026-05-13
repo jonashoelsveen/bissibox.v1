@@ -259,6 +259,13 @@ export function NavIconTabs({
                   e.preventDefault();
                   return;
                 }
+                if (item.key === "settings") {
+                  e.preventDefault();
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("open-settings"));
+                  }
+                  return;
+                }
                 if (isActive && onActiveClick) {
                   e.preventDefault();
                   onActiveClick();
