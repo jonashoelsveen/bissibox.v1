@@ -115,7 +115,7 @@ interface EntityRow {
   entity_type: "team" | "company" | "cooperation";
 }
 
-function SettingsPage() {
+export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   const { user, loading: authLoading, activeEntityId, setActiveEntity, signOut } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
