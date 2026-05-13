@@ -100,7 +100,9 @@ export function SessionHoverMenu({
   const leader = useDiarySessionNote(ev.id, memberId ?? "", viewerRole);
   const viewerName = useViewerName();
   const sessionDate = fromISOLocal(ev.startISO);
-  const baseHeader = `Note ${dayLabel(sessionDate)}`;
+  const memberUpdatedAt = ev.sessionNoteUpdatedAt;
+  const memberDateSource = memberUpdatedAt ? new Date(memberUpdatedAt) : sessionDate;
+  const baseHeader = `Note ${dayLabel(memberDateSource)}`;
   const hasLeaderNote = leader.leaderNotes.length > 0 || !!leader.viewerNote.trim();
 
   // Initialize the SessionDetailsValue from the event.
