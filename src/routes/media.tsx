@@ -2234,6 +2234,7 @@ function SubjectPicker({
 function Lightbox({
   items,
   urls,
+  thumbUrls,
   albums,
   attended,
   userName,
@@ -2244,6 +2245,7 @@ function Lightbox({
 }: {
   items: MediaItem[];
   urls: Record<string, string>;
+  thumbUrls: Record<string, string>;
   albums: Album[];
   attended: AttendedEvent[];
   userName: string;
@@ -2275,13 +2277,10 @@ function Lightbox({
         <div className="flex flex-1 flex-col items-center justify-center p-8">
           <div className="flex w-full flex-1 items-center justify-center px-[6%] py-[3%]">
             {current?.media_type === "photo" ? (
-              url && (
-                <img
-                  src={url}
-                  alt=""
-                  className="max-h-[88%] max-w-[88%] object-contain"
-                />
-              )
+              <PhotoLqip
+                thumbSrc={current ? thumbUrls[current.id] : undefined}
+                fullSrc={url}
+              />
             ) : (
               <VideoPlayer src={url} drawing={drawing} />
             )}
