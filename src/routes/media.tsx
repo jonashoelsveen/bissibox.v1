@@ -3420,8 +3420,16 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
   const togglePlay = () => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.paused) v.play().catch(() => {});
-    else v.pause();
+    if (v.paused) {
+      // Lock playback to the displayed needle position so resume is seamless
+      // (the video may have drifted slightly past during pause's decoder flush).
+      if (isFinite(current) && Math.abs(v.currentTime - current) > 0.01) {
+        try { v.currentTime = current; } catch {}
+      }
+      v.play().catch(() => {});
+    } else {
+      v.pause();
+    }
   };
 
   const seekFromClientX = (clientX: number) => {
