@@ -273,6 +273,7 @@ export function DayNoteButton({
         tone: "leader",
         header: n.authorName ? `${n.authorName} ${dLabel}` : dLabel,
         headerTime: formatHHMM(n.updatedAt),
+        headerTimeUpdatedAt: n.updatedAt,
         value: n.body,
         mode: "preview",
         onSave: () => {},
