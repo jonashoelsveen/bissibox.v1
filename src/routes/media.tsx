@@ -3305,17 +3305,6 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
     const n = needleRef.current;
     if (!v || !n) return;
 
-    // Prime the needle to current playback position synchronously so the first
-    // painted frame after play-resume aligns with reality (avoids a tiny snap
-    // between React's inline style and the first rAF tick).
-    {
-      const d = v.duration;
-      if (isFinite(d) && d > 0) {
-        const pct = Math.min(100, Math.max(0, (v.currentTime / d) * 100));
-        n.style.left = pct + "%";
-      }
-    }
-
     let rafId: number | null = null;
     let rvfcId: number | null = null;
     const useRvfc =
