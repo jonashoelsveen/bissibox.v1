@@ -189,7 +189,6 @@ export function SessionHoverMenu({
     onSave: (text: string) => void;
     onRequestEdit?: () => void;
   };
-  const datePart = dayLabel(sessionDate);
   const leaderPanels: LeaderPanelItem[] = [];
   if (!isOwner && (leader.viewerNote.trim() || leaderNoteEdit || (leader.canEdit && menuVisible))) {
     const viewerDatePart = leader.viewerNoteUpdatedAt
