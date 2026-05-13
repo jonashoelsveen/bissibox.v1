@@ -9,7 +9,7 @@
  * calendar in the grid header and the main view stay in lockstep.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Settings as SettingsIcon } from "lucide-react";
 import { useYearStore, useEventStore, type CellKey } from "./yearStore";
