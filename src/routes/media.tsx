@@ -3421,6 +3421,7 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
     wasPlayingRef.current = !v.paused;
     if (!v.paused) v.pause();
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    if (needleRef.current) needleRef.current.style.left = "";
     seekFromClientX(e.clientX);
   };
 
