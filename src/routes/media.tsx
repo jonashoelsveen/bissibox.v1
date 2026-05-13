@@ -818,6 +818,33 @@ interface AttendedEvent {
 
 const MEDIA_HOUSES = ["VG", "NRK", "TV2", "Dagbladet", "Aftenposten"];
 
+const THUMB_WIDTH = 400;
+const THUMB_QUALITY = 75;
+const LIGHTBOX_WIDTH = 1600;
+const LIGHTBOX_QUALITY = 85;
+
+async function signedThumbUrl(path: string, isPhoto: boolean): Promise<string | null> {
+  if (!isPhoto) {
+    const { data } = await supabase.storage.from("media").createSignedUrl(path, 3600);
+    return data?.signedUrl ?? null;
+  }
+  const { data } = await supabase.storage.from("media").createSignedUrl(path, 3600, {
+    transform: { width: THUMB_WIDTH, height: THUMB_WIDTH, resize: "cover", quality: THUMB_QUALITY },
+  });
+  return data?.signedUrl ?? null;
+}
+
+async function signedLightboxUrl(path: string, isPhoto: boolean): Promise<string | null> {
+  if (!isPhoto) {
+    const { data } = await supabase.storage.from("media").createSignedUrl(path, 3600);
+    return data?.signedUrl ?? null;
+  }
+  const { data } = await supabase.storage.from("media").createSignedUrl(path, 3600, {
+    transform: { width: LIGHTBOX_WIDTH, resize: "contain", quality: LIGHTBOX_QUALITY },
+  });
+  return data?.signedUrl ?? null;
+}
+
 function MediaPage({
   actionsMount,
   hideSideNav,
@@ -848,6 +875,7 @@ function MediaPage({
   const [albums, setAlbums] = useState<Album[]>([]);
   const [items, setItems] = useState<MediaItem[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [lightboxUrls, setLightboxUrls] = useState<Record<string, string>>({});
   const [internalView, setInternalView] = useState<{ type: "all" } | { type: "album"; id: string | null }>({
     type: "all",
   });
@@ -1100,10 +1128,8 @@ function MediaPage({
           next[it.id] = urls[it.id];
           continue;
         }
-        const { data } = await supabase.storage
-          .from("media")
-          .createSignedUrl(it.storage_path, 3600);
-        if (data?.signedUrl) next[it.id] = data.signedUrl;
+        const u = await signedThumbUrl(it.storage_path, it.media_type === "photo");
+        if (u) next[it.id] = u;
       }
       if (!cancel) setUrls(next);
     })();
@@ -1112,6 +1138,29 @@ function MediaPage({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
+
+  // Lazy-load higher-quality URLs for items opened in the lightbox.
+  useEffect(() => {
+    if (!openItems || openItems.length === 0) return;
+    let cancel = false;
+    (async () => {
+      const next: Record<string, string> = { ...lightboxUrls };
+      let changed = false;
+      for (const it of openItems) {
+        if (next[it.id]) continue;
+        const u = await signedLightboxUrl(it.storage_path, it.media_type === "photo");
+        if (u) {
+          next[it.id] = u;
+          changed = true;
+        }
+      }
+      if (!cancel && changed) setLightboxUrls(next);
+    })();
+    return () => {
+      cancel = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openItems]);
 
   const filtered = useMemo(() => {
     let list = items;
@@ -1436,6 +1485,8 @@ function MediaPage({
                         <img
                           src={urls[it.id]}
                           alt=""
+                          loading="lazy"
+                          decoding="async"
                           className="h-full w-full object-cover transition group-hover:scale-[1.02]"
                         />
                       )
@@ -1610,7 +1661,7 @@ function MediaPage({
       {openItems && (
         <Lightbox
           items={openItems}
-          urls={urls}
+          urls={lightboxUrls}
           albums={albums}
           attended={attended}
           userName={userName}
@@ -3799,13 +3850,11 @@ function MediaTabView({
       "";
     setUserName(nm);
 
-    // Signed URLs
+    // Signed URLs (lightbox-quality for the in-tab viewer)
     const urlMap: Record<string, string> = {};
     for (const it of list) {
-      const { data: signed } = await supabase.storage
-        .from("media")
-        .createSignedUrl(it.storage_path, 60 * 60);
-      if (signed?.signedUrl) urlMap[it.id] = signed.signedUrl;
+      const u = await signedLightboxUrl(it.storage_path, it.media_type === "photo");
+      if (u) urlMap[it.id] = u;
     }
     setUrls(urlMap);
   }, [user, mediaIds, isTeamMode]);
