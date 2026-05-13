@@ -257,6 +257,7 @@ export function DayNoteButton({
         tone: "leader",
         header: viewerName ? `${viewerName} ${viewerDateLabel}` : viewerDateLabel,
         headerTime: formatHHMM(viewerNoteUpdatedAt),
+        headerTimeUpdatedAt: viewerNoteUpdatedAt,
         value: viewerNote,
         mode: editingViewer ? "edit" : "preview",
         onSave: (text) => void saveViewerNote(text),
