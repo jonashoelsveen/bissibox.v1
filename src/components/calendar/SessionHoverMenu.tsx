@@ -346,6 +346,7 @@ export function SessionHoverMenu({
                   <NotePanel
                     inline
                     headerLabel={p.header}
+                    headerTime={p.headerTime}
                     initialValue={p.value}
                     mode={p.mode}
                     defaultBodyHeight={140}
