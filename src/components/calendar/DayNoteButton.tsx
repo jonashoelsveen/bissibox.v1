@@ -225,8 +225,11 @@ export function DayNoteButton({
       onRequestEdit?: () => void;
     };
     const items: Item[] = [];
-    const baseHeader = `Note ${dayLabel(date)}`;
-    const datePart = dayLabel(date);
+    const fallbackDate = dayLabel(date);
+    const memberDateLabel = memberNoteUpdatedAt
+      ? dayLabel(new Date(memberNoteUpdatedAt))
+      : fallbackDate;
+    const baseHeader = `Note ${memberDateLabel}`;
 
     // 1. Member panel
     if (hasMemberNote || (isOwner && (editingMember || open))) {
@@ -244,10 +247,13 @@ export function DayNoteButton({
 
     // 2. Current viewer's own note (when not the owner).
     if (!isOwner && canEdit) {
+      const viewerDateLabel = viewerNoteUpdatedAt
+        ? dayLabel(new Date(viewerNoteUpdatedAt))
+        : fallbackDate;
       items.push({
         key: "viewer",
         tone: "leader",
-        header: viewerName ? `${viewerName} ${datePart}` : datePart,
+        header: viewerName ? `${viewerName} ${viewerDateLabel}` : viewerDateLabel,
         headerTime: formatHHMM(viewerNoteUpdatedAt),
         value: viewerNote,
         mode: editingViewer ? "edit" : "preview",
@@ -258,10 +264,11 @@ export function DayNoteButton({
 
     // 3. Other leader / follower notes (read-only).
     for (const n of leaderNotes) {
+      const dLabel = n.updatedAt ? dayLabel(new Date(n.updatedAt)) : fallbackDate;
       items.push({
         key: `leader-${n.authorId}`,
         tone: "leader",
-        header: n.authorName ? `${n.authorName} ${datePart}` : datePart,
+        header: n.authorName ? `${n.authorName} ${dLabel}` : dLabel,
         headerTime: formatHHMM(n.updatedAt),
         value: n.body,
         mode: "preview",
