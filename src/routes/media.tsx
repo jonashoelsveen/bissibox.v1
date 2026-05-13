@@ -1775,7 +1775,13 @@ function UploadDialog({
 
   const doneCount = Object.values(fileProgress).filter((p) => p >= 100).length;
 
-  const uploadOne = (file: File, path: string, accessToken: string, idx: number) =>
+  const uploadOne = (
+    file: File,
+    path: string,
+    accessToken: string,
+    idx: number,
+    parallelChunks: number,
+  ) =>
     new Promise<void>((resolve, reject) => {
       const upload = new tus.Upload(file, {
         endpoint: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/upload/resumable`,
@@ -1786,6 +1792,7 @@ function UploadDialog({
         uploadDataDuringCreation: true,
         removeFingerprintOnSuccess: true,
         chunkSize: 6 * 1024 * 1024,
+        parallelUploads: parallelChunks,
         metadata: {
           bucketName: "media",
           objectName: path,
@@ -1822,38 +1829,65 @@ function UploadDialog({
     setFileProgress({});
     try {
       const insertedIds: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const ext = file.name.split(".").pop();
-        const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-        await uploadOne(file, path, accessToken, i);
-        const isVideo = file.type.startsWith("video");
-        const { data: inserted, error: insErr } = await supabase
-          .from("media_items")
-          .insert({
-            user_id: userId,
-            team_id: teamId,
-            storage_path: path,
-            media_type: isVideo ? "video" : "photo",
-            mime_type: file.type,
-            file_size: file.size,
-            album_id: albumIds[0] ?? null,
-            event_id: eventId,
-            organizer: organizer || null,
-            photographer,
-            subject: subject || null,
-            uploaded_in_mode: mode,
-          })
-          .select("id")
-          .single();
-        if (insErr) throw insErr;
-        if (inserted) insertedIds.push(inserted.id);
+      const failures: { name: string; error: Error }[] = [];
+      const parallelChunks = files.length > 1 ? 1 : 3;
+
+      let next = 0;
+      const runOne = async (): Promise<void> => {
+        while (true) {
+          const i = next++;
+          if (i >= files.length) return;
+          const file = files[i];
+          try {
+            const ext = file.name.split(".").pop();
+            const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+            await uploadOne(file, path, accessToken, i, parallelChunks);
+            const isVideo = file.type.startsWith("video");
+            const { data: inserted, error: insErr } = await supabase
+              .from("media_items")
+              .insert({
+                user_id: userId,
+                team_id: teamId,
+                storage_path: path,
+                media_type: isVideo ? "video" : "photo",
+                mime_type: file.type,
+                file_size: file.size,
+                album_id: albumIds[0] ?? null,
+                event_id: eventId,
+                organizer: organizer || null,
+                photographer,
+                subject: subject || null,
+                uploaded_in_mode: mode,
+              })
+              .select("id")
+              .single();
+            if (insErr) throw insErr;
+            if (inserted) insertedIds.push(inserted.id);
+          } catch (e) {
+            failures.push({ name: file.name, error: e as Error });
+          }
+        }
+      };
+      const FILE_CONCURRENCY = 3;
+      await Promise.all(
+        Array.from({ length: Math.min(FILE_CONCURRENCY, files.length) }, runOne),
+      );
+
+      if (failures.length === files.length) {
+        toast.error(failures[0].error.message);
+      } else {
+        if (insertedIds.length > 0 && albumIds.length > 0) {
+          await syncMediaAlbums(insertedIds, albumIds, "replace");
+        }
+        if (failures.length > 0) {
+          toast.error(
+            `${failures.length} of ${files.length} failed: ${failures[0].error.message}`,
+          );
+        }
+        const successCount = files.length - failures.length;
+        toast.success(successCount > 1 ? `Uploaded ${successCount} files` : "Uploaded");
+        onUploaded(insertedIds);
       }
-      if (insertedIds.length > 0 && albumIds.length > 0) {
-        await syncMediaAlbums(insertedIds, albumIds, "replace");
-      }
-      toast.success(files.length > 1 ? `Uploaded ${files.length} files` : "Uploaded");
-      onUploaded(insertedIds);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
