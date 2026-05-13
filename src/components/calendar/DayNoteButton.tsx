@@ -257,19 +257,16 @@ export function DayNoteButton({
       onRequestEdit?: () => void;
     };
     const items: Item[] = [];
-    const fallbackDate = dayLabel(date);
-    const memberDateLabel = memberNoteUpdatedAt
-      ? dayLabel(new Date(memberNoteUpdatedAt))
-      : fallbackDate;
 
     // 1. Member panel
     if (hasMemberNote || (isOwner && (editingMember || open))) {
+      const hasStamp = !!memberNoteUpdatedAt;
       items.push({
         key: "member",
         tone: "gray",
         headerName: ownerFirstName || undefined,
-        header: ownerFirstName ? memberDateLabel : `Note ${memberDateLabel}`,
-        headerTime: formatHHMM(memberNoteUpdatedAt),
+        header: hasStamp ? dayLabel(new Date(memberNoteUpdatedAt)) : "",
+        headerTime: hasStamp ? formatHHMM(memberNoteUpdatedAt) : undefined,
         headerTimeFresh: isUpdatedToday(memberNoteUpdatedAt),
         value: memberNote,
         mode: isOwner && editingMember ? "edit" : "preview",
@@ -280,15 +277,13 @@ export function DayNoteButton({
 
     // 2. Current viewer's own note (when not the owner).
     if (!isOwner && canEdit) {
-      const viewerDateLabel = viewerNoteUpdatedAt
-        ? dayLabel(new Date(viewerNoteUpdatedAt))
-        : fallbackDate;
+      const hasStamp = !!viewerNoteUpdatedAt;
       items.push({
         key: "viewer",
         tone: "leader",
         headerName: viewerName || undefined,
-        header: viewerDateLabel,
-        headerTime: formatHHMM(viewerNoteUpdatedAt),
+        header: hasStamp ? dayLabel(new Date(viewerNoteUpdatedAt)) : "",
+        headerTime: hasStamp ? formatHHMM(viewerNoteUpdatedAt) : undefined,
         headerTimeFresh: isUpdatedToday(viewerNoteUpdatedAt),
         value: viewerNote,
         mode: editingViewer ? "edit" : "preview",
@@ -299,13 +294,13 @@ export function DayNoteButton({
 
     // 3. Other leader / follower notes (read-only).
     for (const n of leaderNotes) {
-      const dLabel = n.updatedAt ? dayLabel(new Date(n.updatedAt)) : fallbackDate;
+      const hasStamp = !!n.updatedAt;
       items.push({
         key: `leader-${n.authorId}`,
         tone: "leader",
         headerName: n.authorName || undefined,
-        header: dLabel,
-        headerTime: formatHHMM(n.updatedAt),
+        header: hasStamp ? dayLabel(new Date(n.updatedAt)) : "",
+        headerTime: hasStamp ? formatHHMM(n.updatedAt) : undefined,
         headerTimeFresh: isUpdatedToday(n.updatedAt),
         value: n.body,
         mode: "preview",
