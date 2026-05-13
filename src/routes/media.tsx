@@ -875,6 +875,7 @@ function MediaPage({
   const [albums, setAlbums] = useState<Album[]>([]);
   const [items, setItems] = useState<MediaItem[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [lightboxUrls, setLightboxUrls] = useState<Record<string, string>>({});
   const [internalView, setInternalView] = useState<{ type: "all" } | { type: "album"; id: string | null }>({
     type: "all",
   });
