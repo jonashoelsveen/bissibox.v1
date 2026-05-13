@@ -104,9 +104,8 @@ export function SessionHoverMenu({
   const memberUpdatedAt = ev.sessionNoteUpdatedAt;
   const memberDateSource = memberUpdatedAt ? new Date(memberUpdatedAt) : sessionDate;
   const memberDateLabel = dayLabel(memberDateSource);
-  const baseHeader = ownerFirstName
-    ? `${ownerFirstName} ${memberDateLabel}`
-    : `Note ${memberDateLabel}`;
+  const baseHeader = ownerFirstName ? memberDateLabel : `Note ${memberDateLabel}`;
+  const baseHeaderName = ownerFirstName || undefined;
   const hasLeaderNote = leader.leaderNotes.length > 0 || !!leader.viewerNote.trim();
 
   // Initialize the SessionDetailsValue from the event.
