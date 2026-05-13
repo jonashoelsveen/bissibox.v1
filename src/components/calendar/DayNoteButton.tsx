@@ -454,6 +454,8 @@ export function DayNoteButton({
 export interface NotePanelProps {
   anchorRect?: DOMRect;
   headerLabel?: string;
+  /** Optional bold name rendered before the headerLabel (e.g. "John"). */
+  headerName?: string;
   /** Optional "HH:mm" appended to the header in electric green. */
   headerTime?: string;
   /** When true, render headerTime in electric green (note updated today). */
