@@ -3245,9 +3245,8 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const t = ratio * duration;
     setCurrent(t);
-    try {
-      v.currentTime = t;
-    } catch {}
+    pendingTimeRef.current = t;
+    if (!seekingRef.current) flushSeek();
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
