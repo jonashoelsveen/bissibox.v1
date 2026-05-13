@@ -630,6 +630,102 @@ async function uploadItems(
   return null;
 }
 
+async function uploadMediaParallel(
+  files: File[],
+  folderValue: string,
+  ctx: Ctx,
+  accessToken: string,
+  setFileProgress: (updater: (p: Record<number, number>) => Record<number, number>) => void,
+): Promise<OpenTabPayload | null> {
+  if (files.length === 0) throw new Error("Select at least one file");
+  const albumId = folderValue || null;
+
+  const parallelChunks = files.length > 1 ? 1 : 3;
+
+  const uploadOne = (file: File, path: string, idx: number) =>
+    new Promise<void>((resolve, reject) => {
+      const upload = new tus.Upload(file, {
+        endpoint: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/upload/resumable`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          "x-upsert": "true",
+        },
+        uploadDataDuringCreation: true,
+        removeFingerprintOnSuccess: true,
+        chunkSize: 6 * 1024 * 1024,
+        parallelUploads: parallelChunks,
+        metadata: {
+          bucketName: "media",
+          objectName: path,
+          contentType: file.type || "application/octet-stream",
+          cacheControl: "3600",
+        },
+        onError: (err) => reject(err),
+        onProgress: (bytesUploaded, bytesTotal) => {
+          const pct = Math.round((bytesUploaded / bytesTotal) * 100);
+          setFileProgress((p) => ({ ...p, [idx]: pct }));
+        },
+        onSuccess: () => {
+          setFileProgress((p) => ({ ...p, [idx]: 100 }));
+          resolve();
+        },
+      });
+      upload.start();
+    });
+
+  const inserted: { id: string; title: string }[] = [];
+  const failures: { name: string; error: Error }[] = [];
+
+  let next = 0;
+  const runOne = async (): Promise<void> => {
+    while (true) {
+      const i = next++;
+      if (i >= files.length) return;
+      const file = files[i];
+      try {
+        const ext = file.name.split(".").pop();
+        const path = `${ctx.userId}/${crypto.randomUUID()}.${ext}`;
+        await uploadOne(file, path, i);
+        const isVideo = file.type.startsWith("video");
+        const { data: mi, error } = await sb
+          .from("media_items")
+          .insert({
+            user_id: ctx.userId,
+            team_id: ctx.teamId,
+            album_id: albumId,
+            storage_path: path,
+            media_type: isVideo ? "video" : "photo",
+            mime_type: file.type,
+            file_size: file.size,
+            uploaded_in_mode: ctx.teamId ? "team" : "participant",
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        if (albumId && mi?.id) {
+          await sb.from("media_item_albums").insert({ media_item_id: mi.id, album_id: albumId });
+        }
+        if (mi?.id) inserted.push({ id: mi.id, title: file.name });
+      } catch (e) {
+        failures.push({ name: file.name, error: e as Error });
+      }
+    }
+  };
+  const FILE_CONCURRENCY = 3;
+  await Promise.all(
+    Array.from({ length: Math.min(FILE_CONCURRENCY, files.length) }, runOne),
+  );
+
+  if (failures.length === files.length) {
+    throw failures[0].error;
+  }
+  if (failures.length > 0) {
+    toast.error(`${failures.length} of ${files.length} failed: ${failures[0].error.message}`);
+  }
+  const last = inserted[inserted.length - 1];
+  return last ? { type: "media", id: last.id, title: last.title } : null;
+}
+
 function dispatchRefresh(kind: Kind) {
   const events: string[] = ["library:refresh"];
   if (kind === "event") events.push("events:refresh");
