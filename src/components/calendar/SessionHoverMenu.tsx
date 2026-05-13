@@ -184,6 +184,7 @@ export function SessionHoverMenu({
     key: string;
     header: string;
     headerTime?: string;
+    headerTimeFresh?: boolean;
     value: string;
     mode: "preview" | "edit";
     onSave: (text: string) => void;
@@ -198,6 +199,7 @@ export function SessionHoverMenu({
       key: "viewer",
       header: viewerName ? `${viewerName} ${viewerDatePart}` : viewerDatePart,
       headerTime: formatHHMM(leader.viewerNoteUpdatedAt),
+      headerTimeFresh: isUpdatedToday(leader.viewerNoteUpdatedAt),
       value: leader.viewerNote,
       mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
       onSave: (text) => { void leader.saveViewerNote(text); },
@@ -210,6 +212,7 @@ export function SessionHoverMenu({
       key: `leader-${n.authorId}`,
       header: n.authorName ? `${n.authorName} ${dPart}` : dPart,
       headerTime: formatHHMM(n.updatedAt),
+      headerTimeFresh: isUpdatedToday(n.updatedAt),
       value: n.body,
       mode: "preview",
       onSave: () => {},
