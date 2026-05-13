@@ -3850,13 +3850,11 @@ function MediaTabView({
       "";
     setUserName(nm);
 
-    // Signed URLs
+    // Signed URLs (lightbox-quality for the in-tab viewer)
     const urlMap: Record<string, string> = {};
     for (const it of list) {
-      const { data: signed } = await supabase.storage
-        .from("media")
-        .createSignedUrl(it.storage_path, 60 * 60);
-      if (signed?.signedUrl) urlMap[it.id] = signed.signedUrl;
+      const u = await signedLightboxUrl(it.storage_path, it.media_type === "photo");
+      if (u) urlMap[it.id] = u;
     }
     setUrls(urlMap);
   }, [user, mediaIds, isTeamMode]);
