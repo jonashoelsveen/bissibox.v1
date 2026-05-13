@@ -3343,7 +3343,6 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
           rvfcId,
         );
       }
-      if (needleRef.current) needleRef.current.style.left = "";
     };
   }, [playing, duration]);
 
@@ -3361,14 +3360,7 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
       }
     };
     const onPlay = () => setPlaying(true);
-    const onPause = () => {
-      // Sync React state to the actual current time before the rAF loop tears
-      // down and the needle falls back to React-rendered position.
-      if (!scrubbingRef.current) {
-        setCurrent(v.currentTime);
-      }
-      setPlaying(false);
-    };
+    const onPause = () => setPlaying(false);
     const onSeeked = () => {
       seekingRef.current = false;
       if (pendingTimeRef.current != null) flushSeek();
@@ -3429,6 +3421,7 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
     wasPlayingRef.current = !v.paused;
     if (!v.paused) v.pause();
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    if (needleRef.current) needleRef.current.style.left = "";
     seekFromClientX(e.clientX);
   };
 
