@@ -418,6 +418,8 @@ export interface NotePanelProps {
   headerLabel?: string;
   /** Optional "HH:mm" appended to the header in electric green. */
   headerTime?: string;
+  /** When true, render headerTime in electric green (note updated today). */
+  headerTimeFresh?: boolean;
   initialValue: string;
   mode: "preview" | "edit";
   defaultBodyHeight?: number;
