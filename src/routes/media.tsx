@@ -3360,7 +3360,13 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
       }
     };
     const onPlay = () => setPlaying(true);
-    const onPause = () => setPlaying(false);
+    const onPause = () => {
+      const v2 = videoRef.current;
+      if (v2 && !scrubbingRef.current) {
+        setCurrent(v2.currentTime);
+      }
+      setPlaying(false);
+    };
     const onSeeked = () => {
       seekingRef.current = false;
       if (pendingTimeRef.current != null) flushSeek();
