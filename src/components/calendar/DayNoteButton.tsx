@@ -625,7 +625,7 @@ export function NotePanel({
               {headerTime ? (
                 <span
                   className="ml-1.5 font-semibold"
-                  style={{ color: "#22c55e" }}
+                  style={headerTimeFresh ? { color: "#22c55e" } : undefined}
                 >
                   {headerTime}
                 </span>
