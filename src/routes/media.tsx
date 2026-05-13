@@ -4,8 +4,7 @@ import { motion, useMotionValue, useSpring, useTransform, type MotionValue } fro
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useServerFn } from "@tanstack/react-start";
-import { scanFile, pollScan } from "@/server/scan-file";
+import * as tus from "tus-js-client";
 import { FilesPage } from "@/components/library/FilesPage";
 import { NotesPage } from "@/components/library/NotesPage";
 import { NoteEditor } from "@/components/library/NoteEditor";
