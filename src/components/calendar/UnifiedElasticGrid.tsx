@@ -1907,6 +1907,24 @@ function WeekEventsOverlay({
       setHoverRect(null);
     }, 180);
   }, [cancelClose]);
+
+  // Unseen-note tracking + 2s hover-to-mark-seen.
+  const { unseen, markSeen } = useUnseenSessionNotes(memberId, viewerRole ?? "owner", events);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
+  const seenTimerRef = useRef<{ id: string; t: number } | null>(null);
+  const clearSeenTimer = useCallback(() => {
+    if (seenTimerRef.current) {
+      window.clearTimeout(seenTimerRef.current.t);
+      seenTimerRef.current = null;
+    }
+  }, []);
+  const startSeenTimer = useCallback((id: string) => {
+    clearSeenTimer();
+    const t = window.setTimeout(() => {
+      setDismissingId(id);
+    }, 2000);
+    seenTimerRef.current = { id, t };
+  }, [clearSeenTimer]);
   type Box = { left: number; width: number };
   const [cols, setCols] = useState<Box[]>([]);
   const [headerBottom, setHeaderBottom] = useState(0);
