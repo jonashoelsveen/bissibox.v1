@@ -413,6 +413,7 @@ export interface NotePanelProps {
 export function NotePanel({
   anchorRect,
   headerLabel,
+  headerTime,
   initialValue,
   mode,
   defaultBodyHeight,
