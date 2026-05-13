@@ -89,6 +89,8 @@ export function LibrarySideNav({
   const [noteFolders, setNoteFolders] = useState<FolderLite[]>([]);
   const [fileFolders, setFileFolders] = useState<FolderLite[]>([]);
   const [mediaAlbums, setMediaAlbums] = useState<FolderLite[]>([]);
+  const [memberAlbums, setMemberAlbums] = useState<FolderLite[]>([]);
+  const [membersOpen, setMembersOpen] = useState<boolean>(true);
   const [meetingFolders, setMeetingFolders] = useState<FolderLite[]>([]);
   const [mapFolders, setMapFolders] = useState<FolderLite[]>([]);
   const [mapScope, setMapScope] = useState<string>("anon");
