@@ -656,8 +656,8 @@ export function NotePanel({
           className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
           style={{ background: sideLineColor }}
         />
-        {(headerLabel || headerName) ? (
-          <div className="flex items-center justify-between border-b border-hairline pl-4 pr-3 py-1.5">
+        {(headerLabel || headerName || headerTime) ? (
+          <div className="flex items-center justify-between gap-2 border-b border-hairline pl-4 pr-3 py-1.5">
             <span
               className="text-[11px] font-medium uppercase tracking-[0.08em]"
               style={{
@@ -667,19 +667,28 @@ export function NotePanel({
                     : "hsl(var(--muted-foreground))",
               }}
             >
-              {headerName ? (
-                <span className="font-bold">{headerName}{headerLabel ? " " : ""}</span>
-              ) : null}
-              {headerLabel}
-              {headerTime ? (
-                <span
-                  className="ml-1.5 font-semibold"
-                  style={headerTimeFresh ? { color: "#22c55e" } : undefined}
-                >
-                  {headerTime}
-                </span>
-              ) : null}
+              {headerName ? <span className="font-bold">{headerName}</span> : null}
             </span>
+            {headerTimeFresh && headerTime ? (
+              <span
+                className="text-[11px] font-semibold uppercase tracking-[0.08em]"
+                style={{ color: "#22c55e" }}
+              >
+                {headerTime}
+              </span>
+            ) : headerLabel ? (
+              <span
+                className="text-[11px] font-medium uppercase tracking-[0.08em]"
+                style={{
+                  color:
+                    tone === "leader"
+                      ? "var(--primary)"
+                      : "hsl(var(--muted-foreground))",
+                }}
+              >
+                {headerLabel}
+              </span>
+            ) : null}
           </div>
         ) : null}
         <div className="pl-4 pr-3 py-2">
