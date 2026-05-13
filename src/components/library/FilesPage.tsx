@@ -835,6 +835,28 @@ function ImportDialog({
         />
       </div>
 
+      {busy && picked.length > 0 && (
+        <div className="mt-3 space-y-2 rounded-xl border border-hairline bg-background/60 p-3">
+          {picked.map((f, i) => {
+            const pct = fileProgress[i] ?? 0;
+            return (
+              <div key={i}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-xs text-ink" title={f.name}>{f.name}</span>
+                  <span className="shrink-0 mono text-[10px] tabular-nums text-muted-foreground">{pct}%</span>
+                </div>
+                <div className="mt-1 h-0.5 w-full overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className={`h-full transition-all duration-150 ${pct >= 100 ? "bg-primary" : "bg-ink"}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div className="mt-4">
         <LabelText>Folder</LabelText>
         <select
