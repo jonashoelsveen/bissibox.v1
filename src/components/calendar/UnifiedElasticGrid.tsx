@@ -34,6 +34,8 @@ import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, con
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 import { DayNoteButton } from "./DayNoteButton";
 import { SessionHoverMenu } from "./SessionHoverMenu";
+import { SessionUnseenBadge } from "./SessionUnseenBadge";
+import { useUnseenSessionNotes } from "@/hooks/useUnseenSessionNotes";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
 import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoWeekNumber } from "./dateUtils";
