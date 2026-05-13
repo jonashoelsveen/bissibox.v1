@@ -53,7 +53,7 @@ export function useDiaryDayNote(memberId: string, date: Date, role: ViewerRole) 
     if (!memberId) return;
     const { data } = await supabase
       .from("diary_day_notes")
-      .select("author_id,body,kind")
+      .select("author_id,body,kind,updated_at")
       .eq("member_id", memberId)
       .eq("day", dayKey(date));
     const rows = (data ?? []) as Row[];
