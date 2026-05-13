@@ -3,8 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useServerFn } from "@tanstack/react-start";
-import { scanFile, pollScan } from "@/server/scan-file";
+import * as tus from "tus-js-client";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -18,14 +17,13 @@ import {
   Pin,
   PinOff,
   FileText,
-  ShieldCheck,
-  ShieldAlert,
-  Loader2,
   Download,
   Search as SearchIcon,
 } from "lucide-react";
 import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
 import type { PreviousNewKind } from "@/components/library/PreviousPage";
+
+const DOCUMENTS_MAX_BYTES = 1024 * 1024 * 1024; // 1 GB
 
 interface Folder {
   id: string;
