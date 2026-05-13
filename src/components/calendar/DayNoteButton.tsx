@@ -232,6 +232,7 @@ export function DayNoteButton({
       tone: "gray" | "leader";
       header: string;
       headerTime?: string;
+      headerTimeFresh?: boolean;
       value: string;
       mode: "preview" | "edit";
       onSave: (text: string) => void;
@@ -251,6 +252,7 @@ export function DayNoteButton({
         tone: "gray",
         header: baseHeader,
         headerTime: formatHHMM(memberNoteUpdatedAt),
+        headerTimeFresh: isUpdatedToday(memberNoteUpdatedAt),
         value: memberNote,
         mode: isOwner && editingMember ? "edit" : "preview",
         onSave: isOwner ? (text) => void saveViewerNote(text) : () => {},
@@ -268,6 +270,7 @@ export function DayNoteButton({
         tone: "leader",
         header: viewerName ? `${viewerName} ${viewerDateLabel}` : viewerDateLabel,
         headerTime: formatHHMM(viewerNoteUpdatedAt),
+        headerTimeFresh: isUpdatedToday(viewerNoteUpdatedAt),
         value: viewerNote,
         mode: editingViewer ? "edit" : "preview",
         onSave: (text) => void saveViewerNote(text),
@@ -283,6 +286,7 @@ export function DayNoteButton({
         tone: "leader",
         header: n.authorName ? `${n.authorName} ${dLabel}` : dLabel,
         headerTime: formatHHMM(n.updatedAt),
+        headerTimeFresh: isUpdatedToday(n.updatedAt),
         value: n.body,
         mode: "preview",
         onSave: () => {},
