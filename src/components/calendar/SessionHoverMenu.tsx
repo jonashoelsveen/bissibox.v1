@@ -100,7 +100,9 @@ export function SessionHoverMenu({
   const leader = useDiarySessionNote(ev.id, memberId ?? "", viewerRole);
   const viewerName = useViewerName();
   const sessionDate = fromISOLocal(ev.startISO);
-  const baseHeader = `Note ${dayLabel(sessionDate)}`;
+  const memberUpdatedAt = ev.sessionNoteUpdatedAt;
+  const memberDateSource = memberUpdatedAt ? new Date(memberUpdatedAt) : sessionDate;
+  const baseHeader = `Note ${dayLabel(memberDateSource)}`;
   const hasLeaderNote = leader.leaderNotes.length > 0 || !!leader.viewerNote.trim();
 
   // Initialize the SessionDetailsValue from the event.
@@ -187,12 +189,14 @@ export function SessionHoverMenu({
     onSave: (text: string) => void;
     onRequestEdit?: () => void;
   };
-  const datePart = dayLabel(sessionDate);
   const leaderPanels: LeaderPanelItem[] = [];
   if (!isOwner && (leader.viewerNote.trim() || leaderNoteEdit || (leader.canEdit && menuVisible))) {
+    const viewerDatePart = leader.viewerNoteUpdatedAt
+      ? dayLabel(new Date(leader.viewerNoteUpdatedAt))
+      : dayLabel(sessionDate);
     leaderPanels.push({
       key: "viewer",
-      header: viewerName ? `${viewerName} ${datePart}` : datePart,
+      header: viewerName ? `${viewerName} ${viewerDatePart}` : viewerDatePart,
       headerTime: formatHHMM(leader.viewerNoteUpdatedAt),
       value: leader.viewerNote,
       mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
@@ -201,9 +205,10 @@ export function SessionHoverMenu({
     });
   }
   for (const n of leader.leaderNotes) {
+    const dPart = n.updatedAt ? dayLabel(new Date(n.updatedAt)) : dayLabel(sessionDate);
     leaderPanels.push({
       key: `leader-${n.authorId}`,
-      header: n.authorName ? `${n.authorName} ${datePart}` : datePart,
+      header: n.authorName ? `${n.authorName} ${dPart}` : dPart,
       headerTime: formatHHMM(n.updatedAt),
       value: n.body,
       mode: "preview",
@@ -326,6 +331,7 @@ export function SessionHoverMenu({
                 inline
                 attached
                 headerLabel={baseHeader}
+                headerTime={formatHHMM(memberUpdatedAt)}
                 initialValue={ev.sessionNote ?? ""}
                 mode={isOwner && noteEdit ? "edit" : "preview"}
                 defaultBodyHeight={140}

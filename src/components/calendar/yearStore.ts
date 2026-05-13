@@ -336,6 +336,8 @@ export interface CalendarEvent {
   diarySub?: string;
   /** Session note (rich text body for diary). */
   sessionNote?: string;
+  /** ISO timestamp for the last update of the owner's session note. */
+  sessionNoteUpdatedAt?: string;
   /** Multiple activity entries inside one session. */
   activities?: { type: string; durationMin?: number; distanceKm?: number }[];
   /** Strava integration metadata. */
