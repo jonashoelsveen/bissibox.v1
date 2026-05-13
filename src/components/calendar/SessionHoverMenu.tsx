@@ -87,6 +87,7 @@ export function SessionHoverMenu({
   onMenuEnter,
   onMenuLeave,
   onForceClose,
+  onDetailsOpen,
   memberId,
   viewerRole = "owner",
 }: SessionHoverMenuProps) {
