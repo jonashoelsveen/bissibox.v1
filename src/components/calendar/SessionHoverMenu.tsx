@@ -214,6 +214,7 @@ export function SessionHoverMenu({
       key: `leader-${n.authorId}`,
       header: n.authorName ? `${n.authorName} ${dPart}` : dPart,
       headerTime: formatHHMM(n.updatedAt),
+      headerTimeUpdatedAt: n.updatedAt,
       value: n.body,
       mode: "preview",
       onSave: () => {},
