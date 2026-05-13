@@ -2026,9 +2026,11 @@ function WeekEventsOverlay({
         const fg = "hsl(var(--ink, 220 13% 13%))";
         const Icon = iconForColor(ev.color);
         const isGhost = ev.id.startsWith("__ghost__:");
+        const u = unseen[ev.id];
+        const showBadge = !!u && (u.hasUnseenOwner || u.hasUnseenLeader);
         return (
+          <Fragment key={ev.id}>
           <div
-            key={ev.id}
             data-mark-cell="1"
             data-real-event={isGhost ? undefined : "1"}
             data-ghost-event={isGhost ? "1" : undefined}
@@ -2038,9 +2040,11 @@ function WeekEventsOverlay({
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
               setHoverId(ev.id);
               setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+              if (showBadge) startSeenTimer(ev.id);
             }}
             onMouseLeave={(e) => {
               if (isGhost || appKind !== "diary") return;
+              clearSeenTimer();
               const related = e.relatedTarget as Node | null;
               const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
               if (goingIntoMenu) return;
