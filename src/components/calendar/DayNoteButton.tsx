@@ -654,7 +654,7 @@ export function NotePanel({
           className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
           style={{ background: sideLineColor }}
         />
-        {headerLabel ? (
+        {(headerLabel || headerName) ? (
           <div className="flex items-center justify-between border-b border-hairline pl-4 pr-3 py-1.5">
             <span
               className="text-[11px] font-medium uppercase tracking-[0.08em]"
@@ -665,6 +665,9 @@ export function NotePanel({
                     : "hsl(var(--muted-foreground))",
               }}
             >
+              {headerName ? (
+                <span className="font-bold">{headerName}{headerLabel ? " " : ""}</span>
+              ) : null}
               {headerLabel}
               {headerTime ? (
                 <span
