@@ -218,6 +218,7 @@ export function DayNoteButton({
       key: string;
       tone: "gray" | "leader";
       header: string;
+      headerTime?: string;
       value: string;
       mode: "preview" | "edit";
       onSave: (text: string) => void;
@@ -225,6 +226,7 @@ export function DayNoteButton({
     };
     const items: Item[] = [];
     const baseHeader = `Note ${dayLabel(date)}`;
+    const datePart = dayLabel(date);
 
     // 1. Member panel
     if (hasMemberNote || (isOwner && (editingMember || open))) {
@@ -232,6 +234,7 @@ export function DayNoteButton({
         key: "member",
         tone: "gray",
         header: baseHeader,
+        headerTime: formatHHMM(memberNoteUpdatedAt),
         value: memberNote,
         mode: isOwner && editingMember ? "edit" : "preview",
         onSave: isOwner ? (text) => void saveViewerNote(text) : () => {},
@@ -239,13 +242,13 @@ export function DayNoteButton({
       });
     }
 
-    // 2. Current viewer's own note (when not the owner). Always rendered for
-    //    leader/active-follower so they can compose even when no notes exist.
+    // 2. Current viewer's own note (when not the owner).
     if (!isOwner && canEdit) {
       items.push({
         key: "viewer",
         tone: "leader",
-        header: viewerName || "Notat",
+        header: viewerName ? `${viewerName} ${datePart}` : datePart,
+        headerTime: formatHHMM(viewerNoteUpdatedAt),
         value: viewerNote,
         mode: editingViewer ? "edit" : "preview",
         onSave: (text) => void saveViewerNote(text),
@@ -258,7 +261,8 @@ export function DayNoteButton({
       items.push({
         key: `leader-${n.authorId}`,
         tone: "leader",
-        header: n.authorName || "Notat",
+        header: n.authorName ? `${n.authorName} ${datePart}` : datePart,
+        headerTime: formatHHMM(n.updatedAt),
         value: n.body,
         mode: "preview",
         onSave: () => {},
@@ -272,11 +276,13 @@ export function DayNoteButton({
     editingMember,
     open,
     memberNote,
+    memberNoteUpdatedAt,
     saveViewerNote,
     canEdit,
     editingViewer,
     viewerName,
     viewerNote,
+    viewerNoteUpdatedAt,
     leaderNotes,
   ]);
 
