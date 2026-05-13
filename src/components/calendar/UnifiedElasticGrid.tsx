@@ -2273,6 +2273,9 @@ function WeekEventsOverlay({
               })
             }
             onUpsert={(patch) => onUpsertSession?.(patch)}
+            onDetailsOpen={() => {
+              if (unseen[ev.id]) setDismissingId(ev.id);
+            }}
           />
         );
       })()}
