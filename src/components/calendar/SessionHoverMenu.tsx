@@ -102,9 +102,7 @@ export function SessionHoverMenu({
   const ownerFirstName = useMemberFirstName(memberId ?? "");
   const sessionDate = fromISOLocal(ev.startISO);
   const memberUpdatedAt = ev.sessionNoteUpdatedAt;
-  const memberDateSource = memberUpdatedAt ? new Date(memberUpdatedAt) : sessionDate;
-  const memberDateLabel = dayLabel(memberDateSource);
-  const baseHeader = ownerFirstName ? memberDateLabel : `Note ${memberDateLabel}`;
+  const baseHeader = memberUpdatedAt ? dayLabel(new Date(memberUpdatedAt)) : "";
   const baseHeaderName = ownerFirstName || undefined;
   const hasLeaderNote = leader.leaderNotes.length > 0 || !!leader.viewerNote.trim();
 
@@ -196,14 +194,12 @@ export function SessionHoverMenu({
   };
   const leaderPanels: LeaderPanelItem[] = [];
   if (!isOwner && (leader.viewerNote.trim() || leaderNoteEdit || (leader.canEdit && menuVisible))) {
-    const viewerDatePart = leader.viewerNoteUpdatedAt
-      ? dayLabel(new Date(leader.viewerNoteUpdatedAt))
-      : dayLabel(sessionDate);
+    const hasStamp = !!leader.viewerNoteUpdatedAt;
     leaderPanels.push({
       key: "viewer",
       headerName: viewerName || undefined,
-      header: viewerDatePart,
-      headerTime: formatHHMM(leader.viewerNoteUpdatedAt),
+      header: hasStamp ? dayLabel(new Date(leader.viewerNoteUpdatedAt)) : "",
+      headerTime: hasStamp ? formatHHMM(leader.viewerNoteUpdatedAt) : undefined,
       headerTimeFresh: isUpdatedToday(leader.viewerNoteUpdatedAt),
       value: leader.viewerNote,
       mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
@@ -212,12 +208,12 @@ export function SessionHoverMenu({
     });
   }
   for (const n of leader.leaderNotes) {
-    const dPart = n.updatedAt ? dayLabel(new Date(n.updatedAt)) : dayLabel(sessionDate);
+    const hasStamp = !!n.updatedAt;
     leaderPanels.push({
       key: `leader-${n.authorId}`,
       headerName: n.authorName || undefined,
-      header: dPart,
-      headerTime: formatHHMM(n.updatedAt),
+      header: hasStamp ? dayLabel(new Date(n.updatedAt)) : "",
+      headerTime: hasStamp ? formatHHMM(n.updatedAt) : undefined,
       headerTimeFresh: isUpdatedToday(n.updatedAt),
       value: n.body,
       mode: "preview",
@@ -348,7 +344,7 @@ export function SessionHoverMenu({
                 attached
                 headerLabel={baseHeader}
                 headerName={baseHeaderName}
-                headerTime={formatHHMM(memberUpdatedAt)}
+                headerTime={memberUpdatedAt ? formatHHMM(memberUpdatedAt) : undefined}
                 headerTimeFresh={isUpdatedToday(memberUpdatedAt)}
                 initialValue={ev.sessionNote ?? ""}
                 mode={isOwner && noteEdit ? "edit" : "preview"}

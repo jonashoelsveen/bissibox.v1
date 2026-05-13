@@ -57,13 +57,17 @@ function formatHHMM(iso: string | null | undefined): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-/** True when ISO timestamp falls within the last 24 hours. */
+/** True when ISO timestamp is on the current local calendar day (after 00:00 today). */
 export function isUpdatedToday(iso: string | null | undefined): boolean {
   if (!iso) return false;
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return false;
-  const diffMs = Date.now() - d.getTime();
-  return diffMs >= 0 && diffMs < 24 * 60 * 60 * 1000;
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
 }
 
 /** Lookup the current viewer's first name, used in the header of their note. */
@@ -257,19 +261,16 @@ export function DayNoteButton({
       onRequestEdit?: () => void;
     };
     const items: Item[] = [];
-    const fallbackDate = dayLabel(date);
-    const memberDateLabel = memberNoteUpdatedAt
-      ? dayLabel(new Date(memberNoteUpdatedAt))
-      : fallbackDate;
 
     // 1. Member panel
     if (hasMemberNote || (isOwner && (editingMember || open))) {
+      const hasStamp = !!memberNoteUpdatedAt;
       items.push({
         key: "member",
         tone: "gray",
         headerName: ownerFirstName || undefined,
-        header: ownerFirstName ? memberDateLabel : `Note ${memberDateLabel}`,
-        headerTime: formatHHMM(memberNoteUpdatedAt),
+        header: hasStamp ? dayLabel(new Date(memberNoteUpdatedAt)) : "",
+        headerTime: hasStamp ? formatHHMM(memberNoteUpdatedAt) : undefined,
         headerTimeFresh: isUpdatedToday(memberNoteUpdatedAt),
         value: memberNote,
         mode: isOwner && editingMember ? "edit" : "preview",
@@ -280,15 +281,13 @@ export function DayNoteButton({
 
     // 2. Current viewer's own note (when not the owner).
     if (!isOwner && canEdit) {
-      const viewerDateLabel = viewerNoteUpdatedAt
-        ? dayLabel(new Date(viewerNoteUpdatedAt))
-        : fallbackDate;
+      const hasStamp = !!viewerNoteUpdatedAt;
       items.push({
         key: "viewer",
         tone: "leader",
         headerName: viewerName || undefined,
-        header: viewerDateLabel,
-        headerTime: formatHHMM(viewerNoteUpdatedAt),
+        header: hasStamp ? dayLabel(new Date(viewerNoteUpdatedAt)) : "",
+        headerTime: hasStamp ? formatHHMM(viewerNoteUpdatedAt) : undefined,
         headerTimeFresh: isUpdatedToday(viewerNoteUpdatedAt),
         value: viewerNote,
         mode: editingViewer ? "edit" : "preview",
@@ -299,13 +298,13 @@ export function DayNoteButton({
 
     // 3. Other leader / follower notes (read-only).
     for (const n of leaderNotes) {
-      const dLabel = n.updatedAt ? dayLabel(new Date(n.updatedAt)) : fallbackDate;
+      const hasStamp = !!n.updatedAt;
       items.push({
         key: `leader-${n.authorId}`,
         tone: "leader",
         headerName: n.authorName || undefined,
-        header: dLabel,
-        headerTime: formatHHMM(n.updatedAt),
+        header: hasStamp ? dayLabel(new Date(n.updatedAt)) : "",
+        headerTime: hasStamp ? formatHHMM(n.updatedAt) : undefined,
         headerTimeFresh: isUpdatedToday(n.updatedAt),
         value: n.body,
         mode: "preview",
@@ -656,8 +655,8 @@ export function NotePanel({
           className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
           style={{ background: sideLineColor }}
         />
-        {(headerLabel || headerName) ? (
-          <div className="flex items-center justify-between border-b border-hairline pl-4 pr-3 py-1.5">
+        {(headerLabel || headerName || headerTime) ? (
+          <div className="flex items-center justify-between gap-2 border-b border-hairline pl-4 pr-3 py-1.5">
             <span
               className="text-[11px] font-medium uppercase tracking-[0.08em]"
               style={{
@@ -667,19 +666,28 @@ export function NotePanel({
                     : "hsl(var(--muted-foreground))",
               }}
             >
-              {headerName ? (
-                <span className="font-bold">{headerName}{headerLabel ? " " : ""}</span>
-              ) : null}
-              {headerLabel}
-              {headerTime ? (
-                <span
-                  className="ml-1.5 font-semibold"
-                  style={headerTimeFresh ? { color: "#22c55e" } : undefined}
-                >
-                  {headerTime}
-                </span>
-              ) : null}
+              {headerName ? <span className="font-bold">{headerName}</span> : null}
             </span>
+            {headerTimeFresh && headerTime ? (
+              <span
+                className="text-[11px] font-semibold uppercase tracking-[0.08em]"
+                style={{ color: "#22c55e" }}
+              >
+                {headerTime}
+              </span>
+            ) : headerLabel ? (
+              <span
+                className="text-[11px] font-medium uppercase tracking-[0.08em]"
+                style={{
+                  color:
+                    tone === "leader"
+                      ? "var(--primary)"
+                      : "hsl(var(--muted-foreground))",
+                }}
+              >
+                {headerLabel}
+              </span>
+            ) : null}
           </div>
         ) : null}
         <div className="pl-4 pr-3 py-2">
