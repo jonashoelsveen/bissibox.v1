@@ -446,6 +446,7 @@ export function NotePanel({
   anchorRect,
   headerLabel,
   headerTime,
+  headerTimeUpdatedAt,
   initialValue,
   mode,
   defaultBodyHeight,
