@@ -357,6 +357,7 @@ export function SessionHoverMenu({
                     inline
                     headerLabel={p.header}
                     headerTime={p.headerTime}
+                    headerTimeFresh={p.headerTimeFresh}
                     initialValue={p.value}
                     mode={p.mode}
                     defaultBodyHeight={140}
