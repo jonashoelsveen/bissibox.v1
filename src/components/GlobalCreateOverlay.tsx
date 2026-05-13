@@ -113,10 +113,13 @@ function CreateBody({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const { session } = useAuth();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const [fileProgress, setFileProgress] = useState<Record<number, number>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const doneCount = Object.values(fileProgress).filter((p) => p >= 100).length;
 
   const [folders, setFolders] = useState<FolderOpt[]>([]);
   const [folder, setFolder] = useState(""); // stores name OR id depending on kind
