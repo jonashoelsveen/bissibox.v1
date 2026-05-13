@@ -71,6 +71,7 @@ export interface SessionHoverMenuProps {
   onMenuEnter?: () => void;
   onMenuLeave?: () => void;
   onForceClose?: () => void;
+  onDetailsOpen?: () => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
@@ -86,6 +87,7 @@ export function SessionHoverMenu({
   onMenuEnter,
   onMenuLeave,
   onForceClose,
+  onDetailsOpen,
   memberId,
   viewerRole = "owner",
 }: SessionHoverMenuProps) {
@@ -184,6 +186,7 @@ export function SessionHoverMenu({
     key: string;
     header: string;
     headerTime?: string;
+    headerTimeUpdatedAt?: string;
     value: string;
     mode: "preview" | "edit";
     onSave: (text: string) => void;
@@ -198,6 +201,7 @@ export function SessionHoverMenu({
       key: "viewer",
       header: viewerName ? `${viewerName} ${viewerDatePart}` : viewerDatePart,
       headerTime: formatHHMM(leader.viewerNoteUpdatedAt),
+      headerTimeUpdatedAt: leader.viewerNoteUpdatedAt,
       value: leader.viewerNote,
       mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
       onSave: (text) => { void leader.saveViewerNote(text); },
@@ -210,6 +214,7 @@ export function SessionHoverMenu({
       key: `leader-${n.authorId}`,
       header: n.authorName ? `${n.authorName} ${dPart}` : dPart,
       headerTime: formatHHMM(n.updatedAt),
+      headerTimeUpdatedAt: n.updatedAt,
       value: n.body,
       mode: "preview",
       onSave: () => {},
@@ -299,7 +304,7 @@ export function SessionHoverMenu({
             >
               <StickyNote className="h-4 w-4" strokeWidth={2.25} />
             </MenuBtn>
-            <MenuBtn label="Detaljer" onClick={() => setShowDetails(true)}>
+            <MenuBtn label="Detaljer" onClick={() => { onDetailsOpen?.(); setShowDetails(true); }}>
               <Pencil className="h-4 w-4" strokeWidth={2.25} />
             </MenuBtn>
             {isOwner && (
@@ -332,6 +337,7 @@ export function SessionHoverMenu({
                 attached
                 headerLabel={baseHeader}
                 headerTime={formatHHMM(memberUpdatedAt)}
+                headerTimeUpdatedAt={memberUpdatedAt}
                 initialValue={ev.sessionNote ?? ""}
                 mode={isOwner && noteEdit ? "edit" : "preview"}
                 defaultBodyHeight={140}
@@ -353,6 +359,7 @@ export function SessionHoverMenu({
                     inline
                     headerLabel={p.header}
                     headerTime={p.headerTime}
+                    headerTimeUpdatedAt={p.headerTimeUpdatedAt}
                     initialValue={p.value}
                     mode={p.mode}
                     defaultBodyHeight={140}

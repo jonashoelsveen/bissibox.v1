@@ -219,6 +219,7 @@ export function DayNoteButton({
       tone: "gray" | "leader";
       header: string;
       headerTime?: string;
+      headerTimeUpdatedAt?: string;
       value: string;
       mode: "preview" | "edit";
       onSave: (text: string) => void;
@@ -238,6 +239,7 @@ export function DayNoteButton({
         tone: "gray",
         header: baseHeader,
         headerTime: formatHHMM(memberNoteUpdatedAt),
+        headerTimeUpdatedAt: memberNoteUpdatedAt,
         value: memberNote,
         mode: isOwner && editingMember ? "edit" : "preview",
         onSave: isOwner ? (text) => void saveViewerNote(text) : () => {},
@@ -255,6 +257,7 @@ export function DayNoteButton({
         tone: "leader",
         header: viewerName ? `${viewerName} ${viewerDateLabel}` : viewerDateLabel,
         headerTime: formatHHMM(viewerNoteUpdatedAt),
+        headerTimeUpdatedAt: viewerNoteUpdatedAt,
         value: viewerNote,
         mode: editingViewer ? "edit" : "preview",
         onSave: (text) => void saveViewerNote(text),
@@ -270,6 +273,7 @@ export function DayNoteButton({
         tone: "leader",
         header: n.authorName ? `${n.authorName} ${dLabel}` : dLabel,
         headerTime: formatHHMM(n.updatedAt),
+        headerTimeUpdatedAt: n.updatedAt,
         value: n.body,
         mode: "preview",
         onSave: () => {},
@@ -388,6 +392,7 @@ export function DayNoteButton({
                 attached={false}
                 headerLabel={p.header}
                 headerTime={p.headerTime}
+                headerTimeUpdatedAt={p.headerTimeUpdatedAt}
                 initialValue={p.value}
                 mode={p.mode}
                 tone={p.tone}
@@ -416,8 +421,11 @@ export function DayNoteButton({
 export interface NotePanelProps {
   anchorRect?: DOMRect;
   headerLabel?: string;
-  /** Optional "HH:mm" appended to the header in electric green. */
+  /** Optional "HH:mm" appended to the header. Green when updated today. */
   headerTime?: string;
+  /** ISO of when the timestamp refers to. Used to color the time green
+   *  only when the update happened on the current local day. */
+  headerTimeUpdatedAt?: string;
   initialValue: string;
   mode: "preview" | "edit";
   defaultBodyHeight?: number;
@@ -443,6 +451,7 @@ export function NotePanel({
   anchorRect,
   headerLabel,
   headerTime,
+  headerTimeUpdatedAt,
   initialValue,
   mode,
   defaultBodyHeight,
@@ -622,14 +631,26 @@ export function NotePanel({
               }}
             >
               {headerLabel}
-              {headerTime ? (
-                <span
-                  className="ml-1.5 font-semibold"
-                  style={{ color: "#22c55e" }}
-                >
-                  {headerTime}
-                </span>
-              ) : null}
+              {headerTime ? (() => {
+                const isToday = (() => {
+                  if (!headerTimeUpdatedAt) return true;
+                  const d = new Date(headerTimeUpdatedAt);
+                  const now = new Date();
+                  return (
+                    d.getFullYear() === now.getFullYear() &&
+                    d.getMonth() === now.getMonth() &&
+                    d.getDate() === now.getDate()
+                  );
+                })();
+                return (
+                  <span
+                    className="ml-1.5 font-semibold"
+                    style={isToday ? { color: "#22c55e" } : undefined}
+                  >
+                    {headerTime}
+                  </span>
+                );
+              })() : null}
             </span>
           </div>
         ) : null}
