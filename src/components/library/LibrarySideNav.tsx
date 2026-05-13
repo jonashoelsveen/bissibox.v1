@@ -161,14 +161,26 @@ export function LibrarySideNav({
       scopeQuery(
         supabase
           .from("media_albums")
-          .select("id,name,pinned")
+          .select("id,name,pinned,member_user_id")
           .order("pinned", { ascending: false })
           .order("sort_order", { ascending: true }),
       ),
     ]);
     setNoteFolders((nf ?? []) as FolderLite[]);
     setFileFolders((ff ?? []) as FolderLite[]);
-    setMediaAlbums((ma ?? []) as FolderLite[]);
+    type AlbumRow = FolderLite & { member_user_id: string | null };
+    const allAlbums = (ma ?? []) as AlbumRow[];
+    setMediaAlbums(
+      allAlbums.filter((a) => !a.member_user_id).map(({ id, name, pinned }) => ({ id, name, pinned })),
+    );
+    setMemberAlbums(
+      isTeamMode
+        ? allAlbums
+            .filter((a) => !!a.member_user_id)
+            .map(({ id, name, pinned }) => ({ id, name, pinned }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        : [],
+    );
 
     if (isTeamMode && teamId) {
       const { data: mf } = await supabase
