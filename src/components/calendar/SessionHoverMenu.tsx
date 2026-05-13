@@ -192,9 +192,12 @@ export function SessionHoverMenu({
   const datePart = dayLabel(sessionDate);
   const leaderPanels: LeaderPanelItem[] = [];
   if (!isOwner && (leader.viewerNote.trim() || leaderNoteEdit || (leader.canEdit && menuVisible))) {
+    const viewerDatePart = leader.viewerNoteUpdatedAt
+      ? dayLabel(new Date(leader.viewerNoteUpdatedAt))
+      : dayLabel(sessionDate);
     leaderPanels.push({
       key: "viewer",
-      header: viewerName ? `${viewerName} ${datePart}` : datePart,
+      header: viewerName ? `${viewerName} ${viewerDatePart}` : viewerDatePart,
       headerTime: formatHHMM(leader.viewerNoteUpdatedAt),
       value: leader.viewerNote,
       mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
@@ -203,9 +206,10 @@ export function SessionHoverMenu({
     });
   }
   for (const n of leader.leaderNotes) {
+    const dPart = n.updatedAt ? dayLabel(new Date(n.updatedAt)) : dayLabel(sessionDate);
     leaderPanels.push({
       key: `leader-${n.authorId}`,
-      header: n.authorName ? `${n.authorName} ${datePart}` : datePart,
+      header: n.authorName ? `${n.authorName} ${dPart}` : dPart,
       headerTime: formatHHMM(n.updatedAt),
       value: n.body,
       mode: "preview",
