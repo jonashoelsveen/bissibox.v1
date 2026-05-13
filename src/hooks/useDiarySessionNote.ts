@@ -30,7 +30,7 @@ interface State {
 
 function fmtName(p: { first_name: string | null; last_name: string | null } | undefined): string {
   if (!p) return "";
-  return `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim();
+  return (p.first_name ?? "").trim();
 }
 
 export function useDiarySessionNote(

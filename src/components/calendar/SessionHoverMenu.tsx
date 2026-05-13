@@ -14,7 +14,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { StickyNote, Pencil, Trash2 } from "lucide-react";
-import { NotePanel, isUpdatedToday } from "./DayNoteButton";
+import { NotePanel, isUpdatedToday, useMemberFirstName } from "./DayNoteButton";
 import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
 import { CAT_TRAINING_COLOR } from "./MonthGridType1";
 import { colorForActivity } from "@/lib/activity-colors";
@@ -47,11 +47,11 @@ function useViewerName(): string {
     void (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("first_name,last_name")
+        .select("first_name")
         .eq("id", user.id)
         .maybeSingle();
       if (cancelled) return;
-      setName(`${data?.first_name ?? ""} ${data?.last_name ?? ""}`.trim());
+      setName((data?.first_name ?? "").trim());
     })();
     return () => { cancelled = true; };
   }, [user]);
@@ -99,10 +99,14 @@ export function SessionHoverMenu({
   // Leader / active-follower notes (Supabase).
   const leader = useDiarySessionNote(ev.id, memberId ?? "", viewerRole);
   const viewerName = useViewerName();
+  const ownerFirstName = useMemberFirstName(memberId ?? "");
   const sessionDate = fromISOLocal(ev.startISO);
   const memberUpdatedAt = ev.sessionNoteUpdatedAt;
   const memberDateSource = memberUpdatedAt ? new Date(memberUpdatedAt) : sessionDate;
-  const baseHeader = `Note ${dayLabel(memberDateSource)}`;
+  const memberDateLabel = dayLabel(memberDateSource);
+  const baseHeader = ownerFirstName
+    ? `${ownerFirstName} ${memberDateLabel}`
+    : `Note ${memberDateLabel}`;
   const hasLeaderNote = leader.leaderNotes.length > 0 || !!leader.viewerNote.trim();
 
   // Initialize the SessionDetailsValue from the event.
