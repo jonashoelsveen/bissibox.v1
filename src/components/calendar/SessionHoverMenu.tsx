@@ -201,6 +201,7 @@ export function SessionHoverMenu({
       key: "viewer",
       header: viewerName ? `${viewerName} ${viewerDatePart}` : viewerDatePart,
       headerTime: formatHHMM(leader.viewerNoteUpdatedAt),
+      headerTimeUpdatedAt: leader.viewerNoteUpdatedAt,
       value: leader.viewerNote,
       mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
       onSave: (text) => { void leader.saveViewerNote(text); },
