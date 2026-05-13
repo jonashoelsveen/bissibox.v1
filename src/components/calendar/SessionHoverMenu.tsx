@@ -344,7 +344,7 @@ export function SessionHoverMenu({
                 attached
                 headerLabel={baseHeader}
                 headerName={baseHeaderName}
-                headerTime={formatHHMM(memberUpdatedAt)}
+                headerTime={memberUpdatedAt ? formatHHMM(memberUpdatedAt) : undefined}
                 headerTimeFresh={isUpdatedToday(memberUpdatedAt)}
                 initialValue={ev.sessionNote ?? ""}
                 mode={isOwner && noteEdit ? "edit" : "preview"}
