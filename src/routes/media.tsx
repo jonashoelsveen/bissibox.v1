@@ -3180,7 +3180,56 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
     setDuration(0);
     pendingTimeRef.current = null;
     seekingRef.current = false;
+    if (needleRef.current) needleRef.current.style.left = "";
   }, [src]);
+
+  useEffect(() => {
+    if (!playing || duration <= 0) return;
+    const v = videoRef.current;
+    const n = needleRef.current;
+    if (!v || !n) return;
+
+    let rafId: number | null = null;
+    let rvfcId: number | null = null;
+    const useRvfc =
+      typeof (v as unknown as { requestVideoFrameCallback?: unknown }).requestVideoFrameCallback ===
+      "function";
+
+    const tick = () => {
+      const d = v.duration;
+      if (isFinite(d) && d > 0) {
+        const pct = Math.min(100, Math.max(0, (v.currentTime / d) * 100));
+        n.style.left = pct + "%";
+      }
+      schedule();
+    };
+
+    const schedule = () => {
+      if (useRvfc) {
+        rvfcId = (v as unknown as {
+          requestVideoFrameCallback: (cb: () => void) => number;
+        }).requestVideoFrameCallback(tick);
+      } else {
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+
+    schedule();
+
+    return () => {
+      if (rafId != null) cancelAnimationFrame(rafId);
+      if (
+        rvfcId != null &&
+        typeof (v as unknown as { cancelVideoFrameCallback?: (id: number) => void })
+          .cancelVideoFrameCallback === "function"
+      ) {
+        (v as unknown as { cancelVideoFrameCallback: (id: number) => void }).cancelVideoFrameCallback(
+          rvfcId,
+        );
+      }
+      if (needleRef.current) needleRef.current.style.left = "";
+    };
+  }, [playing, duration]);
 
   useEffect(() => {
     const v = videoRef.current;
