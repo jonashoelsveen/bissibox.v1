@@ -14,7 +14,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { StickyNote, Pencil, Trash2 } from "lucide-react";
-import { NotePanel } from "./DayNoteButton";
+import { NotePanel, isUpdatedToday } from "./DayNoteButton";
 import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
 import { CAT_TRAINING_COLOR } from "./MonthGridType1";
 import { colorForActivity } from "@/lib/activity-colors";
