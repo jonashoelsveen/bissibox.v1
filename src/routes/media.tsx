@@ -818,6 +818,33 @@ interface AttendedEvent {
 
 const MEDIA_HOUSES = ["VG", "NRK", "TV2", "Dagbladet", "Aftenposten"];
 
+const THUMB_WIDTH = 400;
+const THUMB_QUALITY = 75;
+const LIGHTBOX_WIDTH = 1600;
+const LIGHTBOX_QUALITY = 85;
+
+async function signedThumbUrl(path: string, isPhoto: boolean): Promise<string | null> {
+  if (!isPhoto) {
+    const { data } = await supabase.storage.from("media").createSignedUrl(path, 3600);
+    return data?.signedUrl ?? null;
+  }
+  const { data } = await supabase.storage.from("media").createSignedUrl(path, 3600, {
+    transform: { width: THUMB_WIDTH, height: THUMB_WIDTH, resize: "cover", quality: THUMB_QUALITY },
+  });
+  return data?.signedUrl ?? null;
+}
+
+async function signedLightboxUrl(path: string, isPhoto: boolean): Promise<string | null> {
+  if (!isPhoto) {
+    const { data } = await supabase.storage.from("media").createSignedUrl(path, 3600);
+    return data?.signedUrl ?? null;
+  }
+  const { data } = await supabase.storage.from("media").createSignedUrl(path, 3600, {
+    transform: { width: LIGHTBOX_WIDTH, resize: "contain", quality: LIGHTBOX_QUALITY },
+  });
+  return data?.signedUrl ?? null;
+}
+
 function MediaPage({
   actionsMount,
   hideSideNav,
