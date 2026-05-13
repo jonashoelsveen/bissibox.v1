@@ -280,7 +280,7 @@ export function SessionHoverMenu({
             data-session-hover-menu="1"
             className={[
               "fixed z-[20] flex items-stretch gap-1 border border-hairline bg-card/95 px-1.5 shadow-md backdrop-blur transition-[width] duration-150",
-              showAnyPanel ? "rounded-t-md border-b-0" : "rounded-md",
+              showMemberPanel ? "rounded-t-md border-b-0" : "rounded-md",
             ].join(" ")}
             style={{ left, top, width: menuW, height: menuH }}
             onMouseEnter={onMenuEnter}
@@ -288,6 +288,13 @@ export function SessionHoverMenu({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
+            {showMemberPanel && (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
+                style={{ background: "#9CA3AF" }}
+              />
+            )}
             <MenuBtn
               label={
                 isOwner
