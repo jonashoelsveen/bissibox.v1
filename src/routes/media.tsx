@@ -1139,29 +1139,6 @@ function MediaPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
-  // Lazy-load higher-quality URLs for items opened in the lightbox.
-  useEffect(() => {
-    if (!openItems || openItems.length === 0) return;
-    let cancel = false;
-    (async () => {
-      const next: Record<string, string> = { ...lightboxUrls };
-      let changed = false;
-      for (const it of openItems) {
-        if (next[it.id]) continue;
-        const u = await signedLightboxUrl(it.storage_path, it.media_type === "photo");
-        if (u) {
-          next[it.id] = u;
-          changed = true;
-        }
-      }
-      if (!cancel && changed) setLightboxUrls(next);
-    })();
-    return () => {
-      cancel = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openItems]);
-
   const filtered = useMemo(() => {
     let list = items;
     if (view.type === "album") {
