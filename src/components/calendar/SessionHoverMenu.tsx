@@ -102,9 +102,7 @@ export function SessionHoverMenu({
   const ownerFirstName = useMemberFirstName(memberId ?? "");
   const sessionDate = fromISOLocal(ev.startISO);
   const memberUpdatedAt = ev.sessionNoteUpdatedAt;
-  const memberDateSource = memberUpdatedAt ? new Date(memberUpdatedAt) : sessionDate;
-  const memberDateLabel = dayLabel(memberDateSource);
-  const baseHeader = ownerFirstName ? memberDateLabel : `Note ${memberDateLabel}`;
+  const baseHeader = memberUpdatedAt ? dayLabel(new Date(memberUpdatedAt)) : "";
   const baseHeaderName = ownerFirstName || undefined;
   const hasLeaderNote = leader.leaderNotes.length > 0 || !!leader.viewerNote.trim();
 
