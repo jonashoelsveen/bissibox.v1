@@ -416,8 +416,11 @@ export function DayNoteButton({
 export interface NotePanelProps {
   anchorRect?: DOMRect;
   headerLabel?: string;
-  /** Optional "HH:mm" appended to the header in electric green. */
+  /** Optional "HH:mm" appended to the header. Green when updated today. */
   headerTime?: string;
+  /** ISO of when the timestamp refers to. Used to color the time green
+   *  only when the update happened on the current local day. */
+  headerTimeUpdatedAt?: string;
   initialValue: string;
   mode: "preview" | "edit";
   defaultBodyHeight?: number;
