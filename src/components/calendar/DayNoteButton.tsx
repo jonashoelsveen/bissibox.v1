@@ -57,20 +57,16 @@ function formatHHMM(iso: string | null | undefined): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-/** True when ISO timestamp falls on the local current calendar day. */
+/** True when ISO timestamp falls within the last 24 hours. */
 export function isUpdatedToday(iso: string | null | undefined): boolean {
   if (!iso) return false;
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return false;
-  const now = new Date();
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  );
+  const diffMs = Date.now() - d.getTime();
+  return diffMs >= 0 && diffMs < 24 * 60 * 60 * 1000;
 }
 
-/** Lookup the current viewer's display name, used in the header of their note. */
+/** Lookup the current viewer's first name, used in the header of their note. */
 function useViewerName(): string {
   const { user } = useAuth();
   const [name, setName] = useState<string>("");
@@ -83,16 +79,36 @@ function useViewerName(): string {
     void (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("first_name,last_name")
+        .select("first_name")
         .eq("id", user.id)
         .maybeSingle();
       if (cancelled) return;
-      setName(`${data?.first_name ?? ""} ${data?.last_name ?? ""}`.trim());
+      setName((data?.first_name ?? "").trim());
     })();
     return () => {
       cancelled = true;
     };
   }, [user]);
+  return name;
+}
+
+/** Lookup a member's first name by id. */
+export function useMemberFirstName(memberId: string): string {
+  const [name, setName] = useState("");
+  useEffect(() => {
+    if (!memberId) { setName(""); return; }
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("first_name")
+        .eq("id", memberId)
+        .maybeSingle();
+      if (cancelled) return;
+      setName((data?.first_name ?? "").trim());
+    })();
+    return () => { cancelled = true; };
+  }, [memberId]);
   return name;
 }
 
