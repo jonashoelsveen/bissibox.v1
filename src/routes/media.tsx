@@ -805,8 +805,9 @@ interface MediaItem {
   allowed_media_houses: string[];
   uploaded_in_mode: string;
   created_at: string;
-  scan_status?: "pending" | "safe" | "infected" | "error";
 }
+
+const MEDIA_MAX_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB
 
 interface AttendedEvent {
   id: string;
