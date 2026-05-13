@@ -3912,13 +3912,10 @@ function MediaTabView({
       <div className="flex flex-1 flex-col items-center justify-center p-6 min-w-0 bg-black/90">
         <div className="flex w-full flex-1 items-center justify-center min-h-0">
           {current?.media_type === "photo" ? (
-            url && (
-              <img
-                src={url}
-                alt=""
-                className="max-h-full max-w-full object-contain"
-              />
-            )
+            <PhotoLqip
+              thumbSrc={current ? thumbUrls[current.id] : undefined}
+              fullSrc={url}
+            />
           ) : (
             <VideoPlayer src={url} drawing={drawing} />
           )}
