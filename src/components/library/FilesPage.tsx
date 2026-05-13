@@ -3,8 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useServerFn } from "@tanstack/react-start";
-import { scanFile, pollScan } from "@/server/scan-file";
+import * as tus from "tus-js-client";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -18,14 +17,13 @@ import {
   Pin,
   PinOff,
   FileText,
-  ShieldCheck,
-  ShieldAlert,
-  Loader2,
   Download,
   Search as SearchIcon,
 } from "lucide-react";
 import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
 import type { PreviousNewKind } from "@/components/library/PreviousPage";
+
+const DOCUMENTS_MAX_BYTES = 1024 * 1024 * 1024; // 1 GB
 
 interface Folder {
   id: string;
@@ -43,8 +41,6 @@ interface FileRow {
   mime_type: string | null;
   file_size: number | null;
   folder_id: string | null;
-  scan_status: "pending" | "safe" | "infected" | "error";
-  scanned_at: string | null;
   created_at: string;
 }
 
@@ -81,8 +77,6 @@ export function FilesPage({
   const navigate = useNavigate();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
   const accessToken = session?.access_token ?? null;
-  const runScan = useServerFn(scanFile);
-  const runPoll = useServerFn(pollScan);
 
   const [folders, setFolders] = useState<Folder[]>([]);
   const [files, setFiles] = useState<FileRow[]>([]);
@@ -222,33 +216,6 @@ export function FilesPage({
   useEffect(() => {
     void load();
   }, [load]);
-
-  // Poll VirusTotal for any pending items, then refresh the list
-  useEffect(() => {
-    if (!accessToken) return;
-    const pending = files.filter((f) => f.scan_status === "pending");
-    if (pending.length === 0) return;
-    let cancelled = false;
-    const tick = async () => {
-      const results = await Promise.all(
-        pending.map((f) =>
-          runPoll({ data: { kind: "file", id: f.id, accessToken } }).catch(() => null),
-        ),
-      );
-      if (cancelled) return;
-      const anyResolved = results.some(
-        (r) => r && (r.status === "safe" || r.status === "infected" || r.status === "error"),
-      );
-      if (anyResolved) void load();
-    };
-    const t = setInterval(() => {
-      void tick();
-    }, 4000);
-    return () => {
-      cancelled = true;
-      clearInterval(t);
-    };
-  }, [accessToken, files, load, runPoll]);
 
   const filtered = useMemo(() => {
     let list = files;
@@ -528,7 +495,6 @@ export function FilesPage({
                       </p>
                       <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
                         <span className="truncate">{formatBytes(f.file_size)}</span>
-                        <ScanBadge status={f.scan_status} />
                       </div>
                     </div>
 
@@ -605,16 +571,9 @@ export function FilesPage({
           userId={user.id}
           teamId={isTeamMode ? teamId : null}
           onClose={() => setImportOpen(false)}
-          onUploaded={(insertedIds) => {
+          onUploaded={() => {
             setImportOpen(false);
             void load();
-            // Trigger verification in background; status pill will reflect outcome
-            if (!accessToken) return;
-            insertedIds.forEach((id) => {
-              runScan({ data: { kind: "file", id, accessToken } }).catch(() => {
-                /* error reflected via scan_status="error" pill */
-              });
-            });
           }}
         />
       )}
@@ -659,47 +618,6 @@ function NavBtn({
     >
       {children}
     </button>
-  );
-}
-
-function ScanBadge({ status }: { status: FileRow["scan_status"] }) {
-  if (status === "pending") {
-    return (
-      <span
-        className="mono inline-flex items-center gap-1 rounded-full bg-secondary/70 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-muted-foreground"
-        title="Verifying file integrity"
-      >
-        <Loader2 className="h-2.5 w-2.5 animate-spin" /> Checking
-      </span>
-    );
-  }
-  if (status === "infected") {
-    return (
-      <span
-        className="mono inline-flex items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-destructive"
-        title="This file failed verification and has been quarantined"
-      >
-        <ShieldAlert className="h-2.5 w-2.5" /> Quarantined
-      </span>
-    );
-  }
-  if (status === "error") {
-    return (
-      <span
-        className="mono inline-flex items-center gap-1 rounded-full bg-secondary/70 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-muted-foreground"
-        title="Verification could not be completed"
-      >
-        Unverified
-      </span>
-    );
-  }
-  return (
-    <span
-      className="mono inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-emerald-500"
-      title="File verified and safe"
-    >
-      <ShieldCheck className="h-2.5 w-2.5" /> Verified
-    </span>
   );
 }
 
@@ -773,26 +691,67 @@ function ImportDialog({
   onClose: () => void;
   onUploaded: (insertedIds: string[]) => void;
 }) {
+  const { session } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [picked, setPicked] = useState<File[]>([]);
   const [folderId, setFolderId] = useState<string | "">("");
   const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [fileProgress, setFileProgress] = useState<Record<number, number>>({});
+
+  const doneCount = Object.values(fileProgress).filter((p) => p >= 100).length;
+
+  const uploadOne = (file: File, path: string, accessToken: string, idx: number) =>
+    new Promise<void>((resolve, reject) => {
+      const upload = new tus.Upload(file, {
+        endpoint: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/upload/resumable`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          "x-upsert": "true",
+        },
+        uploadDataDuringCreation: true,
+        removeFingerprintOnSuccess: true,
+        chunkSize: 6 * 1024 * 1024,
+        metadata: {
+          bucketName: "documents",
+          objectName: path,
+          contentType: file.type || "application/octet-stream",
+          cacheControl: "3600",
+        },
+        onError: (err) => reject(err),
+        onProgress: (bytesUploaded, bytesTotal) => {
+          const pct = Math.round((bytesUploaded / bytesTotal) * 100);
+          setFileProgress((p) => ({ ...p, [idx]: pct }));
+        },
+        onSuccess: () => {
+          setFileProgress((p) => ({ ...p, [idx]: 100 }));
+          resolve();
+        },
+      });
+      upload.start();
+    });
 
   const upload = async () => {
     if (picked.length === 0) return;
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      toast.error("Not signed in");
+      return;
+    }
+    for (const f of picked) {
+      if (f.size > DOCUMENTS_MAX_BYTES) {
+        toast.error(`File "${f.name}" is too large. Maximum is 1 GB.`);
+        return;
+      }
+    }
     setBusy(true);
-    setProgress({ done: 0, total: picked.length });
+    setFileProgress({});
     const insertedIds: string[] = [];
     try {
       for (let i = 0; i < picked.length; i++) {
         const file = picked[i];
         const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
         const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("documents")
-          .upload(path, file, { contentType: file.type || "application/octet-stream" });
-        if (upErr) throw upErr;
+        await uploadOne(file, path, accessToken, i);
 
         const { data: row, error: insErr } = await supabase
           .from("files")
@@ -809,19 +768,14 @@ function ImportDialog({
           .single();
         if (insErr) throw insErr;
         if (row) insertedIds.push(row.id);
-        setProgress({ done: i + 1, total: picked.length });
       }
-      toast.success(
-        picked.length > 1
-          ? `Imported ${picked.length} files — running verification`
-          : "Imported — running verification",
-      );
+      toast.success(picked.length > 1 ? `Imported ${picked.length} files` : "Imported");
       onUploaded(insertedIds);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
-      setProgress(null);
+      setFileProgress({});
     }
   };
 
@@ -864,10 +818,6 @@ function ImportDialog({
         </select>
       </div>
 
-      <p className="mt-4 text-[11px] text-muted-foreground">
-        Every file is automatically verified for integrity before it becomes available to share.
-      </p>
-
       <div className="mt-6 flex justify-end gap-2">
         <button
           onClick={onClose}
@@ -881,9 +831,7 @@ function ImportDialog({
           className="rounded-full bg-primary px-5 py-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
           {busy
-            ? progress
-              ? `Importing ${progress.done}/${progress.total}…`
-              : "Importing…"
+            ? `Importing ${doneCount}/${picked.length}…`
             : picked.length > 1
               ? `Import ${picked.length} files`
               : "Import"}

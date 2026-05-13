@@ -775,9 +775,6 @@ export type Database = {
           folder_id: string | null
           id: string
           mime_type: string | null
-          scan_details: Json
-          scan_status: string
-          scanned_at: string | null
           storage_path: string
           team_id: string | null
           updated_at: string
@@ -790,9 +787,6 @@ export type Database = {
           folder_id?: string | null
           id?: string
           mime_type?: string | null
-          scan_details?: Json
-          scan_status?: string
-          scanned_at?: string | null
           storage_path: string
           team_id?: string | null
           updated_at?: string
@@ -805,9 +799,6 @@ export type Database = {
           folder_id?: string | null
           id?: string
           mime_type?: string | null
-          scan_details?: Json
-          scan_status?: string
-          scanned_at?: string | null
           storage_path?: string
           team_id?: string | null
           updated_at?: string
@@ -911,9 +902,6 @@ export type Database = {
           mime_type: string | null
           organizer: string | null
           photographer: string | null
-          scan_details: Json
-          scan_status: string
-          scanned_at: string | null
           storage_path: string
           subject: string | null
           team_id: string | null
@@ -936,9 +924,6 @@ export type Database = {
           mime_type?: string | null
           organizer?: string | null
           photographer?: string | null
-          scan_details?: Json
-          scan_status?: string
-          scanned_at?: string | null
           storage_path: string
           subject?: string | null
           team_id?: string | null
@@ -961,9 +946,6 @@ export type Database = {
           mime_type?: string | null
           organizer?: string | null
           photographer?: string | null
-          scan_details?: Json
-          scan_status?: string
-          scanned_at?: string | null
           storage_path?: string
           subject?: string | null
           team_id?: string | null

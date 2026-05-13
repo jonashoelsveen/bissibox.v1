@@ -4,8 +4,7 @@ import { motion, useMotionValue, useSpring, useTransform, type MotionValue } fro
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useServerFn } from "@tanstack/react-start";
-import { scanFile, pollScan } from "@/server/scan-file";
+import * as tus from "tus-js-client";
 import { FilesPage } from "@/components/library/FilesPage";
 import { NotesPage } from "@/components/library/NotesPage";
 import { NoteEditor } from "@/components/library/NoteEditor";
@@ -806,8 +805,9 @@ interface MediaItem {
   allowed_media_houses: string[];
   uploaded_in_mode: string;
   created_at: string;
-  scan_status?: "pending" | "safe" | "infected" | "error";
 }
+
+const MEDIA_MAX_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB
 
 interface AttendedEvent {
   id: string;
@@ -844,8 +844,6 @@ function MediaPage({
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const accessToken = session?.access_token ?? null;
-  const runScan = useServerFn(scanFile);
-  const runPoll = useServerFn(pollScan);
   const isTeamMode = (mode === "team" || mode === "organizer") || !!activeEntityId;
   const [albums, setAlbums] = useState<Album[]>([]);
   const [items, setItems] = useState<MediaItem[]>([]);
@@ -1092,38 +1090,6 @@ function MediaPage({
   useEffect(() => {
     void load();
   }, [load]);
-
-  // Poll VirusTotal for any pending media items
-  useEffect(() => {
-    if (!user || !accessToken) return;
-    const pending = items.filter((it) => it.scan_status === "pending");
-    if (pending.length === 0) return;
-    let cancelled = false;
-    const safePoll = (id: string) => {
-      try {
-        return Promise.resolve(runPoll({ data: { kind: "media", id, accessToken } })).catch(
-          () => null,
-        );
-      } catch {
-        return Promise.resolve(null);
-      }
-    };
-    const tick = async () => {
-      const results = await Promise.all(pending.map((it) => safePoll(it.id)));
-      if (cancelled) return;
-      const anyResolved = results.some(
-        (r) => r && (r.status === "safe" || r.status === "infected" || r.status === "error"),
-      );
-      if (anyResolved) void load();
-    };
-    const t = setInterval(() => {
-      void tick();
-    }, 4000);
-    return () => {
-      cancelled = true;
-      clearInterval(t);
-    };
-  }, [accessToken, items, load, runPoll, user]);
 
   useEffect(() => {
     let cancel = false;
@@ -1619,15 +1585,9 @@ function MediaPage({
           mode={mode}
           teamId={isTeamMode ? teamId : null}
           onClose={() => setUploadOpen(false)}
-          onUploaded={(insertedIds) => {
+          onUploaded={() => {
             setUploadOpen(false);
             void load();
-            if (!accessToken) return;
-            insertedIds.forEach((id) => {
-              runScan({ data: { kind: "media", id, accessToken } }).catch(() => {
-                /* error reflected via scan_status */
-              });
-            });
           }}
         />
       )}
@@ -1799,10 +1759,11 @@ function UploadDialog({
   onClose: () => void;
   onUploaded: (insertedIds: string[]) => void;
 }) {
+  const { session } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [albumIds, setAlbumIds] = useState<string[]>([]);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [fileProgress, setFileProgress] = useState<Record<number, number>>({});
   const [eventId, setEventId] = useState<string | null>(null);
   const [eventName, setEventName] = useState("");
   const [organizer, setOrganizer] = useState("");
@@ -1812,20 +1773,60 @@ function UploadDialog({
   // Photographer is locked to user (team logic later)
   const photographer = userName || "You";
 
+  const doneCount = Object.values(fileProgress).filter((p) => p >= 100).length;
+
+  const uploadOne = (file: File, path: string, accessToken: string, idx: number) =>
+    new Promise<void>((resolve, reject) => {
+      const upload = new tus.Upload(file, {
+        endpoint: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/upload/resumable`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          "x-upsert": "true",
+        },
+        uploadDataDuringCreation: true,
+        removeFingerprintOnSuccess: true,
+        chunkSize: 6 * 1024 * 1024,
+        metadata: {
+          bucketName: "media",
+          objectName: path,
+          contentType: file.type || "application/octet-stream",
+          cacheControl: "3600",
+        },
+        onError: (err) => reject(err),
+        onProgress: (bytesUploaded, bytesTotal) => {
+          const pct = Math.round((bytesUploaded / bytesTotal) * 100);
+          setFileProgress((p) => ({ ...p, [idx]: pct }));
+        },
+        onSuccess: () => {
+          setFileProgress((p) => ({ ...p, [idx]: 100 }));
+          resolve();
+        },
+      });
+      upload.start();
+    });
+
   const upload = async () => {
     if (files.length === 0) return;
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      toast.error("Not signed in");
+      return;
+    }
+    for (const f of files) {
+      if (f.size > MEDIA_MAX_BYTES) {
+        toast.error(`File "${f.name}" is too large. Maximum is 5 GB.`);
+        return;
+      }
+    }
     setBusy(true);
-    setProgress({ done: 0, total: files.length });
+    setFileProgress({});
     try {
       const insertedIds: string[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const ext = file.name.split(".").pop();
         const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("media").upload(path, file, {
-          contentType: file.type,
-        });
-        if (upErr) throw upErr;
+        await uploadOne(file, path, accessToken, i);
         const isVideo = file.type.startsWith("video");
         const { data: inserted, error: insErr } = await supabase
           .from("media_items")
@@ -1847,22 +1848,17 @@ function UploadDialog({
           .single();
         if (insErr) throw insErr;
         if (inserted) insertedIds.push(inserted.id);
-        setProgress({ done: i + 1, total: files.length });
       }
       if (insertedIds.length > 0 && albumIds.length > 0) {
         await syncMediaAlbums(insertedIds, albumIds, "replace");
       }
-      toast.success(
-        files.length > 1
-          ? `Uploaded ${files.length} files — running verification`
-          : "Uploaded — running verification",
-      );
+      toast.success(files.length > 1 ? `Uploaded ${files.length} files` : "Uploaded");
       onUploaded(insertedIds);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
-      setProgress(null);
+      setFileProgress({});
     }
   };
 
@@ -1951,9 +1947,7 @@ function UploadDialog({
           className="rounded-full bg-primary px-5 py-2 text-xs text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
           {busy
-            ? progress
-              ? `Uploading ${progress.done}/${progress.total}…`
-              : "Uploading…"
+            ? `Uploading ${doneCount}/${files.length}…`
             : files.length > 1
               ? `Save ${files.length} files`
               : "Save"}
