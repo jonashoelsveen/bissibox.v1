@@ -327,6 +327,7 @@ export function DayNoteButton({
     viewerNote,
     viewerNoteUpdatedAt,
     leaderNotes,
+    ownerFirstName,
   ]);
 
   const showPanels =
