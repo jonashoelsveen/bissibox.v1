@@ -387,6 +387,8 @@ export function DayNoteButton({
 export interface NotePanelProps {
   anchorRect?: DOMRect;
   headerLabel?: string;
+  /** Optional "HH:mm" appended to the header in electric green. */
+  headerTime?: string;
   initialValue: string;
   mode: "preview" | "edit";
   defaultBodyHeight?: number;
