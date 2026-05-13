@@ -32,6 +32,10 @@ export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings · Raceline" }] }),
 });
 
+function SettingsPage() {
+  return <SettingsView />;
+}
+
 interface Profile {
   first_name: string | null;
   last_name: string | null;
