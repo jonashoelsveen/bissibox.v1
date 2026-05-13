@@ -99,10 +99,14 @@ export function SessionHoverMenu({
   // Leader / active-follower notes (Supabase).
   const leader = useDiarySessionNote(ev.id, memberId ?? "", viewerRole);
   const viewerName = useViewerName();
+  const ownerFirstName = useMemberFirstName(memberId ?? "");
   const sessionDate = fromISOLocal(ev.startISO);
   const memberUpdatedAt = ev.sessionNoteUpdatedAt;
   const memberDateSource = memberUpdatedAt ? new Date(memberUpdatedAt) : sessionDate;
-  const baseHeader = `Note ${dayLabel(memberDateSource)}`;
+  const memberDateLabel = dayLabel(memberDateSource);
+  const baseHeader = ownerFirstName
+    ? `${ownerFirstName} ${memberDateLabel}`
+    : `Note ${memberDateLabel}`;
   const hasLeaderNote = leader.leaderNotes.length > 0 || !!leader.viewerNote.trim();
 
   // Initialize the SessionDetailsValue from the event.
