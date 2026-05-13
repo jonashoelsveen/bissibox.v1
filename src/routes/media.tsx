@@ -1139,29 +1139,6 @@ function MediaPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
-  // Lazy-load higher-quality URLs for items opened in the lightbox.
-  useEffect(() => {
-    if (!openItems || openItems.length === 0) return;
-    let cancel = false;
-    (async () => {
-      const next: Record<string, string> = { ...lightboxUrls };
-      let changed = false;
-      for (const it of openItems) {
-        if (next[it.id]) continue;
-        const u = await signedLightboxUrl(it.storage_path, it.media_type === "photo");
-        if (u) {
-          next[it.id] = u;
-          changed = true;
-        }
-      }
-      if (!cancel && changed) setLightboxUrls(next);
-    })();
-    return () => {
-      cancel = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openItems]);
-
   const filtered = useMemo(() => {
     let list = items;
     if (view.type === "album") {
@@ -1179,6 +1156,39 @@ function MediaPage({
     }
     return list;
   }, [items, view, itemAlbums, searchQuery]);
+
+  // Lazy-load higher-quality URLs for items opened in the lightbox, plus neighbor prefetch.
+  useEffect(() => {
+    if (!openItems || openItems.length === 0) return;
+    let cancel = false;
+    (async () => {
+      const indices = new Set<number>();
+      for (const it of openItems) {
+        const i0 = filtered.findIndex((f) => f.id === it.id);
+        if (i0 < 0) continue;
+        for (let d = -2; d <= 2; d++) {
+          const i = i0 + d;
+          if (i >= 0 && i < filtered.length) indices.add(i);
+        }
+      }
+      const targets = Array.from(indices).map((i) => filtered[i]);
+      const next: Record<string, string> = { ...lightboxUrls };
+      let changed = false;
+      for (const it of targets) {
+        if (next[it.id]) continue;
+        const u = await signedLightboxUrl(it.storage_path, it.media_type === "photo");
+        if (u) {
+          next[it.id] = u;
+          changed = true;
+        }
+      }
+      if (!cancel && changed) setLightboxUrls(next);
+    })();
+    return () => {
+      cancel = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openItems]);
 
   useEffect(() => {
     if (searchOpen) {
@@ -1662,6 +1672,7 @@ function MediaPage({
         <Lightbox
           items={openItems}
           urls={lightboxUrls}
+          thumbUrls={urls}
           albums={albums}
           attended={attended}
           userName={userName}
@@ -2223,6 +2234,7 @@ function SubjectPicker({
 function Lightbox({
   items,
   urls,
+  thumbUrls,
   albums,
   attended,
   userName,
@@ -2233,6 +2245,7 @@ function Lightbox({
 }: {
   items: MediaItem[];
   urls: Record<string, string>;
+  thumbUrls: Record<string, string>;
   albums: Album[];
   attended: AttendedEvent[];
   userName: string;
@@ -2264,13 +2277,10 @@ function Lightbox({
         <div className="flex flex-1 flex-col items-center justify-center p-8">
           <div className="flex w-full flex-1 items-center justify-center px-[6%] py-[3%]">
             {current?.media_type === "photo" ? (
-              url && (
-                <img
-                  src={url}
-                  alt=""
-                  className="max-h-[88%] max-w-[88%] object-contain"
-                />
-              )
+              <PhotoLqip
+                thumbSrc={current ? thumbUrls[current.id] : undefined}
+                fullSrc={url}
+              />
             ) : (
               <VideoPlayer src={url} drawing={drawing} />
             )}
@@ -3753,6 +3763,7 @@ function MediaTabView({
   const [attended, setAttended] = useState<AttendedEvent[]>([]);
   const [itemAlbums, setItemAlbums] = useState<Record<string, string[]>>({});
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({});
   const [userName, setUserName] = useState<string>("");
   const [tab, setTab] = useState<"about" | "access" | "draw" | "export">("about");
   const [idx, setIdx] = useState(0);
@@ -3850,13 +3861,22 @@ function MediaTabView({
       "";
     setUserName(nm);
 
-    // Signed URLs (lightbox-quality for the in-tab viewer)
+    // Signed URLs (lightbox-quality + thumbnail for LQIP)
     const urlMap: Record<string, string> = {};
-    for (const it of list) {
-      const u = await signedLightboxUrl(it.storage_path, it.media_type === "photo");
-      if (u) urlMap[it.id] = u;
-    }
+    const thumbMap: Record<string, string> = {};
+    await Promise.all(
+      list.map(async (it) => {
+        const isPhoto = it.media_type === "photo";
+        const [full, thumb] = await Promise.all([
+          signedLightboxUrl(it.storage_path, isPhoto),
+          signedThumbUrl(it.storage_path, isPhoto),
+        ]);
+        if (full) urlMap[it.id] = full;
+        if (thumb) thumbMap[it.id] = thumb;
+      }),
+    );
     setUrls(urlMap);
+    setThumbUrls(thumbMap);
   }, [user, mediaIds, isTeamMode]);
 
   useEffect(() => {
@@ -3892,13 +3912,10 @@ function MediaTabView({
       <div className="flex flex-1 flex-col items-center justify-center p-6 min-w-0 bg-black/90">
         <div className="flex w-full flex-1 items-center justify-center min-h-0">
           {current?.media_type === "photo" ? (
-            url && (
-              <img
-                src={url}
-                alt=""
-                className="max-h-full max-w-full object-contain"
-              />
-            )
+            <PhotoLqip
+              thumbSrc={current ? thumbUrls[current.id] : undefined}
+              fullSrc={url}
+            />
           ) : (
             <VideoPlayer src={url} drawing={drawing} />
           )}
@@ -3947,6 +3964,43 @@ function MediaTabView({
           {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
         </div>
       </aside>
+    </div>
+  );
+}
+
+function PhotoLqip({ thumbSrc, fullSrc }: { thumbSrc?: string; fullSrc?: string }) {
+  const [fullLoaded, setFullLoaded] = useState(false);
+
+  useEffect(() => {
+    setFullLoaded(false);
+  }, [fullSrc]);
+
+  if (!thumbSrc && !fullSrc) return null;
+
+  return (
+    <div className="relative flex max-h-[88%] max-w-[88%] items-center justify-center">
+      {thumbSrc && (
+        <img
+          src={thumbSrc}
+          alt=""
+          aria-hidden
+          className={`max-h-[88vh] max-w-[88vw] object-contain transition-opacity duration-300 ${
+            fullLoaded ? "opacity-0" : "opacity-100"
+          }`}
+          style={{ filter: "blur(20px)", transform: "scale(1.04)" }}
+        />
+      )}
+      {fullSrc && (
+        <img
+          src={fullSrc}
+          alt=""
+          onLoad={() => setFullLoaded(true)}
+          decoding="async"
+          className={`absolute inset-0 m-auto max-h-[88vh] max-w-[88vw] object-contain transition-opacity duration-300 ${
+            fullLoaded ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      )}
     </div>
   );
 }
