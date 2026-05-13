@@ -239,6 +239,7 @@ export function DayNoteButton({
         tone: "gray",
         header: baseHeader,
         headerTime: formatHHMM(memberNoteUpdatedAt),
+        headerTimeUpdatedAt: memberNoteUpdatedAt,
         value: memberNote,
         mode: isOwner && editingMember ? "edit" : "preview",
         onSave: isOwner ? (text) => void saveViewerNote(text) : () => {},
