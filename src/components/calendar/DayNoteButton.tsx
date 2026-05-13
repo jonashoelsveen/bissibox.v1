@@ -50,6 +50,13 @@ function dayLabel(date: Date): string {
   ).padStart(2, "0")}.${String(date.getFullYear() % 100).padStart(2, "0")}`;
 }
 
+function formatHHMM(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return "";
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 /** Lookup the current viewer's display name, used in the header of their note. */
 function useViewerName(): string {
   const { user } = useAuth();
