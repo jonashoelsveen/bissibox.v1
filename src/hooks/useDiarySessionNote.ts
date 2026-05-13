@@ -46,7 +46,7 @@ export function useDiarySessionNote(
     if (!eventId || !memberId) return;
     const { data } = await supabase
       .from("diary_session_notes")
-      .select("author_id,body,kind")
+      .select("author_id,body,kind,updated_at")
       .eq("event_id", eventId)
       .eq("member_id", memberId)
       .eq("kind", "leader");
