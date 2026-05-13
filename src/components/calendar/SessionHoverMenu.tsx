@@ -194,14 +194,12 @@ export function SessionHoverMenu({
   };
   const leaderPanels: LeaderPanelItem[] = [];
   if (!isOwner && (leader.viewerNote.trim() || leaderNoteEdit || (leader.canEdit && menuVisible))) {
-    const viewerDatePart = leader.viewerNoteUpdatedAt
-      ? dayLabel(new Date(leader.viewerNoteUpdatedAt))
-      : dayLabel(sessionDate);
+    const hasStamp = !!leader.viewerNoteUpdatedAt;
     leaderPanels.push({
       key: "viewer",
       headerName: viewerName || undefined,
-      header: viewerDatePart,
-      headerTime: formatHHMM(leader.viewerNoteUpdatedAt),
+      header: hasStamp ? dayLabel(new Date(leader.viewerNoteUpdatedAt)) : "",
+      headerTime: hasStamp ? formatHHMM(leader.viewerNoteUpdatedAt) : undefined,
       headerTimeFresh: isUpdatedToday(leader.viewerNoteUpdatedAt),
       value: leader.viewerNote,
       mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
@@ -210,12 +208,12 @@ export function SessionHoverMenu({
     });
   }
   for (const n of leader.leaderNotes) {
-    const dPart = n.updatedAt ? dayLabel(new Date(n.updatedAt)) : dayLabel(sessionDate);
+    const hasStamp = !!n.updatedAt;
     leaderPanels.push({
       key: `leader-${n.authorId}`,
       headerName: n.authorName || undefined,
-      header: dPart,
-      headerTime: formatHHMM(n.updatedAt),
+      header: hasStamp ? dayLabel(new Date(n.updatedAt)) : "",
+      headerTime: hasStamp ? formatHHMM(n.updatedAt) : undefined,
       headerTimeFresh: isUpdatedToday(n.updatedAt),
       value: n.body,
       mode: "preview",
