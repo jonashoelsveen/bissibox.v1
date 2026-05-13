@@ -23,12 +23,14 @@ export interface AuthoredNote {
   authorId: string;
   authorName: string;
   body: string;
+  updatedAt: string;
 }
 
 interface Row {
   author_id: string;
   body: string;
   kind: "member" | "leader";
+  updated_at: string;
 }
 
 interface State {
