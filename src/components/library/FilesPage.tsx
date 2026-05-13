@@ -41,8 +41,6 @@ interface FileRow {
   mime_type: string | null;
   file_size: number | null;
   folder_id: string | null;
-  scan_status: "pending" | "safe" | "infected" | "error";
-  scanned_at: string | null;
   created_at: string;
 }
 
