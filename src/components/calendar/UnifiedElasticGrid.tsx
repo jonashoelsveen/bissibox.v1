@@ -2223,7 +2223,7 @@ function WeekEventsOverlay({
               style={{
                 left: box.left + box.width - 16,
                 top: top - 6,
-                width: hasUnseenOwnerLeader(u) ? 36 : 18,
+                width: u.hasUnseenOwner && u.hasUnseenLeader ? 36 : 18,
                 height: 18,
               }}
             >
