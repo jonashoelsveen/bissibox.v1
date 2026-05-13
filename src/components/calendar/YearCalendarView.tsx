@@ -103,17 +103,13 @@ function YearCalendarViewInner({
   memberId,
   viewerRole = "owner",
 }: YearCalendarViewProps) {
-  const { data, meta, upsertCell, upsertCells, fillRange, setMeta, undo, redo, canUndo, canRedo } =
+  const { data, meta, upsertCell, upsertCells, fillRange, setMeta } =
     useYearStore(calId, defaultTitle);
   const {
     events,
     upsertEvent,
     moveEvent,
     deleteEvent,
-    undoEvents,
-    redoEvents,
-    canUndoEvents,
-    canRedoEvents,
   } = useEventStore(calId);
 
   // Preview overlay (Import Calendar). When active, ghost events are merged
