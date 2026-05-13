@@ -23,12 +23,14 @@ export interface AuthoredNote {
   authorId: string;
   authorName: string;
   body: string;
+  updatedAt: string;
 }
 
 interface Row {
   author_id: string;
   body: string;
   kind: "member" | "leader";
+  updated_at: string;
 }
 
 interface State {
@@ -51,7 +53,7 @@ export function useDiaryDayNote(memberId: string, date: Date, role: ViewerRole) 
     if (!memberId) return;
     const { data } = await supabase
       .from("diary_day_notes")
-      .select("author_id,body,kind")
+      .select("author_id,body,kind,updated_at")
       .eq("member_id", memberId)
       .eq("day", dayKey(date));
     const rows = (data ?? []) as Row[];
@@ -115,28 +117,25 @@ export function useDiaryDayNote(memberId: string, date: Date, role: ViewerRole) 
     [memberId, date, viewerId, role, viewerKind],
   );
 
-  /** The member's own (gray) note, regardless of the current viewer. */
-  const memberNote = useMemo(
-    () =>
-      state.rows.find((r) => r.kind === "member" && r.author_id === memberId)?.body ?? "",
+  /** The member's own (gray) note row. */
+  const memberRow = useMemo(
+    () => state.rows.find((r) => r.kind === "member" && r.author_id === memberId),
     [state.rows, memberId],
   );
+  const memberNote = memberRow?.body ?? "";
+  const memberNoteUpdatedAt = memberRow?.updated_at ?? "";
 
   /** The current viewer's leader-note (only meaningful for non-owners). */
-  const viewerNote = useMemo(
+  const viewerRow = useMemo(
     () =>
       !isOwner && viewerId
-        ? state.rows.find((r) => r.kind === "leader" && r.author_id === viewerId)?.body ?? ""
-        : "",
+        ? state.rows.find((r) => r.kind === "leader" && r.author_id === viewerId)
+        : undefined,
     [state.rows, viewerId, isOwner],
   );
+  const viewerNote = viewerRow?.body ?? "";
+  const viewerNoteUpdatedAt = viewerRow?.updated_at ?? "";
 
-  /**
-   * Leader-notes to display alongside the member note.
-   * - Non-owner viewer: excludes their own leader-note (shown separately as `viewerNote`).
-   * - Owner viewer: includes ALL leader-notes, including any they authored on
-   *   themselves while in a leader context.
-   */
   const leaderNotes: AuthoredNote[] = useMemo(
     () =>
       state.rows
@@ -145,13 +144,16 @@ export function useDiaryDayNote(memberId: string, date: Date, role: ViewerRole) 
           authorId: r.author_id,
           authorName: state.names[r.author_id] ?? "",
           body: r.body,
+          updatedAt: r.updated_at,
         })),
     [state.rows, state.names, viewerId, isOwner],
   );
 
   return {
     memberNote,
+    memberNoteUpdatedAt,
     viewerNote,
+    viewerNoteUpdatedAt,
     leaderNotes,
     isOwner,
     canEdit: canAnnotate(role),

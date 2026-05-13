@@ -50,6 +50,13 @@ function dayLabel(date: Date): string {
   ).padStart(2, "0")}.${String(date.getFullYear() % 100).padStart(2, "0")}`;
 }
 
+function formatHHMM(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return "";
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 /** Lookup the current viewer's display name, used in the header of their note. */
 function useViewerName(): string {
   const { user } = useAuth();
@@ -85,8 +92,16 @@ export function DayNoteButton({
   viewerRole = "owner",
 }: DayNoteButtonProps) {
   const effectiveMemberId = memberId ?? "";
-  const { memberNote, viewerNote, leaderNotes, isOwner, canEdit, saveViewerNote } =
-    useDiaryDayNote(effectiveMemberId, date, viewerRole);
+  const {
+    memberNote,
+    memberNoteUpdatedAt,
+    viewerNote,
+    viewerNoteUpdatedAt,
+    leaderNotes,
+    isOwner,
+    canEdit,
+    saveViewerNote,
+  } = useDiaryDayNote(effectiveMemberId, date, viewerRole);
   const viewerName = useViewerName();
 
   // Editing state per panel (member panel only owner can edit; viewer panel
@@ -203,6 +218,7 @@ export function DayNoteButton({
       key: string;
       tone: "gray" | "leader";
       header: string;
+      headerTime?: string;
       value: string;
       mode: "preview" | "edit";
       onSave: (text: string) => void;
@@ -210,6 +226,7 @@ export function DayNoteButton({
     };
     const items: Item[] = [];
     const baseHeader = `Note ${dayLabel(date)}`;
+    const datePart = dayLabel(date);
 
     // 1. Member panel
     if (hasMemberNote || (isOwner && (editingMember || open))) {
@@ -217,6 +234,7 @@ export function DayNoteButton({
         key: "member",
         tone: "gray",
         header: baseHeader,
+        headerTime: formatHHMM(memberNoteUpdatedAt),
         value: memberNote,
         mode: isOwner && editingMember ? "edit" : "preview",
         onSave: isOwner ? (text) => void saveViewerNote(text) : () => {},
@@ -224,13 +242,13 @@ export function DayNoteButton({
       });
     }
 
-    // 2. Current viewer's own note (when not the owner). Always rendered for
-    //    leader/active-follower so they can compose even when no notes exist.
+    // 2. Current viewer's own note (when not the owner).
     if (!isOwner && canEdit) {
       items.push({
         key: "viewer",
         tone: "leader",
-        header: viewerName || "Notat",
+        header: viewerName ? `${viewerName} ${datePart}` : datePart,
+        headerTime: formatHHMM(viewerNoteUpdatedAt),
         value: viewerNote,
         mode: editingViewer ? "edit" : "preview",
         onSave: (text) => void saveViewerNote(text),
@@ -243,7 +261,8 @@ export function DayNoteButton({
       items.push({
         key: `leader-${n.authorId}`,
         tone: "leader",
-        header: n.authorName || "Notat",
+        header: n.authorName ? `${n.authorName} ${datePart}` : datePart,
+        headerTime: formatHHMM(n.updatedAt),
         value: n.body,
         mode: "preview",
         onSave: () => {},
@@ -257,11 +276,13 @@ export function DayNoteButton({
     editingMember,
     open,
     memberNote,
+    memberNoteUpdatedAt,
     saveViewerNote,
     canEdit,
     editingViewer,
     viewerName,
     viewerNote,
+    viewerNoteUpdatedAt,
     leaderNotes,
   ]);
 
@@ -359,6 +380,7 @@ export function DayNoteButton({
                 inline
                 attached={false}
                 headerLabel={p.header}
+                headerTime={p.headerTime}
                 initialValue={p.value}
                 mode={p.mode}
                 tone={p.tone}
@@ -387,6 +409,8 @@ export function DayNoteButton({
 export interface NotePanelProps {
   anchorRect?: DOMRect;
   headerLabel?: string;
+  /** Optional "HH:mm" appended to the header in electric green. */
+  headerTime?: string;
   initialValue: string;
   mode: "preview" | "edit";
   defaultBodyHeight?: number;
@@ -411,6 +435,7 @@ export interface NotePanelProps {
 export function NotePanel({
   anchorRect,
   headerLabel,
+  headerTime,
   initialValue,
   mode,
   defaultBodyHeight,
@@ -590,6 +615,14 @@ export function NotePanel({
               }}
             >
               {headerLabel}
+              {headerTime ? (
+                <span
+                  className="ml-1.5 font-semibold"
+                  style={{ color: "#22c55e" }}
+                >
+                  {headerTime}
+                </span>
+              ) : null}
             </span>
           </div>
         ) : null}

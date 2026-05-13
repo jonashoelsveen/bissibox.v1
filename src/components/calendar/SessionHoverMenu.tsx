@@ -31,6 +31,13 @@ function dayLabel(date: Date): string {
   ).padStart(2, "0")}.${String(date.getFullYear() % 100).padStart(2, "0")}`;
 }
 
+function formatHHMM(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return "";
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 function useViewerName(): string {
   const { user } = useAuth();
   const [name, setName] = useState("");
@@ -174,16 +181,19 @@ export function SessionHoverMenu({
   type LeaderPanelItem = {
     key: string;
     header: string;
+    headerTime?: string;
     value: string;
     mode: "preview" | "edit";
     onSave: (text: string) => void;
     onRequestEdit?: () => void;
   };
+  const datePart = dayLabel(sessionDate);
   const leaderPanels: LeaderPanelItem[] = [];
   if (!isOwner && (leader.viewerNote.trim() || leaderNoteEdit || (leader.canEdit && menuVisible))) {
     leaderPanels.push({
       key: "viewer",
-      header: viewerName || "Notat",
+      header: viewerName ? `${viewerName} ${datePart}` : datePart,
+      headerTime: formatHHMM(leader.viewerNoteUpdatedAt),
       value: leader.viewerNote,
       mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
       onSave: (text) => { void leader.saveViewerNote(text); },
@@ -193,7 +203,8 @@ export function SessionHoverMenu({
   for (const n of leader.leaderNotes) {
     leaderPanels.push({
       key: `leader-${n.authorId}`,
-      header: n.authorName || "Notat",
+      header: n.authorName ? `${n.authorName} ${datePart}` : datePart,
+      headerTime: formatHHMM(n.updatedAt),
       value: n.body,
       mode: "preview",
       onSave: () => {},
@@ -335,6 +346,7 @@ export function SessionHoverMenu({
                   <NotePanel
                     inline
                     headerLabel={p.header}
+                    headerTime={p.headerTime}
                     initialValue={p.value}
                     mode={p.mode}
                     defaultBodyHeight={140}

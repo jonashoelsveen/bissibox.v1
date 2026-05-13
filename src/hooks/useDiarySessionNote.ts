@@ -20,6 +20,7 @@ interface Row {
   author_id: string;
   body: string;
   kind: "member" | "leader";
+  updated_at: string;
 }
 
 interface State {
@@ -45,7 +46,7 @@ export function useDiarySessionNote(
     if (!eventId || !memberId) return;
     const { data } = await supabase
       .from("diary_session_notes")
-      .select("author_id,body,kind")
+      .select("author_id,body,kind,updated_at")
       .eq("event_id", eventId)
       .eq("member_id", memberId)
       .eq("kind", "leader");
@@ -104,16 +105,16 @@ export function useDiarySessionNote(
 
   const isOwner = role === "owner";
 
-  const viewerNote = useMemo(
+  const viewerRow = useMemo(
     () =>
       !isOwner && viewerId
-        ? state.rows.find((r) => r.author_id === viewerId)?.body ?? ""
-        : "",
+        ? state.rows.find((r) => r.author_id === viewerId)
+        : undefined,
     [state.rows, viewerId, isOwner],
   );
+  const viewerNote = viewerRow?.body ?? "";
+  const viewerNoteUpdatedAt = viewerRow?.updated_at ?? "";
 
-  // Owner viewer: include every leader-note (incl. their own self-leader notes).
-  // Non-owner viewer: exclude their own leader-note (shown as `viewerNote`).
   const leaderNotes: AuthoredNote[] = useMemo(
     () =>
       state.rows
@@ -122,12 +123,14 @@ export function useDiarySessionNote(
           authorId: r.author_id,
           authorName: state.names[r.author_id] ?? "",
           body: r.body,
+          updatedAt: r.updated_at,
         })),
     [state.rows, state.names, viewerId, isOwner],
   );
 
   return {
     viewerNote,
+    viewerNoteUpdatedAt,
     leaderNotes,
     isOwner,
     canEdit: canAnnotate(role) && role !== "owner",
