@@ -35,6 +35,7 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
+  Users as UsersIcon,
 } from "lucide-react";
 
 export type LibraryCategory = "previous" | "meetings" | "notes" | "files" | "media" | "map";
