@@ -71,6 +71,7 @@ export interface SessionHoverMenuProps {
   onMenuEnter?: () => void;
   onMenuLeave?: () => void;
   onForceClose?: () => void;
+  onDetailsOpen?: () => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
