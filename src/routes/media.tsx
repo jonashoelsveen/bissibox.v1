@@ -3370,7 +3370,13 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
         setReady(true);
       }
     };
-    const onPlay = () => setPlaying(true);
+    const onPlay = () => {
+      const v2 = videoRef.current;
+      if (v2 && !scrubbingRef.current) {
+        setCurrent(v2.currentTime);
+      }
+      setPlaying(true);
+    };
     const onPause = () => {
       const v2 = videoRef.current;
       if (v2 && !scrubbingRef.current) {
