@@ -3343,7 +3343,6 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
           rvfcId,
         );
       }
-      if (needleRef.current) needleRef.current.style.left = "";
     };
   }, [playing, duration]);
 
