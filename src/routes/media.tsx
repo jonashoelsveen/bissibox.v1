@@ -1584,15 +1584,9 @@ function MediaPage({
           mode={mode}
           teamId={isTeamMode ? teamId : null}
           onClose={() => setUploadOpen(false)}
-          onUploaded={(insertedIds) => {
+          onUploaded={() => {
             setUploadOpen(false);
             void load();
-            if (!accessToken) return;
-            insertedIds.forEach((id) => {
-              runScan({ data: { kind: "media", id, accessToken } }).catch(() => {
-                /* error reflected via scan_status */
-              });
-            });
           }}
         />
       )}
