@@ -35,6 +35,7 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
+  Users as UsersIcon,
 } from "lucide-react";
 
 export type LibraryCategory = "previous" | "meetings" | "notes" | "files" | "media" | "map";
@@ -89,6 +90,8 @@ export function LibrarySideNav({
   const [noteFolders, setNoteFolders] = useState<FolderLite[]>([]);
   const [fileFolders, setFileFolders] = useState<FolderLite[]>([]);
   const [mediaAlbums, setMediaAlbums] = useState<FolderLite[]>([]);
+  const [memberAlbums, setMemberAlbums] = useState<FolderLite[]>([]);
+  const [membersOpen, setMembersOpen] = useState<boolean>(true);
   const [meetingFolders, setMeetingFolders] = useState<FolderLite[]>([]);
   const [mapFolders, setMapFolders] = useState<FolderLite[]>([]);
   const [mapScope, setMapScope] = useState<string>("anon");
@@ -159,14 +162,26 @@ export function LibrarySideNav({
       scopeQuery(
         supabase
           .from("media_albums")
-          .select("id,name,pinned")
+          .select("id,name,pinned,member_user_id")
           .order("pinned", { ascending: false })
           .order("sort_order", { ascending: true }),
       ),
     ]);
     setNoteFolders((nf ?? []) as FolderLite[]);
     setFileFolders((ff ?? []) as FolderLite[]);
-    setMediaAlbums((ma ?? []) as FolderLite[]);
+    type AlbumRow = FolderLite & { member_user_id: string | null };
+    const allAlbums = (ma ?? []) as AlbumRow[];
+    setMediaAlbums(
+      allAlbums.filter((a) => !a.member_user_id).map(({ id, name, pinned }) => ({ id, name, pinned })),
+    );
+    setMemberAlbums(
+      isTeamMode
+        ? allAlbums
+            .filter((a) => !!a.member_user_id)
+            .map(({ id, name, pinned }) => ({ id, name, pinned }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        : [],
+    );
 
     if (isTeamMode && teamId) {
       const { data: mf } = await supabase
@@ -200,6 +215,7 @@ export function LibrarySideNav({
       .on("postgres_changes", { event: "*", schema: "public", table: "media_albums" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "meeting_folders" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "team_board_meetings" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "team_group_members" }, () => load())
       .subscribe();
     const onLocal = () => void load();
     window.addEventListener("library:refresh", onLocal);
@@ -618,6 +634,59 @@ export function LibrarySideNav({
                     <span className="px-3 py-1 text-[11px] text-muted-foreground/70">
                       No {s.folderLabel.toLowerCase()} yet
                     </span>
+                  )}
+
+                  {s.key === "media" && isTeamMode && (
+                    <div className="mt-1 flex flex-col">
+                      <button
+                        onClick={() => setMembersOpen((v) => !v)}
+                        className="group flex w-full items-center rounded-md px-3 py-1 text-left text-xs text-ink hover:bg-secondary/60"
+                      >
+                        <span className="grid h-4 w-4 shrink-0 place-items-center text-muted-foreground">
+                          <UsersIcon className="h-3 w-3" strokeWidth={2.25} />
+                        </span>
+                        <span className="ml-1.5 min-w-0 flex-1 truncate font-medium">Members</span>
+                        <ChevronRight
+                          className={`h-3 w-3 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                            membersOpen ? "rotate-90" : "rotate-0"
+                          }`}
+                        />
+                      </button>
+                      <motion.div
+                        initial={false}
+                        animate={{ height: membersOpen ? "auto" : 0, opacity: membersOpen ? 1 : 0 }}
+                        transition={{
+                          height: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+                          opacity: { duration: membersOpen ? 0.16 : 0.1, ease: "easeOut" },
+                        }}
+                        style={{ overflow: "hidden" }}
+                      >
+                        <div className="mt-0.5 flex flex-col gap-0.5">
+                          {memberAlbums.length === 0 ? (
+                            <span className="px-3 py-1 text-[11px] text-muted-foreground/70">
+                              No members yet
+                            </span>
+                          ) : (
+                            memberAlbums.map((f) => {
+                              const active = isCategoryActive && value.folder === f.id;
+                              return (
+                                <button
+                                  key={f.id}
+                                  onClick={() => onChange({ category: "media", folder: f.id })}
+                                  className={`flex min-w-0 items-center rounded-md px-3 py-1 text-left text-xs transition ${
+                                    active
+                                      ? "bg-secondary font-medium text-ink"
+                                      : "text-muted-foreground hover:bg-secondary/60 hover:text-ink"
+                                  }`}
+                                >
+                                  <span className="truncate">{f.name}</span>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </motion.div>
+                    </div>
                   )}
                 </div>
             </motion.div>
