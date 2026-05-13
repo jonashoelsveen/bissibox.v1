@@ -621,47 +621,6 @@ function NavBtn({
   );
 }
 
-function ScanBadge({ status }: { status: FileRow["scan_status"] }) {
-  if (status === "pending") {
-    return (
-      <span
-        className="mono inline-flex items-center gap-1 rounded-full bg-secondary/70 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-muted-foreground"
-        title="Verifying file integrity"
-      >
-        <Loader2 className="h-2.5 w-2.5 animate-spin" /> Checking
-      </span>
-    );
-  }
-  if (status === "infected") {
-    return (
-      <span
-        className="mono inline-flex items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-destructive"
-        title="This file failed verification and has been quarantined"
-      >
-        <ShieldAlert className="h-2.5 w-2.5" /> Quarantined
-      </span>
-    );
-  }
-  if (status === "error") {
-    return (
-      <span
-        className="mono inline-flex items-center gap-1 rounded-full bg-secondary/70 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-muted-foreground"
-        title="Verification could not be completed"
-      >
-        Unverified
-      </span>
-    );
-  }
-  return (
-    <span
-      className="mono inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] uppercase tracking-widest text-emerald-500"
-      title="File verified and safe"
-    >
-      <ShieldCheck className="h-2.5 w-2.5" /> Verified
-    </span>
-  );
-}
-
 function CreateFolderDialog({
   onClose,
   onCreated,
