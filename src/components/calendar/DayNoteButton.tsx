@@ -57,13 +57,17 @@ function formatHHMM(iso: string | null | undefined): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-/** True when ISO timestamp falls within the last 24 hours. */
+/** True when ISO timestamp is on the current local calendar day (after 00:00 today). */
 export function isUpdatedToday(iso: string | null | undefined): boolean {
   if (!iso) return false;
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return false;
-  const diffMs = Date.now() - d.getTime();
-  return diffMs >= 0 && diffMs < 24 * 60 * 60 * 1000;
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
 }
 
 /** Lookup the current viewer's first name, used in the header of their note. */
