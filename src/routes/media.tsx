@@ -3148,6 +3148,7 @@ function formatVideoTime(s: number) {
 function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
+  const needleRef = useRef<HTMLDivElement>(null);
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
