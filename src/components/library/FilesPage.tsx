@@ -495,7 +495,6 @@ export function FilesPage({
                       </p>
                       <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
                         <span className="truncate">{formatBytes(f.file_size)}</span>
-                        <ScanBadge status={f.scan_status} />
                       </div>
                     </div>
 
