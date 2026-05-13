@@ -691,26 +691,67 @@ function ImportDialog({
   onClose: () => void;
   onUploaded: (insertedIds: string[]) => void;
 }) {
+  const { session } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [picked, setPicked] = useState<File[]>([]);
   const [folderId, setFolderId] = useState<string | "">("");
   const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [fileProgress, setFileProgress] = useState<Record<number, number>>({});
+
+  const doneCount = Object.values(fileProgress).filter((p) => p >= 100).length;
+
+  const uploadOne = (file: File, path: string, accessToken: string, idx: number) =>
+    new Promise<void>((resolve, reject) => {
+      const upload = new tus.Upload(file, {
+        endpoint: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/upload/resumable`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          "x-upsert": "true",
+        },
+        uploadDataDuringCreation: true,
+        removeFingerprintOnSuccess: true,
+        chunkSize: 6 * 1024 * 1024,
+        metadata: {
+          bucketName: "documents",
+          objectName: path,
+          contentType: file.type || "application/octet-stream",
+          cacheControl: "3600",
+        },
+        onError: (err) => reject(err),
+        onProgress: (bytesUploaded, bytesTotal) => {
+          const pct = Math.round((bytesUploaded / bytesTotal) * 100);
+          setFileProgress((p) => ({ ...p, [idx]: pct }));
+        },
+        onSuccess: () => {
+          setFileProgress((p) => ({ ...p, [idx]: 100 }));
+          resolve();
+        },
+      });
+      upload.start();
+    });
 
   const upload = async () => {
     if (picked.length === 0) return;
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      toast.error("Not signed in");
+      return;
+    }
+    for (const f of picked) {
+      if (f.size > DOCUMENTS_MAX_BYTES) {
+        toast.error(`File "${f.name}" is too large. Maximum is 1 GB.`);
+        return;
+      }
+    }
     setBusy(true);
-    setProgress({ done: 0, total: picked.length });
+    setFileProgress({});
     const insertedIds: string[] = [];
     try {
       for (let i = 0; i < picked.length; i++) {
         const file = picked[i];
         const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
         const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("documents")
-          .upload(path, file, { contentType: file.type || "application/octet-stream" });
-        if (upErr) throw upErr;
+        await uploadOne(file, path, accessToken, i);
 
         const { data: row, error: insErr } = await supabase
           .from("files")
@@ -727,19 +768,14 @@ function ImportDialog({
           .single();
         if (insErr) throw insErr;
         if (row) insertedIds.push(row.id);
-        setProgress({ done: i + 1, total: picked.length });
       }
-      toast.success(
-        picked.length > 1
-          ? `Imported ${picked.length} files — running verification`
-          : "Imported — running verification",
-      );
+      toast.success(picked.length > 1 ? `Imported ${picked.length} files` : "Imported");
       onUploaded(insertedIds);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
-      setProgress(null);
+      setFileProgress({});
     }
   };
 
