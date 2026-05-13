@@ -132,6 +132,7 @@ export function DayNoteButton({
     saveViewerNote,
   } = useDiaryDayNote(effectiveMemberId, date, viewerRole);
   const viewerName = useViewerName();
+  const ownerFirstName = useMemberFirstName(effectiveMemberId);
 
   // Editing state per panel (member panel only owner can edit; viewer panel
   // editable for non-owner annotators).
