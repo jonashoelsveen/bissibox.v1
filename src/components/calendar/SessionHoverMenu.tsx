@@ -291,7 +291,7 @@ export function SessionHoverMenu({
             {showMemberPanel && (
               <span
                 aria-hidden
-                className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
+                className="pointer-events-none absolute left-0 top-0 h-full w-[3px] rounded-tl-md"
                 style={{ background: "#9CA3AF" }}
               />
             )}
