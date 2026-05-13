@@ -1759,10 +1759,11 @@ function UploadDialog({
   onClose: () => void;
   onUploaded: (insertedIds: string[]) => void;
 }) {
+  const { session } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [albumIds, setAlbumIds] = useState<string[]>([]);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [fileProgress, setFileProgress] = useState<Record<number, number>>({});
   const [eventId, setEventId] = useState<string | null>(null);
   const [eventName, setEventName] = useState("");
   const [organizer, setOrganizer] = useState("");
@@ -1772,20 +1773,60 @@ function UploadDialog({
   // Photographer is locked to user (team logic later)
   const photographer = userName || "You";
 
+  const doneCount = Object.values(fileProgress).filter((p) => p >= 100).length;
+
+  const uploadOne = (file: File, path: string, accessToken: string, idx: number) =>
+    new Promise<void>((resolve, reject) => {
+      const upload = new tus.Upload(file, {
+        endpoint: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/upload/resumable`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          "x-upsert": "true",
+        },
+        uploadDataDuringCreation: true,
+        removeFingerprintOnSuccess: true,
+        chunkSize: 6 * 1024 * 1024,
+        metadata: {
+          bucketName: "media",
+          objectName: path,
+          contentType: file.type || "application/octet-stream",
+          cacheControl: "3600",
+        },
+        onError: (err) => reject(err),
+        onProgress: (bytesUploaded, bytesTotal) => {
+          const pct = Math.round((bytesUploaded / bytesTotal) * 100);
+          setFileProgress((p) => ({ ...p, [idx]: pct }));
+        },
+        onSuccess: () => {
+          setFileProgress((p) => ({ ...p, [idx]: 100 }));
+          resolve();
+        },
+      });
+      upload.start();
+    });
+
   const upload = async () => {
     if (files.length === 0) return;
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      toast.error("Not signed in");
+      return;
+    }
+    for (const f of files) {
+      if (f.size > MEDIA_MAX_BYTES) {
+        toast.error(`File "${f.name}" is too large. Maximum is 5 GB.`);
+        return;
+      }
+    }
     setBusy(true);
-    setProgress({ done: 0, total: files.length });
+    setFileProgress({});
     try {
       const insertedIds: string[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const ext = file.name.split(".").pop();
         const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("media").upload(path, file, {
-          contentType: file.type,
-        });
-        if (upErr) throw upErr;
+        await uploadOne(file, path, accessToken, i);
         const isVideo = file.type.startsWith("video");
         const { data: inserted, error: insErr } = await supabase
           .from("media_items")
@@ -1807,22 +1848,17 @@ function UploadDialog({
           .single();
         if (insErr) throw insErr;
         if (inserted) insertedIds.push(inserted.id);
-        setProgress({ done: i + 1, total: files.length });
       }
       if (insertedIds.length > 0 && albumIds.length > 0) {
         await syncMediaAlbums(insertedIds, albumIds, "replace");
       }
-      toast.success(
-        files.length > 1
-          ? `Uploaded ${files.length} files — running verification`
-          : "Uploaded — running verification",
-      );
+      toast.success(files.length > 1 ? `Uploaded ${files.length} files` : "Uploaded");
       onUploaded(insertedIds);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
-      setProgress(null);
+      setFileProgress({});
     }
   };
 
