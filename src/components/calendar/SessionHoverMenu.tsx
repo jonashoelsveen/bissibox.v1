@@ -335,6 +335,7 @@ export function SessionHoverMenu({
                 attached
                 headerLabel={baseHeader}
                 headerTime={formatHHMM(memberUpdatedAt)}
+                headerTimeFresh={isUpdatedToday(memberUpdatedAt)}
                 initialValue={ev.sessionNote ?? ""}
                 mode={isOwner && noteEdit ? "edit" : "preview"}
                 defaultBodyHeight={140}
