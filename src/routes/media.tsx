@@ -3361,7 +3361,14 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
       }
     };
     const onPlay = () => setPlaying(true);
-    const onPause = () => setPlaying(false);
+    const onPause = () => {
+      // Sync React state to the actual current time before the rAF loop tears
+      // down and the needle falls back to React-rendered position.
+      if (!scrubbingRef.current) {
+        setCurrent(v.currentTime);
+      }
+      setPlaying(false);
+    };
     const onSeeked = () => {
       seekingRef.current = false;
       if (pendingTimeRef.current != null) flushSeek();
