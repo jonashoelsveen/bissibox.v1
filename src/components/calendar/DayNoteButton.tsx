@@ -247,6 +247,7 @@ export function DayNoteButton({
     type Item = {
       key: string;
       tone: "gray" | "leader";
+      headerName?: string;
       header: string;
       headerTime?: string;
       headerTimeFresh?: boolean;
@@ -260,16 +261,14 @@ export function DayNoteButton({
     const memberDateLabel = memberNoteUpdatedAt
       ? dayLabel(new Date(memberNoteUpdatedAt))
       : fallbackDate;
-    const baseHeader = ownerFirstName
-      ? `${ownerFirstName} ${memberDateLabel}`
-      : `Note ${memberDateLabel}`;
 
     // 1. Member panel
     if (hasMemberNote || (isOwner && (editingMember || open))) {
       items.push({
         key: "member",
         tone: "gray",
-        header: baseHeader,
+        headerName: ownerFirstName || undefined,
+        header: ownerFirstName ? memberDateLabel : `Note ${memberDateLabel}`,
         headerTime: formatHHMM(memberNoteUpdatedAt),
         headerTimeFresh: isUpdatedToday(memberNoteUpdatedAt),
         value: memberNote,
@@ -287,7 +286,8 @@ export function DayNoteButton({
       items.push({
         key: "viewer",
         tone: "leader",
-        header: viewerName ? `${viewerName} ${viewerDateLabel}` : viewerDateLabel,
+        headerName: viewerName || undefined,
+        header: viewerDateLabel,
         headerTime: formatHHMM(viewerNoteUpdatedAt),
         headerTimeFresh: isUpdatedToday(viewerNoteUpdatedAt),
         value: viewerNote,
@@ -303,7 +303,8 @@ export function DayNoteButton({
       items.push({
         key: `leader-${n.authorId}`,
         tone: "leader",
-        header: n.authorName ? `${n.authorName} ${dLabel}` : dLabel,
+        headerName: n.authorName || undefined,
+        header: dLabel,
         headerTime: formatHHMM(n.updatedAt),
         headerTimeFresh: isUpdatedToday(n.updatedAt),
         value: n.body,
@@ -424,6 +425,7 @@ export function DayNoteButton({
                 inline
                 attached={false}
                 headerLabel={p.header}
+                headerName={p.headerName}
                 headerTime={p.headerTime}
                 headerTimeFresh={p.headerTimeFresh}
                 initialValue={p.value}
@@ -454,6 +456,8 @@ export function DayNoteButton({
 export interface NotePanelProps {
   anchorRect?: DOMRect;
   headerLabel?: string;
+  /** Optional bold name rendered before the headerLabel (e.g. "John"). */
+  headerName?: string;
   /** Optional "HH:mm" appended to the header in electric green. */
   headerTime?: string;
   /** When true, render headerTime in electric green (note updated today). */
@@ -482,6 +486,7 @@ export interface NotePanelProps {
 export function NotePanel({
   anchorRect,
   headerLabel,
+  headerName,
   headerTime,
   headerTimeFresh,
   initialValue,
@@ -651,7 +656,7 @@ export function NotePanel({
           className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
           style={{ background: sideLineColor }}
         />
-        {headerLabel ? (
+        {(headerLabel || headerName) ? (
           <div className="flex items-center justify-between border-b border-hairline pl-4 pr-3 py-1.5">
             <span
               className="text-[11px] font-medium uppercase tracking-[0.08em]"
@@ -662,6 +667,9 @@ export function NotePanel({
                     : "hsl(var(--muted-foreground))",
               }}
             >
+              {headerName ? (
+                <span className="font-bold">{headerName}{headerLabel ? " " : ""}</span>
+              ) : null}
               {headerLabel}
               {headerTime ? (
                 <span

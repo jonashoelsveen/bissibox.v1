@@ -104,9 +104,8 @@ export function SessionHoverMenu({
   const memberUpdatedAt = ev.sessionNoteUpdatedAt;
   const memberDateSource = memberUpdatedAt ? new Date(memberUpdatedAt) : sessionDate;
   const memberDateLabel = dayLabel(memberDateSource);
-  const baseHeader = ownerFirstName
-    ? `${ownerFirstName} ${memberDateLabel}`
-    : `Note ${memberDateLabel}`;
+  const baseHeader = ownerFirstName ? memberDateLabel : `Note ${memberDateLabel}`;
+  const baseHeaderName = ownerFirstName || undefined;
   const hasLeaderNote = leader.leaderNotes.length > 0 || !!leader.viewerNote.trim();
 
   // Initialize the SessionDetailsValue from the event.
@@ -186,6 +185,7 @@ export function SessionHoverMenu({
   // other leader / follower note. Each gets just the author's name as header.
   type LeaderPanelItem = {
     key: string;
+    headerName?: string;
     header: string;
     headerTime?: string;
     headerTimeFresh?: boolean;
@@ -201,7 +201,8 @@ export function SessionHoverMenu({
       : dayLabel(sessionDate);
     leaderPanels.push({
       key: "viewer",
-      header: viewerName ? `${viewerName} ${viewerDatePart}` : viewerDatePart,
+      headerName: viewerName || undefined,
+      header: viewerDatePart,
       headerTime: formatHHMM(leader.viewerNoteUpdatedAt),
       headerTimeFresh: isUpdatedToday(leader.viewerNoteUpdatedAt),
       value: leader.viewerNote,
@@ -214,7 +215,8 @@ export function SessionHoverMenu({
     const dPart = n.updatedAt ? dayLabel(new Date(n.updatedAt)) : dayLabel(sessionDate);
     leaderPanels.push({
       key: `leader-${n.authorId}`,
-      header: n.authorName ? `${n.authorName} ${dPart}` : dPart,
+      headerName: n.authorName || undefined,
+      header: dPart,
       headerTime: formatHHMM(n.updatedAt),
       headerTimeFresh: isUpdatedToday(n.updatedAt),
       value: n.body,
@@ -345,6 +347,7 @@ export function SessionHoverMenu({
                 inline
                 attached
                 headerLabel={baseHeader}
+                headerName={baseHeaderName}
                 headerTime={formatHHMM(memberUpdatedAt)}
                 headerTimeFresh={isUpdatedToday(memberUpdatedAt)}
                 initialValue={ev.sessionNote ?? ""}
@@ -367,6 +370,7 @@ export function SessionHoverMenu({
                   <NotePanel
                     inline
                     headerLabel={p.header}
+                    headerName={p.headerName}
                     headerTime={p.headerTime}
                     headerTimeFresh={p.headerTimeFresh}
                     initialValue={p.value}
