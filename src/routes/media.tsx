@@ -3271,7 +3271,8 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
       (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
     } catch {}
     const v = videoRef.current;
-    if (v && (pendingTimeRef.current != null || supportsFastSeek)) {
+    const hasFastSeek = !!v && typeof (v as unknown as { fastSeek?: unknown }).fastSeek === "function";
+    if (v && (pendingTimeRef.current != null || hasFastSeek)) {
       try { v.currentTime = current; } catch {}
     }
     pendingTimeRef.current = null;
