@@ -9,9 +9,9 @@
  * calendar in the grid header and the main view stay in lockstep.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Settings as SettingsIcon, Undo2, Redo2 } from "lucide-react";
+import { Settings as SettingsIcon } from "lucide-react";
 import { useYearStore, useEventStore, type CellKey } from "./yearStore";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode } from "./UnifiedElasticGrid";
 import { MonthNavControl } from "./MonthNavControl";
@@ -103,17 +103,13 @@ function YearCalendarViewInner({
   memberId,
   viewerRole = "owner",
 }: YearCalendarViewProps) {
-  const { data, meta, upsertCell, upsertCells, fillRange, setMeta, undo, redo, canUndo, canRedo } =
+  const { data, meta, upsertCell, upsertCells, fillRange, setMeta } =
     useYearStore(calId, defaultTitle);
   const {
     events,
     upsertEvent,
     moveEvent,
     deleteEvent,
-    undoEvents,
-    redoEvents,
-    canUndoEvents,
-    canRedoEvents,
   } = useEventStore(calId);
 
   // Preview overlay (Import Calendar). When active, ghost events are merged
@@ -183,30 +179,8 @@ function YearCalendarViewInner({
     else setInternalViewMode(v);
   };
 
-  // Keyboard shortcuts: ⌘Z / Ctrl+Z for undo, ⌘⇧Z / Ctrl+Y for redo
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const isTyping =
-        target &&
-        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
-      if (isTyping) return;
-      const mod = e.metaKey || e.ctrlKey;
-      if (!mod) return;
-      const k = e.key.toLowerCase();
-      if (k === "z" && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-        undoEvents();
-      } else if ((k === "z" && e.shiftKey) || k === "y") {
-        e.preventDefault();
-        redo();
-        redoEvents();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [undo, redo, undoEvents, redoEvents]);
+
+
 
   const commitTitle = () => {
     setEditingTitle(false);
@@ -260,30 +234,6 @@ function YearCalendarViewInner({
                   ]
             }
           />
-          {appKind !== "diary" && (
-            <>
-              <button
-                type="button"
-                aria-label="Undo"
-                title="Undo (⌘Z)"
-                onClick={() => { undo(); undoEvents(); }}
-                disabled={!canUndo && !canUndoEvents}
-                className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-              >
-                <Undo2 className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                aria-label="Redo"
-                title="Redo (⌘⇧Z)"
-                onClick={() => { redo(); redoEvents(); }}
-                disabled={!canRedo && !canRedoEvents}
-                className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-              >
-                <Redo2 className="h-4 w-4" />
-              </button>
-            </>
-          )}
           <button
             aria-label="Calendar settings"
             className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-ink"
