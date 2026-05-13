@@ -92,8 +92,16 @@ export function DayNoteButton({
   viewerRole = "owner",
 }: DayNoteButtonProps) {
   const effectiveMemberId = memberId ?? "";
-  const { memberNote, viewerNote, leaderNotes, isOwner, canEdit, saveViewerNote } =
-    useDiaryDayNote(effectiveMemberId, date, viewerRole);
+  const {
+    memberNote,
+    memberNoteUpdatedAt,
+    viewerNote,
+    viewerNoteUpdatedAt,
+    leaderNotes,
+    isOwner,
+    canEdit,
+    saveViewerNote,
+  } = useDiaryDayNote(effectiveMemberId, date, viewerRole);
   const viewerName = useViewerName();
 
   // Editing state per panel (member panel only owner can edit; viewer panel
