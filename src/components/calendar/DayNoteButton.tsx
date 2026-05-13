@@ -260,7 +260,9 @@ export function DayNoteButton({
     const memberDateLabel = memberNoteUpdatedAt
       ? dayLabel(new Date(memberNoteUpdatedAt))
       : fallbackDate;
-    const baseHeader = `Note ${memberDateLabel}`;
+    const baseHeader = ownerFirstName
+      ? `${ownerFirstName} ${memberDateLabel}`
+      : `Note ${memberDateLabel}`;
 
     // 1. Member panel
     if (hasMemberNote || (isOwner && (editingMember || open))) {
