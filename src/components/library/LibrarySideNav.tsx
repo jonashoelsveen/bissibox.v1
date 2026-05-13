@@ -214,6 +214,7 @@ export function LibrarySideNav({
       .on("postgres_changes", { event: "*", schema: "public", table: "media_albums" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "meeting_folders" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "team_board_meetings" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "team_group_members" }, () => load())
       .subscribe();
     const onLocal = () => void load();
     window.addEventListener("library:refresh", onLocal);
