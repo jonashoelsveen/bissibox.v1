@@ -1830,7 +1830,7 @@ function UploadDialog({
     try {
       const insertedIds: string[] = [];
       const failures: { name: string; error: Error }[] = [];
-      const parallelChunks = files.length > 1 ? 1 : 3;
+      const parallelChunks = 1;
 
       let next = 0;
       const runOne = async (): Promise<void> => {

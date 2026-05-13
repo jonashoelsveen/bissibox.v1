@@ -640,7 +640,7 @@ async function uploadMediaParallel(
   if (files.length === 0) throw new Error("Select at least one file");
   const albumId = folderValue || null;
 
-  const parallelChunks = files.length > 1 ? 1 : 3;
+  const parallelChunks = 1;
 
   const uploadOne = (file: File, path: string, idx: number) =>
     new Promise<void>((resolve, reject) => {

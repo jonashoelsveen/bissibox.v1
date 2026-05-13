@@ -755,7 +755,7 @@ function ImportDialog({
     const insertedIds: string[] = [];
     const failures: { name: string; error: Error }[] = [];
     try {
-      const parallelChunks = picked.length > 1 ? 1 : 3;
+      const parallelChunks = 1;
       let next = 0;
       const runOne = async (): Promise<void> => {
         while (true) {
