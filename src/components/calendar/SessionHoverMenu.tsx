@@ -47,11 +47,11 @@ function useViewerName(): string {
     void (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("first_name,last_name")
+        .select("first_name")
         .eq("id", user.id)
         .maybeSingle();
       if (cancelled) return;
-      setName(`${data?.first_name ?? ""} ${data?.last_name ?? ""}`.trim());
+      setName((data?.first_name ?? "").trim());
     })();
     return () => { cancelled = true; };
   }, [user]);
