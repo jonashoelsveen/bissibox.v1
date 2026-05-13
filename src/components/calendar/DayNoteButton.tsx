@@ -593,6 +593,14 @@ export function NotePanel({
               }}
             >
               {headerLabel}
+              {headerTime ? (
+                <span
+                  className="ml-1.5 font-semibold"
+                  style={{ color: "#22c55e" }}
+                >
+                  {headerTime}
+                </span>
+              ) : null}
             </span>
           </div>
         ) : null}
