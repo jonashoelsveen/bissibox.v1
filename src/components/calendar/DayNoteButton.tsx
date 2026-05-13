@@ -626,14 +626,26 @@ export function NotePanel({
               }}
             >
               {headerLabel}
-              {headerTime ? (
-                <span
-                  className="ml-1.5 font-semibold"
-                  style={{ color: "#22c55e" }}
-                >
-                  {headerTime}
-                </span>
-              ) : null}
+              {headerTime ? (() => {
+                const isToday = (() => {
+                  if (!headerTimeUpdatedAt) return true;
+                  const d = new Date(headerTimeUpdatedAt);
+                  const now = new Date();
+                  return (
+                    d.getFullYear() === now.getFullYear() &&
+                    d.getMonth() === now.getMonth() &&
+                    d.getDate() === now.getDate()
+                  );
+                })();
+                return (
+                  <span
+                    className="ml-1.5 font-semibold"
+                    style={isToday ? { color: "#22c55e" } : undefined}
+                  >
+                    {headerTime}
+                  </span>
+                );
+              })() : null}
             </span>
           </div>
         ) : null}
