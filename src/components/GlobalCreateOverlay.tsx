@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { X, Plus } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import * as tus from "tus-js-client";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
@@ -112,10 +113,13 @@ function CreateBody({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const { session } = useAuth();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const [fileProgress, setFileProgress] = useState<Record<number, number>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const doneCount = Object.values(fileProgress).filter((p) => p >= 100).length;
 
   const [folders, setFolders] = useState<FolderOpt[]>([]);
   const [folder, setFolder] = useState(""); // stores name OR id depending on kind
@@ -170,6 +174,7 @@ function CreateBody({
   const submit = async () => {
     if (busy) return;
     setBusy(true);
+    setFileProgress({});
     try {
       // Map items are created inside the embedded Map view; just open it.
       if (kind === "map-location" || kind === "map-course") {
@@ -184,7 +189,11 @@ function CreateBody({
         return;
       }
       let payload: OpenTabPayload | null = null;
-      if (cfg.upload) {
+      if (kind === "media") {
+        const accessToken = session?.access_token;
+        if (!accessToken) throw new Error("Not signed in");
+        payload = await uploadMediaParallel(files, folder, { userId, teamId }, accessToken, setFileProgress);
+      } else if (cfg.upload) {
         payload = await uploadItems(kind, files, folder, { userId, teamId });
       } else {
         payload = await createItem(kind, name.trim(), folder, { userId, teamId });
@@ -208,6 +217,7 @@ function CreateBody({
       toast.error(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setBusy(false);
+      setFileProgress({});
     }
   };
 
@@ -251,6 +261,28 @@ function CreateBody({
           />
         )}
       </label>
+
+      {cfg.upload && busy && files.length > 0 && (
+        <div className="mt-3 space-y-2 rounded-xl border border-hairline bg-background/60 p-3">
+          {files.map((f, i) => {
+            const pct = fileProgress[i] ?? 0;
+            return (
+              <div key={i}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-xs text-ink" title={f.name}>{f.name}</span>
+                  <span className="shrink-0 mono text-[10px] tabular-nums text-muted-foreground">{pct}%</span>
+                </div>
+                <div className="mt-1 h-0.5 w-full overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className={`h-full transition-all duration-150 ${pct >= 100 ? "bg-primary" : "bg-ink"}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Folder / album picker */}
       {!cfg.noContainer && (
@@ -317,7 +349,13 @@ function CreateBody({
           disabled={!canSubmit || busy}
           className="rounded-full bg-primary px-5 py-2 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
-          {busy ? "Creating…" : "Create"}
+          {cfg.upload
+            ? busy
+              ? `Uploading ${doneCount}/${files.length}…`
+              : files.length > 1
+                ? `Upload ${files.length} files`
+                : "Upload"
+            : busy ? "Creating…" : "Create"}
         </button>
       </div>
     </div>
@@ -590,6 +628,102 @@ async function uploadItems(
     return lastMedia ? { type: "media", id: lastMedia.id, title: lastMedia.title } : null;
   }
   return null;
+}
+
+async function uploadMediaParallel(
+  files: File[],
+  folderValue: string,
+  ctx: Ctx,
+  accessToken: string,
+  setFileProgress: (updater: (p: Record<number, number>) => Record<number, number>) => void,
+): Promise<OpenTabPayload | null> {
+  if (files.length === 0) throw new Error("Select at least one file");
+  const albumId = folderValue || null;
+
+  const parallelChunks = files.length > 1 ? 1 : 3;
+
+  const uploadOne = (file: File, path: string, idx: number) =>
+    new Promise<void>((resolve, reject) => {
+      const upload = new tus.Upload(file, {
+        endpoint: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/upload/resumable`,
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          "x-upsert": "true",
+        },
+        uploadDataDuringCreation: true,
+        removeFingerprintOnSuccess: true,
+        chunkSize: 6 * 1024 * 1024,
+        parallelUploads: parallelChunks,
+        metadata: {
+          bucketName: "media",
+          objectName: path,
+          contentType: file.type || "application/octet-stream",
+          cacheControl: "3600",
+        },
+        onError: (err) => reject(err),
+        onProgress: (bytesUploaded, bytesTotal) => {
+          const pct = Math.round((bytesUploaded / bytesTotal) * 100);
+          setFileProgress((p) => ({ ...p, [idx]: pct }));
+        },
+        onSuccess: () => {
+          setFileProgress((p) => ({ ...p, [idx]: 100 }));
+          resolve();
+        },
+      });
+      upload.start();
+    });
+
+  const inserted: { id: string; title: string }[] = [];
+  const failures: { name: string; error: Error }[] = [];
+
+  let next = 0;
+  const runOne = async (): Promise<void> => {
+    while (true) {
+      const i = next++;
+      if (i >= files.length) return;
+      const file = files[i];
+      try {
+        const ext = file.name.split(".").pop();
+        const path = `${ctx.userId}/${crypto.randomUUID()}.${ext}`;
+        await uploadOne(file, path, i);
+        const isVideo = file.type.startsWith("video");
+        const { data: mi, error } = await sb
+          .from("media_items")
+          .insert({
+            user_id: ctx.userId,
+            team_id: ctx.teamId,
+            album_id: albumId,
+            storage_path: path,
+            media_type: isVideo ? "video" : "photo",
+            mime_type: file.type,
+            file_size: file.size,
+            uploaded_in_mode: ctx.teamId ? "team" : "participant",
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        if (albumId && mi?.id) {
+          await sb.from("media_item_albums").insert({ media_item_id: mi.id, album_id: albumId });
+        }
+        if (mi?.id) inserted.push({ id: mi.id, title: file.name });
+      } catch (e) {
+        failures.push({ name: file.name, error: e as Error });
+      }
+    }
+  };
+  const FILE_CONCURRENCY = 3;
+  await Promise.all(
+    Array.from({ length: Math.min(FILE_CONCURRENCY, files.length) }, runOne),
+  );
+
+  if (failures.length === files.length) {
+    throw failures[0].error;
+  }
+  if (failures.length > 0) {
+    toast.error(`${failures.length} of ${files.length} failed: ${failures[0].error.message}`);
+  }
+  const last = inserted[inserted.length - 1];
+  return last ? { type: "media", id: last.id, title: last.title } : null;
 }
 
 function dispatchRefresh(kind: Kind) {
