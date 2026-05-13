@@ -77,8 +77,6 @@ export function FilesPage({
   const navigate = useNavigate();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
   const accessToken = session?.access_token ?? null;
-  const runScan = useServerFn(scanFile);
-  const runPoll = useServerFn(pollScan);
 
   const [folders, setFolders] = useState<Folder[]>([]);
   const [files, setFiles] = useState<FileRow[]>([]);
