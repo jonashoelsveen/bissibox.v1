@@ -20,6 +20,7 @@ interface Row {
   author_id: string;
   body: string;
   kind: "member" | "leader";
+  updated_at: string;
 }
 
 interface State {
