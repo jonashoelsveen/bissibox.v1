@@ -3157,8 +3157,6 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
   const scrubbingRef = useRef(false);
   const pendingTimeRef = useRef<number | null>(null);
   const seekingRef = useRef(false);
-  const supportsFastSeek =
-    typeof (videoRef.current as unknown as { fastSeek?: unknown })?.fastSeek === "function";
 
   const flushSeek = useCallback(() => {
     const v = videoRef.current;
@@ -3166,13 +3164,14 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
     const target = pendingTimeRef.current;
     pendingTimeRef.current = null;
     seekingRef.current = true;
+    const fs = (v as unknown as { fastSeek?: (t: number) => void }).fastSeek;
     // fastSeek snaps to the nearest keyframe without forward decoding (iOS Photos-style scrub)
-    if (scrubbingRef.current && supportsFastSeek) {
-      try { (v as unknown as { fastSeek: (t: number) => void }).fastSeek(target); } catch { v.currentTime = target; }
+    if (scrubbingRef.current && typeof fs === "function") {
+      try { fs.call(v, target); } catch { v.currentTime = target; }
     } else {
       try { v.currentTime = target; } catch {}
     }
-  }, [supportsFastSeek]);
+  }, []);
 
   useEffect(() => {
     setReady(false);
