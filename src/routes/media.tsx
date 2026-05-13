@@ -843,8 +843,6 @@ function MediaPage({
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const accessToken = session?.access_token ?? null;
-  const runScan = useServerFn(scanFile);
-  const runPoll = useServerFn(pollScan);
   const isTeamMode = (mode === "team" || mode === "organizer") || !!activeEntityId;
   const [albums, setAlbums] = useState<Album[]>([]);
   const [items, setItems] = useState<MediaItem[]>([]);
