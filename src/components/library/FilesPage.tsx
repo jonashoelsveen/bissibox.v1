@@ -700,7 +700,13 @@ function ImportDialog({
 
   const doneCount = Object.values(fileProgress).filter((p) => p >= 100).length;
 
-  const uploadOne = (file: File, path: string, accessToken: string, idx: number) =>
+  const uploadOne = (
+    file: File,
+    path: string,
+    accessToken: string,
+    idx: number,
+    parallelChunks: number,
+  ) =>
     new Promise<void>((resolve, reject) => {
       const upload = new tus.Upload(file, {
         endpoint: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/upload/resumable`,
@@ -711,6 +717,7 @@ function ImportDialog({
         uploadDataDuringCreation: true,
         removeFingerprintOnSuccess: true,
         chunkSize: 6 * 1024 * 1024,
+        parallelUploads: parallelChunks,
         metadata: {
           bucketName: "documents",
           objectName: path,
@@ -746,31 +753,57 @@ function ImportDialog({
     setBusy(true);
     setFileProgress({});
     const insertedIds: string[] = [];
+    const failures: { name: string; error: Error }[] = [];
     try {
-      for (let i = 0; i < picked.length; i++) {
-        const file = picked[i];
-        const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
-        const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-        await uploadOne(file, path, accessToken, i);
+      const parallelChunks = picked.length > 1 ? 1 : 3;
+      let next = 0;
+      const runOne = async (): Promise<void> => {
+        while (true) {
+          const i = next++;
+          if (i >= picked.length) return;
+          const file = picked[i];
+          try {
+            const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
+            const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+            await uploadOne(file, path, accessToken, i, parallelChunks);
 
-        const { data: row, error: insErr } = await supabase
-          .from("files")
-          .insert({
-            user_id: userId,
-            team_id: teamId,
-            storage_path: path,
-            file_name: file.name,
-            mime_type: file.type || null,
-            file_size: file.size,
-            folder_id: folderId || null,
-          })
-          .select("id")
-          .single();
-        if (insErr) throw insErr;
-        if (row) insertedIds.push(row.id);
+            const { data: row, error: insErr } = await supabase
+              .from("files")
+              .insert({
+                user_id: userId,
+                team_id: teamId,
+                storage_path: path,
+                file_name: file.name,
+                mime_type: file.type || null,
+                file_size: file.size,
+                folder_id: folderId || null,
+              })
+              .select("id")
+              .single();
+            if (insErr) throw insErr;
+            if (row) insertedIds.push(row.id);
+          } catch (e) {
+            failures.push({ name: file.name, error: e as Error });
+          }
+        }
+      };
+      const FILE_CONCURRENCY = 3;
+      await Promise.all(
+        Array.from({ length: Math.min(FILE_CONCURRENCY, picked.length) }, runOne),
+      );
+
+      if (failures.length === picked.length) {
+        toast.error(failures[0].error.message);
+      } else {
+        if (failures.length > 0) {
+          toast.error(
+            `${failures.length} of ${picked.length} failed: ${failures[0].error.message}`,
+          );
+        }
+        const successCount = picked.length - failures.length;
+        toast.success(successCount > 1 ? `Imported ${successCount} files` : "Imported");
+        onUploaded(insertedIds);
       }
-      toast.success(picked.length > 1 ? `Imported ${picked.length} files` : "Imported");
-      onUploaded(insertedIds);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
