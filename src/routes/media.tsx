@@ -3155,11 +3155,31 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
   const [stripWidth, setStripWidth] = useState(0);
   const wasPlayingRef = useRef(false);
   const scrubbingRef = useRef(false);
+  const pendingTimeRef = useRef<number | null>(null);
+  const seekingRef = useRef(false);
+  const supportsFastSeek =
+    typeof (videoRef.current as unknown as { fastSeek?: unknown })?.fastSeek === "function";
+
+  const flushSeek = useCallback(() => {
+    const v = videoRef.current;
+    if (!v || pendingTimeRef.current == null) return;
+    const target = pendingTimeRef.current;
+    pendingTimeRef.current = null;
+    seekingRef.current = true;
+    // fastSeek snaps to the nearest keyframe without forward decoding (iOS Photos-style scrub)
+    if (scrubbingRef.current && supportsFastSeek) {
+      try { (v as unknown as { fastSeek: (t: number) => void }).fastSeek(target); } catch { v.currentTime = target; }
+    } else {
+      try { v.currentTime = target; } catch {}
+    }
+  }, [supportsFastSeek]);
 
   useEffect(() => {
     setReady(false);
     setCurrent(0);
     setDuration(0);
+    pendingTimeRef.current = null;
+    seekingRef.current = false;
   }, [src]);
 
   useEffect(() => {
@@ -3177,11 +3197,16 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
     };
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
+    const onSeeked = () => {
+      seekingRef.current = false;
+      if (pendingTimeRef.current != null) flushSeek();
+    };
     v.addEventListener("timeupdate", onTime);
     v.addEventListener("loadedmetadata", onMeta);
     v.addEventListener("durationchange", onMeta);
     v.addEventListener("play", onPlay);
     v.addEventListener("pause", onPause);
+    v.addEventListener("seeked", onSeeked);
     if (v.readyState >= 1) onMeta();
     return () => {
       v.removeEventListener("timeupdate", onTime);
@@ -3189,8 +3214,9 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
       v.removeEventListener("durationchange", onMeta);
       v.removeEventListener("play", onPlay);
       v.removeEventListener("pause", onPause);
+      v.removeEventListener("seeked", onSeeked);
     };
-  }, [src]);
+  }, [src, flushSeek]);
 
   // Track strip width responsively
   useEffect(() => {
@@ -3219,9 +3245,8 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const t = ratio * duration;
     setCurrent(t);
-    try {
-      v.currentTime = t;
-    } catch {}
+    pendingTimeRef.current = t;
+    if (!seekingRef.current) flushSeek();
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -3247,6 +3272,11 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
       (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
     } catch {}
     const v = videoRef.current;
+    if (v && (pendingTimeRef.current != null || supportsFastSeek)) {
+      try { v.currentTime = current; } catch {}
+    }
+    pendingTimeRef.current = null;
+    seekingRef.current = false;
     if (v && wasPlayingRef.current) v.play().catch(() => {});
   };
 
