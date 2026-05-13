@@ -34,8 +34,6 @@ import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, con
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 import { DayNoteButton } from "./DayNoteButton";
 import { SessionHoverMenu } from "./SessionHoverMenu";
-import { SessionUnseenBadge } from "./SessionUnseenBadge";
-import { useUnseenSessionNotes } from "@/hooks/useUnseenSessionNotes";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
 import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoWeekNumber } from "./dateUtils";
@@ -1907,24 +1905,6 @@ function WeekEventsOverlay({
       setHoverRect(null);
     }, 180);
   }, [cancelClose]);
-
-  // Unseen-note tracking + 2s hover-to-mark-seen.
-  const { unseen, markSeen } = useUnseenSessionNotes(memberId, viewerRole ?? "owner", events);
-  const [dismissingId, setDismissingId] = useState<string | null>(null);
-  const seenTimerRef = useRef<{ id: string; t: number } | null>(null);
-  const clearSeenTimer = useCallback(() => {
-    if (seenTimerRef.current) {
-      window.clearTimeout(seenTimerRef.current.t);
-      seenTimerRef.current = null;
-    }
-  }, []);
-  const startSeenTimer = useCallback((id: string) => {
-    clearSeenTimer();
-    const t = window.setTimeout(() => {
-      setDismissingId(id);
-    }, 2000);
-    seenTimerRef.current = { id, t };
-  }, [clearSeenTimer]);
   type Box = { left: number; width: number };
   const [cols, setCols] = useState<Box[]>([]);
   const [headerBottom, setHeaderBottom] = useState(0);
@@ -2026,11 +2006,9 @@ function WeekEventsOverlay({
         const fg = "hsl(var(--ink, 220 13% 13%))";
         const Icon = iconForColor(ev.color);
         const isGhost = ev.id.startsWith("__ghost__:");
-        const u = unseen[ev.id];
-        const showBadge = !!u && (u.hasUnseenOwner || u.hasUnseenLeader);
         return (
-          <Fragment key={ev.id}>
           <div
+            key={ev.id}
             data-mark-cell="1"
             data-real-event={isGhost ? undefined : "1"}
             data-ghost-event={isGhost ? "1" : undefined}
@@ -2040,11 +2018,9 @@ function WeekEventsOverlay({
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
               setHoverId(ev.id);
               setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
-              if (showBadge) startSeenTimer(ev.id);
             }}
             onMouseLeave={(e) => {
               if (isGhost || appKind !== "diary") return;
-              clearSeenTimer();
               const related = e.relatedTarget as Node | null;
               const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
               if (goingIntoMenu) return;
@@ -2217,28 +2193,6 @@ function WeekEventsOverlay({
               </div>
             )}
           </div>
-          {appKind === "diary" && showBadge && (
-            <div
-              className="pointer-events-none absolute z-[15]"
-              style={{
-                left: box.left + box.width - 16,
-                top: top - 6,
-                width: u.hasUnseenOwner && u.hasUnseenLeader ? 36 : 18,
-                height: 18,
-              }}
-            >
-              <SessionUnseenBadge
-                hasUnseenOwner={u.hasUnseenOwner}
-                hasUnseenLeader={u.hasUnseenLeader}
-                dismissing={dismissingId === ev.id}
-                onSeen={() => {
-                  void markSeen(ev.id);
-                  setDismissingId((cur) => (cur === ev.id ? null : cur));
-                }}
-              />
-            </div>
-          )}
-          </Fragment>
         );
       })}
       {appKind === "diary" && hoverId && hoverRect && (() => {
@@ -2273,9 +2227,6 @@ function WeekEventsOverlay({
               })
             }
             onUpsert={(patch) => onUpsertSession?.(patch)}
-            onDetailsOpen={() => {
-              if (unseen[ev.id]) setDismissingId(ev.id);
-            }}
           />
         );
       })()}

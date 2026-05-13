@@ -237,24 +237,6 @@ export type Database = {
         }
         Relationships: []
       }
-      diary_session_note_views: {
-        Row: {
-          event_id: string
-          last_seen_at: string
-          viewer_id: string
-        }
-        Insert: {
-          event_id: string
-          last_seen_at?: string
-          viewer_id: string
-        }
-        Update: {
-          event_id?: string
-          last_seen_at?: string
-          viewer_id?: string
-        }
-        Relationships: []
-      }
       diary_session_notes: {
         Row: {
           author_id: string
