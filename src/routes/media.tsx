@@ -3763,6 +3763,7 @@ function MediaTabView({
   const [attended, setAttended] = useState<AttendedEvent[]>([]);
   const [itemAlbums, setItemAlbums] = useState<Record<string, string[]>>({});
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({});
   const [userName, setUserName] = useState<string>("");
   const [tab, setTab] = useState<"about" | "access" | "draw" | "export">("about");
   const [idx, setIdx] = useState(0);
