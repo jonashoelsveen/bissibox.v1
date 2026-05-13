@@ -370,6 +370,7 @@ export function SessionHoverMenu({
                   <NotePanel
                     inline
                     headerLabel={p.header}
+                    headerName={p.headerName}
                     headerTime={p.headerTime}
                     headerTimeFresh={p.headerTimeFresh}
                     initialValue={p.value}
