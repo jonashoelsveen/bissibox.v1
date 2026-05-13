@@ -1128,10 +1128,8 @@ function MediaPage({
           next[it.id] = urls[it.id];
           continue;
         }
-        const { data } = await supabase.storage
-          .from("media")
-          .createSignedUrl(it.storage_path, 3600);
-        if (data?.signedUrl) next[it.id] = data.signedUrl;
+        const u = await signedThumbUrl(it.storage_path, it.media_type === "photo");
+        if (u) next[it.id] = u;
       }
       if (!cancel) setUrls(next);
     })();
@@ -1140,6 +1138,29 @@ function MediaPage({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
+
+  // Lazy-load higher-quality URLs for items opened in the lightbox.
+  useEffect(() => {
+    if (!openItems || openItems.length === 0) return;
+    let cancel = false;
+    (async () => {
+      const next: Record<string, string> = { ...lightboxUrls };
+      let changed = false;
+      for (const it of openItems) {
+        if (next[it.id]) continue;
+        const u = await signedLightboxUrl(it.storage_path, it.media_type === "photo");
+        if (u) {
+          next[it.id] = u;
+          changed = true;
+        }
+      }
+      if (!cancel && changed) setLightboxUrls(next);
+    })();
+    return () => {
+      cancel = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openItems]);
 
   const filtered = useMemo(() => {
     let list = items;
