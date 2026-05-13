@@ -1485,6 +1485,8 @@ function MediaPage({
                         <img
                           src={urls[it.id]}
                           alt=""
+                          loading="lazy"
+                          decoding="async"
                           className="h-full w-full object-cover transition group-hover:scale-[1.02]"
                         />
                       )
