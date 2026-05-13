@@ -186,6 +186,7 @@ export function SessionHoverMenu({
     key: string;
     header: string;
     headerTime?: string;
+    headerTimeUpdatedAt?: string;
     value: string;
     mode: "preview" | "edit";
     onSave: (text: string) => void;
