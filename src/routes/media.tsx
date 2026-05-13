@@ -3967,3 +3967,40 @@ function MediaTabView({
     </div>
   );
 }
+
+function PhotoLqip({ thumbSrc, fullSrc }: { thumbSrc?: string; fullSrc?: string }) {
+  const [fullLoaded, setFullLoaded] = useState(false);
+
+  useEffect(() => {
+    setFullLoaded(false);
+  }, [fullSrc]);
+
+  if (!thumbSrc && !fullSrc) return null;
+
+  return (
+    <div className="relative flex max-h-[88%] max-w-[88%] items-center justify-center">
+      {thumbSrc && (
+        <img
+          src={thumbSrc}
+          alt=""
+          aria-hidden
+          className={`max-h-[88vh] max-w-[88vw] object-contain transition-opacity duration-300 ${
+            fullLoaded ? "opacity-0" : "opacity-100"
+          }`}
+          style={{ filter: "blur(20px)", transform: "scale(1.04)" }}
+        />
+      )}
+      {fullSrc && (
+        <img
+          src={fullSrc}
+          alt=""
+          onLoad={() => setFullLoaded(true)}
+          decoding="async"
+          className={`absolute inset-0 m-auto max-h-[88vh] max-w-[88vw] object-contain transition-opacity duration-300 ${
+            fullLoaded ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      )}
+    </div>
+  );
+}
