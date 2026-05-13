@@ -14,7 +14,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { StickyNote, Pencil, Trash2 } from "lucide-react";
-import { NotePanel } from "./DayNoteButton";
+import { NotePanel, isUpdatedToday } from "./DayNoteButton";
 import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
 import { CAT_TRAINING_COLOR } from "./MonthGridType1";
 import { colorForActivity } from "@/lib/activity-colors";
@@ -184,6 +184,7 @@ export function SessionHoverMenu({
     key: string;
     header: string;
     headerTime?: string;
+    headerTimeFresh?: boolean;
     value: string;
     mode: "preview" | "edit";
     onSave: (text: string) => void;
@@ -198,6 +199,7 @@ export function SessionHoverMenu({
       key: "viewer",
       header: viewerName ? `${viewerName} ${viewerDatePart}` : viewerDatePart,
       headerTime: formatHHMM(leader.viewerNoteUpdatedAt),
+      headerTimeFresh: isUpdatedToday(leader.viewerNoteUpdatedAt),
       value: leader.viewerNote,
       mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
       onSave: (text) => { void leader.saveViewerNote(text); },
@@ -210,6 +212,7 @@ export function SessionHoverMenu({
       key: `leader-${n.authorId}`,
       header: n.authorName ? `${n.authorName} ${dPart}` : dPart,
       headerTime: formatHHMM(n.updatedAt),
+      headerTimeFresh: isUpdatedToday(n.updatedAt),
       value: n.body,
       mode: "preview",
       onSave: () => {},
@@ -332,6 +335,7 @@ export function SessionHoverMenu({
                 attached
                 headerLabel={baseHeader}
                 headerTime={formatHHMM(memberUpdatedAt)}
+                headerTimeFresh={isUpdatedToday(memberUpdatedAt)}
                 initialValue={ev.sessionNote ?? ""}
                 mode={isOwner && noteEdit ? "edit" : "preview"}
                 defaultBodyHeight={140}
@@ -353,6 +357,7 @@ export function SessionHoverMenu({
                     inline
                     headerLabel={p.header}
                     headerTime={p.headerTime}
+                    headerTimeFresh={p.headerTimeFresh}
                     initialValue={p.value}
                     mode={p.mode}
                     defaultBodyHeight={140}

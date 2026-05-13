@@ -57,6 +57,19 @@ function formatHHMM(iso: string | null | undefined): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+/** True when ISO timestamp falls on the local current calendar day. */
+export function isUpdatedToday(iso: string | null | undefined): boolean {
+  if (!iso) return false;
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return false;
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
 /** Lookup the current viewer's display name, used in the header of their note. */
 function useViewerName(): string {
   const { user } = useAuth();
@@ -219,6 +232,7 @@ export function DayNoteButton({
       tone: "gray" | "leader";
       header: string;
       headerTime?: string;
+      headerTimeFresh?: boolean;
       value: string;
       mode: "preview" | "edit";
       onSave: (text: string) => void;
@@ -238,6 +252,7 @@ export function DayNoteButton({
         tone: "gray",
         header: baseHeader,
         headerTime: formatHHMM(memberNoteUpdatedAt),
+        headerTimeFresh: isUpdatedToday(memberNoteUpdatedAt),
         value: memberNote,
         mode: isOwner && editingMember ? "edit" : "preview",
         onSave: isOwner ? (text) => void saveViewerNote(text) : () => {},
@@ -255,6 +270,7 @@ export function DayNoteButton({
         tone: "leader",
         header: viewerName ? `${viewerName} ${viewerDateLabel}` : viewerDateLabel,
         headerTime: formatHHMM(viewerNoteUpdatedAt),
+        headerTimeFresh: isUpdatedToday(viewerNoteUpdatedAt),
         value: viewerNote,
         mode: editingViewer ? "edit" : "preview",
         onSave: (text) => void saveViewerNote(text),
@@ -270,6 +286,7 @@ export function DayNoteButton({
         tone: "leader",
         header: n.authorName ? `${n.authorName} ${dLabel}` : dLabel,
         headerTime: formatHHMM(n.updatedAt),
+        headerTimeFresh: isUpdatedToday(n.updatedAt),
         value: n.body,
         mode: "preview",
         onSave: () => {},
@@ -388,6 +405,7 @@ export function DayNoteButton({
                 attached={false}
                 headerLabel={p.header}
                 headerTime={p.headerTime}
+                headerTimeFresh={p.headerTimeFresh}
                 initialValue={p.value}
                 mode={p.mode}
                 tone={p.tone}
@@ -418,6 +436,8 @@ export interface NotePanelProps {
   headerLabel?: string;
   /** Optional "HH:mm" appended to the header in electric green. */
   headerTime?: string;
+  /** When true, render headerTime in electric green (note updated today). */
+  headerTimeFresh?: boolean;
   initialValue: string;
   mode: "preview" | "edit";
   defaultBodyHeight?: number;
@@ -443,6 +463,7 @@ export function NotePanel({
   anchorRect,
   headerLabel,
   headerTime,
+  headerTimeFresh,
   initialValue,
   mode,
   defaultBodyHeight,
@@ -625,7 +646,7 @@ export function NotePanel({
               {headerTime ? (
                 <span
                   className="ml-1.5 font-semibold"
-                  style={{ color: "#22c55e" }}
+                  style={headerTimeFresh ? { color: "#22c55e" } : undefined}
                 >
                   {headerTime}
                 </span>
