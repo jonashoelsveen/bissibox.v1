@@ -2004,8 +2004,8 @@ function UploadDialog({
           {busy
             ? `Uploading ${doneCount}/${files.length}…`
             : files.length > 1
-              ? `Save ${files.length} files`
-              : "Save"}
+              ? `Upload ${files.length} files`
+              : "Upload"}
         </button>
       </div>
     </Modal>
