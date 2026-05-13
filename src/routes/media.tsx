@@ -1090,38 +1090,6 @@ function MediaPage({
     void load();
   }, [load]);
 
-  // Poll VirusTotal for any pending media items
-  useEffect(() => {
-    if (!user || !accessToken) return;
-    const pending = items.filter((it) => it.scan_status === "pending");
-    if (pending.length === 0) return;
-    let cancelled = false;
-    const safePoll = (id: string) => {
-      try {
-        return Promise.resolve(runPoll({ data: { kind: "media", id, accessToken } })).catch(
-          () => null,
-        );
-      } catch {
-        return Promise.resolve(null);
-      }
-    };
-    const tick = async () => {
-      const results = await Promise.all(pending.map((it) => safePoll(it.id)));
-      if (cancelled) return;
-      const anyResolved = results.some(
-        (r) => r && (r.status === "safe" || r.status === "infected" || r.status === "error"),
-      );
-      if (anyResolved) void load();
-    };
-    const t = setInterval(() => {
-      void tick();
-    }, 4000);
-    return () => {
-      cancelled = true;
-      clearInterval(t);
-    };
-  }, [accessToken, items, load, runPoll, user]);
-
   useEffect(() => {
     let cancel = false;
     (async () => {
