@@ -3360,18 +3360,17 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
       }
     };
     const onPlay = () => {
-      const v2 = videoRef.current;
-      if (v2 && !scrubbingRef.current) {
-        setCurrent(v2.currentTime);
-      }
-      setPlaying(true);
+      // togglePlay already set this synchronously; this is a backup for
+      // play events from non-button sources. Only update if state is stale.
+      setPlaying((p) => (p ? p : true));
     };
     const onPause = () => {
-      const v2 = videoRef.current;
-      if (v2 && !scrubbingRef.current) {
-        setCurrent(v2.currentTime);
-      }
-      setPlaying(false);
+      // togglePlay already set this synchronously; this is a backup for
+      // pause events from non-button sources. Only update if state is stale.
+      setPlaying((p) => (p ? false : p));
+      // Don't write to `current` here — togglePlay already wrote the
+      // pre-pause position, and reading v.currentTime here would capture
+      // a moved-forward position.
     };
     const onSeeked = () => {
       seekingRef.current = false;
@@ -3410,13 +3409,23 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
     const v = videoRef.current;
     if (!v) return;
     if (v.paused) {
-      // Lock playback to the displayed needle position so resume is seamless
-      // (the video may have drifted slightly past during pause's decoder flush).
-      if (isFinite(current) && Math.abs(v.currentTime - current) > 0.01) {
+      // Lock playback position to displayed needle, ALWAYS (no threshold —
+      // even sub-frame drift causes a visible snap when rAF takes over).
+      if (isFinite(current)) {
         try { v.currentTime = current; } catch {}
       }
+      // Update React state IMMEDIATELY — don't wait for the browser's `play`
+      // event (which lags ~30-80ms behind the click). This makes the button
+      // feel instant and prevents the rAF effect from starting against stale state.
+      setPlaying(true);
       v.play().catch(() => {});
     } else {
+      // Snap React's current to the exact pause-moment v.currentTime
+      // BEFORE the video has any chance to advance another frame.
+      if (!scrubbingRef.current) {
+        setCurrent(v.currentTime);
+      }
+      setPlaying(false);
       v.pause();
     }
   };
