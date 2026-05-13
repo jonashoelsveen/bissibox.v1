@@ -1157,6 +1157,39 @@ function MediaPage({
     return list;
   }, [items, view, itemAlbums, searchQuery]);
 
+  // Lazy-load higher-quality URLs for items opened in the lightbox, plus neighbor prefetch.
+  useEffect(() => {
+    if (!openItems || openItems.length === 0) return;
+    let cancel = false;
+    (async () => {
+      const indices = new Set<number>();
+      for (const it of openItems) {
+        const i0 = filtered.findIndex((f) => f.id === it.id);
+        if (i0 < 0) continue;
+        for (let d = -2; d <= 2; d++) {
+          const i = i0 + d;
+          if (i >= 0 && i < filtered.length) indices.add(i);
+        }
+      }
+      const targets = Array.from(indices).map((i) => filtered[i]);
+      const next: Record<string, string> = { ...lightboxUrls };
+      let changed = false;
+      for (const it of targets) {
+        if (next[it.id]) continue;
+        const u = await signedLightboxUrl(it.storage_path, it.media_type === "photo");
+        if (u) {
+          next[it.id] = u;
+          changed = true;
+        }
+      }
+      if (!cancel && changed) setLightboxUrls(next);
+    })();
+    return () => {
+      cancel = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openItems]);
+
   useEffect(() => {
     if (searchOpen) {
       const t = setTimeout(() => searchInputRef.current?.focus(), 60);
