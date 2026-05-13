@@ -2220,7 +2220,11 @@ function WeekEventsOverlay({
               onDeleteEvent?.(ev.id);
             }}
             onSaveNote={(note) =>
-              onUpsertSession?.({ ...ev, sessionNote: note || undefined })
+              onUpsertSession?.({
+                ...ev,
+                sessionNote: note || undefined,
+                sessionNoteUpdatedAt: new Date().toISOString(),
+              })
             }
             onUpsert={(patch) => onUpsertSession?.(patch)}
           />
