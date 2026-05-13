@@ -217,33 +217,6 @@ export function FilesPage({
     void load();
   }, [load]);
 
-  // Poll VirusTotal for any pending items, then refresh the list
-  useEffect(() => {
-    if (!accessToken) return;
-    const pending = files.filter((f) => f.scan_status === "pending");
-    if (pending.length === 0) return;
-    let cancelled = false;
-    const tick = async () => {
-      const results = await Promise.all(
-        pending.map((f) =>
-          runPoll({ data: { kind: "file", id: f.id, accessToken } }).catch(() => null),
-        ),
-      );
-      if (cancelled) return;
-      const anyResolved = results.some(
-        (r) => r && (r.status === "safe" || r.status === "infected" || r.status === "error"),
-      );
-      if (anyResolved) void load();
-    };
-    const t = setInterval(() => {
-      void tick();
-    }, 4000);
-    return () => {
-      cancelled = true;
-      clearInterval(t);
-    };
-  }, [accessToken, files, load, runPoll]);
-
   const filtered = useMemo(() => {
     let list = files;
     if (view.type === "folder") {
