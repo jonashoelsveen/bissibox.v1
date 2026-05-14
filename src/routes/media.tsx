@@ -1310,39 +1310,58 @@ function MediaPage({
   );
 
   const inAlbum = view.type === "album";
-  const pageBgClass = inAlbum ? albumBgClass : "bg-white text-foreground";
-  const barTranslucent = (inAlbum ? isDarkAlbum : false)
-    ? "bg-zinc-950/80 text-zinc-100"
-    : "bg-white/80 text-foreground";
+  const clearSelectionOnBg = (e: React.MouseEvent<HTMLElement>) => {
+    if (e.target === e.currentTarget) {
+      setSelected(new Set());
+      setLastClickedId(null);
+    }
+  };
 
   return (
-    <div className={`flex min-h-full flex-col ${pageBgClass}`}>
+    <div className="flex min-h-full flex-col bg-white text-foreground">
       {/* Per-page Search/Plus removed — using the global top tab bar's actions instead. */}
       {void actions}
 
       {/* Always-on frozen top bar — translucent + blurred so it matches the canvas at rest, frosts content on scroll. */}
-      <div className={`sticky top-0 z-20 flex h-11 shrink-0 items-center justify-end gap-1 px-4 backdrop-blur-xl ${barTranslucent}`}>
-        <GalleryBarBtn
-          disabled={selected.size === 0}
-          ariaLabel="Favorite"
-          onClick={() => toast.success("Favorited")}
-        >
-          <Heart className="h-4 w-4" />
-        </GalleryBarBtn>
-        <GalleryBarBtn
-          disabled={selected.size === 0}
-          ariaLabel="Delete"
-          onClick={() => void handleDelete()}
-        >
-          <Trash2 className="h-4 w-4" />
-        </GalleryBarBtn>
-        <GalleryBarBtn
-          disabled={selected.size === 0}
-          ariaLabel="More"
-          onClick={() => toast("More actions coming soon")}
-        >
-          <MoreVertical className="h-4 w-4" />
-        </GalleryBarBtn>
+      <div
+        className="sticky top-0 z-20 flex h-11 shrink-0 items-center justify-between gap-1 px-4 backdrop-blur-xl bg-white/80 text-foreground"
+        onClick={clearSelectionOnBg}
+      >
+        <div className="flex items-center" onClick={clearSelectionOnBg}>
+          {inAlbum && (
+            <button
+              type="button"
+              onClick={() => setView({ type: "all" })}
+              aria-label="Back to all media"
+              className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <GalleryBarBtn
+            disabled={selected.size === 0}
+            ariaLabel="Favorite"
+            onClick={() => toast.success("Favorited")}
+          >
+            <Heart className="h-4 w-4" />
+          </GalleryBarBtn>
+          <GalleryBarBtn
+            disabled={selected.size === 0}
+            ariaLabel="Delete"
+            onClick={() => void handleDelete()}
+          >
+            <Trash2 className="h-4 w-4" />
+          </GalleryBarBtn>
+          <GalleryBarBtn
+            disabled={selected.size === 0}
+            ariaLabel="More"
+            onClick={() => toast("More actions coming soon")}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </GalleryBarBtn>
+        </div>
       </div>
 
       <div className={`grid flex-1 gap-8 overflow-y-auto ${hideSideNav ? "md:grid-cols-1" : "md:grid-cols-[200px_1fr]"}`}>
