@@ -2541,7 +2541,7 @@ function Lightbox({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Row 1 — frozen top bar */}
-        <div className="flex h-11 flex-none items-center justify-between gap-2 px-4 bg-white text-foreground">
+        <div className="relative z-20 flex h-11 flex-none items-center justify-between gap-2 px-4 bg-white text-foreground">
           <button
             type="button"
             onClick={onClose}
@@ -2554,7 +2554,7 @@ function Lightbox({
             type="button"
             onClick={() => setEditPanelOpen((v) => !v)}
             aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-            className={`relative z-20 grid h-9 w-9 place-items-center rounded-full transition ${
+            className={`relative z-30 grid h-9 w-9 place-items-center rounded-full transition ${
               editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
             }`}
           >
@@ -2562,8 +2562,8 @@ function Lightbox({
           </button>
         </div>
 
-        {/* Row 2 — media + sliding edit panel (overlay) */}
-        <div className="relative flex min-h-0 flex-1">
+        {/* Row 2 — media */}
+        <div className="flex min-h-0 flex-1">
           <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4">
             {current?.media_type === "photo" ? (
               <PhotoLqip
@@ -2574,53 +2574,6 @@ function Lightbox({
               <VideoPlayer src={url} drawing={drawing} theme="light" />
             )}
           </div>
-          <aside
-            aria-hidden={!editPanelOpen}
-            className={`absolute right-0 top-0 bottom-0 z-10 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
-              editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
-            }`}
-          >
-            <div className="flex w-96 flex-1 flex-col">
-              <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
-                <div className="flex gap-1">
-                  {tabs.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setTab(t)}
-                      className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
-                        tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => setEditPanelOpen(false)}
-                  className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-5">
-                {tab === "about" && (
-                  <AboutPanel
-                    items={items}
-                    albums={albums}
-                    attended={attended}
-                    userName={userName}
-                    itemAlbums={itemAlbums}
-                    onSaved={onChanged}
-                  />
-                )}
-                {tab === "access" && (
-                  <AccessPanel items={items} onSaved={onChanged} isTeamMode={isTeamMode} />
-                )}
-                {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
-                {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
-              </div>
-            </div>
-          </aside>
         </div>
 
         {/* Row 3 — dock strip */}
@@ -2629,6 +2582,45 @@ function Lightbox({
             <DockStrip items={items} urls={urls} activeIdx={idx} onSelect={setIdx} />
           </div>
         )}
+
+        {/* Sliding edit panel — overlay spanning full height, behind top bar */}
+        <aside
+          aria-hidden={!editPanelOpen}
+          className={`absolute right-0 top-0 bottom-0 z-10 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+            editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
+          }`}
+        >
+          <div className="flex h-11 flex-none items-center gap-1 border-b border-hairline px-5">
+            {tabs.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
+                  tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 overflow-y-auto p-5">
+            {tab === "about" && (
+              <AboutPanel
+                items={items}
+                albums={albums}
+                attended={attended}
+                userName={userName}
+                itemAlbums={itemAlbums}
+                onSaved={onChanged}
+              />
+            )}
+            {tab === "access" && (
+              <AccessPanel items={items} onSaved={onChanged} isTeamMode={isTeamMode} />
+            )}
+            {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
+            {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
+          </div>
+        </aside>
       </div>
     </div>
   );
