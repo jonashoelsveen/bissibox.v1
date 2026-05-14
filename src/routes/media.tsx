@@ -1620,9 +1620,7 @@ function MediaPage({
                 const isRevealed = revealed.has(it.id);
                 const eventTitle = attended.find((e) => e.id === it.event_id)?.title;
                 const openItem = () => {
-                  if (onOpenMediaTab) {
-                    onOpenMediaTab(`media:${it.id}`, tabTitleFor([it]), [it.id]);
-                  } else if (onOpenMedia) onOpenMedia(it.id);
+                  if (onOpenMedia) onOpenMedia(it.id);
                   else setOpenItems([it]);
                 };
                 return (
