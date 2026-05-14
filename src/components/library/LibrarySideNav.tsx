@@ -694,13 +694,17 @@ export function LibrarySideNav({
                                 <button
                                   key={f.id}
                                   onClick={() => onChange({ category: "media", folder: f.id })}
-                                  className={`flex min-w-0 items-center rounded-md px-3 py-1 text-left text-xs transition ${
+                                  onDoubleClick={() =>
+                                    onOpenAsTab?.({ category: "media", folder: f.id }, f.name)
+                                  }
+                                  className={`flex min-w-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-left text-xs transition ${
                                     active
                                       ? "bg-secondary font-medium text-ink"
                                       : "text-muted-foreground hover:bg-secondary/60 hover:text-ink"
                                   }`}
                                 >
-                                  <span className="truncate">{f.name}</span>
+                                  <Library className="h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={2.25} />
+                                  <span className="min-w-0 flex-1 truncate">{f.name}</span>
                                 </button>
                               );
                             })
