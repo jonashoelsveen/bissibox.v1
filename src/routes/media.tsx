@@ -1798,6 +1798,9 @@ function GalleryBarBtn({
       {children}
     </button>
   );
+}
+
+function InfoLine({
   label,
   value,
   to,
