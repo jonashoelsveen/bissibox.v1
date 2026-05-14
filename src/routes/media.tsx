@@ -1322,7 +1322,7 @@ function MediaPage({
     </>
   );
 
-  const inAlbum = view.type === "album";
+  
   const clearSelectionOnBg = (e: React.MouseEvent<HTMLElement>) => {
     if (e.target === e.currentTarget) {
       setSelected(new Set());
