@@ -3936,11 +3936,11 @@ function UnsavedChangesDialog({
 function MediaTabView({
   mediaIds,
   onTitleChange,
-  onBack,
+  onBackToAlbum,
 }: {
   mediaIds: string[];
   onTitleChange: (title: string) => void;
-  onBack?: () => void;
+  onBackToAlbum: (albumId: string | null) => void;
 }) {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
