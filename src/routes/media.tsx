@@ -4226,32 +4226,6 @@ function MediaTabViewBody(props: {
           </button>
         </div>
         <div className="flex items-center gap-1">
-          <div className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
-            searchOpen ? "w-64 border-hairline bg-card pl-2 pr-1" : "w-9 hover:border-hairline hover:bg-card"
-          }`}>
-            {searchOpen && (
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Escape") closeSearch(); }}
-                placeholder="Subject, event, photographer…"
-                className="min-w-0 flex-1 border-b border-hairline bg-transparent py-1 pl-1 text-xs text-ink outline-none transition placeholder:text-muted-foreground/70 focus:border-ink/40"
-              />
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                if (!searchOpen) setSearchOpen(true);
-                else closeSearch();
-              }}
-              aria-label={searchOpen ? "Close search" : "Search in album"}
-              className="grid h-9 w-9 shrink-0 place-items-center text-foreground transition hover:text-ink"
-            >
-              {searchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
-            </button>
-          </div>
           <button
             type="button"
             onClick={() => setEditPanelOpen((v) => !v)}
