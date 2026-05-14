@@ -680,11 +680,11 @@ function LibraryPage() {
                             }}
                           >
                             <path
-                              d="M 0 35 L 0 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0 L 28 35 Z"
+                              d="M 0 35 L 0 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0 L 28 35 Z"
                               fill="#FFFFFF"
                             />
                             <path
-                              d="M 0 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0"
+                              d="M 0 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0"
                               fill="none"
                               stroke="var(--hairline)"
                               strokeWidth="1"
