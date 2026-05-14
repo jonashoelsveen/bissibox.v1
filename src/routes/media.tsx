@@ -3626,7 +3626,7 @@ function VideoPlayer({ src, drawing, theme = "dark" }: { src?: string; drawing?:
               return (
                 <span
                   key={i}
-                  className={`block w-px ${isMajor ? "h-7 bg-zinc-500/70" : "h-4 bg-zinc-600/50"}`}
+                  className={`block w-px ${isMajor ? tickMajorClass : tickMinorClass}`}
                 />
               );
             })}
