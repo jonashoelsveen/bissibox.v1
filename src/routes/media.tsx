@@ -911,6 +911,19 @@ function MediaPage({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Esc clears the current selection (iCloud-style)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selected.size > 0) {
+        setSelected(new Set());
+        setLastClickedId(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected.size]);
+
   const persistAlbumOrder = useCallback(async (next: Album[]) => {
     // Write sort_order based on current array index (pinned first already handled by sort)
     await Promise.all(
