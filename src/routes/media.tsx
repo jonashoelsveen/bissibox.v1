@@ -623,8 +623,8 @@ function LibraryPage() {
         {/* Per-page Search/Plus mount removed — global top tab bar provides them. */}
       </TopBarSlot>
 
-      <div className="grid h-full gap-6 overflow-hidden md:grid-cols-[220px_1fr]">
-        <aside className="md:h-full md:overflow-y-auto md:border-r md:border-border/60 md:pr-4 md:pt-4">
+      <div className="grid h-full gap-0 overflow-hidden md:grid-cols-[220px_1fr]">
+        <aside className="md:h-full md:overflow-y-auto md:border-r md:border-border/60 md:pl-6 md:pr-4 md:pt-4">
           <LibrarySideNav value={sideValue} onChange={onSideChange} />
         </aside>
 
