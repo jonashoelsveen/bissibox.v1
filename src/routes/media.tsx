@@ -1023,6 +1023,7 @@ function MediaPage({
   onCreateContainer,
   newAlbumSignal,
   showMeetingOption,
+  openAlbumFolders,
 }: {
   actionsMount?: HTMLDivElement | null;
   hideSideNav?: boolean;
@@ -1034,6 +1035,7 @@ function MediaPage({
   onCreateContainer?: (kind: PreviousNewKind) => void;
   newAlbumSignal?: number;
   showMeetingOption?: boolean;
+  openAlbumFolders?: Set<string>;
 } = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
