@@ -508,6 +508,8 @@ export function NotePanel({
   const effectiveBodyHeight = defaultBodyHeight ?? (inline ? 80 : 240);
   const [val, setVal] = useState(initialValue);
   const ref = useRef<HTMLDivElement | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const pendingCaretRef = useRef<number | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const [extra, setExtra] = useState(0);
   const [footerHidden, setFooterHidden] = useState(false);
@@ -522,10 +524,13 @@ export function NotePanel({
     const ta = taRef.current;
     if (!ta) return;
     const len = ta.value.length;
+    const pending = pendingCaretRef.current;
+    pendingCaretRef.current = null;
+    const pos = pending != null ? Math.max(0, Math.min(len, pending)) : len;
     requestAnimationFrame(() => {
       ta.focus();
       try {
-        ta.setSelectionRange(len, len);
+        ta.setSelectionRange(pos, pos);
       } catch {
         /* ignore */
       }
