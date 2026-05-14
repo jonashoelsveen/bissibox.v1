@@ -406,6 +406,18 @@ function LibraryPage() {
   const showingMeeting = !!activeTabEntry && activeTabEntry.type === "meeting";
   const showingMedia = !!activeTabEntry && activeTabEntry.type === "media";
 
+  // Folders that currently exist as album tabs in the strip — used by MediaPage
+  // to remember/restore the lightbox-open item per-album when switching tabs.
+  const openAlbumFolders = useMemo(
+    () =>
+      new Set(
+        openNoteTabs
+          .filter((t) => t.type === "album")
+          .map((t) => (t.albumFolder && t.albumFolder.length > 0 ? t.albumFolder : "__unsorted__")),
+      ),
+    [openNoteTabs],
+  );
+
   // Pointer-based, X-axis-locked tab drag (Chrome-style).
   const onTabPointerDown = (e: React.PointerEvent<HTMLButtonElement>, id: string) => {
     if (e.button !== 0) return;
