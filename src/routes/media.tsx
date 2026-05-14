@@ -2658,7 +2658,7 @@ function Lightbox({
             aria-label="Back"
             className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
         </div>
 
