@@ -2541,7 +2541,7 @@ function Lightbox({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Row 1 — frozen top bar */}
-        <div className="relative z-20 flex h-11 flex-none items-center justify-between gap-2 px-4 bg-white text-foreground">
+        <div className="relative flex h-11 flex-none items-center gap-2 px-4 bg-white text-foreground">
           <button
             type="button"
             onClick={onClose}
@@ -2550,17 +2550,18 @@ function Lightbox({
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <button
-            type="button"
-            onClick={() => setEditPanelOpen((v) => !v)}
-            aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-            className={`relative z-30 grid h-9 w-9 place-items-center rounded-full transition ${
-              editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
-            }`}
-          >
-            {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-          </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setEditPanelOpen((v) => !v)}
+          aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
+          className={`absolute top-1 right-4 z-30 grid h-9 w-9 place-items-center rounded-full transition ${
+            editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
+          }`}
+        >
+          {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+        </button>
 
         {/* Row 2 — media */}
         <div className="flex min-h-0 flex-1">
@@ -2586,7 +2587,7 @@ function Lightbox({
         {/* Sliding edit panel — overlay spanning full height, behind top bar */}
         <aside
           aria-hidden={!editPanelOpen}
-          className={`absolute right-0 top-0 bottom-0 z-10 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+          className={`absolute right-0 top-0 bottom-0 z-20 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
             editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
           }`}
         >
