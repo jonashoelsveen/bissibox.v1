@@ -3636,7 +3636,7 @@ function VideoPlayer({ src, drawing, theme = "dark" }: { src?: string; drawing?:
           {ready && (
             <div
               ref={needleRef}
-              className="pointer-events-none absolute top-0 bottom-0 w-px bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+              className={needleClass}
               style={{ left: `${progress * 100}%` }}
             />
           )}
