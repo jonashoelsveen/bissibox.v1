@@ -27,6 +27,7 @@ import {
   StickyNote,
   FolderClosed,
   Image as ImageIcon,
+  Library,
   Pin,
   PinOff,
   History,
@@ -80,9 +81,11 @@ function writeMapFolders(scope: string, next: MapFolderLite[]) {
 export function LibrarySideNav({
   value,
   onChange,
+  onOpenAsTab,
 }: {
   value: LibrarySideNavValue;
   onChange: (v: LibrarySideNavValue) => void;
+  onOpenAsTab?: (v: LibrarySideNavValue, label: string) => void;
 }) {
   const { user, mode, activeEntityId } = useAuth();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
@@ -394,6 +397,7 @@ export function LibrarySideNav({
     key: SectionKey;
     label: string;
     icon: React.ReactNode;
+    rowIcon: React.ReactNode;
     folders: FolderLite[];
     folderLabel: string;
     folderKey: (f: FolderLite) => string;
@@ -404,6 +408,7 @@ export function LibrarySideNav({
       key: "meetings",
       label: "Board Meetings",
       icon: <Briefcase className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      rowIcon: <FolderClosed className="h-3.5 w-3.5" strokeWidth={2.25} />,
       folders: meetingFolders,
       folderLabel: "Folders",
       folderKey: (f) => f.name,
@@ -413,6 +418,7 @@ export function LibrarySideNav({
       key: "notes",
       label: "Notes",
       icon: <StickyNote className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      rowIcon: <FolderClosed className="h-3.5 w-3.5" strokeWidth={2.25} />,
       folders: noteFolders,
       folderLabel: "Folders",
       folderKey: (f) => f.name,
@@ -421,6 +427,7 @@ export function LibrarySideNav({
       key: "files",
       label: "Files",
       icon: <FolderClosed className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      rowIcon: <FolderClosed className="h-3.5 w-3.5" strokeWidth={2.25} />,
       folders: fileFolders,
       folderLabel: "Folders",
       folderKey: (f) => f.id,
@@ -429,6 +436,7 @@ export function LibrarySideNav({
       key: "media",
       label: "Media",
       icon: <ImageIcon className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      rowIcon: <Library className="h-3.5 w-3.5" strokeWidth={2.25} />,
       folders: mediaAlbums,
       folderLabel: "Albums",
       folderKey: (f) => f.id,
@@ -437,6 +445,7 @@ export function LibrarySideNav({
       key: "map",
       label: "Map",
       icon: <MapIcon className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      rowIcon: <FolderClosed className="h-3.5 w-3.5" strokeWidth={2.25} />,
       folders: mapFolders,
       folderLabel: "Folders",
       folderKey: (f) => f.id,
@@ -552,11 +561,17 @@ export function LibrarySideNav({
                         <FolderRow
                           key={f.id}
                           folder={f}
+                          rowIcon={s.rowIcon}
                           active={active}
                           renaming={false}
                           renameValue=""
                           setRenameValue={() => {}}
                           onSelect={() => onChange({ category: s.key, folder: id })}
+                          onOpenAsTab={
+                            onOpenAsTab
+                              ? () => onOpenAsTab({ category: s.key, folder: id }, f.name)
+                              : undefined
+                          }
                           onCommitRename={() => {}}
                           onCancelRename={() => {}}
                           menuOpen={false}
@@ -589,11 +604,17 @@ export function LibrarySideNav({
                                 <SortableFolderRow
                                   key={f.id}
                                   folder={f}
+                                  rowIcon={s.rowIcon}
                                   active={active}
                                   renaming={renamingId === f.id}
                                   renameValue={renameValue}
                                   setRenameValue={setRenameValue}
                                   onSelect={() => onChange({ category: s.key, folder: id })}
+                                  onOpenAsTab={
+                                    onOpenAsTab
+                                      ? () => onOpenAsTab({ category: s.key, folder: id }, f.name)
+                                      : undefined
+                                  }
                                   onCommitRename={() => void commitRename(s.key, f)}
                                   onCancelRename={() => setRenamingId(null)}
                                   menuOpen={menuFor === f.id}
@@ -673,13 +694,17 @@ export function LibrarySideNav({
                                 <button
                                   key={f.id}
                                   onClick={() => onChange({ category: "media", folder: f.id })}
-                                  className={`flex min-w-0 items-center rounded-md px-3 py-1 text-left text-xs transition ${
+                                  onDoubleClick={() =>
+                                    onOpenAsTab?.({ category: "media", folder: f.id }, f.name)
+                                  }
+                                  className={`flex min-w-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-left text-xs transition ${
                                     active
                                       ? "bg-secondary font-medium text-ink"
                                       : "text-muted-foreground hover:bg-secondary/60 hover:text-ink"
                                   }`}
                                 >
-                                  <span className="truncate">{f.name}</span>
+                                  <Library className="h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={2.25} />
+                                  <span className="min-w-0 flex-1 truncate">{f.name}</span>
                                 </button>
                               );
                             })
@@ -735,11 +760,13 @@ export function LibrarySideNav({
 
 function SortableFolderRow(props: {
   folder: FolderLite;
+  rowIcon?: React.ReactNode;
   active: boolean;
   renaming: boolean;
   renameValue: string;
   setRenameValue: (v: string) => void;
   onSelect: () => void;
+  onOpenAsTab?: () => void;
   onCommitRename: () => void;
   onCancelRename: () => void;
   menuOpen: boolean;
@@ -773,11 +800,13 @@ function SortableFolderRow(props: {
 
 function FolderRow({
   folder,
+  rowIcon,
   active,
   renaming,
   renameValue,
   setRenameValue,
   onSelect,
+  onOpenAsTab,
   onCommitRename,
   onCancelRename,
   menuOpen,
@@ -790,11 +819,13 @@ function FolderRow({
   sortable = true,
 }: {
   folder: FolderLite;
+  rowIcon?: React.ReactNode;
   active: boolean;
   renaming: boolean;
   renameValue: string;
   setRenameValue: (v: string) => void;
   onSelect: () => void;
+  onOpenAsTab?: () => void;
   onCommitRename: () => void;
   onCancelRename: () => void;
   menuOpen: boolean;
@@ -850,14 +881,18 @@ function FolderRow({
       ) : (
         <button
           onClick={onSelect}
-          className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-3 py-1 text-left text-xs transition ${
+          onDoubleClick={onOpenAsTab}
+          className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-3 py-1.5 text-left text-xs transition ${
             active ? "font-medium text-ink" : "text-muted-foreground group-hover:text-ink"
           }`}
         >
           {folder.pinned && (
             <Pin className="h-2.5 w-2.5 shrink-0 fill-current text-ink/70" />
           )}
-          <span className="truncate">{folder.name}</span>
+          {rowIcon && (
+            <span className="shrink-0 text-muted-foreground">{rowIcon}</span>
+          )}
+          <span className="min-w-0 flex-1 truncate">{folder.name}</span>
         </button>
       )}
 
