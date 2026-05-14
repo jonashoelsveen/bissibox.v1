@@ -53,6 +53,7 @@
   --ink: oklch(0.14 0.012 260);
   --subtle: oklch(0.96 0.004 90);                /* card surface */
   --hairline: oklch(0.9 0.005 90);
+  --tab-bar-bg: oklch(0.955 0.003 90);            /* slightly grayer than background, for active tab contrast */
 
   --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
