@@ -99,7 +99,7 @@ export function GlobalTopTabBar() {
   };
 
   return (
-    <div className="fixed left-0 right-0 top-[11px] z-40 border-b border-hairline bg-background">
+    <div className="fixed left-0 right-0 top-[11px] z-40 h-[46px] bg-[hsl(var(--tab-bar-bg))]">
       <div className="flex items-end gap-1 px-4 md:px-6">
         <ProfileTab />
         <NavIconTabs activeKey={activeKey} />
