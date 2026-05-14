@@ -54,6 +54,8 @@ import {
   Pause,
   Download,
   Pencil,
+  Heart,
+  ArrowLeft,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 
