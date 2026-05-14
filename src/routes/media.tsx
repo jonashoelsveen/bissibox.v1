@@ -531,6 +531,20 @@ function LibraryPage() {
       replace: true,
     });
   };
+  const onSideOpenAsTab = (v: LibrarySideNavValue, label: string) => {
+    if (v.category !== "media") return;
+    const folder = v.folder || "";
+    const title =
+      folder === "" ? "All" : folder === "__unsorted__" ? "Unsorted" : label;
+    openAlbumTab(folder, title);
+    // Also navigate to album so single behaviour matches.
+    setActiveNoteId(null);
+    navigate({
+      to: "/media",
+      search: { tab: "media", folder: folder || undefined },
+      replace: true,
+    });
+  };
 
   const externalMeetingsView: { type: "all" } | { type: "folder"; name: string | null } | undefined =
     baseTab === "meetings" && search.folder !== undefined
