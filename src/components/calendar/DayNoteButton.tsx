@@ -720,6 +720,7 @@ export function NotePanel({
             />
           ) : (
             <div
+              ref={previewRef}
               className="block w-full whitespace-pre-wrap text-[12px] leading-snug text-ink"
               style={{
                 minHeight: inline ? undefined : effectiveBodyHeight,
