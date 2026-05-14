@@ -15,7 +15,7 @@ import { CreateContainerDialog } from "@/components/library/CreateContainerDialo
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { TopBarSlot } from "@/components/TopBarSlot";
 import { MeetingsListPage } from "@/components/library/MeetingsListPage";
-import { getUnsaved, useLibrarySetting } from "@/lib/library-settings";
+import { getUnsaved } from "@/lib/library-settings";
 import { TeamBoardPage } from "@/routes/team.board";
 import { MapPage } from "@/components/map/MapPage";
 import { toast } from "sonner";
@@ -520,7 +520,7 @@ function LibraryPage() {
       : undefined;
 
   return (
-    <div className="h-full overflow-hidden px-4 md:px-6">
+    <div className="h-full overflow-hidden">
       <TopBarSlot>
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
           {openNoteTabs.length > 0 && (
@@ -623,8 +623,8 @@ function LibraryPage() {
         {/* Per-page Search/Plus mount removed — global top tab bar provides them. */}
       </TopBarSlot>
 
-      <div className="grid h-full gap-6 overflow-hidden md:grid-cols-[220px_1fr]">
-        <aside className="md:h-full md:overflow-y-auto md:border-r md:border-border/60 md:pr-4 md:pt-4">
+      <div className="grid h-full gap-0 overflow-hidden md:grid-cols-[220px_1fr]">
+        <aside className="md:h-full md:overflow-y-auto md:border-r md:border-border/60 md:pl-6 md:pr-4 md:pt-4">
           <LibrarySideNav value={sideValue} onChange={onSideChange} />
         </aside>
 
@@ -646,6 +646,7 @@ function LibraryPage() {
               key={activeNoteId}
               mediaIds={activeTabEntry.mediaIds ?? []}
               onTitleChange={(title) => updateNoteTab({ id: activeNoteId, title })}
+              onBack={() => finalizeClose(activeNoteId)}
             />
           ) : showingNote && activeNoteId ? (
             <NoteEditor
@@ -896,9 +897,6 @@ function MediaPage({
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
-  const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
-  const isDarkAlbum = albumBg === "dark";
-  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-white text-foreground";
   const [openItems, setOpenItems] = useState<MediaItem[] | null>(null);
   const [attended, setAttended] = useState<AttendedEvent[]>([]);
   const [userName, setUserName] = useState<string>("");
@@ -913,6 +911,19 @@ function MediaPage({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Esc clears the current selection (iCloud-style)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selected.size > 0) {
+        setSelected(new Set());
+        setLastClickedId(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected.size]);
+
   const persistAlbumOrder = useCallback(async (next: Album[]) => {
     // Write sort_order based on current array index (pinned first already handled by sort)
     await Promise.all(
@@ -1312,39 +1323,58 @@ function MediaPage({
   );
 
   const inAlbum = view.type === "album";
-  const pageBgClass = inAlbum ? albumBgClass : "bg-white text-foreground";
-  const barTranslucent = (inAlbum ? isDarkAlbum : false)
-    ? "bg-zinc-950/80 text-zinc-100"
-    : "bg-white/80 text-foreground";
+  const clearSelectionOnBg = (e: React.MouseEvent<HTMLElement>) => {
+    if (e.target === e.currentTarget) {
+      setSelected(new Set());
+      setLastClickedId(null);
+    }
+  };
 
   return (
-    <div className={`flex min-h-full flex-col ${pageBgClass}`}>
+    <div className="flex min-h-full flex-col bg-white text-foreground">
       {/* Per-page Search/Plus removed — using the global top tab bar's actions instead. */}
       {void actions}
 
       {/* Always-on frozen top bar — translucent + blurred so it matches the canvas at rest, frosts content on scroll. */}
-      <div className={`sticky top-0 z-20 flex h-11 shrink-0 items-center justify-end gap-1 px-4 backdrop-blur-xl ${barTranslucent}`}>
-        <GalleryBarBtn
-          disabled={selected.size === 0}
-          ariaLabel="Favorite"
-          onClick={() => toast.success("Favorited")}
-        >
-          <Heart className="h-4 w-4" />
-        </GalleryBarBtn>
-        <GalleryBarBtn
-          disabled={selected.size === 0}
-          ariaLabel="Delete"
-          onClick={() => void handleDelete()}
-        >
-          <Trash2 className="h-4 w-4" />
-        </GalleryBarBtn>
-        <GalleryBarBtn
-          disabled={selected.size === 0}
-          ariaLabel="More"
-          onClick={() => toast("More actions coming soon")}
-        >
-          <MoreVertical className="h-4 w-4" />
-        </GalleryBarBtn>
+      <div
+        className="sticky top-0 z-20 flex h-11 shrink-0 items-center justify-between gap-1 px-4 backdrop-blur-xl bg-white/80 text-foreground"
+        onClick={clearSelectionOnBg}
+      >
+        <div className="flex items-center" onClick={clearSelectionOnBg}>
+          {inAlbum && (
+            <button
+              type="button"
+              onClick={() => setView({ type: "all" })}
+              aria-label="Back to all media"
+              className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <GalleryBarBtn
+            disabled={selected.size === 0}
+            ariaLabel="Favorite"
+            onClick={() => toast.success("Favorited")}
+          >
+            <Heart className="h-4 w-4" />
+          </GalleryBarBtn>
+          <GalleryBarBtn
+            disabled={selected.size === 0}
+            ariaLabel="Delete"
+            onClick={() => void handleDelete()}
+          >
+            <Trash2 className="h-4 w-4" />
+          </GalleryBarBtn>
+          <GalleryBarBtn
+            disabled={selected.size === 0}
+            ariaLabel="More"
+            onClick={() => toast("More actions coming soon")}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </GalleryBarBtn>
+        </div>
       </div>
 
       <div className={`grid flex-1 gap-8 overflow-y-auto ${hideSideNav ? "md:grid-cols-1" : "md:grid-cols-[200px_1fr]"}`}>
@@ -1504,14 +1534,14 @@ function MediaPage({
         </nav>
         )}
 
-        <section className="px-4 pb-8 pt-4">
+        <section className="px-4 pb-8 pt-4" onClick={clearSelectionOnBg}>
 
           {filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-20 text-center text-sm text-muted-foreground">
               No content yet. Upload your first photo or video.
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" onClick={clearSelectionOnBg}>
               {filtered.map((it) => {
                 const isSel = selected.has(it.id);
                 const isRevealed = revealed.has(it.id);
@@ -1794,7 +1824,7 @@ function GalleryBarBtn({
       className={`grid h-9 w-9 place-items-center rounded-full transition ${
         disabled
           ? "pointer-events-none text-muted-foreground/40"
-          : "text-current hover:bg-foreground/10"
+          : "text-foreground hover:bg-foreground/10"
       }`}
     >
       {children}
@@ -2358,22 +2388,16 @@ function Lightbox({
   useEffect(() => { if (!isVideo && tab === "draw") setTab("about"); }, [isVideo, tab]);
 
   const [editPanelOpen, setEditPanelOpen] = useState(false);
-  const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
-  const isDarkAlbum = albumBg === "dark";
-  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-white text-foreground";
-  const albumBarClass = isDarkAlbum
-    ? "bg-zinc-950 text-zinc-100"
-    : "bg-white text-foreground";
 
   return (
     <div className="fixed inset-0 z-50 flex animate-in fade-in" onClick={onClose}>
-      <div className={`absolute inset-0 ${isDarkAlbum ? "bg-black/95" : "bg-black/85"}`} />
+      <div className="absolute inset-0 bg-white" />
       <div
-        className={`relative z-10 flex h-full w-full flex-col ${albumBgClass}`}
+        className="relative z-10 flex h-full w-full flex-col bg-white text-foreground"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Row 1 — frozen top bar */}
-        <div className={`flex h-11 flex-none items-center justify-between gap-2 px-4 ${albumBarClass}`}>
+        <div className="flex h-11 flex-none items-center justify-between gap-2 px-4 bg-white text-foreground">
           <button
             type="button"
             onClick={onClose}
@@ -2403,7 +2427,7 @@ function Lightbox({
                 fullSrc={url}
               />
             ) : (
-              <VideoPlayer src={url} drawing={drawing} theme={albumBg} />
+              <VideoPlayer src={url} drawing={drawing} theme="light" />
             )}
           </div>
           <aside
@@ -3615,7 +3639,7 @@ function VideoPlayer({ src, drawing, theme = "dark" }: { src?: string; drawing?:
   return (
     <div className="flex h-full w-full flex-col gap-3">
       <div
-        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-black"
+        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-white"
         onClick={drawing?.enabled ? undefined : togglePlay}
       >
         <video
@@ -3914,9 +3938,11 @@ function UnsavedChangesDialog({
 function MediaTabView({
   mediaIds,
   onTitleChange,
+  onBack,
 }: {
   mediaIds: string[];
   onTitleChange: (title: string) => void;
+  onBack?: () => void;
 }) {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
@@ -4089,6 +4115,7 @@ function MediaTabView({
     current={current}
     url={url}
     onSaved={() => setReloadKey((k) => k + 1)}
+    onBack={onBack}
   />;
 }
 
@@ -4112,17 +4139,22 @@ function MediaTabViewBody(props: {
   current: MediaItem;
   url: string | undefined;
   onSaved: () => void;
+  onBack?: () => void;
 }) {
-  const { items, albums, attended, userName, itemAlbums, urls, thumbUrls, idx, setIdx, drawing, tab, setTab, tabs, isVideo, isMulti, isTeamMode, current, url, onSaved } = props;
+  const { items, albums, attended, userName, itemAlbums, urls, thumbUrls, idx, setIdx, drawing, tab, setTab, tabs, isVideo, isMulti, isTeamMode, current, url, onSaved, onBack } = props;
   const [editPanelOpen, setEditPanelOpen] = useState(false);
-  const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
-  const isDarkAlbum = albumBg === "dark";
-  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-white text-foreground";
-  const barTranslucent = isDarkAlbum ? "bg-zinc-950/80 text-zinc-100" : "bg-white/80 text-foreground";
 
   return (
-    <div className={`flex h-[calc(100vh-12rem)] min-h-[480px] flex-col overflow-hidden ${albumBgClass}`}>
-      <div className={`sticky top-0 z-20 flex h-11 flex-none items-center justify-end gap-2 px-4 backdrop-blur-xl ${barTranslucent}`}>
+    <div className="flex h-[calc(100vh-12rem)] min-h-[480px] flex-col overflow-hidden bg-white text-foreground">
+      <div className="sticky top-0 z-20 flex h-11 flex-none items-center justify-between gap-2 px-4 backdrop-blur-xl bg-white/80 text-foreground">
+        <button
+          type="button"
+          onClick={() => onBack?.()}
+          aria-label="Back"
+          className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
         <button
           type="button"
           onClick={() => setEditPanelOpen((v) => !v)}
@@ -4142,61 +4174,63 @@ function MediaTabViewBody(props: {
               fullSrc={url}
             />
           ) : (
-            <VideoPlayer src={url} drawing={drawing} theme={albumBg} />
+            <VideoPlayer src={url} drawing={drawing} theme="light" />
           )}
         </div>
+        {/* Edit panel — flex sibling that pushes the media area when open. */}
+        <aside
+          aria-hidden={!editPanelOpen}
+          className={`flex min-h-0 flex-none flex-col overflow-hidden border-l border-hairline bg-background transition-[width] duration-300 ease-out ${
+            editPanelOpen ? "w-96" : "w-0"
+          }`}
+        >
+          <div className="flex w-96 flex-1 flex-col">
+            <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
+              <div className="flex gap-1">
+                {tabs.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
+                      tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setEditPanelOpen(false)}
+                className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              {tab === "about" && (
+                <AboutPanel
+                  items={items}
+                  albums={albums}
+                  attended={attended}
+                  userName={userName}
+                  itemAlbums={itemAlbums}
+                  onSaved={onSaved}
+                />
+              )}
+              {tab === "access" && (
+                <AccessPanel items={items} onSaved={onSaved} isTeamMode={isTeamMode} />
+              )}
+              {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
+              {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
+            </div>
+          </div>
+        </aside>
       </div>
       {isMulti && (
         <div className="flex-none">
           <DockStrip items={items} urls={urls} activeIdx={idx} onSelect={setIdx} />
         </div>
       )}
-      {/* Edit panel — viewport-anchored overlay dropping from under the global top tab bar. */}
-      <aside
-        aria-hidden={!editPanelOpen}
-        className={`fixed right-0 top-[57px] bottom-0 z-30 flex w-96 flex-col overflow-hidden border-l border-border/40 bg-background shadow-2xl transition-transform duration-300 ease-out ${
-          editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
-          <div className="flex gap-1">
-            {tabs.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
-                  tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setEditPanelOpen(false)}
-            className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-5">
-          {tab === "about" && (
-            <AboutPanel
-              items={items}
-              albums={albums}
-              attended={attended}
-              userName={userName}
-              itemAlbums={itemAlbums}
-              onSaved={onSaved}
-            />
-          )}
-          {tab === "access" && (
-            <AccessPanel items={items} onSaved={onSaved} isTeamMode={isTeamMode} />
-          )}
-          {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
-          {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
-        </div>
-      </aside>
     </div>
   );
 }
