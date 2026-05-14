@@ -338,6 +338,26 @@ function LibraryPage() {
     [],
   );
 
+  const openAlbumTab = useCallback(
+    (albumFolder: string, title: string) => {
+      const tabId = `album:${albumFolder || "__all__"}`;
+      setOpenNoteTabs((prev) => {
+        if (prev.some((t) => t.id === tabId)) return prev;
+        if (prev.length >= MAX_NOTE_TABS) {
+          toast.error(`You can have at most ${MAX_NOTE_TABS} tabs open at once.`);
+          return prev;
+        }
+        return [
+          ...prev,
+          { id: tabId, title, folder: null, kind: "earlier", type: "album", albumFolder },
+        ];
+      });
+      // Album tabs don't take over the content view — they're shortcuts.
+      // Don't set activeNoteId.
+    },
+    [],
+  );
+
   const updateNoteTab = (patch: { id: string; title?: string; folder?: string | null }) => {
     setOpenNoteTabs((prev) =>
       prev.map((t) =>
