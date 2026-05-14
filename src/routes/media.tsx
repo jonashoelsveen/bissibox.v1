@@ -3938,9 +3938,11 @@ function UnsavedChangesDialog({
 function MediaTabView({
   mediaIds,
   onTitleChange,
+  onBack,
 }: {
   mediaIds: string[];
   onTitleChange: (title: string) => void;
+  onBack?: () => void;
 }) {
   const { user, mode, activeEntityId, loading: authLoading } = useAuth();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
