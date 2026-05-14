@@ -173,7 +173,8 @@ export function SessionHoverMenu({
   const PADDING_X = 6 * 2;
   const GAP = 2 * 2;
   const iconCount = isOwner ? 3 : 2;
-  const compactW = ICON_W * iconCount + GAP + PADDING_X;
+  const compactW = NOTE_PANEL_W;
+  void (ICON_W * iconCount + GAP + PADDING_X);
   // Member-side preview panel: shown when member has a note and menu is visible,
   // OR when the owner is editing their note.
   const showMemberPanel = (hasNote && menuVisible) || (isOwner && noteEdit);
@@ -297,6 +298,18 @@ export function SessionHoverMenu({
                 style={{ background: "#9CA3AF" }}
               />
             )}
+            <span
+              className="min-w-0 flex-1 self-center overflow-hidden whitespace-nowrap pl-1.5 pr-2 text-[12px] text-ink"
+              style={{
+                WebkitMaskImage:
+                  "linear-gradient(to right, #000 0, #000 calc(100% - 16px), transparent 100%)",
+                maskImage:
+                  "linear-gradient(to right, #000 0, #000 calc(100% - 16px), transparent 100%)",
+              }}
+              title={ev.title}
+            >
+              {ev.title}
+            </span>
             <MenuBtn
               label={
                 isOwner
