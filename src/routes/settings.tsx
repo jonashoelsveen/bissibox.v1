@@ -95,6 +95,7 @@ type Tab =
   | "calendar"
   | "diary"
   | "library"
+  | "media"
   | "connectors"
   | "system"
   | "appearance"
