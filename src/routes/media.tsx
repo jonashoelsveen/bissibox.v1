@@ -625,11 +625,11 @@ function LibraryPage() {
                         minWidth: 140,
                         maxWidth: 220,
                         height: 34,
-                        marginRight: 8,
+                        marginRight: 4,
                         background: curveBg,
                         borderTopLeftRadius: 10,
                         borderTopRightRadius: 10,
-                        padding: "0 26px 0 12px",
+                        padding: "0 28px 0 12px",
                         touchAction: "pan-y",
                         ...dragStyle,
                         transition: isDragging
