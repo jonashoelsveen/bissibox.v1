@@ -1570,7 +1570,7 @@ function MediaPage({
                     }}
                     onDoubleClick={(e) => { e.preventDefault(); openItem(); }}
                     className={`group relative aspect-square cursor-default overflow-hidden rounded-sm bg-secondary ${
-                      isSel ? "ring-[1.5px] ring-inset ring-foreground" : ""
+                      isSel ? "ring-[3px] ring-inset ring-black/90" : ""
                     }`}
                   >
                     {it.media_type === "photo" ? (
