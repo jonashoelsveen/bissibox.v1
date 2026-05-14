@@ -3642,7 +3642,7 @@ function VideoPlayer({ src, drawing, theme = "dark" }: { src?: string; drawing?:
           )}
         </div>
 
-        <div className="mt-2 flex justify-center font-mono text-[11px] tabular-nums text-zinc-400">
+        <div className={`mt-2 flex justify-center font-mono text-[11px] tabular-nums ${timeClass}`}>
           {formatVideoTime(current)} / {formatVideoTime(ready ? duration : 0)}
         </div>
       </div>
