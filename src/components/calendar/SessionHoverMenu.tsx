@@ -173,7 +173,8 @@ export function SessionHoverMenu({
   const PADDING_X = 6 * 2;
   const GAP = 2 * 2;
   const iconCount = isOwner ? 3 : 2;
-  const compactW = ICON_W * iconCount + GAP + PADDING_X;
+  const compactW = NOTE_PANEL_W;
+  void (ICON_W * iconCount + GAP + PADDING_X);
   // Member-side preview panel: shown when member has a note and menu is visible,
   // OR when the owner is editing their note.
   const showMemberPanel = (hasNote && menuVisible) || (isOwner && noteEdit);
