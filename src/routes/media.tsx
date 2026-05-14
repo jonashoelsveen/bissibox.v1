@@ -1541,7 +1541,7 @@ function MediaPage({
               No content yet. Upload your first photo or video.
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" onClick={clearSelectionOnBg}>
               {filtered.map((it) => {
                 const isSel = selected.has(it.id);
                 const isRevealed = revealed.has(it.id);
