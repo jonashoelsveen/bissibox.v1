@@ -342,7 +342,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
         "calendar",
         "diary",
         "library",
-        "media",
         "divider-2",
         "connectors",
         "system",
