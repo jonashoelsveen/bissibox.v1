@@ -561,11 +561,17 @@ export function LibrarySideNav({
                         <FolderRow
                           key={f.id}
                           folder={f}
+                          rowIcon={s.rowIcon}
                           active={active}
                           renaming={false}
                           renameValue=""
                           setRenameValue={() => {}}
                           onSelect={() => onChange({ category: s.key, folder: id })}
+                          onOpenAsTab={
+                            onOpenAsTab
+                              ? () => onOpenAsTab({ category: s.key, folder: id }, f.name)
+                              : undefined
+                          }
                           onCommitRename={() => {}}
                           onCancelRename={() => {}}
                           menuOpen={false}
@@ -598,11 +604,17 @@ export function LibrarySideNav({
                                 <SortableFolderRow
                                   key={f.id}
                                   folder={f}
+                                  rowIcon={s.rowIcon}
                                   active={active}
                                   renaming={renamingId === f.id}
                                   renameValue={renameValue}
                                   setRenameValue={setRenameValue}
                                   onSelect={() => onChange({ category: s.key, folder: id })}
+                                  onOpenAsTab={
+                                    onOpenAsTab
+                                      ? () => onOpenAsTab({ category: s.key, folder: id }, f.name)
+                                      : undefined
+                                  }
                                   onCommitRename={() => void commitRename(s.key, f)}
                                   onCancelRename={() => setRenamingId(null)}
                                   menuOpen={menuFor === f.id}
