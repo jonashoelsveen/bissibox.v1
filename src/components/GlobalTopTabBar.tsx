@@ -99,8 +99,12 @@ export function GlobalTopTabBar() {
   };
 
   return (
-    <div className="fixed left-0 right-0 top-[11px] z-40 border-b border-hairline bg-background">
-      <div className="flex items-end gap-1 px-4 md:px-6">
+    <div className="fixed left-0 right-0 top-[11px] z-40 bg-background">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px bg-hairline"
+      />
+      <div className="relative z-10 flex items-end gap-1 px-4 md:px-6">
         <ProfileTab />
         <NavIconTabs activeKey={activeKey} />
         {/* Page-provided slot — open notes/event tabs etc. */}
