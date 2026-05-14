@@ -899,9 +899,6 @@ function MediaPage({
   const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
   const isDarkAlbum = albumBg === "dark";
   const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-white text-foreground";
-  const albumBarClass = isDarkAlbum
-    ? "bg-zinc-950 text-zinc-100"
-    : "bg-white text-foreground";
   const [openItems, setOpenItems] = useState<MediaItem[] | null>(null);
   const [attended, setAttended] = useState<AttendedEvent[]>([]);
   const [userName, setUserName] = useState<string>("");
