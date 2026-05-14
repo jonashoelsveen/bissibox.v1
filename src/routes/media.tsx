@@ -4214,13 +4214,13 @@ function PhotoLqip({ thumbSrc, fullSrc }: { thumbSrc?: string; fullSrc?: string 
   if (!thumbSrc && !fullSrc) return null;
 
   return (
-    <div className="relative flex max-h-[88%] max-w-[88%] items-center justify-center">
+    <div className="relative flex h-full w-full items-center justify-center">
       {thumbSrc && (
         <img
           src={thumbSrc}
           alt=""
           aria-hidden
-          className={`max-h-[88vh] max-w-[88vw] object-contain transition-opacity duration-300 ${
+          className={`max-h-full max-w-full object-contain transition-opacity duration-300 ${
             fullLoaded ? "opacity-0" : "opacity-100"
           }`}
           style={{ filter: "blur(20px)", transform: "scale(1.04)" }}
@@ -4232,7 +4232,7 @@ function PhotoLqip({ thumbSrc, fullSrc }: { thumbSrc?: string; fullSrc?: string 
           alt=""
           onLoad={() => setFullLoaded(true)}
           decoding="async"
-          className={`absolute inset-0 m-auto max-h-[88vh] max-w-[88vw] object-contain transition-opacity duration-300 ${
+          className={`absolute inset-0 m-auto max-h-full max-w-full object-contain transition-opacity duration-300 ${
             fullLoaded ? "opacity-100" : "opacity-0"
           }`}
         />
