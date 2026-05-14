@@ -1348,7 +1348,7 @@ function MediaPage({
 
       {/* Always-on frozen top bar — pure white, indistinguishable from canvas at rest. */}
       <div
-        className="sticky top-0 z-20 flex h-11 shrink-0 items-center justify-between gap-1 px-4 bg-white text-foreground"
+        className="sticky top-0 z-20 flex shrink-0 items-center justify-between gap-1 px-4 pt-4 bg-white text-foreground"
         onClick={clearSelectionOnBg}
       >
         <div className="flex min-w-0 items-center" onClick={clearSelectionOnBg}>
