@@ -355,7 +355,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       case "calendar": return "Calendar";
       case "diary": return "Diary";
       case "library": return "Library";
-      case "media": return "Media";
       case "connectors": return "Connectors";
       case "system": return "System";
       case "appearance": return "Appearance";
