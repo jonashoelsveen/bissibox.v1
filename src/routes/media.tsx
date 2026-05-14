@@ -647,12 +647,14 @@ function LibraryPage() {
               mediaIds={activeTabEntry.mediaIds ?? []}
               onTitleChange={(title) => updateNoteTab({ id: activeNoteId, title })}
               onBackToAlbum={(albumId) => {
-                finalizeClose(activeNoteId);
                 navigate({
                   to: "/media",
                   search: { tab: "media", folder: albumId ?? "__unsorted__" },
                   replace: true,
                 });
+                const closingId = activeNoteId;
+                if (closingId) finalizeClose(closingId);
+                setActiveNoteId(null);
               }}
             />
           ) : showingNote && activeNoteId ? (
