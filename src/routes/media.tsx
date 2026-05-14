@@ -4067,29 +4067,96 @@ function MediaTabView({
     ? ["about", "access", "draw", "export"]
     : ["about", "access", "export"];
 
+  return <MediaTabViewBody
+    items={items}
+    albums={albums}
+    attended={attended}
+    userName={userName}
+    itemAlbums={itemAlbums}
+    urls={urls}
+    thumbUrls={thumbUrls}
+    idx={idx}
+    setIdx={setIdx}
+    drawing={drawing}
+    tab={tab}
+    setTab={setTab}
+    tabs={tabs}
+    isVideo={isVideo}
+    isMulti={isMulti}
+    isTeamMode={isTeamMode}
+    current={current}
+    url={url}
+    onSaved={() => setReloadKey((k) => k + 1)}
+  />;
+}
+
+function MediaTabViewBody(props: {
+  items: MediaItem[];
+  albums: Album[];
+  attended: AttendedEvent[];
+  userName: string;
+  itemAlbums: Record<string, string[]>;
+  urls: Record<string, string>;
+  thumbUrls: Record<string, string>;
+  idx: number;
+  setIdx: (i: number) => void;
+  drawing: DrawingState;
+  tab: "about" | "access" | "draw" | "export";
+  setTab: (t: "about" | "access" | "draw" | "export") => void;
+  tabs: ReadonlyArray<"about" | "access" | "draw" | "export">;
+  isVideo: boolean;
+  isMulti: boolean;
+  isTeamMode: boolean;
+  current: MediaItem;
+  url: string | undefined;
+  onSaved: () => void;
+}) {
+  const { items, albums, attended, userName, itemAlbums, urls, thumbUrls, idx, setIdx, drawing, tab, setTab, tabs, isVideo, isMulti, isTeamMode, current, url, onSaved } = props;
+  const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
+  const isDarkAlbum = albumBg === "dark";
+  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-background text-foreground";
+  const albumBarClass = isDarkAlbum
+    ? "bg-zinc-950 text-zinc-100 border-b border-zinc-800"
+    : "bg-background text-foreground border-b border-hairline";
+
   return (
-    <div className="flex h-[calc(100vh-12rem)] min-h-[480px] gap-4 rounded-2xl border border-hairline bg-card overflow-hidden">
-      <div className="flex flex-1 flex-col items-center justify-center p-6 min-w-0 bg-black/90">
-        <div className="flex w-full flex-1 items-center justify-center min-h-0">
-          {current?.media_type === "photo" ? (
-            <PhotoLqip
-              thumbSrc={current ? thumbUrls[current.id] : undefined}
-              fullSrc={url}
-            />
-          ) : (
-            <VideoPlayer src={url} drawing={drawing} />
+    <div className="relative flex h-[calc(100vh-12rem)] min-h-[480px] overflow-hidden rounded-2xl border border-hairline">
+      <div className={`relative flex flex-1 flex-col min-w-0 ${albumBgClass}`}>
+        <div className={`sticky top-0 z-30 flex items-center justify-end gap-2 px-4 py-3 ${albumBarClass}`}>
+          <button
+            type="button"
+            onClick={() => setEditPanelOpen((v) => !v)}
+            aria-label="Edit"
+            className={`grid h-9 w-9 place-items-center rounded-full transition ${
+              editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
+            }`}
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center p-6 min-w-0">
+          <div className="flex w-full flex-1 items-center justify-center min-h-0">
+            {current?.media_type === "photo" ? (
+              <PhotoLqip
+                thumbSrc={current ? thumbUrls[current.id] : undefined}
+                fullSrc={url}
+              />
+            ) : (
+              <VideoPlayer src={url} drawing={drawing} theme={albumBg} />
+            )}
+          </div>
+          {isMulti && (
+            <DockStrip items={items} urls={urls} activeIdx={idx} onSelect={setIdx} />
           )}
         </div>
-        {isMulti && (
-          <DockStrip
-            items={items}
-            urls={urls}
-            activeIdx={idx}
-            onSelect={setIdx}
-          />
-        )}
       </div>
-      <aside className="flex w-96 flex-col border-l border-hairline bg-background">
+      <aside
+        className={`absolute right-0 bottom-0 flex w-96 flex-col border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+          editPanelOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        style={{ top: 60 }}
+      >
         <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
           <div className="flex gap-1">
             {tabs.map((t) => (
@@ -4104,6 +4171,12 @@ function MediaTabView({
               </button>
             ))}
           </div>
+          <button
+            onClick={() => setEditPanelOpen(false)}
+            className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
@@ -4114,11 +4187,11 @@ function MediaTabView({
               attended={attended}
               userName={userName}
               itemAlbums={itemAlbums}
-              onSaved={() => setReloadKey((k) => k + 1)}
+              onSaved={onSaved}
             />
           )}
           {tab === "access" && (
-            <AccessPanel items={items} onSaved={() => setReloadKey((k) => k + 1)} isTeamMode={isTeamMode} />
+            <AccessPanel items={items} onSaved={onSaved} isTeamMode={isTeamMode} />
           )}
           {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
           {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
