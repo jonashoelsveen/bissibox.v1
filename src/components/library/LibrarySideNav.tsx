@@ -397,6 +397,7 @@ export function LibrarySideNav({
     key: SectionKey;
     label: string;
     icon: React.ReactNode;
+    rowIcon: React.ReactNode;
     folders: FolderLite[];
     folderLabel: string;
     folderKey: (f: FolderLite) => string;
@@ -407,6 +408,7 @@ export function LibrarySideNav({
       key: "meetings",
       label: "Board Meetings",
       icon: <Briefcase className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      rowIcon: <FolderClosed className="h-3.5 w-3.5" strokeWidth={2.25} />,
       folders: meetingFolders,
       folderLabel: "Folders",
       folderKey: (f) => f.name,
@@ -416,6 +418,7 @@ export function LibrarySideNav({
       key: "notes",
       label: "Notes",
       icon: <StickyNote className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      rowIcon: <FolderClosed className="h-3.5 w-3.5" strokeWidth={2.25} />,
       folders: noteFolders,
       folderLabel: "Folders",
       folderKey: (f) => f.name,
@@ -424,6 +427,7 @@ export function LibrarySideNav({
       key: "files",
       label: "Files",
       icon: <FolderClosed className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      rowIcon: <FolderClosed className="h-3.5 w-3.5" strokeWidth={2.25} />,
       folders: fileFolders,
       folderLabel: "Folders",
       folderKey: (f) => f.id,
@@ -432,6 +436,7 @@ export function LibrarySideNav({
       key: "media",
       label: "Media",
       icon: <ImageIcon className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      rowIcon: <Library className="h-3.5 w-3.5" strokeWidth={2.25} />,
       folders: mediaAlbums,
       folderLabel: "Albums",
       folderKey: (f) => f.id,
@@ -440,6 +445,7 @@ export function LibrarySideNav({
       key: "map",
       label: "Map",
       icon: <MapIcon className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      rowIcon: <FolderClosed className="h-3.5 w-3.5" strokeWidth={2.25} />,
       folders: mapFolders,
       folderLabel: "Folders",
       folderKey: (f) => f.id,
