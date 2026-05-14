@@ -877,14 +877,18 @@ function FolderRow({
       ) : (
         <button
           onClick={onSelect}
-          className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-3 py-1 text-left text-xs transition ${
+          onDoubleClick={onOpenAsTab}
+          className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-3 py-1.5 text-left text-xs transition ${
             active ? "font-medium text-ink" : "text-muted-foreground group-hover:text-ink"
           }`}
         >
           {folder.pinned && (
             <Pin className="h-2.5 w-2.5 shrink-0 fill-current text-ink/70" />
           )}
-          <span className="truncate">{folder.name}</span>
+          {rowIcon && (
+            <span className="shrink-0 text-muted-foreground">{rowIcon}</span>
+          )}
+          <span className="min-w-0 flex-1 truncate">{folder.name}</span>
         </button>
       )}
 
