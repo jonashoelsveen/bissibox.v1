@@ -625,11 +625,11 @@ function LibraryPage() {
                         minWidth: 140,
                         maxWidth: 220,
                         height: 34,
-                        marginRight: 8,
+                        marginRight: 4,
                         background: curveBg,
                         borderTopLeftRadius: 10,
                         borderTopRightRadius: 10,
-                        padding: "0 26px 0 12px",
+                        padding: "0 28px 0 12px",
                         touchAction: "pan-y",
                         ...dragStyle,
                         transition: isDragging
@@ -687,9 +687,9 @@ function LibraryPage() {
                         className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left"
                         style={{
                           WebkitMaskImage:
-                            "linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%)",
+                            "linear-gradient(to right, #000 0, #000 calc(100% - 20px), transparent 100%)",
                           maskImage:
-                            "linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%)",
+                            "linear-gradient(to right, #000 0, #000 calc(100% - 20px), transparent 100%)",
                         }}
                       >
                         {t.folder ? `${t.folder} · ${t.title}` : t.title}
