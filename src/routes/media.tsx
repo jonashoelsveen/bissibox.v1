@@ -632,6 +632,9 @@ function LibraryPage() {
                         padding: "0 28px 0 12px",
                         marginBottom: (isActive || isDragging) ? -1 : 0,
                         paddingBottom: (isActive || isDragging) ? 1 : 0,
+                        boxShadow: (isActive || isDragging)
+                          ? "inset 1px 0 0 var(--hairline), inset -1px 0 0 var(--hairline), inset 0 1px 0 var(--hairline)"
+                          : undefined,
                         touchAction: "pan-y",
                         ...dragStyle,
                         transition: isDragging
