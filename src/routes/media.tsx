@@ -3349,7 +3349,15 @@ function formatVideoTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(cs).padStart(2, "0")}`;
 }
 
-function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState }) {
+function VideoPlayer({ src, drawing, theme = "dark" }: { src?: string; drawing?: DrawingState; theme?: "light" | "dark" }) {
+  const isLight = theme === "light";
+  const playBtnClass = isLight ? "text-zinc-800 hover:text-black" : "text-zinc-100 hover:text-white";
+  const tickMajorClass = isLight ? "h-7 bg-zinc-400" : "h-7 bg-zinc-500/70";
+  const tickMinorClass = isLight ? "h-4 bg-zinc-300" : "h-4 bg-zinc-600/50";
+  const needleClass = isLight
+    ? "pointer-events-none absolute top-0 bottom-0 w-px bg-black shadow-[0_0_6px_rgba(0,0,0,0.4)]"
+    : "pointer-events-none absolute top-0 bottom-0 w-px bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]";
+  const timeClass = isLight ? "text-zinc-600" : "text-zinc-400";
   const videoRef = useRef<HTMLVideoElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
   const needleRef = useRef<HTMLDivElement>(null);
