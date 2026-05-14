@@ -1353,7 +1353,7 @@ function MediaPage({
       >
         <div className="flex min-w-0 items-center" onClick={clearSelectionOnBg}>
           <h1
-            className="truncate text-xl font-semibold text-ink"
+            className="truncate text-xl font-normal text-ink"
             style={{ fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif' }}
           >
             {view.type === "all"

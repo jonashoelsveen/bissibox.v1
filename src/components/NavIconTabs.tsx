@@ -271,10 +271,10 @@ export function NavIconTabs({
                   onActiveClick();
                 }
               }}
-              className={`-mb-px flex h-9 w-9 select-none items-center justify-center rounded-md border-b-2 transition hover:bg-secondary/60 ${
+              className={`flex h-9 w-9 select-none items-center justify-center transition ${
                 isActive
-                  ? "border-primary text-ink"
-                  : "border-transparent text-muted-foreground hover:text-ink"
+                  ? "text-ink"
+                  : "text-muted-foreground hover:text-ink"
               }`}
             >
               <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
