@@ -1,53 +1,66 @@
-## Goal
+# Plan — Albums UX overhaul + Media settings
 
-When a group leader is also a member of their own group, the leader role and the member role should behave as two independent personas — even though they share the same user account.
+Scope is large; here's the structured plan before I touch code.
 
-- Opening their own profile from the **group members** page → they act as **leader**: they see their own member-notes (read-only) and can write a separate **leader-note**.
-- Opening their own diary from **individual mode** → they act as **owner**: they edit their member-note and see any leader-notes (including ones they wrote about themselves) as "notes from others", read-only.
+## 1. Selection model in album/gallery view (`src/routes/media.tsx`)
 
-Today the database can only store one note per `(member_id, author_id, day)`, so the same user can never have both a member-note and a leader-note on the same day. We need to introduce a *kind* dimension.
+- Replace single-click-opens behavior with:
+  - **Single click** → toggles selection on the card (thin black border, ~1.5px, inset, rounded matching card). Apple iCloud-style.
+  - **Cmd/Ctrl + click** → adds/removes from multi-selection.
+  - **Shift + click** → range-select between last clicked and current.
+  - **Double click** → opens the item (current behavior).
+- Selection state lives in the gallery component as `Set<string>`.
+- Clicking outside cards / pressing Esc clears selection.
+- Border uses semantic token (`border-foreground/80`) so it adapts to light/dark album bg.
 
-## Changes
+## 2. Frozen top media-bar in album view
 
-### 1. Database (migration)
+- New sticky bar at top of the gallery scroll area (inside the album route, below global TopBar and right for left menu-panel).
+- Same background color as album (theme-driven, see §5).
+- Right-aligned icons: ♥ heart, 🗑 delete, ⋯ three-dot menu.
+  - When no card selected → `text-muted-foreground/40`, `pointer-events-none`.
+  - When ≥1 selected → fully colored, clickable.
+  - Heart = toggle favorite (wire to existing if present, else stub action), Delete = existing delete flow on selection, ⋯ = existing per-item menu adapted to multi.
 
-Add a `kind` column to both diary note tables to distinguish notes authored as the member vs. as a leader/active-follower:
+## 3. Opened-item view: same frozen bar + slide-out edit panel
 
-- `diary_day_notes`: add `kind text not null default 'member'` with check `kind in ('member','leader')`.
-- `diary_session_notes`: same column.
-- Replace the existing unique constraints:
-  - `diary_day_notes`: `unique (member_id, author_id, day, kind)`
-  - `diary_session_notes`: `unique (member_id, author_id, event_id, kind)`
-- Update INSERT/UPDATE RLS `WITH CHECK` so:
-  - `kind = 'member'` is only allowed when `author_id = member_id` (and `author_id = auth.uid()`).
-  - `kind = 'leader'` is only allowed when `can_annotate_member(member_id)` (and `author_id = auth.uid()`). This permits self-leader rows for someone who is both.
-- Add a new SECURITY DEFINER function `get_member_viewer_role_for_leader(_member uuid)` that returns `'leader' | 'active_follower' | 'follower' | 'none'` *without* the owner short-circuit, so the leader-context UI can ask "what's my non-owner role on this member?".
+- When an item opens, keep the same top media-bar visible at the same height.
+- Left side: back arrow (← returns to album).
+- Right side: single Edit icon (Apple-style pencil-in-square) replaces the 3 icons.
+- The right side panel (About / Access / Draw / Export) is **hidden by default**.
+- Clicking Edit slides the panel in from the right (`translate-x-full` → `translate-x-0`, `transition-transform duration-300 ease-out`). Clicking again closes it.
+- Panel sits *below* the frozen top-bar so the Edit icon stays visible above it.
+- Panel itself keeps current background (unaffected by album theme).
 
-### 2. Viewer role hook
+## 4. Media settings tab (`src/routes/settings.tsx`)
 
-`src/hooks/useViewerRole.ts`:
+- New left-nav entry under "Library" → "Media".
+- First section: **Album background**.
+- Two visual tiles (light / dark), same component pattern as session-view modals (see `session-tile-design.ts` / existing settings tiles).
+- Each tile shows a mini illustration: card grid + bar with the corresponding bg.
+- Default = light. Persist via `useLibrarySetting<'light'|'dark'>('media:album-bg', 'light')`.
 
-- Add an options arg: `useViewerRole(memberId, { context?: 'auto' | 'leader' })`. Default `'auto'` keeps current behaviour.
-- When `context === 'leader'`, skip the `memberId === user.id` → `'owner'` short-circuit and call `get_member_viewer_role_for_leader` instead. Result is whatever leader/follower role applies (could be `'leader'` for self).
+## 5. Album theme propagation
 
-### 3. MemberWorkspace + diary note hooks
-
-- `src/components/team/MemberWorkspace.tsx`: pass `{ context: 'leader' }` to `useViewerRole(userId, …)`. This is the "viewing through the group members page" surface, so the persona is leader even on yourself.
-- `src/hooks/useDiaryDayNote.ts` and `src/hooks/useDiarySessionNote.ts`:
-  - Include `kind` in select/insert/update/delete.
-  - `memberNote` reads the row where `author_id = member_id AND kind = 'member'`.
-  - `viewerNote` (leader/active-follower row) reads `author_id = viewerId AND kind = 'leader'`. This works even when `viewerId === memberId`.
-  - `leaderNotes` reads everything where `kind = 'leader' AND author_id != viewerId` (so a leader sees other leaders' notes plus the member-note above).
-  - `saveViewerNote(text)` always upserts with `kind: isOwner ? 'member' : 'leader'`. With the new conflict key `(member_id, author_id, day, kind)`, a self-leader can have both rows side-by-side.
-- `DayNoteButton` keeps the same icon logic — gray = member-note, black = leader-notes — and now correctly shows both icons for a self-leader.
-
-### 4. Individual mode parity
-
-In individual mode (`/diary`, `/calendar`), `useViewerRole` stays in `'auto'`, so the same user is `owner` of themselves and edits their member-note. Any leader-note rows they wrote about themselves through the group surface will now appear under the black icon as a read-only "note from others" — exactly the desired round-trip.
+- Read setting in media route: `const [albumBg] = useLibrarySetting('media:album-bg', 'light')`.
+- Apply to album page wrapper, frozen top-bar, and opened-item view as a single class:
+  - `light` → `bg-background text-foreground`
+  - `dark` → `bg-zinc-950 text-zinc-100`
+- Top-bar icons use `currentColor` so they invert automatically.
+- VideoPlayer gets an optional `theme?: 'light'|'dark'` prop; scrubber track + play/pause button derive colors from it (white on dark, black on light).
+- Right edit panel keeps its existing background (not themed).
 
 ## Technical notes
 
-- Existing rows are migrated with `default 'member'` for member-authored rows (`author_id = member_id`) and `'leader'` for everything else, in a single `UPDATE` inside the migration.
-- `useDiaryDayNote.reload` only changes the SELECT/UPSERT shape; the `CHANGE_EVENT` channel and dispatch are unchanged.
-- No edge-function changes; all of this is RLS + hook code.
-- `types.ts` will regenerate automatically after the migration.
+- Selection logic: `useState<Set<string>>(new Set())`; helpers `toggle/range/clear`. `onClick` with `e.metaKey || e.ctrlKey`, `e.shiftKey`, plain. `onDoubleClick` → existing open handler. Use `onClickCapture` with a 250 ms double-click guard so single-click selection doesn't fire alongside open.
+- Frozen bar: `sticky top-0 z-20` inside the gallery scroll container.
+- Slide-out panel: existing right panel JSX wrapped in a `transform` div with `data-open` state.
+- Settings tab: extend the same array/switch driving the Library section in `settings.tsx`.
+
+## Out of scope
+
+- No DB schema changes (favorites already exist or will be added later if missing — I'll wire heart to existing `favorited` field if present, otherwise no-op with toast "coming soon").
+- No changes to the video bug fixes from previous turns.
+- No changes to the side library nav, search, upload flow, or non-album views.
+
+Ready to implement on approval.

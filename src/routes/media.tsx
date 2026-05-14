@@ -15,7 +15,7 @@ import { CreateContainerDialog } from "@/components/library/CreateContainerDialo
 import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { TopBarSlot } from "@/components/TopBarSlot";
 import { MeetingsListPage } from "@/components/library/MeetingsListPage";
-import { getUnsaved } from "@/lib/library-settings";
+import { getUnsaved, useLibrarySetting } from "@/lib/library-settings";
 import { TeamBoardPage } from "@/routes/team.board";
 import { MapPage } from "@/components/map/MapPage";
 import { toast } from "sonner";
@@ -54,6 +54,8 @@ import {
   Pause,
   Download,
   Pencil,
+  Heart,
+  ArrowLeft,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 
@@ -893,6 +895,13 @@ function MediaPage({
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [lastClickedId, setLastClickedId] = useState<string | null>(null);
+  const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
+  const isDarkAlbum = albumBg === "dark";
+  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-background text-foreground";
+  const albumBarClass = isDarkAlbum
+    ? "bg-zinc-950 text-zinc-100 border-b border-zinc-800"
+    : "bg-background text-foreground border-b border-hairline";
   const [openItems, setOpenItems] = useState<MediaItem[] | null>(null);
   const [attended, setAttended] = useState<AttendedEvent[]>([]);
   const [userName, setUserName] = useState<string>("");
@@ -1467,7 +1476,34 @@ function MediaPage({
         </nav>
         )}
 
-        <section>
+        <section className={view.type === "album" ? `-mx-4 -mt-4 px-4 pb-8 ${albumBgClass}` : ""}>
+          {view.type === "album" && (
+            <div
+              className={`sticky top-0 z-20 -mx-4 mb-6 flex items-center justify-end gap-1 px-4 py-3 ${albumBarClass}`}
+            >
+              <GalleryBarBtn
+                disabled={selected.size === 0}
+                ariaLabel="Favorite"
+                onClick={() => toast.success("Favorited")}
+              >
+                <Heart className="h-4 w-4" />
+              </GalleryBarBtn>
+              <GalleryBarBtn
+                disabled={selected.size === 0}
+                ariaLabel="Delete"
+                onClick={() => void handleDelete()}
+              >
+                <Trash2 className="h-4 w-4" />
+              </GalleryBarBtn>
+              <GalleryBarBtn
+                disabled={selected.size === 0}
+                ariaLabel="More"
+                onClick={() => toast("More actions coming soon")}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </GalleryBarBtn>
+            </div>
+          )}
           {filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-20 text-center text-sm text-muted-foreground">
               No content yet. Upload your first photo or video.
@@ -1478,17 +1514,41 @@ function MediaPage({
                 const isSel = selected.has(it.id);
                 const isRevealed = revealed.has(it.id);
                 const eventTitle = attended.find((e) => e.id === it.event_id)?.title;
+                const openItem = () => {
+                  if (onOpenMediaTab) {
+                    onOpenMediaTab(`media:${it.id}`, tabTitleFor([it]), [it.id]);
+                  } else if (onOpenMedia) onOpenMedia(it.id);
+                  else setOpenItems([it]);
+                };
                 return (
                   <div
                     key={it.id}
-                    onClick={() => {
-                      if (selectMode) toggleSel(it.id);
-                      else if (onOpenMediaTab) {
-                        onOpenMediaTab(`media:${it.id}`, tabTitleFor([it]), [it.id]);
-                      } else if (onOpenMedia) onOpenMedia(it.id);
-                      else setOpenItems([it]);
+                    onClick={(e) => {
+                      if (selectMode) { toggleSel(it.id); return; }
+                      if (e.shiftKey && lastClickedId) {
+                        const ids = filtered.map((f) => f.id);
+                        const a = ids.indexOf(lastClickedId);
+                        const b = ids.indexOf(it.id);
+                        if (a >= 0 && b >= 0) {
+                          const [lo, hi] = a < b ? [a, b] : [b, a];
+                          setSelected((s) => {
+                            const n = new Set(s);
+                            for (let i = lo; i <= hi; i++) n.add(ids[i]);
+                            return n;
+                          });
+                        }
+                      } else if (e.metaKey || e.ctrlKey) {
+                        toggleSel(it.id);
+                        setLastClickedId(it.id);
+                      } else {
+                        setSelected(new Set([it.id]));
+                        setLastClickedId(it.id);
+                      }
                     }}
-                    className="group relative aspect-square cursor-default overflow-hidden rounded-sm bg-secondary"
+                    onDoubleClick={(e) => { e.preventDefault(); openItem(); }}
+                    className={`group relative aspect-square cursor-default overflow-hidden rounded-sm bg-secondary ${
+                      isSel ? "ring-[1.5px] ring-inset ring-foreground" : ""
+                    }`}
                   >
                     {it.media_type === "photo" ? (
                       urls[it.id] && (
@@ -1705,6 +1765,34 @@ function NavBtn({
       onClick={onClick}
       className={`rounded-md px-3 ${small ? "py-1.5 text-xs" : "py-2 text-sm"} text-left transition ${
         active ? "bg-secondary font-medium text-ink" : "text-muted-foreground hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function GalleryBarBtn({
+  disabled,
+  ariaLabel,
+  onClick,
+  children,
+}: {
+  disabled?: boolean;
+  ariaLabel: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      disabled={disabled}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className={`grid h-9 w-9 place-items-center rounded-full transition ${
+        disabled
+          ? "pointer-events-none text-muted-foreground/40"
+          : "text-current hover:bg-foreground/10"
       }`}
     >
       {children}
@@ -2267,34 +2355,69 @@ function Lightbox({
     : ["about", "access", "export"];
   useEffect(() => { if (!isVideo && tab === "draw") setTab("about"); }, [isVideo, tab]);
 
+  const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
+  const isDarkAlbum = albumBg === "dark";
+  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-background text-foreground";
+  const albumBarClass = isDarkAlbum
+    ? "bg-zinc-950 text-zinc-100 border-b border-zinc-800"
+    : "bg-background text-foreground border-b border-hairline";
+
   return (
     <div className="fixed inset-0 z-50 flex animate-in fade-in" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/85" />
+      <div className={`absolute inset-0 ${isDarkAlbum ? "bg-black/95" : "bg-black/85"}`} />
       <div
         className="relative z-10 flex h-full w-full"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex flex-1 flex-col items-center justify-center p-8">
-          <div className="flex w-full flex-1 items-center justify-center px-[6%] py-[3%]">
-            {current?.media_type === "photo" ? (
-              <PhotoLqip
-                thumbSrc={current ? thumbUrls[current.id] : undefined}
-                fullSrc={url}
+        <div className={`relative flex flex-1 flex-col ${albumBgClass}`}>
+          <div className={`sticky top-0 z-30 flex items-center justify-between gap-2 px-4 py-3 ${albumBarClass}`}>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Back"
+              className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditPanelOpen((v) => !v)}
+              aria-label="Edit"
+              className={`grid h-9 w-9 place-items-center rounded-full transition ${
+                editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
+              }`}
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex flex-1 flex-col items-center justify-center p-8">
+            <div className="flex w-full flex-1 items-center justify-center px-[6%] py-[3%]">
+              {current?.media_type === "photo" ? (
+                <PhotoLqip
+                  thumbSrc={current ? thumbUrls[current.id] : undefined}
+                  fullSrc={url}
+                />
+              ) : (
+                <VideoPlayer src={url} drawing={drawing} theme={albumBg} />
+              )}
+            </div>
+            {isMulti && (
+              <DockStrip
+                items={items}
+                urls={urls}
+                activeIdx={idx}
+                onSelect={setIdx}
               />
-            ) : (
-              <VideoPlayer src={url} drawing={drawing} />
             )}
           </div>
-          {isMulti && (
-            <DockStrip
-              items={items}
-              urls={urls}
-              activeIdx={idx}
-              onSelect={setIdx}
-            />
-          )}
         </div>
-        <aside className="flex w-96 flex-col border-l border-hairline bg-background">
+        <aside
+          className={`absolute right-0 bottom-0 flex w-96 flex-col border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+            editPanelOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+          style={{ top: 60 }}
+        >
           <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
             <div className="flex gap-1">
               {tabs.map((t) => (
@@ -2310,7 +2433,7 @@ function Lightbox({
               ))}
             </div>
             <button
-              onClick={onClose}
+              onClick={() => setEditPanelOpen(false)}
               className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
             >
               <X className="h-4 w-4" />
@@ -3261,7 +3384,15 @@ function formatVideoTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(cs).padStart(2, "0")}`;
 }
 
-function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState }) {
+function VideoPlayer({ src, drawing, theme = "dark" }: { src?: string; drawing?: DrawingState; theme?: "light" | "dark" }) {
+  const isLight = theme === "light";
+  const playBtnClass = isLight ? "text-zinc-800 hover:text-black" : "text-zinc-100 hover:text-white";
+  const tickMajorClass = isLight ? "h-7 bg-zinc-400" : "h-7 bg-zinc-500/70";
+  const tickMinorClass = isLight ? "h-4 bg-zinc-300" : "h-4 bg-zinc-600/50";
+  const needleClass = isLight
+    ? "pointer-events-none absolute top-0 bottom-0 w-px bg-black shadow-[0_0_6px_rgba(0,0,0,0.4)]"
+    : "pointer-events-none absolute top-0 bottom-0 w-px bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]";
+  const timeClass = isLight ? "text-zinc-600" : "text-zinc-400";
   const videoRef = useRef<HTMLVideoElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
   const needleRef = useRef<HTMLDivElement>(null);
@@ -3499,7 +3630,7 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
         <div className="mb-2 flex items-center justify-center">
           <button
             onClick={togglePlay}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-100 transition hover:text-white"
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition ${playBtnClass}`}
             aria-label={playing ? "Pause" : "Play"}
           >
             {playing ? (
@@ -3530,7 +3661,7 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
               return (
                 <span
                   key={i}
-                  className={`block w-px ${isMajor ? "h-7 bg-zinc-500/70" : "h-4 bg-zinc-600/50"}`}
+                  className={`block w-px ${isMajor ? tickMajorClass : tickMinorClass}`}
                 />
               );
             })}
@@ -3540,13 +3671,13 @@ function VideoPlayer({ src, drawing }: { src?: string; drawing?: DrawingState })
           {ready && (
             <div
               ref={needleRef}
-              className="pointer-events-none absolute top-0 bottom-0 w-px bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+              className={needleClass}
               style={{ left: `${progress * 100}%` }}
             />
           )}
         </div>
 
-        <div className="mt-2 flex justify-center font-mono text-[11px] tabular-nums text-zinc-400">
+        <div className={`mt-2 flex justify-center font-mono text-[11px] tabular-nums ${timeClass}`}>
           {formatVideoTime(current)} / {formatVideoTime(ready ? duration : 0)}
         </div>
       </div>
@@ -3936,29 +4067,96 @@ function MediaTabView({
     ? ["about", "access", "draw", "export"]
     : ["about", "access", "export"];
 
+  return <MediaTabViewBody
+    items={items}
+    albums={albums}
+    attended={attended}
+    userName={userName}
+    itemAlbums={itemAlbums}
+    urls={urls}
+    thumbUrls={thumbUrls}
+    idx={idx}
+    setIdx={setIdx}
+    drawing={drawing}
+    tab={tab}
+    setTab={setTab}
+    tabs={tabs}
+    isVideo={isVideo}
+    isMulti={isMulti}
+    isTeamMode={isTeamMode}
+    current={current}
+    url={url}
+    onSaved={() => setReloadKey((k) => k + 1)}
+  />;
+}
+
+function MediaTabViewBody(props: {
+  items: MediaItem[];
+  albums: Album[];
+  attended: AttendedEvent[];
+  userName: string;
+  itemAlbums: Record<string, string[]>;
+  urls: Record<string, string>;
+  thumbUrls: Record<string, string>;
+  idx: number;
+  setIdx: (i: number) => void;
+  drawing: DrawingState;
+  tab: "about" | "access" | "draw" | "export";
+  setTab: (t: "about" | "access" | "draw" | "export") => void;
+  tabs: ReadonlyArray<"about" | "access" | "draw" | "export">;
+  isVideo: boolean;
+  isMulti: boolean;
+  isTeamMode: boolean;
+  current: MediaItem;
+  url: string | undefined;
+  onSaved: () => void;
+}) {
+  const { items, albums, attended, userName, itemAlbums, urls, thumbUrls, idx, setIdx, drawing, tab, setTab, tabs, isVideo, isMulti, isTeamMode, current, url, onSaved } = props;
+  const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
+  const isDarkAlbum = albumBg === "dark";
+  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-background text-foreground";
+  const albumBarClass = isDarkAlbum
+    ? "bg-zinc-950 text-zinc-100 border-b border-zinc-800"
+    : "bg-background text-foreground border-b border-hairline";
+
   return (
-    <div className="flex h-[calc(100vh-12rem)] min-h-[480px] gap-4 rounded-2xl border border-hairline bg-card overflow-hidden">
-      <div className="flex flex-1 flex-col items-center justify-center p-6 min-w-0 bg-black/90">
-        <div className="flex w-full flex-1 items-center justify-center min-h-0">
-          {current?.media_type === "photo" ? (
-            <PhotoLqip
-              thumbSrc={current ? thumbUrls[current.id] : undefined}
-              fullSrc={url}
-            />
-          ) : (
-            <VideoPlayer src={url} drawing={drawing} />
+    <div className="relative flex h-[calc(100vh-12rem)] min-h-[480px] overflow-hidden rounded-2xl border border-hairline">
+      <div className={`relative flex flex-1 flex-col min-w-0 ${albumBgClass}`}>
+        <div className={`sticky top-0 z-30 flex items-center justify-end gap-2 px-4 py-3 ${albumBarClass}`}>
+          <button
+            type="button"
+            onClick={() => setEditPanelOpen((v) => !v)}
+            aria-label="Edit"
+            className={`grid h-9 w-9 place-items-center rounded-full transition ${
+              editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
+            }`}
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center p-6 min-w-0">
+          <div className="flex w-full flex-1 items-center justify-center min-h-0">
+            {current?.media_type === "photo" ? (
+              <PhotoLqip
+                thumbSrc={current ? thumbUrls[current.id] : undefined}
+                fullSrc={url}
+              />
+            ) : (
+              <VideoPlayer src={url} drawing={drawing} theme={albumBg} />
+            )}
+          </div>
+          {isMulti && (
+            <DockStrip items={items} urls={urls} activeIdx={idx} onSelect={setIdx} />
           )}
         </div>
-        {isMulti && (
-          <DockStrip
-            items={items}
-            urls={urls}
-            activeIdx={idx}
-            onSelect={setIdx}
-          />
-        )}
       </div>
-      <aside className="flex w-96 flex-col border-l border-hairline bg-background">
+      <aside
+        className={`absolute right-0 bottom-0 flex w-96 flex-col border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+          editPanelOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        style={{ top: 60 }}
+      >
         <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
           <div className="flex gap-1">
             {tabs.map((t) => (
@@ -3973,6 +4171,12 @@ function MediaTabView({
               </button>
             ))}
           </div>
+          <button
+            onClick={() => setEditPanelOpen(false)}
+            className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
@@ -3983,11 +4187,11 @@ function MediaTabView({
               attended={attended}
               userName={userName}
               itemAlbums={itemAlbums}
-              onSaved={() => setReloadKey((k) => k + 1)}
+              onSaved={onSaved}
             />
           )}
           {tab === "access" && (
-            <AccessPanel items={items} onSaved={() => setReloadKey((k) => k + 1)} isTeamMode={isTeamMode} />
+            <AccessPanel items={items} onSaved={onSaved} isTeamMode={isTeamMode} />
           )}
           {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
           {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
