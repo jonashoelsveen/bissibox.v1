@@ -796,11 +796,13 @@ function SortableFolderRow(props: {
 
 function FolderRow({
   folder,
+  rowIcon,
   active,
   renaming,
   renameValue,
   setRenameValue,
   onSelect,
+  onOpenAsTab,
   onCommitRename,
   onCancelRename,
   menuOpen,
@@ -813,11 +815,13 @@ function FolderRow({
   sortable = true,
 }: {
   folder: FolderLite;
+  rowIcon?: React.ReactNode;
   active: boolean;
   renaming: boolean;
   renameValue: string;
   setRenameValue: (v: string) => void;
   onSelect: () => void;
+  onOpenAsTab?: () => void;
   onCommitRename: () => void;
   onCancelRename: () => void;
   menuOpen: boolean;
