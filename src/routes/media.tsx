@@ -4113,7 +4113,7 @@ function MediaTabView({
     current={current}
     url={url}
     onSaved={() => setReloadKey((k) => k + 1)}
-    onBack={onBack}
+    onBackToAlbum={onBackToAlbum}
   />;
 }
 
