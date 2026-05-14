@@ -623,12 +623,12 @@ function LibraryPage() {
         {/* Per-page Search/Plus mount removed — global top tab bar provides them. */}
       </TopBarSlot>
 
-      <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[220px_1fr]">
-        <aside className="md:h-full md:overflow-y-auto md:border-r md:border-border/60 md:pr-4">
+      <div className="grid h-full gap-6 overflow-hidden md:grid-cols-[220px_1fr]">
+        <aside className="md:h-full md:overflow-y-auto md:border-r md:border-border/60 md:pr-4 md:pt-4">
           <LibrarySideNav value={sideValue} onChange={onSideChange} />
         </aside>
 
-        <div className="min-w-0 md:h-full md:overflow-y-auto">
+        <div className="min-w-0 bg-white md:h-full md:overflow-y-auto">
 
           {showingNote && activeNoteId && showingMeeting ? (
             <TeamBoardPage
@@ -898,10 +898,10 @@ function MediaPage({
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
   const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
   const isDarkAlbum = albumBg === "dark";
-  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-background text-foreground";
+  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-white text-foreground";
   const albumBarClass = isDarkAlbum
-    ? "bg-zinc-950 text-zinc-100 border-b border-zinc-800"
-    : "bg-background text-foreground border-b border-hairline";
+    ? "bg-zinc-950 text-zinc-100"
+    : "bg-white text-foreground";
   const [openItems, setOpenItems] = useState<MediaItem[] | null>(null);
   const [attended, setAttended] = useState<AttendedEvent[]>([]);
   const [userName, setUserName] = useState<string>("");
@@ -1314,12 +1314,41 @@ function MediaPage({
     </>
   );
 
+  const inAlbum = view.type === "album";
+  const pageBgClass = inAlbum ? albumBgClass : "bg-white text-foreground";
+  const pageBarClass = inAlbum ? albumBarClass : "bg-white text-foreground";
+
   return (
-    <div>
+    <div className={`flex h-full flex-col ${pageBgClass}`}>
       {/* Per-page Search/Plus removed — using the global top tab bar's actions instead. */}
       {void actions}
 
-      <div className={`mt-4 grid gap-8 ${hideSideNav ? "md:grid-cols-1" : "md:grid-cols-[200px_1fr]"}`}>
+      {/* Always-on frozen top bar (matches album view height for both parent tab and album). */}
+      <div className={`sticky top-0 z-20 flex h-11 shrink-0 items-center justify-end gap-1 px-4 ${pageBarClass}`}>
+        <GalleryBarBtn
+          disabled={selected.size === 0}
+          ariaLabel="Favorite"
+          onClick={() => toast.success("Favorited")}
+        >
+          <Heart className="h-4 w-4" />
+        </GalleryBarBtn>
+        <GalleryBarBtn
+          disabled={selected.size === 0}
+          ariaLabel="Delete"
+          onClick={() => void handleDelete()}
+        >
+          <Trash2 className="h-4 w-4" />
+        </GalleryBarBtn>
+        <GalleryBarBtn
+          disabled={selected.size === 0}
+          ariaLabel="More"
+          onClick={() => toast("More actions coming soon")}
+        >
+          <MoreVertical className="h-4 w-4" />
+        </GalleryBarBtn>
+      </div>
+
+      <div className={`grid flex-1 gap-8 overflow-y-auto ${hideSideNav ? "md:grid-cols-1" : "md:grid-cols-[200px_1fr]"}`}>
         {!hideSideNav && (
         <nav className="-ml-2 flex flex-col gap-0.5">
           <NavBtn active={view.type === "all"} onClick={() => setView({ type: "all" })}>
@@ -1476,34 +1505,8 @@ function MediaPage({
         </nav>
         )}
 
-        <section className={view.type === "album" ? `-mx-4 -mt-4 px-4 pb-8 ${albumBgClass}` : ""}>
-          {view.type === "album" && (
-            <div
-              className={`sticky top-0 z-20 -mx-4 mb-6 flex items-center justify-end gap-1 px-4 py-3 ${albumBarClass}`}
-            >
-              <GalleryBarBtn
-                disabled={selected.size === 0}
-                ariaLabel="Favorite"
-                onClick={() => toast.success("Favorited")}
-              >
-                <Heart className="h-4 w-4" />
-              </GalleryBarBtn>
-              <GalleryBarBtn
-                disabled={selected.size === 0}
-                ariaLabel="Delete"
-                onClick={() => void handleDelete()}
-              >
-                <Trash2 className="h-4 w-4" />
-              </GalleryBarBtn>
-              <GalleryBarBtn
-                disabled={selected.size === 0}
-                ariaLabel="More"
-                onClick={() => toast("More actions coming soon")}
-              >
-                <MoreVertical className="h-4 w-4" />
-              </GalleryBarBtn>
-            </div>
-          )}
+        <section className="px-4 pb-8 pt-4">
+
           {filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-20 text-center text-sm text-muted-foreground">
               No content yet. Upload your first photo or video.
@@ -2358,106 +2361,106 @@ function Lightbox({
   const [editPanelOpen, setEditPanelOpen] = useState(false);
   const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
   const isDarkAlbum = albumBg === "dark";
-  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-background text-foreground";
+  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-white text-foreground";
   const albumBarClass = isDarkAlbum
-    ? "bg-zinc-950 text-zinc-100 border-b border-zinc-800"
-    : "bg-background text-foreground border-b border-hairline";
+    ? "bg-zinc-950 text-zinc-100"
+    : "bg-white text-foreground";
 
   return (
     <div className="fixed inset-0 z-50 flex animate-in fade-in" onClick={onClose}>
       <div className={`absolute inset-0 ${isDarkAlbum ? "bg-black/95" : "bg-black/85"}`} />
       <div
-        className="relative z-10 flex h-full w-full"
+        className={`relative z-10 flex h-full w-full flex-col ${albumBgClass}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={`relative flex flex-1 flex-col ${albumBgClass}`}>
-          <div className={`sticky top-0 z-30 flex items-center justify-between gap-2 px-4 py-3 ${albumBarClass}`}>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Back"
-              className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditPanelOpen((v) => !v)}
-              aria-label="Edit"
-              className={`grid h-9 w-9 place-items-center rounded-full transition ${
-                editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
-              }`}
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="flex flex-1 flex-col items-center justify-center p-8">
-            <div className="flex w-full flex-1 items-center justify-center px-[6%] py-[3%]">
-              {current?.media_type === "photo" ? (
-                <PhotoLqip
-                  thumbSrc={current ? thumbUrls[current.id] : undefined}
-                  fullSrc={url}
-                />
-              ) : (
-                <VideoPlayer src={url} drawing={drawing} theme={albumBg} />
-              )}
-            </div>
-            {isMulti && (
-              <DockStrip
-                items={items}
-                urls={urls}
-                activeIdx={idx}
-                onSelect={setIdx}
-              />
-            )}
-          </div>
+        {/* Row 1 — frozen top bar */}
+        <div className={`flex h-11 flex-none items-center justify-between gap-2 px-4 ${albumBarClass}`}>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Back"
+            className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditPanelOpen((v) => !v)}
+            aria-label="Edit"
+            className={`grid h-9 w-9 place-items-center rounded-full transition ${
+              editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
+            }`}
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
         </div>
-        <aside
-          className={`absolute right-0 bottom-0 flex w-96 flex-col border-l border-hairline bg-background transition-transform duration-300 ease-out ${
-            editPanelOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-          style={{ top: 60 }}
-        >
-          <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
-            <div className="flex gap-1">
-              {tabs.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTab(t)}
-                  className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
-                    tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setEditPanelOpen(false)}
-              className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
 
-          <div className="flex-1 overflow-y-auto p-5">
-            {tab === "about" && (
-              <AboutPanel
-                items={items}
-                albums={albums}
-                attended={attended}
-                userName={userName}
-                itemAlbums={itemAlbums}
-                onSaved={onChanged}
+        {/* Row 2 — media + sliding edit panel */}
+        <div className="flex min-h-0 flex-1">
+          <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4 transition-[flex-basis] duration-300 ease-out">
+            {current?.media_type === "photo" ? (
+              <PhotoLqip
+                thumbSrc={current ? thumbUrls[current.id] : undefined}
+                fullSrc={url}
               />
+            ) : (
+              <VideoPlayer src={url} drawing={drawing} theme={albumBg} />
             )}
-            {tab === "access" && (
-              <AccessPanel items={items} onSaved={onChanged} isTeamMode={isTeamMode} />
-            )}
-            {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
-            {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
           </div>
-        </aside>
+          <aside
+            className={`flex min-h-0 flex-none flex-col overflow-hidden border-l border-hairline bg-background transition-[width] duration-300 ease-out ${
+              editPanelOpen ? "w-96" : "w-0"
+            }`}
+          >
+            <div className="flex w-96 flex-1 flex-col">
+              <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
+                <div className="flex gap-1">
+                  {tabs.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setTab(t)}
+                      className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
+                        tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setEditPanelOpen(false)}
+                  className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-5">
+                {tab === "about" && (
+                  <AboutPanel
+                    items={items}
+                    albums={albums}
+                    attended={attended}
+                    userName={userName}
+                    itemAlbums={itemAlbums}
+                    onSaved={onChanged}
+                  />
+                )}
+                {tab === "access" && (
+                  <AccessPanel items={items} onSaved={onChanged} isTeamMode={isTeamMode} />
+                )}
+                {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
+                {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        {/* Row 3 — dock strip */}
+        {isMulti && (
+          <div className="flex-none">
+            <DockStrip items={items} urls={urls} activeIdx={idx} onSelect={setIdx} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -3611,9 +3614,9 @@ function VideoPlayer({ src, drawing, theme = "dark" }: { src?: string; drawing?:
   const progress = ready && duration > 0 ? Math.min(1, current / duration) : 0;
 
   return (
-    <div className="flex h-full w-full max-w-[88%] flex-col gap-3">
+    <div className="flex h-full w-full flex-col gap-3">
       <div
-        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg bg-black"
+        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-black"
         onClick={drawing?.enabled ? undefined : togglePlay}
       >
         <video
@@ -4115,88 +4118,88 @@ function MediaTabViewBody(props: {
   const [editPanelOpen, setEditPanelOpen] = useState(false);
   const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
   const isDarkAlbum = albumBg === "dark";
-  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-background text-foreground";
+  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-white text-foreground";
   const albumBarClass = isDarkAlbum
-    ? "bg-zinc-950 text-zinc-100 border-b border-zinc-800"
-    : "bg-background text-foreground border-b border-hairline";
+    ? "bg-zinc-950 text-zinc-100"
+    : "bg-white text-foreground";
 
   return (
-    <div className="relative flex h-[calc(100vh-12rem)] min-h-[480px] overflow-hidden rounded-2xl border border-hairline">
-      <div className={`relative flex flex-1 flex-col min-w-0 ${albumBgClass}`}>
-        <div className={`sticky top-0 z-30 flex items-center justify-end gap-2 px-4 py-3 ${albumBarClass}`}>
-          <button
-            type="button"
-            onClick={() => setEditPanelOpen((v) => !v)}
-            aria-label="Edit"
-            className={`grid h-9 w-9 place-items-center rounded-full transition ${
-              editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
-            }`}
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="flex flex-1 flex-col items-center justify-center p-6 min-w-0">
-          <div className="flex w-full flex-1 items-center justify-center min-h-0">
-            {current?.media_type === "photo" ? (
-              <PhotoLqip
-                thumbSrc={current ? thumbUrls[current.id] : undefined}
-                fullSrc={url}
-              />
-            ) : (
-              <VideoPlayer src={url} drawing={drawing} theme={albumBg} />
-            )}
-          </div>
-          {isMulti && (
-            <DockStrip items={items} urls={urls} activeIdx={idx} onSelect={setIdx} />
-          )}
-        </div>
+    <div className={`flex h-[calc(100vh-12rem)] min-h-[480px] flex-col overflow-hidden ${albumBgClass}`}>
+      <div className={`flex h-11 flex-none items-center justify-end gap-2 px-4 ${albumBarClass}`}>
+        <button
+          type="button"
+          onClick={() => setEditPanelOpen((v) => !v)}
+          aria-label="Edit"
+          className={`grid h-9 w-9 place-items-center rounded-full transition ${
+            editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
+          }`}
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
       </div>
-      <aside
-        className={`absolute right-0 bottom-0 flex w-96 flex-col border-l border-hairline bg-background transition-transform duration-300 ease-out ${
-          editPanelOpen ? "translate-x-0" : "translate-x-full"
-        }`}
-        style={{ top: 60 }}
-      >
-        <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
-          <div className="flex gap-1">
-            {tabs.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
-                  tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setEditPanelOpen(false)}
-            className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-5">
-          {tab === "about" && (
-            <AboutPanel
-              items={items}
-              albums={albums}
-              attended={attended}
-              userName={userName}
-              itemAlbums={itemAlbums}
-              onSaved={onSaved}
+      <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4 transition-[flex-basis] duration-300 ease-out">
+          {current?.media_type === "photo" ? (
+            <PhotoLqip
+              thumbSrc={current ? thumbUrls[current.id] : undefined}
+              fullSrc={url}
             />
+          ) : (
+            <VideoPlayer src={url} drawing={drawing} theme={albumBg} />
           )}
-          {tab === "access" && (
-            <AccessPanel items={items} onSaved={onSaved} isTeamMode={isTeamMode} />
-          )}
-          {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
-          {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
         </div>
-      </aside>
+        <aside
+          className={`flex min-h-0 flex-none flex-col overflow-hidden border-l border-hairline bg-background transition-[width] duration-300 ease-out ${
+            editPanelOpen ? "w-96" : "w-0"
+          }`}
+        >
+          <div className="flex w-96 flex-1 flex-col">
+            <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
+              <div className="flex gap-1">
+                {tabs.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
+                      tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setEditPanelOpen(false)}
+                className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              {tab === "about" && (
+                <AboutPanel
+                  items={items}
+                  albums={albums}
+                  attended={attended}
+                  userName={userName}
+                  itemAlbums={itemAlbums}
+                  onSaved={onSaved}
+                />
+              )}
+              {tab === "access" && (
+                <AccessPanel items={items} onSaved={onSaved} isTeamMode={isTeamMode} />
+              )}
+              {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
+              {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
+            </div>
+          </div>
+        </aside>
+      </div>
+      {isMulti && (
+        <div className="flex-none">
+          <DockStrip items={items} urls={urls} activeIdx={idx} onSelect={setIdx} />
+        </div>
+      )}
     </div>
   );
 }
@@ -4211,13 +4214,13 @@ function PhotoLqip({ thumbSrc, fullSrc }: { thumbSrc?: string; fullSrc?: string 
   if (!thumbSrc && !fullSrc) return null;
 
   return (
-    <div className="relative flex max-h-[88%] max-w-[88%] items-center justify-center">
+    <div className="relative flex h-full w-full items-center justify-center">
       {thumbSrc && (
         <img
           src={thumbSrc}
           alt=""
           aria-hidden
-          className={`max-h-[88vh] max-w-[88vw] object-contain transition-opacity duration-300 ${
+          className={`max-h-full max-w-full object-contain transition-opacity duration-300 ${
             fullLoaded ? "opacity-0" : "opacity-100"
           }`}
           style={{ filter: "blur(20px)", transform: "scale(1.04)" }}
@@ -4229,7 +4232,7 @@ function PhotoLqip({ thumbSrc, fullSrc }: { thumbSrc?: string; fullSrc?: string 
           alt=""
           onLoad={() => setFullLoaded(true)}
           decoding="async"
-          className={`absolute inset-0 m-auto max-h-[88vh] max-w-[88vw] object-contain transition-opacity duration-300 ${
+          className={`absolute inset-0 m-auto max-h-full max-w-full object-contain transition-opacity duration-300 ${
             fullLoaded ? "opacity-100" : "opacity-0"
           }`}
         />
