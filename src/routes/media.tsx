@@ -646,6 +646,7 @@ function LibraryPage() {
               key={activeNoteId}
               mediaIds={activeTabEntry.mediaIds ?? []}
               onTitleChange={(title) => updateNoteTab({ id: activeNoteId, title })}
+              onBack={() => finalizeClose(activeNoteId)}
             />
           ) : showingNote && activeNoteId ? (
             <NoteEditor
