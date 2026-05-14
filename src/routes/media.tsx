@@ -1351,8 +1351,17 @@ function MediaPage({
         className="sticky top-0 z-20 flex h-11 shrink-0 items-center justify-between gap-1 px-4 bg-white text-foreground"
         onClick={clearSelectionOnBg}
       >
-        <div className="flex items-center" onClick={clearSelectionOnBg}>
-          {/* intentionally empty — back arrow lives in MediaTabView only */}
+        <div className="flex min-w-0 items-center" onClick={clearSelectionOnBg}>
+          <h1
+            className="truncate text-xl font-semibold text-ink"
+            style={{ fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif' }}
+          >
+            {view.type === "all"
+              ? "All"
+              : view.id === null
+                ? "Unsorted"
+                : (albums.find((a) => a.id === view.id)?.name ?? "")}
+          </h1>
         </div>
         <div className="flex items-center gap-1">
           <div className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
