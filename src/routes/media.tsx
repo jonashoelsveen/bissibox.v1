@@ -899,9 +899,6 @@ function MediaPage({
   const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
   const isDarkAlbum = albumBg === "dark";
   const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-white text-foreground";
-  const albumBarClass = isDarkAlbum
-    ? "bg-zinc-950 text-zinc-100"
-    : "bg-white text-foreground";
   const [openItems, setOpenItems] = useState<MediaItem[] | null>(null);
   const [attended, setAttended] = useState<AttendedEvent[]>([]);
   const [userName, setUserName] = useState<string>("");
@@ -1316,15 +1313,17 @@ function MediaPage({
 
   const inAlbum = view.type === "album";
   const pageBgClass = inAlbum ? albumBgClass : "bg-white text-foreground";
-  const pageBarClass = inAlbum ? albumBarClass : "bg-white text-foreground";
+  const barTranslucent = (inAlbum ? isDarkAlbum : false)
+    ? "bg-zinc-950/80 text-zinc-100"
+    : "bg-white/80 text-foreground";
 
   return (
-    <div className={`flex h-full flex-col ${pageBgClass}`}>
+    <div className={`flex min-h-full flex-col ${pageBgClass}`}>
       {/* Per-page Search/Plus removed — using the global top tab bar's actions instead. */}
       {void actions}
 
-      {/* Always-on frozen top bar (matches album view height for both parent tab and album). */}
-      <div className={`sticky top-0 z-20 flex h-11 shrink-0 items-center justify-end gap-1 px-4 ${pageBarClass}`}>
+      {/* Always-on frozen top bar — translucent + blurred so it matches the canvas at rest, frosts content on scroll. */}
+      <div className={`sticky top-0 z-20 flex h-11 shrink-0 items-center justify-end gap-1 px-4 backdrop-blur-xl ${barTranslucent}`}>
         <GalleryBarBtn
           disabled={selected.size === 0}
           ariaLabel="Favorite"
@@ -4119,26 +4118,24 @@ function MediaTabViewBody(props: {
   const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
   const isDarkAlbum = albumBg === "dark";
   const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-white text-foreground";
-  const albumBarClass = isDarkAlbum
-    ? "bg-zinc-950 text-zinc-100"
-    : "bg-white text-foreground";
+  const barTranslucent = isDarkAlbum ? "bg-zinc-950/80 text-zinc-100" : "bg-white/80 text-foreground";
 
   return (
     <div className={`flex h-[calc(100vh-12rem)] min-h-[480px] flex-col overflow-hidden ${albumBgClass}`}>
-      <div className={`flex h-11 flex-none items-center justify-end gap-2 px-4 ${albumBarClass}`}>
+      <div className={`sticky top-0 z-20 flex h-11 flex-none items-center justify-end gap-2 px-4 backdrop-blur-xl ${barTranslucent}`}>
         <button
           type="button"
           onClick={() => setEditPanelOpen((v) => !v)}
-          aria-label="Edit"
+          aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
           className={`grid h-9 w-9 place-items-center rounded-full transition ${
             editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
           }`}
         >
-          <Pencil className="h-4 w-4" />
+          {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
         </button>
       </div>
       <div className="flex min-h-0 flex-1">
-        <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4 transition-[flex-basis] duration-300 ease-out">
+        <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4">
           {current?.media_type === "photo" ? (
             <PhotoLqip
               thumbSrc={current ? thumbUrls[current.id] : undefined}
@@ -4148,58 +4145,58 @@ function MediaTabViewBody(props: {
             <VideoPlayer src={url} drawing={drawing} theme={albumBg} />
           )}
         </div>
-        <aside
-          className={`flex min-h-0 flex-none flex-col overflow-hidden border-l border-hairline bg-background transition-[width] duration-300 ease-out ${
-            editPanelOpen ? "w-96" : "w-0"
-          }`}
-        >
-          <div className="flex w-96 flex-1 flex-col">
-            <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
-              <div className="flex gap-1">
-                {tabs.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTab(t)}
-                    className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
-                      tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setEditPanelOpen(false)}
-                className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-5">
-              {tab === "about" && (
-                <AboutPanel
-                  items={items}
-                  albums={albums}
-                  attended={attended}
-                  userName={userName}
-                  itemAlbums={itemAlbums}
-                  onSaved={onSaved}
-                />
-              )}
-              {tab === "access" && (
-                <AccessPanel items={items} onSaved={onSaved} isTeamMode={isTeamMode} />
-              )}
-              {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
-              {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
-            </div>
-          </div>
-        </aside>
       </div>
       {isMulti && (
         <div className="flex-none">
           <DockStrip items={items} urls={urls} activeIdx={idx} onSelect={setIdx} />
         </div>
       )}
+      {/* Edit panel — viewport-anchored overlay dropping from under the global top tab bar. */}
+      <aside
+        aria-hidden={!editPanelOpen}
+        className={`fixed right-0 top-[57px] bottom-0 z-30 flex w-96 flex-col overflow-hidden border-l border-border/40 bg-background shadow-2xl transition-transform duration-300 ease-out ${
+          editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
+          <div className="flex gap-1">
+            {tabs.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
+                  tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setEditPanelOpen(false)}
+            className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {tab === "about" && (
+            <AboutPanel
+              items={items}
+              albums={albums}
+              attended={attended}
+              userName={userName}
+              itemAlbums={itemAlbums}
+              onSaved={onSaved}
+            />
+          )}
+          {tab === "access" && (
+            <AccessPanel items={items} onSaved={onSaved} isTeamMode={isTeamMode} />
+          )}
+          {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
+          {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
+        </div>
+      </aside>
     </div>
   );
 }
