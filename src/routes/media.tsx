@@ -66,8 +66,10 @@ export interface OpenNoteTab {
   title: string;
   folder: string | null;
   kind: "new" | "earlier";
-  type?: "note" | "meeting" | "media";
+  type?: "note" | "meeting" | "media" | "album";
   mediaIds?: string[];
+  /** For type === "album": the album folder id (or "__unsorted__" / ""). */
+  albumFolder?: string;
 }
 
 export const Route = createFileRoute("/media")({
