@@ -520,7 +520,7 @@ function LibraryPage() {
       : undefined;
 
   return (
-    <div className="h-full overflow-hidden px-4 md:px-6">
+    <div className="h-full overflow-hidden">
       <TopBarSlot>
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
           {openNoteTabs.length > 0 && (
