@@ -1609,6 +1609,9 @@ function MediaPage({
                         }}
                       />
                     )}
+                    {isSel && (
+                      <div className="pointer-events-none absolute inset-0 z-10 rounded-sm ring-[3px] ring-inset ring-black" />
+                    )}
                     {selectMode && (
                       <div className="absolute left-2 top-2 rounded-full bg-background/80 p-0.5">
                         {isSel ? (
