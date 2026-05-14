@@ -2553,12 +2553,12 @@ function Lightbox({
           <button
             type="button"
             onClick={() => setEditPanelOpen((v) => !v)}
-            aria-label="Edit"
-            className={`grid h-9 w-9 place-items-center rounded-full transition ${
+            aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
+            className={`relative z-20 grid h-9 w-9 place-items-center rounded-full transition ${
               editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
             }`}
           >
-            <Pencil className="h-4 w-4" />
+            {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
           </button>
         </div>
 
