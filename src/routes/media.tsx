@@ -653,11 +653,11 @@ function LibraryPage() {
                             style={{
                               position: "absolute",
                               bottom: -1,
-                              left: -10,
-                              width: 10,
-                              height: 11,
+                              left: -14,
+                              width: 14,
+                              height: 15,
                               background:
-                                "radial-gradient(circle at 0 1px, transparent 10px, #FFFFFF 10.5px)",
+                                "radial-gradient(circle at 0 1px, transparent 13.5px, var(--hairline) 13.5px, var(--hairline) 14.5px, #FFFFFF 14.5px)",
                               pointerEvents: "none",
                             }}
                           />
@@ -666,11 +666,11 @@ function LibraryPage() {
                             style={{
                               position: "absolute",
                               bottom: -1,
-                              right: -10,
-                              width: 10,
-                              height: 11,
+                              right: -14,
+                              width: 14,
+                              height: 15,
                               background:
-                                "radial-gradient(circle at 100% 1px, transparent 10px, #FFFFFF 10.5px)",
+                                "radial-gradient(circle at 100% 1px, transparent 13.5px, var(--hairline) 13.5px, var(--hairline) 14.5px, #FFFFFF 14.5px)",
                               pointerEvents: "none",
                             }}
                           />
