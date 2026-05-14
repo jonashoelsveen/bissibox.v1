@@ -2355,34 +2355,69 @@ function Lightbox({
     : ["about", "access", "export"];
   useEffect(() => { if (!isVideo && tab === "draw") setTab("about"); }, [isVideo, tab]);
 
+  const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
+  const isDarkAlbum = albumBg === "dark";
+  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-background text-foreground";
+  const albumBarClass = isDarkAlbum
+    ? "bg-zinc-950 text-zinc-100 border-b border-zinc-800"
+    : "bg-background text-foreground border-b border-hairline";
+
   return (
     <div className="fixed inset-0 z-50 flex animate-in fade-in" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/85" />
+      <div className={`absolute inset-0 ${isDarkAlbum ? "bg-black/95" : "bg-black/85"}`} />
       <div
         className="relative z-10 flex h-full w-full"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex flex-1 flex-col items-center justify-center p-8">
-          <div className="flex w-full flex-1 items-center justify-center px-[6%] py-[3%]">
-            {current?.media_type === "photo" ? (
-              <PhotoLqip
-                thumbSrc={current ? thumbUrls[current.id] : undefined}
-                fullSrc={url}
+        <div className={`relative flex flex-1 flex-col ${albumBgClass}`}>
+          <div className={`sticky top-0 z-30 flex items-center justify-between gap-2 px-4 py-3 ${albumBarClass}`}>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Back"
+              className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditPanelOpen((v) => !v)}
+              aria-label="Edit"
+              className={`grid h-9 w-9 place-items-center rounded-full transition ${
+                editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
+              }`}
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex flex-1 flex-col items-center justify-center p-8">
+            <div className="flex w-full flex-1 items-center justify-center px-[6%] py-[3%]">
+              {current?.media_type === "photo" ? (
+                <PhotoLqip
+                  thumbSrc={current ? thumbUrls[current.id] : undefined}
+                  fullSrc={url}
+                />
+              ) : (
+                <VideoPlayer src={url} drawing={drawing} theme={albumBg} />
+              )}
+            </div>
+            {isMulti && (
+              <DockStrip
+                items={items}
+                urls={urls}
+                activeIdx={idx}
+                onSelect={setIdx}
               />
-            ) : (
-              <VideoPlayer src={url} drawing={drawing} />
             )}
           </div>
-          {isMulti && (
-            <DockStrip
-              items={items}
-              urls={urls}
-              activeIdx={idx}
-              onSelect={setIdx}
-            />
-          )}
         </div>
-        <aside className="flex w-96 flex-col border-l border-hairline bg-background">
+        <aside
+          className={`absolute right-0 bottom-0 flex w-96 flex-col border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+            editPanelOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+          style={{ top: 60 }}
+        >
           <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
             <div className="flex gap-1">
               {tabs.map((t) => (
@@ -2398,7 +2433,7 @@ function Lightbox({
               ))}
             </div>
             <button
-              onClick={onClose}
+              onClick={() => setEditPanelOpen(false)}
               className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
             >
               <X className="h-4 w-4" />
