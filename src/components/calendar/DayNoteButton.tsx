@@ -644,6 +644,13 @@ export function NotePanel({
       onMouseLeave={onPanelMouseLeave}
       onClick={(e) => {
         if (!isEdit && onRequestEdit) {
+          if (previewRef.current) {
+            pendingCaretRef.current = offsetFromClick(
+              previewRef.current,
+              e.clientX,
+              e.clientY,
+            );
+          }
           e.stopPropagation();
           onRequestEdit();
         }
