@@ -2427,7 +2427,7 @@ function Lightbox({
                 fullSrc={url}
               />
             ) : (
-              <VideoPlayer src={url} drawing={drawing} theme={albumBg} />
+              <VideoPlayer src={url} drawing={drawing} theme="light" />
             )}
           </div>
           <aside
