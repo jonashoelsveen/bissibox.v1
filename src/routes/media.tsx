@@ -2534,7 +2534,7 @@ function Lightbox({
   const [editPanelOpen, setEditPanelOpen] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-50 flex animate-in fade-in" onClick={onClose}>
+    <div className="fixed left-0 right-0 bottom-0 top-[53px] md:left-[220px] z-30 flex animate-in fade-in" onClick={onClose}>
       <div className="absolute inset-0 bg-white" />
       <div
         className="relative z-10 flex h-full w-full flex-col bg-white text-foreground"
