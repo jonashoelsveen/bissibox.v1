@@ -574,15 +574,11 @@ function LibraryPage() {
                 style={{ scrollBehavior: "smooth" }}
               >
                 {openNoteTabs.map((t, idx) => {
-                  const isActive = activeNoteId === t.id;
-                  const isNew = t.kind === "new";
-                  const colorActive = isNew
-                    ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
-                    : "border-muted-foreground text-ink";
-                  const colorIdle = isNew
-                    ? "border-transparent text-emerald-600/80 hover:text-emerald-700 dark:text-emerald-400/80"
-                    : "border-transparent text-muted-foreground hover:text-ink";
-                  const dotColor = isNew ? "bg-emerald-500" : "bg-muted-foreground/60";
+                  const isAlbum = t.type === "album";
+                  const isActive = isAlbum
+                    ? !showingNote && baseTab === "media" &&
+                      ((t.albumFolder ?? "") === (search.folder ?? ""))
+                    : activeNoteId === t.id;
                   const isDragging = dragNoteId === t.id;
 
                   let translateX = 0;
@@ -599,6 +595,8 @@ function LibraryPage() {
                     ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
                     : { transform: `translate3d(${translateX}px,0,0)` };
 
+                  // Chrome-style outward curves on bottom-left and bottom-right.
+                  const curveBg = isActive ? "#FFFFFF" : "transparent";
                   return (
                     <button
                       key={t.id}
@@ -607,33 +605,93 @@ function LibraryPage() {
                         else tabRefs.current.delete(t.id);
                       }}
                       onPointerDown={(e) => onTabPointerDown(e, t.id)}
-                      onClick={() => setActiveNoteId(t.id)}
+                      onClick={() => {
+                        if (isAlbum) {
+                          setActiveNoteId(null);
+                          navigate({
+                            to: "/media",
+                            search: {
+                              tab: "media",
+                              folder: t.albumFolder || undefined,
+                            },
+                            replace: true,
+                          });
+                        } else {
+                          setActiveNoteId(t.id);
+                        }
+                      }}
                       style={{
                         flex: "1 1 200px",
                         minWidth: 140,
-                        maxWidth: 240,
+                        maxWidth: 220,
+                        height: 34,
+                        marginRight: 8,
+                        background: curveBg,
+                        borderTopLeftRadius: 10,
+                        borderTopRightRadius: 10,
+                        padding: "0 26px 0 12px",
                         touchAction: "pan-y",
                         ...dragStyle,
                         transition: isDragging
                           ? "none"
                           : dragNoteId
-                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
-                            : "color 150ms, border-color 150ms",
+                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), background 150ms, color 150ms"
+                            : "background 150ms, color 150ms",
                       }}
-                      className={`group -mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
-                        isActive ? colorActive : colorIdle
+                      className={`group relative inline-flex shrink-0 select-none items-center gap-1.5 text-sm ${
+                        isActive ? "text-ink" : "text-muted-foreground hover:text-ink hover:bg-secondary/40"
                       }`}
                       title={t.title}
                     >
-                      {t.type === "meeting" ? (
-                        <Briefcase className="h-3 w-3 shrink-0 opacity-70" />
-                      ) : t.type === "media" ? (
-                        <ImageIcon className="h-3 w-3 shrink-0 opacity-70" />
-                      ) : (
-                        <StickyNote className="h-3 w-3 shrink-0 opacity-70" />
+                      {/* Chrome-style outward curves (only when active to match the white canvas) */}
+                      {isActive && (
+                        <>
+                          <span
+                            aria-hidden
+                            style={{
+                              position: "absolute",
+                              bottom: 0,
+                              left: -10,
+                              width: 10,
+                              height: 10,
+                              background:
+                                "radial-gradient(circle at 0 0, transparent 10px, #FFFFFF 10.5px)",
+                              pointerEvents: "none",
+                            }}
+                          />
+                          <span
+                            aria-hidden
+                            style={{
+                              position: "absolute",
+                              bottom: 0,
+                              right: -10,
+                              width: 10,
+                              height: 10,
+                              background:
+                                "radial-gradient(circle at 100% 0, transparent 10px, #FFFFFF 10.5px)",
+                              pointerEvents: "none",
+                            }}
+                          />
+                        </>
                       )}
-                      <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
-                      <span className="min-w-0 flex-1 truncate text-left">
+                      {t.type === "meeting" ? (
+                        <Briefcase className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                      ) : t.type === "media" ? (
+                        <ImageIcon className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                      ) : t.type === "album" ? (
+                        <Library className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                      ) : (
+                        <StickyNote className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                      )}
+                      <span
+                        className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left"
+                        style={{
+                          WebkitMaskImage:
+                            "linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%)",
+                          maskImage:
+                            "linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%)",
+                        }}
+                      >
                         {t.folder ? `${t.folder} · ${t.title}` : t.title}
                       </span>
                       <span
@@ -643,9 +701,13 @@ function LibraryPage() {
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
                           e.stopPropagation();
-                          closeNoteTab(t.id);
+                          if (isAlbum) {
+                            setOpenNoteTabs((prev) => prev.filter((x) => x.id !== t.id));
+                          } else {
+                            closeNoteTab(t.id);
+                          }
                         }}
-                        className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
                       >
                         ✕
                       </span>
