@@ -36,7 +36,7 @@ import {
   Link2,
   Activity,
   Ghost,
-  ArrowUp,
+  UsersRound,
   MoreVertical,
   User as UserIcon,
   Camera,
@@ -1691,7 +1691,7 @@ function MediaPage({
                       className="absolute bottom-2 left-2 z-10 cursor-pointer rounded-full bg-black/50 p-1.5 text-white transition hover:bg-black/70"
                       aria-label="Show details"
                     >
-                      <ArrowUp className="h-3.5 w-3.5" />
+                      <UsersRound className="h-3.5 w-3.5" />
                     </button>
 
                     {it.user_id === user.id && (
