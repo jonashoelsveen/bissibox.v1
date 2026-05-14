@@ -756,11 +756,13 @@ export function LibrarySideNav({
 
 function SortableFolderRow(props: {
   folder: FolderLite;
+  rowIcon?: React.ReactNode;
   active: boolean;
   renaming: boolean;
   renameValue: string;
   setRenameValue: (v: string) => void;
   onSelect: () => void;
+  onOpenAsTab?: () => void;
   onCommitRename: () => void;
   onCancelRename: () => void;
   menuOpen: boolean;
