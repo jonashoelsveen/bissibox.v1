@@ -1688,14 +1688,22 @@ function MediaPage({
                           return n;
                         });
                       }}
-                      className="absolute bottom-2 left-2 z-10 cursor-pointer rounded-full bg-black/50 p-1.5 text-white transition hover:bg-black/70"
+                      className={`absolute bottom-2 left-2 z-10 cursor-pointer rounded-full p-1.5 text-white transition ${
+                        isRevealed
+                          ? "bg-black opacity-100"
+                          : "bg-black/50 opacity-0 hover:bg-black/70 group-hover:opacity-100"
+                      }`}
                       aria-label="Show details"
                     >
                       <UsersRound className="h-3.5 w-3.5" />
                     </button>
 
                     {it.user_id === user.id && (
-                      <div className="absolute right-2 top-2 z-10">
+                      <div
+                        className={`absolute right-2 top-2 z-10 transition-opacity ${
+                          menuFor === it.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                        }`}
+                      >
                         <button
                           type="button"
                           onClick={(e) => {
