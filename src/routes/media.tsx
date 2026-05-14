@@ -21,6 +21,7 @@ import { MapPage } from "@/components/map/MapPage";
 import { toast } from "sonner";
 import {
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Plus,
   Upload,
