@@ -862,6 +862,7 @@ function LibraryPage() {
               onCreateContainer={handleCreateContainerFromPrevious}
               newAlbumSignal={0}
               showMeetingOption={isTeamMode}
+              openAlbumFolders={openAlbumFolders}
             />
           )}
         </div>
