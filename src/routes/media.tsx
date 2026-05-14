@@ -626,57 +626,98 @@ function LibraryPage() {
                         maxWidth: 220,
                         height: 34,
                         marginRight: 4,
-                        background: (isActive || isDragging) ? "#FFFFFF" : "transparent",
-                        borderTopLeftRadius: 10,
-                        borderTopRightRadius: 10,
+                        background: "transparent",
                         padding: "0 28px 0 12px",
-                        marginBottom: (isActive || isDragging) ? -1 : 0,
-                        paddingBottom: (isActive || isDragging) ? 1 : 0,
-                        boxShadow: (isActive || isDragging)
-                          ? "inset 1px 0 0 var(--hairline), inset -1px 0 0 var(--hairline), inset 0 1px 0 var(--hairline)"
-                          : undefined,
+                        // Always overlap the bar hairline by 1px so click-to-activate doesn't shift layout.
+                        marginBottom: -1,
+                        paddingBottom: 1,
                         touchAction: "pan-y",
                         ...dragStyle,
                         transition: isDragging
                           ? "none"
                           : dragNoteId
-                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), background 150ms, color 150ms"
-                            : "background 150ms, color 150ms",
+                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms"
+                            : "color 150ms",
                       }}
                       className={`group relative inline-flex shrink-0 select-none items-center gap-1.5 text-sm ${
-                        isActive ? "text-ink" : "text-muted-foreground hover:text-ink hover:bg-secondary/40"
+                        isActive
+                          ? "text-ink"
+                          : "rounded-t-[10px] text-muted-foreground hover:text-ink hover:bg-secondary/40"
                       }`}
                       title={t.title}
                     >
-                      {/* Chrome-style outward curves (active or while dragging) */}
+                      {/* Active tab silhouette: white fill + continuous 1px hairline tracing top, sides and outward bows */}
                       {(isActive || isDragging) && (
                         <>
+                          {/* Middle: white fill + top hairline border (stretches with tab width) */}
                           <span
                             aria-hidden
                             style={{
                               position: "absolute",
+                              top: 0,
+                              left: 14,
+                              right: 14,
                               bottom: -1,
+                              background: "#FFFFFF",
+                              boxShadow: "inset 0 1px 0 var(--hairline)",
+                              pointerEvents: "none",
+                              zIndex: 0,
+                            }}
+                          />
+                          {/* Left silhouette: top-left corner + outward bow */}
+                          <svg
+                            aria-hidden
+                            width="28"
+                            height="35"
+                            viewBox="0 0 28 35"
+                            style={{
+                              position: "absolute",
+                              top: 0,
                               left: -14,
-                              width: 14,
-                              height: 15,
-                              background:
-                                "radial-gradient(circle at 0 1px, transparent 13.5px, var(--hairline) 13.5px, var(--hairline) 14.5px, #FFFFFF 14.5px)",
                               pointerEvents: "none",
+                              zIndex: 0,
+                              overflow: "visible",
                             }}
-                          />
-                          <span
+                          >
+                            <path
+                              d="M 0 35 L 0 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0 L 28 35 Z"
+                              fill="#FFFFFF"
+                            />
+                            <path
+                              d="M 0 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0"
+                              fill="none"
+                              stroke="var(--hairline)"
+                              strokeWidth="1"
+                              shapeRendering="geometricPrecision"
+                            />
+                          </svg>
+                          {/* Right silhouette: top-right corner + outward bow (mirror) */}
+                          <svg
                             aria-hidden
+                            width="28"
+                            height="35"
+                            viewBox="0 0 28 35"
                             style={{
                               position: "absolute",
-                              bottom: -1,
+                              top: 0,
                               right: -14,
-                              width: 14,
-                              height: 15,
-                              background:
-                                "radial-gradient(circle at 100% 1px, transparent 13.5px, var(--hairline) 13.5px, var(--hairline) 14.5px, #FFFFFF 14.5px)",
                               pointerEvents: "none",
+                              zIndex: 0,
+                              overflow: "visible",
                             }}
-                          />
+                          >
+                            <path
+                              d="M 28 35 L 28 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0 L 0 35 Z"
+                              fill="#FFFFFF"
+                            />
+                            <path
+                              d="M 28 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0"
+                              fill="none"
+                              stroke="var(--hairline)"
+                              strokeWidth="1"
+                              shapeRendering="geometricPrecision"
+                            />
+                          </svg>
                         </>
                       )}
                       {t.type === "meeting" ? (
