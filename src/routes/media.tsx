@@ -2553,18 +2553,18 @@ function Lightbox({
           <button
             type="button"
             onClick={() => setEditPanelOpen((v) => !v)}
-            aria-label="Edit"
-            className={`grid h-9 w-9 place-items-center rounded-full transition ${
+            aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
+            className={`relative z-20 grid h-9 w-9 place-items-center rounded-full transition ${
               editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
             }`}
           >
-            <Pencil className="h-4 w-4" />
+            {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
           </button>
         </div>
 
-        {/* Row 2 — media + sliding edit panel */}
-        <div className="flex min-h-0 flex-1">
-          <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4 transition-[flex-basis] duration-300 ease-out">
+        {/* Row 2 — media + sliding edit panel (overlay) */}
+        <div className="relative flex min-h-0 flex-1">
+          <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4">
             {current?.media_type === "photo" ? (
               <PhotoLqip
                 thumbSrc={current ? thumbUrls[current.id] : undefined}
@@ -2575,8 +2575,9 @@ function Lightbox({
             )}
           </div>
           <aside
-            className={`flex min-h-0 flex-none flex-col overflow-hidden border-l border-hairline bg-background transition-[width] duration-300 ease-out ${
-              editPanelOpen ? "w-96" : "w-0"
+            aria-hidden={!editPanelOpen}
+            className={`absolute right-0 top-0 bottom-0 z-10 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+              editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
             }`}
           >
             <div className="flex w-96 flex-1 flex-col">
