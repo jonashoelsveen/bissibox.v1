@@ -623,12 +623,12 @@ function LibraryPage() {
         {/* Per-page Search/Plus mount removed — global top tab bar provides them. */}
       </TopBarSlot>
 
-      <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[220px_1fr]">
-        <aside className="md:h-full md:overflow-y-auto md:border-r md:border-border/60 md:pr-4">
+      <div className="grid h-full gap-6 overflow-hidden md:grid-cols-[220px_1fr]">
+        <aside className="md:h-full md:overflow-y-auto md:border-r md:border-border/60 md:pr-4 md:pt-4">
           <LibrarySideNav value={sideValue} onChange={onSideChange} />
         </aside>
 
-        <div className="min-w-0 md:h-full md:overflow-y-auto">
+        <div className="min-w-0 bg-white md:h-full md:overflow-y-auto">
 
           {showingNote && activeNoteId && showingMeeting ? (
             <TeamBoardPage
