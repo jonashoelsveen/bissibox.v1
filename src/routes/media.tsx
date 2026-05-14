@@ -1064,6 +1064,59 @@ function MediaPage({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
   const [openItems, setOpenItems] = useState<MediaItem[] | null>(null);
+
+  // Per-album lightbox memory: when the user opens a photo/video inside an
+  // album that is currently a tab in the strip, remember it so switching to a
+  // different tab and coming back restores the open item. Items opened from
+  // a non-tab view (e.g. "All", or an album that isn't an open tab) are NOT
+  // remembered — switching tabs simply discards them.
+  const openItemsByFolderRef = useRef<Map<string, MediaItem[]>>(new Map());
+  const openItemsRef = useRef<MediaItem[] | null>(openItems);
+  useEffect(() => {
+    openItemsRef.current = openItems;
+  }, [openItems]);
+  const openAlbumFoldersRef = useRef<Set<string> | undefined>(openAlbumFolders);
+  useEffect(() => {
+    openAlbumFoldersRef.current = openAlbumFolders;
+  }, [openAlbumFolders]);
+  // Folder key for the current view ("__unsorted__" for the null album,
+  // null for the "all" view which is never remembered).
+  const currentFolderKey =
+    view.type === "album" ? (view.id && view.id.length > 0 ? view.id : "__unsorted__") : null;
+  const prevFolderKeyRef = useRef<string | null>(currentFolderKey);
+  useEffect(() => {
+    const prev = prevFolderKeyRef.current;
+    if (prev === currentFolderKey) return;
+    prevFolderKeyRef.current = currentFolderKey;
+
+    // Stash the previously-open lightbox items for the previous folder if it
+    // is still an open album tab. Otherwise discard them.
+    const prevOpen = openItemsRef.current;
+    if (prev && openAlbumFoldersRef.current?.has(prev)) {
+      if (prevOpen && prevOpen.length > 0) {
+        openItemsByFolderRef.current.set(prev, prevOpen);
+      } else {
+        openItemsByFolderRef.current.delete(prev);
+      }
+    } else if (prev) {
+      openItemsByFolderRef.current.delete(prev);
+    }
+
+    // Restore for the new folder, or clear.
+    const restored =
+      currentFolderKey ? openItemsByFolderRef.current.get(currentFolderKey) ?? null : null;
+    setOpenItems(restored);
+  }, [currentFolderKey]);
+
+  // When an album tab is closed (removed from the strip), drop its cached
+  // lightbox state so it doesn't reappear if the user re-opens the album.
+  useEffect(() => {
+    if (!openAlbumFolders) return;
+    for (const key of Array.from(openItemsByFolderRef.current.keys())) {
+      if (!openAlbumFolders.has(key)) openItemsByFolderRef.current.delete(key);
+    }
+  }, [openAlbumFolders]);
+
   const [attended, setAttended] = useState<AttendedEvent[]>([]);
   const [userName, setUserName] = useState<string>("");
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
