@@ -2022,6 +2022,8 @@ function MediaPage({
           userName={userName}
           itemAlbums={itemAlbums}
           onClose={() => {
+            // Explicit close also forgets the per-album memory for this folder.
+            if (currentFolderKey) openItemsByFolderRef.current.delete(currentFolderKey);
             setOpenItems(null);
             exitSelect();
           }}
