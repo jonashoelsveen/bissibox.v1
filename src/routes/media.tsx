@@ -1505,34 +1505,8 @@ function MediaPage({
         </nav>
         )}
 
-        <section className={view.type === "album" ? `-mx-4 -mt-4 px-4 pb-8 ${albumBgClass}` : ""}>
-          {view.type === "album" && (
-            <div
-              className={`sticky top-0 z-20 -mx-4 mb-6 flex items-center justify-end gap-1 px-4 py-3 ${albumBarClass}`}
-            >
-              <GalleryBarBtn
-                disabled={selected.size === 0}
-                ariaLabel="Favorite"
-                onClick={() => toast.success("Favorited")}
-              >
-                <Heart className="h-4 w-4" />
-              </GalleryBarBtn>
-              <GalleryBarBtn
-                disabled={selected.size === 0}
-                ariaLabel="Delete"
-                onClick={() => void handleDelete()}
-              >
-                <Trash2 className="h-4 w-4" />
-              </GalleryBarBtn>
-              <GalleryBarBtn
-                disabled={selected.size === 0}
-                ariaLabel="More"
-                onClick={() => toast("More actions coming soon")}
-              >
-                <MoreVertical className="h-4 w-4" />
-              </GalleryBarBtn>
-            </div>
-          )}
+        <section className="px-4 pb-8 pt-4">
+
           {filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-20 text-center text-sm text-muted-foreground">
               No content yet. Upload your first photo or video.
