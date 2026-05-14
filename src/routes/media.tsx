@@ -1476,7 +1476,34 @@ function MediaPage({
         </nav>
         )}
 
-        <section>
+        <section className={view.type === "album" ? `-mx-4 -mt-4 px-4 pb-8 ${albumBgClass}` : ""}>
+          {view.type === "album" && (
+            <div
+              className={`sticky top-0 z-20 -mx-4 mb-6 flex items-center justify-end gap-1 px-4 py-3 ${albumBarClass}`}
+            >
+              <GalleryBarBtn
+                disabled={selected.size === 0}
+                ariaLabel="Favorite"
+                onClick={() => toast.success("Favorited")}
+              >
+                <Heart className="h-4 w-4" />
+              </GalleryBarBtn>
+              <GalleryBarBtn
+                disabled={selected.size === 0}
+                ariaLabel="Delete"
+                onClick={() => void handleDelete()}
+              >
+                <Trash2 className="h-4 w-4" />
+              </GalleryBarBtn>
+              <GalleryBarBtn
+                disabled={selected.size === 0}
+                ariaLabel="More"
+                onClick={() => toast("More actions coming soon")}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </GalleryBarBtn>
+            </div>
+          )}
           {filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-20 text-center text-sm text-muted-foreground">
               No content yet. Upload your first photo or video.
@@ -1487,17 +1514,41 @@ function MediaPage({
                 const isSel = selected.has(it.id);
                 const isRevealed = revealed.has(it.id);
                 const eventTitle = attended.find((e) => e.id === it.event_id)?.title;
+                const openItem = () => {
+                  if (onOpenMediaTab) {
+                    onOpenMediaTab(`media:${it.id}`, tabTitleFor([it]), [it.id]);
+                  } else if (onOpenMedia) onOpenMedia(it.id);
+                  else setOpenItems([it]);
+                };
                 return (
                   <div
                     key={it.id}
-                    onClick={() => {
-                      if (selectMode) toggleSel(it.id);
-                      else if (onOpenMediaTab) {
-                        onOpenMediaTab(`media:${it.id}`, tabTitleFor([it]), [it.id]);
-                      } else if (onOpenMedia) onOpenMedia(it.id);
-                      else setOpenItems([it]);
+                    onClick={(e) => {
+                      if (selectMode) { toggleSel(it.id); return; }
+                      if (e.shiftKey && lastClickedId) {
+                        const ids = filtered.map((f) => f.id);
+                        const a = ids.indexOf(lastClickedId);
+                        const b = ids.indexOf(it.id);
+                        if (a >= 0 && b >= 0) {
+                          const [lo, hi] = a < b ? [a, b] : [b, a];
+                          setSelected((s) => {
+                            const n = new Set(s);
+                            for (let i = lo; i <= hi; i++) n.add(ids[i]);
+                            return n;
+                          });
+                        }
+                      } else if (e.metaKey || e.ctrlKey) {
+                        toggleSel(it.id);
+                        setLastClickedId(it.id);
+                      } else {
+                        setSelected(new Set([it.id]));
+                        setLastClickedId(it.id);
+                      }
                     }}
-                    className="group relative aspect-square cursor-default overflow-hidden rounded-sm bg-secondary"
+                    onDoubleClick={(e) => { e.preventDefault(); openItem(); }}
+                    className={`group relative aspect-square cursor-default overflow-hidden rounded-sm bg-secondary ${
+                      isSel ? "ring-[1.5px] ring-inset ring-foreground" : ""
+                    }`}
                   >
                     {it.media_type === "photo" ? (
                       urls[it.id] && (
