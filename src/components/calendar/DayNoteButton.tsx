@@ -452,6 +452,41 @@ export function DayNoteButton({
  * NotePanel — reusable note popover (read-only preview / editable)
  * ============================================================ */
 
+/** Translate a click point into a character offset within `container`. */
+function offsetFromClick(
+  container: HTMLElement,
+  clientX: number,
+  clientY: number,
+): number | null {
+  const doc = container.ownerDocument;
+  const anyDoc = doc as unknown as {
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+    caretPositionFromPoint?: (
+      x: number,
+      y: number,
+    ) => { offsetNode: Node; offset: number } | null;
+  };
+  let startNode: Node | null = null;
+  let startOffset = 0;
+  if (typeof anyDoc.caretRangeFromPoint === "function") {
+    const r = anyDoc.caretRangeFromPoint(clientX, clientY);
+    if (r) { startNode = r.startContainer; startOffset = r.startOffset; }
+  } else if (typeof anyDoc.caretPositionFromPoint === "function") {
+    const p = anyDoc.caretPositionFromPoint(clientX, clientY);
+    if (p) { startNode = p.offsetNode; startOffset = p.offset; }
+  }
+  if (!startNode || !container.contains(startNode)) return null;
+  let total = 0;
+  const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  let n: Node | null = walker.nextNode();
+  while (n) {
+    if (n === startNode) return total + startOffset;
+    total += n.textContent?.length ?? 0;
+    n = walker.nextNode();
+  }
+  return null;
+}
+
 export interface NotePanelProps {
   anchorRect?: DOMRect;
   headerLabel?: string;
