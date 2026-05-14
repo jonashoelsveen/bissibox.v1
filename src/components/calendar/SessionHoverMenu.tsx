@@ -298,18 +298,15 @@ export function SessionHoverMenu({
                 style={{ background: "#9CA3AF" }}
               />
             )}
-            <span
-              className="min-w-0 flex-1 self-center overflow-hidden whitespace-nowrap pl-1.5 pr-2 text-[12px] text-ink"
-              style={{
-                WebkitMaskImage:
-                  "linear-gradient(to right, #000 0, #000 calc(100% - 16px), transparent 100%)",
-                maskImage:
-                  "linear-gradient(to right, #000 0, #000 calc(100% - 16px), transparent 100%)",
+            <TitleInput
+              value={ev.title}
+              disabled={!isOwner}
+              onCommit={(next) => {
+                const trimmed = next.trim();
+                if (trimmed === (ev.title ?? "")) return;
+                onUpsert({ id: ev.id, title: trimmed });
               }}
-              title={ev.title}
-            >
-              {ev.title}
-            </span>
+            />
             <MenuBtn
               label={
                 isOwner
@@ -442,6 +439,48 @@ export function SessionHoverMenu({
         />
       )}
     </>
+  );
+}
+
+function TitleInput({
+  value,
+  disabled,
+  onCommit,
+}: {
+  value: string;
+  disabled?: boolean;
+  onCommit: (next: string) => void;
+}) {
+  const [v, setV] = useState(value);
+  useEffect(() => { setV(value); }, [value]);
+  return (
+    <input
+      type="text"
+      value={v}
+      disabled={disabled}
+      onChange={(e) => setV(e.target.value)}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onBlur={() => onCommit(v)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          (e.currentTarget as HTMLInputElement).blur();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setV(value);
+          (e.currentTarget as HTMLInputElement).blur();
+        }
+      }}
+      placeholder="Navngi økt"
+      className="min-w-0 flex-1 self-center overflow-hidden whitespace-nowrap bg-transparent pl-1.5 pr-2 text-[12px] text-ink outline-none placeholder:text-muted-foreground/60 disabled:cursor-default"
+      style={{
+        WebkitMaskImage:
+          "linear-gradient(to right, #000 0, #000 calc(100% - 16px), transparent 100%)",
+        maskImage:
+          "linear-gradient(to right, #000 0, #000 calc(100% - 16px), transparent 100%)",
+      }}
+    />
   );
 }
 

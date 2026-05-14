@@ -452,6 +452,41 @@ export function DayNoteButton({
  * NotePanel — reusable note popover (read-only preview / editable)
  * ============================================================ */
 
+/** Translate a click point into a character offset within `container`. */
+function offsetFromClick(
+  container: HTMLElement,
+  clientX: number,
+  clientY: number,
+): number | null {
+  const doc = container.ownerDocument;
+  const anyDoc = doc as unknown as {
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+    caretPositionFromPoint?: (
+      x: number,
+      y: number,
+    ) => { offsetNode: Node; offset: number } | null;
+  };
+  let startNode: Node | null = null;
+  let startOffset = 0;
+  if (typeof anyDoc.caretRangeFromPoint === "function") {
+    const r = anyDoc.caretRangeFromPoint(clientX, clientY);
+    if (r) { startNode = r.startContainer; startOffset = r.startOffset; }
+  } else if (typeof anyDoc.caretPositionFromPoint === "function") {
+    const p = anyDoc.caretPositionFromPoint(clientX, clientY);
+    if (p) { startNode = p.offsetNode; startOffset = p.offset; }
+  }
+  if (!startNode || !container.contains(startNode)) return null;
+  let total = 0;
+  const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  let n: Node | null = walker.nextNode();
+  while (n) {
+    if (n === startNode) return total + startOffset;
+    total += n.textContent?.length ?? 0;
+    n = walker.nextNode();
+  }
+  return null;
+}
+
 export interface NotePanelProps {
   anchorRect?: DOMRect;
   headerLabel?: string;
@@ -508,6 +543,8 @@ export function NotePanel({
   const effectiveBodyHeight = defaultBodyHeight ?? (inline ? 80 : 240);
   const [val, setVal] = useState(initialValue);
   const ref = useRef<HTMLDivElement | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const pendingCaretRef = useRef<number | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const [extra, setExtra] = useState(0);
   const [footerHidden, setFooterHidden] = useState(false);
@@ -522,10 +559,13 @@ export function NotePanel({
     const ta = taRef.current;
     if (!ta) return;
     const len = ta.value.length;
+    const pending = pendingCaretRef.current;
+    pendingCaretRef.current = null;
+    const pos = pending != null ? Math.max(0, Math.min(len, pending)) : len;
     requestAnimationFrame(() => {
       ta.focus();
       try {
-        ta.setSelectionRange(len, len);
+        ta.setSelectionRange(pos, pos);
       } catch {
         /* ignore */
       }
@@ -639,6 +679,13 @@ export function NotePanel({
       onMouseLeave={onPanelMouseLeave}
       onClick={(e) => {
         if (!isEdit && onRequestEdit) {
+          if (previewRef.current) {
+            pendingCaretRef.current = offsetFromClick(
+              previewRef.current,
+              e.clientX,
+              e.clientY,
+            );
+          }
           e.stopPropagation();
           onRequestEdit();
         }
@@ -708,6 +755,7 @@ export function NotePanel({
             />
           ) : (
             <div
+              ref={previewRef}
               className="block w-full whitespace-pre-wrap text-[12px] leading-snug text-ink"
               style={{
                 minHeight: inline ? undefined : effectiveBodyHeight,
