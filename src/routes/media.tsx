@@ -4139,17 +4139,22 @@ function MediaTabViewBody(props: {
   current: MediaItem;
   url: string | undefined;
   onSaved: () => void;
+  onBack?: () => void;
 }) {
-  const { items, albums, attended, userName, itemAlbums, urls, thumbUrls, idx, setIdx, drawing, tab, setTab, tabs, isVideo, isMulti, isTeamMode, current, url, onSaved } = props;
+  const { items, albums, attended, userName, itemAlbums, urls, thumbUrls, idx, setIdx, drawing, tab, setTab, tabs, isVideo, isMulti, isTeamMode, current, url, onSaved, onBack } = props;
   const [editPanelOpen, setEditPanelOpen] = useState(false);
-  const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
-  const isDarkAlbum = albumBg === "dark";
-  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-white text-foreground";
-  const barTranslucent = isDarkAlbum ? "bg-zinc-950/80 text-zinc-100" : "bg-white/80 text-foreground";
 
   return (
-    <div className={`flex h-[calc(100vh-12rem)] min-h-[480px] flex-col overflow-hidden ${albumBgClass}`}>
-      <div className={`sticky top-0 z-20 flex h-11 flex-none items-center justify-end gap-2 px-4 backdrop-blur-xl ${barTranslucent}`}>
+    <div className="flex h-[calc(100vh-12rem)] min-h-[480px] flex-col overflow-hidden bg-white text-foreground">
+      <div className="sticky top-0 z-20 flex h-11 flex-none items-center justify-between gap-2 px-4 backdrop-blur-xl bg-white/80 text-foreground">
+        <button
+          type="button"
+          onClick={() => onBack?.()}
+          aria-label="Back"
+          className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
         <button
           type="button"
           onClick={() => setEditPanelOpen((v) => !v)}
@@ -4169,61 +4174,63 @@ function MediaTabViewBody(props: {
               fullSrc={url}
             />
           ) : (
-            <VideoPlayer src={url} drawing={drawing} theme={albumBg} />
+            <VideoPlayer src={url} drawing={drawing} theme="light" />
           )}
         </div>
+        {/* Edit panel — flex sibling that pushes the media area when open. */}
+        <aside
+          aria-hidden={!editPanelOpen}
+          className={`flex min-h-0 flex-none flex-col overflow-hidden border-l border-hairline bg-background transition-[width] duration-300 ease-out ${
+            editPanelOpen ? "w-96" : "w-0"
+          }`}
+        >
+          <div className="flex w-96 flex-1 flex-col">
+            <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
+              <div className="flex gap-1">
+                {tabs.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
+                      tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setEditPanelOpen(false)}
+                className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              {tab === "about" && (
+                <AboutPanel
+                  items={items}
+                  albums={albums}
+                  attended={attended}
+                  userName={userName}
+                  itemAlbums={itemAlbums}
+                  onSaved={onSaved}
+                />
+              )}
+              {tab === "access" && (
+                <AccessPanel items={items} onSaved={onSaved} isTeamMode={isTeamMode} />
+              )}
+              {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
+              {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
+            </div>
+          </div>
+        </aside>
       </div>
       {isMulti && (
         <div className="flex-none">
           <DockStrip items={items} urls={urls} activeIdx={idx} onSelect={setIdx} />
         </div>
       )}
-      {/* Edit panel — viewport-anchored overlay dropping from under the global top tab bar. */}
-      <aside
-        aria-hidden={!editPanelOpen}
-        className={`fixed right-0 top-[57px] bottom-0 z-30 flex w-96 flex-col overflow-hidden border-l border-border/40 bg-background shadow-2xl transition-transform duration-300 ease-out ${
-          editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
-          <div className="flex gap-1">
-            {tabs.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
-                  tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setEditPanelOpen(false)}
-            className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-5">
-          {tab === "about" && (
-            <AboutPanel
-              items={items}
-              albums={albums}
-              attended={attended}
-              userName={userName}
-              itemAlbums={itemAlbums}
-              onSaved={onSaved}
-            />
-          )}
-          {tab === "access" && (
-            <AccessPanel items={items} onSaved={onSaved} isTeamMode={isTeamMode} />
-          )}
-          {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
-          {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
-        </div>
-      </aside>
     </div>
   );
 }
