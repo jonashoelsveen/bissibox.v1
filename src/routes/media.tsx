@@ -1342,7 +1342,6 @@ function MediaPage({
       >
         <div className="flex items-center" onClick={clearSelectionOnBg}>
           {/* intentionally empty — back arrow lives in MediaTabView only */}
-          {void inAlbum}
         </div>
         <div className="flex items-center gap-1">
           <GalleryBarBtn
