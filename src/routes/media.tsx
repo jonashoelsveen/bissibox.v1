@@ -3614,9 +3614,9 @@ function VideoPlayer({ src, drawing, theme = "dark" }: { src?: string; drawing?:
   const progress = ready && duration > 0 ? Math.min(1, current / duration) : 0;
 
   return (
-    <div className="flex h-full w-full max-w-[88%] flex-col gap-3">
+    <div className="flex h-full w-full flex-col gap-3">
       <div
-        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg bg-black"
+        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-black"
         onClick={drawing?.enabled ? undefined : togglePlay}
       >
         <video
