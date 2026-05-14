@@ -81,9 +81,11 @@ function writeMapFolders(scope: string, next: MapFolderLite[]) {
 export function LibrarySideNav({
   value,
   onChange,
+  onOpenAsTab,
 }: {
   value: LibrarySideNavValue;
   onChange: (v: LibrarySideNavValue) => void;
+  onOpenAsTab?: (v: LibrarySideNavValue, label: string) => void;
 }) {
   const { user, mode, activeEntityId } = useAuth();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
