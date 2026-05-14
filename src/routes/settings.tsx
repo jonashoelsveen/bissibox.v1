@@ -1479,6 +1479,79 @@ function ProfileVisibilityPanel({
 
 /* ───────── Library category settings (autosave per category) ───────── */
 
+function MediaSettingsPanel() {
+  return (
+    <div className="space-y-3">
+      <AlbumBackgroundCard />
+    </div>
+  );
+}
+
+function AlbumBackgroundCard() {
+  const [open, setOpen] = useState(true);
+  const [bg, setBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
+  const options: Array<{ id: "light" | "dark"; label: string; description: string }> = [
+    { id: "light", label: "Light", description: "Bright background, ideal for daytime browsing." },
+    { id: "dark", label: "Dark", description: "Dim background, easier on the eyes in low light." },
+  ];
+  return (
+    <Card>
+      <div className="flex w-full items-center gap-3">
+        <button onClick={() => setOpen((v) => !v)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <h3 className="text-sm font-semibold text-ink">Album background</h3>
+        </button>
+        <button onClick={() => setOpen((v) => !v)} aria-label={open ? "Collapse" : "Expand"} className="text-muted-foreground hover:text-ink">
+          {open ? <ChevronDown className="h-4 w-4" strokeWidth={2.25} /> : <ChevronRight className="h-4 w-4" strokeWidth={2.25} />}
+        </button>
+      </div>
+      {open && (
+        <>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Color of the album backdrop and frozen top bar. Affects gallery and opened items.
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {options.map((o) => {
+              const active = o.id === bg;
+              const isDark = o.id === "dark";
+              return (
+                <button
+                  key={o.id}
+                  onClick={() => setBg(o.id)}
+                  className={`group relative overflow-hidden rounded-xl border text-left transition ${
+                    active ? "border-primary shadow-md ring-2 ring-primary/30" : "border-hairline hover:border-ink/30"
+                  }`}
+                >
+                  <div className={`relative h-28 px-3 py-2 ${isDark ? "bg-zinc-950" : "bg-background"}`}>
+                    <div className={`mb-2 flex h-3 items-center justify-end gap-1 rounded-sm ${isDark ? "bg-zinc-900" : "bg-secondary/60"}`}>
+                      <span className={`mr-1 h-1.5 w-1.5 rounded-full ${isDark ? "bg-zinc-600" : "bg-zinc-400"}`} />
+                      <span className={`mr-1 h-1.5 w-1.5 rounded-full ${isDark ? "bg-zinc-600" : "bg-zinc-400"}`} />
+                      <span className={`mr-1 h-1.5 w-1.5 rounded-full ${isDark ? "bg-zinc-600" : "bg-zinc-400"}`} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className={`aspect-square rounded-[2px] ${isDark ? "bg-zinc-800" : "bg-zinc-300"}`} />
+                      ))}
+                    </div>
+                    {active && (
+                      <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+                        <Check className="h-3 w-3" />
+                      </span>
+                    )}
+                  </div>
+                  <div className="bg-card px-3 py-2.5">
+                    <div className="text-sm font-medium text-ink">{o.label}</div>
+                    <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{o.description}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
 function LibrarySettingsPanel({ scopeKey }: { scopeKey: string }) {
   return (
     <div className="space-y-3">
