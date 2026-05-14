@@ -3595,7 +3595,7 @@ function VideoPlayer({ src, drawing, theme = "dark" }: { src?: string; drawing?:
         <div className="mb-2 flex items-center justify-center">
           <button
             onClick={togglePlay}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-100 transition hover:text-white"
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition ${playBtnClass}`}
             aria-label={playing ? "Pause" : "Play"}
           >
             {playing ? (
