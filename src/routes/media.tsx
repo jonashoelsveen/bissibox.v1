@@ -1576,9 +1576,7 @@ function MediaPage({
                       }
                     }}
                     onDoubleClick={(e) => { e.preventDefault(); openItem(); }}
-                    className={`group relative aspect-square cursor-default overflow-hidden rounded-sm bg-secondary ${
-                      isSel ? "ring-[3px] ring-inset ring-black/90" : ""
-                    }`}
+                    className="group relative aspect-square cursor-default overflow-hidden rounded-sm bg-secondary"
                   >
                     {it.media_type === "photo" ? (
                       urls[it.id] && (
