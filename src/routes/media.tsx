@@ -1314,12 +1314,41 @@ function MediaPage({
     </>
   );
 
+  const inAlbum = view.type === "album";
+  const pageBgClass = inAlbum ? albumBgClass : "bg-white text-foreground";
+  const pageBarClass = inAlbum ? albumBarClass : "bg-white text-foreground";
+
   return (
-    <div>
+    <div className={`flex h-full flex-col ${pageBgClass}`}>
       {/* Per-page Search/Plus removed — using the global top tab bar's actions instead. */}
       {void actions}
 
-      <div className={`mt-4 grid gap-8 ${hideSideNav ? "md:grid-cols-1" : "md:grid-cols-[200px_1fr]"}`}>
+      {/* Always-on frozen top bar (matches album view height for both parent tab and album). */}
+      <div className={`sticky top-0 z-20 flex h-11 shrink-0 items-center justify-end gap-1 px-4 ${pageBarClass}`}>
+        <GalleryBarBtn
+          disabled={selected.size === 0}
+          ariaLabel="Favorite"
+          onClick={() => toast.success("Favorited")}
+        >
+          <Heart className="h-4 w-4" />
+        </GalleryBarBtn>
+        <GalleryBarBtn
+          disabled={selected.size === 0}
+          ariaLabel="Delete"
+          onClick={() => void handleDelete()}
+        >
+          <Trash2 className="h-4 w-4" />
+        </GalleryBarBtn>
+        <GalleryBarBtn
+          disabled={selected.size === 0}
+          ariaLabel="More"
+          onClick={() => toast("More actions coming soon")}
+        >
+          <MoreVertical className="h-4 w-4" />
+        </GalleryBarBtn>
+      </div>
+
+      <div className={`grid flex-1 gap-8 overflow-y-auto ${hideSideNav ? "md:grid-cols-1" : "md:grid-cols-[200px_1fr]"}`}>
         {!hideSideNav && (
         <nav className="-ml-2 flex flex-col gap-0.5">
           <NavBtn active={view.type === "all"} onClick={() => setView({ type: "all" })}>
