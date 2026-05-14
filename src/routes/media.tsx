@@ -411,7 +411,18 @@ function LibraryPage() {
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
     if (target.closest("[data-tab-close]")) return;
-    setActiveNoteId(id); // immediate focus
+    // Activate immediately on press — release position is irrelevant (Chrome/VSCode behavior).
+    const tab = openNoteTabs.find((t) => t.id === id);
+    if (tab && tab.type === "album") {
+      setActiveNoteId(null);
+      navigate({
+        to: "/media",
+        search: { tab: "media", folder: tab.albumFolder || undefined },
+        replace: true,
+      });
+    } else {
+      setActiveNoteId(id);
+    }
 
     const strip = tabStripRef.current;
     if (!strip) return;
@@ -605,21 +616,6 @@ function LibraryPage() {
                         else tabRefs.current.delete(t.id);
                       }}
                       onPointerDown={(e) => onTabPointerDown(e, t.id)}
-                      onClick={() => {
-                        if (isAlbum) {
-                          setActiveNoteId(null);
-                          navigate({
-                            to: "/media",
-                            search: {
-                              tab: "media",
-                              folder: t.albumFolder || undefined,
-                            },
-                            replace: true,
-                          });
-                        } else {
-                          setActiveNoteId(t.id);
-                        }
-                      }}
                       style={{
                         flex: "1 1 200px",
                         minWidth: 140,
@@ -680,11 +676,11 @@ function LibraryPage() {
                             }}
                           >
                             <path
-                              d="M 0 35 L 0 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0 L 28 35 Z"
+                              d="M 0 35 L 0 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0 L 28 35 Z"
                               fill="#FFFFFF"
                             />
                             <path
-                              d="M 0 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0"
+                              d="M 0 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0"
                               fill="none"
                               stroke="var(--hairline)"
                               strokeWidth="1"
@@ -707,11 +703,11 @@ function LibraryPage() {
                             }}
                           >
                             <path
-                              d="M 28 35 L 28 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0 L 0 35 Z"
+                              d="M 28 35 L 28 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0 L 0 35 Z"
                               fill="#FFFFFF"
                             />
                             <path
-                              d="M 28 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0"
+                              d="M 28 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0"
                               fill="none"
                               stroke="var(--hairline)"
                               strokeWidth="1"
