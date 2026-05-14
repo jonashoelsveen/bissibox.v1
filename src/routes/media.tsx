@@ -1824,7 +1824,7 @@ function GalleryBarBtn({
       className={`grid h-9 w-9 place-items-center rounded-full transition ${
         disabled
           ? "pointer-events-none text-muted-foreground/40"
-          : "text-current hover:bg-foreground/10"
+          : "text-foreground hover:bg-foreground/10"
       }`}
     >
       {children}
