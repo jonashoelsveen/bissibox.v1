@@ -1348,7 +1348,7 @@ function MediaPage({
 
       {/* Always-on frozen top bar — pure white, indistinguishable from canvas at rest. */}
       <div
-        className="sticky top-0 z-20 flex shrink-0 items-center justify-between gap-1 px-4 pt-4 bg-white text-foreground"
+        className="sticky top-0 z-20 flex shrink-0 items-center justify-between gap-1 px-4 pt-4 pb-4 bg-white text-foreground"
         onClick={clearSelectionOnBg}
       >
         <div className="flex min-w-0 items-center" onClick={clearSelectionOnBg}>
@@ -1571,7 +1571,7 @@ function MediaPage({
         </nav>
         )}
 
-        <section className="px-4 pb-8 pt-4" onClick={clearSelectionOnBg}>
+        <section className="px-4 pb-8" onClick={clearSelectionOnBg}>
 
           {filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-20 text-center text-sm text-muted-foreground">
