@@ -581,6 +581,8 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
         <LibrarySettingsPanel scopeKey={`user:${user.id}`} />
       )}
 
+      {tab === "media" && !isTeamMode && <MediaSettingsPanel />}
+
       {tab === "connectors" && <ConnectorsPanel />}
 
       {tab === "system" && <SystemPanel />}
