@@ -2388,22 +2388,16 @@ function Lightbox({
   useEffect(() => { if (!isVideo && tab === "draw") setTab("about"); }, [isVideo, tab]);
 
   const [editPanelOpen, setEditPanelOpen] = useState(false);
-  const [albumBg] = useLibrarySetting<"light" | "dark">("media:album-bg", "light");
-  const isDarkAlbum = albumBg === "dark";
-  const albumBgClass = isDarkAlbum ? "bg-zinc-950 text-zinc-100" : "bg-white text-foreground";
-  const albumBarClass = isDarkAlbum
-    ? "bg-zinc-950 text-zinc-100"
-    : "bg-white text-foreground";
 
   return (
     <div className="fixed inset-0 z-50 flex animate-in fade-in" onClick={onClose}>
-      <div className={`absolute inset-0 ${isDarkAlbum ? "bg-black/95" : "bg-black/85"}`} />
+      <div className="absolute inset-0 bg-white" />
       <div
-        className={`relative z-10 flex h-full w-full flex-col ${albumBgClass}`}
+        className="relative z-10 flex h-full w-full flex-col bg-white text-foreground"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Row 1 — frozen top bar */}
-        <div className={`flex h-11 flex-none items-center justify-between gap-2 px-4 ${albumBarClass}`}>
+        <div className="flex h-11 flex-none items-center justify-between gap-2 px-4 bg-white text-foreground">
           <button
             type="button"
             onClick={onClose}
