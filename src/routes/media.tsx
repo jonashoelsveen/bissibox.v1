@@ -687,9 +687,9 @@ function LibraryPage() {
                         className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left"
                         style={{
                           WebkitMaskImage:
-                            "linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%)",
+                            "linear-gradient(to right, #000 0, #000 calc(100% - 20px), transparent 100%)",
                           maskImage:
-                            "linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%)",
+                            "linear-gradient(to right, #000 0, #000 calc(100% - 20px), transparent 100%)",
                         }}
                       >
                         {t.folder ? `${t.folder} · ${t.title}` : t.title}
