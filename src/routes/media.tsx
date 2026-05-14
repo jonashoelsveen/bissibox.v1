@@ -661,7 +661,7 @@ function LibraryPage() {
 
       <div className="grid h-full gap-0 overflow-hidden md:grid-cols-[220px_1fr]">
         <aside className="md:h-full md:overflow-y-auto md:border-r md:border-border/60 md:pl-6 md:pr-4 md:pt-4">
-          <LibrarySideNav value={sideValue} onChange={onSideChange} />
+          <LibrarySideNav value={sideValue} onChange={onSideChange} onOpenAsTab={onSideOpenAsTab} />
         </aside>
 
         <div className="min-w-0 bg-white md:h-full md:overflow-y-auto">
