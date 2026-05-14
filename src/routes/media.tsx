@@ -411,7 +411,18 @@ function LibraryPage() {
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
     if (target.closest("[data-tab-close]")) return;
-    setActiveNoteId(id); // immediate focus
+    // Activate immediately on press — release position is irrelevant (Chrome/VSCode behavior).
+    const tab = openNoteTabs.find((t) => t.id === id);
+    if (tab && tab.type === "album") {
+      setActiveNoteId(null);
+      navigate({
+        to: "/media",
+        search: { tab: "media", folder: tab.albumFolder || undefined },
+        replace: true,
+      });
+    } else {
+      setActiveNoteId(id);
+    }
 
     const strip = tabStripRef.current;
     if (!strip) return;
