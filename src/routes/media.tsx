@@ -2562,9 +2562,9 @@ function Lightbox({
           </button>
         </div>
 
-        {/* Row 2 — media + sliding edit panel */}
-        <div className="flex min-h-0 flex-1">
-          <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4 transition-[flex-basis] duration-300 ease-out">
+        {/* Row 2 — media + sliding edit panel (overlay) */}
+        <div className="relative flex min-h-0 flex-1">
+          <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4">
             {current?.media_type === "photo" ? (
               <PhotoLqip
                 thumbSrc={current ? thumbUrls[current.id] : undefined}
@@ -2575,8 +2575,9 @@ function Lightbox({
             )}
           </div>
           <aside
-            className={`flex min-h-0 flex-none flex-col overflow-hidden border-l border-hairline bg-background transition-[width] duration-300 ease-out ${
-              editPanelOpen ? "w-96" : "w-0"
+            aria-hidden={!editPanelOpen}
+            className={`absolute right-0 top-0 bottom-0 z-10 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+              editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
             }`}
           >
             <div className="flex w-96 flex-1 flex-col">
