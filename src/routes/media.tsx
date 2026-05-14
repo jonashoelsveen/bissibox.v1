@@ -1772,7 +1772,32 @@ function NavBtn({
   );
 }
 
-function InfoLine({
+function GalleryBarBtn({
+  disabled,
+  ariaLabel,
+  onClick,
+  children,
+}: {
+  disabled?: boolean;
+  ariaLabel: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      disabled={disabled}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className={`grid h-9 w-9 place-items-center rounded-full transition ${
+        disabled
+          ? "pointer-events-none text-muted-foreground/40"
+          : "text-current hover:bg-foreground/10"
+      }`}
+    >
+      {children}
+    </button>
+  );
   label,
   value,
   to,
