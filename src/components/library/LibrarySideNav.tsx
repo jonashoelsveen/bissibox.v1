@@ -27,6 +27,7 @@ import {
   StickyNote,
   FolderClosed,
   Image as ImageIcon,
+  Library,
   Pin,
   PinOff,
   History,
