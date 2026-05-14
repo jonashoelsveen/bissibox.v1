@@ -616,21 +616,6 @@ function LibraryPage() {
                         else tabRefs.current.delete(t.id);
                       }}
                       onPointerDown={(e) => onTabPointerDown(e, t.id)}
-                      onClick={() => {
-                        if (isAlbum) {
-                          setActiveNoteId(null);
-                          navigate({
-                            to: "/media",
-                            search: {
-                              tab: "media",
-                              folder: t.albumFolder || undefined,
-                            },
-                            replace: true,
-                          });
-                        } else {
-                          setActiveNoteId(t.id);
-                        }
-                      }}
                       style={{
                         flex: "1 1 200px",
                         minWidth: 140,
