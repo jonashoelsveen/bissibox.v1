@@ -626,10 +626,12 @@ function LibraryPage() {
                         maxWidth: 220,
                         height: 34,
                         marginRight: 4,
-                        background: curveBg,
+                        background: (isActive || isDragging) ? "#FFFFFF" : "transparent",
                         borderTopLeftRadius: 10,
                         borderTopRightRadius: 10,
                         padding: "0 28px 0 12px",
+                        marginBottom: (isActive || isDragging) ? -1 : 0,
+                        paddingBottom: (isActive || isDragging) ? 1 : 0,
                         touchAction: "pan-y",
                         ...dragStyle,
                         transition: isDragging
@@ -643,19 +645,19 @@ function LibraryPage() {
                       }`}
                       title={t.title}
                     >
-                      {/* Chrome-style outward curves (only when active to match the white canvas) */}
-                      {isActive && (
+                      {/* Chrome-style outward curves (active or while dragging) */}
+                      {(isActive || isDragging) && (
                         <>
                           <span
                             aria-hidden
                             style={{
                               position: "absolute",
-                              bottom: 0,
+                              bottom: -1,
                               left: -10,
                               width: 10,
-                              height: 10,
+                              height: 11,
                               background:
-                                "radial-gradient(circle at 0 0, transparent 10px, #FFFFFF 10.5px)",
+                                "radial-gradient(circle at 0 1px, transparent 10px, #FFFFFF 10.5px)",
                               pointerEvents: "none",
                             }}
                           />
@@ -663,12 +665,12 @@ function LibraryPage() {
                             aria-hidden
                             style={{
                               position: "absolute",
-                              bottom: 0,
+                              bottom: -1,
                               right: -10,
                               width: 10,
-                              height: 10,
+                              height: 11,
                               background:
-                                "radial-gradient(circle at 100% 0, transparent 10px, #FFFFFF 10.5px)",
+                                "radial-gradient(circle at 100% 1px, transparent 10px, #FFFFFF 10.5px)",
                               pointerEvents: "none",
                             }}
                           />
