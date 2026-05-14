@@ -4137,22 +4137,101 @@ function MediaTabViewBody(props: {
   current: MediaItem;
   url: string | undefined;
   onSaved: () => void;
-  onBack?: () => void;
+  onBackToAlbum: (albumId: string | null) => void;
 }) {
-  const { items, albums, attended, userName, itemAlbums, urls, thumbUrls, idx, setIdx, drawing, tab, setTab, tabs, isVideo, isMulti, isTeamMode, current, url, onSaved, onBack } = props;
+  const { items, albums, attended, userName, itemAlbums, urls, thumbUrls, idx, setIdx, drawing, tab, setTab, tabs, isTeamMode, onSaved, onBackToAlbum } = props;
   const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const filteredItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((it) => {
+      const subject = (it.subject ?? "").toLowerCase();
+      const photographer = (it.photographer ?? "").toLowerCase();
+      const eventTitle = (attended.find((e) => e.id === it.event_id)?.title ?? "").toLowerCase();
+      return subject.includes(q) || photographer.includes(q) || eventTitle.includes(q);
+    });
+  }, [items, searchQuery, attended]);
+
+  useEffect(() => {
+    if (idx >= filteredItems.length && filteredItems.length > 0) setIdx(0);
+  }, [filteredItems.length, idx, setIdx]);
+
+  useEffect(() => {
+    if (searchOpen) {
+      const t = setTimeout(() => searchInputRef.current?.focus(), 60);
+      return () => clearTimeout(t);
+    }
+  }, [searchOpen]);
+
+  const closeSearch = () => {
+    setSearchQuery("");
+    setSearchOpen(false);
+  };
+
+  const safeIdx = Math.min(idx, Math.max(0, filteredItems.length - 1));
+  const currentItem = filteredItems[safeIdx] ?? props.current;
+  const currentUrl = currentItem ? urls[currentItem.id] : undefined;
+  const isVideo = currentItem?.media_type === "video";
+  const isMulti = filteredItems.length > 1;
+
+  const primaryAlbumId =
+    (currentItem && itemAlbums[currentItem.id]?.[0]) ?? currentItem?.album_id ?? null;
+
+  const TOP_OFFSET = 57;
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] min-h-[480px] flex-col overflow-hidden bg-white text-foreground">
-      <div className="sticky top-0 z-20 flex h-11 flex-none items-center justify-between gap-2 px-4 backdrop-blur-xl bg-white/80 text-foreground">
-        <button
-          type="button"
-          onClick={() => onBack?.()}
-          aria-label="Back"
-          className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
+    <div className="flex min-h-[calc(100vh-57px)] flex-col bg-white text-foreground">
+      <div className="sticky top-0 z-20 flex h-11 flex-none items-center justify-between gap-2 px-4 bg-white text-foreground">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onBackToAlbum(primaryAlbumId)}
+            aria-label="Back to album"
+            className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <div className={`flex items-center gap-1 overflow-hidden rounded-full border border-transparent transition-all duration-300 ease-out ${
+            searchOpen ? "w-64 border-hairline bg-card pl-3 pr-1" : "w-9 hover:border-hairline hover:bg-card"
+          }`}>
+            <button
+              type="button"
+              onClick={() => {
+                if (!searchOpen) setSearchOpen(true);
+                else searchInputRef.current?.focus();
+              }}
+              aria-label="Search in album"
+              className="grid h-9 w-9 shrink-0 place-items-center text-muted-foreground transition hover:text-ink"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Escape") closeSearch(); }}
+              placeholder="Subject, event, photographer…"
+              className={`min-w-0 flex-1 border-b border-hairline bg-transparent py-1 text-xs text-ink outline-none transition placeholder:text-muted-foreground/70 focus:border-ink/40 ${
+                searchOpen ? "opacity-100" : "pointer-events-none w-0 opacity-0"
+              }`}
+            />
+            {searchOpen && (
+              <button
+                type="button"
+                onClick={closeSearch}
+                aria-label="Clear search"
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-ink"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
         <button
           type="button"
           onClick={() => setEditPanelOpen((v) => !v)}
@@ -4164,25 +4243,34 @@ function MediaTabViewBody(props: {
           {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
         </button>
       </div>
-      <div className="flex min-h-0 flex-1">
+      <div className={`flex min-h-0 flex-1 transition-[padding] duration-300 ease-out ${
+        editPanelOpen ? "pr-96" : "pr-0"
+      }`}>
         <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4">
-          {current?.media_type === "photo" ? (
+          {currentItem?.media_type === "photo" ? (
             <PhotoLqip
-              thumbSrc={current ? thumbUrls[current.id] : undefined}
-              fullSrc={url}
+              thumbSrc={currentItem ? thumbUrls[currentItem.id] : undefined}
+              fullSrc={currentUrl}
             />
           ) : (
-            <VideoPlayer src={url} drawing={drawing} theme="light" />
+            <VideoPlayer src={currentUrl} drawing={drawing} theme="light" />
           )}
         </div>
-        {/* Edit panel — flex sibling that pushes the media area when open. */}
+      </div>
+      {isMulti && (
+        <div className="flex-none">
+          <DockStrip items={filteredItems} urls={urls} activeIdx={safeIdx} onSelect={setIdx} />
+        </div>
+      )}
+      {typeof document !== "undefined" && createPortal(
         <aside
           aria-hidden={!editPanelOpen}
-          className={`flex min-h-0 flex-none flex-col overflow-hidden border-l border-hairline bg-background transition-[width] duration-300 ease-out ${
-            editPanelOpen ? "w-96" : "w-0"
+          className={`fixed right-0 bottom-0 z-40 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+            editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
           }`}
+          style={{ top: TOP_OFFSET }}
         >
-          <div className="flex w-96 flex-1 flex-col">
+          <div className="flex flex-1 flex-col">
             <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
               <div className="flex gap-1">
                 {tabs.map((t) => (
@@ -4207,7 +4295,7 @@ function MediaTabViewBody(props: {
             <div className="flex-1 overflow-y-auto p-5">
               {tab === "about" && (
                 <AboutPanel
-                  items={items}
+                  items={filteredItems}
                   albums={albums}
                   attended={attended}
                   userName={userName}
@@ -4216,18 +4304,14 @@ function MediaTabViewBody(props: {
                 />
               )}
               {tab === "access" && (
-                <AccessPanel items={items} onSaved={onSaved} isTeamMode={isTeamMode} />
+                <AccessPanel items={filteredItems} onSaved={onSaved} isTeamMode={isTeamMode} />
               )}
               {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
-              {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
+              {tab === "export" && <SharePanel url={currentUrl} disabled={isMulti} items={filteredItems} urls={urls} />}
             </div>
           </div>
-        </aside>
-      </div>
-      {isMulti && (
-        <div className="flex-none">
-          <DockStrip items={items} urls={urls} activeIdx={idx} onSelect={setIdx} />
-        </div>
+        </aside>,
+        document.body
       )}
     </div>
   );
