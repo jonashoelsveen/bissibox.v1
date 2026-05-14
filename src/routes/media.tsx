@@ -3639,7 +3639,7 @@ function VideoPlayer({ src, drawing, theme = "dark" }: { src?: string; drawing?:
   return (
     <div className="flex h-full w-full flex-col gap-3">
       <div
-        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-black"
+        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-white"
         onClick={drawing?.enabled ? undefined : togglePlay}
       >
         <video
