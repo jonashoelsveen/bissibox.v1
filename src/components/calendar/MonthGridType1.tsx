@@ -609,9 +609,13 @@ export function MonthGridType1({
                   className={[
                     "group/cell group/daynote-anchor relative flex flex-col border-b border-r border-hairline transition-colors",
                     "first:border-l-0", // first column has no left border (parent supplies)
-                    isWeekend ? "bg-muted/20" : "bg-card",
-                    !d.inMonth ? "bg-muted/40 text-muted-foreground/60" : "",
-                    isInRange || (focused && d.inMonth) ? "bg-muted-foreground/15" : "",
+                    isInRange || (focused && d.inMonth)
+                      ? "bg-muted-foreground/15"
+                      : !d.inMonth
+                        ? "bg-muted/40 text-muted-foreground/60"
+                        : isWeekend
+                          ? "bg-muted/20"
+                          : "bg-card",
                     "hover:bg-secondary/40",
                   ].join(" ")}
                   data-day-anchor=""
