@@ -16,8 +16,9 @@ import {
   useLibrarySetting,
 } from "@/lib/library-settings";
 import { MapSettingsPanel } from "@/components/settings/MapSettingsPanel";
-import { Footprints, Check } from "lucide-react";
+import { Footprints, Check, Bike } from "lucide-react";
 import { SESSION_TILE_DESIGNS, useSessionTileDesign, type SessionTileDesign } from "@/lib/session-tile-design";
+import { MONTH_TILE_DESIGNS, useMonthTileDesign, type MonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, type DistanceUnit } from "@/lib/units";
 import stravaLogo from "@/assets/strava-logo.png";
 import eqTimingLogo from "@/assets/eq-timing-logo.png";
