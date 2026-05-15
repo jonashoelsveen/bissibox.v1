@@ -1589,7 +1589,7 @@ function SessionTileDesignCard() {
           onClick={() => setOpen((v) => !v)}
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
-          <h3 className="text-sm font-semibold text-ink">Session tile design</h3>
+          <h3 className="text-sm font-semibold text-ink">Session tile design Week</h3>
         </button>
         <button
           onClick={() => setOpen((v) => !v)}
