@@ -642,6 +642,8 @@ export function MonthGridType1({
                         const itemColor = it.kind === "legacy" ? splitColor(it.raw).color : it.event.color;
                         const displayText = it.kind === "legacy" ? splitColor(it.raw).text : it.event.title;
                         const itemKey = it.kind === "legacy" ? `legacy-${it.idx}` : `event-${it.event.id}`;
+                        const isDiaryEvent = appKind === "diary" && it.kind === "event";
+                        const tall = isDiaryEvent && (monthTileDesign === "split" || monthTileDesign === "stacked");
                         return (
                           <motion.div
                             key={`${id}-${itemKey}`}
@@ -683,38 +685,153 @@ export function MonthGridType1({
                                 openEventEditor(pos, it.event, e.currentTarget as HTMLElement);
                               }
                             }}
-                            className={[
-                              "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink transition-all",
-                              itemColor ? "" : "bg-secondary/70",
-                              "hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
-                              itemColor ? "" : "hover:bg-secondary",
-                            ].join(" ")}
+                            className={
+                              tall
+                                ? [
+                                    "relative flex items-stretch overflow-hidden rounded-[3px] text-[11.5px] text-ink transition-all",
+                                    itemColor ? "" : "bg-secondary/70",
+                                    "hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
+                                  ].join(" ")
+                                : [
+                                    "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink transition-all",
+                                    itemColor ? "" : "bg-secondary/70",
+                                    "hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
+                                    itemColor ? "" : "hover:bg-secondary",
+                                  ].join(" ")
+                            }
                             style={
-                              itemColor
+                              tall
                                 ? {
-                                    backgroundColor: `${itemColor}1F`,
-                                    boxShadow: `inset 2px 0 0 ${itemColor}`,
+                                    minHeight: 44,
+                                    backgroundColor: itemColor ? `${itemColor}1F` : undefined,
+                                    boxShadow: itemColor ? `inset 2px 0 0 ${itemColor}` : undefined,
                                   }
-                                : undefined
+                                : itemColor
+                                  ? {
+                                      backgroundColor: `${itemColor}1F`,
+                                      boxShadow: `inset 2px 0 0 ${itemColor}`,
+                                    }
+                                  : undefined
                             }
                             title={displayText}
                           >
-                            {(() => {
-                              const Icon = iconForColor(itemColor);
-                              return Icon ? (
-                                <Icon
-                                  className="h-3 w-3 shrink-0"
-                                  style={{ color: itemColor ?? "currentColor" }}
-                                  strokeWidth={2.25}
-                                />
-                              ) : itemColor ? (
-                                <span
-                                  className="h-1.5 w-1.5 shrink-0 rounded-full"
-                                  style={{ background: itemColor }}
-                                />
-                              ) : null;
-                            })()}
-                            <span className="truncate">{displayText}</span>
+                            {isDiaryEvent ? (() => {
+                              const ev = it.kind === "event" ? it.event : null;
+                              if (!ev) return null;
+                              const ActIcon = activityIconFor(ev);
+                              const accent = itemColor ?? "currentColor";
+                              const km = ev.distanceKm;
+                              const distVal = km != null ? kmToUnit(km, distanceUnit) : null;
+                              const actKey = (ev.activity || ev.diarySub || "").toLowerCase();
+                              const isStrength = actKey === "strength";
+                              const startDate = fromISOLocal(ev.startISO);
+                              const endDate = fromISOLocal(ev.endISO);
+                              const totalMin = Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / 60000));
+                              const durH = Math.floor(totalMin / 60);
+                              const durM = totalMin % 60;
+                              const isNorwegian = typeof navigator !== "undefined" && /^nb|^nn|^no/i.test(navigator.language || "");
+                              const hourSuffix = isNorwegian ? "t" : "h";
+                              const durStr = `${String(startDate.getHours()).padStart(2, "0")}:${String(startDate.getMinutes()).padStart(2, "0")} – ${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
+                              const strengthLabel = durH > 0 ? `${durH}${hourSuffix} ${durM}m` : `${durM}m`;
+                              const distLabel = isStrength
+                                ? strengthLabel
+                                : distVal != null ? `${distVal.toFixed(1)} ${unitLabel(distanceUnit)}` : "—";
+                              const iconHalfBg = itemColor
+                                ? `color-mix(in srgb, ${itemColor} 40%, white)`
+                                : "rgba(0,0,0,0.05)";
+
+                              if (monthTileDesign === "stacked") {
+                                return (
+                                  <>
+                                    <div
+                                      className="flex w-1/2 items-center justify-center"
+                                      style={{ background: iconHalfBg }}
+                                    >
+                                      <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+                                    </div>
+                                    <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
+                                      <span className="truncate text-[11px] font-semibold">{ev.title}</span>
+                                      <span className="mono truncate text-[10px] tabular-nums opacity-70">{durStr}</span>
+                                      {!isStrength && (
+                                        <span className="mono truncate text-[10px] tabular-nums opacity-70">{distLabel}</span>
+                                      )}
+                                    </div>
+                                  </>
+                                );
+                              }
+                              if (monthTileDesign === "split") {
+                                return (
+                                  <>
+                                    <div
+                                      className="flex w-1/2 items-center justify-center"
+                                      style={{ background: iconHalfBg }}
+                                    >
+                                      <ActIcon className="h-6 w-6 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+                                    </div>
+                                    <div
+                                      className="flex w-1/2 items-center justify-center text-ink"
+                                      title={distLabel}
+                                    >
+                                      {isStrength ? (
+                                        <span
+                                          className="flex items-baseline gap-1"
+                                          style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18, lineHeight: 1 }}
+                                        >
+                                          {durH > 0 && (
+                                            <>
+                                              <span>{durH}</span>
+                                              <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>{hourSuffix}</span>
+                                            </>
+                                          )}
+                                          <span>{durM}</span>
+                                          <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>m</span>
+                                        </span>
+                                      ) : distVal != null ? (
+                                        <span
+                                          className="flex items-baseline gap-1"
+                                          style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18, lineHeight: 1 }}
+                                        >
+                                          <span>{distVal.toFixed(1)}</span>
+                                          <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>{unitLabel(distanceUnit)}</span>
+                                        </span>
+                                      ) : (
+                                        "—"
+                                      )}
+                                    </div>
+                                  </>
+                                );
+                              }
+                              // "compact" — current low tile, with activity icon
+                              return (
+                                <>
+                                  <ActIcon
+                                    className="h-3 w-3 shrink-0"
+                                    style={{ color: accent }}
+                                    strokeWidth={2.25}
+                                  />
+                                  <span className="truncate">{displayText}</span>
+                                </>
+                              );
+                            })() : (
+                              <>
+                                {(() => {
+                                  const Icon = iconForColor(itemColor);
+                                  return Icon ? (
+                                    <Icon
+                                      className="h-3 w-3 shrink-0"
+                                      style={{ color: itemColor ?? "currentColor" }}
+                                      strokeWidth={2.25}
+                                    />
+                                  ) : itemColor ? (
+                                    <span
+                                      className="h-1.5 w-1.5 shrink-0 rounded-full"
+                                      style={{ background: itemColor }}
+                                    />
+                                  ) : null;
+                                })()}
+                                <span className="truncate">{displayText}</span>
+                              </>
+                            )}
                           </motion.div>
                         );
                       })}
