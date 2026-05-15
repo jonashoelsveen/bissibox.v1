@@ -201,6 +201,8 @@ export function MonthGridType1({
   viewerRole = "owner",
 }: MonthGridType1Props) {
   const dim = daysInMonth(year, month);
+  const [monthTileDesign] = useMonthTileDesign();
+  const [distanceUnit] = useDistanceUnit();
   const firstDow = dowMon0(new Date(year, month, 1));
   const totalCells = Math.ceil((firstDow + dim) / 7) * 7;
   const rows = totalCells / 7;
