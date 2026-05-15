@@ -32,7 +32,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { Plus, Trash2, PersonStanding, GraduationCap, Briefcase, Sparkles, Clock } from "lucide-react";
+import { Plus, Trash2, PersonStanding, GraduationCap, Briefcase, Sparkles, Clock, Bike, Waves, Dumbbell, Snowflake, Footprints } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
@@ -40,6 +40,17 @@ import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, isoWeekNumber } f
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
 import { DayNoteButton } from "./DayNoteButton";
 import { useUserCategories } from "@/hooks/useUserCategories";
+import { useMonthTileDesign } from "@/lib/month-tile-design";
+import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
+
+function activityIconFor(ev: CalendarEvent): LucideIcon {
+  const k = (ev.activity || ev.diarySub || "").toLowerCase();
+  if (k === "cycling" || k === "bike") return Bike;
+  if (k === "swimming" || k === "swim") return Waves;
+  if (k === "strength") return Dumbbell;
+  if (k === "xcskiing") return Snowflake;
+  return Footprints;
+}
 
 // Individual session categories. Three have fixed colors + icons for
 // consistent UX across the platform; "Else" lets the user pick from the 8
