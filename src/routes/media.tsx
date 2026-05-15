@@ -2675,7 +2675,11 @@ function Lightbox({
         </button>
 
         {/* Row 2 — media */}
-        <div className="flex min-h-0 flex-1">
+        <div
+          className={`flex min-h-0 flex-1 transition-[padding] duration-300 ease-out ${
+            editPanelOpen ? "pr-96" : "pr-0"
+          }`}
+        >
           <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4">
             {current?.media_type === "photo" ? (
               <PhotoLqip
@@ -2690,7 +2694,11 @@ function Lightbox({
 
         {/* Row 3 — dock strip */}
         {isMulti && (
-          <div className="flex-none">
+          <div
+            className={`flex-none transition-[padding] duration-300 ease-out ${
+              editPanelOpen ? "pr-96" : "pr-0"
+            }`}
+          >
             <DockStrip items={items} urls={urls} activeIdx={idx} onSelect={setIdx} />
           </div>
         )}
