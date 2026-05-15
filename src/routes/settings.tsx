@@ -1791,6 +1791,8 @@ function MonthTilePreview({ design }: { design: MonthTileDesign }) {
     </div>
   );
 }
+
+function DiarySessionDetailsCard() {
   const [open, setOpen] = useState(false);
   const [autosync, setAutosync] = useLibrarySetting<boolean>(
     "diary:autosync:global",
