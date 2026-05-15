@@ -1683,7 +1683,114 @@ function SessionTilePreview({ design }: { design: SessionTileDesign }) {
   );
 }
 
-function DiarySessionDetailsCard() {
+function MonthSessionTileDesignCard() {
+  const [open, setOpen] = useState(true);
+  const [design, setDesign] = useMonthTileDesign();
+  return (
+    <Card>
+      <div className="flex w-full items-center gap-3">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          <h3 className="text-sm font-semibold text-ink">Session tile design Month</h3>
+        </button>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Collapse" : "Expand"}
+          className="text-muted-foreground hover:text-ink"
+        >
+          {open ? (
+            <ChevronDown className="h-4 w-4" strokeWidth={2.25} />
+          ) : (
+            <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+          )}
+        </button>
+      </div>
+      {open && (
+        <>
+          <p className="mt-1 text-xs text-muted-foreground">
+            How logged sessions appear in the Diary month view.
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {MONTH_TILE_DESIGNS.map((d) => {
+              const active = d.id === design;
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => setDesign(d.id)}
+                  className={`group relative overflow-hidden rounded-xl border text-left transition ${
+                    active
+                      ? "border-primary shadow-md ring-2 ring-primary/30"
+                      : "border-hairline hover:border-ink/30"
+                  }`}
+                >
+                  <div className="relative flex h-24 items-center justify-center bg-[#B8B8FF]/25 px-2">
+                    <MonthTilePreview design={d.id} />
+                    {active && (
+                      <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+                        <Check className="h-3 w-3" />
+                      </span>
+                    )}
+                  </div>
+                  <div className="bg-card px-3 py-2.5">
+                    <div className="text-sm font-medium text-ink">{d.label}</div>
+                    <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                      {d.description}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+function MonthTilePreview({ design }: { design: MonthTileDesign }) {
+  const accent = "#5b5bff";
+  const tint = "rgba(184,184,255,0.45)";
+  if (design === "compact") {
+    return (
+      <div
+        className="flex h-5 w-full items-center gap-1.5 rounded-[3px] px-1.5 text-[11.5px] text-ink"
+        style={{ backgroundColor: "rgba(184,184,255,0.18)", boxShadow: `inset 2px 0 0 ${accent}` }}
+      >
+        <Footprints className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+        <span className="truncate">Morning run</span>
+      </div>
+    );
+  }
+  if (design === "stacked") {
+    return (
+      <div className="flex h-12 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
+        <div className="flex w-1/2 items-center justify-center" style={{ background: tint }}>
+          <Footprints className="h-5 w-5" strokeWidth={2.25} style={{ color: accent }} />
+        </div>
+        <div className="flex w-1/2 flex-col justify-center px-1.5 leading-tight">
+          <span className="truncate text-[9px] font-semibold text-ink">Morning run</span>
+          <span className="text-[8px] tabular-nums text-ink/70">45 min</span>
+          <span className="text-[8px] tabular-nums text-ink/70">8.2 km</span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-12 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
+      <div className="flex w-1/2 items-center justify-center" style={{ background: tint }}>
+        <Footprints className="h-6 w-6" strokeWidth={2.25} style={{ color: accent }} />
+      </div>
+      <div
+        className="flex w-1/2 items-center justify-center text-ink"
+        style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16 }}
+      >
+        8.2
+      </div>
+    </div>
+  );
+}
   const [open, setOpen] = useState(false);
   const [autosync, setAutosync] = useLibrarySetting<boolean>(
     "diary:autosync:global",
