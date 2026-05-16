@@ -979,30 +979,28 @@ function FolderRow({
                   style={{ top: menuPos.top, left: menuPos.left }}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
-                  <MenuItem
-                    icon={folder.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-                    label={folder.pinned ? "Unpin" : "Pin to top"}
-                    onClick={() => {
-                      onCloseMenu();
-                      onPin();
-                    }}
-                  />
-                  <MenuItem
-                    icon={<Pencil className="h-3.5 w-3.5" />}
-                    label="Rename"
-                    onClick={() => {
-                      onCloseMenu();
-                      onRename();
-                    }}
-                  />
+                  <div onMouseEnter={() => { setColorOpen(false); setCustomOpen(false); }}>
+                    <MenuItem
+                      icon={folder.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                      label={folder.pinned ? "Unpin" : "Pin to top"}
+                      onClick={() => {
+                        onCloseMenu();
+                        onPin();
+                      }}
+                    />
+                    <MenuItem
+                      icon={<Pencil className="h-3.5 w-3.5" />}
+                      label="Rename"
+                      onClick={() => {
+                        onCloseMenu();
+                        onRename();
+                      }}
+                    />
+                  </div>
                   {onColor && (
                     <button
-                      onClick={(e) => {
-                        const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-                        setColorPos({ top: r.top, left: r.right + 4 });
-                        setColorOpen(true);
-                        setCustomOpen(false);
-                      }}
+                      onMouseEnter={(e) => openColorSubmenu(e.currentTarget as HTMLButtonElement)}
+                      onClick={(e) => openColorSubmenu(e.currentTarget as HTMLButtonElement)}
                       className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-ink transition hover:bg-secondary"
                     >
                       <Palette className="h-3.5 w-3.5" />
@@ -1010,15 +1008,17 @@ function FolderRow({
                       <ChevronRight className="h-3 w-3 text-muted-foreground" />
                     </button>
                   )}
-                  <MenuItem
-                    icon={<Trash2 className="h-3.5 w-3.5" />}
-                    label="Delete"
-                    destructive
-                    onClick={() => {
-                      onCloseMenu();
-                      onDelete();
-                    }}
-                  />
+                  <div onMouseEnter={() => { setColorOpen(false); setCustomOpen(false); }}>
+                    <MenuItem
+                      icon={<Trash2 className="h-3.5 w-3.5" />}
+                      label="Delete"
+                      destructive
+                      onClick={() => {
+                        onCloseMenu();
+                        onDelete();
+                      }}
+                    />
+                  </div>
                 </div>
                 {colorOpen && colorPos && onColor && (
                   <div
