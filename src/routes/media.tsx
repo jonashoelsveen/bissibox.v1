@@ -2645,6 +2645,14 @@ function Lightbox({
   useEffect(() => { if (!isVideo && tab === "draw") setTab("about"); }, [isVideo, tab]);
 
   const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => { setIsFullscreen(false); }, [current?.id]);
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setIsFullscreen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isFullscreen]);
 
   return (
     <div className="fixed left-0 right-0 bottom-0 top-[53px] md:left-[220px] z-30 flex animate-in fade-in" onClick={onClose}>
@@ -2665,21 +2673,31 @@ function Lightbox({
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setEditPanelOpen((v) => !v)}
-          aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-          className={`absolute top-1 right-4 z-30 grid h-9 w-9 place-items-center rounded-full transition ${
-            editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
-          }`}
-        >
-          {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-        </button>
+        <div className="absolute top-1 right-4 z-30 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(true)}
+            aria-label="Enter full screen"
+            className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditPanelOpen((v) => !v)}
+            aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
+            className={`grid h-9 w-9 place-items-center rounded-full transition ${
+              editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
+            }`}
+          >
+            {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+          </button>
+        </div>
 
         {/* Row 2 — media */}
         <div
           className={`flex min-h-0 flex-1 transition-[padding] duration-300 ease-out ${
-            editPanelOpen ? "pr-96" : "pr-0"
+            editPanelOpen && !isFullscreen ? "pr-96" : "pr-0"
           }`}
         >
           <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4">
@@ -2687,12 +2705,24 @@ function Lightbox({
               <PhotoLqip
                 thumbSrc={current ? thumbUrls[current.id] : undefined}
                 fullSrc={url}
+                fullscreen={isFullscreen}
               />
             ) : (
-              <VideoPlayer src={url} drawing={drawing} theme="light" />
+              <VideoPlayer src={url} drawing={drawing} theme="light" fullscreen={isFullscreen} />
             )}
           </div>
         </div>
+        {isFullscreen && typeof document !== "undefined" && createPortal(
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(false)}
+            aria-label="Exit full screen"
+            className="fixed top-4 right-4 z-[81] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10"
+          >
+            <Minimize2 className="h-4 w-4" />
+          </button>,
+          document.body,
+        )}
 
         {/* Row 3 — dock strip */}
         {isMulti && (
