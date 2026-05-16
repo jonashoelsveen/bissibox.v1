@@ -3896,21 +3896,37 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false }: { src
   const progress = ready && duration > 0 ? Math.min(1, current / duration) : 0;
 
   return (
-    <div className="flex h-full w-full flex-col gap-3">
+    <div
+      className={
+        fullscreen
+          ? "fixed inset-0 z-[80] bg-black"
+          : "flex h-full w-full flex-col gap-3"
+      }
+    >
       <div
-        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-white"
-        onClick={drawing?.enabled ? undefined : togglePlay}
+        className={
+          fullscreen
+            ? "absolute inset-0 flex items-center justify-center overflow-hidden bg-black"
+            : "relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-white"
+        }
       >
         <video
           ref={videoRef}
           src={src}
-          className="max-h-full max-w-full"
+          className="max-h-full max-w-full cursor-pointer"
           playsInline
           preload="metadata"
+          onClick={drawing?.enabled ? undefined : togglePlay}
         />
         {drawing && <DrawingOverlay state={drawing} />}
       </div>
-      <div className="w-full shrink-0">
+      <div
+        className={
+          fullscreen
+            ? "absolute bottom-6 left-[5%] right-[5%] shrink-0"
+            : "w-full shrink-0"
+        }
+      >
         {/* Centered minimalist play/pause */}
         <div className="mb-2 flex items-center justify-center">
           <button
