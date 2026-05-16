@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Plus, Eye, EyeOff, MoreHorizontal, Pin, PinOff, Pencil, Trash2, Palette } from "lucide-react";
+import { motion } from "framer-motion";
+import { ChevronRight, Plus, Eye, EyeOff, MoreHorizontal, Pin } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -19,7 +18,9 @@ import {
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { useUserCategories, type UserCategory } from "@/hooks/useUserCategories";
-import { MiniColorPicker, DEFAULT_SWATCHES } from "./MiniColorPicker";
+import { DEFAULT_SWATCHES } from "./MiniColorPicker";
+import { CategoryActionsMenu } from "@/components/library/CategoryActionsMenu";
+import { Pin as PinIcon, PinOff } from "lucide-react";
 
 export function MeCategorySection({
   hidden,
