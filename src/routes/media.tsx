@@ -3849,7 +3849,7 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false, fullscr
       v.removeEventListener("pause", onPause);
       v.removeEventListener("seeked", onSeeked);
     };
-  }, [src, flushSeek]);
+  }, [src, flushSeek, fullscreen]);
 
   // Track strip width responsively
   useEffect(() => {
