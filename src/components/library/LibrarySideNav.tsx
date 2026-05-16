@@ -718,7 +718,7 @@ export function LibrarySideNav({
                                   key={f.id}
                                   onClick={() => onChange({ category: "media", folder: f.id })}
                                   onDoubleClick={() =>
-                                    onOpenAsTab?.({ category: "media", folder: f.id }, f.name)
+                                    onOpenAsTab?.({ category: "media", folder: f.id }, f.name, f.color ?? null)
                                   }
                                   className={`flex min-w-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-left text-xs transition ${
                                     active
@@ -726,7 +726,11 @@ export function LibrarySideNav({
                                       : "text-muted-foreground hover:bg-secondary/60 hover:text-ink"
                                   }`}
                                 >
-                                  <Library className="h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={2.25} />
+                                  <FolderClosed
+                                    className="h-3.5 w-3.5 shrink-0"
+                                    strokeWidth={2.25}
+                                    style={f.color ? { color: f.color } : { color: "var(--muted-foreground)" }}
+                                  />
                                   <span className="min-w-0 flex-1 truncate">{f.name}</span>
                                 </button>
                               );
