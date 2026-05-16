@@ -4536,26 +4536,7 @@ function MediaTabViewBody(props: {
           </button>
         </div>
         <div className="relative h-9 w-full">
-          <button
-            type="button"
-            onClick={() => setIsFullscreen(true)}
-            aria-label="Enter full screen"
-            className={`absolute top-0 grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10 transition-[right] duration-300 ease-out ${
-              editPanelOpen ? "right-[400px]" : "right-10"
-            }`}
-          >
-            <Maximize2 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditPanelOpen((v) => !v)}
-            aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-            className={`absolute top-0 right-0 grid h-9 w-9 place-items-center rounded-full transition ${
-              editPanelOpen ? "bg-foreground/10 text-foreground" : "text-current hover:bg-foreground/10"
-            }`}
-          >
-            {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-          </button>
+          {/* Maximize + Edit buttons are portaled below */}
         </div>
       </div>
       <div className={`flex min-h-0 flex-1 transition-[padding] duration-300 ease-out ${
