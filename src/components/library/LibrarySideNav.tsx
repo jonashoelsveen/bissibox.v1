@@ -886,22 +886,21 @@ function FolderRow({
   useEffect(() => {
     if (menuOpen && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-      // Reserve enough vertical space for the full chain: menu + color submenu + custom picker.
-      // This prevents the menu from shifting after the user opens nested submenus.
-      const reserved = onColor ? 340 : 140;
-      const top = Math.max(8, Math.min(r.top, vh - reserved - 12));
-      setMenuPos({ top, left: r.right + 4 });
+      setMenuPos({ top: r.top, left: r.right + 4 });
     } else {
       setMenuPos(null);
       setColorOpen(false);
       setCustomOpen(false);
     }
-  }, [menuOpen, onColor]);
+  }, [menuOpen]);
 
   const openColorSubmenu = (el: HTMLElement) => {
     const r = el.getBoundingClientRect();
-    setColorPos({ top: r.top, left: r.right + 4 });
+    const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+    // Reserve room for color submenu (~110px) + custom picker (~230px) so neither falls outside the viewport.
+    const reserved = 340;
+    const top = Math.max(8, Math.min(r.top, vh - reserved - 12));
+    setColorPos({ top, left: r.right + 4 });
     setColorOpen(true);
     setCustomOpen(false);
   };
