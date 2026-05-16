@@ -3861,7 +3861,7 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false, fullscr
     ro.observe(el);
     setStripWidth(el.clientWidth);
     return () => ro.disconnect();
-  }, [ready]);
+  }, [ready, fullscreen]);
 
   const togglePlay = () => {
     const v = videoRef.current;
