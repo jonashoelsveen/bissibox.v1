@@ -2713,14 +2713,28 @@ function Lightbox({
           </div>
         </div>
         {isFullscreen && typeof document !== "undefined" && createPortal(
-          <button
-            type="button"
-            onClick={() => setIsFullscreen(false)}
-            aria-label="Exit full screen"
-            className="fixed top-4 right-4 z-[81] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10"
-          >
-            <Minimize2 className="h-4 w-4" />
-          </button>,
+          <>
+            <button
+              type="button"
+              onClick={() => setIsFullscreen(false)}
+              aria-label="Exit full screen"
+              className={`fixed top-4 z-[83] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10 transition-[right] duration-300 ease-out ${
+                editPanelOpen ? "right-[400px]" : "right-12"
+              }`}
+            >
+              <Minimize2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditPanelOpen((v) => !v)}
+              aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
+              className={`fixed top-4 right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
+                editPanelOpen ? "bg-white/15 text-white" : "text-white hover:bg-white/10"
+              }`}
+            >
+              {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+            </button>
+          </>,
           document.body,
         )}
 
