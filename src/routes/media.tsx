@@ -2673,26 +2673,26 @@ function Lightbox({
           </button>
         </div>
 
-        <div className="absolute top-1 right-4 z-30 flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setIsFullscreen(true)}
-            aria-label="Enter full screen"
-            className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
-          >
-            <Maximize2 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditPanelOpen((v) => !v)}
-            aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-            className={`grid h-9 w-9 place-items-center rounded-full transition ${
-              editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
-            }`}
-          >
-            {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsFullscreen(true)}
+          aria-label="Enter full screen"
+          className={`absolute top-1 z-40 grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10 transition-[right] duration-300 ease-out ${
+            editPanelOpen ? "right-[400px]" : "right-12"
+          }`}
+        >
+          <Maximize2 className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditPanelOpen((v) => !v)}
+          aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
+          className={`absolute top-1 right-4 z-40 grid h-9 w-9 place-items-center rounded-full transition ${
+            editPanelOpen ? "bg-foreground/10 text-foreground" : "text-current hover:bg-foreground/10"
+          }`}
+        >
+          {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+        </button>
 
         {/* Row 2 — media */}
         <div
