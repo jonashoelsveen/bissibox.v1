@@ -4042,7 +4042,7 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false, fullscr
   if (fullscreen && typeof document !== "undefined") {
     return createPortal(
       <div
-        className={`fixed inset-y-0 left-0 z-[80] bg-black transition-[right] duration-300 ease-out ${
+        className={`fixed inset-y-0 left-0 z-[95] bg-black transition-[right] duration-300 ease-out ${
           fullscreenPanelOpen ? "right-96" : "right-0"
         }`}
         style={{ willChange: "right" }}
@@ -4708,7 +4708,7 @@ function PhotoLqip({ thumbSrc, fullSrc, fullscreen, fullscreenPanelOpen = false 
   if (fullscreen && typeof document !== "undefined") {
     return createPortal(
       <div
-        className={`fixed inset-y-0 left-0 z-[80] flex items-center justify-center bg-black transition-[right] duration-300 ease-out ${
+        className={`fixed inset-y-0 left-0 z-[95] flex items-center justify-center bg-black transition-[right] duration-300 ease-out ${
           fullscreenPanelOpen ? "right-96" : "right-0"
         }`}
         style={{ willChange: "right" }}
