@@ -57,6 +57,8 @@ import {
   Pencil,
   Heart,
   ArrowLeft,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 
@@ -2643,6 +2645,14 @@ function Lightbox({
   useEffect(() => { if (!isVideo && tab === "draw") setTab("about"); }, [isVideo, tab]);
 
   const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => { setIsFullscreen(false); }, [current?.id]);
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setIsFullscreen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isFullscreen]);
 
   return (
     <div className="fixed left-0 right-0 bottom-0 top-[53px] md:left-[220px] z-30 flex animate-in fade-in" onClick={onClose}>
@@ -2663,21 +2673,31 @@ function Lightbox({
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setEditPanelOpen((v) => !v)}
-          aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-          className={`absolute top-1 right-4 z-30 grid h-9 w-9 place-items-center rounded-full transition ${
-            editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
-          }`}
-        >
-          {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-        </button>
+        <div className="absolute top-1 right-4 z-30 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(true)}
+            aria-label="Enter full screen"
+            className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditPanelOpen((v) => !v)}
+            aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
+            className={`grid h-9 w-9 place-items-center rounded-full transition ${
+              editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
+            }`}
+          >
+            {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+          </button>
+        </div>
 
         {/* Row 2 — media */}
         <div
           className={`flex min-h-0 flex-1 transition-[padding] duration-300 ease-out ${
-            editPanelOpen ? "pr-96" : "pr-0"
+            editPanelOpen && !isFullscreen ? "pr-96" : "pr-0"
           }`}
         >
           <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4">
@@ -2685,12 +2705,24 @@ function Lightbox({
               <PhotoLqip
                 thumbSrc={current ? thumbUrls[current.id] : undefined}
                 fullSrc={url}
+                fullscreen={isFullscreen}
               />
             ) : (
-              <VideoPlayer src={url} drawing={drawing} theme="light" />
+              <VideoPlayer src={url} drawing={drawing} theme="light" fullscreen={isFullscreen} />
             )}
           </div>
         </div>
+        {isFullscreen && typeof document !== "undefined" && createPortal(
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(false)}
+            aria-label="Exit full screen"
+            className="fixed top-4 right-4 z-[81] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10"
+          >
+            <Minimize2 className="h-4 w-4" />
+          </button>,
+          document.body,
+        )}
 
         {/* Row 3 — dock strip */}
         {isMulti && (
@@ -3667,8 +3699,8 @@ function formatVideoTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(cs).padStart(2, "0")}`;
 }
 
-function VideoPlayer({ src, drawing, theme = "dark" }: { src?: string; drawing?: DrawingState; theme?: "light" | "dark" }) {
-  const isLight = theme === "light";
+function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false }: { src?: string; drawing?: DrawingState; theme?: "light" | "dark"; fullscreen?: boolean }) {
+  const isLight = theme === "light" && !fullscreen;
   const playBtnClass = isLight ? "text-zinc-800 hover:text-black" : "text-zinc-100 hover:text-white";
   const tickMajorClass = isLight ? "h-7 bg-zinc-400" : "h-7 bg-zinc-500/70";
   const tickMinorClass = isLight ? "h-4 bg-zinc-300" : "h-4 bg-zinc-600/50";
@@ -3894,21 +3926,37 @@ function VideoPlayer({ src, drawing, theme = "dark" }: { src?: string; drawing?:
   const progress = ready && duration > 0 ? Math.min(1, current / duration) : 0;
 
   return (
-    <div className="flex h-full w-full flex-col gap-3">
+    <div
+      className={
+        fullscreen
+          ? "fixed inset-0 z-[80] bg-black"
+          : "flex h-full w-full flex-col gap-3"
+      }
+    >
       <div
-        className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-white"
-        onClick={drawing?.enabled ? undefined : togglePlay}
+        className={
+          fullscreen
+            ? "absolute inset-0 flex items-center justify-center overflow-hidden bg-black"
+            : "relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-white"
+        }
       >
         <video
           ref={videoRef}
           src={src}
-          className="max-h-full max-w-full"
+          className="max-h-full max-w-full cursor-pointer"
           playsInline
           preload="metadata"
+          onClick={drawing?.enabled ? undefined : togglePlay}
         />
         {drawing && <DrawingOverlay state={drawing} />}
       </div>
-      <div className="w-full shrink-0">
+      <div
+        className={
+          fullscreen
+            ? "absolute bottom-6 left-[5%] right-[5%] shrink-0"
+            : "w-full shrink-0"
+        }
+      >
         {/* Centered minimalist play/pause */}
         <div className="mb-2 flex items-center justify-center">
           <button
@@ -4437,6 +4485,15 @@ function MediaTabViewBody(props: {
   const isVideo = currentItem?.media_type === "video";
   const isMulti = filteredItems.length > 1;
 
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => { setIsFullscreen(false); }, [currentItem?.id]);
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setIsFullscreen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isFullscreen]);
+
   const primaryAlbumId =
     (currentItem && itemAlbums[currentItem.id]?.[0]) ?? currentItem?.album_id ?? null;
 
@@ -4458,6 +4515,14 @@ function MediaTabViewBody(props: {
         <div className="flex items-center gap-1">
           <button
             type="button"
+            onClick={() => setIsFullscreen(true)}
+            aria-label="Enter full screen"
+            className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={() => setEditPanelOpen((v) => !v)}
             aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
             className={`grid h-9 w-9 place-items-center rounded-full transition ${
@@ -4469,16 +4534,17 @@ function MediaTabViewBody(props: {
         </div>
       </div>
       <div className={`flex min-h-0 flex-1 transition-[padding] duration-300 ease-out ${
-        editPanelOpen ? "pr-96" : "pr-0"
+        editPanelOpen && !isFullscreen ? "pr-96" : "pr-0"
       }`}>
         <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4">
           {currentItem?.media_type === "photo" ? (
             <PhotoLqip
               thumbSrc={currentItem ? thumbUrls[currentItem.id] : undefined}
               fullSrc={currentUrl}
+              fullscreen={isFullscreen}
             />
           ) : (
-            <VideoPlayer src={currentUrl} drawing={drawing} theme="light" />
+            <VideoPlayer src={currentUrl} drawing={drawing} theme="light" fullscreen={isFullscreen} />
           )}
         </div>
       </div>
@@ -4486,6 +4552,17 @@ function MediaTabViewBody(props: {
         <div className="flex-none">
           <DockStrip items={filteredItems} urls={urls} activeIdx={safeIdx} onSelect={setIdx} />
         </div>
+      )}
+      {isFullscreen && typeof document !== "undefined" && createPortal(
+        <button
+          type="button"
+          onClick={() => setIsFullscreen(false)}
+          aria-label="Exit full screen"
+          className="fixed top-4 right-4 z-[81] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10"
+        >
+          <Minimize2 className="h-4 w-4" />
+        </button>,
+        document.body,
       )}
       {typeof document !== "undefined" && createPortal(
         <aside
@@ -4542,7 +4619,7 @@ function MediaTabViewBody(props: {
   );
 }
 
-function PhotoLqip({ thumbSrc, fullSrc }: { thumbSrc?: string; fullSrc?: string }) {
+function PhotoLqip({ thumbSrc, fullSrc, fullscreen }: { thumbSrc?: string; fullSrc?: string; fullscreen?: boolean }) {
   const [fullLoaded, setFullLoaded] = useState(false);
 
   useEffect(() => {
@@ -4551,8 +4628,12 @@ function PhotoLqip({ thumbSrc, fullSrc }: { thumbSrc?: string; fullSrc?: string 
 
   if (!thumbSrc && !fullSrc) return null;
 
+  const outerClass = fullscreen
+    ? "fixed inset-0 z-[80] flex items-center justify-center bg-black"
+    : "relative flex h-full w-full items-center justify-center";
+
   return (
-    <div className="relative flex h-full w-full items-center justify-center">
+    <div className={outerClass}>
       {thumbSrc && (
         <img
           src={thumbSrc}
