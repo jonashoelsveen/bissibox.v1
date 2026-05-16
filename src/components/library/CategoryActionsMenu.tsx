@@ -276,9 +276,9 @@ function ColorsPanel({
       {/* Negative margins extend the divider + Custom row to the full panel width, mirroring the Delete row in the main menu */}
       <DropdownMenuSeparator className="-mx-2 my-1" />
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger className="-mx-2 flex w-[calc(100%+1rem)] cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs text-ink transition hover:bg-secondary focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary">
+        <DropdownMenuSubTrigger className="-mx-2 box-border h-6 min-h-6 w-[calc(100%+1rem)] cursor-pointer rounded-sm px-2 py-0 text-xs text-ink transition hover:bg-secondary focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary [&_svg]:shrink-0">
           <Palette className="h-3.5 w-3.5" />
-          <span>Custom</span>
+          <span className="flex-1 text-left leading-none">Custom</span>
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent
           sideOffset={4}
