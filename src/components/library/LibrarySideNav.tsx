@@ -634,7 +634,7 @@ export function LibrarySideNav({
                                   onSelect={() => onChange({ category: s.key, folder: id })}
                                   onOpenAsTab={
                                     onOpenAsTab
-                                      ? () => onOpenAsTab({ category: s.key, folder: id }, f.name)
+                                      ? () => onOpenAsTab({ category: s.key, folder: id }, f.name, f.color ?? null)
                                       : undefined
                                   }
                                   onCommitRename={() => void commitRename(s.key, f)}
@@ -646,6 +646,7 @@ export function LibrarySideNav({
                                   onCloseMenu={() => setMenuFor(null)}
                                   onPin={() => void togglePin(s.key, f)}
                                   onRename={() => startRename(f)}
+                                  onColor={s.key === "media" ? (hex) => void setAlbumColor(f, hex) : undefined}
                                   onDelete={() =>
                                     setConfirmDelete({ section: s.key, folder: f })
                                   }
