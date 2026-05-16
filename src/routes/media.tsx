@@ -4615,7 +4615,7 @@ function MediaTabViewBody(props: {
             onClick={() => setEditPanelOpen((v) => !v)}
             aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
             className={`fixed top-4 right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
-              editPanelOpen ? "bg-white/15 text-white" : "text-white hover:bg-white/10"
+              editPanelOpen ? "bg-foreground/10 text-foreground" : "text-white hover:bg-white/10"
             }`}
           >
             {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
