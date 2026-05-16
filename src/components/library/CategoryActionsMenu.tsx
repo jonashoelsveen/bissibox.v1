@@ -273,17 +273,15 @@ function ColorsPanel({
           );
         })}
       </div>
-      <DropdownMenuSeparator />
+      {/* Negative margins extend the divider + Custom row to the full panel width, mirroring the Delete row in the main menu */}
+      <DropdownMenuSeparator className="-mx-2 my-1" />
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary">
+        <DropdownMenuSubTrigger className="-mx-2 gap-2 rounded-sm px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary">
           <Palette className="h-3.5 w-3.5" />
           <span className="flex-1">Custom</span>
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent
-          // SUB_OFFSET (8) + parent panel right padding (p-2 = 8) so the visual
-          // gap between the standard color popover and the custom popover matches
-          // the gap between the main menu and the standard color popover.
-          sideOffset={SUB_OFFSET + 8}
+          sideOffset={SUB_OFFSET}
           collisionPadding={8}
           className="p-2"
           onPointerDown={(e) => e.stopPropagation()}
