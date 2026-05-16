@@ -3755,7 +3755,7 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false, fullscr
     pendingTimeRef.current = null;
     seekingRef.current = false;
     if (needleRef.current) needleRef.current.style.left = "";
-  }, [src]);
+  }, [src, fullscreen]);
 
   useEffect(() => {
     if (!playing || duration <= 0) return;
@@ -3802,7 +3802,7 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false, fullscr
         );
       }
     };
-  }, [playing, duration]);
+  }, [playing, duration, fullscreen]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -3849,7 +3849,7 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false, fullscr
       v.removeEventListener("pause", onPause);
       v.removeEventListener("seeked", onSeeked);
     };
-  }, [src, flushSeek]);
+  }, [src, flushSeek, fullscreen]);
 
   // Track strip width responsively
   useEffect(() => {
@@ -3861,7 +3861,7 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false, fullscr
     ro.observe(el);
     setStripWidth(el.clientWidth);
     return () => ro.disconnect();
-  }, [ready]);
+  }, [ready, fullscreen]);
 
   const togglePlay = () => {
     const v = videoRef.current;
