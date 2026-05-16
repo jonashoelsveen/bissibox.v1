@@ -20,7 +20,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useUserCategories, type UserCategory } from "@/hooks/useUserCategories";
 import { DEFAULT_SWATCHES } from "./MiniColorPicker";
 import { CategoryActionsMenu } from "@/components/library/CategoryActionsMenu";
-import { Pin as PinIcon, PinOff } from "lucide-react";
+
 
 export function MeCategorySection({
   hidden,
