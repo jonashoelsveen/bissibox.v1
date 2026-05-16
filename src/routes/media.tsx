@@ -4676,7 +4676,7 @@ function MediaTabViewBody(props: {
   );
 }
 
-function PhotoLqip({ thumbSrc, fullSrc, fullscreen }: { thumbSrc?: string; fullSrc?: string; fullscreen?: boolean }) {
+function PhotoLqip({ thumbSrc, fullSrc, fullscreen, fullscreenPanelOpen = false }: { thumbSrc?: string; fullSrc?: string; fullscreen?: boolean; fullscreenPanelOpen?: boolean }) {
   const [fullLoaded, setFullLoaded] = useState(false);
 
   useEffect(() => {
