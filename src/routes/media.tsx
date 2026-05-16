@@ -559,12 +559,12 @@ function LibraryPage() {
       replace: true,
     });
   };
-  const onSideOpenAsTab = (v: LibrarySideNavValue, label: string) => {
+  const onSideOpenAsTab = (v: LibrarySideNavValue, label: string, color?: string | null) => {
     if (v.category !== "media") return;
     const folder = v.folder || "";
     const title =
       folder === "" ? "All" : folder === "__unsorted__" ? "Unsorted" : label;
-    openAlbumTab(folder, title);
+    openAlbumTab(folder, title, color ?? null);
     // Also navigate to album so single behaviour matches.
     setActiveNoteId(null);
     navigate({
