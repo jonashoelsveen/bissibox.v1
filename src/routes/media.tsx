@@ -406,6 +406,21 @@ function LibraryPage() {
     return () => window.removeEventListener("library:open-tab", onOpenTab);
   }, [openNote, openMeetingTab, openMediaTab]);
 
+  // Live update album tab colors when the user picks a color in the side nav.
+  useEffect(() => {
+    const onColor = (e: Event) => {
+      const d = (e as CustomEvent).detail as { id: string; color: string } | null;
+      if (!d) return;
+      setOpenNoteTabs((prev) =>
+        prev.map((t) =>
+          t.type === "album" && t.albumFolder === d.id ? { ...t, albumColor: d.color } : t,
+        ),
+      );
+    };
+    window.addEventListener("library:album-color", onColor);
+    return () => window.removeEventListener("library:album-color", onColor);
+  }, []);
+
   const showingNote = activeNoteId !== null;
   const activeTabEntry = activeNoteId ? openNoteTabs.find((t) => t.id === activeNoteId) ?? null : null;
   const showingMeeting = !!activeTabEntry && activeTabEntry.type === "meeting";
