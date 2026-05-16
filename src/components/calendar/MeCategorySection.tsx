@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Plus, Eye, EyeOff, MoreHorizontal, Pin, PinOff, Pencil, Trash2, Palette } from "lucide-react";
+import { motion } from "framer-motion";
+import { ChevronRight, Plus, Eye, EyeOff, MoreHorizontal, Pin, PinOff } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -19,7 +18,9 @@ import {
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { useUserCategories, type UserCategory } from "@/hooks/useUserCategories";
-import { MiniColorPicker, DEFAULT_SWATCHES } from "./MiniColorPicker";
+import { DEFAULT_SWATCHES } from "./MiniColorPicker";
+import { CategoryActionsMenu } from "@/components/library/CategoryActionsMenu";
+
 
 export function MeCategorySection({
   hidden,
@@ -38,8 +39,6 @@ export function MeCategorySection({
   const [open, setOpen] = useState(true);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [menuFor, setMenuFor] = useState<string | null>(null);
-  const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -76,7 +75,6 @@ export function MeCategorySection({
   };
 
   const ids = categories.map((c) => c.id);
-  const menuCat = categories.find((c) => c.id === menuFor);
 
   return (
     <div className="flex flex-col">
@@ -132,29 +130,16 @@ export function MeCategorySection({
                   onCommitRename={() => void commitRename(c)}
                   onCancelRename={() => setRenamingId(null)}
                   onToggleHidden={() => onToggleHidden(c.id)}
-                  onOpenMenu={(rect) => {
-                    setMenuFor(c.id);
-                    setMenuAnchor({ x: rect.right + 4, y: rect.top });
-                  }}
+                  onRename={() => startRename(c)}
+                  onTogglePin={() => void update(c.id, { pinned: !c.pinned })}
+                  onDelete={() => void remove(c.id)}
+                  onColorChange={(hex) => void update(c.id, { color: hex })}
                 />
               ))}
             </SortableContext>
           </DndContext>
         </div>
       </motion.div>
-
-      {menuFor && menuCat && menuAnchor && (
-        <CategoryMenu
-          cat={menuCat}
-          anchor={menuAnchor}
-          onClose={() => { setMenuFor(null); setMenuAnchor(null); }}
-          onRename={() => { setMenuFor(null); startRename(menuCat); }}
-          onPin={async () => { await update(menuCat.id, { pinned: !menuCat.pinned }); setMenuFor(null); }}
-          onDelete={async () => { await remove(menuCat.id); setMenuFor(null); }}
-          onColor={(hex) => { void update(menuCat.id, { color: hex }); }}
-          onCustomDone={() => { setMenuFor(null); setMenuAnchor(null); }}
-        />
-      )}
     </div>
   );
 }
@@ -168,7 +153,10 @@ function SortableCategoryRow(props: {
   onCommitRename: () => void;
   onCancelRename: () => void;
   onToggleHidden: () => void;
-  onOpenMenu: (rect: DOMRect) => void;
+  onRename: () => void;
+  onTogglePin: () => void;
+  onDelete: () => void;
+  onColorChange: (hex: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.cat.id });
   const style: React.CSSProperties = {
@@ -176,7 +164,6 @@ function SortableCategoryRow(props: {
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
-  const dotsRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (props.renaming) {
@@ -184,6 +171,9 @@ function SortableCategoryRow(props: {
       inputRef.current?.select();
     }
   }, [props.renaming]);
+
+  const { cat } = props;
+  const canEdit = !cat.is_default;
 
   return (
     <div
@@ -193,7 +183,6 @@ function SortableCategoryRow(props: {
       {...listeners}
       onClick={(e) => {
         if (props.renaming) return;
-        // Ignore clicks that originated on action buttons (they stopPropagation already, but guard anyway)
         const tgt = e.target as HTMLElement;
         if (tgt.closest("button")) return;
         props.onToggleHidden();
@@ -205,7 +194,7 @@ function SortableCategoryRow(props: {
       <span
         aria-hidden
         className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-hairline"
-        style={{ background: props.cat.color, opacity: props.hidden ? 0.35 : 1 }}
+        style={{ background: cat.color, opacity: props.hidden ? 0.35 : 1 }}
       />
       {props.renaming ? (
         <input
@@ -223,24 +212,35 @@ function SortableCategoryRow(props: {
         />
       ) : (
         <span className="min-w-0 flex-1 truncate">
-          {props.cat.name}
-          {props.cat.pinned && <Pin className="ml-1 inline h-2.5 w-2.5 text-muted-foreground" />}
+          {cat.name}
+          {cat.pinned && <Pin className="ml-1 inline h-2.5 w-2.5 text-muted-foreground" />}
         </span>
       )}
-      <button
-        ref={dotsRef}
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-          props.onOpenMenu(r);
-        }}
-        onPointerDown={(e) => e.stopPropagation()}
-        className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground/60 opacity-0 hover:bg-secondary hover:text-ink group-hover:opacity-100"
-        aria-label="More"
-      >
-        <MoreHorizontal className="h-3 w-3" />
-      </button>
+      <CategoryActionsMenu
+        trigger={
+          <button
+            type="button"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground/60 opacity-0 hover:bg-secondary hover:text-ink group-hover:opacity-100 data-[state=open]:opacity-100"
+            aria-label="More"
+          >
+            <MoreHorizontal className="h-3 w-3" />
+          </button>
+        }
+        currentColor={cat.color}
+        onColorChange={props.onColorChange}
+        onRename={canEdit ? props.onRename : undefined}
+        onDelete={canEdit ? props.onDelete : undefined}
+        extraItems={[
+          {
+            top: true,
+            label: cat.pinned ? "Unpin" : "Pin to top",
+            icon: cat.pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />,
+            onClick: props.onTogglePin,
+          },
+        ]}
+      />
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); props.onToggleHidden(); }}
@@ -255,176 +255,5 @@ function SortableCategoryRow(props: {
         )}
       </button>
     </div>
-  );
-}
-
-function CategoryMenu({
-  cat,
-  anchor,
-  onClose,
-  onRename,
-  onPin,
-  onDelete,
-  onColor,
-  onCustomDone,
-}: {
-  cat: UserCategory;
-  anchor: { x: number; y: number };
-  onClose: () => void;
-  onRename: () => void;
-  onPin: () => void;
-  onDelete: () => void;
-  onColor: (hex: string) => void;
-  onCustomDone: () => void;
-}) {
-  const [colorOpen, setColorOpen] = useState(false);
-  const [colorAnchor, setColorAnchor] = useState<{ x: number; y: number } | null>(null);
-  const [colorPinned, setColorPinned] = useState(false);
-  const [customOpen, setCustomOpen] = useState(false);
-  const [customAnchor, setCustomAnchor] = useState<{ x: number; y: number } | null>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const closeTimer = useRef<number | null>(null);
-
-  const cancelClose = () => {
-    if (closeTimer.current !== null) {
-      window.clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-  };
-  const scheduleClose = () => {
-    cancelClose();
-    closeTimer.current = window.setTimeout(() => {
-      if (!colorPinned) {
-        setColorOpen(false);
-        setCustomOpen(false);
-      }
-    }, 120);
-  };
-
-  useEffect(() => {
-    const onDocPointer = (e: PointerEvent | MouseEvent) => {
-      const t = e.target as Node | null;
-      if (!t) return;
-      if (rootRef.current?.contains(t)) return;
-      if (document.getElementById("__cat_color_menu")?.contains(t)) return;
-      if (document.getElementById("__cat_custom_menu")?.contains(t)) return;
-      onClose();
-    };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    // Defer registration so the opening click doesn't immediately close us.
-    const id = window.setTimeout(() => {
-      document.addEventListener("pointerdown", onDocPointer, true);
-      document.addEventListener("mousedown", onDocPointer, true);
-    }, 0);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      window.clearTimeout(id);
-      document.removeEventListener("pointerdown", onDocPointer, true);
-      document.removeEventListener("mousedown", onDocPointer, true);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
-
-  const openColor = (rect: DOMRect) => {
-    cancelClose();
-    setColorAnchor({ x: rect.right + 4, y: rect.top });
-    setColorOpen(true);
-  };
-
-  return createPortal(
-    <>
-      <div
-        ref={rootRef}
-        className="fixed z-50 min-w-[170px] overflow-hidden rounded-xl border border-hairline bg-popover p-1 text-xs shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
-        style={{ left: anchor.x, top: anchor.y }}
-      >
-        <button onClick={onPin} className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-ink hover:bg-secondary">
-          {cat.pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
-          {cat.pinned ? "Unpin" : "Pin to top"}
-        </button>
-        <button
-          onClick={onRename}
-          disabled={cat.is_default}
-          className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-ink hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Pencil className="h-3 w-3" /> Rename
-        </button>
-        <button
-          onMouseEnter={(e) => openColor(e.currentTarget.getBoundingClientRect())}
-          onMouseLeave={scheduleClose}
-          onClick={(e) => {
-            openColor(e.currentTarget.getBoundingClientRect());
-            setColorPinned(true);
-          }}
-          className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-ink hover:bg-secondary"
-        >
-          <Palette className="h-3 w-3" /> Color
-          <ChevronRight className="ml-auto h-3 w-3" />
-        </button>
-        <button
-          onClick={onDelete}
-          disabled={cat.is_default}
-          className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-destructive hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Trash2 className="h-3 w-3" /> Delete
-        </button>
-      </div>
-
-      {colorOpen && colorAnchor && (
-        <div
-          id="__cat_color_menu"
-          onMouseEnter={cancelClose}
-          onMouseLeave={scheduleClose}
-          className="fixed z-50 overflow-hidden rounded-xl border border-hairline bg-popover p-2 shadow-xl animate-in fade-in zoom-in-95 duration-150"
-          style={{ left: colorAnchor.x, top: colorAnchor.y }}
-        >
-          <div className="grid grid-cols-4 gap-1.5">
-            {DEFAULT_SWATCHES.map((hex) => {
-              const selected = cat.color.toLowerCase() === hex.toLowerCase();
-              return (
-                <button
-                  key={hex}
-                  type="button"
-                  onClick={() => { setColorPinned(false); onColor(hex); }}
-                  className={`h-5 w-5 rounded-full border transition-transform hover:scale-110 ${
-                    selected ? "border-ink ring-2 ring-ink/30" : "border-black/10"
-                  }`}
-                  style={{ background: hex }}
-                  aria-label={hex}
-                />
-              );
-            })}
-          </div>
-          <button
-            onClick={(e) => {
-              const r = e.currentTarget.getBoundingClientRect();
-              setCustomAnchor({ x: r.right + 6, y: r.top });
-              setCustomOpen(true);
-              setColorPinned(true);
-            }}
-            className="mt-2 flex w-full items-center justify-between rounded-lg px-2 py-1 text-[11px] text-ink hover:bg-secondary"
-          >
-            Custom
-            <ChevronRight className="h-3 w-3" />
-          </button>
-        </div>
-      )}
-
-      {customOpen && customAnchor && (
-        <div
-          id="__cat_custom_menu"
-          onMouseEnter={cancelClose}
-          className="fixed z-50 overflow-hidden rounded-xl border border-hairline bg-popover shadow-xl animate-in fade-in zoom-in-95 duration-150"
-          style={{ left: customAnchor.x, top: customAnchor.y }}
-        >
-          <MiniColorPicker
-            initial={cat.color}
-            onPreview={(hex) => onColor(hex)}
-            onSave={(hex) => { onColor(hex); onCustomDone(); }}
-          />
-        </div>
-      )}
-    </>,
-    document.body,
   );
 }
