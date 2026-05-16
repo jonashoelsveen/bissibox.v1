@@ -4485,6 +4485,15 @@ function MediaTabViewBody(props: {
   const isVideo = currentItem?.media_type === "video";
   const isMulti = filteredItems.length > 1;
 
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => { setIsFullscreen(false); }, [currentItem?.id]);
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setIsFullscreen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isFullscreen]);
+
   const primaryAlbumId =
     (currentItem && itemAlbums[currentItem.id]?.[0]) ?? currentItem?.album_id ?? null;
 
@@ -4506,6 +4515,14 @@ function MediaTabViewBody(props: {
         <div className="flex items-center gap-1">
           <button
             type="button"
+            onClick={() => setIsFullscreen(true)}
+            aria-label="Enter full screen"
+            className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={() => setEditPanelOpen((v) => !v)}
             aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
             className={`grid h-9 w-9 place-items-center rounded-full transition ${
@@ -4517,16 +4534,17 @@ function MediaTabViewBody(props: {
         </div>
       </div>
       <div className={`flex min-h-0 flex-1 transition-[padding] duration-300 ease-out ${
-        editPanelOpen ? "pr-96" : "pr-0"
+        editPanelOpen && !isFullscreen ? "pr-96" : "pr-0"
       }`}>
         <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-4">
           {currentItem?.media_type === "photo" ? (
             <PhotoLqip
               thumbSrc={currentItem ? thumbUrls[currentItem.id] : undefined}
               fullSrc={currentUrl}
+              fullscreen={isFullscreen}
             />
           ) : (
-            <VideoPlayer src={currentUrl} drawing={drawing} theme="light" />
+            <VideoPlayer src={currentUrl} drawing={drawing} theme="light" fullscreen={isFullscreen} />
           )}
         </div>
       </div>
@@ -4534,6 +4552,17 @@ function MediaTabViewBody(props: {
         <div className="flex-none">
           <DockStrip items={filteredItems} urls={urls} activeIdx={safeIdx} onSelect={setIdx} />
         </div>
+      )}
+      {isFullscreen && typeof document !== "undefined" && createPortal(
+        <button
+          type="button"
+          onClick={() => setIsFullscreen(false)}
+          aria-label="Exit full screen"
+          className="fixed top-4 right-4 z-[81] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10"
+        >
+          <Minimize2 className="h-4 w-4" />
+        </button>,
+        document.body,
       )}
       {typeof document !== "undefined" && createPortal(
         <aside
