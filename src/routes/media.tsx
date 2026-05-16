@@ -3802,7 +3802,7 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false, fullscr
         );
       }
     };
-  }, [playing, duration]);
+  }, [playing, duration, fullscreen]);
 
   useEffect(() => {
     const v = videoRef.current;
