@@ -3,9 +3,12 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  ChevronLeft,
   ChevronRight,
   Palette,
   Pencil,
@@ -32,21 +35,20 @@ export type CategoryActionsMenuProps = {
   currentColor: ColorValue;
   onColorChange: (color: ColorValue) => void;
   extraItems?: CategoryExtraItem[];
-  /** Allow color edits. Defaults to true. */
   allowColor?: boolean;
 };
 
 // 9 standard colors (3x3 grid)
 export const STANDARD_COLORS: ColorValue[] = [
-  "#ef4444", // red
-  "#f97316", // orange
-  "#eab308", // yellow
-  "#22c55e", // green
-  "#06b6d4", // cyan
-  "#3b82f6", // blue
-  "#8b5cf6", // purple
-  "#ec4899", // pink
-  "#64748b", // slate
+  "#ef4444",
+  "#f97316",
+  "#eab308",
+  "#22c55e",
+  "#06b6d4",
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899",
+  "#64748b",
 ];
 
 // ---- color math ----
@@ -92,7 +94,9 @@ function hex2hue(hex: string): number {
 
 const isValidHex = (v: string) => /^#[0-9a-f]{6}$/i.test(v.trim());
 
-// ---- component ----
+// Gap between adjacent popovers — matches the diary owner/leader note spacing (gap-2 = 8px)
+const SUB_OFFSET = 8;
+
 export function CategoryActionsMenu({
   trigger,
   onRename,
@@ -104,18 +108,10 @@ export function CategoryActionsMenu({
   allowColor = true,
 }: CategoryActionsMenuProps) {
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"main" | "colors" | "custom">("main");
+  const topExtras = extraItems.filter((i) => i.top);
+  const bottomExtras = extraItems.filter((i) => !i.top);
 
-  useEffect(() => {
-    if (!open) {
-      // delay reset so the close animation doesn't flash a different view
-      const t = window.setTimeout(() => setView("main"), 150);
-      return () => window.clearTimeout(t);
-    }
-  }, [open]);
-
-  // Fixed height so all 3 views match. Tuned to fit the colors view (3x3 + header + custom row).
-  const FIXED_HEIGHT = 248;
+  const close = () => setOpen(false);
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -125,144 +121,99 @@ export function CategoryActionsMenu({
         side="right"
         sideOffset={4}
         collisionPadding={8}
-        className="w-56 overflow-hidden p-0"
-        style={{ height: FIXED_HEIGHT }}
+        className="w-44 p-1"
         onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
       >
-        {view === "main" && (
-          <MainView
-            onRename={onRename}
-            onDuplicate={onDuplicate}
-            onDelete={onDelete}
-            extraItems={extraItems}
-            allowColor={allowColor}
-            onOpenColors={() => setView("colors")}
-            onClose={() => setOpen(false)}
-          />
-        )}
-        {view === "colors" && (
-          <ColorsView
-            currentColor={currentColor}
-            onPick={(hex) => {
-              onColorChange(hex);
-              setOpen(false);
+        {topExtras.map((it, i) => (
+          <Item
+            key={`t-${i}`}
+            icon={it.icon}
+            label={it.label}
+            destructive={it.destructive}
+            onClick={() => {
+              it.onClick();
+              close();
             }}
-            onBack={() => setView("main")}
-            onCustom={() => setView("custom")}
           />
-        )}
-        {view === "custom" && (
-          <CustomView
-            initial={currentColor}
-            onBack={() => setView("colors")}
-            onSave={(hex) => {
-              onColorChange(hex);
-              setOpen(false);
+        ))}
+        {onRename && (
+          <Item
+            icon={<Pencil className="h-3.5 w-3.5" />}
+            label="Rename"
+            onClick={() => {
+              onRename();
+              close();
             }}
-            onPreview={(hex) => onColorChange(hex)}
           />
         )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-// ---- Main view ----
-function MainView({
-  onRename,
-  onDuplicate,
-  onDelete,
-  extraItems,
-  allowColor,
-  onOpenColors,
-  onClose,
-}: {
-  onRename?: () => void;
-  onDuplicate?: () => void;
-  onDelete?: () => void;
-  extraItems: CategoryExtraItem[];
-  allowColor: boolean;
-  onOpenColors: () => void;
-  onClose: () => void;
-}) {
-  const topExtras = extraItems.filter((i) => i.top);
-  const bottomExtras = extraItems.filter((i) => !i.top);
-
-  return (
-    <div className="flex h-full flex-col p-1 text-xs">
-      {topExtras.map((it, i) => (
-        <Item
-          key={`t-${i}`}
-          icon={it.icon}
-          label={it.label}
-          destructive={it.destructive}
-          onClick={() => {
-            it.onClick();
-            onClose();
-          }}
-        />
-      ))}
-      {onRename && (
-        <Item
-          icon={<Pencil className="h-3.5 w-3.5" />}
-          label="Rename"
-          onClick={() => {
-            onRename();
-            onClose();
-          }}
-        />
-      )}
-      {onDuplicate && (
-        <Item
-          icon={<Copy className="h-3.5 w-3.5" />}
-          label="Duplicate"
-          onClick={() => {
-            onDuplicate();
-            onClose();
-          }}
-        />
-      )}
-      {allowColor && (
-        <button
-          type="button"
-          onMouseEnter={onOpenColors}
-          onClick={onOpenColors}
-          className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-ink transition hover:bg-secondary"
-        >
-          <Palette className="h-3.5 w-3.5" />
-          <span className="flex-1">Color</span>
-          <ChevronRight className="h-3 w-3 text-muted-foreground" />
-        </button>
-      )}
-      {bottomExtras.length > 0 && <div className="my-1 h-px bg-border" />}
-      {bottomExtras.map((it, i) => (
-        <Item
-          key={`b-${i}`}
-          icon={it.icon}
-          label={it.label}
-          destructive={it.destructive}
-          onClick={() => {
-            it.onClick();
-            onClose();
-          }}
-        />
-      ))}
-      {onDelete && (
-        <>
-          {bottomExtras.length === 0 && <div className="my-1 h-px bg-border" />}
+        {onDuplicate && (
+          <Item
+            icon={<Copy className="h-3.5 w-3.5" />}
+            label="Duplicate"
+            onClick={() => {
+              onDuplicate();
+              close();
+            }}
+          />
+        )}
+        {allowColor && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="gap-2 px-2 py-1.5 text-xs text-ink">
+              <Palette className="h-3.5 w-3.5" />
+              <span className="flex-1">Color</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent
+              sideOffset={SUB_OFFSET}
+              collisionPadding={8}
+              className="p-2"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <ColorsPanel
+                currentColor={currentColor}
+                onPick={(hex) => {
+                  onColorChange(hex);
+                  close();
+                }}
+                customPanel={
+                  <CustomPanel
+                    initial={currentColor}
+                    onPreview={(hex) => onColorChange(hex)}
+                    onSave={(hex) => {
+                      onColorChange(hex);
+                      close();
+                    }}
+                  />
+                }
+              />
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
+        {(bottomExtras.length > 0 || onDelete) && <DropdownMenuSeparator />}
+        {bottomExtras.map((it, i) => (
+          <Item
+            key={`b-${i}`}
+            icon={it.icon}
+            label={it.label}
+            destructive={it.destructive}
+            onClick={() => {
+              it.onClick();
+              close();
+            }}
+          />
+        ))}
+        {onDelete && (
           <Item
             icon={<Trash2 className="h-3.5 w-3.5" />}
             label="Delete"
             destructive
             onClick={() => {
               onDelete();
-              onClose();
+              close();
             }}
           />
-        </>
-      )}
-    </div>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -281,7 +232,7 @@ function Item({
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left transition ${
+      className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs transition ${
         destructive
           ? "text-destructive hover:bg-destructive/10"
           : "text-ink hover:bg-secondary"
@@ -293,30 +244,19 @@ function Item({
   );
 }
 
-// ---- Colors view ----
-function ColorsView({
+// ---- Colors panel (rendered in a separate sub popover) ----
+function ColorsPanel({
   currentColor,
   onPick,
-  onBack,
-  onCustom,
+  customPanel,
 }: {
   currentColor: ColorValue;
   onPick: (hex: ColorValue) => void;
-  onBack: () => void;
-  onCustom: () => void;
+  customPanel: React.ReactNode;
 }) {
   return (
-    <div className="flex h-full flex-col p-1 text-xs">
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-left text-ink transition hover:bg-secondary"
-      >
-        <ChevronLeft className="h-3.5 w-3.5" />
-        <span>Color</span>
-      </button>
-      <div className="my-1 h-px bg-border" />
-      <div className="grid flex-1 grid-cols-3 place-items-center gap-2 px-2 py-1">
+    <div className="flex flex-col text-xs">
+      <div className="grid grid-cols-3 place-items-center gap-2 px-1 py-1">
         {STANDARD_COLORS.map((hex) => {
           const selected = currentColor.toLowerCase() === hex.toLowerCase();
           return (
@@ -333,43 +273,41 @@ function ColorsView({
           );
         })}
       </div>
-      <div className="my-1 h-px bg-border" />
-      <button
-        type="button"
-        onMouseEnter={onCustom}
-        onClick={onCustom}
-        className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-ink transition hover:bg-secondary"
-      >
-        <Palette className="h-3.5 w-3.5" />
-        <span className="flex-1">Custom</span>
-        <ChevronRight className="h-3 w-3 text-muted-foreground" />
-      </button>
+      <DropdownMenuSeparator />
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger className="gap-2 px-2 py-1.5 text-xs text-ink">
+          <Palette className="h-3.5 w-3.5" />
+          <span className="flex-1">Custom</span>
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent
+          sideOffset={SUB_OFFSET}
+          collisionPadding={8}
+          className="p-2"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {customPanel}
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
     </div>
   );
 }
 
-// ---- Custom view ----
-function CustomView({
+// ---- Custom picker panel ----
+function CustomPanel({
   initial,
-  onBack,
   onSave,
   onPreview,
 }: {
   initial: ColorValue;
-  onBack: () => void;
   onSave: (hex: ColorValue) => void;
   onPreview?: (hex: ColorValue) => void;
 }) {
-  const [hue, setHue] = useState<number>(() => hex2hue(initial));
-  const [preview, setPreview] = useState<ColorValue>(
-    isValidHex(initial) ? initial : hsl2hex(hex2hue(initial)),
-  );
-  const [hexInput, setHexInput] = useState<string>(
-    isValidHex(initial) ? initial : hsl2hex(hex2hue(initial)),
-  );
+  const seed = isValidHex(initial) ? initial : hsl2hex(hex2hue(initial));
+  const [hue, setHue] = useState<number>(() => hex2hue(seed));
+  const [preview, setPreview] = useState<ColorValue>(seed);
+  const [hexInput, setHexInput] = useState<string>(seed);
   const hueRef = useRef<HTMLDivElement>(null);
 
-  // sync hex input when hue dragged
   useEffect(() => {
     onPreview?.(preview);
   }, [preview, onPreview]);
@@ -384,8 +322,7 @@ function CustomView({
   const onHexChange = (v: string) => {
     setHexInput(v);
     if (isValidHex(v)) {
-      const h = hex2hue(v);
-      setHue(h);
+      setHue(hex2hue(v));
       setPreview(v);
     }
   };
@@ -416,59 +353,48 @@ function CustomView({
   const huePct = (hue / 360) * 100;
 
   return (
-    <div className="flex h-full flex-col p-1 text-xs">
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-left text-ink transition hover:bg-secondary"
-      >
-        <ChevronLeft className="h-3.5 w-3.5" />
-        <span>Custom</span>
-      </button>
-      <div className="my-1 h-px bg-border" />
-      <div className="flex flex-1 gap-2 p-2">
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <input
-            type="text"
-            value={hexInput}
-            onChange={(e) => onHexChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && isValidHex(hexInput)) onSave(hexInput);
-            }}
-            spellCheck={false}
-            placeholder="#000000"
-            className="w-full rounded border border-hairline bg-background px-2 py-1 font-mono text-[11px] outline-none focus:border-ink/30"
-          />
-          <div className="flex flex-1 gap-2">
-            <div
-              className="flex-1 rounded border border-hairline"
-              style={{ background: preview }}
-              aria-label="Color preview"
-            />
-            <button
-              type="button"
-              onClick={() => onSave(preview)}
-              className="flex w-7 items-center justify-center rounded bg-ink text-[10px] font-semibold tracking-wider text-background hover:opacity-90"
-              style={{ writingMode: "vertical-rl" as const, textOrientation: "mixed" as const }}
-            >
-              SAVE
-            </button>
-          </div>
-        </div>
-        <div
-          ref={hueRef}
-          onPointerDown={onHuePointerDown}
-          className="relative w-3.5 cursor-pointer rounded border border-hairline touch-none"
-          style={{
-            background:
-              "linear-gradient(to bottom, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)",
+    <div className="flex h-44 w-48 gap-2 text-xs">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <input
+          type="text"
+          value={hexInput}
+          onChange={(e) => onHexChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && isValidHex(hexInput)) onSave(hexInput);
           }}
-        >
+          spellCheck={false}
+          placeholder="#000000"
+          className="w-full rounded border border-hairline bg-background px-2 py-1 font-mono text-[11px] outline-none focus:border-ink/30"
+        />
+        <div className="flex flex-1 gap-2">
           <div
-            className="pointer-events-none absolute -left-[2px] -right-[2px] h-1 -translate-y-1/2 border border-black bg-white"
-            style={{ top: `${huePct}%` }}
+            className="flex-1 rounded border border-hairline"
+            style={{ background: preview }}
+            aria-label="Color preview"
           />
+          <button
+            type="button"
+            onClick={() => onSave(preview)}
+            className="flex w-7 items-center justify-center rounded bg-ink text-[10px] font-semibold tracking-wider text-background hover:opacity-90"
+            style={{ writingMode: "vertical-rl" as const, textOrientation: "mixed" as const }}
+          >
+            SAVE
+          </button>
         </div>
+      </div>
+      <div
+        ref={hueRef}
+        onPointerDown={onHuePointerDown}
+        className="relative w-3.5 cursor-pointer touch-none rounded border border-hairline"
+        style={{
+          background:
+            "linear-gradient(to bottom, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)",
+        }}
+      >
+        <div
+          className="pointer-events-none absolute -left-[2px] -right-[2px] h-1 -translate-y-1/2 border border-black bg-white"
+          style={{ top: `${huePct}%` }}
+        />
       </div>
     </div>
   );
