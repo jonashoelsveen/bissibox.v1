@@ -4037,7 +4037,14 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false, fullscr
 
   if (fullscreen && typeof document !== "undefined") {
     return createPortal(
-      <div className="fixed inset-0 z-[80] bg-black">{playerInner}</div>,
+      <div
+        className={`fixed inset-y-0 left-0 z-[80] bg-black transition-[right] duration-300 ease-out ${
+          fullscreenPanelOpen ? "right-96" : "right-0"
+        }`}
+        style={{ willChange: "right" }}
+      >
+        {playerInner}
+      </div>,
       document.body,
     );
   }
