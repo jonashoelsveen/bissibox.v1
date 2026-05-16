@@ -3755,7 +3755,7 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false, fullscr
     pendingTimeRef.current = null;
     seekingRef.current = false;
     if (needleRef.current) needleRef.current.style.left = "";
-  }, [src]);
+  }, [src, fullscreen]);
 
   useEffect(() => {
     if (!playing || duration <= 0) return;
