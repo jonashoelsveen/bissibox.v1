@@ -966,6 +966,7 @@ function FolderRow({
                 <div
                   className="fixed z-[70] w-40 overflow-hidden rounded-lg border border-hairline bg-card py-1 shadow-lg animate-in fade-in-0 zoom-in-95"
                   style={{ top: menuPos.top, left: menuPos.left }}
+                  onPointerDown={(e) => e.stopPropagation()}
                 >
                   <MenuItem
                     icon={folder.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
@@ -1050,6 +1051,7 @@ function FolderRow({
                   <div
                     className="fixed z-[72] overflow-hidden rounded-lg shadow-xl"
                     style={{ top: customPos.top, left: customPos.left }}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
                     <MiniColorPicker
                       initial={folder.color ?? "#3B82F6"}
