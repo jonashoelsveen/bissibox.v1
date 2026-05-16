@@ -4631,12 +4631,8 @@ function PhotoLqip({ thumbSrc, fullSrc, fullscreen }: { thumbSrc?: string; fullS
 
   if (!thumbSrc && !fullSrc) return null;
 
-  const outerClass = fullscreen
-    ? "fixed inset-0 z-[80] flex items-center justify-center bg-black"
-    : "relative flex h-full w-full items-center justify-center";
-
-  return (
-    <div className={outerClass}>
+  const innerContent = (
+    <>
       {thumbSrc && (
         <img
           src={thumbSrc}
@@ -4659,6 +4655,21 @@ function PhotoLqip({ thumbSrc, fullSrc, fullscreen }: { thumbSrc?: string; fullS
           }`}
         />
       )}
+    </>
+  );
+
+  if (fullscreen && typeof document !== "undefined") {
+    return createPortal(
+      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black">
+        {innerContent}
+      </div>,
+      document.body,
+    );
+  }
+
+  return (
+    <div className="relative flex h-full w-full items-center justify-center">
+      {innerContent}
     </div>
   );
 }
