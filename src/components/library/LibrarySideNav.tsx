@@ -886,14 +886,25 @@ function FolderRow({
   useEffect(() => {
     if (menuOpen && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      // open menu to the right of the trigger, top aligned
-      setMenuPos({ top: r.top, left: r.right + 4 });
+      const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+      // Reserve enough vertical space for the full chain: menu + color submenu + custom picker.
+      // This prevents the menu from shifting after the user opens nested submenus.
+      const reserved = onColor ? 340 : 140;
+      const top = Math.max(8, Math.min(r.top, vh - reserved - 12));
+      setMenuPos({ top, left: r.right + 4 });
     } else {
       setMenuPos(null);
       setColorOpen(false);
       setCustomOpen(false);
     }
-  }, [menuOpen]);
+  }, [menuOpen, onColor]);
+
+  const openColorSubmenu = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    setColorPos({ top: r.top, left: r.right + 4 });
+    setColorOpen(true);
+    setCustomOpen(false);
+  };
 
   return (
     <div
@@ -968,30 +979,28 @@ function FolderRow({
                   style={{ top: menuPos.top, left: menuPos.left }}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
-                  <MenuItem
-                    icon={folder.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-                    label={folder.pinned ? "Unpin" : "Pin to top"}
-                    onClick={() => {
-                      onCloseMenu();
-                      onPin();
-                    }}
-                  />
-                  <MenuItem
-                    icon={<Pencil className="h-3.5 w-3.5" />}
-                    label="Rename"
-                    onClick={() => {
-                      onCloseMenu();
-                      onRename();
-                    }}
-                  />
+                  <div onMouseEnter={() => { setColorOpen(false); setCustomOpen(false); }}>
+                    <MenuItem
+                      icon={folder.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                      label={folder.pinned ? "Unpin" : "Pin to top"}
+                      onClick={() => {
+                        onCloseMenu();
+                        onPin();
+                      }}
+                    />
+                    <MenuItem
+                      icon={<Pencil className="h-3.5 w-3.5" />}
+                      label="Rename"
+                      onClick={() => {
+                        onCloseMenu();
+                        onRename();
+                      }}
+                    />
+                  </div>
                   {onColor && (
                     <button
-                      onClick={(e) => {
-                        const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-                        setColorPos({ top: r.top, left: r.right + 4 });
-                        setColorOpen(true);
-                        setCustomOpen(false);
-                      }}
+                      onMouseEnter={(e) => openColorSubmenu(e.currentTarget as HTMLButtonElement)}
+                      onClick={(e) => openColorSubmenu(e.currentTarget as HTMLButtonElement)}
                       className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-ink transition hover:bg-secondary"
                     >
                       <Palette className="h-3.5 w-3.5" />
@@ -999,15 +1008,17 @@ function FolderRow({
                       <ChevronRight className="h-3 w-3 text-muted-foreground" />
                     </button>
                   )}
-                  <MenuItem
-                    icon={<Trash2 className="h-3.5 w-3.5" />}
-                    label="Delete"
-                    destructive
-                    onClick={() => {
-                      onCloseMenu();
-                      onDelete();
-                    }}
-                  />
+                  <div onMouseEnter={() => { setColorOpen(false); setCustomOpen(false); }}>
+                    <MenuItem
+                      icon={<Trash2 className="h-3.5 w-3.5" />}
+                      label="Delete"
+                      destructive
+                      onClick={() => {
+                        onCloseMenu();
+                        onDelete();
+                      }}
+                    />
+                  </div>
                 </div>
                 {colorOpen && colorPos && onColor && (
                   <div
