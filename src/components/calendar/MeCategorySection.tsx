@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronRight, Plus, Eye, EyeOff, MoreHorizontal, Pin } from "lucide-react";
+import { ChevronRight, Plus, Eye, EyeOff, MoreHorizontal, Pin, PinOff } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
