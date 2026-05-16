@@ -2752,7 +2752,7 @@ function Lightbox({
         {/* Sliding edit panel — overlay spanning full height, behind top bar */}
         <aside
           aria-hidden={!editPanelOpen}
-          className={`absolute right-0 top-0 bottom-0 z-20 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+          className={`${isFullscreen ? "fixed z-[82]" : "absolute z-20"} right-0 top-0 bottom-0 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
             editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
           }`}
         >
