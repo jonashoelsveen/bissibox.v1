@@ -39,8 +39,6 @@ export function MeCategorySection({
   const [open, setOpen] = useState(true);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [menuFor, setMenuFor] = useState<string | null>(null);
-  const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -77,7 +75,6 @@ export function MeCategorySection({
   };
 
   const ids = categories.map((c) => c.id);
-  const menuCat = categories.find((c) => c.id === menuFor);
 
   return (
     <div className="flex flex-col">
@@ -133,29 +130,16 @@ export function MeCategorySection({
                   onCommitRename={() => void commitRename(c)}
                   onCancelRename={() => setRenamingId(null)}
                   onToggleHidden={() => onToggleHidden(c.id)}
-                  onOpenMenu={(rect) => {
-                    setMenuFor(c.id);
-                    setMenuAnchor({ x: rect.right + 4, y: rect.top });
-                  }}
+                  onRename={() => startRename(c)}
+                  onTogglePin={() => void update(c.id, { pinned: !c.pinned })}
+                  onDelete={() => void remove(c.id)}
+                  onColorChange={(hex) => void update(c.id, { color: hex })}
                 />
               ))}
             </SortableContext>
           </DndContext>
         </div>
       </motion.div>
-
-      {menuFor && menuCat && menuAnchor && (
-        <CategoryMenu
-          cat={menuCat}
-          anchor={menuAnchor}
-          onClose={() => { setMenuFor(null); setMenuAnchor(null); }}
-          onRename={() => { setMenuFor(null); startRename(menuCat); }}
-          onPin={async () => { await update(menuCat.id, { pinned: !menuCat.pinned }); setMenuFor(null); }}
-          onDelete={async () => { await remove(menuCat.id); setMenuFor(null); }}
-          onColor={(hex) => { void update(menuCat.id, { color: hex }); }}
-          onCustomDone={() => { setMenuFor(null); setMenuAnchor(null); }}
-        />
-      )}
     </div>
   );
 }
