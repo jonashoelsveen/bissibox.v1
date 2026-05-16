@@ -2673,26 +2673,26 @@ function Lightbox({
           </button>
         </div>
 
-        <div className="absolute top-1 right-4 z-30 flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setIsFullscreen(true)}
-            aria-label="Enter full screen"
-            className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
-          >
-            <Maximize2 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditPanelOpen((v) => !v)}
-            aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-            className={`grid h-9 w-9 place-items-center rounded-full transition ${
-              editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
-            }`}
-          >
-            {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsFullscreen(true)}
+          aria-label="Enter full screen"
+          className={`absolute top-1 z-40 grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10 transition-[right] duration-300 ease-out ${
+            editPanelOpen ? "right-[400px]" : "right-12"
+          }`}
+        >
+          <Maximize2 className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditPanelOpen((v) => !v)}
+          aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
+          className={`absolute top-1 right-4 z-40 grid h-9 w-9 place-items-center rounded-full transition ${
+            editPanelOpen ? "bg-foreground/10 text-foreground" : "text-current hover:bg-foreground/10"
+          }`}
+        >
+          {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+        </button>
 
         {/* Row 2 — media */}
         <div
@@ -2736,7 +2736,7 @@ function Lightbox({
               onClick={() => setEditPanelOpen((v) => !v)}
               aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
               className={`fixed top-4 right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
-                editPanelOpen ? "bg-white/15 text-white" : "text-white hover:bg-white/10"
+                editPanelOpen ? "bg-foreground/10 text-foreground" : "text-white hover:bg-white/10"
               }`}
             >
               {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
@@ -4537,7 +4537,7 @@ function MediaTabViewBody(props: {
 
   return (
     <div className="flex h-full flex-col bg-white text-foreground">
-      <div className="sticky top-0 z-20 flex h-11 flex-none items-center justify-between gap-2 px-4 bg-white text-foreground">
+      <div className="sticky top-0 z-40 flex h-11 flex-none items-center justify-between gap-2 px-4 bg-white text-foreground">
         <div className="flex items-center">
           <button
             type="button"
@@ -4548,12 +4548,14 @@ function MediaTabViewBody(props: {
             <ArrowLeft className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="relative h-9 w-full">
           <button
             type="button"
             onClick={() => setIsFullscreen(true)}
             aria-label="Enter full screen"
-            className="grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10"
+            className={`absolute top-0 grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10 transition-[right] duration-300 ease-out ${
+              editPanelOpen ? "right-[400px]" : "right-10"
+            }`}
           >
             <Maximize2 className="h-4 w-4" />
           </button>
@@ -4561,8 +4563,8 @@ function MediaTabViewBody(props: {
             type="button"
             onClick={() => setEditPanelOpen((v) => !v)}
             aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-            className={`grid h-9 w-9 place-items-center rounded-full transition ${
-              editPanelOpen ? "bg-foreground/15" : "hover:bg-foreground/10"
+            className={`absolute top-0 right-0 grid h-9 w-9 place-items-center rounded-full transition ${
+              editPanelOpen ? "bg-foreground/10 text-foreground" : "text-current hover:bg-foreground/10"
             }`}
           >
             {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
@@ -4613,7 +4615,7 @@ function MediaTabViewBody(props: {
             onClick={() => setEditPanelOpen((v) => !v)}
             aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
             className={`fixed top-4 right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
-              editPanelOpen ? "bg-white/15 text-white" : "text-white hover:bg-white/10"
+              editPanelOpen ? "bg-foreground/10 text-foreground" : "text-white hover:bg-white/10"
             }`}
           >
             {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
