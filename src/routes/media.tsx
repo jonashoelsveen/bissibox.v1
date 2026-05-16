@@ -2713,14 +2713,28 @@ function Lightbox({
           </div>
         </div>
         {isFullscreen && typeof document !== "undefined" && createPortal(
-          <button
-            type="button"
-            onClick={() => setIsFullscreen(false)}
-            aria-label="Exit full screen"
-            className="fixed top-4 right-4 z-[81] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10"
-          >
-            <Minimize2 className="h-4 w-4" />
-          </button>,
+          <>
+            <button
+              type="button"
+              onClick={() => setIsFullscreen(false)}
+              aria-label="Exit full screen"
+              className={`fixed top-4 z-[83] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10 transition-[right] duration-300 ease-out ${
+                editPanelOpen ? "right-[400px]" : "right-12"
+              }`}
+            >
+              <Minimize2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditPanelOpen((v) => !v)}
+              aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
+              className={`fixed top-4 right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
+                editPanelOpen ? "bg-white/15 text-white" : "text-white hover:bg-white/10"
+              }`}
+            >
+              {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+            </button>
+          </>,
           document.body,
         )}
 
@@ -2738,7 +2752,7 @@ function Lightbox({
         {/* Sliding edit panel — overlay spanning full height, behind top bar */}
         <aside
           aria-hidden={!editPanelOpen}
-          className={`absolute right-0 top-0 bottom-0 z-20 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+          className={`${isFullscreen ? "fixed z-[82]" : "absolute z-20"} right-0 top-0 bottom-0 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
             editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
           }`}
         >
@@ -4557,23 +4571,37 @@ function MediaTabViewBody(props: {
         </div>
       )}
       {isFullscreen && typeof document !== "undefined" && createPortal(
-        <button
-          type="button"
-          onClick={() => setIsFullscreen(false)}
-          aria-label="Exit full screen"
-          className="fixed top-4 right-4 z-[81] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10"
-        >
-          <Minimize2 className="h-4 w-4" />
-        </button>,
+        <>
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(false)}
+            aria-label="Exit full screen"
+            className={`fixed top-4 z-[83] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10 transition-[right] duration-300 ease-out ${
+              editPanelOpen ? "right-[400px]" : "right-12"
+            }`}
+          >
+            <Minimize2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditPanelOpen((v) => !v)}
+            aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
+            className={`fixed top-4 right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
+              editPanelOpen ? "bg-white/15 text-white" : "text-white hover:bg-white/10"
+            }`}
+          >
+            {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+          </button>
+        </>,
         document.body,
       )}
       {typeof document !== "undefined" && createPortal(
         <aside
           aria-hidden={!editPanelOpen}
-          className={`fixed right-0 bottom-0 z-30 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+          className={`fixed right-0 bottom-0 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
             editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
-          }`}
-          style={{ top: TOP_OFFSET }}
+          } ${isFullscreen ? "top-0 z-[82]" : "z-30"}`}
+          style={isFullscreen ? undefined : { top: TOP_OFFSET }}
         >
           <div className="flex flex-1 flex-col">
             <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
