@@ -308,15 +308,12 @@ function CustomPanel({
   const [hexInput, setHexInput] = useState<string>(seed);
   const hueRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    onPreview?.(preview);
-  }, [preview, onPreview]);
-
   const applyHue = (h: number) => {
     setHue(h);
     const hex = hsl2hex(h);
     setPreview(hex);
     setHexInput(hex);
+    onPreview?.(hex);
   };
 
   const onHexChange = (v: string) => {
@@ -324,6 +321,7 @@ function CustomPanel({
     if (isValidHex(v)) {
       setHue(hex2hue(v));
       setPreview(v);
+      onPreview?.(v);
     }
   };
 
