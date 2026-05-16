@@ -753,7 +753,7 @@ function LibraryPage() {
                       ) : t.type === "media" ? (
                         <ImageIcon className="h-3.5 w-3.5 shrink-0 opacity-70" />
                       ) : t.type === "album" ? (
-                        <Library className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                        <FolderClosed className="h-3.5 w-3.5 shrink-0" style={t.albumColor ? { color: t.albumColor, opacity: 1 } : { opacity: 0.7 }} />
                       ) : (
                         <StickyNote className="h-3.5 w-3.5 shrink-0 opacity-70" />
                       )}
