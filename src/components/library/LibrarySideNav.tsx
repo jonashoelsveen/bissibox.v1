@@ -797,6 +797,7 @@ function SortableFolderRow(props: {
   onCloseMenu: () => void;
   onPin: () => void;
   onRename: () => void;
+  onColor?: (hex: string) => void;
   onDelete: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
