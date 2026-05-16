@@ -2749,44 +2749,48 @@ function Lightbox({
           </div>
         )}
 
-        {/* Sliding edit panel — overlay spanning full height, behind top bar */}
-        <aside
-          aria-hidden={!editPanelOpen}
-          className={`${isFullscreen ? "fixed z-[82]" : "absolute z-20"} right-0 top-0 bottom-0 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
-            editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
-          }`}
-        >
-          <div className="flex h-11 flex-none items-center gap-1 border-b border-hairline px-5">
-            {tabs.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
-                  tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-          <div className="flex-1 overflow-y-auto p-5">
-            {tab === "about" && (
-              <AboutPanel
-                items={items}
-                albums={albums}
-                attended={attended}
-                userName={userName}
-                itemAlbums={itemAlbums}
-                onSaved={onChanged}
-              />
-            )}
-            {tab === "access" && (
-              <AccessPanel items={items} onSaved={onChanged} isTeamMode={isTeamMode} />
-            )}
-            {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
-            {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
-          </div>
-        </aside>
+        {/* Sliding edit panel — portaled so it escapes the Lightbox's stacking context */}
+        {typeof document !== "undefined" && createPortal(
+          <aside
+            aria-hidden={!editPanelOpen}
+            className={`fixed right-0 bottom-0 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+              editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
+            } ${isFullscreen ? "top-0 z-[82]" : "z-30"}`}
+            style={isFullscreen ? undefined : { top: 53 }}
+          >
+            <div className="flex h-11 flex-none items-center gap-1 border-b border-hairline px-5">
+              {tabs.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
+                    tab === t ? "bg-secondary text-ink" : "text-muted-foreground hover:text-ink"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              {tab === "about" && (
+                <AboutPanel
+                  items={items}
+                  albums={albums}
+                  attended={attended}
+                  userName={userName}
+                  itemAlbums={itemAlbums}
+                  onSaved={onChanged}
+                />
+              )}
+              {tab === "access" && (
+                <AccessPanel items={items} onSaved={onChanged} isTeamMode={isTeamMode} />
+              )}
+              {tab === "draw" && isVideo && <DrawPanel state={drawing} />}
+              {tab === "export" && <SharePanel url={url} disabled={isMulti} items={items} urls={urls} />}
+            </div>
+          </aside>,
+          document.body,
+        )}
       </div>
     </div>
   );
