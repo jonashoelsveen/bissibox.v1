@@ -4544,7 +4544,7 @@ function MediaTabViewBody(props: {
   );
 }
 
-function PhotoLqip({ thumbSrc, fullSrc }: { thumbSrc?: string; fullSrc?: string }) {
+function PhotoLqip({ thumbSrc, fullSrc, fullscreen }: { thumbSrc?: string; fullSrc?: string; fullscreen?: boolean }) {
   const [fullLoaded, setFullLoaded] = useState(false);
 
   useEffect(() => {
@@ -4553,8 +4553,12 @@ function PhotoLqip({ thumbSrc, fullSrc }: { thumbSrc?: string; fullSrc?: string 
 
   if (!thumbSrc && !fullSrc) return null;
 
+  const outerClass = fullscreen
+    ? "fixed inset-0 z-[80] flex items-center justify-center bg-black"
+    : "relative flex h-full w-full items-center justify-center";
+
   return (
-    <div className="relative flex h-full w-full items-center justify-center">
+    <div className={outerClass}>
       {thumbSrc && (
         <img
           src={thumbSrc}
