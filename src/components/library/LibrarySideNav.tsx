@@ -868,13 +868,10 @@ function FolderRow({
   sortable?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const btnRef = useRef<HTMLButtonElement | null>(null);
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
-  const [colorOpen, setColorOpen] = useState(false);
-  const [colorPos, setColorPos] = useState<{ top: number; left: number } | null>(null);
-  const [customOpen, setCustomOpen] = useState(false);
-  const [customPos, setCustomPos] = useState<{ top: number; left: number } | null>(null);
   void sortable;
+  void menuOpen;
+  void onToggleMenu;
+  void onCloseMenu;
 
   useEffect(() => {
     if (renaming && inputRef.current) {
@@ -882,28 +879,6 @@ function FolderRow({
       inputRef.current.select();
     }
   }, [renaming]);
-
-  useEffect(() => {
-    if (menuOpen && btnRef.current) {
-      const r = btnRef.current.getBoundingClientRect();
-      setMenuPos({ top: r.top, left: r.right + 4 });
-    } else {
-      setMenuPos(null);
-      setColorOpen(false);
-      setCustomOpen(false);
-    }
-  }, [menuOpen]);
-
-  const openColorSubmenu = (el: HTMLElement) => {
-    const r = el.getBoundingClientRect();
-    const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-    // Reserve room for color submenu (~110px) + custom picker (~230px) so neither falls outside the viewport.
-    const reserved = 340;
-    const top = Math.max(8, Math.min(r.top, vh - reserved - 12));
-    setColorPos({ top, left: r.right + 4 });
-    setColorOpen(true);
-    setCustomOpen(false);
-  };
 
   return (
     <div
@@ -948,135 +923,32 @@ function FolderRow({
       )}
 
       {!renaming && showMenu && (
-        <>
-          <button
-            ref={btnRef}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleMenu();
-            }}
-            data-open={menuOpen}
-            aria-label="Folder actions"
-            className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-muted-foreground/60 opacity-0 transition hover:bg-card hover:text-ink group-hover:opacity-100 data-[open=true]:opacity-100"
-          >
-            <MoreHorizontal className="h-3.5 w-3.5" />
-          </button>
-          {menuOpen && menuPos &&
-            createPortal(
-              <>
-                <div
-                  className="fixed inset-0 z-[60]"
-                  onClick={onCloseMenu}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    onCloseMenu();
-                  }}
-                />
-                <div
-                  className="fixed z-[70] w-40 overflow-hidden rounded-lg border border-hairline bg-card py-1 shadow-lg animate-in fade-in-0 zoom-in-95"
-                  style={{ top: menuPos.top, left: menuPos.left }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  <div onMouseEnter={() => { setColorOpen(false); setCustomOpen(false); }}>
-                    <MenuItem
-                      icon={folder.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-                      label={folder.pinned ? "Unpin" : "Pin to top"}
-                      onClick={() => {
-                        onCloseMenu();
-                        onPin();
-                      }}
-                    />
-                    <MenuItem
-                      icon={<Pencil className="h-3.5 w-3.5" />}
-                      label="Rename"
-                      onClick={() => {
-                        onCloseMenu();
-                        onRename();
-                      }}
-                    />
-                  </div>
-                  {onColor && (
-                    <button
-                      onMouseEnter={(e) => openColorSubmenu(e.currentTarget as HTMLButtonElement)}
-                      onClick={(e) => openColorSubmenu(e.currentTarget as HTMLButtonElement)}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-ink transition hover:bg-secondary"
-                    >
-                      <Palette className="h-3.5 w-3.5" />
-                      <span className="flex-1">Color</span>
-                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                    </button>
-                  )}
-                  <div onMouseEnter={() => { setColorOpen(false); setCustomOpen(false); }}>
-                    <MenuItem
-                      icon={<Trash2 className="h-3.5 w-3.5" />}
-                      label="Delete"
-                      destructive
-                      onClick={() => {
-                        onCloseMenu();
-                        onDelete();
-                      }}
-                    />
-                  </div>
-                </div>
-                {colorOpen && colorPos && onColor && (
-                  <div
-                    className="fixed z-[71] overflow-hidden rounded-lg border border-hairline bg-popover p-2 shadow-xl animate-in fade-in-0 zoom-in-95"
-                    style={{ top: colorPos.top, left: colorPos.left }}
-                  >
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {DEFAULT_SWATCHES.map((hex) => {
-                        const selected = (folder.color ?? "").toLowerCase() === hex.toLowerCase();
-                        return (
-                          <button
-                            key={hex}
-                            type="button"
-                            onClick={() => {
-                              onColor(hex);
-                              onCloseMenu();
-                            }}
-                            className={`h-5 w-5 rounded-full border transition-transform hover:scale-110 ${
-                              selected ? "border-ink ring-2 ring-ink/30" : "border-black/10"
-                            }`}
-                            style={{ background: hex }}
-                            aria-label={hex}
-                          />
-                        );
-                      })}
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-                        setCustomPos({ top: r.top, left: r.right + 6 });
-                        setCustomOpen(true);
-                      }}
-                      className="mt-2 flex w-full items-center justify-between rounded-lg px-2 py-1 text-[11px] text-ink transition hover:bg-secondary"
-                    >
-                      Custom
-                      <ChevronRight className="h-3 w-3" />
-                    </button>
-                  </div>
-                )}
-                {customOpen && customPos && onColor && (
-                  <div
-                    className="fixed z-[72] overflow-hidden rounded-lg shadow-xl"
-                    style={{ top: customPos.top, left: customPos.left }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                  >
-                    <MiniColorPicker
-                      initial={folder.color ?? "#3B82F6"}
-                      onPreview={(hex) => onColor(hex)}
-                      onSave={(hex) => {
-                        onColor(hex);
-                        onCloseMenu();
-                      }}
-                    />
-                  </div>
-                )}
-              </>,
-              document.body,
-            )}
-        </>
+        <CategoryActionsMenu
+          trigger={
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Folder actions"
+              className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-muted-foreground/60 opacity-0 transition hover:bg-card hover:text-ink group-hover:opacity-100 data-[state=open]:opacity-100"
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </button>
+          }
+          currentColor={folder.color ?? "#3b82f6"}
+          allowColor={!!onColor}
+          onColorChange={(hex) => onColor?.(hex)}
+          onRename={onRename}
+          onDelete={onDelete}
+          extraItems={[
+            {
+              top: true,
+              label: folder.pinned ? "Unpin" : "Pin to top",
+              icon: folder.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />,
+              onClick: onPin,
+            },
+          ]}
+        />
       )}
     </div>
   );
