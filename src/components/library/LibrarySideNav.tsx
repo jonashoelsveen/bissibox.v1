@@ -34,12 +34,8 @@ import {
   Map as MapIcon,
   Briefcase,
   MoreHorizontal,
-  Pencil,
-  Trash2,
   Users as UsersIcon,
-  Palette,
 } from "lucide-react";
-import { MiniColorPicker, DEFAULT_SWATCHES } from "@/components/calendar/MiniColorPicker";
 
 export type LibraryCategory = "previous" | "meetings" | "notes" | "files" | "media" | "map";
 
