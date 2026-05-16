@@ -3975,6 +3975,7 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false, fullscr
             ? "absolute bottom-6 left-[5%] right-[5%] shrink-0"
             : "w-full shrink-0"
         }
+        style={fullscreen ? { willChange: "left, right" } : undefined}
       >
         {/* Centered minimalist play/pause */}
         <div className="mb-2 flex items-center justify-center">
