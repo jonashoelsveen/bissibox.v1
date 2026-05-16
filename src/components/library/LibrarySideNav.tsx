@@ -88,7 +88,7 @@ export function LibrarySideNav({
 }: {
   value: LibrarySideNavValue;
   onChange: (v: LibrarySideNavValue) => void;
-  onOpenAsTab?: (v: LibrarySideNavValue, label: string) => void;
+  onOpenAsTab?: (v: LibrarySideNavValue, label: string, color?: string | null) => void;
 }) {
   const { user, mode, activeEntityId } = useAuth();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
