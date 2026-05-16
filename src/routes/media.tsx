@@ -4566,24 +4566,30 @@ function MediaTabViewBody(props: {
           <DockStrip items={filteredItems} urls={urls} activeIdx={safeIdx} onSelect={setIdx} />
         </div>
       )}
-      {isFullscreen && typeof document !== "undefined" && createPortal(
+      {typeof document !== "undefined" && createPortal(
         <>
           <button
             type="button"
-            onClick={() => setIsFullscreen(false)}
-            aria-label="Exit full screen"
-            className={`fixed top-4 z-[83] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10 transition-[right] duration-300 ease-out ${
-              editPanelOpen ? "right-[400px]" : "right-12"
-            }`}
+            onClick={() => setIsFullscreen((v) => !v)}
+            aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
+            className={`fixed z-[83] grid h-9 w-9 place-items-center rounded-full transition-[right,top] duration-300 ease-out ${
+              isFullscreen ? "top-1 text-white hover:bg-white/10" : "top-[10px] text-foreground hover:bg-foreground/10"
+            } ${editPanelOpen ? "right-[400px]" : "right-12"}`}
           >
-            <Minimize2 className="h-4 w-4" />
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>
           <button
             type="button"
             onClick={() => setEditPanelOpen((v) => !v)}
             aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-            className={`fixed top-4 right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
-              editPanelOpen ? "bg-foreground/10 text-foreground" : "text-white hover:bg-white/10"
+            className={`fixed right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
+              isFullscreen ? "top-1" : "top-[10px]"
+            } ${
+              editPanelOpen
+                ? "bg-foreground/10 text-foreground"
+                : isFullscreen
+                  ? "text-white hover:bg-white/10"
+                  : "text-foreground hover:bg-foreground/10"
             }`}
           >
             {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
