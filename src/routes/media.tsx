@@ -73,6 +73,8 @@ export interface OpenNoteTab {
   mediaIds?: string[];
   /** For type === "album": the album folder id (or "__unsorted__" / ""). */
   albumFolder?: string;
+  /** For type === "album": optional color used to tint the folder icon. */
+  albumColor?: string | null;
 }
 
 export const Route = createFileRoute("/media")({
