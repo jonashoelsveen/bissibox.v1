@@ -2672,7 +2672,7 @@ function Lightbox({
   }, [isFullscreen]);
 
   return (
-    <div className="fixed left-0 right-0 bottom-0 top-[53px] md:left-[220px] z-30 flex animate-in fade-in" onClick={onClose}>
+    <div className={`fixed right-0 bottom-0 flex animate-in fade-in ${isFullscreen ? "left-0 top-0 z-[95]" : "left-0 top-[53px] md:left-[220px] z-30"}`} onClick={onClose}>
       <div className="absolute inset-0 bg-white" />
       <div
         className="relative z-10 flex h-full w-full flex-col bg-white text-foreground"
@@ -2723,7 +2723,7 @@ function Lightbox({
               type="button"
               onClick={() => setIsFullscreen((v) => !v)}
               aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
-              className={`fixed z-[83] grid h-9 w-9 place-items-center rounded-full transition-[right,top] duration-300 ease-out ${
+              className={`fixed z-[96] grid h-9 w-9 place-items-center rounded-full transition-[right,top] duration-300 ease-out ${
                 isFullscreen ? "top-1 text-white hover:bg-white/10" : "top-[57px] text-foreground hover:bg-foreground/10"
               } ${editPanelOpen ? "right-[400px]" : "right-12"}`}
             >
@@ -2733,7 +2733,7 @@ function Lightbox({
               type="button"
               onClick={() => setEditPanelOpen((v) => !v)}
               aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-              className={`fixed right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
+              className={`fixed right-4 z-[96] grid h-9 w-9 place-items-center rounded-full transition ${
                 isFullscreen ? "top-1" : "top-[57px]"
               } ${
                 editPanelOpen
@@ -2766,7 +2766,7 @@ function Lightbox({
             aria-hidden={!editPanelOpen}
             className={`fixed right-0 bottom-0 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
               editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
-            } ${isFullscreen ? "top-0 z-[82]" : "z-30"}`}
+            } ${isFullscreen ? "top-0 z-[96]" : "z-30"}`}
             style={isFullscreen ? undefined : { top: 53 }}
           >
             <div className="flex h-11 flex-none items-center gap-1 border-b border-hairline px-5">
