@@ -299,6 +299,25 @@ export function LibrarySideNav({
     }
   };
 
+  /** Set album color (media only). Optimistically updates local state, persists
+   * to DB, and broadcasts so open tabs / other surfaces update live. */
+  const setAlbumColor = async (folder: FolderLite, hex: string) => {
+    setMediaAlbums((prev) =>
+      prev.map((f) => (f.id === folder.id ? { ...f, color: hex } : f)),
+    );
+    setMemberAlbums((prev) =>
+      prev.map((f) => (f.id === folder.id ? { ...f, color: hex } : f)),
+    );
+    window.dispatchEvent(
+      new CustomEvent("library:album-color", { detail: { id: folder.id, color: hex } }),
+    );
+    const { error } = await supabase
+      .from("media_albums")
+      .update({ color: hex })
+      .eq("id", folder.id);
+    if (error) toast.error(error.message);
+  };
+
   const startRename = (folder: FolderLite) => {
     setMenuFor(null);
     setRenamingId(folder.id);
