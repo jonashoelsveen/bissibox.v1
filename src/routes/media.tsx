@@ -2738,9 +2738,9 @@ function Lightbox({
         {/* Sliding edit panel — portaled so it escapes the Lightbox's stacking context */}
         {typeof document !== "undefined" && createPortal(
           <aside
-            aria-hidden={!editPanelOpen}
+            aria-hidden={!editPanelOpen || isFullscreen}
             className={`fixed right-0 bottom-0 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
-              editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
+              editPanelOpen && !isFullscreen ? "translate-x-0" : "translate-x-full pointer-events-none"
             } ${isFullscreen ? "top-0 z-[82]" : "z-30"}`}
             style={isFullscreen ? undefined : { top: 53 }}
           >
