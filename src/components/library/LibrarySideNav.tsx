@@ -838,6 +838,7 @@ function FolderRow({
   onCloseMenu,
   onPin,
   onRename,
+  onColor,
   onDelete,
   showMenu = true,
   sortable = true,
@@ -857,6 +858,7 @@ function FolderRow({
   onCloseMenu: () => void;
   onPin: () => void;
   onRename: () => void;
+  onColor?: (hex: string) => void;
   onDelete: () => void;
   showMenu?: boolean;
   sortable?: boolean;
@@ -864,6 +866,11 @@ function FolderRow({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [colorOpen, setColorOpen] = useState(false);
+  const [colorPos, setColorPos] = useState<{ top: number; left: number } | null>(null);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customPos, setCustomPos] = useState<{ top: number; left: number } | null>(null);
+  void sortable;
 
   useEffect(() => {
     if (renaming && inputRef.current) {
@@ -875,11 +882,12 @@ function FolderRow({
   useEffect(() => {
     if (menuOpen && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      const menuW = 160;
-      // align right edge of menu with right edge of button
-      setMenuPos({ top: r.bottom + 4, left: Math.max(8, r.right - menuW) });
+      // open menu to the right of the trigger, top aligned
+      setMenuPos({ top: r.top, left: r.right + 4 });
     } else {
       setMenuPos(null);
+      setColorOpen(false);
+      setCustomOpen(false);
     }
   }, [menuOpen]);
 
@@ -914,7 +922,12 @@ function FolderRow({
             <Pin className="h-2.5 w-2.5 shrink-0 fill-current text-ink/70" />
           )}
           {rowIcon && (
-            <span className="shrink-0 text-muted-foreground">{rowIcon}</span>
+            <span
+              className="shrink-0 text-muted-foreground"
+              style={folder.color ? { color: folder.color } : undefined}
+            >
+              {rowIcon}
+            </span>
           )}
           <span className="min-w-0 flex-1 truncate">{folder.name}</span>
         </button>
@@ -966,6 +979,21 @@ function FolderRow({
                       onRename();
                     }}
                   />
+                  {onColor && (
+                    <button
+                      onClick={(e) => {
+                        const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                        setColorPos({ top: r.top, left: r.right + 4 });
+                        setColorOpen(true);
+                        setCustomOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-ink transition hover:bg-secondary"
+                    >
+                      <Palette className="h-3.5 w-3.5" />
+                      <span className="flex-1">Color</span>
+                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  )}
                   <MenuItem
                     icon={<Trash2 className="h-3.5 w-3.5" />}
                     label="Delete"
@@ -976,6 +1004,59 @@ function FolderRow({
                     }}
                   />
                 </div>
+                {colorOpen && colorPos && onColor && (
+                  <div
+                    className="fixed z-[71] overflow-hidden rounded-lg border border-hairline bg-popover p-2 shadow-xl animate-in fade-in-0 zoom-in-95"
+                    style={{ top: colorPos.top, left: colorPos.left }}
+                  >
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {DEFAULT_SWATCHES.map((hex) => {
+                        const selected = (folder.color ?? "").toLowerCase() === hex.toLowerCase();
+                        return (
+                          <button
+                            key={hex}
+                            type="button"
+                            onClick={() => {
+                              onColor(hex);
+                              onCloseMenu();
+                            }}
+                            className={`h-5 w-5 rounded-full border transition-transform hover:scale-110 ${
+                              selected ? "border-ink ring-2 ring-ink/30" : "border-black/10"
+                            }`}
+                            style={{ background: hex }}
+                            aria-label={hex}
+                          />
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                        setCustomPos({ top: r.top, left: r.right + 6 });
+                        setCustomOpen(true);
+                      }}
+                      className="mt-2 flex w-full items-center justify-between rounded-lg px-2 py-1 text-[11px] text-ink transition hover:bg-secondary"
+                    >
+                      Custom
+                      <ChevronRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+                {customOpen && customPos && onColor && (
+                  <div
+                    className="fixed z-[72] overflow-hidden rounded-lg shadow-xl"
+                    style={{ top: customPos.top, left: customPos.left }}
+                  >
+                    <MiniColorPicker
+                      initial={folder.color ?? "#3B82F6"}
+                      onPreview={(hex) => onColor(hex)}
+                      onSave={(hex) => {
+                        onColor(hex);
+                        onCloseMenu();
+                      }}
+                    />
+                  </div>
+                )}
               </>,
               document.body,
             )}
