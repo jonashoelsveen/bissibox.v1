@@ -280,7 +280,10 @@ function ColorsPanel({
           <span className="flex-1">Custom</span>
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent
-          sideOffset={SUB_OFFSET}
+          // SUB_OFFSET (8) + parent panel right padding (p-2 = 8) so the visual
+          // gap between the standard color popover and the custom popover matches
+          // the gap between the main menu and the standard color popover.
+          sideOffset={SUB_OFFSET + 8}
           collisionPadding={8}
           className="p-2"
           onPointerDown={(e) => e.stopPropagation()}
