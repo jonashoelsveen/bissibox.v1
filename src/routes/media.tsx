@@ -4598,10 +4598,10 @@ function MediaTabViewBody(props: {
       {typeof document !== "undefined" && createPortal(
         <aside
           aria-hidden={!editPanelOpen}
-          className={`fixed right-0 bottom-0 z-30 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
+          className={`fixed right-0 bottom-0 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
             editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
-          }`}
-          style={{ top: TOP_OFFSET }}
+          } ${isFullscreen ? "top-0 z-[82]" : "z-30"}`}
+          style={isFullscreen ? undefined : { top: TOP_OFFSET }}
         >
           <div className="flex flex-1 flex-col">
             <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
