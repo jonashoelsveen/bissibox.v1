@@ -158,7 +158,7 @@ export function CategoryActionsMenu({
         )}
         {allowColor && (
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="gap-2 px-2 py-1.5 text-xs text-ink">
+            <DropdownMenuSubTrigger className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary">
               <Palette className="h-3.5 w-3.5" />
               <span className="flex-1">Color</span>
             </DropdownMenuSubTrigger>
@@ -275,7 +275,7 @@ function ColorsPanel({
       </div>
       <DropdownMenuSeparator />
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger className="gap-2 px-2 py-1.5 text-xs text-ink">
+        <DropdownMenuSubTrigger className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary">
           <Palette className="h-3.5 w-3.5" />
           <span className="flex-1">Custom</span>
         </DropdownMenuSubTrigger>
