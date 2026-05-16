@@ -47,6 +47,7 @@ interface FolderLite {
   id: string;
   name: string;
   pinned: boolean;
+  color?: string | null;
 }
 
 export interface LibrarySideNavValue {
