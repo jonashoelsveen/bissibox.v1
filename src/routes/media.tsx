@@ -3925,14 +3925,8 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false }: { src
   const tickCount = Math.max(40, Math.min(240, Math.floor(stripWidth / 6) || 80));
   const progress = ready && duration > 0 ? Math.min(1, current / duration) : 0;
 
-  return (
-    <div
-      className={
-        fullscreen
-          ? "fixed inset-0 z-[80] bg-black"
-          : "flex h-full w-full flex-col gap-3"
-      }
-    >
+  const playerInner = (
+    <>
       <div
         className={
           fullscreen
@@ -4012,8 +4006,17 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false }: { src
           {formatVideoTime(current)} / {formatVideoTime(ready ? duration : 0)}
         </div>
       </div>
-    </div>
+    </>
   );
+
+  if (fullscreen && typeof document !== "undefined") {
+    return createPortal(
+      <div className="fixed inset-0 z-[80] bg-black">{playerInner}</div>,
+      document.body,
+    );
+  }
+
+  return <div className="flex h-full w-full flex-col gap-3">{playerInner}</div>;
 }
 
 // Mac-Dock style fish-eye magnification strip for the Lightbox bottom flow.
@@ -4628,12 +4631,8 @@ function PhotoLqip({ thumbSrc, fullSrc, fullscreen }: { thumbSrc?: string; fullS
 
   if (!thumbSrc && !fullSrc) return null;
 
-  const outerClass = fullscreen
-    ? "fixed inset-0 z-[80] flex items-center justify-center bg-black"
-    : "relative flex h-full w-full items-center justify-center";
-
-  return (
-    <div className={outerClass}>
+  const innerContent = (
+    <>
       {thumbSrc && (
         <img
           src={thumbSrc}
@@ -4656,6 +4655,21 @@ function PhotoLqip({ thumbSrc, fullSrc, fullscreen }: { thumbSrc?: string; fullS
           }`}
         />
       )}
+    </>
+  );
+
+  if (fullscreen && typeof document !== "undefined") {
+    return createPortal(
+      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black">
+        {innerContent}
+      </div>,
+      document.body,
+    );
+  }
+
+  return (
+    <div className="relative flex h-full w-full items-center justify-center">
+      {innerContent}
     </div>
   );
 }
