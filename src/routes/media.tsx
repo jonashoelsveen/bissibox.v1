@@ -344,7 +344,7 @@ function LibraryPage() {
   );
 
   const openAlbumTab = useCallback(
-    (albumFolder: string, title: string) => {
+    (albumFolder: string, title: string, albumColor?: string | null) => {
       const tabId = `album:${albumFolder || "__all__"}`;
       setOpenNoteTabs((prev) => {
         if (prev.some((t) => t.id === tabId)) return prev;
@@ -354,7 +354,7 @@ function LibraryPage() {
         }
         return [
           ...prev,
-          { id: tabId, title, folder: null, kind: "earlier", type: "album", albumFolder },
+          { id: tabId, title, folder: null, kind: "earlier", type: "album", albumFolder, albumColor: albumColor ?? null },
         ];
       });
       // Album tabs don't take over the content view — they're shortcuts.
