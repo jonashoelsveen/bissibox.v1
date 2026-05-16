@@ -2673,26 +2673,7 @@ function Lightbox({
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsFullscreen(true)}
-          aria-label="Enter full screen"
-          className={`absolute top-1 z-40 grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10 transition-[right] duration-300 ease-out ${
-            editPanelOpen ? "right-[400px]" : "right-12"
-          }`}
-        >
-          <Maximize2 className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => setEditPanelOpen((v) => !v)}
-          aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-          className={`absolute top-1 right-4 z-40 grid h-9 w-9 place-items-center rounded-full transition ${
-            editPanelOpen ? "bg-foreground/10 text-foreground" : "text-current hover:bg-foreground/10"
-          }`}
-        >
-          {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-        </button>
+        {/* Maximize + Edit buttons are portaled below to escape the Lightbox stacking context */}
 
         {/* Row 2 — media */}
         <div
@@ -2719,24 +2700,30 @@ function Lightbox({
             )}
           </div>
         </div>
-        {isFullscreen && typeof document !== "undefined" && createPortal(
+        {typeof document !== "undefined" && createPortal(
           <>
             <button
               type="button"
-              onClick={() => setIsFullscreen(false)}
-              aria-label="Exit full screen"
-              className={`fixed top-4 z-[83] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10 transition-[right] duration-300 ease-out ${
-                editPanelOpen ? "right-[400px]" : "right-12"
-              }`}
+              onClick={() => setIsFullscreen((v) => !v)}
+              aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
+              className={`fixed z-[83] grid h-9 w-9 place-items-center rounded-full transition-[right,top] duration-300 ease-out ${
+                isFullscreen ? "top-1 text-white hover:bg-white/10" : "top-[57px] text-foreground hover:bg-foreground/10"
+              } ${editPanelOpen ? "right-[400px]" : "right-12"}`}
             >
-              <Minimize2 className="h-4 w-4" />
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </button>
             <button
               type="button"
               onClick={() => setEditPanelOpen((v) => !v)}
               aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-              className={`fixed top-4 right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
-                editPanelOpen ? "bg-foreground/10 text-foreground" : "text-white hover:bg-white/10"
+              className={`fixed right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
+                isFullscreen ? "top-1" : "top-[57px]"
+              } ${
+                editPanelOpen
+                  ? "bg-foreground/10 text-foreground"
+                  : isFullscreen
+                    ? "text-white hover:bg-white/10"
+                    : "text-foreground hover:bg-foreground/10"
               }`}
             >
               {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
@@ -4549,26 +4536,7 @@ function MediaTabViewBody(props: {
           </button>
         </div>
         <div className="relative h-9 w-full">
-          <button
-            type="button"
-            onClick={() => setIsFullscreen(true)}
-            aria-label="Enter full screen"
-            className={`absolute top-0 grid h-9 w-9 place-items-center rounded-full text-current hover:bg-foreground/10 transition-[right] duration-300 ease-out ${
-              editPanelOpen ? "right-[400px]" : "right-10"
-            }`}
-          >
-            <Maximize2 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditPanelOpen((v) => !v)}
-            aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-            className={`absolute top-0 right-0 grid h-9 w-9 place-items-center rounded-full transition ${
-              editPanelOpen ? "bg-foreground/10 text-foreground" : "text-current hover:bg-foreground/10"
-            }`}
-          >
-            {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-          </button>
+          {/* Maximize + Edit buttons are portaled below */}
         </div>
       </div>
       <div className={`flex min-h-0 flex-1 transition-[padding] duration-300 ease-out ${
@@ -4598,24 +4566,30 @@ function MediaTabViewBody(props: {
           <DockStrip items={filteredItems} urls={urls} activeIdx={safeIdx} onSelect={setIdx} />
         </div>
       )}
-      {isFullscreen && typeof document !== "undefined" && createPortal(
+      {typeof document !== "undefined" && createPortal(
         <>
           <button
             type="button"
-            onClick={() => setIsFullscreen(false)}
-            aria-label="Exit full screen"
-            className={`fixed top-4 z-[83] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10 transition-[right] duration-300 ease-out ${
-              editPanelOpen ? "right-[400px]" : "right-12"
-            }`}
+            onClick={() => setIsFullscreen((v) => !v)}
+            aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
+            className={`fixed z-[83] grid h-9 w-9 place-items-center rounded-full transition-[right,top] duration-300 ease-out ${
+              isFullscreen ? "top-1 text-white hover:bg-white/10" : "top-[57px] text-foreground hover:bg-foreground/10"
+            } ${editPanelOpen ? "right-[400px]" : "right-12"}`}
           >
-            <Minimize2 className="h-4 w-4" />
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>
           <button
             type="button"
             onClick={() => setEditPanelOpen((v) => !v)}
             aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-            className={`fixed top-4 right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
-              editPanelOpen ? "bg-foreground/10 text-foreground" : "text-white hover:bg-white/10"
+            className={`fixed right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
+              isFullscreen ? "top-1" : "top-[57px]"
+            } ${
+              editPanelOpen
+                ? "bg-foreground/10 text-foreground"
+                : isFullscreen
+                  ? "text-white hover:bg-white/10"
+                  : "text-foreground hover:bg-foreground/10"
             }`}
           >
             {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
