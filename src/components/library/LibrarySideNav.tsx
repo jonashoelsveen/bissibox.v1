@@ -458,7 +458,7 @@ export function LibrarySideNav({
       key: "media",
       label: "Media",
       icon: <ImageIcon className="h-3.5 w-3.5" strokeWidth={2.25} />,
-      rowIcon: <Library className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      rowIcon: <FolderClosed className="h-3.5 w-3.5" strokeWidth={2.25} />,
       folders: mediaAlbums,
       folderLabel: "Albums",
       folderKey: (f) => f.id,
