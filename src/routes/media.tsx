@@ -73,6 +73,8 @@ export interface OpenNoteTab {
   mediaIds?: string[];
   /** For type === "album": the album folder id (or "__unsorted__" / ""). */
   albumFolder?: string;
+  /** For type === "album": optional color used to tint the folder icon. */
+  albumColor?: string | null;
 }
 
 export const Route = createFileRoute("/media")({
@@ -342,7 +344,7 @@ function LibraryPage() {
   );
 
   const openAlbumTab = useCallback(
-    (albumFolder: string, title: string) => {
+    (albumFolder: string, title: string, albumColor?: string | null) => {
       const tabId = `album:${albumFolder || "__all__"}`;
       setOpenNoteTabs((prev) => {
         if (prev.some((t) => t.id === tabId)) return prev;
@@ -352,7 +354,7 @@ function LibraryPage() {
         }
         return [
           ...prev,
-          { id: tabId, title, folder: null, kind: "earlier", type: "album", albumFolder },
+          { id: tabId, title, folder: null, kind: "earlier", type: "album", albumFolder, albumColor: albumColor ?? null },
         ];
       });
       // Album tabs don't take over the content view — they're shortcuts.
@@ -403,6 +405,21 @@ function LibraryPage() {
     window.addEventListener("library:open-tab", onOpenTab);
     return () => window.removeEventListener("library:open-tab", onOpenTab);
   }, [openNote, openMeetingTab, openMediaTab]);
+
+  // Live update album tab colors when the user picks a color in the side nav.
+  useEffect(() => {
+    const onColor = (e: Event) => {
+      const d = (e as CustomEvent).detail as { id: string; color: string } | null;
+      if (!d) return;
+      setOpenNoteTabs((prev) =>
+        prev.map((t) =>
+          t.type === "album" && t.albumFolder === d.id ? { ...t, albumColor: d.color } : t,
+        ),
+      );
+    };
+    window.addEventListener("library:album-color", onColor);
+    return () => window.removeEventListener("library:album-color", onColor);
+  }, []);
 
   const showingNote = activeNoteId !== null;
   const activeTabEntry = activeNoteId ? openNoteTabs.find((t) => t.id === activeNoteId) ?? null : null;
@@ -557,12 +574,12 @@ function LibraryPage() {
       replace: true,
     });
   };
-  const onSideOpenAsTab = (v: LibrarySideNavValue, label: string) => {
+  const onSideOpenAsTab = (v: LibrarySideNavValue, label: string, color?: string | null) => {
     if (v.category !== "media") return;
     const folder = v.folder || "";
     const title =
       folder === "" ? "All" : folder === "__unsorted__" ? "Unsorted" : label;
-    openAlbumTab(folder, title);
+    openAlbumTab(folder, title, color ?? null);
     // Also navigate to album so single behaviour matches.
     setActiveNoteId(null);
     navigate({
@@ -736,7 +753,7 @@ function LibraryPage() {
                       ) : t.type === "media" ? (
                         <ImageIcon className="h-3.5 w-3.5 shrink-0 opacity-70" />
                       ) : t.type === "album" ? (
-                        <Library className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                        <FolderClosed className="h-3.5 w-3.5 shrink-0" style={t.albumColor ? { color: t.albumColor, opacity: 1 } : { opacity: 0.7 }} />
                       ) : (
                         <StickyNote className="h-3.5 w-3.5 shrink-0 opacity-70" />
                       )}

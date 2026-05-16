@@ -37,7 +37,9 @@ import {
   Pencil,
   Trash2,
   Users as UsersIcon,
+  Palette,
 } from "lucide-react";
+import { MiniColorPicker, DEFAULT_SWATCHES } from "@/components/calendar/MiniColorPicker";
 
 export type LibraryCategory = "previous" | "meetings" | "notes" | "files" | "media" | "map";
 
@@ -45,6 +47,7 @@ interface FolderLite {
   id: string;
   name: string;
   pinned: boolean;
+  color?: string | null;
 }
 
 export interface LibrarySideNavValue {
@@ -85,7 +88,7 @@ export function LibrarySideNav({
 }: {
   value: LibrarySideNavValue;
   onChange: (v: LibrarySideNavValue) => void;
-  onOpenAsTab?: (v: LibrarySideNavValue, label: string) => void;
+  onOpenAsTab?: (v: LibrarySideNavValue, label: string, color?: string | null) => void;
 }) {
   const { user, mode, activeEntityId } = useAuth();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
@@ -165,23 +168,23 @@ export function LibrarySideNav({
       scopeQuery(
         supabase
           .from("media_albums")
-          .select("id,name,pinned,member_user_id")
+          .select("id,name,pinned,color,member_user_id")
           .order("pinned", { ascending: false })
           .order("sort_order", { ascending: true }),
       ),
     ]);
     setNoteFolders((nf ?? []) as FolderLite[]);
     setFileFolders((ff ?? []) as FolderLite[]);
-    type AlbumRow = FolderLite & { member_user_id: string | null };
+    type AlbumRow = FolderLite & { member_user_id: string | null; color: string | null };
     const allAlbums = (ma ?? []) as AlbumRow[];
     setMediaAlbums(
-      allAlbums.filter((a) => !a.member_user_id).map(({ id, name, pinned }) => ({ id, name, pinned })),
+      allAlbums.filter((a) => !a.member_user_id).map(({ id, name, pinned, color }) => ({ id, name, pinned, color })),
     );
     setMemberAlbums(
       isTeamMode
         ? allAlbums
             .filter((a) => !!a.member_user_id)
-            .map(({ id, name, pinned }) => ({ id, name, pinned }))
+            .map(({ id, name, pinned, color }) => ({ id, name, pinned, color }))
             .sort((a, b) => a.name.localeCompare(b.name))
         : [],
     );
@@ -294,6 +297,25 @@ export function LibrarySideNav({
       void load();
       window.dispatchEvent(new Event("library:refresh"));
     }
+  };
+
+  /** Set album color (media only). Optimistically updates local state, persists
+   * to DB, and broadcasts so open tabs / other surfaces update live. */
+  const setAlbumColor = async (folder: FolderLite, hex: string) => {
+    setMediaAlbums((prev) =>
+      prev.map((f) => (f.id === folder.id ? { ...f, color: hex } : f)),
+    );
+    setMemberAlbums((prev) =>
+      prev.map((f) => (f.id === folder.id ? { ...f, color: hex } : f)),
+    );
+    window.dispatchEvent(
+      new CustomEvent("library:album-color", { detail: { id: folder.id, color: hex } }),
+    );
+    const { error } = await supabase
+      .from("media_albums")
+      .update({ color: hex })
+      .eq("id", folder.id);
+    if (error) toast.error(error.message);
   };
 
   const startRename = (folder: FolderLite) => {
@@ -436,7 +458,7 @@ export function LibrarySideNav({
       key: "media",
       label: "Media",
       icon: <ImageIcon className="h-3.5 w-3.5" strokeWidth={2.25} />,
-      rowIcon: <Library className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      rowIcon: <FolderClosed className="h-3.5 w-3.5" strokeWidth={2.25} />,
       folders: mediaAlbums,
       folderLabel: "Albums",
       folderKey: (f) => f.id,
@@ -612,7 +634,7 @@ export function LibrarySideNav({
                                   onSelect={() => onChange({ category: s.key, folder: id })}
                                   onOpenAsTab={
                                     onOpenAsTab
-                                      ? () => onOpenAsTab({ category: s.key, folder: id }, f.name)
+                                      ? () => onOpenAsTab({ category: s.key, folder: id }, f.name, f.color ?? null)
                                       : undefined
                                   }
                                   onCommitRename={() => void commitRename(s.key, f)}
@@ -624,6 +646,7 @@ export function LibrarySideNav({
                                   onCloseMenu={() => setMenuFor(null)}
                                   onPin={() => void togglePin(s.key, f)}
                                   onRename={() => startRename(f)}
+                                  onColor={s.key === "media" ? (hex) => void setAlbumColor(f, hex) : undefined}
                                   onDelete={() =>
                                     setConfirmDelete({ section: s.key, folder: f })
                                   }
@@ -695,7 +718,7 @@ export function LibrarySideNav({
                                   key={f.id}
                                   onClick={() => onChange({ category: "media", folder: f.id })}
                                   onDoubleClick={() =>
-                                    onOpenAsTab?.({ category: "media", folder: f.id }, f.name)
+                                    onOpenAsTab?.({ category: "media", folder: f.id }, f.name, f.color ?? null)
                                   }
                                   className={`flex min-w-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-left text-xs transition ${
                                     active
@@ -703,7 +726,11 @@ export function LibrarySideNav({
                                       : "text-muted-foreground hover:bg-secondary/60 hover:text-ink"
                                   }`}
                                 >
-                                  <Library className="h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={2.25} />
+                                  <FolderClosed
+                                    className="h-3.5 w-3.5 shrink-0"
+                                    strokeWidth={2.25}
+                                    style={f.color ? { color: f.color } : { color: "var(--muted-foreground)" }}
+                                  />
                                   <span className="min-w-0 flex-1 truncate">{f.name}</span>
                                 </button>
                               );
@@ -774,6 +801,7 @@ function SortableFolderRow(props: {
   onCloseMenu: () => void;
   onPin: () => void;
   onRename: () => void;
+  onColor?: (hex: string) => void;
   onDelete: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -814,6 +842,7 @@ function FolderRow({
   onCloseMenu,
   onPin,
   onRename,
+  onColor,
   onDelete,
   showMenu = true,
   sortable = true,
@@ -833,6 +862,7 @@ function FolderRow({
   onCloseMenu: () => void;
   onPin: () => void;
   onRename: () => void;
+  onColor?: (hex: string) => void;
   onDelete: () => void;
   showMenu?: boolean;
   sortable?: boolean;
@@ -840,6 +870,11 @@ function FolderRow({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [colorOpen, setColorOpen] = useState(false);
+  const [colorPos, setColorPos] = useState<{ top: number; left: number } | null>(null);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customPos, setCustomPos] = useState<{ top: number; left: number } | null>(null);
+  void sortable;
 
   useEffect(() => {
     if (renaming && inputRef.current) {
@@ -851,11 +886,12 @@ function FolderRow({
   useEffect(() => {
     if (menuOpen && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      const menuW = 160;
-      // align right edge of menu with right edge of button
-      setMenuPos({ top: r.bottom + 4, left: Math.max(8, r.right - menuW) });
+      // open menu to the right of the trigger, top aligned
+      setMenuPos({ top: r.top, left: r.right + 4 });
     } else {
       setMenuPos(null);
+      setColorOpen(false);
+      setCustomOpen(false);
     }
   }, [menuOpen]);
 
@@ -890,7 +926,12 @@ function FolderRow({
             <Pin className="h-2.5 w-2.5 shrink-0 fill-current text-ink/70" />
           )}
           {rowIcon && (
-            <span className="shrink-0 text-muted-foreground">{rowIcon}</span>
+            <span
+              className="shrink-0 text-muted-foreground"
+              style={folder.color ? { color: folder.color } : undefined}
+            >
+              {rowIcon}
+            </span>
           )}
           <span className="min-w-0 flex-1 truncate">{folder.name}</span>
         </button>
@@ -942,6 +983,21 @@ function FolderRow({
                       onRename();
                     }}
                   />
+                  {onColor && (
+                    <button
+                      onClick={(e) => {
+                        const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                        setColorPos({ top: r.top, left: r.right + 4 });
+                        setColorOpen(true);
+                        setCustomOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-ink transition hover:bg-secondary"
+                    >
+                      <Palette className="h-3.5 w-3.5" />
+                      <span className="flex-1">Color</span>
+                      <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  )}
                   <MenuItem
                     icon={<Trash2 className="h-3.5 w-3.5" />}
                     label="Delete"
@@ -952,6 +1008,59 @@ function FolderRow({
                     }}
                   />
                 </div>
+                {colorOpen && colorPos && onColor && (
+                  <div
+                    className="fixed z-[71] overflow-hidden rounded-lg border border-hairline bg-popover p-2 shadow-xl animate-in fade-in-0 zoom-in-95"
+                    style={{ top: colorPos.top, left: colorPos.left }}
+                  >
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {DEFAULT_SWATCHES.map((hex) => {
+                        const selected = (folder.color ?? "").toLowerCase() === hex.toLowerCase();
+                        return (
+                          <button
+                            key={hex}
+                            type="button"
+                            onClick={() => {
+                              onColor(hex);
+                              onCloseMenu();
+                            }}
+                            className={`h-5 w-5 rounded-full border transition-transform hover:scale-110 ${
+                              selected ? "border-ink ring-2 ring-ink/30" : "border-black/10"
+                            }`}
+                            style={{ background: hex }}
+                            aria-label={hex}
+                          />
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        const r = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                        setCustomPos({ top: r.top, left: r.right + 6 });
+                        setCustomOpen(true);
+                      }}
+                      className="mt-2 flex w-full items-center justify-between rounded-lg px-2 py-1 text-[11px] text-ink transition hover:bg-secondary"
+                    >
+                      Custom
+                      <ChevronRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+                {customOpen && customPos && onColor && (
+                  <div
+                    className="fixed z-[72] overflow-hidden rounded-lg shadow-xl"
+                    style={{ top: customPos.top, left: customPos.left }}
+                  >
+                    <MiniColorPicker
+                      initial={folder.color ?? "#3B82F6"}
+                      onPreview={(hex) => onColor(hex)}
+                      onSave={(hex) => {
+                        onColor(hex);
+                        onCloseMenu();
+                      }}
+                    />
+                  </div>
+                )}
               </>,
               document.body,
             )}

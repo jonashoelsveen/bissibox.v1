@@ -1,0 +1,1 @@
+ALTER TABLE public.media_albums ADD COLUMN IF NOT EXISTS color text;
