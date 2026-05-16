@@ -293,6 +293,48 @@ function ColorsPanel({
 }
 
 // ---- Custom picker panel ----
+// HSV color: hue (0-360) selected via vertical strip, saturation+value via 2D canvas.
+function hsvToHex(h: number, s: number, v: number): string {
+  const c = v * s;
+  const hp = (h % 360) / 60;
+  const x = c * (1 - Math.abs((hp % 2) - 1));
+  let r = 0,
+    g = 0,
+    b = 0;
+  if (hp < 1) [r, g, b] = [c, x, 0];
+  else if (hp < 2) [r, g, b] = [x, c, 0];
+  else if (hp < 3) [r, g, b] = [0, c, x];
+  else if (hp < 4) [r, g, b] = [0, x, c];
+  else if (hp < 5) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+  const m = v - c;
+  const to = (n: number) =>
+    Math.round((n + m) * 255)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+
+function hexToHsv(hex: string): { h: number; s: number; v: number } {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return { h: 0, s: 1, v: 1 };
+  const n = parseInt(m[1], 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b);
+  const d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    if (max === r) h = 60 * (((g - b) / d) % 6);
+    else if (max === g) h = 60 * ((b - r) / d + 2);
+    else h = 60 * ((r - g) / d + 4);
+  }
+  if (h < 0) h += 360;
+  return { h, s: max === 0 ? 0 : d / max, v: max };
+}
+
 function CustomPanel({
   initial,
   onSave,
@@ -302,44 +344,35 @@ function CustomPanel({
   onSave: (hex: ColorValue) => void;
   onPreview?: (hex: ColorValue) => void;
 }) {
-  const seed = isValidHex(initial) ? initial : hsl2hex(hex2hue(initial));
-  const [hue, setHue] = useState<number>(() => hex2hue(seed));
-  const [preview, setPreview] = useState<ColorValue>(seed);
-  const [hexInput, setHexInput] = useState<string>(seed);
+  const start = hexToHsv(isValidHex(initial) ? initial : "#3b82f6");
+  const [h, setH] = useState(start.h);
+  const [s, setS] = useState(start.s);
+  const [v, setV] = useState(start.v);
+  const [hexInput, setHexInput] = useState(isValidHex(initial) ? initial : hsvToHex(start.h, start.s, start.v));
+  const canvasRef = useRef<HTMLDivElement>(null);
   const hueRef = useRef<HTMLDivElement>(null);
 
-  const applyHue = (h: number) => {
-    setHue(h);
-    const hex = hsl2hex(h);
-    setPreview(hex);
+  const emit = (nh: number, ns: number, nv: number) => {
+    const hex = hsvToHex(nh, ns, nv);
     setHexInput(hex);
     onPreview?.(hex);
   };
 
-  const onHexChange = (v: string) => {
-    setHexInput(v);
-    if (isValidHex(v)) {
-      setHue(hex2hue(v));
-      setPreview(v);
-      onPreview?.(v);
-    }
-  };
-
-  const dragHue = (clientY: number) => {
-    const el = hueRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (clientY - r.top) / r.height));
-    applyHue(pct * 360);
-  };
-
-  const onHuePointerDown = (e: React.PointerEvent) => {
+  const onCanvasDrag = (e: React.PointerEvent) => {
     e.preventDefault();
-    const el = hueRef.current;
+    const el = canvasRef.current;
     if (!el) return;
     el.setPointerCapture(e.pointerId);
-    dragHue(e.clientY);
-    const onMove = (ev: PointerEvent) => dragHue(ev.clientY);
+    const move = (cx: number, cy: number) => {
+      const r = el.getBoundingClientRect();
+      const ns = Math.max(0, Math.min(1, (cx - r.left) / r.width));
+      const nv = 1 - Math.max(0, Math.min(1, (cy - r.top) / r.height));
+      setS(ns);
+      setV(nv);
+      emit(h, ns, nv);
+    };
+    move(e.clientX, e.clientY);
+    const onMove = (ev: PointerEvent) => move(ev.clientX, ev.clientY);
     const onUp = () => {
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerup", onUp);
@@ -348,11 +381,72 @@ function CustomPanel({
     el.addEventListener("pointerup", onUp);
   };
 
-  const huePct = (hue / 360) * 100;
+  const onHueDrag = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const el = hueRef.current;
+    if (!el) return;
+    el.setPointerCapture(e.pointerId);
+    const move = (cy: number) => {
+      const r = el.getBoundingClientRect();
+      const nh = Math.max(0, Math.min(1, (cy - r.top) / r.height)) * 360;
+      setH(nh);
+      emit(nh, s, v);
+    };
+    move(e.clientY);
+    const onMove = (ev: PointerEvent) => move(ev.clientY);
+    const onUp = () => {
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", onUp);
+    };
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerup", onUp);
+  };
+
+  const onHexChange = (val: string) => {
+    setHexInput(val);
+    if (isValidHex(val)) {
+      const p = hexToHsv(val);
+      setH(p.h);
+      setS(p.s);
+      setV(p.v);
+      onPreview?.(val);
+    }
+  };
+
+  const currentHex = hsvToHex(h, s, v);
+  const hueColor = hsvToHex(h, 1, 1);
 
   return (
-    <div className="flex h-44 w-48 gap-2 text-xs">
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
+    <div className="flex flex-col gap-2 text-xs" style={{ width: 152 }}>
+      {/* TOP: saturation/value canvas + vertical hue strip */}
+      <div className="flex gap-2">
+        <div
+          ref={canvasRef}
+          onPointerDown={onCanvasDrag}
+          className="relative h-28 w-28 cursor-crosshair touch-none rounded border border-hairline"
+          style={{
+            background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${hueColor})`,
+          }}
+        >
+          <div
+            className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white"
+            style={{ left: `${s * 100}%`, top: `${(1 - v) * 100}%`, boxShadow: "0 0 0 1px rgba(0,0,0,0.5)" }}
+          />
+        </div>
+        <div
+          ref={hueRef}
+          onPointerDown={onHueDrag}
+          className="relative h-28 w-3 cursor-pointer touch-none rounded border border-hairline"
+          style={{ background: "linear-gradient(to bottom, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)" }}
+        >
+          <div
+            className="pointer-events-none absolute -left-[2px] -right-[2px] h-1 -translate-y-1/2 border border-black bg-white"
+            style={{ top: `${(h / 360) * 100}%` }}
+          />
+        </div>
+      </div>
+      {/* BOTTOM: hex input + preview swatch + save */}
+      <div className="flex items-center gap-1.5">
         <input
           type="text"
           value={hexInput}
@@ -362,37 +456,20 @@ function CustomPanel({
           }}
           spellCheck={false}
           placeholder="#000000"
-          className="w-full rounded border border-hairline bg-background px-2 py-1 font-mono text-[11px] outline-none focus:border-ink/30"
+          className="min-w-0 flex-1 rounded border border-hairline bg-background px-1.5 py-1 font-mono text-[10px] outline-none focus:border-ink/30"
         />
-        <div className="flex flex-1 gap-2">
-          <div
-            className="flex-1 rounded border border-hairline"
-            style={{ background: preview }}
-            aria-label="Color preview"
-          />
-          <button
-            type="button"
-            onClick={() => onSave(preview)}
-            className="flex w-7 items-center justify-center rounded bg-ink text-[10px] font-semibold tracking-wider text-background hover:opacity-90"
-            style={{ writingMode: "vertical-rl" as const, textOrientation: "mixed" as const }}
-          >
-            SAVE
-          </button>
-        </div>
-      </div>
-      <div
-        ref={hueRef}
-        onPointerDown={onHuePointerDown}
-        className="relative w-3.5 cursor-pointer touch-none rounded border border-hairline"
-        style={{
-          background:
-            "linear-gradient(to bottom, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)",
-        }}
-      >
         <div
-          className="pointer-events-none absolute -left-[2px] -right-[2px] h-1 -translate-y-1/2 border border-black bg-white"
-          style={{ top: `${huePct}%` }}
+          className="h-6 w-6 shrink-0 rounded border border-hairline"
+          style={{ background: currentHex }}
+          aria-label="Color preview"
         />
+        <button
+          type="button"
+          onClick={() => onSave(currentHex)}
+          className="shrink-0 rounded bg-ink px-2 py-1 text-[10px] font-semibold tracking-wide text-background hover:opacity-90"
+        >
+          Save
+        </button>
       </div>
     </div>
   );
