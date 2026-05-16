@@ -99,7 +99,7 @@ export function GlobalTopTabBar() {
   };
 
   return (
-    <div className="fixed left-0 right-0 top-[11px] z-40 bg-background">
+    <div className="fixed left-0 right-0 top-[11px] z-[90] bg-background">
       <div
         aria-hidden
         className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px bg-hairline"
