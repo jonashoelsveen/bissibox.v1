@@ -2706,21 +2706,42 @@ function Lightbox({
                 thumbSrc={current ? thumbUrls[current.id] : undefined}
                 fullSrc={url}
                 fullscreen={isFullscreen}
+                fullscreenPanelOpen={isFullscreen && editPanelOpen}
               />
             ) : (
-              <VideoPlayer src={url} drawing={drawing} theme="light" fullscreen={isFullscreen} />
+              <VideoPlayer
+                src={url}
+                drawing={drawing}
+                theme="light"
+                fullscreen={isFullscreen}
+                fullscreenPanelOpen={isFullscreen && editPanelOpen}
+              />
             )}
           </div>
         </div>
         {isFullscreen && typeof document !== "undefined" && createPortal(
-          <button
-            type="button"
-            onClick={() => setIsFullscreen(false)}
-            aria-label="Exit full screen"
-            className="fixed top-4 right-4 z-[83] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10"
-          >
-            <Minimize2 className="h-4 w-4" />
-          </button>,
+          <>
+            <button
+              type="button"
+              onClick={() => setIsFullscreen(false)}
+              aria-label="Exit full screen"
+              className={`fixed top-4 z-[83] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10 transition-[right] duration-300 ease-out ${
+                editPanelOpen ? "right-[400px]" : "right-12"
+              }`}
+            >
+              <Minimize2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditPanelOpen((v) => !v)}
+              aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
+              className={`fixed top-4 right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
+                editPanelOpen ? "bg-white/15 text-white" : "text-white hover:bg-white/10"
+              }`}
+            >
+              {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+            </button>
+          </>,
           document.body,
         )}
 
@@ -2738,9 +2759,9 @@ function Lightbox({
         {/* Sliding edit panel — portaled so it escapes the Lightbox's stacking context */}
         {typeof document !== "undefined" && createPortal(
           <aside
-            aria-hidden={!editPanelOpen || isFullscreen}
+            aria-hidden={!editPanelOpen}
             className={`fixed right-0 bottom-0 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
-              editPanelOpen && !isFullscreen ? "translate-x-0" : "translate-x-full pointer-events-none"
+              editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
             } ${isFullscreen ? "top-0 z-[82]" : "z-30"}`}
             style={isFullscreen ? undefined : { top: 53 }}
           >
@@ -3703,7 +3724,7 @@ function formatVideoTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(cs).padStart(2, "0")}`;
 }
 
-function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false }: { src?: string; drawing?: DrawingState; theme?: "light" | "dark"; fullscreen?: boolean }) {
+function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false, fullscreenPanelOpen = false }: { src?: string; drawing?: DrawingState; theme?: "light" | "dark"; fullscreen?: boolean; fullscreenPanelOpen?: boolean }) {
   const isLight = theme === "light" && !fullscreen;
   const playBtnClass = isLight ? "text-zinc-800 hover:text-black" : "text-zinc-100 hover:text-white";
   const tickMajorClass = isLight ? "h-7 bg-zinc-400" : "h-7 bg-zinc-500/70";
@@ -3954,6 +3975,7 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false }: { src
             ? "absolute bottom-6 left-[5%] right-[5%] shrink-0"
             : "w-full shrink-0"
         }
+        style={fullscreen ? { willChange: "left, right" } : undefined}
       >
         {/* Centered minimalist play/pause */}
         <div className="mb-2 flex items-center justify-center">
@@ -4015,7 +4037,14 @@ function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false }: { src
 
   if (fullscreen && typeof document !== "undefined") {
     return createPortal(
-      <div className="fixed inset-0 z-[80] bg-black">{playerInner}</div>,
+      <div
+        className={`fixed inset-y-0 left-0 z-[80] bg-black transition-[right] duration-300 ease-out ${
+          fullscreenPanelOpen ? "right-96" : "right-0"
+        }`}
+        style={{ willChange: "right" }}
+      >
+        {playerInner}
+      </div>,
       document.body,
     );
   }
@@ -4549,9 +4578,16 @@ function MediaTabViewBody(props: {
               thumbSrc={currentItem ? thumbUrls[currentItem.id] : undefined}
               fullSrc={currentUrl}
               fullscreen={isFullscreen}
+              fullscreenPanelOpen={isFullscreen && editPanelOpen}
             />
           ) : (
-            <VideoPlayer src={currentUrl} drawing={drawing} theme="light" fullscreen={isFullscreen} />
+            <VideoPlayer
+              src={currentUrl}
+              drawing={drawing}
+              theme="light"
+              fullscreen={isFullscreen}
+              fullscreenPanelOpen={isFullscreen && editPanelOpen}
+            />
           )}
         </div>
       </div>
@@ -4561,21 +4597,35 @@ function MediaTabViewBody(props: {
         </div>
       )}
       {isFullscreen && typeof document !== "undefined" && createPortal(
-        <button
-          type="button"
-          onClick={() => setIsFullscreen(false)}
-          aria-label="Exit full screen"
-          className="fixed top-4 right-4 z-[83] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10"
-        >
-          <Minimize2 className="h-4 w-4" />
-        </button>,
+        <>
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(false)}
+            aria-label="Exit full screen"
+            className={`fixed top-4 z-[83] grid h-9 w-9 place-items-center rounded-full text-white hover:bg-white/10 transition-[right] duration-300 ease-out ${
+              editPanelOpen ? "right-[400px]" : "right-12"
+            }`}
+          >
+            <Minimize2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditPanelOpen((v) => !v)}
+            aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
+            className={`fixed top-4 right-4 z-[83] grid h-9 w-9 place-items-center rounded-full transition ${
+              editPanelOpen ? "bg-white/15 text-white" : "text-white hover:bg-white/10"
+            }`}
+          >
+            {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+          </button>
+        </>,
         document.body,
       )}
       {typeof document !== "undefined" && createPortal(
         <aside
-          aria-hidden={!editPanelOpen || isFullscreen}
+          aria-hidden={!editPanelOpen}
           className={`fixed right-0 bottom-0 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
-            editPanelOpen && !isFullscreen ? "translate-x-0" : "translate-x-full pointer-events-none"
+            editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
           } ${isFullscreen ? "top-0 z-[82]" : "z-30"}`}
           style={isFullscreen ? undefined : { top: TOP_OFFSET }}
         >
@@ -4626,7 +4676,7 @@ function MediaTabViewBody(props: {
   );
 }
 
-function PhotoLqip({ thumbSrc, fullSrc, fullscreen }: { thumbSrc?: string; fullSrc?: string; fullscreen?: boolean }) {
+function PhotoLqip({ thumbSrc, fullSrc, fullscreen, fullscreenPanelOpen = false }: { thumbSrc?: string; fullSrc?: string; fullscreen?: boolean; fullscreenPanelOpen?: boolean }) {
   const [fullLoaded, setFullLoaded] = useState(false);
 
   useEffect(() => {
@@ -4664,7 +4714,12 @@ function PhotoLqip({ thumbSrc, fullSrc, fullscreen }: { thumbSrc?: string; fullS
 
   if (fullscreen && typeof document !== "undefined") {
     return createPortal(
-      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black">
+      <div
+        className={`fixed inset-y-0 left-0 z-[80] flex items-center justify-center bg-black transition-[right] duration-300 ease-out ${
+          fullscreenPanelOpen ? "right-96" : "right-0"
+        }`}
+        style={{ willChange: "right" }}
+      >
         {innerContent}
       </div>,
       document.body,
