@@ -3669,8 +3669,8 @@ function formatVideoTime(s: number) {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(cs).padStart(2, "0")}`;
 }
 
-function VideoPlayer({ src, drawing, theme = "dark" }: { src?: string; drawing?: DrawingState; theme?: "light" | "dark" }) {
-  const isLight = theme === "light";
+function VideoPlayer({ src, drawing, theme = "dark", fullscreen = false }: { src?: string; drawing?: DrawingState; theme?: "light" | "dark"; fullscreen?: boolean }) {
+  const isLight = theme === "light" && !fullscreen;
   const playBtnClass = isLight ? "text-zinc-800 hover:text-black" : "text-zinc-100 hover:text-white";
   const tickMajorClass = isLight ? "h-7 bg-zinc-400" : "h-7 bg-zinc-500/70";
   const tickMinorClass = isLight ? "h-4 bg-zinc-300" : "h-4 bg-zinc-600/50";
