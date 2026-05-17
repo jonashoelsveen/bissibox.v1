@@ -2286,3 +2286,246 @@ function WeekEventsOverlay({
   );
 }
 
+/**
+ * DiarySimpleStack — stacks each day's sessions vertically in fixed-height
+ * tiles, ignoring time of day. Mirrors WeekEventsOverlay positioning
+ * (measures `[data-simple-col]` columns) but uses a simple flow layout.
+ */
+function DiarySimpleStack({
+  scrollRef,
+  events,
+  weekDates,
+  onEventClick,
+  onDeleteEvent,
+  onUpsertSession,
+  memberId,
+  viewerRole = "owner",
+}: {
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  events: CalendarEvent[];
+  weekDates: Date[];
+  onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
+  onDeleteEvent?: (id: string) => void;
+  onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
+  memberId?: string;
+  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
+}) {
+  const [tileDesign] = useSessionTileDesign();
+  const [unit] = useDistanceUnit();
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const closeTimerRef = useRef<number | null>(null);
+  const cancelClose = useCallback(() => {
+    if (closeTimerRef.current != null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+  const scheduleClose = useCallback(() => {
+    cancelClose();
+    closeTimerRef.current = window.setTimeout(() => {
+      setHoverId(null);
+      setHoverRect(null);
+    }, 180);
+  }, [cancelClose]);
+
+  type Box = { left: number; top: number; width: number };
+  const [cols, setCols] = useState<Box[]>([]);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const c = scrollRef.current;
+      if (!c) return;
+      const next: Box[] = [];
+      for (let i = 0; i < 7; i++) {
+        const cell = c.querySelector<HTMLElement>(`[data-simple-col="${i}"]`);
+        if (cell) next.push({ left: cell.offsetLeft, top: cell.offsetTop, width: cell.offsetWidth });
+      }
+      if (next.length === 7) setCols(next);
+    };
+    measure();
+    const id = window.setInterval(measure, 500);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("resize", measure);
+    };
+  }, [scrollRef]);
+
+  if (cols.length !== 7) return null;
+
+  const TILE_H = 56;
+  const TILE_GAP = 4;
+  const PAD = 6;
+
+  // Group events by day column, sorted by start time.
+  const byCol: CalendarEvent[][] = Array.from({ length: 7 }, () => []);
+  for (const ev of events) {
+    const start = fromISOLocal(ev.startISO);
+    const idx = weekDates.findIndex((d) => sameDay(d, start));
+    if (idx < 0) continue;
+    byCol[idx].push(ev);
+  }
+  for (const list of byCol) {
+    list.sort((a, b) => fromISOLocal(a.startISO).getTime() - fromISOLocal(b.startISO).getTime());
+  }
+
+  return (
+    <>
+      {byCol.map((list, colIdx) =>
+        list.map((ev, i) => {
+          const box = cols[colIdx];
+          const top = box.top + PAD + i * (TILE_H + TILE_GAP);
+          const accent = ev.color ?? "hsl(var(--primary))";
+          const bg = ev.color ? `color-mix(in srgb, ${ev.color} 18%, white)` : "hsl(var(--primary) / 0.15)";
+          const fg = "hsl(var(--ink, 220 13% 13%))";
+          const start = fromISOLocal(ev.startISO);
+          const end = fromISOLocal(ev.endISO);
+          const startMin = start.getHours() * 60 + start.getMinutes();
+          const endMin = end.getHours() * 60 + end.getMinutes();
+          const actKey = (ev.activity || ev.diarySub || "").toLowerCase();
+          const ActIcon =
+            actKey === "cycling" || actKey === "bike" ? Bike :
+            actKey === "swimming" || actKey === "swim" ? Waves :
+            actKey === "strength" ? Dumbbell :
+            actKey === "xcskiing" ? Snowflake :
+            Footprints;
+          const km = ev.distanceKm;
+          const distVal = km != null ? kmToUnit(km, unit) : null;
+          const isStrength = actKey === "strength";
+          const isNorwegian = typeof navigator !== "undefined" && /^nb|^nn|^no/i.test(navigator.language || "");
+          const hourSuffix = isNorwegian ? "t" : "h";
+          const totalMin = Math.max(0, endMin - startMin);
+          const durH = Math.floor(totalMin / 60);
+          const durM = totalMin % 60;
+          const strengthLabel = durH > 0 ? `${durH}${hourSuffix} ${durM}m` : `${durM}m`;
+          const distLabel = isStrength
+            ? strengthLabel
+            : distVal != null ? `${distVal.toFixed(1)} ${unitLabel(unit)}` : "—";
+          const iconHalfBg = ev.color ? `color-mix(in srgb, ${ev.color} 40%, white)` : "rgba(0,0,0,0.05)";
+          const durStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
+
+          return (
+            <div
+              key={ev.id}
+              data-real-event="1"
+              onMouseEnter={(e) => {
+                cancelClose();
+                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                setHoverId(ev.id);
+                setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+              }}
+              onMouseLeave={(e) => {
+                const related = e.relatedTarget as Node | null;
+                const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
+                if (goingIntoMenu) return;
+                scheduleClose();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEventClick(ev, e.currentTarget as HTMLElement);
+              }}
+              className="absolute z-[8] cursor-pointer overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md"
+              style={{
+                left: box.left + 2,
+                width: box.width - 4,
+                top,
+                height: TILE_H,
+                background: bg,
+                color: fg,
+              }}
+              title={ev.title}
+            >
+              <span className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: accent }} />
+              {tileDesign === "icon" ? (
+                <div className="flex h-full w-full items-center justify-center pl-1">
+                  <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+                </div>
+              ) : tileDesign === "stacked" ? (
+                <div className="-mx-2 -my-0.5 flex h-full items-stretch">
+                  <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
+                    <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+                  </div>
+                  <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
+                    <span className="truncate text-[12px] font-semibold">{ev.title}</span>
+                    <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{durStr}</span>
+                    {!isStrength && (
+                      <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{distLabel}</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="-mx-2 -my-0.5 flex h-full items-stretch">
+                  <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
+                    <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+                  </div>
+                  <div
+                    className="flex w-1/2 items-center justify-center text-ink"
+                    title={distLabel}
+                    style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18 }}
+                  >
+                    {isStrength ? (
+                      <span className="flex items-baseline gap-1" style={{ lineHeight: 1 }}>
+                        {durH > 0 && (
+                          <>
+                            <span>{durH}</span>
+                            <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{hourSuffix}</span>
+                          </>
+                        )}
+                        <span>{durM}</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>m</span>
+                      </span>
+                    ) : distVal != null ? (
+                      <span className="flex items-baseline gap-1" style={{ lineHeight: 1 }}>
+                        <span>{distVal.toFixed(1)}</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{unitLabel(unit)}</span>
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })
+      )}
+      {hoverId && hoverRect && (() => {
+        const ev = events.find((e) => e.id === hoverId);
+        if (!ev) return null;
+        return (
+          <SessionHoverMenu
+            ev={ev}
+            blockRect={hoverRect}
+            rowHeight={TILE_H}
+            visible={hoverId === ev.id}
+            memberId={memberId}
+            viewerRole={viewerRole}
+            onMenuEnter={cancelClose}
+            onMenuLeave={scheduleClose}
+            onForceClose={() => {
+              cancelClose();
+              setHoverId(null);
+              setHoverRect(null);
+            }}
+            onDelete={() => {
+              cancelClose();
+              setHoverId(null);
+              setHoverRect(null);
+              onDeleteEvent?.(ev.id);
+            }}
+            onSaveNote={(note) =>
+              onUpsertSession?.({
+                ...ev,
+                sessionNote: note || undefined,
+                sessionNoteUpdatedAt: new Date().toISOString(),
+              })
+            }
+            onUpsert={(patch) => onUpsertSession?.(patch)}
+          />
+        );
+      })()}
+    </>
+  );
+}
+
