@@ -1003,11 +1003,16 @@ export function MonthGridType1({
         </LayoutGroup>
 
         <ReorderConfirmDialog
-          open={!!pendingReorder}
-          onCancel={() => setPendingReorder(null)}
+          open={!!pendingReorder || stravaBlocked}
+          mode={stravaBlocked ? "stravaBlocked" : "confirm"}
+          onCancel={() => {
+            setPendingReorder(null);
+            setStravaBlocked(false);
+          }}
           onConfirm={() => {
             if (pendingReorder) onReorderEvents?.(pendingReorder.ids);
             setPendingReorder(null);
+            setStravaBlocked(false);
           }}
         />
 
