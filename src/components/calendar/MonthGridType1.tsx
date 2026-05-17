@@ -561,7 +561,11 @@ export function MonthGridType1({
               const allItems: UnifiedItem[] = [
                 ...dayEvents
                   .slice()
-                  .sort((a, b) => a.startISO.localeCompare(b.startISO))
+                  .sort((a, b) => {
+                    const ka = a.sortIndex ?? Date.parse(a.startISO);
+                    const kb = b.sortIndex ?? Date.parse(b.startISO);
+                    return ka - kb;
+                  })
                   .map<UnifiedItem>((event) => ({ kind: "event", event })),
                 ...legacyItems.map<UnifiedItem>((it) => ({
                   kind: "legacy",
