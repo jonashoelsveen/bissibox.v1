@@ -1039,6 +1039,7 @@ export function MonthGridType1({
           })();
           return (
             <DiaryPopoverEditor
+              key={popover.eventId ?? `new-${popover.pos.row}-${popover.pos.col}`}
               initialEvent={existingEv ?? { title: popover.initialText }}
               isEdit={!!existingEv}
               anchor={popover.rect}
