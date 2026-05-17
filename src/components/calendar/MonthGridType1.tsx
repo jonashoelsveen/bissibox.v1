@@ -55,6 +55,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
+import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 
 /**
  * Render-prop wrapper that registers a child as a vertical-sortable item
@@ -1017,7 +1018,83 @@ export function MonthGridType1({
         />
 
         {/* Inline popover (per-item create or edit) */}
-        {popover && (
+        {popover && appKind === "diary" && (() => {
+          const cell = days.find(
+            (d) => d.row === popover.pos.row && d.col === popover.pos.col,
+          );
+          if (!cell) return null;
+          const existingEv = popover.eventId ? events.find((e) => e.id === popover.eventId) ?? null : null;
+          const initialTime = (() => {
+            if (existingEv && !existingEv.allDay) {
+              const s = fromISOLocal(existingEv.startISO);
+              const e = fromISOLocal(existingEv.endISO);
+              return {
+                startMin: s.getHours() * 60 + s.getMinutes(),
+                endMin: e.getHours() * 60 + e.getMinutes(),
+              };
+            }
+            return { startMin: 9 * 60, endMin: 10 * 60 };
+          })();
+          return (
+            <DiaryPopoverEditor
+              initialEvent={existingEv ?? { title: popover.initialText }}
+              isEdit={!!existingEv}
+              anchor={popover.rect}
+              initialTime={initialTime}
+              date={cell.date}
+              onClose={closePopover}
+              onCommit={(v: DiaryPopoverValue, opts) => {
+                if (opts?.delete && popover.eventId) {
+                  onDeleteEvent?.(popover.eventId);
+                  closePopover();
+                  return;
+                }
+                const time = v.time ?? initialTime;
+                const start = setHM(cell.date, Math.floor(time.startMin / 60), time.startMin % 60);
+                const end = setHM(cell.date, Math.floor(time.endMin / 60), time.endMin % 60);
+                if (popover.eventId) {
+                  if (!v.title) {
+                    onDeleteEvent?.(popover.eventId);
+                  } else {
+                    onUpsertEvent?.({
+                      id: popover.eventId,
+                      title: v.title,
+                      color: v.color,
+                      startISO: toISOLocal(start),
+                      endISO: toISOLocal(end),
+                      allDay: false,
+                      diaryType: v.diaryType,
+                      diaryGroup: v.diaryGroup,
+                      diarySub: v.diarySub,
+                      distanceKm: v.distanceKm,
+                      paceSecPerKm: v.paceSecPerKm,
+                      sessionNote: v.sessionNote,
+                      activities: v.activities,
+                    });
+                  }
+                } else if (v.title && onUpsertEvent) {
+                  onUpsertEvent({
+                    title: v.title,
+                    color: v.color,
+                    startISO: toISOLocal(start),
+                    endISO: toISOLocal(end),
+                    allDay: false,
+                    diaryType: v.diaryType,
+                    diaryGroup: v.diaryGroup,
+                    diarySub: v.diarySub,
+                    distanceKm: v.distanceKm,
+                    paceSecPerKm: v.paceSecPerKm,
+                    sessionNote: v.sessionNote,
+                    activities: v.activities,
+                  });
+                }
+                closePopover();
+              }}
+            />
+          );
+        })()}
+
+        {popover && appKind !== "diary" && (
           <PopoverEditor
             seat={seat}
             initialText={popover.initialText}
@@ -1203,7 +1280,7 @@ function fmtMin(m: number): string {
  * down/up to another; the marked range becomes the session's time. Press
  * Enter (or click "Lagre tid") to commit.
  */
-function MiniDurationColumn({
+export function MiniDurationColumn({
   startHour,
   rows,
   rowHeight,

@@ -13,7 +13,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pencil, Clock, Trash2 } from "lucide-react";
 import type { CalendarEvent } from "./yearStore";
-import { CAT_TRAINING_COLOR } from "./MonthGridType1";
+import { CAT_TRAINING_COLOR, MiniDurationColumn } from "./MonthGridType1";
 import { colorForActivity } from "@/lib/activity-colors";
 import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
 
@@ -107,6 +107,7 @@ export function DiaryPopoverEditor({
   );
   const [time, setTime] = useState<{ startMin: number; endMin: number } | null>(initialTime);
   const [showDetails, setShowDetails] = useState(false);
+  const [showDuration, setShowDuration] = useState(false);
 
   const [distanceKm, setDistanceKm] = useState<number | undefined>(initialEvent?.distanceKm);
   const [paceSecPerKm, setPaceSecPerKm] = useState<number | undefined>(initialEvent?.paceSecPerKm);
@@ -146,14 +147,14 @@ export function DiaryPopoverEditor({
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
-      if (showDetails) return; // modal handles its own dismissal
+      if (showDetails || showDuration) return; // modal/picker handles its own dismissal
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
         onCommit(buildValue());
       }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (showDetails) return;
+      if (showDetails || showDuration) return;
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
@@ -171,7 +172,7 @@ export function DiaryPopoverEditor({
       window.removeEventListener("keydown", onKey);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onCommit, onClose, showDetails]);
+  }, [onCommit, onClose, showDetails, showDuration]);
 
   const POPOVER_W = 280;
   const POPOVER_H = diaryType === "training" ? (hasSubs ? 280 : 250) : 320;
@@ -200,7 +201,8 @@ export function DiaryPopoverEditor({
         className="fixed z-50"
         style={{ top, left, width: POPOVER_W }}
       >
-        <div className="relative overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg">
+        <div className="relative flex items-start gap-2">
+        <div className="flex-1 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg">
           {/* Header */}
           <div className="flex items-center justify-between gap-2 border-b border-hairline px-2 py-1.5">
             <div className="flex items-center gap-1.5">
@@ -224,9 +226,20 @@ export function DiaryPopoverEditor({
                 </span>
               )}
               {diaryType !== "note" && (
-                <span className="rounded-md p-1 text-muted-foreground/60">
+                <button
+                  type="button"
+                  aria-label="Sett varighet"
+                  title="Sett varighet"
+                  onClick={() => setShowDuration((v) => !v)}
+                  className={[
+                    "rounded-md p-1 transition-colors",
+                    showDuration
+                      ? "bg-secondary text-ink"
+                      : "text-muted-foreground hover:bg-secondary hover:text-ink",
+                  ].join(" ")}
+                >
                   <Clock className="h-3.5 w-3.5" strokeWidth={2} />
-                </span>
+                </button>
               )}
             </div>
           </div>
@@ -328,6 +341,28 @@ export function DiaryPopoverEditor({
               {isEdit ? "Lagre" : "Legg til"}
             </button>
           </div>
+        </div>
+
+        {/* Mini duration column — appears next to the editor when toggled. */}
+        {showDuration && diaryType !== "note" && (
+          <div
+            className="absolute left-full top-0"
+            style={{ width: 220, height: 360, marginLeft: 8 }}
+          >
+            <MiniDurationColumn
+              startHour={6}
+              rows={36}
+              rowHeight={36}
+              initial={time}
+              color={accent}
+              onCommit={(t) => {
+                setTime(t);
+                setShowDuration(false);
+              }}
+              onClose={() => setShowDuration(false)}
+            />
+          </div>
+        )}
         </div>
       </div>
 
