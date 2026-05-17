@@ -201,7 +201,8 @@ export function DiaryPopoverEditor({
         className="fixed z-50"
         style={{ top, left, width: POPOVER_W }}
       >
-        <div className="relative overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg">
+        <div className="relative flex items-start gap-2">
+        <div className="flex-1 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg">
           {/* Header */}
           <div className="flex items-center justify-between gap-2 border-b border-hairline px-2 py-1.5">
             <div className="flex items-center gap-1.5">
@@ -225,9 +226,20 @@ export function DiaryPopoverEditor({
                 </span>
               )}
               {diaryType !== "note" && (
-                <span className="rounded-md p-1 text-muted-foreground/60">
+                <button
+                  type="button"
+                  aria-label="Sett varighet"
+                  title="Sett varighet"
+                  onClick={() => setShowDuration((v) => !v)}
+                  className={[
+                    "rounded-md p-1 transition-colors",
+                    showDuration
+                      ? "bg-secondary text-ink"
+                      : "text-muted-foreground hover:bg-secondary hover:text-ink",
+                  ].join(" ")}
+                >
                   <Clock className="h-3.5 w-3.5" strokeWidth={2} />
-                </span>
+                </button>
               )}
             </div>
           </div>
