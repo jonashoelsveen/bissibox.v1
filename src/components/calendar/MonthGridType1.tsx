@@ -739,11 +739,18 @@ export function MonthGridType1({
                         const itemKey = it.kind === "legacy" ? `legacy-${it.idx}` : `event-${it.event.id}`;
                         const isDiaryEvent = appKind === "diary" && it.kind === "event";
                         const tall = isDiaryEvent && (monthTileDesign === "split" || monthTileDesign === "stacked");
-                        return (
+                        const isEventItem = it.kind === "event" && !it.event.id.startsWith("__ghost__:");
+                        const renderChip = (extra?: {
+                          sortableRef?: (el: HTMLElement | null) => void;
+                          sortableStyle?: React.CSSProperties;
+                          sortableListeners?: Record<string, unknown>;
+                          sortableAttributes?: Record<string, unknown>;
+                        }) => (
                           <motion.div
+                            ref={extra?.sortableRef as React.Ref<HTMLDivElement> | undefined}
                             key={`${id}-${itemKey}`}
-                            layout
-                            layoutId={it.kind === "event" ? `evt-${it.event.id}` : undefined}
+                            layout={!extra}
+                            layoutId={!extra && it.kind === "event" ? `evt-${it.event.id}` : undefined}
                             initial={{ opacity: 0, y: -2 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -2 }}
