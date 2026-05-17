@@ -82,7 +82,7 @@ function SortableMonthEventChip({
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0 : 1,
+    zIndex: isDragging ? 30 : undefined,
   };
   return <>{children({ setNodeRef, style, listeners, attributes, isDragging })}</>;
 }
@@ -708,6 +708,26 @@ export function MonthGridType1({
 
                   {/* Items list */}
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
+                    {(() => {
+                      const sortableIds = sortedDayEvents
+                        .filter((e) => !e.id.startsWith("__ghost__:"))
+                        .map((e) => e.id);
+                      return (
+                        <DndContext
+                          sensors={dndSensors}
+                          collisionDetection={closestCenter}
+                          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+                          onDragEnd={(ev: DragEndEvent) => {
+                            const { active, over } = ev;
+                            if (!over || active.id === over.id) return;
+                            const oldIndex = sortableIds.indexOf(String(active.id));
+                            const newIndex = sortableIds.indexOf(String(over.id));
+                            if (oldIndex < 0 || newIndex < 0) return;
+                            const next = arrayMove(sortableIds, oldIndex, newIndex);
+                            setPendingReorder({ dayKey: id, ids: next });
+                          }}
+                        >
+                          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
                     <AnimatePresence initial={false}>
                       {visible.map((it) => {
                         const raw = it.kind === "legacy" ? it.raw : it.event.title;
@@ -716,9 +736,18 @@ export function MonthGridType1({
                         const itemKey = it.kind === "legacy" ? `legacy-${it.idx}` : `event-${it.event.id}`;
                         const isDiaryEvent = appKind === "diary" && it.kind === "event";
                         const tall = isDiaryEvent && (monthTileDesign === "split" || monthTileDesign === "stacked");
-                        return (
+                        const isSortableEvent =
+                          it.kind === "event" && !it.event.id.startsWith("__ghost__:");
+                        const renderChip = (sortable: {
+                          setNodeRef: (el: HTMLElement | null) => void;
+                          style: React.CSSProperties;
+                          listeners: ReturnType<typeof useSortable>["listeners"];
+                          attributes: ReturnType<typeof useSortable>["attributes"];
+                          isDragging: boolean;
+                        } | null) => (
                           <motion.div
                             key={`${id}-${itemKey}`}
+                            ref={sortable?.setNodeRef}
                             layout
                             layoutId={it.kind === "event" ? `evt-${it.event.id}` : undefined}
                             initial={{ opacity: 0, y: -2 }}
@@ -731,7 +760,9 @@ export function MonthGridType1({
                             data-role="item"
                             data-real-event={it.kind === "event" && !it.event.id.startsWith("__ghost__:") ? "1" : undefined}
                             data-ghost-event={it.kind === "event" && it.event.id.startsWith("__ghost__:") ? "1" : undefined}
-                            draggable={!(it.kind === "event" && it.event.id.startsWith("__ghost__:"))}
+                            draggable={!sortable && !(it.kind === "event" && it.event.id.startsWith("__ghost__:"))}
+                            {...(sortable?.attributes ?? {})}
+                            {...(sortable?.listeners ?? {})}
                             onDragStart={(e) => {
                               const dev = e as unknown as DragEvent;
                               if (dev.dataTransfer) {
@@ -771,8 +802,9 @@ export function MonthGridType1({
                                     itemColor ? "" : "hover:bg-secondary",
                                   ].join(" ")
                             }
-                            style={
-                              tall
+                            style={{
+                              ...(sortable?.style ?? {}),
+                              ...(tall
                                 ? {
                                     minHeight: 44,
                                     backgroundColor: itemColor ? `${itemColor}1F` : undefined,
@@ -783,8 +815,8 @@ export function MonthGridType1({
                                       backgroundColor: `${itemColor}1F`,
                                       boxShadow: `inset 2px 0 0 ${itemColor}`,
                                     }
-                                  : undefined
-                            }
+                                  : {}),
+                            }}
                             title={displayText}
                           >
                             {isDiaryEvent ? (() => {
@@ -906,6 +938,17 @@ export function MonthGridType1({
                             )}
                           </motion.div>
                         );
+                        if (isSortableEvent && it.kind === "event") {
+                          return (
+                            <SortableMonthEventChip
+                              key={`${id}-${itemKey}`}
+                              id={it.event.id}
+                            >
+                              {(s) => renderChip(s)}
+                            </SortableMonthEventChip>
+                          );
+                        }
+                        return renderChip(null);
                       })}
                     </AnimatePresence>
                     {overflow > 0 && (
@@ -921,6 +964,10 @@ export function MonthGridType1({
                         +{overflow} mer
                       </button>
                     )}
+                          </SortableContext>
+                        </DndContext>
+                      );
+                    })()}
                   </div>
 
                   {/* Hover "+" affordance — visible only when cell is empty + in month */}
@@ -941,6 +988,15 @@ export function MonthGridType1({
             })}
           </div>
         </LayoutGroup>
+
+        <ReorderConfirmDialog
+          open={!!pendingReorder}
+          onCancel={() => setPendingReorder(null)}
+          onConfirm={() => {
+            if (pendingReorder) onReorderEvents?.(pendingReorder.ids);
+            setPendingReorder(null);
+          }}
+        />
 
         {/* Inline popover (per-item create or edit) */}
         {popover && (
