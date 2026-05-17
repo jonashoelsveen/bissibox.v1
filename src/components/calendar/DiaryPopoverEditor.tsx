@@ -147,14 +147,14 @@ export function DiaryPopoverEditor({
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
-      if (showDetails) return; // modal handles its own dismissal
+      if (showDetails || showDuration) return; // modal/picker handles its own dismissal
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
         onCommit(buildValue());
       }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (showDetails) return;
+      if (showDetails || showDuration) return;
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
@@ -172,7 +172,7 @@ export function DiaryPopoverEditor({
       window.removeEventListener("keydown", onKey);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onCommit, onClose, showDetails]);
+  }, [onCommit, onClose, showDetails, showDuration]);
 
   const POPOVER_W = 280;
   const POPOVER_H = diaryType === "training" ? (hasSubs ? 280 : 250) : 320;
