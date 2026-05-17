@@ -42,6 +42,50 @@ import { DayNoteButton } from "./DayNoteButton";
 import { useUserCategories } from "@/hooks/useUserCategories";
 import { useMonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
+import { CSS } from "@dnd-kit/utilities";
+import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
+
+/**
+ * Render-prop wrapper that registers a child as a vertical-sortable item
+ * inside its enclosing SortableContext. The child receives the dnd-kit
+ * ref/style/listeners/attributes to spread onto its draggable root.
+ */
+function SortableMonthEventChip({
+  id,
+  disabled,
+  children,
+}: {
+  id: string;
+  disabled?: boolean;
+  children: (s: {
+    setNodeRef: (el: HTMLElement | null) => void;
+    style: React.CSSProperties;
+    listeners: ReturnType<typeof useSortable>["listeners"];
+    attributes: ReturnType<typeof useSortable>["attributes"];
+    isDragging: boolean;
+  }) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0 : 1,
+  };
+  return <>{children({ setNodeRef, style, listeners, attributes, isDragging })}</>;
+}
 
 function activityIconFor(ev: CalendarEvent): LucideIcon {
   const k = (ev.activity || ev.diarySub || "").toLowerCase();
@@ -147,6 +191,8 @@ export interface MonthGridType1Props {
   ) => CalendarEvent;
   onMoveEvent?: (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => void;
   onDeleteEvent?: (id: string) => void;
+  /** Reorder a sequence of event ids within a day (writes sortIndex values). */
+  onReorderEvents?: (ids: string[]) => void;
   /** When the user clicks a week-number cell, zoom into that week. */
   onWeekClick?: (anchorDate: Date) => void;
   /** Externally-controlled selected day (mirrors mini-calendar). */
@@ -194,6 +240,7 @@ export function MonthGridType1({
   onUpsertEvent,
   onMoveEvent,
   onDeleteEvent,
+  onReorderEvents,
   onWeekClick,
   selectedDate,
   onSelectDate,
@@ -203,6 +250,9 @@ export function MonthGridType1({
   const dim = daysInMonth(year, month);
   const [monthTileDesign] = useMonthTileDesign();
   const [distanceUnit] = useDistanceUnit();
+  // Pending in-cell reorder awaiting user confirmation.
+  const [pendingReorder, setPendingReorder] = useState<{ dayKey: string; ids: string[] } | null>(null);
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const firstDow = dowMon0(new Date(year, month, 1));
   const totalCells = Math.ceil((firstDow + dim) / 7) * 7;
   const rows = totalCells / 7;
@@ -539,15 +589,33 @@ export function MonthGridType1({
               const legacyItems = parseItems(data[id]?.text);
               // Events whose start day is this calendar cell.
               const dayEvents = events.filter((e) => sameDay(fromISOLocal(e.startISO), d.date));
+              const sortedDayEvents = dayEvents
+                .slice()
+                .sort((a, b) => {
+                  const ka = a.sortIndex ?? Date.parse(a.startISO);
+                  const kb = b.sortIndex ?? Date.parse(b.startISO);
+                  return ka - kb;
+                });
+              // Apply pending reorder locally so the UI reflects the user's intent
+              // until they confirm or cancel.
+              if (pendingReorder && pendingReorder.dayKey === id) {
+                const map = new Map(sortedDayEvents.map((e) => [e.id, e]));
+                const ordered = pendingReorder.ids
+                  .map((eid) => map.get(eid))
+                  .filter((e): e is CalendarEvent => !!e);
+                // Append any events not in the pending list (shouldn't happen) at the end.
+                for (const e of sortedDayEvents) {
+                  if (!pendingReorder.ids.includes(e.id)) ordered.push(e);
+                }
+                sortedDayEvents.length = 0;
+                sortedDayEvents.push(...ordered);
+              }
 
               type UnifiedItem =
                 | { kind: "legacy"; idx: number; raw: string }
                 | { kind: "event"; event: CalendarEvent };
               const allItems: UnifiedItem[] = [
-                ...dayEvents
-                  .slice()
-                  .sort((a, b) => a.startISO.localeCompare(b.startISO))
-                  .map<UnifiedItem>((event) => ({ kind: "event", event })),
+                ...sortedDayEvents.map<UnifiedItem>((event) => ({ kind: "event", event })),
                 ...legacyItems.map<UnifiedItem>((it) => ({
                   kind: "legacy",
                   idx: it.idx,

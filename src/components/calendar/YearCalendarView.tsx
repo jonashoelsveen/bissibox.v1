@@ -108,6 +108,7 @@ function YearCalendarViewInner({
   const {
     events,
     upsertEvent,
+    reorderEvents,
     moveEvent,
     deleteEvent,
   } = useEventStore(calId);
@@ -281,6 +282,7 @@ function YearCalendarViewInner({
           }}
           onMoveEvent={moveEvent}
           onDeleteEvent={deleteEvent}
+          onReorderEvents={reorderEvents}
           currentDate={currentDate}
           currentRange={currentRange}
           onCurrentDateChange={(d, r) => updateCurrent(d, r)}
