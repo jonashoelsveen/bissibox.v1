@@ -947,7 +947,16 @@ export function UnifiedElasticGrid({
                         // Ignore double-clicks on a session tile
                         if (target.closest('[data-real-event="1"]')) return;
                         const k: CellKey = { year: colDate.getFullYear(), month: m.idx, day: 2, session: 0 };
-                        openPopover(k, e.currentTarget as HTMLElement);
+                        // Diary: existing sessions are edited via the hover menu (Details).
+                        // Double-clicking the column always starts a NEW manual session,
+                        // even if other (e.g. Strava) sessions already exist that day.
+                        setPopover({
+                          key: k,
+                          rect: (e.currentTarget as HTMLElement).getBoundingClientRect(),
+                          initialText: "",
+                          initialColor: null,
+                          isEdit: false,
+                        });
                       }}
                     />
                   );
