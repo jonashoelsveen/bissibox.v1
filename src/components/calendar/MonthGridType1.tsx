@@ -218,6 +218,9 @@ export function MonthGridType1({
   const dim = daysInMonth(year, month);
   const [monthTileDesign] = useMonthTileDesign();
   const [distanceUnit] = useDistanceUnit();
+  // Pending in-cell reorder awaiting user confirmation.
+  const [pendingReorder, setPendingReorder] = useState<{ dayKey: string; ids: string[] } | null>(null);
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const firstDow = dowMon0(new Date(year, month, 1));
   const totalCells = Math.ceil((firstDow + dim) / 7) * 7;
   const rows = totalCells / 7;
