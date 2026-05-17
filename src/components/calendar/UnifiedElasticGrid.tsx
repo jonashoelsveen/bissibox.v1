@@ -2312,8 +2312,8 @@ function WeekEventsOverlay({
 
 /**
  * DiarySimpleStack — stacks each day's sessions vertically in fixed-height
- * tiles, ignoring time of day. Mirrors WeekEventsOverlay positioning
- * (measures `[data-simple-col]` columns) but uses a simple flow layout.
+ * tiles, ignoring time of day. Supports drag-to-reorder within a column
+ * (vertical only) with a confirmation modal on release.
  */
 function DiarySimpleStack({
   scrollRef,
@@ -2322,6 +2322,7 @@ function DiarySimpleStack({
   onEventClick,
   onDeleteEvent,
   onUpsertSession,
+  onReorderEvents,
   memberId,
   viewerRole = "owner",
 }: {
@@ -2331,6 +2332,7 @@ function DiarySimpleStack({
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onDeleteEvent?: (id: string) => void;
   onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
+  onReorderEvents?: (ids: string[]) => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }) {
@@ -2376,144 +2378,66 @@ function DiarySimpleStack({
     };
   }, [scrollRef]);
 
+  // Group events by column, sorted by sortIndex (fallback startISO).
+  // Local order overrides while a reorder is pending.
+  const [pendingOrder, setPendingOrder] = useState<{ colIdx: number; ids: string[] } | null>(null);
+  const byCol = useMemo(() => {
+    const arr: CalendarEvent[][] = Array.from({ length: 7 }, () => []);
+    for (const ev of events) {
+      const start = fromISOLocal(ev.startISO);
+      const idx = weekDates.findIndex((d) => sameDay(d, start));
+      if (idx < 0) continue;
+      arr[idx].push(ev);
+    }
+    for (const list of arr) {
+      list.sort((a, b) => {
+        const ka = a.sortIndex ?? fromISOLocal(a.startISO).getTime();
+        const kb = b.sortIndex ?? fromISOLocal(b.startISO).getTime();
+        return ka - kb;
+      });
+    }
+    if (pendingOrder) {
+      const list = arr[pendingOrder.colIdx];
+      const map = new Map(list.map((e) => [e.id, e]));
+      arr[pendingOrder.colIdx] = pendingOrder.ids
+        .map((id) => map.get(id))
+        .filter((e): e is CalendarEvent => !!e);
+    }
+    return arr;
+  }, [events, weekDates, pendingOrder]);
+
   if (cols.length !== 7) return null;
-
-  const TILE_H = 56;
-  const TILE_GAP = 4;
-  const PAD = 6;
-
-  // Group events by day column, sorted by start time.
-  const byCol: CalendarEvent[][] = Array.from({ length: 7 }, () => []);
-  for (const ev of events) {
-    const start = fromISOLocal(ev.startISO);
-    const idx = weekDates.findIndex((d) => sameDay(d, start));
-    if (idx < 0) continue;
-    byCol[idx].push(ev);
-  }
-  for (const list of byCol) {
-    list.sort((a, b) => fromISOLocal(a.startISO).getTime() - fromISOLocal(b.startISO).getTime());
-  }
 
   return (
     <>
-      {byCol.map((list, colIdx) =>
-        list.map((ev, i) => {
-          const box = cols[colIdx];
-          const top = box.top + PAD + i * (TILE_H + TILE_GAP);
-          const accent = ev.color ?? "hsl(var(--primary))";
-          const bg = ev.color ? `color-mix(in srgb, ${ev.color} 18%, white)` : "hsl(var(--primary) / 0.15)";
-          const fg = "hsl(var(--ink, 220 13% 13%))";
-          const start = fromISOLocal(ev.startISO);
-          const end = fromISOLocal(ev.endISO);
-          const startMin = start.getHours() * 60 + start.getMinutes();
-          const endMin = end.getHours() * 60 + end.getMinutes();
-          const actKey = (ev.activity || ev.diarySub || "").toLowerCase();
-          const ActIcon =
-            actKey === "cycling" || actKey === "bike" ? Bike :
-            actKey === "swimming" || actKey === "swim" ? Waves :
-            actKey === "strength" ? Dumbbell :
-            actKey === "xcskiing" ? Snowflake :
-            Footprints;
-          const km = ev.distanceKm;
-          const distVal = km != null ? kmToUnit(km, unit) : null;
-          const isStrength = actKey === "strength";
-          const isNorwegian = typeof navigator !== "undefined" && /^nb|^nn|^no/i.test(navigator.language || "");
-          const hourSuffix = isNorwegian ? "t" : "h";
-          const totalMin = Math.max(0, endMin - startMin);
-          const durH = Math.floor(totalMin / 60);
-          const durM = totalMin % 60;
-          const strengthLabel = durH > 0 ? `${durH}${hourSuffix} ${durM}m` : `${durM}m`;
-          const distLabel = isStrength
-            ? strengthLabel
-            : distVal != null ? `${distVal.toFixed(1)} ${unitLabel(unit)}` : "—";
-          const iconHalfBg = ev.color ? `color-mix(in srgb, ${ev.color} 40%, white)` : "rgba(0,0,0,0.05)";
-          const durStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
-
-          return (
-            <div
-              key={ev.id}
-              data-real-event="1"
-              onMouseEnter={(e) => {
-                cancelClose();
-                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                setHoverId(ev.id);
-                setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
-              }}
-              onMouseLeave={(e) => {
-                const related = e.relatedTarget as Node | null;
-                const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
-                if (goingIntoMenu) return;
-                scheduleClose();
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onEventClick(ev, e.currentTarget as HTMLElement);
-              }}
-              className="absolute z-[8] cursor-pointer overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md"
-              style={{
-                left: box.left + 2,
-                width: box.width - 4,
-                top,
-                height: TILE_H,
-                background: bg,
-                color: fg,
-              }}
-              title={ev.title}
-            >
-              <span className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: accent }} />
-              {tileDesign === "icon" ? (
-                <div className="flex h-full w-full items-center justify-center pl-1">
-                  <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
-                </div>
-              ) : tileDesign === "stacked" ? (
-                <div className="-mx-2 -my-0.5 flex h-full items-stretch">
-                  <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
-                    <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
-                  </div>
-                  <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
-                    <span className="truncate text-[12px] font-semibold">{ev.title}</span>
-                    <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{durStr}</span>
-                    {!isStrength && (
-                      <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{distLabel}</span>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="-mx-2 -my-0.5 flex h-full items-stretch">
-                  <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
-                    <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
-                  </div>
-                  <div
-                    className="flex w-1/2 items-center justify-center text-ink"
-                    title={distLabel}
-                    style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18 }}
-                  >
-                    {isStrength ? (
-                      <span className="flex items-baseline gap-1" style={{ lineHeight: 1 }}>
-                        {durH > 0 && (
-                          <>
-                            <span>{durH}</span>
-                            <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{hourSuffix}</span>
-                          </>
-                        )}
-                        <span>{durM}</span>
-                        <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>m</span>
-                      </span>
-                    ) : distVal != null ? (
-                      <span className="flex items-baseline gap-1" style={{ lineHeight: 1 }}>
-                        <span>{distVal.toFixed(1)}</span>
-                        <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{unitLabel(unit)}</span>
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })
-      )}
+      {byCol.map((list, colIdx) => (
+        <SimpleColumn
+          key={colIdx}
+          colIdx={colIdx}
+          list={list}
+          box={cols[colIdx]}
+          tileDesign={tileDesign}
+          unit={unit}
+          onEventClick={onEventClick}
+          onHoverChange={(id, rect) => {
+            cancelClose();
+            setHoverId(id);
+            setHoverRect(rect);
+          }}
+          onHoverEnd={scheduleClose}
+          onReorder={(ids) => {
+            setPendingOrder({ colIdx, ids });
+          }}
+        />
+      ))}
+      <ReorderConfirmDialog
+        open={!!pendingOrder}
+        onCancel={() => setPendingOrder(null)}
+        onConfirm={() => {
+          if (pendingOrder) onReorderEvents?.(pendingOrder.ids);
+          setPendingOrder(null);
+        }}
+      />
       {hoverId && hoverRect && (() => {
         const ev = events.find((e) => e.id === hoverId);
         if (!ev) return null;
@@ -2552,4 +2476,253 @@ function DiarySimpleStack({
     </>
   );
 }
+
+const SIMPLE_TILE_H = 56;
+const SIMPLE_TILE_GAP = 4;
+const SIMPLE_PAD = 6;
+
+function SimpleColumn({
+  colIdx,
+  list,
+  box,
+  tileDesign,
+  unit,
+  onEventClick,
+  onHoverChange,
+  onHoverEnd,
+  onReorder,
+}: {
+  colIdx: number;
+  list: CalendarEvent[];
+  box: { left: number; top: number; width: number };
+  tileDesign: "split" | "stacked" | "icon";
+  unit: ReturnType<typeof useDistanceUnit>[0];
+  onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
+  onHoverChange: (id: string, rect: { left: number; top: number; width: number; height: number }) => void;
+  onHoverEnd: () => void;
+  onReorder: (ids: string[]) => void;
+}) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const ids = list.map((e) => e.id);
+
+  const handleDragEnd = (e: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIndex = ids.indexOf(String(active.id));
+    const newIndex = ids.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    const next = arrayMove(ids, oldIndex, newIndex);
+    onReorder(next);
+  };
+
+  const handleDragStart = (e: DragStartEvent) => {
+    setActiveId(String(e.active.id));
+  };
+
+  const activeEvent = activeId ? list.find((e) => e.id === activeId) ?? null : null;
+
+  return (
+    <div
+      data-simple-col-overlay={colIdx}
+      className="absolute z-[8]"
+      style={{
+        left: box.left + 2,
+        top: box.top + SIMPLE_PAD,
+        width: box.width - 4,
+      }}
+    >
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveId(null)}
+      >
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          <div className="flex flex-col" style={{ gap: SIMPLE_TILE_GAP }}>
+            {list.map((ev) => (
+              <SortableSimpleTile
+                key={ev.id}
+                ev={ev}
+                tileDesign={tileDesign}
+                unit={unit}
+                onEventClick={onEventClick}
+                onHoverChange={onHoverChange}
+                onHoverEnd={onHoverEnd}
+              />
+            ))}
+          </div>
+        </SortableContext>
+        <DragOverlay dropAnimation={{ duration: 160, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
+          {activeEvent ? (
+            <SimpleTileBody ev={activeEvent} tileDesign={tileDesign} unit={unit} dragging />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </div>
+  );
+}
+
+function SortableSimpleTile({
+  ev,
+  tileDesign,
+  unit,
+  onEventClick,
+  onHoverChange,
+  onHoverEnd,
+}: {
+  ev: CalendarEvent;
+  tileDesign: "split" | "stacked" | "icon";
+  unit: ReturnType<typeof useDistanceUnit>[0];
+  onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
+  onHoverChange: (id: string, rect: { left: number; top: number; width: number; height: number }) => void;
+  onHoverEnd: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: ev.id,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      data-real-event="1"
+      onMouseEnter={(e) => {
+        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        onHoverChange(ev.id, { left: r.left, top: r.top, width: r.width, height: r.height });
+      }}
+      onMouseLeave={(e) => {
+        const related = e.relatedTarget as Node | null;
+        const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
+        if (goingIntoMenu) return;
+        onHoverEnd();
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (isDragging) return;
+        onEventClick(ev, e.currentTarget as HTMLElement);
+      }}
+    >
+      <SimpleTileBody ev={ev} tileDesign={tileDesign} unit={unit} />
+    </div>
+  );
+}
+
+function SimpleTileBody({
+  ev,
+  tileDesign,
+  unit,
+  dragging = false,
+}: {
+  ev: CalendarEvent;
+  tileDesign: "split" | "stacked" | "icon";
+  unit: ReturnType<typeof useDistanceUnit>[0];
+  dragging?: boolean;
+}) {
+  const accent = ev.color ?? "hsl(var(--primary))";
+  const bg = ev.color ? `color-mix(in srgb, ${ev.color} 18%, white)` : "hsl(var(--primary) / 0.15)";
+  const fg = "hsl(var(--ink, 220 13% 13%))";
+  const start = fromISOLocal(ev.startISO);
+  const end = fromISOLocal(ev.endISO);
+  const startMin = start.getHours() * 60 + start.getMinutes();
+  const endMin = end.getHours() * 60 + end.getMinutes();
+  const actKey = (ev.activity || ev.diarySub || "").toLowerCase();
+  const ActIcon =
+    actKey === "cycling" || actKey === "bike" ? Bike :
+    actKey === "swimming" || actKey === "swim" ? Waves :
+    actKey === "strength" ? Dumbbell :
+    actKey === "xcskiing" ? Snowflake :
+    Footprints;
+  const km = ev.distanceKm;
+  const distVal = km != null ? kmToUnit(km, unit) : null;
+  const isStrength = actKey === "strength";
+  const isNorwegian = typeof navigator !== "undefined" && /^nb|^nn|^no/i.test(navigator.language || "");
+  const hourSuffix = isNorwegian ? "t" : "h";
+  const totalMin = Math.max(0, endMin - startMin);
+  const durH = Math.floor(totalMin / 60);
+  const durM = totalMin % 60;
+  const strengthLabel = durH > 0 ? `${durH}${hourSuffix} ${durM}m` : `${durM}m`;
+  const distLabel = isStrength
+    ? strengthLabel
+    : distVal != null ? `${distVal.toFixed(1)} ${unitLabel(unit)}` : "—";
+  const iconHalfBg = ev.color ? `color-mix(in srgb, ${ev.color} 40%, white)` : "rgba(0,0,0,0.05)";
+  const durStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
+
+  return (
+    <div
+      className={[
+        "relative cursor-grab overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md",
+        dragging ? "cursor-grabbing shadow-lg" : "",
+      ].join(" ")}
+      style={{
+        height: SIMPLE_TILE_H,
+        background: bg,
+        color: fg,
+      }}
+      title={ev.title}
+    >
+      <span className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: accent }} />
+      {tileDesign === "icon" ? (
+        <div className="flex h-full w-full items-center justify-center pl-1">
+          <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+        </div>
+      ) : tileDesign === "stacked" ? (
+        <div className="-mx-2 -my-0.5 flex h-full items-stretch">
+          <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
+            <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+          </div>
+          <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
+            <span className="truncate text-[12px] font-semibold">{ev.title}</span>
+            <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{durStr}</span>
+            {!isStrength && (
+              <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{distLabel}</span>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="-mx-2 -my-0.5 flex h-full items-stretch">
+          <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
+            <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+          </div>
+          <div
+            className="flex w-1/2 items-center justify-center text-ink"
+            title={distLabel}
+            style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18 }}
+          >
+            {isStrength ? (
+              <span className="flex items-baseline gap-1" style={{ lineHeight: 1 }}>
+                {durH > 0 && (
+                  <>
+                    <span>{durH}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{hourSuffix}</span>
+                  </>
+                )}
+                <span>{durM}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>m</span>
+              </span>
+            ) : distVal != null ? (
+              <span className="flex items-baseline gap-1" style={{ lineHeight: 1 }}>
+                <span>{distVal.toFixed(1)}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{unitLabel(unit)}</span>
+              </span>
+            ) : (
+              "—"
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
