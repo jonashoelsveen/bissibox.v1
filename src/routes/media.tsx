@@ -1900,8 +1900,6 @@ function MediaPage({
                       <InfoLine
                         label="Event"
                         value={eventTitle ?? null}
-                        to={it.event_id ? "/events/$eventId" : undefined}
-                        params={it.event_id ? { eventId: it.event_id } : undefined}
                       />
                       <InfoLine
                         label="Photograph"
