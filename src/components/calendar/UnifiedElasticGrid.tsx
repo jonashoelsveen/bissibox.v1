@@ -2427,16 +2427,26 @@ function DiarySimpleStack({
           }}
           onHoverEnd={scheduleClose}
           onReorder={(ids) => {
+            const hasStrava = list.some((e) => e.stravaActivityId != null);
+            if (hasStrava) {
+              setStravaBlocked(true);
+              return;
+            }
             setPendingOrder({ colIdx, ids });
           }}
         />
       ))}
       <ReorderConfirmDialog
-        open={!!pendingOrder}
-        onCancel={() => setPendingOrder(null)}
+        open={!!pendingOrder || stravaBlocked}
+        mode={stravaBlocked ? "stravaBlocked" : "confirm"}
+        onCancel={() => {
+          setPendingOrder(null);
+          setStravaBlocked(false);
+        }}
         onConfirm={() => {
           if (pendingOrder) onReorderEvents?.(pendingOrder.ids);
           setPendingOrder(null);
+          setStravaBlocked(false);
         }}
       />
       {hoverId && hoverRect && (() => {
