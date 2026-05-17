@@ -716,7 +716,10 @@ export function MonthGridType1({
                       return (
                         <DndContext
                           sensors={dndSensors}
-                          collisionDetection={closestCenter}
+                          collisionDetection={(args) => {
+                            const pw = pointerWithin(args);
+                            return pw.length > 0 ? pw : rectIntersection(args);
+                          }}
                           modifiers={[restrictToVerticalAxis, restrictToParentElement]}
                           onDragEnd={(ev: DragEndEvent) => {
                             const { active, over } = ev;
