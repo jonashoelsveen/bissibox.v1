@@ -45,21 +45,13 @@ function useNavItems(): NavItem[] {
     items.push({ key: "auth", to: "/auth", label: "Sign in", icon: LogIn });
     return items;
   }
-  if (mode === "team") {
-    items.push({ key: "members", to: "/team/members", label: "Members", icon: Users });
-  }
   if (isOrganizer && isGroupLeader) {
-    items.push({ key: "group-meetings", to: "/team/group-meetings", label: "Group meetings", icon: Briefcase });
     items.push({ key: "group-members", to: "/team/group-members", label: "Group members", icon: UsersRound });
   }
   items.push({ key: "library", to: "/media", label: "Library", icon: Library });
   items.push({ key: "calendar", to: "/calendar", label: "Calendar", icon: CalendarDays });
   if (isIndividual) {
     items.push({ key: "diary", to: "/diary", label: "Diary", icon: BookOpen });
-    items.push({ key: "search", to: "/", label: "Search", icon: Search });
-  }
-  if (isOrganizer) {
-    items.push({ key: "events", to: "/organizer/library", label: "My events", icon: Tent });
   }
   items.push({ key: "settings", to: "/settings", label: "Settings", icon: Settings });
   return items;
