@@ -1583,6 +1583,7 @@ function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
 function SessionTileDesignCard() {
   const [open, setOpen] = useState(true);
   const [design, setDesign] = useSessionTileDesign();
+  const [simple, setSimple] = useDiarySimpleView();
   return (
     <Card>
       <div className="flex w-full items-center gap-3">
