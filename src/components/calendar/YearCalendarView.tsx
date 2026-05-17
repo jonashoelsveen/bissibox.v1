@@ -108,6 +108,7 @@ function YearCalendarViewInner({
   const {
     events,
     upsertEvent,
+    reorderEvents,
     moveEvent,
     deleteEvent,
   } = useEventStore(calId);
