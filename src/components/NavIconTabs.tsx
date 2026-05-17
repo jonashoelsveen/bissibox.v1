@@ -1,18 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  Search,
   Library,
-  Tent,
   Settings,
   LogIn,
-  Users,
   UsersRound,
-  Armchair,
   CalendarDays,
-  
   BookOpen,
-  Briefcase,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
