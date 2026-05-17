@@ -291,18 +291,12 @@ export function UniversalTopBar({
 export function useActiveNavKey(): NavKey {
   const router = useRouterState();
   const path = router.location.pathname;
-  const search = router.location.search as Record<string, unknown> | undefined;
-  if (path.startsWith("/team/group-meetings")) return "group-meetings";
   if (path.startsWith("/team/group-members")) return "group-members";
-  if (path.startsWith("/team/members")) return "members";
-  if (path.startsWith("/media")) {
-    return "library";
-  }
+  if (path.startsWith("/media")) return "library";
   if (path.startsWith("/calendar")) return "calendar";
   if (path.startsWith("/diary")) return "diary";
-  if (path.startsWith("/organizer")) return "events";
   if (path.startsWith("/desk")) return "desk";
   if (path.startsWith("/settings")) return "settings";
   if (path.startsWith("/auth")) return "auth";
-  return "search";
+  return "library";
 }
