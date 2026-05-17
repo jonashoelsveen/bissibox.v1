@@ -206,6 +206,8 @@ export interface UnifiedElasticGridProps {
   ) => CalendarEvent;
   onMoveEvent: (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => void;
   onDeleteEvent: (id: string) => void;
+  /** Reorder a sequence of event ids by writing sortIndex values. */
+  onReorderEvents?: (ids: string[]) => void;
   /** Shared "what is the calendar showing?" anchor date. */
   currentDate: Date;
   /** Optional drag-selected range from the mini-calendar. */
