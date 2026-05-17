@@ -47,7 +47,8 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCenter,
+  pointerWithin,
+  rectIntersection,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
@@ -715,7 +716,10 @@ export function MonthGridType1({
                       return (
                         <DndContext
                           sensors={dndSensors}
-                          collisionDetection={closestCenter}
+                          collisionDetection={(args) => {
+                            const pw = pointerWithin(args);
+                            return pw.length > 0 ? pw : rectIntersection(args);
+                          }}
                           modifiers={[restrictToVerticalAxis, restrictToParentElement]}
                           onDragEnd={(ev: DragEndEvent) => {
                             const { active, over } = ev;
@@ -943,6 +947,7 @@ export function MonthGridType1({
                             <SortableMonthEventChip
                               key={`${id}-${itemKey}`}
                               id={it.event.id}
+                              disabled={sortableIds.length < 2}
                             >
                               {(s) => renderChip(s)}
                             </SortableMonthEventChip>
