@@ -795,14 +795,14 @@ export function MonthGridType1({
                             className={
                               tall
                                 ? [
-                                    "relative flex items-stretch overflow-hidden rounded-[3px] text-[11.5px] text-ink transition-all",
+                                    "relative flex items-stretch overflow-hidden rounded-[3px] text-[11.5px] text-ink",
+                                    sortable ? "transition-shadow hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]" : "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                                     itemColor ? "" : "bg-secondary/70",
-                                    "hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                                   ].join(" ")
                                 : [
-                                    "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink transition-all",
+                                    "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink",
+                                    sortable ? "transition-shadow hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]" : "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                                     itemColor ? "" : "bg-secondary/70",
-                                    "hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                                     itemColor ? "" : "hover:bg-secondary",
                                   ].join(" ")
                             }
