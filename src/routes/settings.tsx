@@ -1641,6 +1641,18 @@ function SessionTileDesignCard() {
               );
             })}
           </div>
+          <div className="mt-4 rounded-lg border border-hairline p-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-ink">Simple view</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs tabular-nums text-muted-foreground">{simple ? "On" : "Off"}</span>
+                <Switch checked={simple} onCheckedChange={setSimple} />
+              </div>
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Ignore time of day — stack each day's sessions vertically with fixed tile height.
+            </p>
+          </div>
         </>
       )}
     </Card>
