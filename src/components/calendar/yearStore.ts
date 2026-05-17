@@ -508,6 +508,7 @@ export function useEventStore(calId: string) {
   return {
     events,
     upsertEvent,
+    reorderEvents,
     moveEvent,
     deleteEvent,
     undoEvents,
