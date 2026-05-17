@@ -747,6 +747,7 @@ export function MonthGridType1({
                         } | null) => (
                           <motion.div
                             key={`${id}-${itemKey}`}
+                            ref={sortable?.setNodeRef}
                             layout
                             layoutId={it.kind === "event" ? `evt-${it.event.id}` : undefined}
                             initial={{ opacity: 0, y: -2 }}
@@ -759,7 +760,9 @@ export function MonthGridType1({
                             data-role="item"
                             data-real-event={it.kind === "event" && !it.event.id.startsWith("__ghost__:") ? "1" : undefined}
                             data-ghost-event={it.kind === "event" && it.event.id.startsWith("__ghost__:") ? "1" : undefined}
-                            draggable={!(it.kind === "event" && it.event.id.startsWith("__ghost__:"))}
+                            draggable={!sortable && !(it.kind === "event" && it.event.id.startsWith("__ghost__:"))}
+                            {...(sortable?.attributes ?? {})}
+                            {...(sortable?.listeners ?? {})}
                             onDragStart={(e) => {
                               const dev = e as unknown as DragEvent;
                               if (dev.dataTransfer) {
