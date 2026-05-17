@@ -428,11 +428,41 @@ export function useEventStore(calId: string) {
         ...patch,
         id,
       };
+      // New events get a sortIndex so they always render after existing ones
+      // in views that respect manual ordering (month + simple week).
+      if (!existing && merged.sortIndex == null) {
+        merged.sortIndex = Date.now();
+      }
       const next = existing
         ? current.map((e) => (e.id === id ? merged : e))
         : [...current, merged];
       persist(next);
       return merged;
+    },
+    [persist],
+  );
+
+  /**
+   * Reorder a set of events by writing monotonically increasing sortIndex
+   * values to them in the given order. Other events are left untouched.
+   * Used by drag-to-reorder in month + simple-week views.
+   */
+  const reorderEvents = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      const current = eventsRef.current;
+      const base = Date.now();
+      const indexById = new Map<string, number>();
+      ids.forEach((id, i) => indexById.set(id, base + i));
+      let changed = false;
+      const next = current.map((e) => {
+        const si = indexById.get(e.id);
+        if (si == null) return e;
+        if (e.sortIndex === si) return e;
+        changed = true;
+        return { ...e, sortIndex: si };
+      });
+      if (changed) persist(next);
     },
     [persist],
   );
