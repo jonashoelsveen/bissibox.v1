@@ -2572,6 +2572,7 @@ function SortableSimpleTile({
   ev,
   tileDesign,
   unit,
+  disabled,
   onEventClick,
   onHoverChange,
   onHoverEnd,
@@ -2579,12 +2580,14 @@ function SortableSimpleTile({
   ev: CalendarEvent;
   tileDesign: "split" | "stacked" | "icon";
   unit: ReturnType<typeof useDistanceUnit>[0];
+  disabled?: boolean;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onHoverChange: (id: string, rect: { left: number; top: number; width: number; height: number }) => void;
   onHoverEnd: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: ev.id,
+    disabled,
   });
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
