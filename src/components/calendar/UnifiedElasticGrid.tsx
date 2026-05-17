@@ -2381,6 +2381,7 @@ function DiarySimpleStack({
   // Group events by column, sorted by sortIndex (fallback startISO).
   // Local order overrides while a reorder is pending.
   const [pendingOrder, setPendingOrder] = useState<{ colIdx: number; ids: string[] } | null>(null);
+  const [stravaBlocked, setStravaBlocked] = useState(false);
   const byCol = useMemo(() => {
     const arr: CalendarEvent[][] = Array.from({ length: 7 }, () => []);
     for (const ev of events) {
