@@ -938,6 +938,17 @@ export function MonthGridType1({
                             )}
                           </motion.div>
                         );
+                        if (isSortableEvent && it.kind === "event") {
+                          return (
+                            <SortableMonthEventChip
+                              key={`${id}-${itemKey}`}
+                              id={it.event.id}
+                            >
+                              {(s) => renderChip(s)}
+                            </SortableMonthEventChip>
+                          );
+                        }
+                        return renderChip(null);
                       })}
                     </AnimatePresence>
                     {overflow > 0 && (
