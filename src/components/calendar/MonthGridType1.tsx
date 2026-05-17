@@ -1203,7 +1203,7 @@ function fmtMin(m: number): string {
  * down/up to another; the marked range becomes the session's time. Press
  * Enter (or click "Lagre tid") to commit.
  */
-function MiniDurationColumn({
+export function MiniDurationColumn({
   startHour,
   rows,
   rowHeight,
