@@ -542,11 +542,9 @@ function TeamPage() {
             </div>
           ) : (
             events.map((e) => (
-              <Link
+              <div
                 key={e.id}
-                to="/events/$eventId"
-                params={{ eventId: e.id }}
-                className="flex items-center justify-between rounded-xl border border-hairline bg-card px-5 py-4 hover:bg-secondary"
+                className="flex items-center justify-between rounded-xl border border-hairline bg-card px-5 py-4"
               >
                 <div>
                   <div className="text-sm font-medium text-ink">{e.title}</div>
@@ -555,7 +553,7 @@ function TeamPage() {
                     {e.location && ` · ${e.location}`}
                   </div>
                 </div>
-              </Link>
+              </div>
             ))
           )}
         </div>
