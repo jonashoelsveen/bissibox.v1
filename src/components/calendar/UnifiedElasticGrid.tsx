@@ -2129,7 +2129,7 @@ function WeekEventsOverlay({
               e.stopPropagation();
               onEventClick(ev, e.currentTarget as HTMLElement);
             }}
-            className={`absolute z-[8] ${isGhost || appKind === "diary" ? "cursor-pointer" : "cursor-grab"} overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
+            className={`absolute z-[8] cursor-pointer overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
             style={{
               left: box.left + 2 + dragDx,
               width: box.width - 4,
