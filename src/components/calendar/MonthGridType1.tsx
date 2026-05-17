@@ -941,6 +941,10 @@ export function MonthGridType1({
                         +{overflow} mer
                       </button>
                     )}
+                          </SortableContext>
+                        </DndContext>
+                      );
+                    })()}
                   </div>
 
                   {/* Hover "+" affordance — visible only when cell is empty + in month */}
