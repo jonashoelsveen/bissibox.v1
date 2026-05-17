@@ -2497,7 +2497,7 @@ function DiarySimpleStack({
           <SessionHoverMenu
             ev={ev}
             blockRect={hoverRect}
-            rowHeight={TILE_H}
+            rowHeight={28}
             visible={hoverId === ev.id}
             memberId={memberId}
             viewerRole={viewerRole}
