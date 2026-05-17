@@ -107,6 +107,7 @@ export function DiaryPopoverEditor({
   );
   const [time, setTime] = useState<{ startMin: number; endMin: number } | null>(initialTime);
   const [showDetails, setShowDetails] = useState(false);
+  const [showDuration, setShowDuration] = useState(false);
 
   const [distanceKm, setDistanceKm] = useState<number | undefined>(initialEvent?.distanceKm);
   const [paceSecPerKm, setPaceSecPerKm] = useState<number | undefined>(initialEvent?.paceSecPerKm);
