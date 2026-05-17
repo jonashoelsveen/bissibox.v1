@@ -750,9 +750,9 @@ export function MonthGridType1({
                             ref={sortable?.setNodeRef}
                             layout={sortable ? false : true}
                             layoutId={!sortable && it.kind === "event" ? `evt-${it.event.id}` : undefined}
-                            initial={{ opacity: 0, y: -2 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -2 }}
+                            initial={sortable ? false : { opacity: 0, y: -2 }}
+                            animate={sortable ? undefined : { opacity: 1, y: 0 }}
+                            exit={sortable ? undefined : { opacity: 0, y: -2 }}
                             transition={{
                               duration: 0.14,
                               ease: [0.2, 0, 0, 1],
