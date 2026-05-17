@@ -26,3 +26,13 @@ const KEY = "diary:session-tile-design:global";
 export function useSessionTileDesign(): [SessionTileDesign, (v: SessionTileDesign) => void] {
   return useLibrarySetting<SessionTileDesign>(KEY, "split");
 }
+
+/**
+ * Simple view: when on, the Diary week view ignores time-of-day and stacks
+ * each day's sessions vertically with fixed tile heights.
+ */
+const SIMPLE_KEY = "diary:simple-view:global";
+
+export function useDiarySimpleView(): [boolean, (v: boolean) => void] {
+  return useLibrarySetting<boolean>(SIMPLE_KEY, false);
+}
