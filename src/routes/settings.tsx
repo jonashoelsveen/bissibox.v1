@@ -17,7 +17,8 @@ import {
 } from "@/lib/library-settings";
 import { MapSettingsPanel } from "@/components/settings/MapSettingsPanel";
 import { Footprints, Check, Bike } from "lucide-react";
-import { SESSION_TILE_DESIGNS, useSessionTileDesign, type SessionTileDesign } from "@/lib/session-tile-design";
+import { SESSION_TILE_DESIGNS, useSessionTileDesign, useDiarySimpleView, type SessionTileDesign } from "@/lib/session-tile-design";
+import { Switch } from "@/components/ui/switch";
 import { MONTH_TILE_DESIGNS, useMonthTileDesign, type MonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, type DistanceUnit } from "@/lib/units";
 import stravaLogo from "@/assets/strava-logo.png";
@@ -1582,6 +1583,7 @@ function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
 function SessionTileDesignCard() {
   const [open, setOpen] = useState(true);
   const [design, setDesign] = useSessionTileDesign();
+  const [simple, setSimple] = useDiarySimpleView();
   return (
     <Card>
       <div className="flex w-full items-center gap-3">
@@ -1638,6 +1640,18 @@ function SessionTileDesignCard() {
                 </button>
               );
             })}
+          </div>
+          <div className="mt-4 rounded-lg border border-hairline p-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-ink">Simple view</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs tabular-nums text-muted-foreground">{simple ? "On" : "Off"}</span>
+                <Switch checked={simple} onCheckedChange={setSimple} />
+              </div>
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Ignore time of day — stack each day's sessions vertically with fixed tile height.
+            </p>
           </div>
         </>
       )}
