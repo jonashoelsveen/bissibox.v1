@@ -748,11 +748,11 @@ export function MonthGridType1({
                           <motion.div
                             key={`${id}-${itemKey}`}
                             ref={sortable?.setNodeRef}
-                            layout
-                            layoutId={it.kind === "event" ? `evt-${it.event.id}` : undefined}
-                            initial={{ opacity: 0, y: -2 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -2 }}
+                            layout={sortable ? false : true}
+                            layoutId={!sortable && it.kind === "event" ? `evt-${it.event.id}` : undefined}
+                            initial={sortable ? false : { opacity: 0, y: -2 }}
+                            animate={sortable ? undefined : { opacity: 1, y: 0 }}
+                            exit={sortable ? undefined : { opacity: 0, y: -2 }}
                             transition={{
                               duration: 0.14,
                               ease: [0.2, 0, 0, 1],
