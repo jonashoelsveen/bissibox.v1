@@ -13,7 +13,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pencil, Clock, Trash2 } from "lucide-react";
 import type { CalendarEvent } from "./yearStore";
-import { CAT_TRAINING_COLOR } from "./MonthGridType1";
+import { CAT_TRAINING_COLOR, MiniDurationColumn } from "./MonthGridType1";
 import { colorForActivity } from "@/lib/activity-colors";
 import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
 
