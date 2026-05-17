@@ -989,6 +989,15 @@ export function MonthGridType1({
           </div>
         </LayoutGroup>
 
+        <ReorderConfirmDialog
+          open={!!pendingReorder}
+          onCancel={() => setPendingReorder(null)}
+          onConfirm={() => {
+            if (pendingReorder) onReorderEvents?.(pendingReorder.ids);
+            setPendingReorder(null);
+          }}
+        />
+
         {/* Inline popover (per-item create or edit) */}
         {popover && (
           <PopoverEditor
