@@ -38,7 +38,7 @@ import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
 import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoWeekNumber } from "./dateUtils";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import { useSessionTileDesign } from "@/lib/session-tile-design";
+import { useSessionTileDesign, useDiarySimpleView } from "@/lib/session-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
 
 export type ViewMode = "day" | "week" | "month";
