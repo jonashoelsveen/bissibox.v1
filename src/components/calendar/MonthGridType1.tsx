@@ -947,6 +947,7 @@ export function MonthGridType1({
                             <SortableMonthEventChip
                               key={`${id}-${itemKey}`}
                               id={it.event.id}
+                              disabled={sortableIds.length < 2}
                             >
                               {(s) => renderChip(s)}
                             </SortableMonthEventChip>
