@@ -282,6 +282,7 @@ function YearCalendarViewInner({
           }}
           onMoveEvent={moveEvent}
           onDeleteEvent={deleteEvent}
+          onReorderEvents={reorderEvents}
           currentDate={currentDate}
           currentRange={currentRange}
           onCurrentDateChange={(d, r) => updateCurrent(d, r)}
