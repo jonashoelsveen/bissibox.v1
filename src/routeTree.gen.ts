@@ -10,38 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as SearchRouteImport } from './routes/search'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MediaRouteImport } from './routes/media'
-import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as DiaryRouteImport } from './routes/diary'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AcceptLeaderInviteRouteImport } from './routes/accept-leader-invite'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUserIdRouteImport } from './routes/u.$userId'
-import { Route as TeamMembersRouteImport } from './routes/team.members'
 import { Route as TeamGroupMembersRouteImport } from './routes/team.group-members'
-import { Route as TeamGroupMeetingsRouteImport } from './routes/team.group-meetings'
 import { Route as TeamBoardRouteImport } from './routes/team.board'
 import { Route as TTeamIdRouteImport } from './routes/t.$teamId'
-import { Route as OrganizerNewRouteImport } from './routes/organizer.new'
-import { Route as OrganizerLibraryRouteImport } from './routes/organizer.library'
 import { Route as NotesNoteIdRouteImport } from './routes/notes.$noteId'
-import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
 import { Route as CCompanyIdRouteImport } from './routes/c.$companyId'
-import { Route as OrganizerEventIdParticipantsRouteImport } from './routes/organizer.$eventId.participants'
-import { Route as OrganizerEventIdEditRouteImport } from './routes/organizer.$eventId.edit'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SearchRoute = SearchRouteImport.update({
-  id: '/search',
-  path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -52,11 +38,6 @@ const ProfileRoute = ProfileRouteImport.update({
 const MediaRoute = MediaRouteImport.update({
   id: '/media',
   path: '/media',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DiscoverRoute = DiscoverRouteImport.update({
-  id: '/discover',
-  path: '/discover',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiaryRoute = DiaryRouteImport.update({
@@ -89,19 +70,9 @@ const UUserIdRoute = UUserIdRouteImport.update({
   path: '/u/$userId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TeamMembersRoute = TeamMembersRouteImport.update({
-  id: '/team/members',
-  path: '/team/members',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TeamGroupMembersRoute = TeamGroupMembersRouteImport.update({
   id: '/team/group-members',
   path: '/team/group-members',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TeamGroupMeetingsRoute = TeamGroupMeetingsRouteImport.update({
-  id: '/team/group-meetings',
-  path: '/team/group-meetings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TeamBoardRoute = TeamBoardRouteImport.update({
@@ -114,40 +85,14 @@ const TTeamIdRoute = TTeamIdRouteImport.update({
   path: '/t/$teamId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OrganizerNewRoute = OrganizerNewRouteImport.update({
-  id: '/organizer/new',
-  path: '/organizer/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OrganizerLibraryRoute = OrganizerLibraryRouteImport.update({
-  id: '/organizer/library',
-  path: '/organizer/library',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const NotesNoteIdRoute = NotesNoteIdRouteImport.update({
   id: '/notes/$noteId',
   path: '/notes/$noteId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EventsEventIdRoute = EventsEventIdRouteImport.update({
-  id: '/events/$eventId',
-  path: '/events/$eventId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CCompanyIdRoute = CCompanyIdRouteImport.update({
   id: '/c/$companyId',
   path: '/c/$companyId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OrganizerEventIdParticipantsRoute =
-  OrganizerEventIdParticipantsRouteImport.update({
-    id: '/organizer/$eventId/participants',
-    path: '/organizer/$eventId/participants',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const OrganizerEventIdEditRoute = OrganizerEventIdEditRouteImport.update({
-  id: '/organizer/$eventId/edit',
-  path: '/organizer/$eventId/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LovableEmailQueueProcessRoute =
@@ -163,24 +108,15 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/diary': typeof DiaryRoute
-  '/discover': typeof DiscoverRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
-  '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
-  '/events/$eventId': typeof EventsEventIdRoute
   '/notes/$noteId': typeof NotesNoteIdRoute
-  '/organizer/library': typeof OrganizerLibraryRoute
-  '/organizer/new': typeof OrganizerNewRoute
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
-  '/team/group-meetings': typeof TeamGroupMeetingsRoute
   '/team/group-members': typeof TeamGroupMembersRoute
-  '/team/members': typeof TeamMembersRoute
   '/u/$userId': typeof UUserIdRoute
-  '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
-  '/organizer/$eventId/participants': typeof OrganizerEventIdParticipantsRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
@@ -189,24 +125,15 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/diary': typeof DiaryRoute
-  '/discover': typeof DiscoverRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
-  '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
-  '/events/$eventId': typeof EventsEventIdRoute
   '/notes/$noteId': typeof NotesNoteIdRoute
-  '/organizer/library': typeof OrganizerLibraryRoute
-  '/organizer/new': typeof OrganizerNewRoute
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
-  '/team/group-meetings': typeof TeamGroupMeetingsRoute
   '/team/group-members': typeof TeamGroupMembersRoute
-  '/team/members': typeof TeamMembersRoute
   '/u/$userId': typeof UUserIdRoute
-  '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
-  '/organizer/$eventId/participants': typeof OrganizerEventIdParticipantsRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
@@ -216,24 +143,15 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/diary': typeof DiaryRoute
-  '/discover': typeof DiscoverRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
-  '/search': typeof SearchRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
-  '/events/$eventId': typeof EventsEventIdRoute
   '/notes/$noteId': typeof NotesNoteIdRoute
-  '/organizer/library': typeof OrganizerLibraryRoute
-  '/organizer/new': typeof OrganizerNewRoute
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
-  '/team/group-meetings': typeof TeamGroupMeetingsRoute
   '/team/group-members': typeof TeamGroupMembersRoute
-  '/team/members': typeof TeamMembersRoute
   '/u/$userId': typeof UUserIdRoute
-  '/organizer/$eventId/edit': typeof OrganizerEventIdEditRoute
-  '/organizer/$eventId/participants': typeof OrganizerEventIdParticipantsRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
@@ -244,24 +162,15 @@ export interface FileRouteTypes {
     | '/auth'
     | '/calendar'
     | '/diary'
-    | '/discover'
     | '/media'
     | '/profile'
-    | '/search'
     | '/settings'
     | '/c/$companyId'
-    | '/events/$eventId'
     | '/notes/$noteId'
-    | '/organizer/library'
-    | '/organizer/new'
     | '/t/$teamId'
     | '/team/board'
-    | '/team/group-meetings'
     | '/team/group-members'
-    | '/team/members'
     | '/u/$userId'
-    | '/organizer/$eventId/edit'
-    | '/organizer/$eventId/participants'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -270,24 +179,15 @@ export interface FileRouteTypes {
     | '/auth'
     | '/calendar'
     | '/diary'
-    | '/discover'
     | '/media'
     | '/profile'
-    | '/search'
     | '/settings'
     | '/c/$companyId'
-    | '/events/$eventId'
     | '/notes/$noteId'
-    | '/organizer/library'
-    | '/organizer/new'
     | '/t/$teamId'
     | '/team/board'
-    | '/team/group-meetings'
     | '/team/group-members'
-    | '/team/members'
     | '/u/$userId'
-    | '/organizer/$eventId/edit'
-    | '/organizer/$eventId/participants'
     | '/lovable/email/queue/process'
   id:
     | '__root__'
@@ -296,24 +196,15 @@ export interface FileRouteTypes {
     | '/auth'
     | '/calendar'
     | '/diary'
-    | '/discover'
     | '/media'
     | '/profile'
-    | '/search'
     | '/settings'
     | '/c/$companyId'
-    | '/events/$eventId'
     | '/notes/$noteId'
-    | '/organizer/library'
-    | '/organizer/new'
     | '/t/$teamId'
     | '/team/board'
-    | '/team/group-meetings'
     | '/team/group-members'
-    | '/team/members'
     | '/u/$userId'
-    | '/organizer/$eventId/edit'
-    | '/organizer/$eventId/participants'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
@@ -323,24 +214,15 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CalendarRoute: typeof CalendarRoute
   DiaryRoute: typeof DiaryRoute
-  DiscoverRoute: typeof DiscoverRoute
   MediaRoute: typeof MediaRoute
   ProfileRoute: typeof ProfileRoute
-  SearchRoute: typeof SearchRoute
   SettingsRoute: typeof SettingsRoute
   CCompanyIdRoute: typeof CCompanyIdRoute
-  EventsEventIdRoute: typeof EventsEventIdRoute
   NotesNoteIdRoute: typeof NotesNoteIdRoute
-  OrganizerLibraryRoute: typeof OrganizerLibraryRoute
-  OrganizerNewRoute: typeof OrganizerNewRoute
   TTeamIdRoute: typeof TTeamIdRoute
   TeamBoardRoute: typeof TeamBoardRoute
-  TeamGroupMeetingsRoute: typeof TeamGroupMeetingsRoute
   TeamGroupMembersRoute: typeof TeamGroupMembersRoute
-  TeamMembersRoute: typeof TeamMembersRoute
   UUserIdRoute: typeof UUserIdRoute
-  OrganizerEventIdEditRoute: typeof OrganizerEventIdEditRoute
-  OrganizerEventIdParticipantsRoute: typeof OrganizerEventIdParticipantsRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
@@ -351,13 +233,6 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/search': {
-      id: '/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -372,13 +247,6 @@ declare module '@tanstack/react-router' {
       path: '/media'
       fullPath: '/media'
       preLoaderRoute: typeof MediaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/discover': {
-      id: '/discover'
-      path: '/discover'
-      fullPath: '/discover'
-      preLoaderRoute: typeof DiscoverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/diary': {
@@ -423,25 +291,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UUserIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/team/members': {
-      id: '/team/members'
-      path: '/team/members'
-      fullPath: '/team/members'
-      preLoaderRoute: typeof TeamMembersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/team/group-members': {
       id: '/team/group-members'
       path: '/team/group-members'
       fullPath: '/team/group-members'
       preLoaderRoute: typeof TeamGroupMembersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/team/group-meetings': {
-      id: '/team/group-meetings'
-      path: '/team/group-meetings'
-      fullPath: '/team/group-meetings'
-      preLoaderRoute: typeof TeamGroupMeetingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/team/board': {
@@ -458,20 +312,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TTeamIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/organizer/new': {
-      id: '/organizer/new'
-      path: '/organizer/new'
-      fullPath: '/organizer/new'
-      preLoaderRoute: typeof OrganizerNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/organizer/library': {
-      id: '/organizer/library'
-      path: '/organizer/library'
-      fullPath: '/organizer/library'
-      preLoaderRoute: typeof OrganizerLibraryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/notes/$noteId': {
       id: '/notes/$noteId'
       path: '/notes/$noteId'
@@ -479,32 +319,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NotesNoteIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/events/$eventId': {
-      id: '/events/$eventId'
-      path: '/events/$eventId'
-      fullPath: '/events/$eventId'
-      preLoaderRoute: typeof EventsEventIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/c/$companyId': {
       id: '/c/$companyId'
       path: '/c/$companyId'
       fullPath: '/c/$companyId'
       preLoaderRoute: typeof CCompanyIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/organizer/$eventId/participants': {
-      id: '/organizer/$eventId/participants'
-      path: '/organizer/$eventId/participants'
-      fullPath: '/organizer/$eventId/participants'
-      preLoaderRoute: typeof OrganizerEventIdParticipantsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/organizer/$eventId/edit': {
-      id: '/organizer/$eventId/edit'
-      path: '/organizer/$eventId/edit'
-      fullPath: '/organizer/$eventId/edit'
-      preLoaderRoute: typeof OrganizerEventIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lovable/email/queue/process': {
@@ -523,35 +342,17 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CalendarRoute: CalendarRoute,
   DiaryRoute: DiaryRoute,
-  DiscoverRoute: DiscoverRoute,
   MediaRoute: MediaRoute,
   ProfileRoute: ProfileRoute,
-  SearchRoute: SearchRoute,
   SettingsRoute: SettingsRoute,
   CCompanyIdRoute: CCompanyIdRoute,
-  EventsEventIdRoute: EventsEventIdRoute,
   NotesNoteIdRoute: NotesNoteIdRoute,
-  OrganizerLibraryRoute: OrganizerLibraryRoute,
-  OrganizerNewRoute: OrganizerNewRoute,
   TTeamIdRoute: TTeamIdRoute,
   TeamBoardRoute: TeamBoardRoute,
-  TeamGroupMeetingsRoute: TeamGroupMeetingsRoute,
   TeamGroupMembersRoute: TeamGroupMembersRoute,
-  TeamMembersRoute: TeamMembersRoute,
   UUserIdRoute: UUserIdRoute,
-  OrganizerEventIdEditRoute: OrganizerEventIdEditRoute,
-  OrganizerEventIdParticipantsRoute: OrganizerEventIdParticipantsRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

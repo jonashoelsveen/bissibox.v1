@@ -1,18 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  Search,
   Library,
-  Tent,
   Settings,
   LogIn,
-  Users,
   UsersRound,
-  Armchair,
   CalendarDays,
-  
   BookOpen,
-  Briefcase,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
@@ -22,11 +16,7 @@ type NavKey =
   | "library"
   | "calendar"
   | "diary"
-  | "search"
   | "map"
-  | "events"
-  | "members"
-  | "group-meetings"
   | "group-members"
   | "desk"
   | "settings"
@@ -51,21 +41,13 @@ function useNavItems(): NavItem[] {
     items.push({ key: "auth", to: "/auth", label: "Sign in", icon: LogIn });
     return items;
   }
-  if (mode === "team") {
-    items.push({ key: "members", to: "/team/members", label: "Members", icon: Users });
-  }
   if (isOrganizer && isGroupLeader) {
-    items.push({ key: "group-meetings", to: "/team/group-meetings", label: "Group meetings", icon: Briefcase });
     items.push({ key: "group-members", to: "/team/group-members", label: "Group members", icon: UsersRound });
   }
   items.push({ key: "library", to: "/media", label: "Library", icon: Library });
   items.push({ key: "calendar", to: "/calendar", label: "Calendar", icon: CalendarDays });
   if (isIndividual) {
     items.push({ key: "diary", to: "/diary", label: "Diary", icon: BookOpen });
-    items.push({ key: "search", to: "/", label: "Search", icon: Search });
-  }
-  if (isOrganizer) {
-    items.push({ key: "events", to: "/organizer/library", label: "My events", icon: Tent });
   }
   items.push({ key: "settings", to: "/settings", label: "Settings", icon: Settings });
   return items;
@@ -309,18 +291,12 @@ export function UniversalTopBar({
 export function useActiveNavKey(): NavKey {
   const router = useRouterState();
   const path = router.location.pathname;
-  const search = router.location.search as Record<string, unknown> | undefined;
-  if (path.startsWith("/team/group-meetings")) return "group-meetings";
   if (path.startsWith("/team/group-members")) return "group-members";
-  if (path.startsWith("/team/members")) return "members";
-  if (path.startsWith("/media")) {
-    return "library";
-  }
+  if (path.startsWith("/media")) return "library";
   if (path.startsWith("/calendar")) return "calendar";
   if (path.startsWith("/diary")) return "diary";
-  if (path.startsWith("/organizer")) return "events";
   if (path.startsWith("/desk")) return "desk";
   if (path.startsWith("/settings")) return "settings";
   if (path.startsWith("/auth")) return "auth";
-  return "search";
+  return "library";
 }

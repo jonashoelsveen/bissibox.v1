@@ -1900,8 +1900,6 @@ function MediaPage({
                       <InfoLine
                         label="Event"
                         value={eventTitle ?? null}
-                        to={it.event_id ? "/events/$eventId" : undefined}
-                        params={it.event_id ? { eventId: it.event_id } : undefined}
                       />
                       <InfoLine
                         label="Photograph"
@@ -2114,8 +2112,8 @@ function InfoLine({
 }: {
   label: string;
   value: string | null | undefined;
-  to?: "/events/$eventId" | "/u/$userId";
-  params?: { eventId: string } | { userId: string };
+  to?: "/u/$userId";
+  params?: { userId: string };
 }) {
   const text = value && value.trim() ? value : "—";
   const linkable = !!to && !!params && text !== "—";
