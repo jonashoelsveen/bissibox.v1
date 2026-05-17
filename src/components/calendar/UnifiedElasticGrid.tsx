@@ -2661,8 +2661,8 @@ function SimpleTileBody({
   return (
     <div
       className={[
-        "relative cursor-grab overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md",
-        dragging ? "cursor-grabbing shadow-lg" : "",
+        "relative overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md",
+        dragging ? "shadow-lg" : "",
       ].join(" ")}
       style={{
         height: SIMPLE_TILE_H,
