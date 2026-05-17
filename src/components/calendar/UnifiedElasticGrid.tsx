@@ -40,6 +40,25 @@ import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoW
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSessionTileDesign, useDiarySimpleView } from "@/lib/session-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+  type DragStartEvent,
+  DragOverlay,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
+import { CSS } from "@dnd-kit/utilities";
+import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
 
 export type ViewMode = "day" | "week" | "month";
 
