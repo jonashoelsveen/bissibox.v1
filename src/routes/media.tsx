@@ -2112,8 +2112,8 @@ function InfoLine({
 }: {
   label: string;
   value: string | null | undefined;
-  to?: "/events/$eventId" | "/u/$userId";
-  params?: { eventId: string } | { userId: string };
+  to?: "/u/$userId";
+  params?: { userId: string };
 }) {
   const text = value && value.trim() ? value : "—";
   const linkable = !!to && !!params && text !== "—";
