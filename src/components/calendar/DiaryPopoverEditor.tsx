@@ -342,6 +342,28 @@ export function DiaryPopoverEditor({
             </button>
           </div>
         </div>
+
+        {/* Mini duration column — appears next to the editor when toggled. */}
+        {showDuration && diaryType !== "note" && (
+          <div
+            className="absolute left-full top-0"
+            style={{ width: 220, height: 360, marginLeft: 8 }}
+          >
+            <MiniDurationColumn
+              startHour={6}
+              rows={36}
+              rowHeight={36}
+              initial={time}
+              color={accent}
+              onCommit={(t) => {
+                setTime(t);
+                setShowDuration(false);
+              }}
+              onClose={() => setShowDuration(false)}
+            />
+          </div>
+        )}
+        </div>
       </div>
 
       {showDetails && (
