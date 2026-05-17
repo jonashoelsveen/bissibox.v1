@@ -1,40 +1,82 @@
-## Done so far
-1. Added `useDiarySimpleView()` hook in `src/lib/session-tile-design.ts` (localStorage-backed, default off).
-2. Added a **Simple view** switch in Settings → Diary → "Session tile design Week", below the three tile-design cards. Shows "On"/"Off" beside the toggle and an explanation underneath.
+## Goal
 
-## Still to build — Simple view week grid
+In the **diary month view** and the **diary week "simple view"**:
+1. Newly created sessions always render **last** in their day, regardless of time-of-day.
+2. Users can **drag a session vertically inside its day** to reorder. Animation is vertical-only, smooth, mirroring the library-sidebar folder drag.
+3. On release, a **centered confirmation modal** asks the user to confirm or cancel the new order.
 
-The current week view in `UnifiedElasticGrid.tsx` renders an hourly grid (06:00–24:30, 38 rows × 7 day-columns) with absolutely-positioned session tiles laid out by time of day. Simple view needs a structurally different body.
+Normal week view (hourly grid) is unchanged — sessions there are still positioned by time of day.
 
-### Approach
-Add an `isSimple` branch inside the existing week-view JSX (rather than a separate top-level component) so all popover/edit/delete/upsert state is reused.
+---
 
-When `appKind === "diary" && viewMode === "week" && simpleView === true`:
+## Data model
 
-- **Header row**: unchanged (same week-number gutter + 7 day headers, same `DayNoteButton`, same "today" highlight).
-- **Body**:
-  - Replace the 19 × (left-hour-label + 7 columns) row grid with a single body row.
-  - Left week-number gutter cell renders empty (no time labels), same vertical column border as today.
-  - Each of the 7 day columns becomes one tall flex container (vertical stack) with internal padding. No horizontal divider lines, only the vertical column borders that already exist.
-  - On hover, the entire column body gets the same gray tone used today when marking cells (no plus icon).
-  - On double-click anywhere in a column body (outside a tile), call `openPopover` with a synthetic `CellKey` for that day and a default time slot (e.g. 09:00–10:00). The existing popover handles new-session creation.
-- **Session tiles**:
-  - Replace `WeekEventsOverlay` with an inline stack: for each day, render its events sorted by start time as fixed-height tiles (same height as the tile previews in settings) with small vertical gaps.
-  - Reuse the existing tile-content renderer (split / stacked / icon) — extract the per-tile JSX from `WeekEventsOverlay` into a small `DiarySessionTileBody` helper so both code paths share rendering.
-  - Hover a tile → same `SessionHoverMenu` as today.
-  - Click a tile → opens edit popover (same path as `onEventClick`).
-  - Drag-to-reorder/reschedule is **out of scope** for v1 of simple view — tiles are static stacks, no time-based dragging.
+Add an optional `sortIndex?: number` to `CalendarEvent` in `src/components/calendar/yearStore.ts`.
 
-### Files to touch
-- `src/components/calendar/UnifiedElasticGrid.tsx`
-  - Read `useDiarySimpleView()` once.
-  - Branch the week-view body (lines ~903–969) on `isSimple`.
-  - Skip `<WeekEventsOverlay/>` when simple is on; render a new inline `<DiarySimpleWeekBody/>` instead.
-  - Extract `DiarySessionTileBody` from existing overlay tile rendering.
+- `useEventStore.upsertEvent`: when creating a brand-new event (no existing match) and the caller did not supply `sortIndex`, set it to `Date.now()`. This guarantees freshly added sessions sort after older ones.
+- New helper `reorderEvents(ids: string[])` on the store: takes an ordered list of event IDs for one column and writes monotonically increasing `sortIndex` values to each, then `persist()`s. Used after drag confirm.
 
-### Out of scope
-- Day view, month view, calendar (non-diary) seat — unchanged.
-- Strava ghost imports in simple view render the same as normal events.
-- No animation between normal ↔ simple toggle.
+Sort rule used by month + simple views:
+```
+key(ev) = ev.sortIndex ?? Date.parse(ev.startISO)
+```
+sorted ascending. Older sessions keep their time-based order; new ones land at the bottom.
+
+---
+
+## Drag-and-drop (shared)
+
+Reuse the same `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/modifiers` setup as `src/components/library/LibrarySideNav.tsx`:
+- `PointerSensor` with `activationConstraint: { distance: 4 }`
+- `modifiers={[restrictToVerticalAxis, restrictToParentElement]}`
+- `verticalListSortingStrategy`
+- `DragOverlay` for the lifted clone, original hidden (`opacity: 0`) while dragging
+- Ghost / strava-preview events (`id.startsWith("__ghost__:")`) are **not** sortable.
+
+New shared component `src/components/calendar/ReorderConfirmDialog.tsx` — centered `AlertDialog` with title "Confirm reorder", body "Apply the new order to this day?", buttons **Cancel** / **Confirm**.
+
+Drag-end flow in both views:
+1. Compute the proposed ordered ID list for that column.
+2. If no change, do nothing.
+3. Otherwise open `ReorderConfirmDialog` with the pending order in local state.
+4. On **Confirm** → call `reorderEvents(pendingIds)`.
+5. On **Cancel** → discard, original order persists.
+
+---
+
+## Files touched
+
+### `src/components/calendar/yearStore.ts`
+- Add `sortIndex?: number` to `CalendarEvent`.
+- In `upsertEvent`, default `sortIndex = Date.now()` for brand-new events.
+- Add `reorderEvents(ids: string[])` and export it from `useEventStore`.
+
+### `src/components/calendar/YearCalendarView.tsx`
+- Pass the new `reorderEvents` down to `UnifiedElasticGrid` and `MonthGridType1` (whichever consumes it).
+
+### `src/components/calendar/UnifiedElasticGrid.tsx` — `DiarySimpleStack`
+- Refactor the per-column rendering from absolute-positioned tiles into a **flow container** anchored at each measured column box, with `SortableContext` per column.
+- Each tile becomes a `useSortable` item (vertical-only translate, fixed `TILE_H`).
+- One top-level `DndContext` per column (or one shared context keyed by column id; per-column keeps logic simple).
+- Sort by `sortIndex ?? startISO`.
+- On `onDragEnd`, if order changed → set pending order, open `ReorderConfirmDialog`.
+- Hover menu, click-to-edit, double-click-to-create unchanged.
+
+### `src/components/calendar/MonthGridType1.tsx`
+- Replace the existing HTML5 `draggable` per-item logic **for in-cell reorder only**. Cross-day drag (moving a session to a different date) keeps the current HTML5 path — only same-cell reordering becomes a dnd-kit sortable interaction.
+- Wrap the visible event tiles in each day cell with a `SortableContext` scoped to that cell. Legacy text items and ghost events stay non-sortable and render before/after the sortable block (legacy items render after events as today).
+- Sort `dayEvents` by `sortIndex ?? startISO`.
+- On `onDragEnd` in-cell with changed order → open `ReorderConfirmDialog`, then call `reorderEvents`.
+
+### New `src/components/calendar/ReorderConfirmDialog.tsx`
+- Tiny wrapper around `AlertDialog` with cancel + confirm actions.
+
+---
+
+## Out of scope
+- Cross-day drag in simple view (only vertical reorder inside one day column).
+- Reorder in normal week hourly view (positions are time-based).
+- Touch/keyboard sensors beyond what dnd-kit's defaults provide.
+- Persisting `sortIndex` to a remote backend — still localStorage like the rest of the store.
 
 Confirm and I'll build it.
