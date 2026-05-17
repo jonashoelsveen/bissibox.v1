@@ -55,6 +55,38 @@ import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifi
 import { CSS } from "@dnd-kit/utilities";
 import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
 
+/**
+ * Render-prop wrapper that registers a child as a vertical-sortable item
+ * inside its enclosing SortableContext. The child receives the dnd-kit
+ * ref/style/listeners/attributes to spread onto its draggable root.
+ */
+function SortableMonthEventChip({
+  id,
+  disabled,
+  children,
+}: {
+  id: string;
+  disabled?: boolean;
+  children: (s: {
+    setNodeRef: (el: HTMLElement | null) => void;
+    style: React.CSSProperties;
+    listeners: ReturnType<typeof useSortable>["listeners"];
+    attributes: ReturnType<typeof useSortable>["attributes"];
+    isDragging: boolean;
+  }) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0 : 1,
+  };
+  return <>{children({ setNodeRef, style, listeners, attributes, isDragging })}</>;
+}
+
 function activityIconFor(ev: CalendarEvent): LucideIcon {
   const k = (ev.activity || ev.diarySub || "").toLowerCase();
   if (k === "cycling" || k === "bike") return Bike;
