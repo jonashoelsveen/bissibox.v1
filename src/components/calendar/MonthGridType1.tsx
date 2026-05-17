@@ -557,19 +557,33 @@ export function MonthGridType1({
               const legacyItems = parseItems(data[id]?.text);
               // Events whose start day is this calendar cell.
               const dayEvents = events.filter((e) => sameDay(fromISOLocal(e.startISO), d.date));
+              const sortedDayEvents = dayEvents
+                .slice()
+                .sort((a, b) => {
+                  const ka = a.sortIndex ?? Date.parse(a.startISO);
+                  const kb = b.sortIndex ?? Date.parse(b.startISO);
+                  return ka - kb;
+                });
+              // Apply pending reorder locally so the UI reflects the user's intent
+              // until they confirm or cancel.
+              if (pendingReorder && pendingReorder.dayKey === id) {
+                const map = new Map(sortedDayEvents.map((e) => [e.id, e]));
+                const ordered = pendingReorder.ids
+                  .map((eid) => map.get(eid))
+                  .filter((e): e is CalendarEvent => !!e);
+                // Append any events not in the pending list (shouldn't happen) at the end.
+                for (const e of sortedDayEvents) {
+                  if (!pendingReorder.ids.includes(e.id)) ordered.push(e);
+                }
+                sortedDayEvents.length = 0;
+                sortedDayEvents.push(...ordered);
+              }
 
               type UnifiedItem =
                 | { kind: "legacy"; idx: number; raw: string }
                 | { kind: "event"; event: CalendarEvent };
               const allItems: UnifiedItem[] = [
-                ...dayEvents
-                  .slice()
-                  .sort((a, b) => {
-                    const ka = a.sortIndex ?? Date.parse(a.startISO);
-                    const kb = b.sortIndex ?? Date.parse(b.startISO);
-                    return ka - kb;
-                  })
-                  .map<UnifiedItem>((event) => ({ kind: "event", event })),
+                ...sortedDayEvents.map<UnifiedItem>((event) => ({ kind: "event", event })),
                 ...legacyItems.map<UnifiedItem>((it) => ({
                   kind: "legacy",
                   idx: it.idx,
