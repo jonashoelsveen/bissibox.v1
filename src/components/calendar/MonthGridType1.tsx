@@ -931,6 +931,8 @@ export function MonthGridType1({
                         );
                       })}
                     </AnimatePresence>
+                    </SortableContext>
+                    </DndContext>
                     {overflow > 0 && (
                       <button
                         type="button"
