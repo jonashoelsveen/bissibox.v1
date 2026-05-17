@@ -2550,6 +2550,7 @@ function SimpleColumn({
                 ev={ev}
                 tileDesign={tileDesign}
                 unit={unit}
+                disabled={list.length < 2}
                 onEventClick={onEventClick}
                 onHoverChange={onHoverChange}
                 onHoverEnd={onHoverEnd}
