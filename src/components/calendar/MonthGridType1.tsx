@@ -708,6 +708,26 @@ export function MonthGridType1({
 
                   {/* Items list */}
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
+                    {(() => {
+                      const sortableIds = sortedDayEvents
+                        .filter((e) => !e.id.startsWith("__ghost__:"))
+                        .map((e) => e.id);
+                      return (
+                        <DndContext
+                          sensors={dndSensors}
+                          collisionDetection={closestCenter}
+                          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+                          onDragEnd={(ev: DragEndEvent) => {
+                            const { active, over } = ev;
+                            if (!over || active.id === over.id) return;
+                            const oldIndex = sortableIds.indexOf(String(active.id));
+                            const newIndex = sortableIds.indexOf(String(over.id));
+                            if (oldIndex < 0 || newIndex < 0) return;
+                            const next = arrayMove(sortableIds, oldIndex, newIndex);
+                            setPendingReorder({ dayKey: id, ids: next });
+                          }}
+                        >
+                          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
                     <AnimatePresence initial={false}>
                       {visible.map((it) => {
                         const raw = it.kind === "legacy" ? it.raw : it.event.title;
