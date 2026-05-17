@@ -902,7 +902,36 @@ export function UnifiedElasticGrid({
               );
             })}
 
-            {Array.from(
+            {isSimple ? (
+              <Fragment key="simple-body">
+                {/* Empty week-number gutter under the header */}
+                <div
+                  className="border-r border-hairline bg-card"
+                  style={{ height: rowHeight * 19 }}
+                  aria-hidden
+                />
+                {months.map((m) => {
+                  const colDate = weekDates[m.idx];
+                  return (
+                    <div
+                      key={`simple-col-${m.idx}`}
+                      data-simple-col={m.idx}
+                      className="relative border-r border-hairline transition-colors hover:bg-secondary/60"
+                      style={{ height: rowHeight * 19 }}
+                      onDoubleClick={(e) => {
+                        if (!colDate) return;
+                        const target = e.target as HTMLElement;
+                        // Ignore double-clicks on a session tile
+                        if (target.closest('[data-real-event="1"]')) return;
+                        const k: CellKey = { year: colDate.getFullYear(), month: m.idx, day: 2, session: 0 };
+                        openPopover(k, e.currentTarget as HTMLElement);
+                      }}
+                    />
+                  );
+                })}
+              </Fragment>
+            ) : (
+            Array.from(
               // Week view (compact / kind:"year") renders hour-rows of a
               // single weekday: 06:00 → 24:30 in 30-min slots = 38 rows
               // = 19 "days" × 2 sessions. Day view keeps the original
@@ -968,9 +997,9 @@ export function UnifiedElasticGrid({
                   markReleased={markReleased}
                 />
               </Fragment>
-            ))}
+            )))}
           </div>
-          {mode.kind === "year" && (
+          {mode.kind === "year" && !isSimple && (
             <WeekEventsOverlay
               scrollRef={scrollRef}
               events={weekEvents}
