@@ -82,7 +82,7 @@ function SortableMonthEventChip({
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0 : 1,
+    zIndex: isDragging ? 30 : undefined,
   };
   return <>{children({ setNodeRef, style, listeners, attributes, isDragging })}</>;
 }
