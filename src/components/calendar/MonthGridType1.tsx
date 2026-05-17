@@ -802,8 +802,9 @@ export function MonthGridType1({
                                     itemColor ? "" : "hover:bg-secondary",
                                   ].join(" ")
                             }
-                            style={
-                              tall
+                            style={{
+                              ...(sortable?.style ?? {}),
+                              ...(tall
                                 ? {
                                     minHeight: 44,
                                     backgroundColor: itemColor ? `${itemColor}1F` : undefined,
@@ -814,8 +815,8 @@ export function MonthGridType1({
                                       backgroundColor: `${itemColor}1F`,
                                       boxShadow: `inset 2px 0 0 ${itemColor}`,
                                     }
-                                  : undefined
-                            }
+                                  : {}),
+                            }}
                             title={displayText}
                           >
                             {isDiaryEvent ? (() => {
