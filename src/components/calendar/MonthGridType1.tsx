@@ -55,6 +55,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
+import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 
 /**
  * Render-prop wrapper that registers a child as a vertical-sortable item
