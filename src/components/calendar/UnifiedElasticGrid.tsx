@@ -264,6 +264,8 @@ export function UnifiedElasticGrid({
   // views). Day view uses the "rich" per-row layout (kind: "month"); Week
   // view uses the "compact" hourly-label layout (kind: "year").
   const mode: Mode = viewMode === "day" ? { kind: "month", month: 0 } : { kind: "year" };
+  const [simpleView] = useDiarySimpleView();
+  const isSimple = mode.kind === "year" && appKind === "diary" && simpleView;
 
   const handleViewModeChange = (v: ViewMode) => {
     if (!isControlled) setViewModeInternal(v);
