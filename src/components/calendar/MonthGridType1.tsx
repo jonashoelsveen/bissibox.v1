@@ -636,7 +636,7 @@ export function MonthGridType1({
                   key={d.idx}
                   data-cell-pos={`${d.row}-${d.col}`}
                   onMouseDown={(e) => {
-                    if ((e.target as HTMLElement).dataset.role === "item") return;
+                    if ((e.target as HTMLElement).closest('[data-role="item"]')) return;
                     setFocus(pos);
                     dragAnchorRef.current = pos;
                     setRange({ a: pos, b: pos });
@@ -674,7 +674,9 @@ export function MonthGridType1({
                   }}
                   onDoubleClick={(e) => {
                     if (!d.inMonth) return;
-                    if ((e.target as HTMLElement).dataset.role === "item") return;
+                    // Ignore dblclicks that originate inside an existing item
+                    // (target may be a child span/icon without data-role).
+                    if ((e.target as HTMLElement).closest('[data-role="item"]')) return;
                     openPopoverAt(pos, e.currentTarget);
                   }}
                   className={[
