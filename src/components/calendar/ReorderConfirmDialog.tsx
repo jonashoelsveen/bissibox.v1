@@ -33,7 +33,30 @@ export function ReorderConfirmDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  const isBlocked = mode === "stravaBlocked";
+  // Freeze the mode while the dialog is open OR closing so the contents do
+  // not flip (e.g. from "Ok" to "Confirm") during the exit animation when
+  // the parent resets its state on close.
+  const [displayMode, setDisplayMode] = useState(mode);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (open) {
+      if (closeTimer.current) {
+        clearTimeout(closeTimer.current);
+        closeTimer.current = null;
+      }
+      setDisplayMode(mode);
+    } else {
+      // keep displayMode through the ~200ms close animation
+      closeTimer.current = setTimeout(() => {
+        setDisplayMode(mode);
+        closeTimer.current = null;
+      }, 220);
+    }
+    return () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    };
+  }, [open, mode]);
+  const isBlocked = displayMode === "stravaBlocked";
   return (
     <AlertDialogPrimitive.Root
       open={open}
