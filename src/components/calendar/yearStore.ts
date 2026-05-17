@@ -347,6 +347,12 @@ export interface CalendarEvent {
   averageHeartrate?: number;
   sportType?: string;
   subType?: string;
+  /**
+   * Manual sort order within a day column (Diary month + simple-week views).
+   * When set, takes precedence over startISO for ordering. New sessions get
+   * `Date.now()` on create so they always render after older ones.
+   */
+  sortIndex?: number;
 }
 
 const eventsKey = (calId: string) => `calendar:events:${calId}`;
