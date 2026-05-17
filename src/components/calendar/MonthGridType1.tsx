@@ -253,6 +253,7 @@ export function MonthGridType1({
   const [distanceUnit] = useDistanceUnit();
   // Pending in-cell reorder awaiting user confirmation.
   const [pendingReorder, setPendingReorder] = useState<{ dayKey: string; ids: string[] } | null>(null);
+  const [stravaBlocked, setStravaBlocked] = useState(false);
   const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const firstDow = dowMon0(new Date(year, month, 1));
   const totalCells = Math.ceil((firstDow + dim) / 7) * 7;
@@ -724,6 +725,13 @@ export function MonthGridType1({
                           onDragEnd={(ev: DragEndEvent) => {
                             const { active, over } = ev;
                             if (!over || active.id === over.id) return;
+                            const hasStrava = sortedDayEvents.some(
+                              (e) => e.stravaActivityId != null,
+                            );
+                            if (hasStrava) {
+                              setStravaBlocked(true);
+                              return;
+                            }
                             const oldIndex = sortableIds.indexOf(String(active.id));
                             const newIndex = sortableIds.indexOf(String(over.id));
                             if (oldIndex < 0 || newIndex < 0) return;
@@ -995,11 +1003,16 @@ export function MonthGridType1({
         </LayoutGroup>
 
         <ReorderConfirmDialog
-          open={!!pendingReorder}
-          onCancel={() => setPendingReorder(null)}
+          open={!!pendingReorder || stravaBlocked}
+          mode={stravaBlocked ? "stravaBlocked" : "confirm"}
+          onCancel={() => {
+            setPendingReorder(null);
+            setStravaBlocked(false);
+          }}
           onConfirm={() => {
             if (pendingReorder) onReorderEvents?.(pendingReorder.ids);
             setPendingReorder(null);
+            setStravaBlocked(false);
           }}
         />
 

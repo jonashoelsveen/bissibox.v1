@@ -2381,6 +2381,7 @@ function DiarySimpleStack({
   // Group events by column, sorted by sortIndex (fallback startISO).
   // Local order overrides while a reorder is pending.
   const [pendingOrder, setPendingOrder] = useState<{ colIdx: number; ids: string[] } | null>(null);
+  const [stravaBlocked, setStravaBlocked] = useState(false);
   const byCol = useMemo(() => {
     const arr: CalendarEvent[][] = Array.from({ length: 7 }, () => []);
     for (const ev of events) {
@@ -2426,16 +2427,26 @@ function DiarySimpleStack({
           }}
           onHoverEnd={scheduleClose}
           onReorder={(ids) => {
+            const hasStrava = list.some((e) => e.stravaActivityId != null);
+            if (hasStrava) {
+              setStravaBlocked(true);
+              return;
+            }
             setPendingOrder({ colIdx, ids });
           }}
         />
       ))}
       <ReorderConfirmDialog
-        open={!!pendingOrder}
-        onCancel={() => setPendingOrder(null)}
+        open={!!pendingOrder || stravaBlocked}
+        mode={stravaBlocked ? "stravaBlocked" : "confirm"}
+        onCancel={() => {
+          setPendingOrder(null);
+          setStravaBlocked(false);
+        }}
         onConfirm={() => {
           if (pendingOrder) onReorderEvents?.(pendingOrder.ids);
           setPendingOrder(null);
+          setStravaBlocked(false);
         }}
       />
       {hoverId && hoverRect && (() => {
