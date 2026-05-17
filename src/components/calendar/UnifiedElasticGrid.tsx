@@ -1041,6 +1041,27 @@ export function UnifiedElasticGrid({
               viewerRole={viewerRole}
             />
           )}
+          {mode.kind === "year" && isSimple && (
+            <DiarySimpleStack
+              scrollRef={scrollRef}
+              events={weekEvents}
+              weekDates={weekDates}
+              onEventClick={(ev, anchor) => {
+                setPopover({
+                  key: { year, month: 0, day: 1, session: 0 },
+                  rect: anchor.getBoundingClientRect(),
+                  initialText: ev.title,
+                  initialColor: ev.color,
+                  isEdit: true,
+                  eventId: ev.id,
+                });
+              }}
+              onDeleteEvent={onDeleteEvent}
+              onUpsertSession={(patch) => onUpsertEvent(patch)}
+              memberId={memberId}
+              viewerRole={viewerRole}
+            />
+          )}
           {mode.kind === "year" && todayColIdx >= 0 && nowMinutesSinceStart !== null && (
             <NowLine
               scrollRef={scrollRef}
