@@ -817,6 +817,7 @@ export function UnifiedElasticGrid({
           onUpsertEvent={onUpsertEvent}
           onMoveEvent={onMoveEvent}
           onDeleteEvent={onDeleteEvent}
+          onReorderEvents={onReorderEvents}
           memberId={memberId}
           viewerRole={viewerRole}
           onPrevMonth={() => {
