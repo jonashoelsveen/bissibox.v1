@@ -736,7 +736,15 @@ export function MonthGridType1({
                         const itemKey = it.kind === "legacy" ? `legacy-${it.idx}` : `event-${it.event.id}`;
                         const isDiaryEvent = appKind === "diary" && it.kind === "event";
                         const tall = isDiaryEvent && (monthTileDesign === "split" || monthTileDesign === "stacked");
-                        return (
+                        const isSortableEvent =
+                          it.kind === "event" && !it.event.id.startsWith("__ghost__:");
+                        const renderChip = (sortable: {
+                          setNodeRef: (el: HTMLElement | null) => void;
+                          style: React.CSSProperties;
+                          listeners: ReturnType<typeof useSortable>["listeners"];
+                          attributes: ReturnType<typeof useSortable>["attributes"];
+                          isDragging: boolean;
+                        } | null) => (
                           <motion.div
                             key={`${id}-${itemKey}`}
                             layout
