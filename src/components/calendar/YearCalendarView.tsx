@@ -79,6 +79,8 @@ export interface YearCalendarViewProps {
   memberId?: string;
   /** Viewer's relationship to the member; defaults to "owner". */
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
+  /** When the surrounding left panel is closed, the header makes room for the panel toggle icon. */
+  panelOpen?: boolean;
 }
 
 export function YearCalendarView(props: YearCalendarViewProps) {
