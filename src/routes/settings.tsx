@@ -1647,7 +1647,7 @@ function SessionTileDesignCard() {
               Combined sessions
             </h4>
             <p className="mt-1 text-xs text-muted-foreground">
-              How two or more Strava sessions synced less than an hour apart render as one tile.
+              How two or more Strava sessions that <em>happened</em> less than an hour apart (i.e. the time between when the activities actually took place, not when they were synced) render as one tile.
               The tile height is always the sum of the synced activities (unless Simple view is on).
             </p>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
