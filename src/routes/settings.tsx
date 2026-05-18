@@ -17,7 +17,7 @@ import {
 } from "@/lib/library-settings";
 import { MapSettingsPanel } from "@/components/settings/MapSettingsPanel";
 import { Footprints, Check, Bike } from "lucide-react";
-import { SESSION_TILE_DESIGNS, useSessionTileDesign, useDiarySimpleView, type SessionTileDesign } from "@/lib/session-tile-design";
+import { SESSION_TILE_DESIGNS, useSessionTileDesign, useDiarySimpleView, type SessionTileDesign, COMBINED_SESSION_TILE_DESIGNS, useCombinedSessionTileDesign, type CombinedSessionTileDesign } from "@/lib/session-tile-design";
 import { Switch } from "@/components/ui/switch";
 import { MONTH_TILE_DESIGNS, useMonthTileDesign, type MonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, type DistanceUnit } from "@/lib/units";
@@ -1583,6 +1583,7 @@ function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
 function SessionTileDesignCard() {
   const [open, setOpen] = useState(true);
   const [design, setDesign] = useSessionTileDesign();
+  const [combined, setCombined] = useCombinedSessionTileDesign();
   const [simple, setSimple] = useDiarySimpleView();
   return (
     <Card>
@@ -1641,6 +1642,46 @@ function SessionTileDesignCard() {
               );
             })}
           </div>
+          <div className="mt-5">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Combined sessions
+            </h4>
+            <p className="mt-1 text-xs text-muted-foreground">
+              How two or more Strava sessions synced less than an hour apart render as one tile.
+              The tile height is always the sum of the synced activities (unless Simple view is on).
+            </p>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {COMBINED_SESSION_TILE_DESIGNS.map((d) => {
+                const active = d.id === combined;
+                return (
+                  <button
+                    key={d.id}
+                    onClick={() => setCombined(d.id)}
+                    className={`group relative overflow-hidden rounded-xl border text-left transition ${
+                      active
+                        ? "border-primary shadow-md ring-2 ring-primary/30"
+                        : "border-hairline hover:border-ink/30"
+                    }`}
+                  >
+                    <div className="relative flex h-24 items-center justify-center bg-[#B8B8FF]/25 px-2">
+                      <CombinedSessionTilePreview design={d.id} />
+                      {active && (
+                        <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+                          <Check className="h-3 w-3" />
+                        </span>
+                      )}
+                    </div>
+                    <div className="bg-card px-3 py-2.5">
+                      <div className="text-sm font-medium text-ink">{d.label}</div>
+                      <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                        {d.description}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="mt-4 rounded-lg border border-hairline p-3">
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm font-medium text-ink">Simple view</span>
@@ -1692,6 +1733,50 @@ function SessionTilePreview({ design }: { design: SessionTileDesign }) {
         style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18 }}
       >
         8.2
+      </div>
+    </div>
+  );
+}
+
+function CombinedSessionTilePreview({ design }: { design: CombinedSessionTileDesign }) {
+  const accent1 = "#5b5bff";
+  const accent2 = "#ff6b3a";
+  const bg1 = "rgba(184,184,255,0.45)";
+  const bg2 = "rgba(255,184,140,0.55)";
+  if (design === "icon") {
+    return (
+      <div className="flex h-14 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
+        <div className="flex w-1/2 items-center justify-center" style={{ background: bg1 }}>
+          <Footprints className="h-6 w-6" strokeWidth={2.25} style={{ color: accent1 }} />
+        </div>
+        <div className="flex w-1/2 items-center justify-center" style={{ background: bg2 }}>
+          <Footprints className="h-6 w-6" strokeWidth={2.25} style={{ color: accent2 }} />
+        </div>
+      </div>
+    );
+  }
+  if (design === "metric") {
+    return (
+      <div className="flex h-14 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
+        <div className="flex w-1/2 items-center justify-center text-ink" style={{ background: bg1, fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16 }}>
+          8.2
+        </div>
+        <div className="flex w-1/2 items-center justify-center text-ink" style={{ background: bg2, fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16 }}>
+          45′
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-14 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
+      <div className="flex w-1/2 flex-col justify-center px-1.5 leading-tight" style={{ background: bg1 }}>
+        <span className="truncate text-[9px] font-semibold text-ink">Morning run</span>
+        <span className="text-[8px] tabular-nums text-ink/70">45 min</span>
+        <span className="text-[8px] tabular-nums text-ink/70">8.2 km</span>
+      </div>
+      <div className="flex w-1/2 flex-col justify-center px-1.5 leading-tight" style={{ background: bg2 }}>
+        <span className="truncate text-[9px] font-semibold text-ink">Core</span>
+        <span className="text-[8px] tabular-nums text-ink/70">20 min</span>
       </div>
     </div>
   );
