@@ -104,6 +104,7 @@ function YearCalendarViewInner({
   appKind = "calendar",
   memberId,
   viewerRole = "owner",
+  panelOpen = true,
 }: YearCalendarViewProps) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta } =
     useYearStore(calId, defaultTitle);
