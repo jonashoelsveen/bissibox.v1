@@ -104,20 +104,16 @@ export function GlobalTopTabBar() {
       style={{ background: "#1d1d1f" }}
     >
       <style>{`
-        .global-topbar-dark > .topbar-row,
-        .global-topbar-dark > .topbar-row * {
-          color: #ffffff;
-        }
-        .global-topbar-dark > .topbar-row svg { color: #ffffff; }
-        .global-topbar-dark > .topbar-row button:hover {
+        .global-topbar-dark .topbar-row,
+        .global-topbar-dark .topbar-row * { color: #ffffff; }
+        .global-topbar-dark .topbar-row button:hover {
           background-color: rgba(255,255,255,0.10) !important;
         }
-        .global-topbar-dark [role="menu"],
-        .global-topbar-dark [role="menu"] * {
-          color: hsl(var(--ink, 0 0% 10%));
-        }
-        .global-topbar-dark [role="menu"] {
-          color: inherit;
+        .global-topbar-dark .topbar-row [role="menu"],
+        .global-topbar-dark .topbar-row [role="menu"] * { color: oklch(0.14 0.012 260); }
+        .global-topbar-dark .topbar-row [role="menu"] .text-muted-foreground { color: oklch(0.5 0.01 260); }
+        .global-topbar-dark .topbar-row [role="menu"] button:hover {
+          background-color: oklch(0.94 0.005 90) !important;
         }
       `}</style>
       <div
