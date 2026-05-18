@@ -1552,10 +1552,9 @@ function MediaPage({
         )}
       </div>
       {onCreate && (
-        <LibraryPlusMenu
-          onCreate={onCreate}
-          onCreateContainer={onCreateContainer}
-          showMeetingOption={showMeetingOption}
+        <MediaPlusMenu
+          onUpload={() => onCreate("media")}
+          onCreateAlbum={onCreateContainer ? () => onCreateContainer("media") : undefined}
         />
       )}
     </>
