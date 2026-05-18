@@ -2473,7 +2473,7 @@ function Lightbox({
 
   return (
     <div
-      className={`fixed right-0 bottom-0 flex animate-in fade-in transition-[left] duration-300 ease-out ${isFullscreen ? "left-0 top-0 z-[95]" : "top-14 z-30"}`}
+      className={`fixed right-0 bottom-0 flex animate-in fade-in transition-[left] duration-300 ease-out ${isFullscreen ? "left-0 top-0 z-[95]" : "top-10 z-30"}`}
       style={isFullscreen ? undefined : { left: panelOpen ? 256 : 0 }}
       onClick={onClose}
     >
@@ -2528,7 +2528,7 @@ function Lightbox({
               onClick={() => setIsFullscreen((v) => !v)}
               aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
               className={`fixed z-[96] grid h-9 w-9 place-items-center rounded-full transition-[right,top] duration-300 ease-out ${
-                isFullscreen ? "top-1 text-white hover:bg-white/10" : "top-[66px] text-foreground hover:bg-foreground/10"
+                isFullscreen ? "top-1 text-white hover:bg-white/10" : "top-[50px] text-foreground hover:bg-foreground/10"
               } ${editPanelOpen ? "right-[400px]" : "right-12"}`}
             >
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -2538,7 +2538,7 @@ function Lightbox({
               onClick={() => setEditPanelOpen((v) => !v)}
               aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
               className={`fixed right-4 z-[96] grid h-9 w-9 place-items-center rounded-full transition ${
-                isFullscreen ? "top-1" : "top-[66px]"
+                isFullscreen ? "top-1" : "top-[50px]"
               } ${
                 editPanelOpen
                   ? "bg-foreground/10 text-foreground"
@@ -2571,7 +2571,7 @@ function Lightbox({
             className={`fixed right-0 bottom-0 flex w-96 flex-col overflow-hidden border-l border-hairline bg-background transition-transform duration-300 ease-out ${
               editPanelOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
             } ${isFullscreen ? "top-0 z-[96]" : "z-30"}`}
-            style={isFullscreen ? undefined : { top: 56 }}
+            style={isFullscreen ? undefined : { top: 40 }}
           >
             <div className="flex h-11 flex-none items-center gap-1 border-b border-hairline px-5">
               {tabs.map((t) => (
