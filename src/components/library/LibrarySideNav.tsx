@@ -234,23 +234,11 @@ export function LibrarySideNav({
     void persistOrder(next);
   };
 
+  void onTogglePanel;
   return (
     <nav className="flex flex-col gap-1">
-      <div className="flex items-center gap-1.5">
-        {onTogglePanel && (
-          <button
-            type="button"
-            onClick={onTogglePanel}
-            aria-label="Hide panel"
-            title="Hide panel"
-            className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-secondary/60 hover:text-ink"
-          >
-            <PanelLeft className="h-4 w-4" />
-          </button>
-        )}
-        <div className="min-w-0 flex-1">
-          <SideNavNameHeader name={displayName ?? "Me"} weight="normal" />
-        </div>
+      <div className="pl-9">
+        <SideNavNameHeader name={displayName ?? "Me"} weight="normal" />
       </div>
       <div className="flex flex-col">
         <button
