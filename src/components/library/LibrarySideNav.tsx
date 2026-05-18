@@ -30,6 +30,7 @@ import {
   PinOff,
   MoreHorizontal,
   Users as UsersIcon,
+  PanelLeft,
 } from "lucide-react";
 import { SideNavNameHeader } from "@/components/calendar/SideNavNameHeader";
 
@@ -54,11 +55,13 @@ export function LibrarySideNav({
   onChange,
   onOpenAsTab,
   displayName,
+  onTogglePanel,
 }: {
   value: LibrarySideNavValue;
   onChange: (v: LibrarySideNavValue) => void;
   onOpenAsTab?: (v: LibrarySideNavValue, label: string, color?: string | null) => void;
   displayName?: string;
+  onTogglePanel?: () => void;
 }) {
   const { user, mode, activeEntityId } = useAuth();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
@@ -233,7 +236,22 @@ export function LibrarySideNav({
 
   return (
     <nav className="flex flex-col gap-1">
-      <SideNavNameHeader name={displayName ?? "Me"} weight="normal" />
+      <div className="flex items-center gap-1.5">
+        {onTogglePanel && (
+          <button
+            type="button"
+            onClick={onTogglePanel}
+            aria-label="Hide panel"
+            title="Hide panel"
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-secondary/60 hover:text-ink"
+          >
+            <PanelLeft className="h-4 w-4" />
+          </button>
+        )}
+        <div className="min-w-0 flex-1">
+          <SideNavNameHeader name={displayName ?? "Me"} weight="normal" />
+        </div>
+      </div>
       <div className="flex flex-col">
         <button
           onClick={() => {

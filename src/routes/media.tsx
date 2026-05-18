@@ -48,8 +48,10 @@ import {
   ArrowLeft,
   Maximize2,
   Minimize2,
+  PanelLeft,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { useLibrarySetting } from "@/lib/library-settings";
 
 /** Library is media-only. Only "media" remains as a tab; the other library
  *  surfaces (notes / files / meetings / map) were removed. */
@@ -434,8 +436,15 @@ function LibraryPage() {
   };
   const [newAlbumSignal, setNewAlbumSignal] = useState(0);
 
+  const panelScopeKey = activeEntityId ?? user?.id ?? "anon";
+  const [panelOpen, setPanelOpen] = useLibrarySetting<boolean>(
+    `library:panel:open:${panelScopeKey}`,
+    true,
+  );
+
   return (
-    <div className="h-full overflow-hidden px-4 md:px-6">
+    <div className="h-full overflow-hidden bg-white pl-0 pr-4 md:pr-6">
+
       <TopBarSlot>
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
           {openNoteTabs.length > 0 && (
@@ -575,12 +584,45 @@ function LibraryPage() {
         </nav>
       </TopBarSlot>
 
-      <div className="grid h-full gap-6 overflow-hidden md:grid-cols-[220px_1fr]">
-        <aside className="md:h-full md:overflow-y-auto md:pr-0 md:pt-4">
-          <LibrarySideNav value={sideValue} onChange={onSideChange} onOpenAsTab={onSideOpenAsTab} displayName={displayName} />
+      <div
+        className="grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
+        style={{ gridTemplateColumns: panelOpen ? "232px 1fr" : "0px 1fr" }}
+      >
+        <aside className="relative md:h-full overflow-hidden">
+          <div
+            className="relative h-full pl-0 pr-3 py-2 transition-transform duration-300 ease-out"
+            style={{
+              width: 232,
+              transform: panelOpen ? "translateX(0)" : "translateX(-100%)",
+            }}
+          >
+            <div className="relative h-full overflow-hidden rounded-r-2xl border border-l-0 border-hairline bg-card shadow-sm">
+              <div className="h-full overflow-y-auto px-3 pb-6 pt-4">
+                <LibrarySideNav
+                  value={sideValue}
+                  onChange={onSideChange}
+                  onOpenAsTab={onSideOpenAsTab}
+                  displayName={displayName}
+                  onTogglePanel={() => setPanelOpen(false)}
+                />
+              </div>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-2xl bg-gradient-to-t from-card to-transparent" />
+            </div>
+          </div>
         </aside>
 
-        <div className="min-w-0 bg-white md:h-full md:overflow-y-auto">
+        <div className="relative min-w-0 md:h-full md:overflow-y-auto pl-4 md:pl-6">
+          {!panelOpen && (
+            <button
+              type="button"
+              onClick={() => setPanelOpen(true)}
+              aria-label="Show panel"
+              title="Show panel"
+              className="absolute left-2 top-3 z-20 grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-secondary/60 hover:text-ink"
+            >
+              <PanelLeft className="h-4 w-4" />
+            </button>
+          )}
           {showingMedia && activeNoteId && activeTabEntry ? (
             <MediaTabView
               key={activeNoteId}
