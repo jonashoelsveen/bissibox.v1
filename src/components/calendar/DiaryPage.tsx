@@ -49,7 +49,7 @@ export function DiaryPage() {
   );
 
   return (
-    <div className="h-full overflow-hidden bg-white pl-0 pr-4 md:pr-6">
+    <div className={`h-full overflow-hidden bg-white pr-4 md:pr-6 transition-[padding-left] duration-300 ease-out ${panelOpen ? "pl-0" : "pl-2"}`}>
       <div
         className="relative grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
         style={{ gridTemplateColumns: panelOpen ? "256px 1fr" : "0px 1fr" }}
@@ -63,7 +63,7 @@ export function DiaryPage() {
             }}
           >
             <div className="relative h-full overflow-hidden rounded-lg border border-hairline bg-subtle shadow-sm">
-              <div className="h-full overflow-y-auto px-3 pb-6 pt-4">
+              <div className="h-full overflow-y-auto px-3 pb-6 pt-[10px]">
                 <DiarySideNav
                   currentDate={currentDate}
                   currentRange={currentRange}
@@ -108,6 +108,7 @@ export function DiaryPage() {
             visibleCategories={visibleCategories}
             memberId={user?.id}
             viewerRole="owner"
+            panelOpen={panelOpen}
           />
         </div>
       </div>
