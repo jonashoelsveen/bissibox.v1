@@ -100,7 +100,7 @@ export function GlobalTopTabBar() {
 
   return (
     <div
-      className="global-topbar-dark fixed left-0 right-0 top-[11px] z-[90]"
+      className="global-topbar-dark fixed left-0 right-0 top-0 z-[90]"
       style={{ background: "#1d1d1f" }}
     >
       <style>{`
