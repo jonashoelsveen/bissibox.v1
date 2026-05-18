@@ -48,8 +48,10 @@ import {
   ArrowLeft,
   Maximize2,
   Minimize2,
+  PanelLeft,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { useLibrarySetting } from "@/lib/library-settings";
 
 /** Library is media-only. Only "media" remains as a tab; the other library
  *  surfaces (notes / files / meetings / map) were removed. */
