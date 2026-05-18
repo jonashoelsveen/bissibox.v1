@@ -85,12 +85,31 @@ const MAX_TABS = 10;
 function LibraryPage() {
   const search = useSearch({ from: "/media" });
   const navigate = useNavigate();
-  const { mode, activeEntityId } = useAuth();
+  const { user, mode, activeEntityId } = useAuth();
+  const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
 
   const [openNoteTabs, setOpenNoteTabs] = useState<OpenNoteTab[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
+  const [entityName, setEntityName] = useState<string>("");
   void mode; void activeEntityId; void setActionsMount;
+
+  // Resolve display name for the side-nav header ("Me" or entity name).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (!user || !isTeamMode) { setEntityName(""); return; }
+      const q = supabase.from("teams").select("id,name");
+      const { data } = activeEntityId
+        ? await q.eq("id", activeEntityId).maybeSingle()
+        : await q.eq("owner_id", user.id).order("created_at", { ascending: true }).limit(1).maybeSingle();
+      if (cancelled) return;
+      setEntityName((data as { name?: string } | null)?.name ?? "Team");
+    })();
+    return () => { cancelled = true; };
+  }, [user, isTeamMode, activeEntityId]);
+  const displayName = isTeamMode ? (entityName || "Team") : "Me";
+
 
   // Persist open tabs per profile so they survive logout / reloads.
   const profileScopeKey = `${mode}:${activeEntityId ?? "self"}`;
@@ -416,7 +435,7 @@ function LibraryPage() {
   const [newAlbumSignal, setNewAlbumSignal] = useState(0);
 
   return (
-    <div className="h-full overflow-hidden">
+    <div className="h-full overflow-hidden px-4 md:px-6">
       <TopBarSlot>
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
           {openNoteTabs.length > 0 && (
@@ -556,9 +575,9 @@ function LibraryPage() {
         </nav>
       </TopBarSlot>
 
-      <div className="grid h-full gap-0 overflow-hidden md:grid-cols-[220px_1fr]">
-        <aside className="md:h-full md:overflow-y-auto md:border-r md:border-border/60 md:pl-6 md:pr-4 md:pt-4">
-          <LibrarySideNav value={sideValue} onChange={onSideChange} onOpenAsTab={onSideOpenAsTab} />
+      <div className="grid h-full gap-6 overflow-hidden md:grid-cols-[220px_1fr]">
+        <aside className="md:h-full md:overflow-y-auto md:pr-0 md:pt-4">
+          <LibrarySideNav value={sideValue} onChange={onSideChange} onOpenAsTab={onSideOpenAsTab} displayName={displayName} />
         </aside>
 
         <div className="min-w-0 bg-white md:h-full md:overflow-y-auto">

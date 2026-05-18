@@ -31,6 +31,7 @@ import {
   MoreHorizontal,
   Users as UsersIcon,
 } from "lucide-react";
+import { SideNavNameHeader } from "@/components/calendar/SideNavNameHeader";
 
 /** Library is media-only. The category type is kept as a single literal for
  *  back-compat with callers that destructure `value.category`. */
@@ -52,10 +53,12 @@ export function LibrarySideNav({
   value,
   onChange,
   onOpenAsTab,
+  displayName,
 }: {
   value: LibrarySideNavValue;
   onChange: (v: LibrarySideNavValue) => void;
   onOpenAsTab?: (v: LibrarySideNavValue, label: string, color?: string | null) => void;
+  displayName?: string;
 }) {
   const { user, mode, activeEntityId } = useAuth();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
@@ -230,6 +233,7 @@ export function LibrarySideNav({
 
   return (
     <nav className="flex flex-col gap-1">
+      <SideNavNameHeader name={displayName ?? "Me"} weight="normal" />
       <div className="flex flex-col">
         <button
           onClick={() => {

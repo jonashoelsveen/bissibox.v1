@@ -7,7 +7,13 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-export function SideNavNameHeader({ name }: { name: string }) {
+export function SideNavNameHeader({
+  name,
+  weight = "semibold",
+}: {
+  name: string;
+  weight?: "semibold" | "normal";
+}) {
   const fontStyle = { fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif' };
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const textRef = useRef<HTMLSpanElement | null>(null);
@@ -50,7 +56,7 @@ export function SideNavNameHeader({ name }: { name: string }) {
   return (
     <div ref={wrapRef} className="mb-3 flex h-7 items-center overflow-hidden">
       <h2
-        className="min-w-0 whitespace-nowrap text-xl font-semibold text-ink"
+        className={`min-w-0 whitespace-nowrap text-xl text-ink ${weight === "normal" ? "font-normal" : "font-semibold"}`}
         style={{ ...fontStyle, ...fadeStyle }}
         title={name}
       >
