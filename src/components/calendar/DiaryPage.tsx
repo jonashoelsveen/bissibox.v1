@@ -63,7 +63,7 @@ export function DiaryPage() {
             }}
           >
             <div className="relative h-full overflow-hidden rounded-lg border border-hairline bg-subtle shadow-sm">
-              <div className="h-full overflow-y-auto px-3 pb-6 pt-[10px]">
+              <div className="h-full overflow-y-auto px-3 pb-6 pt-3">
                 <DiarySideNav
                   currentDate={currentDate}
                   currentRange={currentRange}
@@ -86,7 +86,7 @@ export function DiaryPage() {
           onClick={() => setPanelOpen(!panelOpen)}
           aria-label={panelOpen ? "Hide panel" : "Show panel"}
           title={panelOpen ? "Hide panel" : "Show panel"}
-          className="absolute left-3 top-[18px] z-40 grid h-7 w-7 place-items-center rounded-md bg-white/0 text-muted-foreground hover:bg-secondary/60 hover:text-ink"
+          className="absolute left-3 top-[12px] z-40 grid h-7 w-7 place-items-center rounded-md bg-white/0 text-muted-foreground hover:bg-secondary/60 hover:text-ink"
         >
           <PanelLeft className="h-4 w-4" />
         </button>
