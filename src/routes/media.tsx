@@ -596,7 +596,7 @@ function LibraryPage() {
               transform: panelOpen ? "translateX(0)" : "translateX(-100%)",
             }}
           >
-            <div className="relative h-full overflow-hidden rounded-r-lg border border-l-0 border-hairline bg-card shadow-sm">
+            <div className="relative h-full overflow-hidden rounded-r-lg border border-l-0 border-hairline bg-subtle shadow-sm">
               <div className="h-full overflow-y-auto px-3 pb-6 pt-4">
                 <LibrarySideNav
                   value={sideValue}
@@ -605,7 +605,7 @@ function LibraryPage() {
                   displayName={displayName}
                 />
               </div>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg bg-gradient-to-t from-card to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg bg-gradient-to-t from-subtle to-transparent" />
             </div>
           </div>
         </aside>
