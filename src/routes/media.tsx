@@ -2528,7 +2528,7 @@ function Lightbox({
               onClick={() => setIsFullscreen((v) => !v)}
               aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
               className={`fixed z-[96] grid h-9 w-9 place-items-center rounded-full transition-[right,top] duration-300 ease-out ${
-                isFullscreen ? "top-1 text-white hover:bg-white/10" : "top-[50px] text-foreground hover:bg-foreground/10"
+                isFullscreen ? "top-[10px] text-white hover:bg-white/10" : "top-[50px] text-foreground hover:bg-foreground/10"
               } ${editPanelOpen ? "right-[400px]" : "right-12"}`}
             >
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
