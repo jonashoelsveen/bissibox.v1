@@ -30,6 +30,7 @@ import {
   PinOff,
   MoreHorizontal,
   Users as UsersIcon,
+  PanelLeft,
 } from "lucide-react";
 import { SideNavNameHeader } from "@/components/calendar/SideNavNameHeader";
 
