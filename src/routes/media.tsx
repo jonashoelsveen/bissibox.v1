@@ -842,6 +842,7 @@ function MediaPage({
   newAlbumSignal,
   showMeetingOption,
   openAlbumFolders,
+  panelOpen,
 }: {
   actionsMount?: HTMLDivElement | null;
   hideSideNav?: boolean;
@@ -854,6 +855,7 @@ function MediaPage({
   newAlbumSignal?: number;
   showMeetingOption?: boolean;
   openAlbumFolders?: Set<string>;
+  panelOpen?: boolean;
 } = {}) {
   const { user, session, mode, activeEntityId, loading: authLoading } = useAuth();
   const navigate = useNavigate();
