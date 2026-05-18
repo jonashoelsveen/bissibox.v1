@@ -671,7 +671,7 @@ function LibraryPage() {
         </button>
 
         <div
-          className="relative min-w-0 md:h-full md:overflow-y-auto"
+          className="relative min-w-0 md:h-full md:overflow-hidden"
         >
 
 
