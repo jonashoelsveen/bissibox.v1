@@ -1729,11 +1729,13 @@ function SessionTilePreview({ design }: { design: SessionTileDesign }) {
         <Footprints className="h-7 w-7" strokeWidth={2.25} style={{ color: accent }} />
       </div>
       <div
-        className="flex w-1/2 items-baseline justify-center text-ink"
-        style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18, gap: 3 }}
+        className="flex w-1/2 items-center justify-center text-ink"
+        style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18 }}
       >
-        <span>8.2</span>
-        <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>km</span>
+        <span className="inline-flex items-baseline" style={{ gap: 3 }}>
+          <span>8.2</span>
+          <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>km</span>
+        </span>
       </div>
     </div>
   );
