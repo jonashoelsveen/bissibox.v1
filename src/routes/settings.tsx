@@ -1583,6 +1583,7 @@ function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
 function SessionTileDesignCard() {
   const [open, setOpen] = useState(true);
   const [design, setDesign] = useSessionTileDesign();
+  const [combined, setCombined] = useCombinedSessionTileDesign();
   const [simple, setSimple] = useDiarySimpleView();
   return (
     <Card>
