@@ -491,8 +491,7 @@ function LibraryPage() {
                   const showDivider =
                     idx < openNoteTabs.length - 1 &&
                     !isActive &&
-                    !nextIsActive &&
-                    !dragNoteId;
+                    !nextIsActive;
                   const folderColor = t.type === "album" ? (t.albumColor ?? null) : null;
                   // Resolve icon color:
                   //  - if folder has a color → always use it (visible on both bgs)
