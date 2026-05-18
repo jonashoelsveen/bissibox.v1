@@ -2537,12 +2537,14 @@ function Lightbox({
               type="button"
               onClick={() => setEditPanelOpen((v) => !v)}
               aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-              className={`fixed right-4 z-[97] grid h-9 w-9 place-items-center rounded-full transition ${
+              className={`fixed right-4 z-[98] grid h-9 w-9 place-items-center rounded-full transition ${
                 isFullscreen ? "top-1" : "top-[50px]"
               } ${
-                isFullscreen
-                  ? "text-white hover:bg-white/10"
-                  : "text-foreground hover:bg-foreground/10"
+                editPanelOpen
+                  ? "text-foreground hover:bg-foreground/10"
+                  : isFullscreen
+                    ? "text-white hover:bg-white/10"
+                    : "text-foreground hover:bg-foreground/10"
               }`}
             >
               {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
@@ -4401,12 +4403,14 @@ function MediaTabViewBody(props: {
             type="button"
             onClick={() => setEditPanelOpen((v) => !v)}
             aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
-            className={`fixed right-4 z-[97] grid h-9 w-9 place-items-center rounded-full transition ${
+            className={`fixed right-4 z-[98] grid h-9 w-9 place-items-center rounded-full transition ${
               isFullscreen ? "top-1" : "top-[10px]"
             } ${
-              isFullscreen
-                ? "text-white hover:bg-white/10"
-                : "text-foreground hover:bg-foreground/10"
+              editPanelOpen
+                ? "text-foreground hover:bg-foreground/10"
+                : isFullscreen
+                  ? "text-white hover:bg-white/10"
+                  : "text-foreground hover:bg-foreground/10"
             }`}
           >
             {editPanelOpen ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
