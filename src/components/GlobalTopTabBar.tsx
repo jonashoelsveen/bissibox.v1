@@ -99,12 +99,29 @@ export function GlobalTopTabBar() {
   };
 
   return (
-    <div className="fixed left-0 right-0 top-[11px] z-[90] bg-background">
+    <div
+      className="global-topbar-dark fixed left-0 right-0 top-[11px] z-[90]"
+      style={{ background: "#1d1d1f" }}
+    >
+      <style>{`
+        .global-topbar-dark .topbar-row,
+        .global-topbar-dark .topbar-row * { color: #ffffff; }
+        .global-topbar-dark .topbar-row button:hover {
+          background-color: rgba(255,255,255,0.10) !important;
+        }
+        .global-topbar-dark .topbar-row [role="menu"],
+        .global-topbar-dark .topbar-row [role="menu"] * { color: oklch(0.14 0.012 260); }
+        .global-topbar-dark .topbar-row [role="menu"] .text-muted-foreground { color: oklch(0.5 0.01 260); }
+        .global-topbar-dark .topbar-row [role="menu"] button:hover {
+          background-color: oklch(0.94 0.005 90) !important;
+        }
+      `}</style>
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px bg-hairline"
+        className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px"
+        style={{ background: "rgba(255,255,255,0.10)" }}
       />
-      <div className="relative z-10 flex items-end gap-1 px-4 md:px-6">
+      <div className="topbar-row relative z-10 flex items-end gap-1 px-4 md:px-6">
         <ProfileTab />
         <NavIconTabs activeKey={activeKey} />
         {/* Page-provided slot — open notes/event tabs etc. */}
