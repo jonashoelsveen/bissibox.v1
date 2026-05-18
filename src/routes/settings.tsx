@@ -1647,7 +1647,7 @@ function SessionTileDesignCard() {
               Combined sessions
             </h4>
             <p className="mt-1 text-xs text-muted-foreground">
-              How two or more Strava sessions synced less than an hour apart render as one tile.
+              How two or more Strava sessions that <em>happened</em> less than an hour apart (i.e. the time between when the activities actually took place, not when they were synced) render as one tile.
               The tile height is always the sum of the synced activities (unless Simple view is on).
             </p>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1729,11 +1729,13 @@ function SessionTilePreview({ design }: { design: SessionTileDesign }) {
         <Footprints className="h-7 w-7" strokeWidth={2.25} style={{ color: accent }} />
       </div>
       <div
-        className="flex w-1/2 items-baseline justify-center text-ink"
-        style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18, gap: 3 }}
+        className="flex w-1/2 items-center justify-center text-ink"
+        style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18 }}
       >
-        <span>8.2</span>
-        <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>km</span>
+        <span className="inline-flex items-baseline" style={{ gap: 3 }}>
+          <span>8.2</span>
+          <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>km</span>
+        </span>
       </div>
     </div>
   );
@@ -1759,13 +1761,11 @@ function CombinedSessionTilePreview({ design }: { design: CombinedSessionTileDes
   if (design === "metric") {
     return (
       <div className="flex h-14 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
-        <div className="flex w-1/2 items-baseline justify-center text-ink" style={{ background: bg1, fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16, gap: 3 }}>
-          <span>8.2</span>
-          <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>km</span>
+        <div className="flex w-1/2 items-center justify-center px-1.5" style={{ background: bg1 }}>
+          <span className="truncate text-[9px] font-semibold text-ink">Morning run</span>
         </div>
-        <div className="flex w-1/2 items-baseline justify-center text-ink" style={{ background: bg2, fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16, gap: 3 }}>
-          <span>20</span>
-          <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>min</span>
+        <div className="flex w-1/2 items-center justify-center px-1.5" style={{ background: bg2 }}>
+          <span className="truncate text-[9px] font-semibold text-ink">Core</span>
         </div>
       </div>
     );
@@ -1885,11 +1885,13 @@ function MonthTilePreview({ design }: { design: MonthTileDesign }) {
         <Footprints className="h-6 w-6" strokeWidth={2.25} style={{ color: accent }} />
       </div>
       <div
-        className="flex w-1/2 items-baseline justify-center text-ink"
-        style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16, gap: 3 }}
+        className="flex w-1/2 items-center justify-center text-ink"
+        style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16 }}
       >
-        <span>8.2</span>
-        <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>km</span>
+        <span className="inline-flex items-baseline" style={{ gap: 3 }}>
+          <span>8.2</span>
+          <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>km</span>
+        </span>
       </div>
     </div>
   );
