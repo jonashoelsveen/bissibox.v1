@@ -118,8 +118,12 @@ export function GlobalTopTabBar() {
         .global-topbar-dark .topbar-row [data-active-tab] *:hover {
           background-color: transparent !important;
         }
-        /* Folder icon: inline style.color wins, but be explicit for clarity. */
-        .global-topbar-dark .topbar-row [data-folder-icon] { color: var(--folder-color, currentColor) !important; }
+        /* Folder icon: when a folder color is set on the tab, it wins over
+           the active-tab black override. Higher specificity than [data-active-tab] *. */
+        .global-topbar-dark .topbar-row [data-tab] [data-folder-icon],
+        .global-topbar-dark .topbar-row [data-active-tab] [data-folder-icon] {
+          color: var(--folder-color, currentColor) !important;
+        }
         /* Inactive-tab divider (Chrome-style). Hidden when either adjacent
            tab is hovered or active. */
         .global-topbar-dark .topbar-row [data-tab-divider] { transition: opacity 120ms; }
