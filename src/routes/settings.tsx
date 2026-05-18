@@ -1759,13 +1759,11 @@ function CombinedSessionTilePreview({ design }: { design: CombinedSessionTileDes
   if (design === "metric") {
     return (
       <div className="flex h-14 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
-        <div className="flex w-1/2 items-baseline justify-center text-ink" style={{ background: bg1, fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16, gap: 3 }}>
-          <span>8.2</span>
-          <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>km</span>
+        <div className="flex w-1/2 items-center justify-center px-1.5" style={{ background: bg1 }}>
+          <span className="truncate text-[9px] font-semibold text-ink">Morning run</span>
         </div>
-        <div className="flex w-1/2 items-baseline justify-center text-ink" style={{ background: bg2, fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16, gap: 3 }}>
-          <span>20</span>
-          <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>min</span>
+        <div className="flex w-1/2 items-center justify-center px-1.5" style={{ background: bg2 }}>
+          <span className="truncate text-[9px] font-semibold text-ink">Core</span>
         </div>
       </div>
     );
