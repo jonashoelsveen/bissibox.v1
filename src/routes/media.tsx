@@ -2538,7 +2538,7 @@ function Lightbox({
               onClick={() => setEditPanelOpen((v) => !v)}
               aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
               className={`fixed right-4 z-[96] grid h-9 w-9 place-items-center rounded-full transition ${
-                isFullscreen ? "top-1" : "top-[66px]"
+                isFullscreen ? "top-1" : "top-[50px]"
               } ${
                 editPanelOpen
                   ? "bg-foreground/10 text-foreground"
