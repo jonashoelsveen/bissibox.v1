@@ -113,6 +113,29 @@ export function GlobalTopTabBar() {
         .global-topbar-dark .topbar-row button:hover {
           background-color: rgba(255,255,255,0.10) !important;
         }
+        /* Chrome-style inset hover pill for inactive tabs.
+           Replaces the full-rect hover with a smaller pill that floats
+           inside the tab area, inset on all four sides. */
+        .global-topbar-dark .topbar-row [data-tab]:not([data-active-tab]):hover {
+          background-color: transparent !important;
+        }
+        .global-topbar-dark .topbar-row [data-tab]:not([data-active-tab])::before {
+          content: "";
+          position: absolute;
+          top: 4px;
+          bottom: 5px;
+          left: 4px;
+          right: 4px;
+          border-radius: 8px;
+          background-color: rgba(255, 255, 255, 0.10);
+          opacity: 0;
+          transition: opacity 120ms ease-out;
+          pointer-events: none;
+          z-index: 0;
+        }
+        .global-topbar-dark .topbar-row [data-tab]:not([data-active-tab]):hover::before {
+          opacity: 1;
+        }
         /* Active tab sits on a white background — force black text/icon
            regardless of the dark-bar default. Folder icon keeps its inline
            color via specificity (set further below). */
