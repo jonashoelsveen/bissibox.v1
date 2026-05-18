@@ -1729,10 +1729,11 @@ function SessionTilePreview({ design }: { design: SessionTileDesign }) {
         <Footprints className="h-7 w-7" strokeWidth={2.25} style={{ color: accent }} />
       </div>
       <div
-        className="flex w-1/2 items-center justify-center text-ink"
-        style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18 }}
+        className="flex w-1/2 items-baseline justify-center text-ink"
+        style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18, gap: 3 }}
       >
-        8.2
+        <span>8.2</span>
+        <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>km</span>
       </div>
     </div>
   );
@@ -1740,9 +1741,9 @@ function SessionTilePreview({ design }: { design: SessionTileDesign }) {
 
 function CombinedSessionTilePreview({ design }: { design: CombinedSessionTileDesign }) {
   const accent1 = "#5b5bff";
-  const accent2 = "#ff6b3a";
+  const accent2 = "#ADADAD"; // strengthCore
   const bg1 = "rgba(184,184,255,0.45)";
-  const bg2 = "rgba(255,184,140,0.55)";
+  const bg2 = "rgba(173,173,173,0.35)";
   if (design === "icon") {
     return (
       <div className="flex h-14 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
@@ -1750,7 +1751,7 @@ function CombinedSessionTilePreview({ design }: { design: CombinedSessionTileDes
           <Footprints className="h-6 w-6" strokeWidth={2.25} style={{ color: accent1 }} />
         </div>
         <div className="flex w-1/2 items-center justify-center" style={{ background: bg2 }}>
-          <Footprints className="h-6 w-6" strokeWidth={2.25} style={{ color: accent2 }} />
+          <Dumbbell className="h-6 w-6" strokeWidth={2.25} style={{ color: accent2 }} />
         </div>
       </div>
     );
@@ -1758,11 +1759,13 @@ function CombinedSessionTilePreview({ design }: { design: CombinedSessionTileDes
   if (design === "metric") {
     return (
       <div className="flex h-14 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
-        <div className="flex w-1/2 items-center justify-center text-ink" style={{ background: bg1, fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16 }}>
-          8.2
+        <div className="flex w-1/2 items-baseline justify-center text-ink" style={{ background: bg1, fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16, gap: 3 }}>
+          <span>8.2</span>
+          <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>km</span>
         </div>
-        <div className="flex w-1/2 items-center justify-center text-ink" style={{ background: bg2, fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16 }}>
-          45′
+        <div className="flex w-1/2 items-baseline justify-center text-ink" style={{ background: bg2, fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16, gap: 3 }}>
+          <span>20</span>
+          <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>min</span>
         </div>
       </div>
     );
