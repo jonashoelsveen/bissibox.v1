@@ -150,13 +150,15 @@ export function CalendarPage() {
     };
   }, [user, teamId]);
 
-  return (
-    <div className="h-full overflow-hidden px-4 md:px-6">
   const panelScopeKey = activeEntityId ?? user?.id ?? "anon";
   const [panelOpen, setPanelOpen] = useLibrarySetting<boolean>(
     `calendar:panel:open:${panelScopeKey}`,
     true,
   );
+
+  return (
+    <div className="h-full overflow-hidden bg-white pl-0 pr-4 md:pr-6">
+
 
   return (
     <div className="h-full overflow-hidden bg-white pl-0 pr-4 md:pr-6">
