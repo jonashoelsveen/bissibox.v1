@@ -63,7 +63,7 @@ export function DiaryPage() {
             }}
           >
             <div className="relative h-full overflow-hidden rounded-lg border border-hairline bg-subtle shadow-sm">
-              <div className="h-full overflow-y-auto px-3 pb-6 pt-3">
+              <div className="h-full overflow-y-auto px-3 pb-6 pt-[48px]">
                 <DiarySideNav
                   currentDate={currentDate}
                   currentRange={currentRange}
