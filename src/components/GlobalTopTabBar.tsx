@@ -104,16 +104,16 @@ export function GlobalTopTabBar() {
       style={{ background: "#1d1d1f" }}
     >
       <style>{`
-        .global-topbar-dark .topbar-row,
-        .global-topbar-dark .topbar-row * { color: #ffffff; }
+        .global-topbar-dark .topbar-row { color: #ffffff; }
+        .global-topbar-dark .topbar-row *:not([data-folder-icon]):not([data-folder-icon] *) { color: #ffffff; }
         .global-topbar-dark .topbar-row button:hover {
           background-color: rgba(255,255,255,0.10) !important;
         }
         /* Active tab sits on a white background — force black text/icon
            regardless of the dark-bar default. Folder icon keeps its inline
            color via specificity (set further below). */
-        .global-topbar-dark .topbar-row [data-active-tab],
-        .global-topbar-dark .topbar-row [data-active-tab] * { color: #111111 !important; }
+        .global-topbar-dark .topbar-row [data-active-tab] { color: #111111 !important; }
+        .global-topbar-dark .topbar-row [data-active-tab] *:not([data-folder-icon]):not([data-folder-icon] *) { color: #111111 !important; }
         .global-topbar-dark .topbar-row [data-active-tab]:hover,
         .global-topbar-dark .topbar-row [data-active-tab] *:hover {
           background-color: transparent !important;
