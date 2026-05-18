@@ -4341,11 +4341,11 @@ function MediaTabViewBody(props: {
   const primaryAlbumId =
     (currentItem && itemAlbums[currentItem.id]?.[0]) ?? currentItem?.album_id ?? null;
 
-  const TOP_OFFSET = 57;
+  const TOP_OFFSET = 56;
 
   return (
     <div className="flex h-full flex-col bg-white text-foreground">
-      <div className="sticky top-0 z-40 flex h-11 flex-none items-center justify-between gap-2 px-4 bg-white text-foreground">
+      <div className="sticky top-0 z-40 flex h-14 flex-none items-center justify-between gap-2 px-4 bg-white text-foreground">
         <div className="flex items-center">
           <button
             type="button"
