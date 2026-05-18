@@ -31,6 +31,7 @@ import {
   MoreHorizontal,
   Users as UsersIcon,
 } from "lucide-react";
+import { SideNavNameHeader } from "@/components/calendar/SideNavNameHeader";
 
 /** Library is media-only. The category type is kept as a single literal for
  *  back-compat with callers that destructure `value.category`. */
