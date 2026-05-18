@@ -620,7 +620,11 @@ function LibraryPage() {
           <PanelLeft className="h-4 w-4" />
         </button>
 
-        <div className="relative min-w-0 md:h-full md:overflow-y-auto pl-4 md:pl-6">
+        <div
+          className="relative min-w-0 md:h-full md:overflow-y-auto pl-4 md:pl-6 transition-transform duration-300 ease-out"
+          style={{ transform: panelOpen ? "translateX(0)" : "translateX(-232px)" }}
+        >
+
 
           {showingMedia && activeNoteId && activeTabEntry ? (
             <MediaTabView
