@@ -636,17 +636,17 @@ function LibraryPage() {
 
       <div
         className="relative grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
-        style={{ gridTemplateColumns: panelOpen ? "232px 1fr" : "0px 1fr" }}
+        style={{ gridTemplateColumns: panelOpen ? "256px 1fr" : "0px 1fr" }}
       >
         <aside className="relative md:h-full overflow-hidden">
           <div
-            className="relative h-full pl-0 pr-3 py-2 transition-transform duration-300 ease-out"
+            className="relative h-full pl-3 pr-3 py-2 transition-transform duration-300 ease-out"
             style={{
-              width: 232,
+              width: 256,
               transform: panelOpen ? "translateX(0)" : "translateX(-100%)",
             }}
           >
-            <div className="relative h-full overflow-hidden rounded-r-lg border border-l-0 border-hairline bg-subtle shadow-sm">
+            <div className="relative h-full overflow-hidden rounded-lg border border-hairline bg-subtle shadow-sm">
               <div className="h-full overflow-y-auto px-3 pb-6 pt-4">
                 <LibrarySideNav
                   value={sideValue}
@@ -671,7 +671,7 @@ function LibraryPage() {
         </button>
 
         <div
-          className="relative min-w-0 md:h-full md:overflow-y-auto pl-4 md:pl-6"
+          className="relative min-w-0 md:h-full md:overflow-y-auto"
         >
 
 
