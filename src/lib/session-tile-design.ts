@@ -62,7 +62,7 @@ export const COMBINED_SESSION_TILE_DESIGNS: {
   description: string;
 }[] = [
   { id: "icon", label: "Icons", description: "Each synced activity shown as its icon, side-by-side." },
-  { id: "metric", label: "Metric", description: "Distance (endurance) or duration (strength/stretch) per field." },
+  { id: "metric", label: "Header", description: "Session header only, one per field." },
   { id: "details", label: "Details", description: "Header, duration and distance stacked per field." },
 ];
 
