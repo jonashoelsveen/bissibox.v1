@@ -553,13 +553,13 @@ function LibraryPage() {
                               zIndex: 0,
                             }}
                           />
-                          <svg aria-hidden width="32" height="35" viewBox="0 0 32 35"
+                          <svg aria-hidden width="32" height="39" viewBox="0 0 32 39"
                             style={{ position: "absolute", top: 0, left: -16, pointerEvents: "none", zIndex: 0, overflow: "visible", display: "block" }}>
-                            <path d="M 0 35 L 0 34 A 16 16 0 0 0 16 18 L 16 8 A 8 8 0 0 1 24 0 L 32 0 L 32 35 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
+                            <path d="M 0 39 L 0 38 A 16 16 0 0 0 16 22 L 16 8 A 8 8 0 0 1 24 0 L 32 0 L 32 39 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
                           </svg>
-                          <svg aria-hidden width="32" height="35" viewBox="0 0 32 35"
+                          <svg aria-hidden width="32" height="39" viewBox="0 0 32 39"
                             style={{ position: "absolute", top: 0, right: -16, pointerEvents: "none", zIndex: 0, overflow: "visible", display: "block" }}>
-                            <path d="M 32 35 L 32 34 A 16 16 0 0 1 16 18 L 16 8 A 8 8 0 0 0 8 0 L 0 0 L 0 35 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
+                            <path d="M 32 39 L 32 38 A 16 16 0 0 1 16 22 L 16 8 A 8 8 0 0 0 8 0 L 0 0 L 0 39 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
                           </svg>
                         </>
                       )}
