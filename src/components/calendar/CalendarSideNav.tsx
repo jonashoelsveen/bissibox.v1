@@ -23,6 +23,7 @@ import {
   CAT_WORK_COLOR,
 } from "./MonthGridType1";
 import { MeCategorySection } from "./MeCategorySection";
+import { SideNavNameHeader } from "./SideNavNameHeader";
 import { useUserCategories } from "@/hooks/useUserCategories";
 
 /* ---------- Category keys & colors ---------- */
