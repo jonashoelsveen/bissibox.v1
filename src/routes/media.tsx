@@ -640,7 +640,7 @@ function LibraryPage() {
       >
         <aside className="relative md:h-full overflow-hidden">
           <div
-            className="relative h-full pl-3 pr-3 py-2 transition-transform duration-300 ease-out"
+            className="relative h-full pl-2 pr-2 py-2 transition-transform duration-300 ease-out"
             style={{
               width: 256,
               transform: panelOpen ? "translateX(0)" : "translateX(-100%)",
