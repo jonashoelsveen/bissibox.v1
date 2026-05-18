@@ -56,7 +56,7 @@ export function SideNavNameHeader({
   return (
     <div ref={wrapRef} className="mb-3 flex h-7 items-center overflow-hidden">
       <h2
-        className="min-w-0 whitespace-nowrap text-xl font-semibold text-ink"
+        className={`min-w-0 whitespace-nowrap text-xl text-ink ${weight === "normal" ? "font-normal" : "font-semibold"}`}
         style={{ ...fontStyle, ...fadeStyle }}
         title={name}
       >
