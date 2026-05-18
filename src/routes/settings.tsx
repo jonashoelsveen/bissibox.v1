@@ -1364,6 +1364,7 @@ function AppearancePanel() {
 
   return (
     <div className="space-y-3">
+      <ThemeSettingsPanel />
       <Card>
         <button
           onClick={() => setOpen((v) => !v)}
@@ -1392,6 +1393,91 @@ function AppearancePanel() {
         )}
       </Card>
     </div>
+  );
+}
+
+function ThemeSettingsPanel() {
+  const [selectedTheme, setSelectedTheme] = useState<"light" | "dark">("light");
+
+  return (
+    <Card>
+      <header className="mb-4">
+        <h3 className="text-sm font-semibold text-ink">Theme</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Choose between light and dark mode for the platform.
+        </p>
+      </header>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {/* Light theme tile */}
+        <button
+          onClick={() => setSelectedTheme("light")}
+          className={`group relative overflow-hidden rounded-xl border text-left transition ${
+            selectedTheme === "light"
+              ? "border-primary shadow-md ring-2 ring-primary/30"
+              : "border-hairline hover:border-ink/30"
+          }`}
+        >
+          <div className="relative flex h-28 items-center justify-center bg-white p-4">
+            {/* Miniature light platform preview */}
+            <div className="h-20 w-32 overflow-hidden rounded border border-gray-200 shadow-sm">
+              {/* Top tab bar */}
+              <div className="h-4 w-full bg-gray-200" />
+              {/* Body: sidebar + main */}
+              <div className="flex h-16">
+                <div className="h-full w-8 bg-gray-200" />
+                <div className="h-full flex-1 bg-white" />
+              </div>
+            </div>
+            {selectedTheme === "light" && (
+              <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+                <Check className="h-3 w-3" />
+              </span>
+            )}
+          </div>
+          <div className="bg-card px-3 py-2.5">
+            <div className="text-sm font-medium text-ink">Light</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              Light grey top bar and sidebar with a white main window.
+            </div>
+          </div>
+        </button>
+
+        {/* Dark theme tile */}
+        <button
+          onClick={() => setSelectedTheme("dark")}
+          className={`group relative overflow-hidden rounded-xl border text-left transition ${
+            selectedTheme === "dark"
+              ? "border-primary shadow-md ring-2 ring-primary/30"
+              : "border-hairline hover:border-ink/30"
+          }`}
+        >
+          <div className="relative flex h-28 items-center justify-center bg-white p-4">
+            {/* Miniature dark platform preview */}
+            <div className="h-20 w-32 overflow-hidden rounded border border-gray-800 shadow-sm">
+              {/* Top tab bar */}
+              <div className="h-4 w-full bg-gray-900" />
+              {/* Body: sidebar + main */}
+              <div className="flex h-16">
+                <div className="h-full w-8 bg-gray-900" />
+                <div className="h-full flex-1 bg-white" />
+              </div>
+            </div>
+            {selectedTheme === "dark" && (
+              <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+                <Check className="h-3 w-3" />
+              </span>
+            )}
+          </div>
+          <div className="bg-card px-3 py-2.5">
+            <div className="text-sm font-medium text-ink">Dark</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              Dark top bar and sidebar with a white main window.
+            </div>
+          </div>
+        </button>
+      </div>
+    </Card>
   );
 }
 
