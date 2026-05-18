@@ -2573,7 +2573,7 @@ function Lightbox({
             } ${isFullscreen ? "top-0 z-[96]" : "z-30"}`}
             style={isFullscreen ? undefined : { top: 40 }}
           >
-            <div className="flex h-11 flex-none items-center gap-1 border-b border-hairline px-5">
+            <div className="flex h-14 flex-none items-center gap-1 border-b border-hairline px-5">
               {tabs.map((t) => (
                 <button
                   key={t}
