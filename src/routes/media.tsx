@@ -5,19 +5,8 @@ import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import * as tus from "tus-js-client";
-import { FilesPage } from "@/components/library/FilesPage";
-import { NotesPage } from "@/components/library/NotesPage";
-import { NoteEditor } from "@/components/library/NoteEditor";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
-import { PreviousPage, type PreviousNewKind } from "@/components/library/PreviousPage";
-import { LibraryPlusMenu } from "@/components/library/LibraryPlusMenu";
-import { CreateContainerDialog } from "@/components/library/CreateContainerDialog";
-import { NewNoteOverlay } from "@/components/library/NewNoteOverlay";
 import { TopBarSlot } from "@/components/TopBarSlot";
-import { MeetingsListPage } from "@/components/library/MeetingsListPage";
-import { getUnsaved } from "@/lib/library-settings";
-import { TeamBoardPage } from "@/routes/team.board";
-import { MapPage } from "@/components/map/MapPage";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -62,14 +51,18 @@ import {
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 
-type LibraryTab = "notes" | "files" | "media" | "meetings" | "map";
+/** Library is media-only. Only "media" remains as a tab; the other library
+ *  surfaces (notes / files / meetings / map) were removed. */
+type LibraryTab = "media";
+/** Kept for back-compat with MediaPage's create callbacks. */
+type PreviousNewKind = "media";
 
 export interface OpenNoteTab {
   id: string;
   title: string;
   folder: string | null;
   kind: "new" | "earlier";
-  type?: "note" | "meeting" | "media" | "album";
+  type?: "media" | "album";
   mediaIds?: string[];
   /** For type === "album": the album folder id (or "__unsorted__" / ""). */
   albumFolder?: string;
@@ -79,74 +72,31 @@ export interface OpenNoteTab {
 
 export const Route = createFileRoute("/media")({
   component: LibraryPage,
-  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; folder?: string; new?: string; open?: string; view?: "previous"; edit?: string } => ({
-    tab:
-      s.tab === "files" || s.tab === "media" || s.tab === "notes" || s.tab === "meetings" || s.tab === "map"
-        ? (s.tab as LibraryTab)
-        : undefined,
+  validateSearch: (s: Record<string, unknown>): { tab?: LibraryTab; folder?: string; new?: string } => ({
+    tab: s.tab === "media" ? "media" : undefined,
     folder: typeof s.folder === "string" ? (s.folder as string) : undefined,
     new: typeof s.new === "string" ? (s.new as string) : undefined,
-    open: typeof s.open === "string" ? (s.open as string) : undefined,
-    view: s.view === "previous" ? "previous" : undefined,
-    edit: typeof s.edit === "string" ? (s.edit as string) : undefined,
   }),
   head: () => ({ meta: [{ title: "Library · Raceline" }] }),
 });
 
-const MAX_NOTE_TABS = 10;
+const MAX_TABS = 10;
 
 function LibraryPage() {
   const search = useSearch({ from: "/media" });
   const navigate = useNavigate();
   const { mode, activeEntityId } = useAuth();
-  const baseTab: LibraryTab = search.tab ?? "files";
 
   const [openNoteTabs, setOpenNoteTabs] = useState<OpenNoteTab[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [actionsMount, setActionsMount] = useState<HTMLDivElement | null>(null);
-  const [newNoteOpen, setNewNoteOpen] = useState(false);
-  const [newMeetingSignal, setNewMeetingSignal] = useState(0);
-  const [createContainerKind, setCreateContainerKind] = useState<PreviousNewKind | null>(null);
-  const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
+  void mode; void activeEntityId; void setActionsMount;
 
-  const handleCreateContainerFromPrevious = (kind: PreviousNewKind) => {
-    // Open the parent-level create dialog WITHOUT navigating away from the
-    // current tab. The new folder/album appears in the side nav immediately
-    // via the shared `library:refresh` event.
-    setCreateContainerKind(kind);
-  };
-
-  const handleCreateFromPrevious = (kind: PreviousNewKind) => {
-    if (kind === "meeting") {
-      setActiveNoteId(null);
-      // Switch to meetings tab and trigger the inline new-meeting dialog.
-      navigate({ to: "/media", search: { tab: "meetings" }, replace: true });
-      setNewMeetingSignal((n) => n + 1);
-      return;
-    }
-    if (kind === "note") {
-      setNewNoteOpen(true);
-      return;
-    }
-    if (kind === "files") {
-      setActiveNoteId(null);
-      navigate({ to: "/media", search: { tab: "files", new: "1" }, replace: true });
-      return;
-    }
-    if (kind === "media") {
-      setActiveNoteId(null);
-      navigate({ to: "/media", search: { tab: "media", new: "1" }, replace: true });
-      return;
-    }
-  };
-
-  // Persist open library tabs per profile so they survive logout / page reloads.
+  // Persist open tabs per profile so they survive logout / reloads.
   const profileScopeKey = `${mode}:${activeEntityId ?? "self"}`;
   const storageKey = `library:openNoteTabs:${profileScopeKey}`;
-  const lastScopeRef = useRef<string>(profileScopeKey);
   const hydratedRef = useRef<string | null>(null);
 
-  // Hydrate from localStorage on first mount + when profile scope changes.
   useEffect(() => {
     if (hydratedRef.current === profileScopeKey) return;
     hydratedRef.current = profileScopeKey;
@@ -157,8 +107,10 @@ function LibraryPage() {
       if (raw) {
         const parsed = JSON.parse(raw) as OpenNoteTab[];
         if (Array.isArray(parsed)) {
-          setOpenNoteTabs(parsed);
-          if (activeRaw && parsed.some((t) => t.id === activeRaw)) {
+          // Filter to media/album types only — older persisted notes / meetings are dropped.
+          const filtered = parsed.filter((t) => t.type === "media" || t.type === "album");
+          setOpenNoteTabs(filtered);
+          if (activeRaw && filtered.some((t) => t.id === activeRaw)) {
             setActiveNoteId(activeRaw);
           } else {
             setActiveNoteId(null);
@@ -174,15 +126,6 @@ function LibraryPage() {
     }
   }, [profileScopeKey, storageKey]);
 
-  // Reset (clear in-memory) when profile changes — hydration above repopulates.
-  useEffect(() => {
-    if (lastScopeRef.current !== profileScopeKey) {
-      lastScopeRef.current = profileScopeKey;
-      hydratedRef.current = null;
-    }
-  }, [profileScopeKey]);
-
-  // Persist whenever tabs / active change.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (hydratedRef.current !== profileScopeKey) return;
@@ -195,7 +138,7 @@ function LibraryPage() {
     }
   }, [openNoteTabs, activeNoteId, storageKey, profileScopeKey]);
 
-  // Chrome-like tab DnD (pointer-based, X-axis only)
+  // Tab DnD state (Chrome-style horizontal reorder)
   const tabStripRef = useRef<HTMLDivElement | null>(null);
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [dragNoteId, setDragNoteId] = useState<string | null>(null);
@@ -209,7 +152,6 @@ function LibraryPage() {
     offsets: number[];
     moved: boolean;
   } | null>(null);
-  // FLIP settle: animate ONLY the dropped tab into its new DOM home.
   const flipRef = useRef<{ id: string; fromLeft: number } | null>(null);
   const [edgeFade, setEdgeFade] = useState({ left: false, right: false });
 
@@ -248,92 +190,12 @@ function LibraryPage() {
     el.addEventListener("transitionend", cleanup);
   });
 
-  const setTab = (next: LibraryTab) => {
-    setActiveNoteId(null);
-    navigate({ to: "/media", search: { tab: next }, replace: true });
-  };
-
-  const openNote = useCallback(
-    async (id: string, kind: "new" | "earlier" = "earlier") => {
-      const existing = openNoteTabs.find((t) => t.id === id);
-      if (existing) {
-        setActiveNoteId(id);
-        return;
-      }
-      if (openNoteTabs.length >= MAX_NOTE_TABS) {
-        toast.error(`You can have at most ${MAX_NOTE_TABS} note tabs open at once.`);
-        return;
-      }
-      const { data } = await supabase
-        .from("notes").select("id,title,folder").eq("id", id).maybeSingle();
-      if (!data) { toast.error("Note not found"); return; }
-      setOpenNoteTabs((prev) => [
-        ...prev,
-        { id: data.id, title: data.title, folder: data.folder, kind },
-      ]);
-      setActiveNoteId(id);
-    },
-    [openNoteTabs],
-  );
-
-  const [unsavedPrompt, setUnsavedPrompt] = useState<{
-    id: string;
-    title: string;
-    isNew: boolean;
-  } | null>(null);
-
-  const finalizeClose = (id: string) => {
-    setOpenNoteTabs((prev) => {
-      const idx = prev.findIndex((t) => t.id === id);
-      const next = prev.filter((t) => t.id !== id);
-      if (activeNoteId === id) {
-        if (next.length === 0) {
-          setActiveNoteId(null);
-        } else {
-          const leftIdx = Math.max(0, (idx === -1 ? 0 : idx) - 1);
-          setActiveNoteId(next[leftIdx].id);
-        }
-      }
-      return next;
-    });
-  };
-
-  const closeNoteTab = (id: string) => {
-    const tab = openNoteTabs.find((t) => t.id === id);
-    const handle = getUnsaved(id);
-    if (handle && handle.isDirty()) {
-      setUnsavedPrompt({
-        id,
-        title: handle.title(),
-        isNew: tab?.kind === "new",
-      });
-      return;
-    }
-    finalizeClose(id);
-  };
-
-  const openMeetingTab = useCallback(
-    (m: { id: string; title: string; folder: string | null }, kind: "new" | "earlier" = "earlier") => {
-      setOpenNoteTabs((prev) => {
-        if (prev.some((t) => t.id === m.id)) return prev;
-        if (prev.length >= MAX_NOTE_TABS) {
-          toast.error(`You can have at most ${MAX_NOTE_TABS} tabs open at once.`);
-          return prev;
-        }
-        return [...prev, { id: m.id, title: m.title, folder: m.folder, kind, type: "meeting" }];
-      });
-      setActiveNoteId(m.id);
-    },
-    [],
-  );
-
   const openMediaTab = useCallback(
     (tabId: string, title: string, mediaIds: string[]) => {
       setOpenNoteTabs((prev) => {
-        const existing = prev.find((t) => t.id === tabId);
-        if (existing) return prev;
-        if (prev.length >= MAX_NOTE_TABS) {
-          toast.error(`You can have at most ${MAX_NOTE_TABS} tabs open at once.`);
+        if (prev.some((t) => t.id === tabId)) return prev;
+        if (prev.length >= MAX_TABS) {
+          toast.error(`You can have at most ${MAX_TABS} tabs open at once.`);
           return prev;
         }
         return [...prev, { id: tabId, title, folder: null, kind: "earlier", type: "media", mediaIds }];
@@ -348,8 +210,8 @@ function LibraryPage() {
       const tabId = `album:${albumFolder || "__all__"}`;
       setOpenNoteTabs((prev) => {
         if (prev.some((t) => t.id === tabId)) return prev;
-        if (prev.length >= MAX_NOTE_TABS) {
-          toast.error(`You can have at most ${MAX_NOTE_TABS} tabs open at once.`);
+        if (prev.length >= MAX_TABS) {
+          toast.error(`You can have at most ${MAX_TABS} tabs open at once.`);
           return prev;
         }
         return [
@@ -357,8 +219,6 @@ function LibraryPage() {
           { id: tabId, title, folder: null, kind: "earlier", type: "album", albumFolder, albumColor: albumColor ?? null },
         ];
       });
-      // Album tabs don't take over the content view — they're shortcuts.
-      // Don't set activeNoteId.
     },
     [],
   );
@@ -372,39 +232,6 @@ function LibraryPage() {
       ),
     );
   };
-
-  // Auto-open via ?open=<id> (from /notes/$noteId redirect)
-  useEffect(() => {
-    if (search.open) {
-      void openNote(search.open, "earlier");
-      navigate({ to: "/media", search: { tab: search.tab ?? "notes" }, replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search.open]);
-
-  // Global "open as new tab" event — fired by the global + create overlay
-  // after a new note / meeting / media item is created so it appears as an
-  // open tab in the top tab bar (mirrors the previous per-page behaviour).
-  useEffect(() => {
-    const onOpenTab = (e: Event) => {
-      const d = (e as CustomEvent).detail as
-        | { type: "note"; id: string; title: string; folder: string | null }
-        | { type: "meeting"; id: string; title: string; folder: string | null }
-        | { type: "media"; id: string; title: string }
-        | { type: "file"; id: string; title: string };
-      if (!d) return;
-      if (d.type === "note") {
-        void openNote(d.id, "new");
-      } else if (d.type === "meeting") {
-        openMeetingTab({ id: d.id, title: d.title, folder: d.folder }, "new");
-      } else if (d.type === "media") {
-        openMediaTab(`media:${d.id}`, d.title, [d.id]);
-      }
-      // files: no per-file editor tab — skipped intentionally.
-    };
-    window.addEventListener("library:open-tab", onOpenTab);
-    return () => window.removeEventListener("library:open-tab", onOpenTab);
-  }, [openNote, openMeetingTab, openMediaTab]);
 
   // Live update album tab colors when the user picks a color in the side nav.
   useEffect(() => {
@@ -421,13 +248,26 @@ function LibraryPage() {
     return () => window.removeEventListener("library:album-color", onColor);
   }, []);
 
-  const showingNote = activeNoteId !== null;
+  // Global "open as new tab" event — fired after a new media item is created.
+  useEffect(() => {
+    const onOpenTab = (e: Event) => {
+      const d = (e as CustomEvent).detail as
+        | { type: "media"; id: string; title: string }
+        | { type: string; id: string; title: string; folder?: string | null }
+        | null;
+      if (!d) return;
+      if (d.type === "media") {
+        openMediaTab(`media:${d.id}`, d.title, [d.id]);
+      }
+      // Other types (note/meeting/file) are ignored — those surfaces were removed.
+    };
+    window.addEventListener("library:open-tab", onOpenTab);
+    return () => window.removeEventListener("library:open-tab", onOpenTab);
+  }, [openMediaTab]);
+
   const activeTabEntry = activeNoteId ? openNoteTabs.find((t) => t.id === activeNoteId) ?? null : null;
-  const showingMeeting = !!activeTabEntry && activeTabEntry.type === "meeting";
   const showingMedia = !!activeTabEntry && activeTabEntry.type === "media";
 
-  // Folders that currently exist as album tabs in the strip — used by MediaPage
-  // to remember/restore the lightbox-open item per-album when switching tabs.
   const openAlbumFolders = useMemo(
     () =>
       new Set(
@@ -443,7 +283,6 @@ function LibraryPage() {
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
     if (target.closest("[data-tab-close]")) return;
-    // Activate immediately on press — release position is irrelevant (Chrome/VSCode behavior).
     const tab = openNoteTabs.find((t) => t.id === id);
     if (tab && tab.type === "album") {
       setActiveNoteId(null);
@@ -510,8 +349,6 @@ function LibraryPage() {
       dragStateRef.current = null;
       const willReorder = !!(st && st.moved && st.currentIndex !== st.startIndex);
       if (willReorder && st) {
-        // Capture the dragged tab's CURRENT visual left (with drag transform)
-        // so we can FLIP-animate it to its new DOM home after reorder.
         const el = tabRefs.current.get(st.id);
         if (el) {
           flipRef.current = { id: st.id, fromLeft: el.getBoundingClientRect().left };
@@ -532,24 +369,8 @@ function LibraryPage() {
     window.addEventListener("pointercancel", onUp);
   };
 
-  const externalNotesView: { type: "all" } | { type: "folder"; name: string | null } | undefined =
-    baseTab === "notes" && search.folder !== undefined
-      ? search.folder === "__unsorted__"
-        ? { type: "folder", name: null }
-        : search.folder === ""
-          ? { type: "all" }
-          : { type: "folder", name: search.folder }
-      : undefined;
-  const externalFilesView: { type: "all" } | { type: "folder"; id: string | null } | undefined =
-    baseTab === "files" && search.folder !== undefined
-      ? search.folder === "__unsorted__"
-        ? { type: "folder", id: null }
-        : search.folder === ""
-          ? { type: "all" }
-          : { type: "folder", id: search.folder }
-      : undefined;
   const externalMediaView: { type: "all" } | { type: "album"; id: string | null } | undefined =
-    baseTab === "media" && search.folder !== undefined
+    search.folder !== undefined
       ? search.folder === "__unsorted__"
         ? { type: "album", id: null }
         : search.folder === ""
@@ -557,30 +378,23 @@ function LibraryPage() {
           : { type: "album", id: search.folder }
       : undefined;
 
-  const showingPrevious = search.view === "previous";
   const sideValue: LibrarySideNavValue = {
-    category: showingPrevious ? "previous" : baseTab,
-    folder: showingPrevious ? "" : (search.folder ?? ""),
+    category: "media",
+    folder: search.folder ?? "",
   };
   const onSideChange = (v: LibrarySideNavValue) => {
     setActiveNoteId(null);
-    if (v.category === "previous") {
-      navigate({ to: "/media", search: { tab: baseTab, view: "previous" }, replace: true });
-      return;
-    }
     navigate({
       to: "/media",
-      search: { tab: v.category, folder: v.folder || undefined },
+      search: { tab: "media", folder: v.folder || undefined },
       replace: true,
     });
   };
   const onSideOpenAsTab = (v: LibrarySideNavValue, label: string, color?: string | null) => {
-    if (v.category !== "media") return;
     const folder = v.folder || "";
     const title =
       folder === "" ? "All" : folder === "__unsorted__" ? "Unsorted" : label;
     openAlbumTab(folder, title, color ?? null);
-    // Also navigate to album so single behaviour matches.
     setActiveNoteId(null);
     navigate({
       to: "/media",
@@ -589,14 +403,17 @@ function LibraryPage() {
     });
   };
 
-  const externalMeetingsView: { type: "all" } | { type: "folder"; name: string | null } | undefined =
-    baseTab === "meetings" && search.folder !== undefined
-      ? search.folder === "__unsorted__"
-        ? { type: "folder", name: null }
-        : search.folder === ""
-          ? { type: "all" }
-          : { type: "folder", name: search.folder }
-      : undefined;
+  // Media-only create handlers — invoked by the in-page "+" menu on MediaPage.
+  const handleCreateMedia = (_kind: PreviousNewKind) => {
+    setActiveNoteId(null);
+    navigate({ to: "/media", search: { tab: "media", new: "1" }, replace: true });
+  };
+  const handleCreateAlbumContainer = (_kind: PreviousNewKind) => {
+    // MediaPage exposes its own internal "create album" dialog via newAlbumSignal —
+    // for the side-nav-driven flow we just bump a signal.
+    setNewAlbumSignal((n) => n + 1);
+  };
+  const [newAlbumSignal, setNewAlbumSignal] = useState(0);
 
   return (
     <div className="h-full overflow-hidden">
@@ -619,8 +436,7 @@ function LibraryPage() {
                 {openNoteTabs.map((t, idx) => {
                   const isAlbum = t.type === "album";
                   const isActive = isAlbum
-                    ? !showingNote && baseTab === "media" &&
-                      ((t.albumFolder ?? "") === (search.folder ?? ""))
+                    ? !activeNoteId && ((t.albumFolder ?? "") === (search.folder ?? ""))
                     : activeNoteId === t.id;
                   const isDragging = dragNoteId === t.id;
 
@@ -638,8 +454,6 @@ function LibraryPage() {
                     ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
                     : { transform: `translate3d(${translateX}px,0,0)` };
 
-                  // Chrome-style outward curves on bottom-left and bottom-right.
-                  const curveBg = isActive ? "#FFFFFF" : "transparent";
                   return (
                     <button
                       key={t.id}
@@ -656,7 +470,6 @@ function LibraryPage() {
                         marginRight: 4,
                         background: "transparent",
                         padding: "0 28px 0 12px",
-                        // Always overlap the bar hairline by 1px so click-to-activate doesn't shift layout.
                         marginBottom: -1,
                         paddingBottom: 1,
                         touchAction: "pan-y",
@@ -674,10 +487,8 @@ function LibraryPage() {
                       }`}
                       title={t.title}
                     >
-                      {/* Active tab silhouette: white fill + continuous 1px hairline tracing top, sides and outward bows */}
                       {(isActive || isDragging) && (
                         <>
-                          {/* Middle: white fill + top hairline border (stretches with tab width) */}
                           <span
                             aria-hidden
                             style={{
@@ -692,70 +503,24 @@ function LibraryPage() {
                               zIndex: 0,
                             }}
                           />
-                          {/* Left silhouette: top-left corner + outward bow */}
-                          <svg
-                            aria-hidden
-                            width="28"
-                            height="35"
-                            viewBox="0 0 28 35"
-                            style={{
-                              position: "absolute",
-                              top: 0,
-                              left: -14,
-                              pointerEvents: "none",
-                              zIndex: 0,
-                              overflow: "visible",
-                            }}
-                          >
-                            <path
-                              d="M 0 35 L 0 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0 L 28 35 Z"
-                              fill="#FFFFFF"
-                            />
-                            <path
-                              d="M 0 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0"
-                              fill="none"
-                              stroke="var(--hairline)"
-                              strokeWidth="1"
-                              shapeRendering="geometricPrecision"
-                            />
+                          <svg aria-hidden width="28" height="35" viewBox="0 0 28 35"
+                            style={{ position: "absolute", top: 0, left: -14, pointerEvents: "none", zIndex: 0, overflow: "visible" }}>
+                            <path d="M 0 35 L 0 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0 L 28 35 Z" fill="#FFFFFF" />
+                            <path d="M 0 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0" fill="none" stroke="var(--hairline)" strokeWidth="1" shapeRendering="geometricPrecision" />
                           </svg>
-                          {/* Right silhouette: top-right corner + outward bow (mirror) */}
-                          <svg
-                            aria-hidden
-                            width="28"
-                            height="35"
-                            viewBox="0 0 28 35"
-                            style={{
-                              position: "absolute",
-                              top: 0,
-                              right: -14,
-                              pointerEvents: "none",
-                              zIndex: 0,
-                              overflow: "visible",
-                            }}
-                          >
-                            <path
-                              d="M 28 35 L 28 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0 L 0 35 Z"
-                              fill="#FFFFFF"
-                            />
-                            <path
-                              d="M 28 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0"
-                              fill="none"
-                              stroke="var(--hairline)"
-                              strokeWidth="1"
-                              shapeRendering="geometricPrecision"
-                            />
+                          <svg aria-hidden width="28" height="35" viewBox="0 0 28 35"
+                            style={{ position: "absolute", top: 0, right: -14, pointerEvents: "none", zIndex: 0, overflow: "visible" }}>
+                            <path d="M 28 35 L 28 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0 L 0 35 Z" fill="#FFFFFF" />
+                            <path d="M 28 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0" fill="none" stroke="var(--hairline)" strokeWidth="1" shapeRendering="geometricPrecision" />
                           </svg>
                         </>
                       )}
-                      {t.type === "meeting" ? (
-                        <Briefcase className="h-3.5 w-3.5 shrink-0 opacity-70" />
-                      ) : t.type === "media" ? (
+                      {t.type === "media" ? (
                         <ImageIcon className="h-3.5 w-3.5 shrink-0 opacity-70" />
                       ) : t.type === "album" ? (
                         <FolderClosed className="h-3.5 w-3.5 shrink-0" style={t.albumColor ? { color: t.albumColor, opacity: 1 } : { opacity: 0.7 }} />
                       ) : (
-                        <StickyNote className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                        <ImageIcon className="h-3.5 w-3.5 shrink-0 opacity-70" />
                       )}
                       <span
                         className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left"
@@ -775,11 +540,8 @@ function LibraryPage() {
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (isAlbum) {
-                            setOpenNoteTabs((prev) => prev.filter((x) => x.id !== t.id));
-                          } else {
-                            closeNoteTab(t.id);
-                          }
+                          setOpenNoteTabs((prev) => prev.filter((x) => x.id !== t.id));
+                          if (activeNoteId === t.id) setActiveNoteId(null);
                         }}
                         className="absolute right-2 top-1/2 -translate-y-1/2 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
                       >
@@ -792,7 +554,6 @@ function LibraryPage() {
             </div>
           )}
         </nav>
-        {/* Per-page Search/Plus mount removed — global top tab bar provides them. */}
       </TopBarSlot>
 
       <div className="grid h-full gap-0 overflow-hidden md:grid-cols-[220px_1fr]">
@@ -801,19 +562,7 @@ function LibraryPage() {
         </aside>
 
         <div className="min-w-0 bg-white md:h-full md:overflow-y-auto">
-
-          {showingNote && activeNoteId && showingMeeting ? (
-            <TeamBoardPage
-              key={activeNoteId}
-              embedded
-              hideOwnTabBar
-              forceMeetingId={activeNoteId}
-              onMeetingOpened={(m) =>
-                openMeetingTab({ id: m.id, title: m.title, folder: m.folder }, m.kind)
-              }
-              onMeetingDeleted={(id) => finalizeClose(id)}
-            />
-          ) : showingNote && activeNoteId && showingMedia && activeTabEntry ? (
+          {showingMedia && activeNoteId && activeTabEntry ? (
             <MediaTabView
               key={activeNoteId}
               mediaIds={activeTabEntry.mediaIds ?? []}
@@ -831,112 +580,73 @@ function LibraryPage() {
                 });
               }}
             />
-          ) : showingNote && activeNoteId ? (
-            <NoteEditor
-              key={activeNoteId}
-              noteId={activeNoteId}
-              actionsMount={actionsMount}
-              onChanged={updateNoteTab}
-              onDeleted={(id) => finalizeClose(id)}
-            />
-          ) : showingPrevious ? (
-            <PreviousPage
-              onOpenNote={(id) => void openNote(id, "earlier")}
-              onOpenTab={(t) =>
-                navigate({ to: "/media", search: { tab: t }, replace: true })
-              }
-              onCreate={handleCreateFromPrevious}
-              showMeetingOption={isTeamMode}
-              actionsMount={actionsMount}
-            />
-          ) : baseTab === "meetings" ? (
-            <MeetingsListPage
-              actionsMount={actionsMount}
-              externalView={externalMeetingsView ?? { type: "all" }}
-              newMeetingSignal={newMeetingSignal}
-              newFolderSignal={0}
-              onOpenMeeting={(m) => openMeetingTab(m, "earlier")}
-              onMeetingCreated={(m) => openMeetingTab(m, "new")}
-              onCreate={handleCreateFromPrevious}
-              onCreateContainer={handleCreateContainerFromPrevious}
-              showMeetingOption={isTeamMode}
-            />
-          ) : baseTab === "notes" ? (
-            <NotesPage
-              actionsMount={actionsMount}
-              onOpenNote={(id, kind) => void openNote(id, kind)}
-              hideSideNav
-              externalView={externalNotesView}
-              onCreate={handleCreateFromPrevious}
-              onCreateContainer={handleCreateContainerFromPrevious}
-              newFolderSignal={0}
-              showMeetingOption={isTeamMode}
-            />
-          ) : baseTab === "files" ? (
-            <FilesPage
-              actionsMount={actionsMount}
-              hideSideNav
-              externalView={externalFilesView}
-              onCreate={handleCreateFromPrevious}
-              onCreateContainer={handleCreateContainerFromPrevious}
-              newFolderSignal={0}
-              showMeetingOption={isTeamMode}
-            />
-          ) : baseTab === "map" ? (
-            <MapPage embedded />
           ) : (
             <MediaPage
               actionsMount={actionsMount}
               hideSideNav
               externalView={externalMediaView}
               onOpenMediaTab={openMediaTab}
-              onCreate={handleCreateFromPrevious}
-              onCreateContainer={handleCreateContainerFromPrevious}
-              newAlbumSignal={0}
-              showMeetingOption={isTeamMode}
+              onCreate={handleCreateMedia}
+              onCreateContainer={handleCreateAlbumContainer}
+              newAlbumSignal={newAlbumSignal}
               openAlbumFolders={openAlbumFolders}
             />
           )}
         </div>
       </div>
-      {newNoteOpen && <NewNoteOverlay onClose={() => setNewNoteOpen(false)} />}
-      {createContainerKind && (
-        <CreateContainerDialog
-          kind={createContainerKind}
-          onClose={() => setCreateContainerKind(null)}
-        />
-      )}
-      {unsavedPrompt && (
-        <UnsavedChangesDialog
-          title={unsavedPrompt.title}
-          isNew={unsavedPrompt.isNew}
-          onSave={async () => {
-            const h = getUnsaved(unsavedPrompt.id);
-            if (h) await h.save();
-            const id = unsavedPrompt.id;
-            setUnsavedPrompt(null);
-            finalizeClose(id);
-          }}
-          onDiscard={async () => {
-            const h = getUnsaved(unsavedPrompt.id);
-            if (h) {
-              if (unsavedPrompt.isNew) {
-                // delete the brand-new record
-                await supabase.from(
-                  openNoteTabs.find((t) => t.id === unsavedPrompt.id)?.type === "meeting"
-                    ? "team_board_meetings"
-                    : "notes",
-                ).delete().eq("id", unsavedPrompt.id);
-              } else {
-                await h.discard();
-              }
-            }
-            const id = unsavedPrompt.id;
-            setUnsavedPrompt(null);
-            finalizeClose(id);
-          }}
-          onCancel={() => setUnsavedPrompt(null)}
-        />
+    </div>
+  );
+}
+
+/** Media-only "+" dropdown: upload media + create album. */
+function MediaPlusMenu({ onUpload, onCreateAlbum }: { onUpload: () => void; onCreateAlbum?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Create new"
+        className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-secondary hover:text-ink"
+      >
+        <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-30 mt-2 w-48 rounded-xl border border-hairline bg-popover p-1 shadow-xl">
+          <button
+            type="button"
+            onClick={() => { setOpen(false); onUpload(); }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-secondary"
+          >
+            <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+            <span>Upload media</span>
+          </button>
+          {onCreateAlbum && (
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onCreateAlbum(); }}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-secondary"
+            >
+              <FolderClosed className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>New album</span>
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
