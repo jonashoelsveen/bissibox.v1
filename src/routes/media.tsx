@@ -585,8 +585,8 @@ function LibraryPage() {
       </TopBarSlot>
 
       <div
-        className="grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
-        style={{ gridTemplateColumns: panelOpen ? "232px 1fr" : "0px 1fr" }}
+        className="relative grid h-full overflow-hidden"
+        style={{ gridTemplateColumns: "232px 1fr" }}
       >
         <aside className="relative md:h-full overflow-hidden">
           <div
@@ -596,33 +596,32 @@ function LibraryPage() {
               transform: panelOpen ? "translateX(0)" : "translateX(-100%)",
             }}
           >
-            <div className="relative h-full overflow-hidden rounded-r-2xl border border-l-0 border-hairline bg-card shadow-sm">
+            <div className="relative h-full overflow-hidden rounded-r-lg border border-l-0 border-hairline bg-card shadow-sm">
               <div className="h-full overflow-y-auto px-3 pb-6 pt-4">
                 <LibrarySideNav
                   value={sideValue}
                   onChange={onSideChange}
                   onOpenAsTab={onSideOpenAsTab}
                   displayName={displayName}
-                  onTogglePanel={() => setPanelOpen(false)}
                 />
               </div>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-2xl bg-gradient-to-t from-card to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg bg-gradient-to-t from-card to-transparent" />
             </div>
           </div>
         </aside>
 
+        <button
+          type="button"
+          onClick={() => setPanelOpen((v) => !v)}
+          aria-label={panelOpen ? "Hide panel" : "Show panel"}
+          title={panelOpen ? "Hide panel" : "Show panel"}
+          className="absolute left-3 top-[18px] z-30 grid h-7 w-7 place-items-center rounded-md bg-white/0 text-muted-foreground hover:bg-secondary/60 hover:text-ink"
+        >
+          <PanelLeft className="h-4 w-4" />
+        </button>
+
         <div className="relative min-w-0 md:h-full md:overflow-y-auto pl-4 md:pl-6">
-          {!panelOpen && (
-            <button
-              type="button"
-              onClick={() => setPanelOpen(true)}
-              aria-label="Show panel"
-              title="Show panel"
-              className="absolute left-2 top-3 z-20 grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:bg-secondary/60 hover:text-ink"
-            >
-              <PanelLeft className="h-4 w-4" />
-            </button>
-          )}
+
           {showingMedia && activeNoteId && activeTabEntry ? (
             <MediaTabView
               key={activeNoteId}
