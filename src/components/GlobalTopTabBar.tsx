@@ -99,10 +99,22 @@ export function GlobalTopTabBar() {
   };
 
   return (
-    <div className="fixed left-0 right-0 top-[11px] z-[90] bg-background">
+    <div
+      className="fixed left-0 right-0 top-[11px] z-[90]"
+      style={{
+        background: "#1d1d1f",
+        ["--ink" as any]: "0 0% 100%",
+        ["--foreground" as any]: "0 0% 100%",
+        ["--muted-foreground" as any]: "0 0% 85%",
+        ["--secondary" as any]: "0 0% 100% / 0.12",
+        ["--hairline" as any]: "0 0% 100% / 0.12",
+        color: "#ffffff",
+      }}
+    >
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px bg-hairline"
+        className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px"
+        style={{ background: "rgba(255,255,255,0.08)" }}
       />
       <div className="relative z-10 flex items-end gap-1 px-4 md:px-6">
         <ProfileTab />
