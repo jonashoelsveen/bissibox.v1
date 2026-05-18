@@ -1738,6 +1738,50 @@ function SessionTilePreview({ design }: { design: SessionTileDesign }) {
   );
 }
 
+function CombinedSessionTilePreview({ design }: { design: CombinedSessionTileDesign }) {
+  const accent1 = "#5b5bff";
+  const accent2 = "#ff6b3a";
+  const bg1 = "rgba(184,184,255,0.45)";
+  const bg2 = "rgba(255,184,140,0.55)";
+  if (design === "icon") {
+    return (
+      <div className="flex h-14 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
+        <div className="flex w-1/2 items-center justify-center" style={{ background: bg1 }}>
+          <Footprints className="h-6 w-6" strokeWidth={2.25} style={{ color: accent1 }} />
+        </div>
+        <div className="flex w-1/2 items-center justify-center" style={{ background: bg2 }}>
+          <Footprints className="h-6 w-6" strokeWidth={2.25} style={{ color: accent2 }} />
+        </div>
+      </div>
+    );
+  }
+  if (design === "metric") {
+    return (
+      <div className="flex h-14 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
+        <div className="flex w-1/2 items-center justify-center text-ink" style={{ background: bg1, fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16 }}>
+          8.2
+        </div>
+        <div className="flex w-1/2 items-center justify-center text-ink" style={{ background: bg2, fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16 }}>
+          45′
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-14 w-full items-stretch overflow-hidden rounded-[3px] bg-white/70 ring-1 ring-black/5">
+      <div className="flex w-1/2 flex-col justify-center px-1.5 leading-tight" style={{ background: bg1 }}>
+        <span className="truncate text-[9px] font-semibold text-ink">Morning run</span>
+        <span className="text-[8px] tabular-nums text-ink/70">45 min</span>
+        <span className="text-[8px] tabular-nums text-ink/70">8.2 km</span>
+      </div>
+      <div className="flex w-1/2 flex-col justify-center px-1.5 leading-tight" style={{ background: bg2 }}>
+        <span className="truncate text-[9px] font-semibold text-ink">Core</span>
+        <span className="text-[8px] tabular-nums text-ink/70">20 min</span>
+      </div>
+    </div>
+  );
+}
+
 function MonthSessionTileDesignCard() {
   const [open, setOpen] = useState(true);
   const [design, setDesign] = useMonthTileDesign();
