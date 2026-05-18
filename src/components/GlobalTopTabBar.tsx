@@ -101,7 +101,11 @@ export function GlobalTopTabBar() {
   return (
     <div
       className="global-topbar-dark fixed left-0 right-0 top-0 z-[90]"
-      style={{ background: "#1d1d1f" }}
+      style={{
+        backgroundColor: "rgba(29, 29, 31, 0.82)",
+        backdropFilter: "saturate(180%) blur(20px)",
+        WebkitBackdropFilter: "saturate(180%) blur(20px)",
+      }}
     >
       <style>{`
         .global-topbar-dark .topbar-row { color: #ffffff; }
