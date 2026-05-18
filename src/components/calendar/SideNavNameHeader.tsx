@@ -7,7 +7,13 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-export function SideNavNameHeader({ name }: { name: string }) {
+export function SideNavNameHeader({
+  name,
+  weight = "semibold",
+}: {
+  name: string;
+  weight?: "semibold" | "normal";
+}) {
   const fontStyle = { fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif' };
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const textRef = useRef<HTMLSpanElement | null>(null);
