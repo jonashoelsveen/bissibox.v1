@@ -1426,7 +1426,7 @@ function ThemeSettingsPanel() {
               {/* Body: sidebar island + main */}
               <div className="flex h-[calc(100%-0.625rem)] gap-1 p-1">
                 <div className="h-full w-8 rounded-sm bg-[#e8e4dd]" />
-                <div className="h-full flex-1 rounded-sm bg-white" />
+                <div className="h-full flex-1 bg-white" />
               </div>
             </div>
             {selectedTheme === "light" && (
