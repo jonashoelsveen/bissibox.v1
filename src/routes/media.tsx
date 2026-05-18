@@ -585,8 +585,8 @@ function LibraryPage() {
       </TopBarSlot>
 
       <div
-        className="relative grid h-full overflow-hidden"
-        style={{ gridTemplateColumns: "232px 1fr" }}
+        className="relative grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
+        style={{ gridTemplateColumns: panelOpen ? "232px 1fr" : "0px 1fr" }}
       >
         <aside className="relative md:h-full overflow-hidden">
           <div
@@ -621,8 +621,7 @@ function LibraryPage() {
         </button>
 
         <div
-          className="relative min-w-0 md:h-full md:overflow-y-auto pl-4 md:pl-6 transition-transform duration-300 ease-out"
-          style={{ transform: panelOpen ? "translateX(0)" : "translateX(-232px)" }}
+          className="relative min-w-0 md:h-full md:overflow-y-auto pl-4 md:pl-6"
         >
 
 
