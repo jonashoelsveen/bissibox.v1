@@ -488,7 +488,11 @@ function LibraryPage() {
                         ? !activeNoteId && ((next.albumFolder ?? "") === (search.folder ?? ""))
                         : activeNoteId === next.id)
                     : false;
-                  const showDivider = idx < openNoteTabs.length - 1 && !isActive && !nextIsActive;
+                  const showDivider =
+                    idx < openNoteTabs.length - 1 &&
+                    !isActive &&
+                    !nextIsActive &&
+                    !dragNoteId;
                   const folderColor = t.type === "album" ? (t.albumColor ?? null) : null;
                   // Resolve icon color:
                   //  - if folder has a color → always use it (visible on both bgs)
@@ -520,6 +524,7 @@ function LibraryPage() {
                         marginBottom: -1,
                         paddingBottom: 1,
                         touchAction: "pan-y",
+                        ...(folderColor ? ({ ["--folder-color" as any]: folderColor } as React.CSSProperties) : {}),
                         ...dragStyle,
                         transition: isDragging
                           ? "none"
@@ -541,21 +546,21 @@ function LibraryPage() {
                             style={{
                               position: "absolute",
                               top: 0,
-                              left: 14,
-                              right: 14,
+                              left: 16,
+                              right: 16,
                               bottom: -1,
                               background: "#FFFFFF",
                               pointerEvents: "none",
                               zIndex: 0,
                             }}
                           />
-                          <svg aria-hidden width="28" height="35" viewBox="0 0 28 35"
-                            style={{ position: "absolute", top: 0, left: -14, pointerEvents: "none", zIndex: 0, overflow: "visible", display: "block" }}>
-                            <path d="M 0 35 L 0 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0 L 28 35 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
+                          <svg aria-hidden width="32" height="35" viewBox="0 0 32 35"
+                            style={{ position: "absolute", top: 0, left: -16, pointerEvents: "none", zIndex: 0, overflow: "visible", display: "block" }}>
+                            <path d="M 0 35 L 0 34 A 16 16 0 0 0 16 18 L 16 8 A 8 8 0 0 1 24 0 L 32 0 L 32 35 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
                           </svg>
-                          <svg aria-hidden width="28" height="35" viewBox="0 0 28 35"
-                            style={{ position: "absolute", top: 0, right: -14, pointerEvents: "none", zIndex: 0, overflow: "visible", display: "block" }}>
-                            <path d="M 28 35 L 28 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0 L 0 35 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
+                          <svg aria-hidden width="32" height="35" viewBox="0 0 32 35"
+                            style={{ position: "absolute", top: 0, right: -16, pointerEvents: "none", zIndex: 0, overflow: "visible", display: "block" }}>
+                            <path d="M 32 35 L 32 34 A 16 16 0 0 1 16 18 L 16 8 A 8 8 0 0 0 8 0 L 0 0 L 0 35 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
                           </svg>
                         </>
                       )}
@@ -569,7 +574,7 @@ function LibraryPage() {
                         <FolderClosed
                           data-folder-icon
                           className="relative z-[1] h-3.5 w-3.5 shrink-0"
-                          style={{ color: iconColor, opacity: 1 }}
+                          style={folderColor ? { opacity: 1 } : { color: iconColor, opacity: 1 }}
                         />
                       ) : (
                         <ImageIcon
