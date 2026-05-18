@@ -233,6 +233,7 @@ export function LibrarySideNav({
 
   return (
     <nav className="flex flex-col gap-1">
+      <SideNavNameHeader name={displayName ?? "Me"} weight="normal" />
       <div className="flex flex-col">
         <button
           onClick={() => {
