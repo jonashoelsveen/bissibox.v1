@@ -176,16 +176,11 @@ function CreateBody({
     setBusy(true);
     setFileProgress({});
     try {
-      // Map items are created inside the embedded Map view; just open it.
+      // Map / notes / meetings / files surfaces were removed from the library.
+      // Only media items have a landing surface; everything else still creates
+      // the record but skips navigation.
       if (kind === "map-location" || kind === "map-course") {
         onClose();
-        await navigate({
-          to: "/media",
-          search: {
-            tab: "map" as const,
-            edit: kind === "map-course" ? "new-course" : "new-location",
-          },
-        });
         return;
       }
       let payload: OpenTabPayload | null = null;
@@ -201,14 +196,8 @@ function CreateBody({
       toast.success("Created");
       dispatchRefresh(kind);
       onClose();
-      if (payload) {
-        const tabFor: Record<OpenTabPayload["type"], "notes" | "meetings" | "media" | "files"> = {
-          note: "notes",
-          meeting: "meetings",
-          media: "media",
-          file: "files",
-        };
-        await navigate({ to: "/media", search: { tab: tabFor[payload.type] } });
+      if (payload && payload.type === "media") {
+        await navigate({ to: "/media", search: { tab: "media" } });
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent("library:open-tab", { detail: payload }));
         }, 50);

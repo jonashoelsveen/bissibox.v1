@@ -21,7 +21,6 @@ import { Route as UUserIdRouteImport } from './routes/u.$userId'
 import { Route as TeamGroupMembersRouteImport } from './routes/team.group-members'
 import { Route as TeamBoardRouteImport } from './routes/team.board'
 import { Route as TTeamIdRouteImport } from './routes/t.$teamId'
-import { Route as NotesNoteIdRouteImport } from './routes/notes.$noteId'
 import { Route as CCompanyIdRouteImport } from './routes/c.$companyId'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 
@@ -85,11 +84,6 @@ const TTeamIdRoute = TTeamIdRouteImport.update({
   path: '/t/$teamId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NotesNoteIdRoute = NotesNoteIdRouteImport.update({
-  id: '/notes/$noteId',
-  path: '/notes/$noteId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CCompanyIdRoute = CCompanyIdRouteImport.update({
   id: '/c/$companyId',
   path: '/c/$companyId',
@@ -112,7 +106,6 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
-  '/notes/$noteId': typeof NotesNoteIdRoute
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
   '/team/group-members': typeof TeamGroupMembersRoute
@@ -129,7 +122,6 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
-  '/notes/$noteId': typeof NotesNoteIdRoute
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
   '/team/group-members': typeof TeamGroupMembersRoute
@@ -147,7 +139,6 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
-  '/notes/$noteId': typeof NotesNoteIdRoute
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
   '/team/group-members': typeof TeamGroupMembersRoute
@@ -166,7 +157,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/c/$companyId'
-    | '/notes/$noteId'
     | '/t/$teamId'
     | '/team/board'
     | '/team/group-members'
@@ -183,7 +173,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/c/$companyId'
-    | '/notes/$noteId'
     | '/t/$teamId'
     | '/team/board'
     | '/team/group-members'
@@ -200,7 +189,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/c/$companyId'
-    | '/notes/$noteId'
     | '/t/$teamId'
     | '/team/board'
     | '/team/group-members'
@@ -218,7 +206,6 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   SettingsRoute: typeof SettingsRoute
   CCompanyIdRoute: typeof CCompanyIdRoute
-  NotesNoteIdRoute: typeof NotesNoteIdRoute
   TTeamIdRoute: typeof TTeamIdRoute
   TeamBoardRoute: typeof TeamBoardRoute
   TeamGroupMembersRoute: typeof TeamGroupMembersRoute
@@ -312,13 +299,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TTeamIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/notes/$noteId': {
-      id: '/notes/$noteId'
-      path: '/notes/$noteId'
-      fullPath: '/notes/$noteId'
-      preLoaderRoute: typeof NotesNoteIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/c/$companyId': {
       id: '/c/$companyId'
       path: '/c/$companyId'
@@ -346,7 +326,6 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   SettingsRoute: SettingsRoute,
   CCompanyIdRoute: CCompanyIdRoute,
-  NotesNoteIdRoute: NotesNoteIdRoute,
   TTeamIdRoute: TTeamIdRoute,
   TeamBoardRoute: TeamBoardRoute,
   TeamGroupMembersRoute: TeamGroupMembersRoute,
