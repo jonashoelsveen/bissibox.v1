@@ -1378,7 +1378,7 @@ function MediaPage({
         className="sticky top-0 z-20 flex shrink-0 items-center justify-between gap-1 px-4 pt-4 pb-4 bg-white text-foreground"
         onClick={clearSelectionOnBg}
       >
-        <div className="flex min-w-0 items-center" onClick={clearSelectionOnBg}>
+        <div className={`flex min-w-0 items-center transition-[padding-left] duration-300 ease-out ${panelOpen ? "pl-0" : "pl-9"}`} onClick={clearSelectionOnBg}>
           <h1
             className="truncate text-xl font-normal text-ink"
             style={{ fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif' }}
@@ -2483,7 +2483,7 @@ function Lightbox({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Row 1 — frozen top bar */}
-        <div className="relative flex h-11 flex-none items-center gap-2 px-4 bg-white text-foreground">
+        <div className={`relative flex h-11 flex-none items-center gap-2 px-4 bg-white text-foreground transition-[padding-left] duration-300 ease-out ${panelOpen ? "" : "pl-12"}`}>
           <button
             type="button"
             onClick={onClose}
