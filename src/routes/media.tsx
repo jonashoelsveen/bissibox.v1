@@ -609,12 +609,12 @@ function LibraryPage() {
                         data-tab-divider
                         aria-hidden
                         style={{
-                          alignSelf: "stretch",
+                          alignSelf: "center",
                           width: 1,
+                          height: 17,
                           marginLeft: -2,
                           marginRight: 1,
-                          marginTop: "25%",
-                          marginBottom: "25%",
+                          marginBottom: 4,
                           background: "rgba(255,255,255,0.45)",
                           pointerEvents: "none",
                           flex: "0 0 1px",
