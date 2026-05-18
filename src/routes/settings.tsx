@@ -1885,10 +1885,11 @@ function MonthTilePreview({ design }: { design: MonthTileDesign }) {
         <Footprints className="h-6 w-6" strokeWidth={2.25} style={{ color: accent }} />
       </div>
       <div
-        className="flex w-1/2 items-center justify-center text-ink"
-        style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16 }}
+        className="flex w-1/2 items-baseline justify-center text-ink"
+        style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 16, gap: 3 }}
       >
-        8.2
+        <span>8.2</span>
+        <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>km</span>
       </div>
     </div>
   );
