@@ -2434,6 +2434,7 @@ function Lightbox({
   onClose,
   onChanged,
   isTeamMode,
+  panelOpen,
 }: {
   items: MediaItem[];
   urls: Record<string, string>;
@@ -2445,6 +2446,7 @@ function Lightbox({
   onClose: () => void;
   onChanged: () => void;
   isTeamMode?: boolean;
+  panelOpen?: boolean;
 }) {
   const [tab, setTab] = useState<"about" | "access" | "draw" | "export">("about");
   const [idx, setIdx] = useState(0);
