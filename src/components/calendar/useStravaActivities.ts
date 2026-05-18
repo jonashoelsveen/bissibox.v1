@@ -99,7 +99,7 @@ export function rowToCalendarEvent(row: StravaActivityRow): CalendarEvent | null
 export function mergeAdjacentSessions(events: CalendarEvent[]): CalendarEvent[] {
   if (events.length < 2) return events;
   const sorted = [...events].sort((a, b) => a.startISO.localeCompare(b.startISO));
-  const GAP_MS = 30 * 60 * 1000;
+  const GAP_MS = 60 * 60 * 1000;
   for (let i = 0; i < sorted.length - 1; i++) {
     const prev = sorted[i];
     const next = sorted[i + 1];
