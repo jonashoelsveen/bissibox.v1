@@ -2436,8 +2436,12 @@ function DiarySimpleStack({
           }}
           onHoverEnd={scheduleClose}
           onReorder={(ids) => {
-            const hasStrava = list.some((e) => e.stravaActivityId != null);
-            if (hasStrava) {
+            const oldIds = list.map((e) => e.id);
+            const byId = new Map(list.map((e) => [e.id, e]));
+            const movedStrava = ids.some(
+              (id, i) => id !== oldIds[i] && byId.get(id)?.stravaActivityId != null,
+            );
+            if (movedStrava) {
               setStravaBlocked(true);
               return;
             }
