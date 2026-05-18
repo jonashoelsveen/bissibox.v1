@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform, type MotionValue } from "framer-motion";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -482,9 +482,28 @@ function LibraryPage() {
                     ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
                     : { transform: `translate3d(${translateX}px,0,0)` };
 
+                  const next = openNoteTabs[idx + 1];
+                  const nextIsActive = next
+                    ? (next.type === "album"
+                        ? !activeNoteId && ((next.albumFolder ?? "") === (search.folder ?? ""))
+                        : activeNoteId === next.id)
+                    : false;
+                  const showDivider = idx < openNoteTabs.length - 1 && !isActive && !nextIsActive;
+                  const folderColor = t.type === "album" ? (t.albumColor ?? null) : null;
+                  // Resolve icon color:
+                  //  - if folder has a color → always use it (visible on both bgs)
+                  //  - else: black on active (white bg) / white on inactive (dark bg)
+                  const iconColor = folderColor
+                    ? folderColor
+                    : isActive
+                      ? "#111111"
+                      : "#ffffff";
+
                   return (
+                    <Fragment key={t.id}>
                     <button
-                      key={t.id}
+                      data-tab
+                      data-active-tab={isActive ? "" : undefined}
                       ref={(el) => {
                         if (el) tabRefs.current.set(t.id, el);
                         else tabRefs.current.delete(t.id);
@@ -510,8 +529,8 @@ function LibraryPage() {
                       }}
                       className={`group relative inline-flex shrink-0 select-none items-center gap-1.5 text-sm ${
                         isActive
-                          ? "text-ink"
-                          : "rounded-t-[10px] text-muted-foreground hover:text-ink hover:bg-secondary/40"
+                          ? ""
+                          : "rounded-t-[10px]"
                       }`}
                       title={t.title}
                     >
@@ -526,32 +545,41 @@ function LibraryPage() {
                               right: 14,
                               bottom: -1,
                               background: "#FFFFFF",
-                              boxShadow: "inset 0 1px 0 var(--hairline)",
                               pointerEvents: "none",
                               zIndex: 0,
                             }}
                           />
                           <svg aria-hidden width="28" height="35" viewBox="0 0 28 35"
-                            style={{ position: "absolute", top: 0, left: -14, pointerEvents: "none", zIndex: 0, overflow: "visible" }}>
-                            <path d="M 0 35 L 0 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0 L 28 35 Z" fill="#FFFFFF" />
-                            <path d="M 0 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0" fill="none" stroke="var(--hairline)" strokeWidth="1" shapeRendering="geometricPrecision" />
+                            style={{ position: "absolute", top: 0, left: -14, pointerEvents: "none", zIndex: 0, overflow: "visible", display: "block" }}>
+                            <path d="M 0 35 L 0 34 A 14 14 0 0 0 14 20 L 14 10 A 10 10 0 0 1 24 0 L 28 0 L 28 35 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
                           </svg>
                           <svg aria-hidden width="28" height="35" viewBox="0 0 28 35"
-                            style={{ position: "absolute", top: 0, right: -14, pointerEvents: "none", zIndex: 0, overflow: "visible" }}>
-                            <path d="M 28 35 L 28 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0 L 0 35 Z" fill="#FFFFFF" />
-                            <path d="M 28 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0" fill="none" stroke="var(--hairline)" strokeWidth="1" shapeRendering="geometricPrecision" />
+                            style={{ position: "absolute", top: 0, right: -14, pointerEvents: "none", zIndex: 0, overflow: "visible", display: "block" }}>
+                            <path d="M 28 35 L 28 34 A 14 14 0 0 1 14 20 L 14 10 A 10 10 0 0 0 4 0 L 0 0 L 0 35 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
                           </svg>
                         </>
                       )}
                       {t.type === "media" ? (
-                        <ImageIcon className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                        <ImageIcon
+                          data-folder-icon
+                          className="relative z-[1] h-3.5 w-3.5 shrink-0"
+                          style={{ color: isActive ? "#111111" : "#ffffff", opacity: 0.85 }}
+                        />
                       ) : t.type === "album" ? (
-                        <FolderClosed className="h-3.5 w-3.5 shrink-0" style={t.albumColor ? { color: t.albumColor, opacity: 1 } : { opacity: 0.7 }} />
+                        <FolderClosed
+                          data-folder-icon
+                          className="relative z-[1] h-3.5 w-3.5 shrink-0"
+                          style={{ color: iconColor, opacity: 1 }}
+                        />
                       ) : (
-                        <ImageIcon className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                        <ImageIcon
+                          data-folder-icon
+                          className="relative z-[1] h-3.5 w-3.5 shrink-0"
+                          style={{ color: isActive ? "#111111" : "#ffffff", opacity: 0.85 }}
+                        />
                       )}
                       <span
-                        className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left"
+                        className="relative z-[1] min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left"
                         style={{
                           WebkitMaskImage:
                             "linear-gradient(to right, #000 0, #000 calc(100% - 20px), transparent 100%)",
@@ -571,11 +599,29 @@ function LibraryPage() {
                           setOpenNoteTabs((prev) => prev.filter((x) => x.id !== t.id));
                           if (activeNoteId === t.id) setActiveNoteId(null);
                         }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                        className="absolute right-2 top-1/2 z-[2] -translate-y-1/2 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
                       >
                         ✕
                       </span>
                     </button>
+                    {showDivider && (
+                      <span
+                        data-tab-divider
+                        aria-hidden
+                        style={{
+                          alignSelf: "stretch",
+                          width: 1,
+                          marginLeft: -2,
+                          marginRight: 1,
+                          marginTop: "25%",
+                          marginBottom: "25%",
+                          background: "rgba(255,255,255,0.45)",
+                          pointerEvents: "none",
+                          flex: "0 0 1px",
+                        }}
+                      />
+                    )}
+                    </Fragment>
                   );
                 })}
               </div>
