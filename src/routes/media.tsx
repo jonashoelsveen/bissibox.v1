@@ -443,7 +443,7 @@ function LibraryPage() {
   );
 
   return (
-    <div className="h-full overflow-hidden bg-white pl-0 pr-4 md:pr-6">
+    <div className="h-full overflow-hidden bg-white pl-0 pr-0">
 
       <TopBarSlot>
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
@@ -671,7 +671,7 @@ function LibraryPage() {
         </button>
 
         <div
-          className="relative min-w-0 md:h-full md:overflow-y-auto"
+          className="relative min-w-0 md:h-full md:overflow-hidden"
         >
 
 
@@ -1369,7 +1369,7 @@ function MediaPage({
   };
 
   return (
-    <div className="flex min-h-full flex-col bg-white text-foreground">
+    <div className="flex h-full min-h-full flex-col bg-white text-foreground">
       {/* Per-page Search/Plus removed — using the global top tab bar's actions instead. */}
       {void actions}
 
