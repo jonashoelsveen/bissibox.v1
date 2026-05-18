@@ -237,9 +237,6 @@ export function LibrarySideNav({
   void onTogglePanel;
   return (
     <nav className="flex flex-col gap-1">
-      <div className="pl-9">
-        <SideNavNameHeader name={displayName ?? "Me"} weight="normal" />
-      </div>
       <div className="flex flex-col">
         <button
           onClick={() => {
