@@ -1846,6 +1846,7 @@ function MediaPage({
           }}
           onChanged={() => void load()}
           isTeamMode={isTeamMode}
+          panelOpen={panelOpen}
         />
       )}
     </div>
