@@ -2528,7 +2528,7 @@ function Lightbox({
               onClick={() => setIsFullscreen((v) => !v)}
               aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
               className={`fixed z-[96] grid h-9 w-9 place-items-center rounded-full transition-[right,top] duration-300 ease-out ${
-                isFullscreen ? "top-1 text-white hover:bg-white/10" : "top-[57px] text-foreground hover:bg-foreground/10"
+                isFullscreen ? "top-1 text-white hover:bg-white/10" : "top-[10px] text-foreground hover:bg-foreground/10"
               } ${editPanelOpen ? "right-[400px]" : "right-12"}`}
             >
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -2538,7 +2538,7 @@ function Lightbox({
               onClick={() => setEditPanelOpen((v) => !v)}
               aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
               className={`fixed right-4 z-[96] grid h-9 w-9 place-items-center rounded-full transition ${
-                isFullscreen ? "top-1" : "top-[57px]"
+                isFullscreen ? "top-1" : "top-[10px]"
               } ${
                 editPanelOpen
                   ? "bg-foreground/10 text-foreground"
@@ -4394,7 +4394,7 @@ function MediaTabViewBody(props: {
             onClick={() => setIsFullscreen((v) => !v)}
             aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"}
             className={`fixed z-[96] grid h-9 w-9 place-items-center rounded-full transition-[right,top] duration-300 ease-out ${
-              isFullscreen ? "top-1 text-white hover:bg-white/10" : "top-[57px] text-foreground hover:bg-foreground/10"
+              isFullscreen ? "top-1 text-white hover:bg-white/10" : "top-[10px] text-foreground hover:bg-foreground/10"
             } ${editPanelOpen ? "right-[400px]" : "right-12"}`}
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -4404,7 +4404,7 @@ function MediaTabViewBody(props: {
             onClick={() => setEditPanelOpen((v) => !v)}
             aria-label={editPanelOpen ? "Close edit panel" : "Edit"}
             className={`fixed right-4 z-[96] grid h-9 w-9 place-items-center rounded-full transition ${
-              isFullscreen ? "top-1" : "top-[57px]"
+              isFullscreen ? "top-1" : "top-[10px]"
             } ${
               editPanelOpen
                 ? "bg-foreground/10 text-foreground"
