@@ -24,6 +24,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Eye, EyeOff } from "lucide-react";
 import { MiniCalendar, type DateRange } from "./MiniCalendar";
+import { SideNavNameHeader } from "./SideNavNameHeader";
 import { CAT_TRAINING_COLOR } from "./MonthGridType1";
 import type { CategoryKey } from "./CalendarSideNav";
 
@@ -88,6 +89,8 @@ export interface DiarySideNavProps {
   viewMode?: "day" | "week" | "month";
   visibleCategories: Set<CategoryKey>;
   onToggleCategory: (key: CategoryKey) => void;
+  /** Display name shown above the mini-calendar. Defaults to "Me". */
+  displayName?: string;
 }
 
 export function DiarySideNav({
@@ -97,6 +100,7 @@ export function DiarySideNav({
   viewMode,
   visibleCategories,
   onToggleCategory,
+  displayName,
 }: DiarySideNavProps) {
   const [open, setOpen] = useState<Set<string>>(() => {
     const s = loadSet(OPEN_KEY);
@@ -150,7 +154,8 @@ export function DiarySideNav({
   }, []);
 
   return (
-    <nav className="flex max-h-[calc(100vh-8rem)] flex-col gap-3 overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
+    <nav className="mt-3 flex max-h-[calc(100vh-8rem)] flex-col gap-3 overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
+      <SideNavNameHeader name={displayName ?? "Me"} />
       <div>
         <MiniCalendar
           selectedRange={currentRange ?? { start: currentDate, end: currentDate }}

@@ -23,6 +23,7 @@ import {
   CAT_WORK_COLOR,
 } from "./MonthGridType1";
 import { MeCategorySection } from "./MeCategorySection";
+import { SideNavNameHeader } from "./SideNavNameHeader";
 import { useUserCategories } from "@/hooks/useUserCategories";
 
 /* ---------- Category keys & colors ---------- */
@@ -81,6 +82,8 @@ export interface CalendarSideNavProps {
   teamId?: string | null;
   /** Active team name (admin seat only). Used as the section header. */
   teamName?: string;
+  /** Display name shown above the mini-calendar. "Me" for individual, entity name for admin. */
+  displayName?: string;
 }
 
 export function CalendarSideNav({
@@ -94,6 +97,7 @@ export function CalendarSideNav({
   entities = [],
   teamId = null,
   teamName,
+  displayName,
 }: CalendarSideNavProps) {
   // Per-entity visibility state (independent across entities).
   const [entityHidden, setEntityHidden] = useState<Record<string, Set<AdminCatKey>>>({});
@@ -121,9 +125,11 @@ export function CalendarSideNav({
       return next;
     });
 
+  const name = displayName ?? (seat === "admin" ? teamName ?? "Team" : "Me");
+
   return (
-    <nav className="flex max-h-[calc(100vh-8rem)] flex-col gap-3 overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
-      {/* Mini-calendar pinned to the top of the rail */}
+    <nav className="mt-3 flex max-h-[calc(100vh-8rem)] flex-col gap-3 overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
+      <SideNavNameHeader name={name} />
       <div>
         <MiniCalendar
           selectedRange={currentRange ?? { start: currentDate, end: currentDate }}
