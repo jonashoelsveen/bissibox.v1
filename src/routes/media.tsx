@@ -2472,7 +2472,11 @@ function Lightbox({
   }, [isFullscreen]);
 
   return (
-    <div className={`fixed right-0 bottom-0 flex animate-in fade-in ${isFullscreen ? "left-0 top-0 z-[95]" : "left-0 top-[53px] md:left-[268px] z-30"}`} onClick={onClose}>
+    <div
+      className={`fixed right-0 bottom-0 flex animate-in fade-in transition-[left] duration-300 ease-out ${isFullscreen ? "left-0 top-0 z-[95]" : "top-[53px] z-30"}`}
+      style={isFullscreen ? undefined : { left: panelOpen ? 256 : 0 }}
+      onClick={onClose}
+    >
       <div className="absolute inset-0 bg-white" />
       <div
         className="relative z-10 flex h-full w-full flex-col bg-white text-foreground"
