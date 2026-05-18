@@ -157,7 +157,7 @@ export function CalendarPage() {
   );
 
   return (
-    <div className={`h-full overflow-hidden bg-white pr-4 md:pr-6 transition-[padding-left] duration-300 ease-out ${panelOpen ? "pl-0" : "pl-2"}`}>
+    <div className="h-full overflow-hidden bg-white pr-4 md:pr-6">
 
       <div
         className="relative grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
