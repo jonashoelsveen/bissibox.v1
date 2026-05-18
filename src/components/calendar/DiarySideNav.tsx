@@ -100,6 +100,7 @@ export function DiarySideNav({
   viewMode,
   visibleCategories,
   onToggleCategory,
+  displayName,
 }: DiarySideNavProps) {
   const [open, setOpen] = useState<Set<string>>(() => {
     const s = loadSet(OPEN_KEY);
