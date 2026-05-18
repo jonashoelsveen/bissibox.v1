@@ -14,7 +14,9 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { PanelLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useLibrarySetting } from "@/lib/library-settings";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CalendarSideNav,
