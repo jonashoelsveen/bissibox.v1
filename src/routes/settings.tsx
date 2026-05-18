@@ -1420,12 +1420,12 @@ function ThemeSettingsPanel() {
         >
           <div className="relative flex h-32 items-center justify-center bg-[#f5f3ee] p-4">
             {/* Miniature light platform preview */}
-            <div className="h-24 w-40 overflow-hidden rounded-md border border-gray-300 bg-[#e8e4dd] shadow-sm">
+            <div className="h-24 w-40 overflow-hidden bg-white">
               {/* Top tab bar — thin */}
-              <div className="h-2.5 w-full bg-[#e8e4dd]" />
+              <div className="h-1.5 w-full bg-[#e8e4dd]" />
               {/* Body: sidebar island + main */}
-              <div className="flex h-[calc(100%-0.625rem)] gap-1 p-1">
-                <div className="h-full w-8 rounded-sm bg-[#e8e4dd]" />
+              <div className="flex h-[calc(100%-0.375rem)] p-1">
+                <div className="h-full w-7 rounded-sm bg-[#e8e4dd]" />
                 <div className="h-full flex-1 bg-white" />
               </div>
             </div>
@@ -1454,12 +1454,12 @@ function ThemeSettingsPanel() {
         >
           <div className="relative flex h-32 items-center justify-center bg-[#f5f3ee] p-4">
             {/* Miniature dark platform preview */}
-            <div className="h-24 w-40 overflow-hidden rounded-md border border-gray-800 bg-[#2d2d2d] shadow-sm">
+            <div className="h-24 w-40 overflow-hidden bg-white">
               {/* Top tab bar — thin */}
-              <div className="h-2.5 w-full bg-[#2d2d2d]" />
+              <div className="h-1.5 w-full bg-[#2d2d2d]" />
               {/* Body: sidebar island + main */}
-              <div className="flex h-[calc(100%-0.625rem)] gap-1 p-1">
-                <div className="h-full w-8 rounded-sm bg-[#2d2d2d]" />
+              <div className="flex h-[calc(100%-0.375rem)] p-1">
+                <div className="h-full w-7 rounded-sm bg-[#2d2d2d]" />
                 <div className="h-full flex-1 bg-white" />
               </div>
             </div>
