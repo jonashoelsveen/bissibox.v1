@@ -575,11 +575,10 @@ function LibraryPage() {
         </nav>
       </TopBarSlot>
 
-      <div className="h-full overflow-hidden px-4 md:px-6">
-        <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[220px_1fr]">
-          <aside className="md:h-full md:overflow-y-auto md:pr-0">
-            <LibrarySideNav value={sideValue} onChange={onSideChange} onOpenAsTab={onSideOpenAsTab} displayName={displayName} />
-          </aside>
+      <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[220px_1fr]">
+        <aside className="md:h-full md:overflow-y-auto md:pr-0">
+          <LibrarySideNav value={sideValue} onChange={onSideChange} onOpenAsTab={onSideOpenAsTab} displayName={displayName} />
+        </aside>
 
         <div className="min-w-0 bg-white md:h-full md:overflow-y-auto">
           {showingMedia && activeNoteId && activeTabEntry ? (
