@@ -89,6 +89,8 @@ export interface DiarySideNavProps {
   viewMode?: "day" | "week" | "month";
   visibleCategories: Set<CategoryKey>;
   onToggleCategory: (key: CategoryKey) => void;
+  /** Display name shown above the mini-calendar. Defaults to "Me". */
+  displayName?: string;
 }
 
 export function DiarySideNav({
