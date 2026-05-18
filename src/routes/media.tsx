@@ -703,6 +703,7 @@ function LibraryPage() {
               onCreateContainer={handleCreateAlbumContainer}
               newAlbumSignal={newAlbumSignal}
               openAlbumFolders={openAlbumFolders}
+              panelOpen={panelOpen}
             />
           )}
         </div>
