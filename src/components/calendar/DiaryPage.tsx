@@ -4,7 +4,9 @@
  */
 
 import { useMemo, useState } from "react";
+import { PanelLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useLibrarySetting } from "@/lib/library-settings";
 import type { CategoryKey } from "./CalendarSideNav";
 import { DiarySideNav } from "./DiarySideNav";
 import { YearCalendarView } from "./YearCalendarView";
@@ -40,24 +42,56 @@ export function DiaryPage() {
       return next;
     });
 
+  const panelScopeKey = user?.id ?? "anon";
+  const [panelOpen, setPanelOpen] = useLibrarySetting<boolean>(
+    `diary:panel:open:${panelScopeKey}`,
+    true,
+  );
+
   return (
-    <div className="h-full overflow-hidden px-4 md:px-6">
-      <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[220px_1fr]">
-        <aside className="md:h-full md:overflow-y-auto md:pr-0">
-          <DiarySideNav
-            currentDate={currentDate}
-            currentRange={currentRange}
-            onCurrentDateChange={(d, r) => {
-              setCurrentDate(d);
-              setCurrentRange(r);
+    <div className="h-full overflow-hidden bg-white pl-0 pr-4 md:pr-6">
+      <div
+        className="relative grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
+        style={{ gridTemplateColumns: panelOpen ? "256px 1fr" : "0px 1fr" }}
+      >
+        <aside className="relative md:h-full overflow-hidden">
+          <div
+            className="relative h-full pl-2 pr-2 py-2 transition-transform duration-300 ease-out"
+            style={{
+              width: 256,
+              transform: panelOpen ? "translateX(0)" : "translateX(-100%)",
             }}
-            viewMode={viewMode}
-            visibleCategories={visibleCategories}
-            onToggleCategory={toggleCategory}
-          />
+          >
+            <div className="relative h-full overflow-hidden rounded-lg border border-hairline bg-subtle shadow-sm">
+              <div className="h-full overflow-y-auto px-3 pb-6 pt-4">
+                <DiarySideNav
+                  currentDate={currentDate}
+                  currentRange={currentRange}
+                  onCurrentDateChange={(d, r) => {
+                    setCurrentDate(d);
+                    setCurrentRange(r);
+                  }}
+                  viewMode={viewMode}
+                  visibleCategories={visibleCategories}
+                  onToggleCategory={toggleCategory}
+                />
+              </div>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg bg-gradient-to-t from-subtle to-transparent" />
+            </div>
+          </div>
         </aside>
 
-        <div className="min-w-0 md:h-full md:overflow-y-auto">
+        <button
+          type="button"
+          onClick={() => setPanelOpen(!panelOpen)}
+          aria-label={panelOpen ? "Hide panel" : "Show panel"}
+          title={panelOpen ? "Hide panel" : "Show panel"}
+          className="absolute left-3 top-[18px] z-40 grid h-7 w-7 place-items-center rounded-md bg-white/0 text-muted-foreground hover:bg-secondary/60 hover:text-ink"
+        >
+          <PanelLeft className="h-4 w-4" />
+        </button>
+
+        <div className="relative min-w-0 md:h-full md:overflow-y-auto">
           <YearCalendarView
             calId={calId}
             defaultTitle={calTitle}
