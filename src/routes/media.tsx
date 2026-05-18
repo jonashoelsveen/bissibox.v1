@@ -516,7 +516,7 @@ function LibraryPage() {
                         flex: "1 1 200px",
                         minWidth: 140,
                         maxWidth: 220,
-                        height: 34,
+                        height: 38,
                         marginRight: 4,
                         background: "transparent",
                         padding: "0 28px 0 12px",
