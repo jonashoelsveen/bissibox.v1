@@ -545,8 +545,8 @@ function LibraryPage() {
                             style={{
                               position: "absolute",
                               top: 0,
-                              left: 16,
-                              right: 16,
+                              left: 15,
+                              right: 15,
                               bottom: -1,
                               background: "#FFFFFF",
                               pointerEvents: "none",
