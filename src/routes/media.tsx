@@ -1369,7 +1369,7 @@ function MediaPage({
   };
 
   return (
-    <div className="flex min-h-full flex-col bg-white text-foreground">
+    <div className="flex h-full min-h-full flex-col bg-white text-foreground">
       {/* Per-page Search/Plus removed — using the global top tab bar's actions instead. */}
       {void actions}
 
