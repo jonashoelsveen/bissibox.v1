@@ -2483,7 +2483,7 @@ function Lightbox({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Row 1 — frozen top bar */}
-        <div className="relative flex h-11 flex-none items-center gap-2 px-4 bg-white text-foreground">
+        <div className={`relative flex h-11 flex-none items-center gap-2 px-4 bg-white text-foreground transition-[padding-left] duration-300 ease-out ${panelOpen ? "" : "pl-12"}`}>
           <button
             type="button"
             onClick={onClose}
