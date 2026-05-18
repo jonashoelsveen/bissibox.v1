@@ -55,11 +55,13 @@ export function LibrarySideNav({
   onChange,
   onOpenAsTab,
   displayName,
+  onTogglePanel,
 }: {
   value: LibrarySideNavValue;
   onChange: (v: LibrarySideNavValue) => void;
   onOpenAsTab?: (v: LibrarySideNavValue, label: string, color?: string | null) => void;
   displayName?: string;
+  onTogglePanel?: () => void;
 }) {
   const { user, mode, activeEntityId } = useAuth();
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
