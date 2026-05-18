@@ -108,6 +108,7 @@ export function DiaryPage() {
             visibleCategories={visibleCategories}
             memberId={user?.id}
             viewerRole="owner"
+            panelOpen={panelOpen}
           />
         </div>
       </div>
