@@ -49,7 +49,7 @@ export function DiaryPage() {
   );
 
   return (
-    <div className={`h-full overflow-hidden bg-white pr-4 md:pr-6 transition-[padding-left] duration-300 ease-out ${panelOpen ? "pl-0" : "pl-2"}`}>
+    <div className="h-full overflow-hidden bg-white pr-4 md:pr-6">
       <div
         className="relative grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
         style={{ gridTemplateColumns: panelOpen ? "256px 1fr" : "0px 1fr" }}
@@ -91,7 +91,7 @@ export function DiaryPage() {
           <PanelLeft className="h-4 w-4" />
         </button>
 
-        <div className="relative min-w-0 md:h-full md:overflow-y-auto">
+        <div className={`relative min-w-0 md:h-full md:overflow-y-auto transition-[padding-left] duration-300 ease-out ${panelOpen ? "pl-0" : "pl-2"}`}>
           <YearCalendarView
             calId={calId}
             defaultTitle={calTitle}
