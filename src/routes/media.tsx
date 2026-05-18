@@ -436,8 +436,15 @@ function LibraryPage() {
   };
   const [newAlbumSignal, setNewAlbumSignal] = useState(0);
 
+  const panelScopeKey = activeEntityId ?? user?.id ?? "anon";
+  const [panelOpen, setPanelOpen] = useLibrarySetting<boolean>(
+    `library:panel:open:${panelScopeKey}`,
+    true,
+  );
+
   return (
-    <div className="h-full overflow-hidden px-4 md:px-6">
+    <div className="h-full overflow-hidden bg-white pl-0 pr-4 md:pr-6">
+
       <TopBarSlot>
         <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
           {openNoteTabs.length > 0 && (
