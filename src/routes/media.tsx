@@ -605,7 +605,7 @@ function LibraryPage() {
                   displayName={displayName}
                 />
               </div>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg bg-gradient-to-t from-card to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg bg-gradient-to-t from-subtle to-transparent" />
             </div>
           </div>
         </aside>
