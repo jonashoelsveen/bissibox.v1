@@ -728,17 +728,22 @@ export function MonthGridType1({
                           onDragEnd={(ev: DragEndEvent) => {
                             const { active, over } = ev;
                             if (!over || active.id === over.id) return;
-                            const hasStrava = sortedDayEvents.some(
-                              (e) => e.stravaActivityId != null,
-                            );
-                            if (hasStrava) {
-                              setStravaBlocked(true);
-                              return;
-                            }
                             const oldIndex = sortableIds.indexOf(String(active.id));
                             const newIndex = sortableIds.indexOf(String(over.id));
                             if (oldIndex < 0 || newIndex < 0) return;
                             const next = arrayMove(sortableIds, oldIndex, newIndex);
+                            const byId = new Map(
+                              sortedDayEvents.map((e) => [e.id, e]),
+                            );
+                            const movedStrava = next.some(
+                              (id, i) =>
+                                id !== sortableIds[i] &&
+                                byId.get(id)?.stravaActivityId != null,
+                            );
+                            if (movedStrava) {
+                              setStravaBlocked(true);
+                              return;
+                            }
                             setPendingReorder({ dayKey: id, ids: next });
                           }}
                         >
