@@ -24,6 +24,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Eye, EyeOff } from "lucide-react";
 import { MiniCalendar, type DateRange } from "./MiniCalendar";
+import { SideNavNameHeader } from "./SideNavNameHeader";
 import { CAT_TRAINING_COLOR } from "./MonthGridType1";
 import type { CategoryKey } from "./CalendarSideNav";
 
