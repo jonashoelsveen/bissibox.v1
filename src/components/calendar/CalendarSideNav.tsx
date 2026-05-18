@@ -81,6 +81,8 @@ export interface CalendarSideNavProps {
   teamId?: string | null;
   /** Active team name (admin seat only). Used as the section header. */
   teamName?: string;
+  /** Display name shown above the mini-calendar. "Me" for individual, entity name for admin. */
+  displayName?: string;
 }
 
 export function CalendarSideNav({
