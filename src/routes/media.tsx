@@ -2473,7 +2473,7 @@ function Lightbox({
 
   return (
     <div
-      className={`fixed right-0 bottom-0 flex animate-in fade-in transition-[left] duration-300 ease-out ${isFullscreen ? "left-0 top-0 z-[95]" : "top-[53px] z-30"}`}
+      className={`fixed right-0 bottom-0 flex animate-in fade-in transition-[left] duration-300 ease-out ${isFullscreen ? "left-0 top-0 z-[95]" : "top-14 z-30"}`}
       style={isFullscreen ? undefined : { left: panelOpen ? 256 : 0 }}
       onClick={onClose}
     >
