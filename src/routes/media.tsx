@@ -254,93 +254,20 @@ function LibraryPage() {
     );
   };
 
-  // Keep album tab colors in sync with the same album records the left side-nav uses.
-  const [albumColorMap, setAlbumColorMap] = useState<Record<string, string | null>>({});
+  // Live update album tab colors when the user picks a color in the side nav.
   useEffect(() => {
-    if (!user) {
-      setAlbumColorMap({});
-      return;
-    }
-
-    let cancelled = false;
-
-    const applyAlbumColors = (nextMap: Record<string, string | null>) => {
-      setAlbumColorMap(nextMap);
-      setOpenNoteTabs((prev) =>
-        prev.map((t) => {
-          if (t.type !== "album" || !t.albumFolder) return t;
-          const nextColor = nextMap[t.albumFolder] ?? null;
-          return nextColor === t.albumColor ? t : { ...t, albumColor: nextColor };
-        }),
-      );
-    };
-
-    const loadAlbumColors = async () => {
-      let teamId: string | null = null;
-      if (isTeamMode) {
-        if (activeEntityId) {
-          const { data } = await supabase
-            .from("teams")
-            .select("id")
-            .eq("id", activeEntityId)
-            .maybeSingle();
-          teamId = data?.id ?? null;
-        }
-
-        if (!teamId) {
-          const { data } = await supabase
-            .from("teams")
-            .select("id")
-            .eq("owner_id", user.id)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          teamId = data?.id ?? null;
-        }
-      }
-
-      const query = supabase.from("media_albums").select("id,color");
-      const { data } = await (isTeamMode && teamId
-        ? query.eq("team_id", teamId)
-        : query.is("team_id", null).eq("user_id", user.id));
-
-      if (cancelled) return;
-
-      applyAlbumColors(
-        Object.fromEntries(
-          ((data ?? []) as Array<{ id: string; color: string | null }>).map((row) => [row.id, row.color ?? null]),
-        ),
-      );
-    };
-
     const onColor = (e: Event) => {
-      const d = (e as CustomEvent).detail as { id: string; color: string | null } | null;
+      const d = (e as CustomEvent).detail as { id: string; color: string } | null;
       if (!d) return;
-      setAlbumColorMap((prev) => ({ ...prev, [d.id]: d.color ?? null }));
       setOpenNoteTabs((prev) =>
         prev.map((t) =>
-          t.type === "album" && t.albumFolder === d.id ? { ...t, albumColor: d.color ?? null } : t,
+          t.type === "album" && t.albumFolder === d.id ? { ...t, albumColor: d.color } : t,
         ),
       );
     };
-
-    void loadAlbumColors();
-
-    const channel = supabase
-      .channel(`media-tab-album-colors-${user.id}-${activeEntityId ?? "self"}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "media_albums" }, () => {
-        void loadAlbumColors();
-      })
-      .subscribe();
-
     window.addEventListener("library:album-color", onColor);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener("library:album-color", onColor);
-      void supabase.removeChannel(channel);
-    };
-  }, [user, isTeamMode, activeEntityId]);
+    return () => window.removeEventListener("library:album-color", onColor);
+  }, []);
 
   // Global "open as new tab" event — fired after a new media item is created.
   useEffect(() => {
@@ -552,12 +479,7 @@ function LibraryPage() {
                     }
                   }
                   const dragStyle: React.CSSProperties = isDragging
-                    ? {
-                        transform: `translate3d(${dragDx}px,0,0)`,
-                        transition: "none",
-                        zIndex: 5,
-                        isolation: "isolate",
-                      }
+                    ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
                     : { transform: `translate3d(${translateX}px,0,0)` };
 
                   const next = openNoteTabs[idx + 1];
@@ -570,9 +492,7 @@ function LibraryPage() {
                     idx < openNoteTabs.length - 1 &&
                     !isActive &&
                     !nextIsActive;
-                  const folderColor = t.type === "album"
-                    ? (t.albumFolder ? (albumColorMap[t.albumFolder] ?? t.albumColor ?? null) : (t.albumColor ?? null))
-                    : null;
+                  const folderColor = t.type === "album" ? (t.albumColor ?? null) : null;
                   // Resolve icon color:
                   //  - if folder has a color → always use it (visible on both bgs)
                   //  - else: black on active (white bg) / white on inactive (dark bg)
@@ -618,21 +538,6 @@ function LibraryPage() {
                       }`}
                       title={t.title}
                     >
-                      {isDragging && (
-                        <span
-                          aria-hidden
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            bottom: 0,
-                            left: -18,
-                            right: -18,
-                            background: "#1d1d1f",
-                            pointerEvents: "none",
-                            zIndex: 0,
-                          }}
-                        />
-                      )}
                       {(isActive || isDragging) && (
                         <>
                           <span
@@ -645,15 +550,15 @@ function LibraryPage() {
                               bottom: -1,
                               background: "#FFFFFF",
                               pointerEvents: "none",
-                              zIndex: 1,
+                              zIndex: 0,
                             }}
                           />
                           <svg aria-hidden width="32" height="35" viewBox="0 0 32 35"
-                            style={{ position: "absolute", top: 0, left: -16, pointerEvents: "none", zIndex: 1, overflow: "visible", display: "block" }}>
+                            style={{ position: "absolute", top: 0, left: -16, pointerEvents: "none", zIndex: 0, overflow: "visible", display: "block" }}>
                             <path d="M 0 35 L 0 34 A 16 16 0 0 0 16 18 L 16 8 A 8 8 0 0 1 24 0 L 32 0 L 32 35 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
                           </svg>
                           <svg aria-hidden width="32" height="35" viewBox="0 0 32 35"
-                            style={{ position: "absolute", top: 0, right: -16, pointerEvents: "none", zIndex: 1, overflow: "visible", display: "block" }}>
+                            style={{ position: "absolute", top: 0, right: -16, pointerEvents: "none", zIndex: 0, overflow: "visible", display: "block" }}>
                             <path d="M 32 35 L 32 34 A 16 16 0 0 1 16 18 L 16 8 A 8 8 0 0 0 8 0 L 0 0 L 0 35 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
                           </svg>
                         </>
@@ -667,8 +572,8 @@ function LibraryPage() {
                       ) : t.type === "album" ? (
                         <FolderClosed
                           data-folder-icon
-                          className="relative z-[2] h-3.5 w-3.5 shrink-0"
-                          style={{ color: folderColor ?? iconColor, opacity: 1 }}
+                          className="relative z-[1] h-3.5 w-3.5 shrink-0"
+                          style={folderColor ? { opacity: 1 } : { color: iconColor, opacity: 1 }}
                         />
                       ) : (
                         <ImageIcon
@@ -678,7 +583,7 @@ function LibraryPage() {
                         />
                       )}
                       <span
-                        className="relative z-[2] min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left"
+                        className="relative z-[1] min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left"
                         style={{
                           WebkitMaskImage:
                             "linear-gradient(to right, #000 0, #000 calc(100% - 20px), transparent 100%)",
@@ -698,7 +603,7 @@ function LibraryPage() {
                           setOpenNoteTabs((prev) => prev.filter((x) => x.id !== t.id));
                           if (activeNoteId === t.id) setActiveNoteId(null);
                         }}
-                        className="absolute right-2 top-1/2 z-[3] -translate-y-1/2 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                        className="absolute right-2 top-1/2 z-[2] -translate-y-1/2 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
                       >
                         ✕
                       </span>
