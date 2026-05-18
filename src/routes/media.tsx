@@ -1598,7 +1598,7 @@ function MediaPage({
         </nav>
         )}
 
-        <section className="pl-2 pr-4 pb-8" onClick={clearSelectionOnBg}>
+        <section className="pl-0 pr-4 pb-8" onClick={clearSelectionOnBg}>
 
           {filtered.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-hairline bg-card/40 py-20 text-center text-sm text-muted-foreground">
