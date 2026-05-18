@@ -2573,7 +2573,7 @@ function Lightbox({
             } ${isFullscreen ? "top-0 z-[96]" : "z-30"}`}
             style={isFullscreen ? undefined : { top: 40 }}
           >
-            <div className="flex h-11 flex-none items-center gap-1 border-b border-hairline px-5">
+            <div className="flex h-14 flex-none items-center gap-1 border-b border-hairline px-5">
               {tabs.map((t) => (
                 <button
                   key={t}
@@ -4427,7 +4427,7 @@ function MediaTabViewBody(props: {
           style={isFullscreen ? undefined : { top: TOP_OFFSET }}
         >
           <div className="flex flex-1 flex-col">
-            <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
+            <div className="flex h-14 items-center justify-between border-b border-hairline px-5">
               <div className="flex gap-1">
                 {tabs.map((t) => (
                   <button
