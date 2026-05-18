@@ -109,6 +109,24 @@ export function GlobalTopTabBar() {
         .global-topbar-dark .topbar-row button:hover {
           background-color: rgba(255,255,255,0.10) !important;
         }
+        /* Active tab sits on a white background — force black text/icon
+           regardless of the dark-bar default. Folder icon keeps its inline
+           color via specificity (set further below). */
+        .global-topbar-dark .topbar-row [data-active-tab],
+        .global-topbar-dark .topbar-row [data-active-tab] * { color: #111111 !important; }
+        .global-topbar-dark .topbar-row [data-active-tab]:hover,
+        .global-topbar-dark .topbar-row [data-active-tab] *:hover {
+          background-color: transparent !important;
+        }
+        /* Folder icon: inline style.color wins, but be explicit for clarity. */
+        .global-topbar-dark .topbar-row [data-folder-icon] { color: var(--folder-color, currentColor) !important; }
+        /* Inactive-tab divider (Chrome-style). Hidden when either adjacent
+           tab is hovered or active. */
+        .global-topbar-dark .topbar-row [data-tab-divider] { transition: opacity 120ms; }
+        .global-topbar-dark .topbar-row [data-tab]:hover + [data-tab-divider],
+        .global-topbar-dark .topbar-row [data-tab-divider]:has(+ [data-tab]:hover) {
+          opacity: 0 !important;
+        }
         .global-topbar-dark .topbar-row [role="menu"],
         .global-topbar-dark .topbar-row [role="menu"] * { color: oklch(0.14 0.012 260); }
         .global-topbar-dark .topbar-row [role="menu"] .text-muted-foreground { color: oklch(0.5 0.01 260); }
@@ -116,11 +134,6 @@ export function GlobalTopTabBar() {
           background-color: oklch(0.94 0.005 90) !important;
         }
       `}</style>
-      <div
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 h-px"
-        style={{ background: "rgba(255,255,255,0.10)" }}
-      />
       <div className="topbar-row relative z-10 flex items-end gap-1 px-4 md:px-6">
         <ProfileTab />
         <NavIconTabs activeKey={activeKey} />
