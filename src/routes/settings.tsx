@@ -1642,6 +1642,46 @@ function SessionTileDesignCard() {
               );
             })}
           </div>
+          <div className="mt-5">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Combined sessions
+            </h4>
+            <p className="mt-1 text-xs text-muted-foreground">
+              How two or more Strava sessions synced less than an hour apart render as one tile.
+              The tile height is always the sum of the synced activities (unless Simple view is on).
+            </p>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {COMBINED_SESSION_TILE_DESIGNS.map((d) => {
+                const active = d.id === combined;
+                return (
+                  <button
+                    key={d.id}
+                    onClick={() => setCombined(d.id)}
+                    className={`group relative overflow-hidden rounded-xl border text-left transition ${
+                      active
+                        ? "border-primary shadow-md ring-2 ring-primary/30"
+                        : "border-hairline hover:border-ink/30"
+                    }`}
+                  >
+                    <div className="relative flex h-24 items-center justify-center bg-[#B8B8FF]/25 px-2">
+                      <CombinedSessionTilePreview design={d.id} />
+                      {active && (
+                        <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+                          <Check className="h-3 w-3" />
+                        </span>
+                      )}
+                    </div>
+                    <div className="bg-card px-3 py-2.5">
+                      <div className="text-sm font-medium text-ink">{d.label}</div>
+                      <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                        {d.description}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="mt-4 rounded-lg border border-hairline p-3">
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm font-medium text-ink">Simple view</span>
