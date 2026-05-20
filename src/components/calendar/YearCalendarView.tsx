@@ -250,7 +250,7 @@ function YearCalendarViewInner({
         </div>
       </div>
 
-      <div className="min-h-[60vh]" data-preview-active={previewActive ? "true" : "false"}>
+      <div data-preview-active={previewActive ? "true" : "false"}>
         <UnifiedElasticGrid
           calId={calId}
           year={meta.year}
