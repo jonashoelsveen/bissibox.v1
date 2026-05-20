@@ -906,13 +906,18 @@ export function MonthGridType1({
                             return (
                           <motion.div
                             key={`${id}-${itemKey}`}
-                            layout
-                            layoutId={it.kind === "event" ? `evt-${it.event.id}` : undefined}
-                            initial={{ opacity: 0, y: -2 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -2 }}
+                            initial={{ opacity: 0 }}
+                            animate={{
+                              opacity:
+                                dragSession &&
+                                it.kind === "event" &&
+                                dragSession.eventId === it.event.id
+                                  ? 0
+                                  : 1,
+                            }}
+                            exit={{ opacity: 0 }}
                             transition={{
-                              duration: 0.14,
+                              duration: 0.08,
                               ease: [0.2, 0, 0, 1],
                             }}
                             data-role="item"
