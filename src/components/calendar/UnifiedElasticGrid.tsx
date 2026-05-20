@@ -585,8 +585,8 @@ export function UnifiedElasticGrid({
       const hoverRank = newDay * 2 + newSession;
       let newLo = hoverRank - drag.offset;
       let newHi = newLo + drag.size - 1;
-      // Clamp to slot range. In week view rows = 19 days × 2 sessions = 38.
-      const maxRank = 19 * 2 - 1;
+      // Clamp to slot range. In week view rows = 18 days × 2 sessions = 36.
+      const maxRank = 18 * 2 - 1;
       if (newLo < 0) { newHi -= newLo; newLo = 0; }
       if (newHi > maxRank) { newLo -= (newHi - maxRank); newHi = maxRank; }
       setMarkRange({ month: newMonth, lo: newLo, hi: newHi });
@@ -730,7 +730,7 @@ export function UnifiedElasticGrid({
     const minutes =
       now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
     const since6 = minutes - 6 * 60;
-    if (since6 < 0 || since6 > 19 * 60) return null;
+    if (since6 < 0 || since6 > 18 * 60) return null;
     return since6;
   }, [now, mode]);
 
@@ -784,8 +784,7 @@ export function UnifiedElasticGrid({
   return (
     <div
       ref={containerRef}
-      className="relative w-full overflow-hidden rounded-md border border-hairline bg-card"
-      style={{ height: "calc(100vh - 280px)" }}
+      className="relative w-full"
     >
       {/* Top-right control cluster: [Mode ▾] [‹ 📅 ›].
           When the parent controls viewMode it also renders these controls
@@ -818,7 +817,7 @@ export function UnifiedElasticGrid({
       {viewMode === "month" ? (
         <motion.div
           key="month"
-          className="h-full w-full"
+          className="w-full"
           initial={{ opacity: 0, scaleY: 0.85 }}
           animate={{ opacity: 1, scaleY: 1 }}
           exit={{ opacity: 0, scaleY: 0.85 }}
@@ -861,7 +860,7 @@ export function UnifiedElasticGrid({
       ) : (
         <motion.div
           key="week"
-          className="h-full w-full"
+          className="w-full"
           initial={{ opacity: 0, scaleY: 0.85 }}
           animate={{ opacity: 1, scaleY: 1 }}
           exit={{ opacity: 0, scaleY: 0.85 }}
@@ -870,8 +869,7 @@ export function UnifiedElasticGrid({
         >
         <div
           ref={scrollRef}
-          className="relative h-full w-full overflow-auto"
-          style={{ scrollbarGutter: "stable" }}
+          className="relative w-full"
           onClick={(e) => {
             if (e.target === e.currentTarget) handleSelect(null);
           }}
@@ -892,7 +890,7 @@ export function UnifiedElasticGrid({
                 type="button"
                 onClick={() => handleViewModeChange("month")}
                 title={`Uke ${isoWeekNumber(weekDates[0] ?? new Date())} — klikk for å zoome ut`}
-                className="sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-1 py-2 text-center text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+                className="sticky top-0 z-20 select-none border-b border-hairline bg-card px-1 py-2 text-center text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
                 ref={(el) => {
                   headerRef.current = el;
                 }}
@@ -929,8 +927,8 @@ export function UnifiedElasticGrid({
               <Fragment key="simple-body">
                 {/* Empty week-number gutter under the header */}
                 <div
-                  className="border-r border-hairline bg-card"
-                  style={{ height: rowHeight * 19 }}
+                  className="bg-card"
+                  style={{ height: rowHeight * 18 }}
                   aria-hidden
                 />
                 {months.map((m) => {
@@ -940,7 +938,7 @@ export function UnifiedElasticGrid({
                       key={`simple-col-${m.idx}`}
                       data-simple-col={m.idx}
                       className="relative border-r border-hairline transition-colors hover:bg-secondary/60"
-                      style={{ height: rowHeight * 19 }}
+                      style={{ height: rowHeight * 18 }}
                       onDoubleClick={(e) => {
                         if (!colDate) return;
                         const target = e.target as HTMLElement;
@@ -965,10 +963,10 @@ export function UnifiedElasticGrid({
             ) : (
             Array.from(
               // Week view (compact / kind:"year") renders hour-rows of a
-              // single weekday: 06:00 → 24:30 in 30-min slots = 38 rows
-              // = 19 "days" × 2 sessions. Day view keeps the original
+              // single weekday: 06:00 → 24:00 in 30-min slots = 36 rows
+              // = 18 "days" × 2 sessions. Day view keeps the original
               // 31-day envelope.
-              { length: mode.kind === "year" ? 19 : 31 },
+              { length: mode.kind === "year" ? 18 : 31 },
               (_, i) => i + 1,
             ).map((day) => (
               <Fragment key={day}>
@@ -977,7 +975,7 @@ export function UnifiedElasticGrid({
                   const label = `${String(hh).padStart(2, "0")}:00`;
                   return (
                     <div
-                      className="border-b border-r border-hairline bg-card pl-1.5 pt-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
+                      className="border-b border-hairline bg-card pl-1.5 pt-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
                       style={{ height: rowHeight * 2 }}
                       aria-hidden
                     >
@@ -2050,7 +2048,7 @@ function WeekEventsOverlay({
         let newStart = drag.originStartMin + minShift;
         // Clamp inside visible range [startHour*60, startHour*60 + 19*60].
         const minStart = startHour * 60;
-        const maxStart = startHour * 60 + 19 * 60 - drag.durationMin;
+        const maxStart = startHour * 60 + 18 * 60 - drag.durationMin;
         newStart = Math.max(minStart, Math.min(maxStart, newStart));
         onEventDrop(drag.id, weekDates[newCol], newStart, drag.durationMin, drag.anchor ?? undefined);
       }
@@ -2077,7 +2075,7 @@ function WeekEventsOverlay({
         const endMin = end.getHours() * 60 + end.getMinutes();
         const since = startMin - startHour * 60;
         const dur = Math.max(30, endMin - startMin);
-        if (since < 0 || since >= 19 * 60) return null;
+        if (since < 0 || since >= 18 * 60) return null;
         const top = headerBottom + (since / 30) * rowHeight;
         const height = (dur / 30) * rowHeight;
         const box = cols[colIdx];
