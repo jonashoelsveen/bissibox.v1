@@ -115,7 +115,7 @@ export function TimeWheelPicker({
   );
 
   return (
-    <div className="flex items-center justify-start gap-1 select-none pl-1">
+    <div className="flex items-center justify-start gap-0 select-none pl-1">
       <Wheel
         ref={wheelRefs[0]}
         ariaLabel="Fra time"
@@ -296,6 +296,7 @@ const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
   };
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       clearTypeBuf();
