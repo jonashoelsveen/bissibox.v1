@@ -1405,7 +1405,11 @@ export function UnifiedElasticGrid({
           }}
           onSave={() => setPendingMove(null)}
         />
-      )}
+    </div>
+  );
+}
+
+
 
 interface DayRowProps {
   day: number;
