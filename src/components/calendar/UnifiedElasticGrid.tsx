@@ -2075,7 +2075,7 @@ function WeekEventsOverlay({
         const endMin = end.getHours() * 60 + end.getMinutes();
         const since = startMin - startHour * 60;
         const dur = Math.max(30, endMin - startMin);
-        if (since < 0 || since >= 19 * 60) return null;
+        if (since < 0 || since >= 18 * 60) return null;
         const top = headerBottom + (since / 30) * rowHeight;
         const height = (dur / 30) * rowHeight;
         const box = cols[colIdx];
