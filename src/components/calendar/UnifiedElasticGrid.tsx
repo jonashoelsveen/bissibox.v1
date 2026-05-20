@@ -730,7 +730,7 @@ export function UnifiedElasticGrid({
     const minutes =
       now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
     const since6 = minutes - 6 * 60;
-    if (since6 < 0 || since6 > 19 * 60) return null;
+    if (since6 < 0 || since6 > 18 * 60) return null;
     return since6;
   }, [now, mode]);
 
