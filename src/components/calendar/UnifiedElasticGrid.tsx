@@ -1095,7 +1095,7 @@ export function UnifiedElasticGrid({
                       // anchor the popover next to it.
                       requestAnimationFrame(() => {
                         const el = document.querySelector<HTMLElement>(
-                          `[data-event-id="${CSS.escape(id)}"]`,
+                          `[data-event-id="${id.replace(/"/g, '\\"')}"]`,
                         );
                         const rect = el?.getBoundingClientRect() ?? anchor?.getBoundingClientRect();
                         if (!rect) return;
