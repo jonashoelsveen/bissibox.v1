@@ -905,9 +905,10 @@ export function UnifiedElasticGrid({
                   key={`h-${m.idx}`}
                   data-month-col={m.idx}
                   data-day-anchor=""
-                  className={`group/daynote-anchor sticky top-12 z-20 select-none border-b border-r border-hairline px-3 py-2 text-center text-[12px] font-semibold uppercase tracking-wide ${
+                  className={`group/daynote-anchor sticky top-12 z-20 flex select-none items-center justify-center border-b border-r border-hairline px-3 text-[12px] font-semibold uppercase tracking-wide ${
                     isToday ? "bg-secondary text-ink" : "bg-card text-muted-foreground"
                   } ${appKind === "diary" ? "relative" : ""}`}
+                  style={{ height: 36 }}
                 >
                   {appKind === "diary" && colDate && (
                     <DayNoteButton calId={calId} date={colDate} variant="week" memberId={memberId} viewerRole={viewerRole} />
@@ -921,6 +922,7 @@ export function UnifiedElasticGrid({
                 </div>
               );
             })}
+
 
             {isSimple ? (
               <Fragment key="simple-body">
