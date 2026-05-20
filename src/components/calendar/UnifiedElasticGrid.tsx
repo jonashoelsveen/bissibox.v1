@@ -2277,7 +2277,6 @@ function WeekEventsOverlay({
  * (vertical only) with a confirmation modal on release.
  */
 function DiarySimpleStack({
-  scrollRef,
   events,
   weekDates,
   onEventClick,
@@ -2287,7 +2286,6 @@ function DiarySimpleStack({
   memberId,
   viewerRole = "owner",
 }: {
-  scrollRef: React.RefObject<HTMLDivElement | null>;
   events: CalendarEvent[];
   weekDates: Date[];
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
@@ -2315,43 +2313,6 @@ function DiarySimpleStack({
       setHoverRect(null);
     }, 180);
   }, [cancelClose]);
-
-  type Box = { left: number; top: number; width: number };
-  const [cols, setCols] = useState<Box[]>([]);
-
-  useLayoutEffect(() => {
-    const measure = () => {
-      const c = scrollRef.current;
-      if (!c) return;
-      const next: Box[] = [];
-      for (let i = 0; i < 7; i++) {
-        const cell = c.querySelector<HTMLElement>(`[data-simple-col="${i}"]`);
-        if (cell) next.push({ left: cell.offsetLeft, top: cell.offsetTop, width: cell.offsetWidth });
-      }
-      if (next.length === 7) setCols(next);
-    };
-    measure();
-    const ro = new ResizeObserver(() => measure());
-    if (scrollRef.current) ro.observe(scrollRef.current);
-    const scrollAncestors: (HTMLElement | Window)[] = [window];
-    let node: HTMLElement | null = scrollRef.current?.parentElement ?? null;
-    while (node) {
-      const cs = window.getComputedStyle(node);
-      if (/(auto|scroll)/.test(cs.overflowY) || /(auto|scroll)/.test(cs.overflow)) {
-        scrollAncestors.push(node);
-      }
-      node = node.parentElement;
-    }
-    for (const t of scrollAncestors) t.addEventListener("scroll", measure, { passive: true });
-    const id = window.setInterval(measure, 500);
-    window.addEventListener("resize", measure);
-    return () => {
-      window.clearInterval(id);
-      window.removeEventListener("resize", measure);
-      ro.disconnect();
-      for (const t of scrollAncestors) t.removeEventListener("scroll", measure);
-    };
-  }, [scrollRef]);
 
   // Group events by column, sorted by sortIndex (fallback startISO).
   // Local order overrides while a reorder is pending.
@@ -2382,38 +2343,45 @@ function DiarySimpleStack({
     return arr;
   }, [events, weekDates, pendingOrder]);
 
-  if (cols.length !== 7) return null;
-
   return (
     <>
       {byCol.map((list, colIdx) => (
-        <SimpleColumn
-          key={colIdx}
-          colIdx={colIdx}
-          list={list}
-          box={cols[colIdx]}
-          tileDesign={tileDesign}
-          unit={unit}
-          onEventClick={onEventClick}
-          onHoverChange={(id, rect) => {
-            cancelClose();
-            setHoverId(id);
-            setHoverRect(rect);
+        <div
+          key={`simple-rail-${colIdx}`}
+          style={{
+            gridColumn: colIdx + 2,
+            gridRow: "2",
+            position: "relative",
+            pointerEvents: "none",
+            zIndex: 8,
           }}
-          onHoverEnd={scheduleClose}
-          onReorder={(ids) => {
-            const oldIds = list.map((e) => e.id);
-            const byId = new Map(list.map((e) => [e.id, e]));
-            const movedStrava = ids.some(
-              (id, i) => id !== oldIds[i] && byId.get(id)?.stravaActivityId != null,
-            );
-            if (movedStrava) {
-              setStravaBlocked(true);
-              return;
-            }
-            setPendingOrder({ colIdx, ids });
-          }}
-        />
+        >
+          <SimpleColumn
+            colIdx={colIdx}
+            list={list}
+            tileDesign={tileDesign}
+            unit={unit}
+            onEventClick={onEventClick}
+            onHoverChange={(id, rect) => {
+              cancelClose();
+              setHoverId(id);
+              setHoverRect(rect);
+            }}
+            onHoverEnd={scheduleClose}
+            onReorder={(ids) => {
+              const oldIds = list.map((e) => e.id);
+              const byId = new Map(list.map((e) => [e.id, e]));
+              const movedStrava = ids.some(
+                (id, i) => id !== oldIds[i] && byId.get(id)?.stravaActivityId != null,
+              );
+              if (movedStrava) {
+                setStravaBlocked(true);
+                return;
+              }
+              setPendingOrder({ colIdx, ids });
+            }}
+          />
+        </div>
       ))}
       <ReorderConfirmDialog
         open={!!pendingOrder || stravaBlocked}
@@ -2466,6 +2434,7 @@ function DiarySimpleStack({
     </>
   );
 }
+
 
 const SIMPLE_TILE_H = 56;
 const SIMPLE_TILE_GAP = 4;
