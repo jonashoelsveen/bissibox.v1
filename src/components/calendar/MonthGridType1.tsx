@@ -526,19 +526,16 @@ export function MonthGridType1({
         const d = days[cellIdx];
         if (d) {
           targetDate = d.date;
-          // Compute insertion index by time-of-day, ignoring the moved event.
+          // Compute insertion index strictly by session start time,
+          // ignoring the moved event. Earlier start = earlier slot.
           const movedKey = Date.parse(start.originalStartISO);
           const sorted = eventsRef
             .filter((ev) => ev.id !== start.eventId && sameDay(fromISOLocal(ev.startISO), d.date))
             .slice()
-            .sort((a, b) => {
-              const ka = a.sortIndex ?? Date.parse(a.startISO);
-              const kb = b.sortIndex ?? Date.parse(b.startISO);
-              return ka - kb;
-            });
+            .sort((a, b) => Date.parse(a.startISO) - Date.parse(b.startISO));
           insertIndex = sorted.length;
           for (let i = 0; i < sorted.length; i++) {
-            const ka = sorted[i].sortIndex ?? Date.parse(sorted[i].startISO);
+            const ka = Date.parse(sorted[i].startISO);
             if (movedKey < ka) {
               insertIndex = i;
               break;
@@ -732,11 +729,7 @@ export function MonthGridType1({
               const dayEvents = events.filter((e) => sameDay(fromISOLocal(e.startISO), d.date));
               const sortedDayEvents = dayEvents
                 .slice()
-                .sort((a, b) => {
-                  const ka = a.sortIndex ?? Date.parse(a.startISO);
-                  const kb = b.sortIndex ?? Date.parse(b.startISO);
-                  return ka - kb;
-                });
+                .sort((a, b) => Date.parse(a.startISO) - Date.parse(b.startISO));
 
               type UnifiedItem =
                 | { kind: "legacy"; idx: number; raw: string }
@@ -751,7 +744,7 @@ export function MonthGridType1({
               ];
 
               // Strict row alignment: limit visible items, show "+N more"
-              const MAX_VISIBLE = 3;
+              const MAX_VISIBLE = 5;
               const visible = allItems.slice(0, MAX_VISIBLE);
               const overflow = Math.max(0, allItems.length - MAX_VISIBLE);
 
@@ -914,7 +907,7 @@ export function MonthGridType1({
                             return (
                           <motion.div
                             key={`${id}-${itemKey}`}
-                            initial={{ opacity: 0 }}
+                            initial={false}
                             animate={{
                               opacity:
                                 dragSession &&
@@ -924,10 +917,7 @@ export function MonthGridType1({
                                   : 1,
                             }}
                             exit={{ opacity: 0 }}
-                            transition={{
-                              duration: 0.08,
-                              ease: [0.2, 0, 0, 1],
-                            }}
+                            transition={{ duration: 0 }}
                             data-role="item"
                             data-real-event={isRealEvent ? "1" : undefined}
                             data-ghost-event={it.kind === "event" && it.event.id.startsWith("__ghost__:") ? "1" : undefined}
@@ -1111,7 +1101,7 @@ export function MonthGridType1({
                         data-role="item"
                         onClick={(e) => {
                           e.stopPropagation();
-                          openPopoverAt(pos, e.currentTarget.closest("[data-cell-pos]") as HTMLElement);
+                          onWeekClick?.(d.date);
                         }}
                         className="mono w-full truncate rounded-[3px] px-1.5 py-0.5 text-left text-[10.5px] tabular-nums text-muted-foreground hover:bg-secondary"
                       >
