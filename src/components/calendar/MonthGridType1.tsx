@@ -736,6 +736,10 @@ export function MonthGridType1({
                   data-day-anchor=""
                   style={{ cursor: "default" }}
                 >
+                  {/* Drop-target border preview during cross-day event drag */}
+                  {hoverDayKey === id && dragItem?.source === "event" && (
+                    <div className="pointer-events-none absolute inset-0 z-10 rounded-[3px] border-2 border-solid border-primary/70 bg-primary/10" />
+                  )}
                   {/* Day number — small, top-right, muted */}
                   <div className="flex items-start justify-between px-2 pt-1.5">
                     <span className="invisible text-[11px]">·</span>
