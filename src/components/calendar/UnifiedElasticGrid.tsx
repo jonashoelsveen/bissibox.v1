@@ -1085,6 +1085,26 @@ export function UnifiedElasticGrid({
                   onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
                     const ev = events.find((e) => e.id === id);
                     if (!ev) return;
+                    if (appKind === "calendar") {
+                      // Snap visually + ask for confirmation. We optimistically
+                      // move the event so it lands in the new slot, then revert
+                      // on cancel.
+                      const newStart = setHM(newDate, Math.floor(newStartMin / 60), newStartMin % 60);
+                      const newEnd = addMinutes(newStart, durationMin);
+                      const originalStartISO = ev.startISO;
+                      const originalEndISO = ev.endISO;
+                      onMoveEvent(id, { startISO: toISOLocal(newStart), endISO: toISOLocal(newEnd) });
+                      setPendingMove({
+                        id,
+                        name: ev.title,
+                        newDate,
+                        newStartMin,
+                        durationMin,
+                        originalStartISO,
+                        originalEndISO,
+                      });
+                      return;
+                    }
                     setPopover({
                       key: { year, month: 0, day: 1, session: 0 },
                       rect: (anchor ?? document.body).getBoundingClientRect(),
