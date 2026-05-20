@@ -1121,6 +1121,7 @@ export function UnifiedElasticGrid({
               )}
             </div>
           )}
+          </div>
         </div>
 
         </motion.div>
