@@ -416,6 +416,12 @@ export function MonthGridType1({
     targetDayKey: string | null;
     targetDate: Date | null;
     insertIndex: number;
+    pointerX: number;
+    pointerY: number;
+    offsetX: number;
+    offsetY: number;
+    chipWidth: number;
+    chipHeight: number;
   } | null>(null);
   const dragSessionRef = useRef(dragSession);
   useEffect(() => {
