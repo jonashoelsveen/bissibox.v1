@@ -296,6 +296,7 @@ const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
   };
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       clearTypeBuf();
