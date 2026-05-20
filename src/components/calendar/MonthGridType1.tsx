@@ -1071,6 +1071,22 @@ export function MonthGridType1({
           }}
         />
 
+        {pendingMove && (
+          <MoveSavePopover
+            anchor={pendingMove.anchorRect}
+            onCancel={() => {
+              onMoveEvent?.(pendingMove.id, {
+                startISO: pendingMove.originalStartISO,
+                endISO: pendingMove.originalEndISO,
+              });
+              setPendingMove(null);
+            }}
+            onSave={() => setPendingMove(null)}
+          />
+        )}
+
+
+
         {/* Inline popover (per-item create or edit) */}
         {popover && appKind === "diary" && (() => {
           const cell = days.find(
