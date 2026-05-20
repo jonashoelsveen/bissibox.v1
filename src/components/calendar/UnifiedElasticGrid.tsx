@@ -1393,35 +1393,19 @@ export function UnifiedElasticGrid({
           }}
         />
       )}
-      <MoveSessionConfirmDialog
-        open={!!pendingMove}
-        sessionName={pendingMove?.name ?? ""}
-        newTimeLabel={(() => {
-          if (!pendingMove) return "";
-          const d = pendingMove.newDate;
-          const dateStr = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
-          const startH = Math.floor(pendingMove.newStartMin / 60);
-          const startM = pendingMove.newStartMin % 60;
-          const endMin = pendingMove.newStartMin + pendingMove.durationMin;
-          const endH = Math.floor(endMin / 60);
-          const endM = endMin % 60;
-          const pad = (n: number) => String(n).padStart(2, "0");
-          return `${dateStr}, ${pad(startH)}:${pad(startM)} – ${pad(endH)}:${pad(endM)}`;
-        })()}
-        onCancel={() => {
-          if (pendingMove) {
+      {pendingMove && (
+        <MoveSavePopover
+          anchor={pendingMove.anchorRect}
+          onCancel={() => {
             onMoveEvent(pendingMove.id, {
               startISO: pendingMove.originalStartISO,
               endISO: pendingMove.originalEndISO,
             });
-          }
-          setPendingMove(null);
-        }}
-        onConfirm={() => setPendingMove(null)}
-      />
-    </div>
-  );
-}
+            setPendingMove(null);
+          }}
+          onSave={() => setPendingMove(null)}
+        />
+      )}
 
 interface DayRowProps {
   day: number;
