@@ -559,7 +559,7 @@ export function MonthGridType1({
             style={
               {
                 gridTemplateColumns: GRID_TEMPLATE,
-                gridAutoRows: `minmax(${rowMinHeight}px, 1fr)`,
+                gridAutoRows: `${rowMinHeight}px`,
               } as CSSProperties
             }
           >
