@@ -44,6 +44,7 @@ import { useMonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
 
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
+import { TimeWheelPicker } from "./TimeWheelPicker";
 
 function activityIconFor(ev: CalendarEvent): LucideIcon {
   const k = (ev.activity || ev.diarySub || "").toLowerCase();
