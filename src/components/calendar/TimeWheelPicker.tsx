@@ -233,7 +233,7 @@ function Wheel({ items, value, ariaLabel, format, onChange }: WheelProps) {
         className="pointer-events-none absolute inset-0 z-20"
         style={{
           background:
-            "linear-gradient(to bottom, hsl(var(--card)) 0%, hsl(var(--card) / 0) 30%, hsl(var(--card) / 0) 70%, hsl(var(--card)) 100%)",
+            "linear-gradient(to bottom, var(--card) 0%, color-mix(in oklab, var(--card) 0%, transparent) 30%, color-mix(in oklab, var(--card) 0%, transparent) 70%, var(--card) 100%)",
         }}
       />
       <div
