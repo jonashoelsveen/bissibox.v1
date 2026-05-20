@@ -586,15 +586,21 @@ export function MonthGridType1({
         const el = document.querySelector<HTMLElement>(
           `[data-event-id="${drag.eventId.replace(/"/g, '\\"')}"]`,
         );
-        const rect = el?.getBoundingClientRect();
-        if (!rect) return;
-        setPendingMove({
-          id: drag.eventId,
-          originalStartISO: drag.originalStartISO,
-          originalEndISO: drag.originalEndISO,
-          anchorRect: rect,
-        });
+        if (!el) return;
+        const cell = days.find(
+          (d) =>
+            d.date.getFullYear() === td.getFullYear() &&
+            d.date.getMonth() === td.getMonth() &&
+            d.date.getDate() === td.getDate(),
+        );
+        if (!cell) return;
+        // Fetch the freshest event by id; fall back to the dragged copy.
+        const fresh = events.find((e) => e.id === drag.eventId) ?? {
+          ...drag.event,
+        };
+        openEventEditor({ row: cell.row, col: cell.col }, fresh, el);
       });
+
     };
 
     window.addEventListener("pointermove", onMove);
