@@ -1903,11 +1903,8 @@ function NowLine({
  * Click without dragging opens the inline editor.
  */
 function WeekEventsOverlay({
-  scrollRef,
   events,
   weekDates,
-  headerH,
-  rowHeight,
   startHour,
   appKind = "calendar",
   onEventClick,
@@ -1918,11 +1915,8 @@ function WeekEventsOverlay({
   memberId,
   viewerRole = "owner",
 }: {
-  scrollRef: React.RefObject<HTMLDivElement | null>;
   events: CalendarEvent[];
   weekDates: Date[];
-  headerH: number;
-  rowHeight: number;
   startHour: number;
   appKind?: "calendar" | "diary";
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
@@ -1933,11 +1927,14 @@ function WeekEventsOverlay({
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }) {
+  const ROW_HEIGHT = 28;
   const [tileDesign] = useSessionTileDesign();
   const [unit] = useDistanceUnit();
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const closeTimerRef = useRef<number | null>(null);
+  // Mark prop as used to silence ts noUnused warnings; behavior unchanged.
+  void onSaveSessionNote;
   const cancelClose = useCallback(() => {
     if (closeTimerRef.current != null) {
       window.clearTimeout(closeTimerRef.current);
@@ -1951,49 +1948,6 @@ function WeekEventsOverlay({
       setHoverRect(null);
     }, 180);
   }, [cancelClose]);
-  type Box = { left: number; width: number };
-  const [cols, setCols] = useState<Box[]>([]);
-  const [headerBottom, setHeaderBottom] = useState(0);
-
-  useLayoutEffect(() => {
-    const measure = () => {
-      const c = scrollRef.current;
-      if (!c) return;
-      const next: Box[] = [];
-      let hb = 0;
-      for (let i = 0; i < 7; i++) {
-        // First match for data-month-col is the sticky header for that column.
-        const cell = c.querySelector<HTMLElement>(`[data-month-col="${i}"]`);
-        if (cell) {
-          next.push({ left: cell.offsetLeft, width: cell.offsetWidth });
-          hb = Math.max(hb, cell.offsetTop + cell.offsetHeight);
-        }
-      }
-      if (next.length === 7) setCols(next);
-      setHeaderBottom(hb);
-    };
-    measure();
-    const ro = new ResizeObserver(() => measure());
-    if (scrollRef.current) ro.observe(scrollRef.current);
-    const scrollAncestors: (HTMLElement | Window)[] = [window];
-    let node: HTMLElement | null = scrollRef.current?.parentElement ?? null;
-    while (node) {
-      const cs = window.getComputedStyle(node);
-      if (/(auto|scroll)/.test(cs.overflowY) || /(auto|scroll)/.test(cs.overflow)) {
-        scrollAncestors.push(node);
-      }
-      node = node.parentElement;
-    }
-    for (const t of scrollAncestors) t.addEventListener("scroll", measure, { passive: true });
-    const id = window.setInterval(measure, 500);
-    window.addEventListener("resize", measure);
-    return () => {
-      window.clearInterval(id);
-      window.removeEventListener("resize", measure);
-      ro.disconnect();
-      for (const t of scrollAncestors) t.removeEventListener("scroll", measure);
-    };
-  }, [scrollRef]);
 
   const [drag, setDrag] = useState<{
     id: string;
@@ -2015,15 +1969,14 @@ function WeekEventsOverlay({
       setDrag({ ...drag, delta: { dx, dy }, moved });
     };
     const onUp = () => {
-      if (drag.moved && cols.length === 7) {
-        // Compute drop column based on horizontal delta.
-        const colW = cols[0].width;
-        let colShift = Math.round(drag.delta.dx / colW);
-        let newCol = Math.max(0, Math.min(6, drag.originColIdx + colShift));
-        // Compute new start minute from vertical delta (snap to 30-min grid).
-        const minShift = Math.round(drag.delta.dy / rowHeight) * 30;
+      if (drag.moved) {
+        // Read column width once at drop time — no measurement-driven state.
+        const sample = document.querySelector<HTMLElement>('[data-month-col="0"]');
+        const colW = sample?.offsetWidth ?? 1;
+        const colShift = Math.round(drag.delta.dx / colW);
+        const newCol = Math.max(0, Math.min(6, drag.originColIdx + colShift));
+        const minShift = Math.round(drag.delta.dy / ROW_HEIGHT) * 30;
         let newStart = drag.originStartMin + minShift;
-        // Clamp inside visible range [startHour*60, startHour*60 + 19*60].
         const minStart = startHour * 60;
         const maxStart = startHour * 60 + 18 * 60 - drag.durationMin;
         newStart = Math.max(minStart, Math.min(maxStart, newStart));
@@ -2037,224 +1990,247 @@ function WeekEventsOverlay({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [drag, cols, rowHeight, startHour, weekDates, onEventDrop]);
+  }, [drag, startHour, weekDates, onEventDrop]);
 
-  if (cols.length !== 7) return null;
+  // Group events by day column (clamped to the visible 06:00–24:00 window).
+  const byCol = useMemo(() => {
+    const arr: Array<Array<{ ev: CalendarEvent; startMin: number; endMin: number }>> = Array.from(
+      { length: 7 },
+      () => [],
+    );
+    for (const ev of events) {
+      const start = fromISOLocal(ev.startISO);
+      const end = fromISOLocal(ev.endISO);
+      const idx = weekDates.findIndex((d) => sameDay(d, start));
+      if (idx < 0) continue;
+      const startMin = start.getHours() * 60 + start.getMinutes();
+      const endMin = end.getHours() * 60 + end.getMinutes();
+      const since = startMin - startHour * 60;
+      if (since < 0 || since >= 18 * 60) continue;
+      arr[idx].push({ ev, startMin, endMin });
+    }
+    return arr;
+  }, [events, weekDates, startHour]);
 
   return (
     <>
-      {events.map((ev) => {
-        const start = fromISOLocal(ev.startISO);
-        const end = fromISOLocal(ev.endISO);
-        const colIdx = weekDates.findIndex((d) => sameDay(d, start));
-        if (colIdx < 0) return null;
-        const startMin = start.getHours() * 60 + start.getMinutes();
-        const endMin = end.getHours() * 60 + end.getMinutes();
-        const since = startMin - startHour * 60;
-        const dur = Math.max(30, endMin - startMin);
-        if (since < 0 || since >= 18 * 60) return null;
-        const top = headerBottom + (since / 30) * rowHeight;
-        const height = (dur / 30) * rowHeight;
-        const box = cols[colIdx];
-        const isDragging = drag?.id === ev.id && drag.moved;
-        const dragDx = isDragging ? drag.delta.dx : 0;
-        const dragDy = isDragging ? drag.delta.dy : 0;
-        const accent = ev.color ?? "hsl(var(--primary))";
-        const bg = ev.color
-          ? `color-mix(in srgb, ${ev.color} 18%, white)`
-          : "hsl(var(--primary) / 0.15)";
-        const fg = "hsl(var(--ink, 220 13% 13%))";
-        const Icon = iconForColor(ev.color);
-        const isGhost = ev.id.startsWith("__ghost__:");
-        return (
-          <div
-            key={ev.id}
-            data-mark-cell="1"
-            data-real-event={isGhost ? undefined : "1"}
-            data-ghost-event={isGhost ? "1" : undefined}
-            onMouseEnter={(e) => {
-              if (isGhost || appKind !== "diary") return;
-              cancelClose();
-              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              setHoverId(ev.id);
-              setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
-            }}
-            onMouseLeave={(e) => {
-              if (isGhost || appKind !== "diary") return;
-              const related = e.relatedTarget as Node | null;
-              const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
-              if (goingIntoMenu) return;
-              scheduleClose();
-            }}
-            onPointerDown={(e) => {
-              if (isGhost) return;
-              if (appKind === "diary") return;
-              e.stopPropagation();
-              (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-              setDrag({
-                id: ev.id,
-                pointerStart: { x: e.clientX, y: e.clientY },
-                originColIdx: colIdx,
-                originStartMin: startMin,
-                durationMin: dur,
-                moved: false,
-                delta: { dx: 0, dy: 0 },
-                anchor: e.currentTarget as HTMLElement,
-              });
-            }}
-            onClick={(e) => {
-              if (isGhost) return;
-              // Diary: existing sessions are edited via the hover menu (Details).
-              if (appKind === "diary") {
-                e.stopPropagation();
-                return;
-              }
-              if (drag?.moved) return;
-              e.stopPropagation();
-              onEventClick(ev, e.currentTarget as HTMLElement);
-            }}
-            className={`absolute z-[8] cursor-pointer overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
-            style={{
-              left: box.left + 2 + dragDx,
-              width: box.width - 4,
-              top: top + dragDy,
-              height: Math.max(rowHeight - 2, height - 2),
-              background: bg,
-              color: fg,
-              opacity: isDragging ? 0.85 : 1,
-            }}
-            title={ev.title}
-          >
-            <span
-              className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]"
-              style={{ background: accent }}
-            />
-            {appKind === "diary" ? (
-              (() => {
-                const actKey = (ev.activity || ev.diarySub || "").toLowerCase();
-                const ActIcon: LucideIcon =
-                  actKey === "cycling" || actKey === "bike" ? Bike :
-                  actKey === "swimming" || actKey === "swim" ? Waves :
-                  actKey === "strength" ? Dumbbell :
-                  actKey === "xcskiing" ? Snowflake :
-                  Footprints;
-                const durStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
-                const km = ev.distanceKm;
-                const distVal = km != null ? kmToUnit(km, unit) : null;
-                const isStrength = actKey === "strength";
-                const isNorwegian = typeof navigator !== "undefined" && /^nb|^nn|^no/i.test(navigator.language || "");
-                const hourSuffix = isNorwegian ? "t" : "h";
-                const totalMin = Math.max(0, endMin - startMin);
-                const durH = Math.floor(totalMin / 60);
-                const durM = totalMin % 60;
-                const strengthLabel = durH > 0 ? `${durH}${hourSuffix} ${durM}m` : `${durM}m`;
-                const distLabel = isStrength
-                  ? strengthLabel
-                  : distVal != null ? `${distVal.toFixed(1)} ${unitLabel(unit)}` : "—";
-                const iconHalfBg = ev.color
-                  ? `color-mix(in srgb, ${ev.color} 40%, white)`
-                  : "rgba(0,0,0,0.05)";
+      {byCol.map((list, colIdx) => (
+        <div
+          key={`week-rail-${colIdx}`}
+          style={{
+            gridColumn: colIdx + 2,
+            gridRow: "2 / span 18",
+            position: "relative",
+            pointerEvents: "none",
+            zIndex: 8,
+          }}
+        >
+          {list.map(({ ev, startMin, endMin }) => {
+            const since = startMin - startHour * 60;
+            const dur = Math.max(30, endMin - startMin);
+            const top = (since / 30) * ROW_HEIGHT;
+            const height = (dur / 30) * ROW_HEIGHT;
+            const isDragging = drag?.id === ev.id && drag.moved;
+            const dragDx = isDragging ? drag.delta.dx : 0;
+            const dragDy = isDragging ? drag.delta.dy : 0;
+            const accent = ev.color ?? "hsl(var(--primary))";
+            const bg = ev.color
+              ? `color-mix(in srgb, ${ev.color} 18%, white)`
+              : "hsl(var(--primary) / 0.15)";
+            const fg = "hsl(var(--ink, 220 13% 13%))";
+            const Icon = iconForColor(ev.color);
+            const isGhost = ev.id.startsWith("__ghost__:");
+            return (
+              <div
+                key={ev.id}
+                data-mark-cell="1"
+                data-real-event={isGhost ? undefined : "1"}
+                data-ghost-event={isGhost ? "1" : undefined}
+                onMouseEnter={(e) => {
+                  if (isGhost || appKind !== "diary") return;
+                  cancelClose();
+                  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  setHoverId(ev.id);
+                  setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+                }}
+                onMouseLeave={(e) => {
+                  if (isGhost || appKind !== "diary") return;
+                  const related = e.relatedTarget as Node | null;
+                  const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
+                  if (goingIntoMenu) return;
+                  scheduleClose();
+                }}
+                onPointerDown={(e) => {
+                  if (isGhost) return;
+                  if (appKind === "diary") return;
+                  e.stopPropagation();
+                  (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+                  setDrag({
+                    id: ev.id,
+                    pointerStart: { x: e.clientX, y: e.clientY },
+                    originColIdx: colIdx,
+                    originStartMin: startMin,
+                    durationMin: dur,
+                    moved: false,
+                    delta: { dx: 0, dy: 0 },
+                    anchor: e.currentTarget as HTMLElement,
+                  });
+                }}
+                onClick={(e) => {
+                  if (isGhost) return;
+                  if (appKind === "diary") {
+                    e.stopPropagation();
+                    return;
+                  }
+                  if (drag?.moved) return;
+                  e.stopPropagation();
+                  onEventClick(ev, e.currentTarget as HTMLElement);
+                }}
+                className={`absolute cursor-pointer overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
+                style={{
+                  left: 2,
+                  right: 2,
+                  top,
+                  height,
+                  transform: isDragging ? `translate(${dragDx}px, ${dragDy}px)` : undefined,
+                  background: bg,
+                  color: fg,
+                  opacity: isDragging ? 0.85 : 1,
+                  pointerEvents: "auto",
+                }}
+                title={ev.title}
+              >
+                <span
+                  className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]"
+                  style={{ background: accent }}
+                />
+                {appKind === "diary" ? (
+                  (() => {
+                    const actKey = (ev.activity || ev.diarySub || "").toLowerCase();
+                    const ActIcon: LucideIcon =
+                      actKey === "cycling" || actKey === "bike" ? Bike :
+                      actKey === "swimming" || actKey === "swim" ? Waves :
+                      actKey === "strength" ? Dumbbell :
+                      actKey === "xcskiing" ? Snowflake :
+                      Footprints;
+                    const durStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
+                    const km = ev.distanceKm;
+                    const distVal = km != null ? kmToUnit(km, unit) : null;
+                    const isStrength = actKey === "strength";
+                    const isNorwegian = typeof navigator !== "undefined" && /^nb|^nn|^no/i.test(navigator.language || "");
+                    const hourSuffix = isNorwegian ? "t" : "h";
+                    const totalMin = Math.max(0, endMin - startMin);
+                    const durH = Math.floor(totalMin / 60);
+                    const durM = totalMin % 60;
+                    const strengthLabel = durH > 0 ? `${durH}${hourSuffix} ${durM}m` : `${durM}m`;
+                    const distLabel = isStrength
+                      ? strengthLabel
+                      : distVal != null ? `${distVal.toFixed(1)} ${unitLabel(unit)}` : "—";
+                    const iconHalfBg = ev.color
+                      ? `color-mix(in srgb, ${ev.color} 40%, white)`
+                      : "rgba(0,0,0,0.05)";
 
-                if (tileDesign === "icon") {
-                  return (
-                    <div className="flex h-full w-full items-center justify-center pl-1">
-                      <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
-                    </div>
-                  );
-                }
-                if (tileDesign === "stacked") {
-                  return (
-                    <div className="-mx-2 -my-0.5 flex h-full items-stretch">
-                      <div
-                        className="flex w-1/2 items-center justify-center"
-                        style={{ background: iconHalfBg }}
-                      >
-                        <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
-                      </div>
-                      <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
-                        <span className="truncate text-[12px] font-semibold">{ev.title}</span>
-                        <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{durStr}</span>
-                        {!isStrength && (
-                          <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
-                            {distLabel}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                }
-                // "split" (default)
-                return (
-                  <div className="-mx-2 -my-0.5 flex h-full items-stretch">
-                    <div
-                      className="flex w-1/2 items-center justify-center"
-                      style={{ background: iconHalfBg }}
-                    >
-                      <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
-                    </div>
-                    <div
-                      className="flex w-1/2 items-center justify-center text-ink"
-                      title={distLabel}
-                    >
-                      {isStrength ? (
-                        <span
-                          className="flex items-baseline gap-1"
-                          style={{
-                            fontFamily: "Helvetica, Arial, sans-serif",
-                            fontWeight: 700,
-                            fontSize: 22,
-                            lineHeight: 1,
-                          }}
-                        >
-                          {durH > 0 && (
-                            <>
-                              <span>{durH}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{hourSuffix}</span>
-                            </>
-                          )}
-                          <span>{durM}</span>
-                          <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>m</span>
-                        </span>
-                      ) : distVal != null ? (
-                        <span
-                          className="flex items-baseline gap-1"
-                          style={{
-                            fontFamily: "Helvetica, Arial, sans-serif",
-                            fontWeight: 700,
-                            fontSize: 22,
-                            lineHeight: 1,
-                          }}
-                        >
-                          <span>{distVal.toFixed(1)}</span>
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 600,
-                              opacity: 0.7,
-                            }}
+                    if (tileDesign === "icon") {
+                      return (
+                        <div className="flex h-full w-full items-center justify-center pl-1">
+                          <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+                        </div>
+                      );
+                    }
+                    if (tileDesign === "stacked") {
+                      return (
+                        <div className="-mx-2 -my-0.5 flex h-full items-stretch">
+                          <div
+                            className="flex w-1/2 items-center justify-center"
+                            style={{ background: iconHalfBg }}
                           >
-                            {unitLabel(unit)}
-                          </span>
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </div>
+                            <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+                          </div>
+                          <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
+                            <span className="truncate text-[12px] font-semibold">{ev.title}</span>
+                            <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{durStr}</span>
+                            {!isStrength && (
+                              <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
+                                {distLabel}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="-mx-2 -my-0.5 flex h-full items-stretch">
+                        <div
+                          className="flex w-1/2 items-center justify-center"
+                          style={{ background: iconHalfBg }}
+                        >
+                          <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+                        </div>
+                        <div
+                          className="flex w-1/2 items-center justify-center text-ink"
+                          title={distLabel}
+                        >
+                          {isStrength ? (
+                            <span
+                              className="flex items-baseline gap-1"
+                              style={{
+                                fontFamily: "Helvetica, Arial, sans-serif",
+                                fontWeight: 700,
+                                fontSize: 22,
+                                lineHeight: 1,
+                              }}
+                            >
+                              {durH > 0 && (
+                                <>
+                                  <span>{durH}</span>
+                                  <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{hourSuffix}</span>
+                                </>
+                              )}
+                              <span>{durM}</span>
+                              <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>m</span>
+                            </span>
+                          ) : distVal != null ? (
+                            <span
+                              className="flex items-baseline gap-1"
+                              style={{
+                                fontFamily: "Helvetica, Arial, sans-serif",
+                                fontWeight: 700,
+                                fontSize: 22,
+                                lineHeight: 1,
+                              }}
+                            >
+                              <span>{distVal.toFixed(1)}</span>
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  opacity: 0.7,
+                                }}
+                              >
+                                {unitLabel(unit)}
+                              </span>
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <div className="flex items-center gap-1">
+                    {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: accent }} />}
+                    <span className="truncate font-medium">{ev.title}</span>
+                    <span className="ml-auto shrink-0 pl-1 mono text-[10.5px] tabular-nums opacity-70">
+                      {`${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`}
+                    </span>
                   </div>
-                );
-              })()
-            ) : (
-              <div className="flex items-center gap-1">
-                {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: accent }} />}
-                <span className="truncate font-medium">{ev.title}</span>
-                <span className="ml-auto shrink-0 pl-1 mono text-[10.5px] tabular-nums opacity-70">
-                  {`${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`}
-                </span>
+                )}
               </div>
-            )}
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
+      ))}
       {appKind === "diary" && hoverId && hoverRect && (() => {
         const ev = events.find((e) => e.id === hoverId);
         if (!ev) return null;
@@ -2262,7 +2238,7 @@ function WeekEventsOverlay({
           <SessionHoverMenu
             ev={ev}
             blockRect={hoverRect}
-            rowHeight={rowHeight}
+            rowHeight={ROW_HEIGHT}
             visible={hoverId === ev.id}
             memberId={memberId}
             viewerRole={viewerRole}
@@ -2293,6 +2269,7 @@ function WeekEventsOverlay({
     </>
   );
 }
+
 
 /**
  * DiarySimpleStack — stacks each day's sessions vertically in fixed-height
