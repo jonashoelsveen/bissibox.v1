@@ -817,7 +817,7 @@ export function UnifiedElasticGrid({
       {viewMode === "month" ? (
         <motion.div
           key="month"
-          className="w-full"
+          className="flex flex-1 min-h-0 w-full flex-col"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
