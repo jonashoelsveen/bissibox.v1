@@ -59,7 +59,7 @@ import {
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
-import { MoveSessionConfirmDialog } from "./MoveSessionConfirmDialog";
+import { MoveSavePopover } from "./MoveSavePopover";
 
 export type ViewMode = "day" | "week" | "month";
 
