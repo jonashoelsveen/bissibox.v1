@@ -1839,89 +1839,42 @@ function DurationCell({ initial, onCommit }: DurationCellProps) {
 }
 
 /**
- * NowLine — a thin horizontal indicator showing the current time inside
- * the week-view's day column. Mirrors Notion/Outlook calendar UX.
- *
- * Renders an absolute positioned rule across the active day column only,
- * with a small dot anchor on the left edge. Position is computed from the
- * column's offsetLeft/Width so it stays accurate through grid track
- * animations.
+ * NowLine — current-time indicator. Rendered as a grid item rail at today's
+ * column. Vertical position is computed from minute math (no measurement),
+ * so it stays glued to the underlying cells through any scroll/animation.
  */
 function NowLine({
-  scrollRef,
   colIdx,
   nowMinutesSinceStart,
-  rowHeight,
 }: {
-  scrollRef: React.RefObject<HTMLDivElement | null>;
   colIdx: number;
   /** Minutes elapsed since the grid's start hour (e.g. 06:00). */
   nowMinutesSinceStart: number;
-  rowHeight: number;
 }) {
-  const [box, setBox] = useState<{ left: number; width: number; headerBottom: number } | null>(
-    null,
-  );
-
-  useLayoutEffect(() => {
-    const measure = () => {
-      const c = scrollRef.current;
-      if (!c) return;
-      // First match for data-month-col is the sticky day-column header.
-      const header = c.querySelector<HTMLElement>(`[data-month-col="${colIdx}"]`);
-      if (!header) return;
-      setBox({
-        left: header.offsetLeft,
-        width: header.offsetWidth,
-        headerBottom: header.offsetTop + header.offsetHeight,
-      });
-    };
-    measure();
-    const ro = new ResizeObserver(() => measure());
-    if (scrollRef.current) ro.observe(scrollRef.current);
-    const scrollAncestors: (HTMLElement | Window)[] = [window];
-    let node: HTMLElement | null = scrollRef.current?.parentElement ?? null;
-    while (node) {
-      const cs = window.getComputedStyle(node);
-      if (/(auto|scroll)/.test(cs.overflowY) || /(auto|scroll)/.test(cs.overflow)) {
-        scrollAncestors.push(node);
-      }
-      node = node.parentElement;
-    }
-    for (const t of scrollAncestors) t.addEventListener("scroll", measure, { passive: true });
-    const id = window.setInterval(measure, 500);
-    window.addEventListener("resize", measure);
-    return () => {
-      window.clearInterval(id);
-      window.removeEventListener("resize", measure);
-      ro.disconnect();
-      for (const t of scrollAncestors) t.removeEventListener("scroll", measure);
-    };
-  }, [colIdx, scrollRef]);
-
-  if (!box) return null;
-  // 30-min slot maps to one rowHeight; convert minutes precisely.
-  const top = box.headerBottom + (nowMinutesSinceStart / 30) * rowHeight;
+  const ROW_HEIGHT = 28;
+  const top = (nowMinutesSinceStart / 30) * ROW_HEIGHT;
   const NOW_COLOR = "#FF4F4F";
   return (
-    <>
-      {/* Past-time dim: subtle shading above the indicator inside today's column */}
-      {top > box.headerBottom && (
+    <div
+      aria-hidden
+      style={{
+        gridColumn: colIdx + 2,
+        gridRow: "2 / span 18",
+        position: "relative",
+        pointerEvents: "none",
+        zIndex: 14,
+      }}
+    >
+      {top > 0 && (
         <div
-          className="pointer-events-none absolute z-[14]"
-          style={{
-            top: box.headerBottom,
-            left: box.left,
-            width: box.width,
-            height: top - box.headerBottom,
-            background: "rgba(15, 23, 42, 0.04)",
-          }}
+          className="pointer-events-none absolute left-0 right-0 top-0"
+          style={{ height: top, background: "rgba(15, 23, 42, 0.04)" }}
           aria-hidden
         />
       )}
       <div
-        className="pointer-events-none absolute z-[15]"
-        style={{ top, left: box.left, width: box.width, height: 0 }}
+        className="pointer-events-none absolute left-0 right-0"
+        style={{ top, height: 0, zIndex: 15 }}
         aria-hidden
       >
         <div
@@ -1933,9 +1886,10 @@ function NowLine({
           style={{ background: NOW_COLOR }}
         />
       </div>
-    </>
+    </div>
   );
 }
+
 
 /**
  * WeekEventsOverlay — projects unified `CalendarEvent`s onto the week-view
