@@ -743,8 +743,12 @@ export function MonthGridType1({
                 })),
               ];
 
-              // Strict row alignment: limit visible items, show "+N more"
-              const MAX_VISIBLE = 5;
+              // Strict row alignment: at most 5 rows total in a day cell.
+              // If everything fits in 5, show all 5 chips. Otherwise show 4
+              // chips and reserve the 5th row for the "+N more" button.
+              const MAX_ROWS = 5;
+              const willOverflow = allItems.length > MAX_ROWS;
+              const MAX_VISIBLE = willOverflow ? MAX_ROWS - 1 : MAX_ROWS;
               const visible = allItems.slice(0, MAX_VISIBLE);
               const overflow = Math.max(0, allItems.length - MAX_VISIBLE);
 
