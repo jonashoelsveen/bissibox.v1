@@ -1104,7 +1104,7 @@ export function MonthGridType1({
                         data-role="item"
                         onClick={(e) => {
                           e.stopPropagation();
-                          openPopoverAt(pos, e.currentTarget.closest("[data-cell-pos]") as HTMLElement);
+                          onWeekClick?.(d.date);
                         }}
                         className="mono w-full truncate rounded-[3px] px-1.5 py-0.5 text-left text-[10.5px] tabular-nums text-muted-foreground hover:bg-secondary"
                       >
