@@ -2270,7 +2270,6 @@ function WeekEventsOverlay({
                 ) : (
                   <div className="flex h-full flex-col justify-start pl-1 pt-0.5 leading-tight">
                     <div className="flex items-center gap-1">
-                      {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: accent }} />}
                       <span className="truncate text-[12px] font-semibold">{ev.title}</span>
                     </div>
                     {endMin - startMin > 45 && (
