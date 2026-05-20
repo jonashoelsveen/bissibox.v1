@@ -55,6 +55,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
+import { MoveSavePopover } from "./MoveSavePopover";
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 
 /**
