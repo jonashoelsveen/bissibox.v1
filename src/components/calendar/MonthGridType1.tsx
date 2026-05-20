@@ -1088,34 +1088,14 @@ export function MonthGridType1({
                                   </>
                                 );
                               }
-                              // "compact" — current low tile, with activity icon
+                              // "compact" — current low tile
                               return (
                                 <>
-                                  <ActIcon
-                                    className="h-3 w-3 shrink-0"
-                                    style={{ color: accent }}
-                                    strokeWidth={2.25}
-                                  />
                                   <span className="truncate">{displayText}</span>
                                 </>
                               );
                             })() : (
                               <>
-                                {(() => {
-                                  const Icon = iconForColor(itemColor);
-                                  return Icon ? (
-                                    <Icon
-                                      className="h-3 w-3 shrink-0"
-                                      style={{ color: itemColor ?? "currentColor" }}
-                                      strokeWidth={2.25}
-                                    />
-                                  ) : itemColor ? (
-                                    <span
-                                      className="h-1.5 w-1.5 shrink-0 rounded-full"
-                                      style={{ background: itemColor }}
-                                    />
-                                  ) : null;
-                                })()}
                                 <span className="truncate">{displayText}</span>
                               </>
                             )}
