@@ -59,6 +59,7 @@ import {
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
+import { MoveSessionConfirmDialog } from "./MoveSessionConfirmDialog";
 
 export type ViewMode = "day" | "week" | "month";
 
@@ -409,6 +410,18 @@ export function UnifiedElasticGrid({
     /** Pending unsaved drag — date/time to apply on Save. */
     pendingDate?: Date;
     pendingTime?: { startMin: number; endMin: number };
+  } | null>(null);
+
+  // Calendar drag-to-move: after the user releases, the tile snaps into the
+  // new slot and this dialog asks for confirmation before persisting.
+  const [pendingMove, setPendingMove] = useState<{
+    id: string;
+    name: string;
+    newDate: Date;
+    newStartMin: number;
+    durationMin: number;
+    originalStartISO: string;
+    originalEndISO: string;
   } | null>(null);
 
   // Refs assigned later in render so openPopover can reach the latest
@@ -1072,6 +1085,26 @@ export function UnifiedElasticGrid({
                   onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
                     const ev = events.find((e) => e.id === id);
                     if (!ev) return;
+                    if (appKind === "calendar") {
+                      // Snap visually + ask for confirmation. We optimistically
+                      // move the event so it lands in the new slot, then revert
+                      // on cancel.
+                      const newStart = setHM(newDate, Math.floor(newStartMin / 60), newStartMin % 60);
+                      const newEnd = addMinutes(newStart, durationMin);
+                      const originalStartISO = ev.startISO;
+                      const originalEndISO = ev.endISO;
+                      onMoveEvent(id, { startISO: toISOLocal(newStart), endISO: toISOLocal(newEnd) });
+                      setPendingMove({
+                        id,
+                        name: ev.title,
+                        newDate,
+                        newStartMin,
+                        durationMin,
+                        originalStartISO,
+                        originalEndISO,
+                      });
+                      return;
+                    }
                     setPopover({
                       key: { year, month: 0, day: 1, session: 0 },
                       rect: (anchor ?? document.body).getBoundingClientRect(),
@@ -1357,6 +1390,32 @@ export function UnifiedElasticGrid({
           }}
         />
       )}
+      <MoveSessionConfirmDialog
+        open={!!pendingMove}
+        sessionName={pendingMove?.name ?? ""}
+        newTimeLabel={(() => {
+          if (!pendingMove) return "";
+          const d = pendingMove.newDate;
+          const dateStr = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+          const startH = Math.floor(pendingMove.newStartMin / 60);
+          const startM = pendingMove.newStartMin % 60;
+          const endMin = pendingMove.newStartMin + pendingMove.durationMin;
+          const endH = Math.floor(endMin / 60);
+          const endM = endMin % 60;
+          const pad = (n: number) => String(n).padStart(2, "0");
+          return `${dateStr}, ${pad(startH)}:${pad(startM)} – ${pad(endH)}:${pad(endM)}`;
+        })()}
+        onCancel={() => {
+          if (pendingMove) {
+            onMoveEvent(pendingMove.id, {
+              startISO: pendingMove.originalStartISO,
+              endISO: pendingMove.originalEndISO,
+            });
+          }
+          setPendingMove(null);
+        }}
+        onConfirm={() => setPendingMove(null)}
+      />
     </div>
   );
 }
@@ -2249,10 +2308,12 @@ function WeekEventsOverlay({
                     );
                   })()
                 ) : (
-                  <div className="flex items-center gap-1">
-                    {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: accent }} />}
-                    <span className="truncate font-medium">{ev.title}</span>
-                    <span className="ml-auto shrink-0 pl-1 mono text-[10.5px] tabular-nums opacity-70">
+                  <div className="flex h-full flex-col justify-center pl-1 leading-tight">
+                    <div className="flex items-center gap-1">
+                      {Icon && <Icon className="h-3 w-3 shrink-0" strokeWidth={2.25} style={{ color: accent }} />}
+                      <span className="truncate text-[12px] font-semibold">{ev.title}</span>
+                    </div>
+                    <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
                       {`${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`}
                     </span>
                   </div>
@@ -2262,6 +2323,37 @@ function WeekEventsOverlay({
           })}
         </div>
       ))}
+      {(() => {
+        if (!drag || !drag.moved || appKind !== "calendar") return null;
+        const sample = typeof document !== "undefined" ? document.querySelector<HTMLElement>('[data-month-col="0"]') : null;
+        const colW = sample?.offsetWidth ?? 1;
+        const colShift = Math.round(drag.delta.dx / colW);
+        const newCol = Math.max(0, Math.min(6, drag.originColIdx + colShift));
+        const minShift = Math.round(drag.delta.dy / ROW_HEIGHT) * 30;
+        const minStart = startHour * 60;
+        const maxStart = startHour * 60 + 18 * 60 - drag.durationMin;
+        const newStart = Math.max(minStart, Math.min(maxStart, drag.originStartMin + minShift));
+        const top = ((newStart - startHour * 60) / 30) * ROW_HEIGHT;
+        const height = (drag.durationMin / 30) * ROW_HEIGHT;
+        return (
+          <div
+            style={{
+              gridColumnStart: newCol + 2,
+              gridColumnEnd: newCol + 3,
+              gridRowStart: 1,
+              gridRowEnd: 19,
+              position: "relative",
+              pointerEvents: "none",
+              zIndex: 7,
+            }}
+          >
+            <div
+              className="absolute rounded-[3px] border-2 border-dashed border-primary/70 bg-primary/10"
+              style={{ left: 2, right: 2, top, height }}
+            />
+          </div>
+        );
+      })()}
       {appKind === "diary" && hoverId && hoverRect && (() => {
         const ev = events.find((e) => e.id === hoverId);
         if (!ev) return null;
