@@ -59,7 +59,7 @@ import {
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
-import { MoveSavePopover } from "./MoveSavePopover";
+
 
 export type ViewMode = "day" | "week" | "month";
 
@@ -412,14 +412,9 @@ export function UnifiedElasticGrid({
     pendingTime?: { startMin: number; endMin: number };
   } | null>(null);
 
-  // Calendar drag-to-move: after the user releases, the tile snaps into the
-  // new slot and this dialog asks for confirmation before persisting.
-  const [pendingMove, setPendingMove] = useState<{
-    id: string;
-    originalStartISO: string;
-    originalEndISO: string;
-    anchorRect: DOMRect;
-  } | null>(null);
+  // Calendar drag-to-move: the time/location is applied immediately on
+  // release; no extra confirmation step is required.
+
 
   // Refs assigned later in render so openPopover can reach the latest
   // week-events lookup without forward-declaration issues.
@@ -1082,42 +1077,27 @@ export function UnifiedElasticGrid({
                   onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
                     const ev = events.find((e) => e.id === id);
                     if (!ev) return;
-                    if (appKind === "calendar") {
-                      // Optimistically snap the tile into the new slot, then
-                      // open a side popover next to the (now-moved) tile so the
-                      // user can save or cancel the move. Cancel reverts.
-                      const newStart = setHM(newDate, Math.floor(newStartMin / 60), newStartMin % 60);
-                      const newEnd = addMinutes(newStart, durationMin);
-                      const originalStartISO = ev.startISO;
-                      const originalEndISO = ev.endISO;
-                      onMoveEvent(id, { startISO: toISOLocal(newStart), endISO: toISOLocal(newEnd) });
-                      // After React paints the new position, locate the tile and
-                      // anchor the popover next to it.
-                      requestAnimationFrame(() => {
-                        const el = document.querySelector<HTMLElement>(
-                          `[data-event-id="${id.replace(/"/g, '\\"')}"]`,
-                        );
-                        const rect = el?.getBoundingClientRect() ?? anchor?.getBoundingClientRect();
-                        if (!rect) return;
-                        setPendingMove({
-                          id,
-                          originalStartISO,
-                          originalEndISO,
-                          anchorRect: rect,
-                        });
+                    // Apply the new time/date immediately — no save step.
+                    const newStart = setHM(newDate, Math.floor(newStartMin / 60), newStartMin % 60);
+                    const newEnd = addMinutes(newStart, durationMin);
+                    onMoveEvent(id, { startISO: toISOLocal(newStart), endISO: toISOLocal(newEnd) });
+                    // Open the regular edit popover anchored next to the moved tile.
+                    requestAnimationFrame(() => {
+                      const el = document.querySelector<HTMLElement>(
+                        `[data-event-id="${id.replace(/"/g, '\\"')}"]`,
+                      );
+                      const rect = el?.getBoundingClientRect() ?? anchor?.getBoundingClientRect();
+                      if (!rect) return;
+                      setPopover({
+                        key: { year, month: 0, day: 1, session: 0 },
+                        rect,
+                        initialText: ev.title,
+                        initialColor: ev.color,
+                        isEdit: true,
+                        eventId: id,
                       });
-                      return;
-                    }
-                    setPopover({
-                      key: { year, month: 0, day: 1, session: 0 },
-                      rect: (anchor ?? document.body).getBoundingClientRect(),
-                      initialText: ev.title,
-                      initialColor: ev.color,
-                      isEdit: true,
-                      eventId: id,
-                      pendingDate: newDate,
-                      pendingTime: { startMin: newStartMin, endMin: newStartMin + durationMin },
                     });
+
                   }}
                   onDeleteEvent={onDeleteEvent}
                   onSaveSessionNote={(id, note) =>
@@ -1391,19 +1371,6 @@ export function UnifiedElasticGrid({
             setMarkReleased(false);
             closePopover();
           }}
-        />
-      )}
-      {pendingMove && (
-        <MoveSavePopover
-          anchor={pendingMove.anchorRect}
-          onCancel={() => {
-            onMoveEvent(pendingMove.id, {
-              startISO: pendingMove.originalStartISO,
-              endISO: pendingMove.originalEndISO,
-            });
-            setPendingMove(null);
-          }}
-          onSave={() => setPendingMove(null)}
         />
       )}
     </div>

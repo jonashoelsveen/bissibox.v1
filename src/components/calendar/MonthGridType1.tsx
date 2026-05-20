@@ -42,7 +42,7 @@ import { DayNoteButton } from "./DayNoteButton";
 import { useUserCategories } from "@/hooks/useUserCategories";
 import { useMonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
-import { MoveSavePopover } from "./MoveSavePopover";
+
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 
 function activityIconFor(ev: CalendarEvent): LucideIcon {
@@ -421,13 +421,6 @@ export function MonthGridType1({
   useEffect(() => {
     dragSessionRef.current = dragSession;
   }, [dragSession]);
-  // Pending move awaiting save/cancel via MoveSavePopover.
-  const [pendingMove, setPendingMove] = useState<{
-    id: string;
-    originalStartISO: string;
-    originalEndISO: string;
-    anchorRect: DOMRect;
-  } | null>(null);
   // Mutable tracking ref used by chip onPointerDown to remember the press
   // before deciding if it's a click or a drag (>= 4px movement).
   const dragStartRef = useRef<{
@@ -439,6 +432,7 @@ export function MonthGridType1({
     originalEndISO: string;
     event: CalendarEvent;
   } | null>(null);
+
 
   const moveItem = useCallback(
     (
@@ -512,7 +506,7 @@ export function MonthGridType1({
         const [rowS, colS] = posStr.split("-");
         const cellIdx = Number(rowS) * 7 + Number(colS);
         const d = days[cellIdx];
-        if (d && d.inMonth) {
+        if (d) {
           targetDate = d.date;
           // Compute insertion index by time-of-day, ignoring the moved event.
           const movedKey = Date.parse(start.originalStartISO);
@@ -592,15 +586,21 @@ export function MonthGridType1({
         const el = document.querySelector<HTMLElement>(
           `[data-event-id="${drag.eventId.replace(/"/g, '\\"')}"]`,
         );
-        const rect = el?.getBoundingClientRect();
-        if (!rect) return;
-        setPendingMove({
-          id: drag.eventId,
-          originalStartISO: drag.originalStartISO,
-          originalEndISO: drag.originalEndISO,
-          anchorRect: rect,
-        });
+        if (!el) return;
+        const cell = days.find(
+          (d) =>
+            d.date.getFullYear() === td.getFullYear() &&
+            d.date.getMonth() === td.getMonth() &&
+            d.date.getDate() === td.getDate(),
+        );
+        if (!cell) return;
+        // Fetch the freshest event by id; fall back to the dragged copy.
+        const fresh = events.find((e) => e.id === drag.eventId) ?? {
+          ...drag.event,
+        };
+        openEventEditor({ row: cell.row, col: cell.col }, fresh, el);
       });
+
     };
 
     window.addEventListener("pointermove", onMove);
@@ -777,11 +777,14 @@ export function MonthGridType1({
                         : isWeekend
                           ? "bg-muted/20"
                           : "bg-card",
-                    "hover:bg-secondary/40",
+                    // Suppress per-cell hover tint while dragging a session,
+                    // so only the ghost-preview indicates the drop target.
+                    dragSession ? "select-none" : "hover:bg-secondary/40",
                   ].join(" ")}
                   data-day-anchor=""
                   data-day-key={id}
                   style={{ cursor: "default" }}
+
                 >
                   {/* Day number — small, top-right, muted */}
                   <div className="flex items-start justify-between px-2 pt-1.5">
@@ -813,17 +816,11 @@ export function MonthGridType1({
                       const isTargetDay =
                         !!dragSession && dragSession.targetDayKey === id && !isSourceDay;
 
-                      // While dragging, hide the source event from the source day
-                      // so the only visible representation is the ghost in the target.
-                      const baseVisible = dragSession
-                        ? visible.filter(
-                            (it) =>
-                              !(
-                                it.kind === "event" &&
-                                it.event.id === dragSession.eventId
-                              ),
-                          )
-                        : visible;
+                      // Keep the source event visible during drag — the
+                      // ghost preview in the target cell simply indicates
+                      // where it will land on release.
+                      const baseVisible = visible;
+
 
                       type RenderItem =
                         | { kind: "ghost" }
@@ -941,16 +938,17 @@ export function MonthGridType1({
                             className={
                               tall
                                 ? [
-                                    "relative flex items-stretch overflow-hidden rounded-[3px] text-[11.5px] text-ink cursor-grab active:cursor-grabbing",
+                                    "relative flex items-stretch overflow-hidden rounded-[3px] text-[11.5px] text-ink",
                                     "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                                     itemColor ? "" : "bg-secondary/70",
                                   ].join(" ")
                                 : [
-                                    "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink cursor-grab active:cursor-grabbing",
+                                    "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink",
                                     "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                                     itemColor ? "" : "bg-secondary/70",
                                     itemColor ? "" : "hover:bg-secondary",
                                   ].join(" ")
+
                             }
                             style={
                               tall
@@ -1128,19 +1126,6 @@ export function MonthGridType1({
         {/* In-cell reorder + confirmation modal intentionally removed. */}
 
 
-        {pendingMove && (
-          <MoveSavePopover
-            anchor={pendingMove.anchorRect}
-            onCancel={() => {
-              onMoveEvent?.(pendingMove.id, {
-                startISO: pendingMove.originalStartISO,
-                endISO: pendingMove.originalEndISO,
-              });
-              setPendingMove(null);
-            }}
-            onSave={() => setPendingMove(null)}
-          />
-        )}
 
 
 
