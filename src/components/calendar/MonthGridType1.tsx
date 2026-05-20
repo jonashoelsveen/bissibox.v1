@@ -1665,7 +1665,7 @@ export function PopoverEditor({
       : initialColor ?? CAT_TRAINING_COLOR;
   const [color, setColor] = useState<string | null>(resolvedInitial);
   const [time, setTime] = useState<{ startMin: number; endMin: number } | null>(initialTime);
-  const [showDuration, setShowDuration] = useState(false);
+  
   const ref = useRef<HTMLDivElement | null>(null);
 
   // Keep latest values for the unmount-time autosave to avoid stale captures.
