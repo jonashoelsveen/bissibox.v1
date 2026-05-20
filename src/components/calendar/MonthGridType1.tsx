@@ -1354,6 +1354,26 @@ export function MonthGridType1({
             }}
           />
         )}
+        {dragSession && (() => {
+          const ev = dragSession.event;
+          const { color } = splitColor(ev.title ? `[${ev.color ?? ""}] ${ev.title}` : ev.title);
+          void color;
+          return (
+            <div
+              className="pointer-events-none fixed z-[60] truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink shadow-[0_8px_24px_rgba(15,23,42,0.18)] ring-1 ring-ink/10"
+              style={{
+                left: dragSession.pointerX - dragSession.offsetX,
+                top: dragSession.pointerY - dragSession.offsetY,
+                width: dragSession.chipWidth,
+                height: dragSession.chipHeight,
+                background: ev.color ?? "hsl(var(--secondary))",
+                opacity: 0.95,
+              }}
+            >
+              {ev.title}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
