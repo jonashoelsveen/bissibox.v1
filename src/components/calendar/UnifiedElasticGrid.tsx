@@ -2126,6 +2126,7 @@ function WeekEventsOverlay({
               <div
                 key={ev.id}
                 data-mark-cell="1"
+                data-event-id={ev.id}
                 data-real-event={isGhost ? undefined : "1"}
                 data-ghost-event={isGhost ? "1" : undefined}
                 onMouseEnter={(e) => {
