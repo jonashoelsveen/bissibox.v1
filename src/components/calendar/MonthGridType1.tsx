@@ -532,7 +532,7 @@ export function MonthGridType1({
         className="sticky top-0 z-20 grid border-b border-hairline bg-card"
         style={{ gridTemplateColumns: GRID_TEMPLATE }}
       >
-        <div />
+        <div className="border-r border-hairline" />
         {WEEKDAYS.map((w, idx) => {
           // The first row of `days` represents this week's Mon..Sun, so we
           // can read each column's date from row 0.
