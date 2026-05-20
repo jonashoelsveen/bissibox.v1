@@ -2048,7 +2048,7 @@ function WeekEventsOverlay({
         let newStart = drag.originStartMin + minShift;
         // Clamp inside visible range [startHour*60, startHour*60 + 19*60].
         const minStart = startHour * 60;
-        const maxStart = startHour * 60 + 19 * 60 - drag.durationMin;
+        const maxStart = startHour * 60 + 18 * 60 - drag.durationMin;
         newStart = Math.max(minStart, Math.min(maxStart, newStart));
         onEventDrop(drag.id, weekDates[newCol], newStart, drag.durationMin, drag.anchor ?? undefined);
       }
