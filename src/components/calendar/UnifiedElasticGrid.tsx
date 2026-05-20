@@ -1405,6 +1405,7 @@ export function UnifiedElasticGrid({
           }}
           onSave={() => setPendingMove(null)}
         />
+      )}
     </div>
   );
 }
