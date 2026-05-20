@@ -923,6 +923,7 @@ export function MonthGridType1({
                               if (e.button !== 0) return;
                               if (it.kind === "legacy") return;
                               if (it.event.id.startsWith("__ghost__:")) return;
+                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                               // Start tracking a potential drag.
                               dragStartRef.current = {
                                 x: e.clientX,
@@ -932,6 +933,10 @@ export function MonthGridType1({
                                 originalStartISO: it.event.startISO,
                                 originalEndISO: it.event.endISO,
                                 event: it.event,
+                                offsetX: e.clientX - rect.left,
+                                offsetY: e.clientY - rect.top,
+                                chipWidth: rect.width,
+                                chipHeight: rect.height,
                               };
                               // Prevent cell-level range selection mousedown.
                               e.stopPropagation();
