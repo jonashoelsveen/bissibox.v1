@@ -922,8 +922,17 @@ export function UnifiedElasticGrid({
                 </div>
               );
             })}
+          </div>
 
-
+          <div className="relative flex flex-1 min-h-0 flex-col overflow-y-auto">
+          <div
+            className="grid"
+            style={{
+              gridTemplateColumns,
+              transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
+              willChange: "grid-template-columns",
+            }}
+          >
             {isSimple ? (
               <Fragment key="simple-body">
                 {/* Empty week-number gutter under the header */}
