@@ -777,11 +777,14 @@ export function MonthGridType1({
                         : isWeekend
                           ? "bg-muted/20"
                           : "bg-card",
-                    "hover:bg-secondary/40",
+                    // Suppress per-cell hover tint while dragging a session,
+                    // so only the ghost-preview indicates the drop target.
+                    dragSession ? "select-none" : "hover:bg-secondary/40",
                   ].join(" ")}
                   data-day-anchor=""
                   data-day-key={id}
                   style={{ cursor: "default" }}
+
                 >
                   {/* Day number — small, top-right, muted */}
                   <div className="flex items-start justify-between px-2 pt-1.5">
