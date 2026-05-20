@@ -2020,8 +2020,10 @@ function WeekEventsOverlay({
         <div
           key={`week-rail-${colIdx}`}
           style={{
-            gridColumn: colIdx + 2,
-            gridRow: "2 / span 18",
+            gridColumnStart: colIdx + 2,
+            gridColumnEnd: colIdx + 3,
+            gridRowStart: 2,
+            gridRowEnd: 20,
             position: "relative",
             pointerEvents: "none",
             zIndex: 8,
