@@ -927,8 +927,8 @@ export function UnifiedElasticGrid({
               <Fragment key="simple-body">
                 {/* Empty week-number gutter under the header */}
                 <div
-                  className="border-r border-hairline bg-card"
-                  style={{ height: rowHeight * 19 }}
+                  className="bg-card"
+                  style={{ height: rowHeight * 18 }}
                   aria-hidden
                 />
                 {months.map((m) => {
@@ -938,7 +938,7 @@ export function UnifiedElasticGrid({
                       key={`simple-col-${m.idx}`}
                       data-simple-col={m.idx}
                       className="relative border-r border-hairline transition-colors hover:bg-secondary/60"
-                      style={{ height: rowHeight * 19 }}
+                      style={{ height: rowHeight * 18 }}
                       onDoubleClick={(e) => {
                         if (!colDate) return;
                         const target = e.target as HTMLElement;
