@@ -298,7 +298,7 @@ const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
         focused ? "ring-1 ring-ink" : "ring-1 ring-transparent",
       ].join(" ")}
       style={{
-        width: 22,
+        width: 20,
         height: ITEM_H,
         scrollSnapType: "y mandatory",
         scrollbarWidth: "none",
