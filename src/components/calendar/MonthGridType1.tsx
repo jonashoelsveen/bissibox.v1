@@ -1128,19 +1128,6 @@ export function MonthGridType1({
         {/* In-cell reorder + confirmation modal intentionally removed. */}
 
 
-        {pendingMove && (
-          <MoveSavePopover
-            anchor={pendingMove.anchorRect}
-            onCancel={() => {
-              onMoveEvent?.(pendingMove.id, {
-                startISO: pendingMove.originalStartISO,
-                endISO: pendingMove.originalEndISO,
-              });
-              setPendingMove(null);
-            }}
-            onSave={() => setPendingMove(null)}
-          />
-        )}
 
 
 
