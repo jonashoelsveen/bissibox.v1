@@ -59,7 +59,7 @@ import {
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
-import { MoveSessionConfirmDialog } from "./MoveSessionConfirmDialog";
+import { MoveSavePopover } from "./MoveSavePopover";
 
 export type ViewMode = "day" | "week" | "month";
 
@@ -416,12 +416,9 @@ export function UnifiedElasticGrid({
   // new slot and this dialog asks for confirmation before persisting.
   const [pendingMove, setPendingMove] = useState<{
     id: string;
-    name: string;
-    newDate: Date;
-    newStartMin: number;
-    durationMin: number;
     originalStartISO: string;
     originalEndISO: string;
+    anchorRect: DOMRect;
   } | null>(null);
 
   // Refs assigned later in render so openPopover can reach the latest
@@ -1086,22 +1083,28 @@ export function UnifiedElasticGrid({
                     const ev = events.find((e) => e.id === id);
                     if (!ev) return;
                     if (appKind === "calendar") {
-                      // Snap visually + ask for confirmation. We optimistically
-                      // move the event so it lands in the new slot, then revert
-                      // on cancel.
+                      // Optimistically snap the tile into the new slot, then
+                      // open a side popover next to the (now-moved) tile so the
+                      // user can save or cancel the move. Cancel reverts.
                       const newStart = setHM(newDate, Math.floor(newStartMin / 60), newStartMin % 60);
                       const newEnd = addMinutes(newStart, durationMin);
                       const originalStartISO = ev.startISO;
                       const originalEndISO = ev.endISO;
                       onMoveEvent(id, { startISO: toISOLocal(newStart), endISO: toISOLocal(newEnd) });
-                      setPendingMove({
-                        id,
-                        name: ev.title,
-                        newDate,
-                        newStartMin,
-                        durationMin,
-                        originalStartISO,
-                        originalEndISO,
+                      // After React paints the new position, locate the tile and
+                      // anchor the popover next to it.
+                      requestAnimationFrame(() => {
+                        const el = document.querySelector<HTMLElement>(
+                          `[data-event-id="${id.replace(/"/g, '\\"')}"]`,
+                        );
+                        const rect = el?.getBoundingClientRect() ?? anchor?.getBoundingClientRect();
+                        if (!rect) return;
+                        setPendingMove({
+                          id,
+                          originalStartISO,
+                          originalEndISO,
+                          anchorRect: rect,
+                        });
                       });
                       return;
                     }
@@ -1390,35 +1393,24 @@ export function UnifiedElasticGrid({
           }}
         />
       )}
-      <MoveSessionConfirmDialog
-        open={!!pendingMove}
-        sessionName={pendingMove?.name ?? ""}
-        newTimeLabel={(() => {
-          if (!pendingMove) return "";
-          const d = pendingMove.newDate;
-          const dateStr = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
-          const startH = Math.floor(pendingMove.newStartMin / 60);
-          const startM = pendingMove.newStartMin % 60;
-          const endMin = pendingMove.newStartMin + pendingMove.durationMin;
-          const endH = Math.floor(endMin / 60);
-          const endM = endMin % 60;
-          const pad = (n: number) => String(n).padStart(2, "0");
-          return `${dateStr}, ${pad(startH)}:${pad(startM)} – ${pad(endH)}:${pad(endM)}`;
-        })()}
-        onCancel={() => {
-          if (pendingMove) {
+      {pendingMove && (
+        <MoveSavePopover
+          anchor={pendingMove.anchorRect}
+          onCancel={() => {
             onMoveEvent(pendingMove.id, {
               startISO: pendingMove.originalStartISO,
               endISO: pendingMove.originalEndISO,
             });
-          }
-          setPendingMove(null);
-        }}
-        onConfirm={() => setPendingMove(null)}
-      />
+            setPendingMove(null);
+          }}
+          onSave={() => setPendingMove(null)}
+        />
+      )}
     </div>
   );
 }
+
+
 
 interface DayRowProps {
   day: number;
@@ -2134,6 +2126,7 @@ function WeekEventsOverlay({
               <div
                 key={ev.id}
                 data-mark-cell="1"
+                data-event-id={ev.id}
                 data-real-event={isGhost ? undefined : "1"}
                 data-ghost-event={isGhost ? "1" : undefined}
                 onMouseEnter={(e) => {
