@@ -396,15 +396,31 @@ export function MonthGridType1({
     return () => window.removeEventListener("keydown", onKey);
   }, [focus, openPopoverAt, popover, rows]);
 
-  // ───────────────────────── Drag-and-drop items ─────────────────────────
+  // ───────────────────────── Drag-and-drop sessions ─────────────────────────
+  //
+  // Pointer-based drag for cross-day session moves. HTML5 native drag
+  // is intentionally avoided because it suppresses pointer/mouse events
+  // mid-drag, which broke hover-target detection.
 
   const [dragItem, setDragItem] = useState<
     | { fromKey: CellKey; text: string; source: "legacy" }
-    | { fromKey: CellKey; text: string; source: "event"; eventId: string }
     | null
   >(null);
-  // Highlighted day cell during a cross-day event drag (solid border preview).
-  const [hoverDayKey, setHoverDayKey] = useState<string | null>(null);
+  // Active cross-day session drag (real pointer drag, not HTML5).
+  const [dragSession, setDragSession] = useState<{
+    eventId: string;
+    fromKey: CellKey;
+    originalStartISO: string;
+    originalEndISO: string;
+    event: CalendarEvent;
+    targetDayKey: string | null;
+    targetDate: Date | null;
+    insertIndex: number;
+  } | null>(null);
+  const dragSessionRef = useRef(dragSession);
+  useEffect(() => {
+    dragSessionRef.current = dragSession;
+  }, [dragSession]);
   // Pending move awaiting save/cancel via MoveSavePopover.
   const [pendingMove, setPendingMove] = useState<{
     id: string;
@@ -412,11 +428,6 @@ export function MonthGridType1({
     originalEndISO: string;
     anchorRect: DOMRect;
   } | null>(null);
-  useEffect(() => {
-    const onUp = () => setHoverDayKey(null);
-    window.addEventListener("mouseup", onUp);
-    return () => window.removeEventListener("mouseup", onUp);
-  }, []);
 
   const moveItem = useCallback(
     (
