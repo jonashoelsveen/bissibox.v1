@@ -506,7 +506,7 @@ export function MonthGridType1({
         const [rowS, colS] = posStr.split("-");
         const cellIdx = Number(rowS) * 7 + Number(colS);
         const d = days[cellIdx];
-        if (d && d.inMonth) {
+        if (d) {
           targetDate = d.date;
           // Compute insertion index by time-of-day, ignoring the moved event.
           const movedKey = Date.parse(start.originalStartISO);
