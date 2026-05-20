@@ -452,6 +452,20 @@ export function MonthGridType1({
     | { fromKey: CellKey; text: string; source: "event"; eventId: string }
     | null
   >(null);
+  // Highlighted day cell during a cross-day event drag (solid border preview).
+  const [hoverDayKey, setHoverDayKey] = useState<string | null>(null);
+  // Pending move awaiting save/cancel via MoveSavePopover.
+  const [pendingMove, setPendingMove] = useState<{
+    id: string;
+    originalStartISO: string;
+    originalEndISO: string;
+    anchorRect: DOMRect;
+  } | null>(null);
+  useEffect(() => {
+    const onUp = () => setHoverDayKey(null);
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+  }, []);
 
   const moveItem = useCallback(
     (
