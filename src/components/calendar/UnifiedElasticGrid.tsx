@@ -2323,6 +2323,37 @@ function WeekEventsOverlay({
           })}
         </div>
       ))}
+      {(() => {
+        if (!drag || !drag.moved || appKind !== "calendar") return null;
+        const sample = typeof document !== "undefined" ? document.querySelector<HTMLElement>('[data-month-col="0"]') : null;
+        const colW = sample?.offsetWidth ?? 1;
+        const colShift = Math.round(drag.delta.dx / colW);
+        const newCol = Math.max(0, Math.min(6, drag.originColIdx + colShift));
+        const minShift = Math.round(drag.delta.dy / ROW_HEIGHT) * 30;
+        const minStart = startHour * 60;
+        const maxStart = startHour * 60 + 18 * 60 - drag.durationMin;
+        const newStart = Math.max(minStart, Math.min(maxStart, drag.originStartMin + minShift));
+        const top = ((newStart - startHour * 60) / 30) * ROW_HEIGHT;
+        const height = (drag.durationMin / 30) * ROW_HEIGHT;
+        return (
+          <div
+            style={{
+              gridColumnStart: newCol + 2,
+              gridColumnEnd: newCol + 3,
+              gridRowStart: 1,
+              gridRowEnd: 19,
+              position: "relative",
+              pointerEvents: "none",
+              zIndex: 7,
+            }}
+          >
+            <div
+              className="absolute rounded-[3px] border-2 border-dashed border-primary/70 bg-primary/10"
+              style={{ left: 2, right: 2, top, height }}
+            />
+          </div>
+        );
+      })()}
       {appKind === "diary" && hoverId && hoverRect && (() => {
         const ev = events.find((e) => e.id === hoverId);
         if (!ev) return null;
