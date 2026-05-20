@@ -194,9 +194,9 @@ function YearCalendarViewInner({
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Header — title + nav arrows on the left, action cluster on the right */}
-      <div className="sticky top-0 z-30 flex h-12 items-center justify-between gap-3 bg-white px-0.5">
+      <div className="flex h-12 flex-none items-center justify-between gap-3 bg-white px-0.5">
         <div className={`flex items-center gap-2 min-w-0 transition-[padding-left] duration-300 ease-out ${panelOpen ? "pl-0" : "pl-9"}`}>
           <ViewTitle viewMode={viewMode} currentDate={currentDate} />
           <MonthNavControl
