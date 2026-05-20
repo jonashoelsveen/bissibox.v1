@@ -729,11 +729,7 @@ export function MonthGridType1({
               const dayEvents = events.filter((e) => sameDay(fromISOLocal(e.startISO), d.date));
               const sortedDayEvents = dayEvents
                 .slice()
-                .sort((a, b) => {
-                  const ka = a.sortIndex ?? Date.parse(a.startISO);
-                  const kb = b.sortIndex ?? Date.parse(b.startISO);
-                  return ka - kb;
-                });
+                .sort((a, b) => Date.parse(a.startISO) - Date.parse(b.startISO));
 
               type UnifiedItem =
                 | { kind: "legacy"; idx: number; raw: string }
@@ -748,7 +744,7 @@ export function MonthGridType1({
               ];
 
               // Strict row alignment: limit visible items, show "+N more"
-              const MAX_VISIBLE = 3;
+              const MAX_VISIBLE = 5;
               const visible = allItems.slice(0, MAX_VISIBLE);
               const overflow = Math.max(0, allItems.length - MAX_VISIBLE);
 
