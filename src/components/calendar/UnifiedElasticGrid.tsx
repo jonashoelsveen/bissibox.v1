@@ -874,7 +874,7 @@ export function UnifiedElasticGrid({
           tabIndex={0}
         >
           <div
-            className="grid"
+            className="grid flex-none"
             style={{
               gridTemplateColumns,
               transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
