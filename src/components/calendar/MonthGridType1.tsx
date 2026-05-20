@@ -668,93 +668,133 @@ export function MonthGridType1({
                   {/* Items list */}
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
                     {(() => {
-                      const sortableIds = sortedDayEvents
-                        .filter((e) => !e.id.startsWith("__ghost__:"))
-                        .map((e) => e.id);
+                      // Decide whether to splice a ghost preview chip into
+                      // this day's list during a cross-day drag.
+                      const isSourceDay =
+                        !!dragSession &&
+                        dragSession.fromKey.year === d.date.getFullYear() &&
+                        dragSession.fromKey.month === d.date.getMonth() &&
+                        dragSession.fromKey.day === d.date.getDate();
+                      const isTargetDay =
+                        !!dragSession && dragSession.targetDayKey === id && !isSourceDay;
+
+                      // While dragging, hide the source event from the source day
+                      // so the only visible representation is the ghost in the target.
+                      const baseVisible = dragSession
+                        ? visible.filter(
+                            (it) =>
+                              !(
+                                it.kind === "event" &&
+                                it.event.id === dragSession.eventId
+                              ),
+                          )
+                        : visible;
+
+                      type RenderItem =
+                        | { kind: "ghost" }
+                        | UnifiedItem;
+                      const renderList: RenderItem[] = [...baseVisible];
+                      if (isTargetDay && dragSession) {
+                        const idx = Math.min(
+                          Math.max(0, dragSession.insertIndex),
+                          renderList.length,
+                        );
+                        renderList.splice(idx, 0, { kind: "ghost" });
+                      }
+                      const renderVisible = renderList.slice(0, MAX_VISIBLE);
+
+                      const renderGhost = () => {
+                        if (!dragSession) return null;
+                        const ev = dragSession.event;
+                        const isDiaryEvent = appKind === "diary";
+                        const tall =
+                          isDiaryEvent &&
+                          (monthTileDesign === "split" ||
+                            monthTileDesign === "stacked");
+                        return (
+                          <div
+                            key={`${id}-ghost-move`}
+                            data-role="ghost-move"
+                            className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/70 bg-primary/10"
+                            style={{
+                              minHeight: tall ? 44 : 22,
+                              borderColor: ev.color
+                                ? `${ev.color}CC`
+                                : undefined,
+                              background: ev.color
+                                ? `${ev.color}1F`
+                                : undefined,
+                            }}
+                          />
+                        );
+                      };
+
                       return (
-                        <DndContext
-                          sensors={dndSensors}
-                          collisionDetection={(args) => {
-                            const pw = pointerWithin(args);
-                            return pw.length > 0 ? pw : rectIntersection(args);
-                          }}
-                          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-                          onDragEnd={(ev: DragEndEvent) => {
-                            const { active, over } = ev;
-                            if (!over || active.id === over.id) return;
-                            const oldIndex = sortableIds.indexOf(String(active.id));
-                            const newIndex = sortableIds.indexOf(String(over.id));
-                            if (oldIndex < 0 || newIndex < 0) return;
-                            const next = arrayMove(sortableIds, oldIndex, newIndex);
-                            const byId = new Map(
-                              sortedDayEvents.map((e) => [e.id, e]),
-                            );
-                            const movedStrava = next.some(
-                              (id, i) =>
-                                id !== sortableIds[i] &&
-                                byId.get(id)?.stravaActivityId != null,
-                            );
-                            if (movedStrava) {
-                              setStravaBlocked(true);
-                              return;
+                        <AnimatePresence initial={false}>
+                          {renderVisible.map((it, idx) => {
+                            if (it.kind === "ghost") {
+                              return (
+                                <motion.div
+                                  key={`${id}-ghost-${idx}`}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.1 }}
+                                >
+                                  {renderGhost()}
+                                </motion.div>
+                              );
                             }
-                            setPendingReorder({ dayKey: id, ids: next });
-                          }}
-                        >
-                          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-                    <AnimatePresence initial={false}>
-                      {visible.map((it) => {
-                        const raw = it.kind === "legacy" ? it.raw : it.event.title;
-                        const itemColor = it.kind === "legacy" ? splitColor(it.raw).color : it.event.color;
-                        const displayText = it.kind === "legacy" ? splitColor(it.raw).text : it.event.title;
-                        const itemKey = it.kind === "legacy" ? `legacy-${it.idx}` : `event-${it.event.id}`;
-                        const isDiaryEvent = appKind === "diary" && it.kind === "event";
-                        const tall = isDiaryEvent && (monthTileDesign === "split" || monthTileDesign === "stacked");
-                        const isSortableEvent =
-                          it.kind === "event" && !it.event.id.startsWith("__ghost__:");
-                        const renderChip = (sortable: {
-                          setNodeRef: (el: HTMLElement | null) => void;
-                          style: React.CSSProperties;
-                          listeners: ReturnType<typeof useSortable>["listeners"];
-                          attributes: ReturnType<typeof useSortable>["attributes"];
-                          isDragging: boolean;
-                        } | null) => (
+                            const raw = it.kind === "legacy" ? it.raw : it.event.title;
+                            const itemColor = it.kind === "legacy" ? splitColor(it.raw).color : it.event.color;
+                            const displayText = it.kind === "legacy" ? splitColor(it.raw).text : it.event.title;
+                            const itemKey = it.kind === "legacy" ? `legacy-${it.idx}` : `event-${it.event.id}`;
+                            const isDiaryEvent = appKind === "diary" && it.kind === "event";
+                            const tall = isDiaryEvent && (monthTileDesign === "split" || monthTileDesign === "stacked");
+                            const isRealEvent =
+                              it.kind === "event" && !it.event.id.startsWith("__ghost__:");
+                            return (
                           <motion.div
                             key={`${id}-${itemKey}`}
-                            ref={sortable?.setNodeRef}
-                            layout={sortable ? false : true}
-                            layoutId={!sortable && it.kind === "event" ? `evt-${it.event.id}` : undefined}
-                            initial={sortable ? false : { opacity: 0, y: -2 }}
-                            animate={sortable ? undefined : { opacity: 1, y: 0 }}
-                            exit={sortable ? undefined : { opacity: 0, y: -2 }}
+                            layout
+                            layoutId={it.kind === "event" ? `evt-${it.event.id}` : undefined}
+                            initial={{ opacity: 0, y: -2 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -2 }}
                             transition={{
                               duration: 0.14,
                               ease: [0.2, 0, 0, 1],
                             }}
                             data-role="item"
-                            data-real-event={it.kind === "event" && !it.event.id.startsWith("__ghost__:") ? "1" : undefined}
+                            data-real-event={isRealEvent ? "1" : undefined}
                             data-ghost-event={it.kind === "event" && it.event.id.startsWith("__ghost__:") ? "1" : undefined}
-                            data-event-id={it.kind === "event" && !it.event.id.startsWith("__ghost__:") ? it.event.id : undefined}
-                            draggable={!sortable && !(it.kind === "event" && it.event.id.startsWith("__ghost__:"))}
-                            {...(sortable?.attributes ?? {})}
-                            {...(sortable?.listeners ?? {})}
-                            onDragStart={(e) => {
-                              const dev = e as unknown as DragEvent;
-                              if (dev.dataTransfer) {
-                                dev.dataTransfer.effectAllowed = "move";
-                                dev.dataTransfer.setData("text/plain", raw);
-                              }
-                              if (it.kind === "legacy") {
-                                setDragItem({ fromKey: k, text: it.raw, source: "legacy" });
-                              } else {
-                                setDragItem({ fromKey: k, text: it.event.title, source: "event", eventId: it.event.id });
-                              }
+                            data-event-id={isRealEvent ? it.event.id : undefined}
+                            onPointerDown={(e) => {
+                              if (e.button !== 0) return;
+                              if (it.kind === "legacy") return;
+                              if (it.event.id.startsWith("__ghost__:")) return;
+                              // Start tracking a potential drag.
+                              dragStartRef.current = {
+                                x: e.clientX,
+                                y: e.clientY,
+                                eventId: it.event.id,
+                                fromKey: k,
+                                originalStartISO: it.event.startISO,
+                                originalEndISO: it.event.endISO,
+                                event: it.event,
+                              };
+                              // Prevent cell-level range selection mousedown.
+                              e.stopPropagation();
                             }}
-                            onDragEnd={() => setDragItem(null)}
+                            onDragStart={(e) => {
+                              // Block native HTML5 drag so pointer events keep flowing.
+                              e.preventDefault();
+                            }}
+                            draggable={false}
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (dragSessionRef.current) return;
                               if (it.kind === "event" && it.event.id.startsWith("__ghost__:")) {
-                                // Ghost preview events are not editable.
                                 return;
                               }
                               if (it.kind === "legacy") {
@@ -766,20 +806,19 @@ export function MonthGridType1({
                             className={
                               tall
                                 ? [
-                                    "relative flex items-stretch overflow-hidden rounded-[3px] text-[11.5px] text-ink",
-                                    sortable ? "transition-shadow hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]" : "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
+                                    "relative flex items-stretch overflow-hidden rounded-[3px] text-[11.5px] text-ink cursor-grab active:cursor-grabbing",
+                                    "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                                     itemColor ? "" : "bg-secondary/70",
                                   ].join(" ")
                                 : [
-                                    "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink",
-                                    sortable ? "transition-shadow hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]" : "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
+                                    "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink cursor-grab active:cursor-grabbing",
+                                    "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                                     itemColor ? "" : "bg-secondary/70",
                                     itemColor ? "" : "hover:bg-secondary",
                                   ].join(" ")
                             }
-                            style={{
-                              ...(sortable?.style ?? {}),
-                              ...(tall
+                            style={
+                              tall
                                 ? {
                                     minHeight: 44,
                                     backgroundColor: itemColor ? `${itemColor}1F` : undefined,
@@ -790,8 +829,8 @@ export function MonthGridType1({
                                       backgroundColor: `${itemColor}1F`,
                                       boxShadow: `inset 2px 0 0 ${itemColor}`,
                                     }
-                                  : {}),
-                            }}
+                                  : {}
+                            }
                             title={displayText}
                           >
                             {isDiaryEvent ? (() => {
@@ -912,21 +951,11 @@ export function MonthGridType1({
                               </>
                             )}
                           </motion.div>
-                        );
-                        if (isSortableEvent && it.kind === "event") {
-                          return (
-                            <SortableMonthEventChip
-                              key={`${id}-${itemKey}`}
-                              id={it.event.id}
-                              disabled={sortableIds.length < 2}
-                            >
-                              {(s) => renderChip(s)}
-                            </SortableMonthEventChip>
-                          );
-                        }
-                        return renderChip(null);
-                      })}
-                    </AnimatePresence>
+                            );
+                          })}
+                        </AnimatePresence>
+                      );
+                    })()}
                     {overflow > 0 && (
                       <button
                         type="button"
@@ -940,10 +969,6 @@ export function MonthGridType1({
                         +{overflow} mer
                       </button>
                     )}
-                          </SortableContext>
-                        </DndContext>
-                      );
-                    })()}
                   </div>
 
                   {/* Hover "+" affordance — visible only when cell is empty + in month */}
