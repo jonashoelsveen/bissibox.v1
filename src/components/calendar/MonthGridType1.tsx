@@ -523,16 +523,16 @@ export function MonthGridType1({
   return (
     <div
       ref={containerRef}
-      className="relative flex h-full w-full flex-col bg-card"
+      className="relative flex w-full flex-col"
       tabIndex={0}
     >
       {/* Weekday strip — mirrors the Week view: 28px week-number gutter + 7
           weekday columns. Today's column gets the dark-grey highlight. */}
       <div
-        className="grid border-b border-hairline bg-card"
+        className="sticky top-0 z-20 grid border-b border-hairline bg-card"
         style={{ gridTemplateColumns: GRID_TEMPLATE }}
       >
-        <div className="border-r border-hairline" />
+        <div />
         {WEEKDAYS.map((w, idx) => {
           // The first row of `days` represents this week's Mon..Sun, so we
           // can read each column's date from row 0.
@@ -552,10 +552,10 @@ export function MonthGridType1({
       </div>
 
       {/* The grid */}
-      <div className="relative flex-1 overflow-auto" style={{ scrollbarGutter: "stable" }}>
+      <div className="relative flex-1">
         <LayoutGroup>
           <div
-            className="grid h-full w-full"
+            className="grid w-full"
             style={
               {
                 gridTemplateColumns: GRID_TEMPLATE,
@@ -570,7 +570,7 @@ export function MonthGridType1({
                 onClick={() => onWeekClick?.(wr.firstDate)}
                 title={`Uke ${wr.weekNo} — klikk for å zoome inn`}
                 style={{ gridColumn: 1, gridRow: wr.row + 1 }}
-                className="flex items-start justify-center border-b border-r border-hairline pt-2 text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+                className="flex items-start justify-center border-b border-hairline pt-2 text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
               >
                 {wr.weekNo}
               </button>
