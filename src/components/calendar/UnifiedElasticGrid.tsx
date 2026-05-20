@@ -1083,22 +1083,28 @@ export function UnifiedElasticGrid({
                     const ev = events.find((e) => e.id === id);
                     if (!ev) return;
                     if (appKind === "calendar") {
-                      // Snap visually + ask for confirmation. We optimistically
-                      // move the event so it lands in the new slot, then revert
-                      // on cancel.
+                      // Optimistically snap the tile into the new slot, then
+                      // open a side popover next to the (now-moved) tile so the
+                      // user can save or cancel the move. Cancel reverts.
                       const newStart = setHM(newDate, Math.floor(newStartMin / 60), newStartMin % 60);
                       const newEnd = addMinutes(newStart, durationMin);
                       const originalStartISO = ev.startISO;
                       const originalEndISO = ev.endISO;
                       onMoveEvent(id, { startISO: toISOLocal(newStart), endISO: toISOLocal(newEnd) });
-                      setPendingMove({
-                        id,
-                        name: ev.title,
-                        newDate,
-                        newStartMin,
-                        durationMin,
-                        originalStartISO,
-                        originalEndISO,
+                      // After React paints the new position, locate the tile and
+                      // anchor the popover next to it.
+                      requestAnimationFrame(() => {
+                        const el = document.querySelector<HTMLElement>(
+                          `[data-event-id="${CSS.escape(id)}"]`,
+                        );
+                        const rect = el?.getBoundingClientRect() ?? anchor?.getBoundingClientRect();
+                        if (!rect) return;
+                        setPendingMove({
+                          id,
+                          originalStartISO,
+                          originalEndISO,
+                          anchorRect: rect,
+                        });
                       });
                       return;
                     }
