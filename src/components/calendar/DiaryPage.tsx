@@ -91,7 +91,7 @@ export function DiaryPage() {
           <PanelLeft className="h-4 w-4" />
         </button>
 
-        <div className={`relative min-w-0 md:h-full md:overflow-y-auto pr-4 md:pr-6 transition-[padding-left] duration-300 ease-out ${panelOpen ? "pl-0" : "pl-2"}`}>
+        <div className={`relative min-w-0 md:h-full md:overflow-hidden pr-4 md:pr-6 transition-[padding-left] duration-300 ease-out ${panelOpen ? "pl-0" : "pl-2"}`}>
           <YearCalendarView
             calId={calId}
             defaultTitle={calTitle}
