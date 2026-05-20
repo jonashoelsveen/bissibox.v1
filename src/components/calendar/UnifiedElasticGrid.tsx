@@ -2443,7 +2443,6 @@ const SIMPLE_PAD = 6;
 function SimpleColumn({
   colIdx,
   list,
-  box,
   tileDesign,
   unit,
   onEventClick,
@@ -2453,7 +2452,6 @@ function SimpleColumn({
 }: {
   colIdx: number;
   list: CalendarEvent[];
-  box: { left: number; top: number; width: number };
   tileDesign: "split" | "stacked" | "icon";
   unit: ReturnType<typeof useDistanceUnit>[0];
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
@@ -2486,13 +2484,15 @@ function SimpleColumn({
   return (
     <div
       data-simple-col-overlay={colIdx}
-      className="absolute z-[8]"
+      className="absolute left-0 right-0 top-0"
       style={{
-        left: box.left + 2,
-        top: box.top + SIMPLE_PAD,
-        width: box.width - 4,
+        paddingLeft: 2,
+        paddingRight: 2,
+        paddingTop: SIMPLE_PAD,
+        pointerEvents: "auto",
       }}
     >
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
