@@ -42,53 +42,8 @@ import { DayNoteButton } from "./DayNoteButton";
 import { useUserCategories } from "@/hooks/useUserCategories";
 import { useMonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
-import {
-  DndContext,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  pointerWithin,
-  rectIntersection,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
-import { CSS } from "@dnd-kit/utilities";
-import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
 import { MoveSavePopover } from "./MoveSavePopover";
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
-
-/**
- * Render-prop wrapper that registers a child as a vertical-sortable item
- * inside its enclosing SortableContext. The child receives the dnd-kit
- * ref/style/listeners/attributes to spread onto its draggable root.
- */
-function SortableMonthEventChip({
-  id,
-  disabled,
-  children,
-}: {
-  id: string;
-  disabled?: boolean;
-  children: (s: {
-    setNodeRef: (el: HTMLElement | null) => void;
-    style: React.CSSProperties;
-    listeners: ReturnType<typeof useSortable>["listeners"];
-    attributes: ReturnType<typeof useSortable>["attributes"];
-    isDragging: boolean;
-  }) => React.ReactNode;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id,
-    disabled,
-  });
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 30 : undefined,
-  };
-  return <>{children({ setNodeRef, style, listeners, attributes, isDragging })}</>;
-}
 
 function activityIconFor(ev: CalendarEvent): LucideIcon {
   const k = (ev.activity || ev.diarySub || "").toLowerCase();
@@ -253,10 +208,6 @@ export function MonthGridType1({
   const dim = daysInMonth(year, month);
   const [monthTileDesign] = useMonthTileDesign();
   const [distanceUnit] = useDistanceUnit();
-  // Pending in-cell reorder awaiting user confirmation.
-  const [pendingReorder, setPendingReorder] = useState<{ dayKey: string; ids: string[] } | null>(null);
-  const [stravaBlocked, setStravaBlocked] = useState(false);
-  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const firstDow = dowMon0(new Date(year, month, 1));
   const totalCells = Math.ceil((firstDow + dim) / 7) * 7;
   const rows = totalCells / 7;
@@ -445,15 +396,31 @@ export function MonthGridType1({
     return () => window.removeEventListener("keydown", onKey);
   }, [focus, openPopoverAt, popover, rows]);
 
-  // ───────────────────────── Drag-and-drop items ─────────────────────────
+  // ───────────────────────── Drag-and-drop sessions ─────────────────────────
+  //
+  // Pointer-based drag for cross-day session moves. HTML5 native drag
+  // is intentionally avoided because it suppresses pointer/mouse events
+  // mid-drag, which broke hover-target detection.
 
   const [dragItem, setDragItem] = useState<
     | { fromKey: CellKey; text: string; source: "legacy" }
-    | { fromKey: CellKey; text: string; source: "event"; eventId: string }
     | null
   >(null);
-  // Highlighted day cell during a cross-day event drag (solid border preview).
-  const [hoverDayKey, setHoverDayKey] = useState<string | null>(null);
+  // Active cross-day session drag (real pointer drag, not HTML5).
+  const [dragSession, setDragSession] = useState<{
+    eventId: string;
+    fromKey: CellKey;
+    originalStartISO: string;
+    originalEndISO: string;
+    event: CalendarEvent;
+    targetDayKey: string | null;
+    targetDate: Date | null;
+    insertIndex: number;
+  } | null>(null);
+  const dragSessionRef = useRef(dragSession);
+  useEffect(() => {
+    dragSessionRef.current = dragSession;
+  }, [dragSession]);
   // Pending move awaiting save/cancel via MoveSavePopover.
   const [pendingMove, setPendingMove] = useState<{
     id: string;
@@ -461,11 +428,17 @@ export function MonthGridType1({
     originalEndISO: string;
     anchorRect: DOMRect;
   } | null>(null);
-  useEffect(() => {
-    const onUp = () => setHoverDayKey(null);
-    window.addEventListener("mouseup", onUp);
-    return () => window.removeEventListener("mouseup", onUp);
-  }, []);
+  // Mutable tracking ref used by chip onPointerDown to remember the press
+  // before deciding if it's a click or a drag (>= 4px movement).
+  const dragStartRef = useRef<{
+    x: number;
+    y: number;
+    eventId: string;
+    fromKey: CellKey;
+    originalStartISO: string;
+    originalEndISO: string;
+    event: CalendarEvent;
+  } | null>(null);
 
   const moveItem = useCallback(
     (
@@ -514,6 +487,130 @@ export function MonthGridType1({
     },
     [calId, data, onCommitText, events, onMoveEvent],
   );
+
+  // Pointer-based cross-day session drag. We attach window listeners once
+  // and consult dragStartRef + the current events list to compute the
+  // target day cell + the insertion index for the ghost preview chip.
+  useEffect(() => {
+    const eventsRef = events;
+    const onMove = (e: PointerEvent) => {
+      const start = dragStartRef.current;
+      if (!start) return;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      const active = dragSessionRef.current;
+      if (!active && Math.hypot(dx, dy) < 4) return;
+
+      // Hit-test the cell under the pointer.
+      const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const cell = node?.closest<HTMLElement>("[data-cell-pos]");
+      const dayKey = cell?.getAttribute("data-day-key") ?? null;
+      const posStr = cell?.getAttribute("data-cell-pos") ?? null;
+      let targetDate: Date | null = null;
+      let insertIndex = 0;
+      if (cell && posStr && dayKey) {
+        const [rowS, colS] = posStr.split("-");
+        const cellIdx = Number(rowS) * 7 + Number(colS);
+        const d = days[cellIdx];
+        if (d && d.inMonth) {
+          targetDate = d.date;
+          // Compute insertion index by time-of-day, ignoring the moved event.
+          const movedKey = Date.parse(start.originalStartISO);
+          const sorted = eventsRef
+            .filter((ev) => ev.id !== start.eventId && sameDay(fromISOLocal(ev.startISO), d.date))
+            .slice()
+            .sort((a, b) => {
+              const ka = a.sortIndex ?? Date.parse(a.startISO);
+              const kb = b.sortIndex ?? Date.parse(b.startISO);
+              return ka - kb;
+            });
+          insertIndex = sorted.length;
+          for (let i = 0; i < sorted.length; i++) {
+            const ka = sorted[i].sortIndex ?? Date.parse(sorted[i].startISO);
+            if (movedKey < ka) {
+              insertIndex = i;
+              break;
+            }
+          }
+        } else {
+          targetDate = null;
+        }
+      }
+
+      if (!active) {
+        setDragSession({
+          eventId: start.eventId,
+          fromKey: start.fromKey,
+          originalStartISO: start.originalStartISO,
+          originalEndISO: start.originalEndISO,
+          event: start.event,
+          targetDayKey: targetDate ? dayKey : null,
+          targetDate,
+          insertIndex,
+        });
+      } else {
+        setDragSession((prev) =>
+          prev
+            ? {
+                ...prev,
+                targetDayKey: targetDate ? dayKey : null,
+                targetDate,
+                insertIndex,
+              }
+            : prev,
+        );
+      }
+    };
+
+    const onUp = () => {
+      const start = dragStartRef.current;
+      const drag = dragSessionRef.current;
+      dragStartRef.current = null;
+      if (!drag) {
+        return;
+      }
+      setDragSession(null);
+      void start;
+      const td = drag.targetDate;
+      if (!td) return;
+      const sameDayDrop =
+        drag.fromKey.year === td.getFullYear() &&
+        drag.fromKey.month === td.getMonth() &&
+        drag.fromKey.day === td.getDate();
+      if (sameDayDrop) return;
+      const newKey: CellKey = {
+        year: td.getFullYear(),
+        month: td.getMonth(),
+        day: td.getDate(),
+        session: 0,
+      };
+      moveItem(drag.fromKey, newKey, drag.event.title, {
+        source: "event",
+        eventId: drag.eventId,
+      });
+      requestAnimationFrame(() => {
+        const el = document.querySelector<HTMLElement>(
+          `[data-event-id="${drag.eventId.replace(/"/g, '\\"')}"]`,
+        );
+        const rect = el?.getBoundingClientRect();
+        if (!rect) return;
+        setPendingMove({
+          id: drag.eventId,
+          originalStartISO: drag.originalStartISO,
+          originalEndISO: drag.originalEndISO,
+          anchorRect: rect,
+        });
+      });
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [days, events, moveItem]);
+
 
   // ───────────────────────── Render ─────────────────────────
 
@@ -614,20 +711,6 @@ export function MonthGridType1({
                   const kb = b.sortIndex ?? Date.parse(b.startISO);
                   return ka - kb;
                 });
-              // Apply pending reorder locally so the UI reflects the user's intent
-              // until they confirm or cancel.
-              if (pendingReorder && pendingReorder.dayKey === id) {
-                const map = new Map(sortedDayEvents.map((e) => [e.id, e]));
-                const ordered = pendingReorder.ids
-                  .map((eid) => map.get(eid))
-                  .filter((e): e is CalendarEvent => !!e);
-                // Append any events not in the pending list (shouldn't happen) at the end.
-                for (const e of sortedDayEvents) {
-                  if (!pendingReorder.ids.includes(e.id)) ordered.push(e);
-                }
-                sortedDayEvents.length = 0;
-                sortedDayEvents.push(...ordered);
-              }
 
               type UnifiedItem =
                 | { kind: "legacy"; idx: number; raw: string }
@@ -661,48 +744,11 @@ export function MonthGridType1({
                     if (dragAnchorRef.current) {
                       setRange({ a: dragAnchorRef.current, b: pos });
                     }
-                    if (dragItem && dragItem.source === "event" && d.inMonth) {
-                      setHoverDayKey(id);
-                    }
                   }}
                   onMouseUp={(e) => {
                     if (dragItem && d.inMonth) {
-                      if (dragItem.source === "event") {
-                        // Capture originals before the optimistic move.
-                        const ev = events.find((x) => x.id === dragItem.eventId);
-                        const originalStartISO = ev?.startISO;
-                        const originalEndISO = ev?.endISO;
-                        const movedId = dragItem.eventId;
-                        const sameDayDrop =
-                          dragItem.fromKey.year === k.year &&
-                          dragItem.fromKey.month === k.month &&
-                          dragItem.fromKey.day === k.day;
-                        moveItem(
-                          dragItem.fromKey,
-                          k,
-                          dragItem.text,
-                          { source: "event", eventId: dragItem.eventId },
-                        );
-                        if (!sameDayDrop && originalStartISO && originalEndISO) {
-                          requestAnimationFrame(() => {
-                            const el = document.querySelector<HTMLElement>(
-                              `[data-event-id="${movedId.replace(/"/g, '\\"')}"]`,
-                            );
-                            const rect = el?.getBoundingClientRect();
-                            if (!rect) return;
-                            setPendingMove({
-                              id: movedId,
-                              originalStartISO,
-                              originalEndISO,
-                              anchorRect: rect,
-                            });
-                          });
-                        }
-                      } else {
-                        moveItem(dragItem.fromKey, k, dragItem.text, { source: "legacy" });
-                      }
+                      moveItem(dragItem.fromKey, k, dragItem.text, { source: "legacy" });
                       setDragItem(null);
-                      setHoverDayKey(null);
                     }
                     // If user clicked without dragging, collapse range to focus
                     if (
@@ -734,12 +780,9 @@ export function MonthGridType1({
                     "hover:bg-secondary/40",
                   ].join(" ")}
                   data-day-anchor=""
+                  data-day-key={id}
                   style={{ cursor: "default" }}
                 >
-                  {/* Drop-target border preview during cross-day event drag */}
-                  {hoverDayKey === id && dragItem?.source === "event" && (
-                    <div className="pointer-events-none absolute inset-0 z-10 rounded-[3px] border-2 border-solid border-primary/70 bg-primary/10" />
-                  )}
                   {/* Day number — small, top-right, muted */}
                   <div className="flex items-start justify-between px-2 pt-1.5">
                     <span className="invisible text-[11px]">·</span>
@@ -760,93 +803,133 @@ export function MonthGridType1({
                   {/* Items list */}
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
                     {(() => {
-                      const sortableIds = sortedDayEvents
-                        .filter((e) => !e.id.startsWith("__ghost__:"))
-                        .map((e) => e.id);
+                      // Decide whether to splice a ghost preview chip into
+                      // this day's list during a cross-day drag.
+                      const isSourceDay =
+                        !!dragSession &&
+                        dragSession.fromKey.year === d.date.getFullYear() &&
+                        dragSession.fromKey.month === d.date.getMonth() &&
+                        dragSession.fromKey.day === d.date.getDate();
+                      const isTargetDay =
+                        !!dragSession && dragSession.targetDayKey === id && !isSourceDay;
+
+                      // While dragging, hide the source event from the source day
+                      // so the only visible representation is the ghost in the target.
+                      const baseVisible = dragSession
+                        ? visible.filter(
+                            (it) =>
+                              !(
+                                it.kind === "event" &&
+                                it.event.id === dragSession.eventId
+                              ),
+                          )
+                        : visible;
+
+                      type RenderItem =
+                        | { kind: "ghost" }
+                        | UnifiedItem;
+                      const renderList: RenderItem[] = [...baseVisible];
+                      if (isTargetDay && dragSession) {
+                        const idx = Math.min(
+                          Math.max(0, dragSession.insertIndex),
+                          renderList.length,
+                        );
+                        renderList.splice(idx, 0, { kind: "ghost" });
+                      }
+                      const renderVisible = renderList.slice(0, MAX_VISIBLE);
+
+                      const renderGhost = () => {
+                        if (!dragSession) return null;
+                        const ev = dragSession.event;
+                        const isDiaryEvent = appKind === "diary";
+                        const tall =
+                          isDiaryEvent &&
+                          (monthTileDesign === "split" ||
+                            monthTileDesign === "stacked");
+                        return (
+                          <div
+                            key={`${id}-ghost-move`}
+                            data-role="ghost-move"
+                            className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/70 bg-primary/10"
+                            style={{
+                              minHeight: tall ? 44 : 22,
+                              borderColor: ev.color
+                                ? `${ev.color}CC`
+                                : undefined,
+                              background: ev.color
+                                ? `${ev.color}1F`
+                                : undefined,
+                            }}
+                          />
+                        );
+                      };
+
                       return (
-                        <DndContext
-                          sensors={dndSensors}
-                          collisionDetection={(args) => {
-                            const pw = pointerWithin(args);
-                            return pw.length > 0 ? pw : rectIntersection(args);
-                          }}
-                          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-                          onDragEnd={(ev: DragEndEvent) => {
-                            const { active, over } = ev;
-                            if (!over || active.id === over.id) return;
-                            const oldIndex = sortableIds.indexOf(String(active.id));
-                            const newIndex = sortableIds.indexOf(String(over.id));
-                            if (oldIndex < 0 || newIndex < 0) return;
-                            const next = arrayMove(sortableIds, oldIndex, newIndex);
-                            const byId = new Map(
-                              sortedDayEvents.map((e) => [e.id, e]),
-                            );
-                            const movedStrava = next.some(
-                              (id, i) =>
-                                id !== sortableIds[i] &&
-                                byId.get(id)?.stravaActivityId != null,
-                            );
-                            if (movedStrava) {
-                              setStravaBlocked(true);
-                              return;
+                        <AnimatePresence initial={false}>
+                          {renderVisible.map((it, idx) => {
+                            if (it.kind === "ghost") {
+                              return (
+                                <motion.div
+                                  key={`${id}-ghost-${idx}`}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.1 }}
+                                >
+                                  {renderGhost()}
+                                </motion.div>
+                              );
                             }
-                            setPendingReorder({ dayKey: id, ids: next });
-                          }}
-                        >
-                          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-                    <AnimatePresence initial={false}>
-                      {visible.map((it) => {
-                        const raw = it.kind === "legacy" ? it.raw : it.event.title;
-                        const itemColor = it.kind === "legacy" ? splitColor(it.raw).color : it.event.color;
-                        const displayText = it.kind === "legacy" ? splitColor(it.raw).text : it.event.title;
-                        const itemKey = it.kind === "legacy" ? `legacy-${it.idx}` : `event-${it.event.id}`;
-                        const isDiaryEvent = appKind === "diary" && it.kind === "event";
-                        const tall = isDiaryEvent && (monthTileDesign === "split" || monthTileDesign === "stacked");
-                        const isSortableEvent =
-                          it.kind === "event" && !it.event.id.startsWith("__ghost__:");
-                        const renderChip = (sortable: {
-                          setNodeRef: (el: HTMLElement | null) => void;
-                          style: React.CSSProperties;
-                          listeners: ReturnType<typeof useSortable>["listeners"];
-                          attributes: ReturnType<typeof useSortable>["attributes"];
-                          isDragging: boolean;
-                        } | null) => (
+                            const raw = it.kind === "legacy" ? it.raw : it.event.title;
+                            const itemColor = it.kind === "legacy" ? splitColor(it.raw).color : it.event.color;
+                            const displayText = it.kind === "legacy" ? splitColor(it.raw).text : it.event.title;
+                            const itemKey = it.kind === "legacy" ? `legacy-${it.idx}` : `event-${it.event.id}`;
+                            const isDiaryEvent = appKind === "diary" && it.kind === "event";
+                            const tall = isDiaryEvent && (monthTileDesign === "split" || monthTileDesign === "stacked");
+                            const isRealEvent =
+                              it.kind === "event" && !it.event.id.startsWith("__ghost__:");
+                            return (
                           <motion.div
                             key={`${id}-${itemKey}`}
-                            ref={sortable?.setNodeRef}
-                            layout={sortable ? false : true}
-                            layoutId={!sortable && it.kind === "event" ? `evt-${it.event.id}` : undefined}
-                            initial={sortable ? false : { opacity: 0, y: -2 }}
-                            animate={sortable ? undefined : { opacity: 1, y: 0 }}
-                            exit={sortable ? undefined : { opacity: 0, y: -2 }}
+                            layout
+                            layoutId={it.kind === "event" ? `evt-${it.event.id}` : undefined}
+                            initial={{ opacity: 0, y: -2 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -2 }}
                             transition={{
                               duration: 0.14,
                               ease: [0.2, 0, 0, 1],
                             }}
                             data-role="item"
-                            data-real-event={it.kind === "event" && !it.event.id.startsWith("__ghost__:") ? "1" : undefined}
+                            data-real-event={isRealEvent ? "1" : undefined}
                             data-ghost-event={it.kind === "event" && it.event.id.startsWith("__ghost__:") ? "1" : undefined}
-                            data-event-id={it.kind === "event" && !it.event.id.startsWith("__ghost__:") ? it.event.id : undefined}
-                            draggable={!sortable && !(it.kind === "event" && it.event.id.startsWith("__ghost__:"))}
-                            {...(sortable?.attributes ?? {})}
-                            {...(sortable?.listeners ?? {})}
-                            onDragStart={(e) => {
-                              const dev = e as unknown as DragEvent;
-                              if (dev.dataTransfer) {
-                                dev.dataTransfer.effectAllowed = "move";
-                                dev.dataTransfer.setData("text/plain", raw);
-                              }
-                              if (it.kind === "legacy") {
-                                setDragItem({ fromKey: k, text: it.raw, source: "legacy" });
-                              } else {
-                                setDragItem({ fromKey: k, text: it.event.title, source: "event", eventId: it.event.id });
-                              }
+                            data-event-id={isRealEvent ? it.event.id : undefined}
+                            onPointerDown={(e) => {
+                              if (e.button !== 0) return;
+                              if (it.kind === "legacy") return;
+                              if (it.event.id.startsWith("__ghost__:")) return;
+                              // Start tracking a potential drag.
+                              dragStartRef.current = {
+                                x: e.clientX,
+                                y: e.clientY,
+                                eventId: it.event.id,
+                                fromKey: k,
+                                originalStartISO: it.event.startISO,
+                                originalEndISO: it.event.endISO,
+                                event: it.event,
+                              };
+                              // Prevent cell-level range selection mousedown.
+                              e.stopPropagation();
                             }}
-                            onDragEnd={() => setDragItem(null)}
+                            onDragStart={(e) => {
+                              // Block native HTML5 drag so pointer events keep flowing.
+                              e.preventDefault();
+                            }}
+                            draggable={false}
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (dragSessionRef.current) return;
                               if (it.kind === "event" && it.event.id.startsWith("__ghost__:")) {
-                                // Ghost preview events are not editable.
                                 return;
                               }
                               if (it.kind === "legacy") {
@@ -858,20 +941,19 @@ export function MonthGridType1({
                             className={
                               tall
                                 ? [
-                                    "relative flex items-stretch overflow-hidden rounded-[3px] text-[11.5px] text-ink",
-                                    sortable ? "transition-shadow hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]" : "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
+                                    "relative flex items-stretch overflow-hidden rounded-[3px] text-[11.5px] text-ink cursor-grab active:cursor-grabbing",
+                                    "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                                     itemColor ? "" : "bg-secondary/70",
                                   ].join(" ")
                                 : [
-                                    "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink",
-                                    sortable ? "transition-shadow hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]" : "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
+                                    "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink cursor-grab active:cursor-grabbing",
+                                    "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                                     itemColor ? "" : "bg-secondary/70",
                                     itemColor ? "" : "hover:bg-secondary",
                                   ].join(" ")
                             }
-                            style={{
-                              ...(sortable?.style ?? {}),
-                              ...(tall
+                            style={
+                              tall
                                 ? {
                                     minHeight: 44,
                                     backgroundColor: itemColor ? `${itemColor}1F` : undefined,
@@ -882,8 +964,8 @@ export function MonthGridType1({
                                       backgroundColor: `${itemColor}1F`,
                                       boxShadow: `inset 2px 0 0 ${itemColor}`,
                                     }
-                                  : {}),
-                            }}
+                                  : {}
+                            }
                             title={displayText}
                           >
                             {isDiaryEvent ? (() => {
@@ -1004,21 +1086,11 @@ export function MonthGridType1({
                               </>
                             )}
                           </motion.div>
-                        );
-                        if (isSortableEvent && it.kind === "event") {
-                          return (
-                            <SortableMonthEventChip
-                              key={`${id}-${itemKey}`}
-                              id={it.event.id}
-                              disabled={sortableIds.length < 2}
-                            >
-                              {(s) => renderChip(s)}
-                            </SortableMonthEventChip>
-                          );
-                        }
-                        return renderChip(null);
-                      })}
-                    </AnimatePresence>
+                            );
+                          })}
+                        </AnimatePresence>
+                      );
+                    })()}
                     {overflow > 0 && (
                       <button
                         type="button"
@@ -1032,10 +1104,6 @@ export function MonthGridType1({
                         +{overflow} mer
                       </button>
                     )}
-                          </SortableContext>
-                        </DndContext>
-                      );
-                    })()}
                   </div>
 
                   {/* Hover "+" affordance — visible only when cell is empty + in month */}
@@ -1057,19 +1125,8 @@ export function MonthGridType1({
           </div>
         </LayoutGroup>
 
-        <ReorderConfirmDialog
-          open={!!pendingReorder || stravaBlocked}
-          mode={stravaBlocked ? "stravaBlocked" : "confirm"}
-          onCancel={() => {
-            setPendingReorder(null);
-            setStravaBlocked(false);
-          }}
-          onConfirm={() => {
-            if (pendingReorder) onReorderEvents?.(pendingReorder.ids);
-            setPendingReorder(null);
-            setStravaBlocked(false);
-          }}
-        />
+        {/* In-cell reorder + confirmation modal intentionally removed. */}
+
 
         {pendingMove && (
           <MoveSavePopover
