@@ -1077,42 +1077,27 @@ export function UnifiedElasticGrid({
                   onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
                     const ev = events.find((e) => e.id === id);
                     if (!ev) return;
-                    if (appKind === "calendar") {
-                      // Optimistically snap the tile into the new slot, then
-                      // open a side popover next to the (now-moved) tile so the
-                      // user can save or cancel the move. Cancel reverts.
-                      const newStart = setHM(newDate, Math.floor(newStartMin / 60), newStartMin % 60);
-                      const newEnd = addMinutes(newStart, durationMin);
-                      const originalStartISO = ev.startISO;
-                      const originalEndISO = ev.endISO;
-                      onMoveEvent(id, { startISO: toISOLocal(newStart), endISO: toISOLocal(newEnd) });
-                      // After React paints the new position, locate the tile and
-                      // anchor the popover next to it.
-                      requestAnimationFrame(() => {
-                        const el = document.querySelector<HTMLElement>(
-                          `[data-event-id="${id.replace(/"/g, '\\"')}"]`,
-                        );
-                        const rect = el?.getBoundingClientRect() ?? anchor?.getBoundingClientRect();
-                        if (!rect) return;
-                        setPendingMove({
-                          id,
-                          originalStartISO,
-                          originalEndISO,
-                          anchorRect: rect,
-                        });
+                    // Apply the new time/date immediately — no save step.
+                    const newStart = setHM(newDate, Math.floor(newStartMin / 60), newStartMin % 60);
+                    const newEnd = addMinutes(newStart, durationMin);
+                    onMoveEvent(id, { startISO: toISOLocal(newStart), endISO: toISOLocal(newEnd) });
+                    // Open the regular edit popover anchored next to the moved tile.
+                    requestAnimationFrame(() => {
+                      const el = document.querySelector<HTMLElement>(
+                        `[data-event-id="${id.replace(/"/g, '\\"')}"]`,
+                      );
+                      const rect = el?.getBoundingClientRect() ?? anchor?.getBoundingClientRect();
+                      if (!rect) return;
+                      setPopover({
+                        key: { year, month: 0, day: 1, session: 0 },
+                        rect,
+                        initialText: ev.title,
+                        initialColor: ev.color,
+                        isEdit: true,
+                        eventId: id,
                       });
-                      return;
-                    }
-                    setPopover({
-                      key: { year, month: 0, day: 1, session: 0 },
-                      rect: (anchor ?? document.body).getBoundingClientRect(),
-                      initialText: ev.title,
-                      initialColor: ev.color,
-                      isEdit: true,
-                      eventId: id,
-                      pendingDate: newDate,
-                      pendingTime: { startMin: newStartMin, endMin: newStartMin + durationMin },
                     });
+
                   }}
                   onDeleteEvent={onDeleteEvent}
                   onSaveSessionNote={(id, note) =>
