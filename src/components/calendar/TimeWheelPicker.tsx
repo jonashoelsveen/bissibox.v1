@@ -1,26 +1,24 @@
 /**
- * TimeWheelPicker — compact inline time-range picker that lives inside the
- * popover header WITHOUT changing its height.
+ * TimeWheelPicker — compact inline time-range editor.
  *
- *   [HH][MM] – [HH][MM]
+ *   [HH]:[MM] – [HH]:[MM]
  *
- * Each cell is a single-row scrollable wheel. The focused cell gets a thin
- * black outline ("smile" border). Keyboard:
- *   ← →   move focus between the four wheels
- *   ↑ ↓   step one value within the focused wheel
- * Pointer:
- *   wheel / trackpad scroll  → smoothly changes the focused value, snapping
- *   when motion stops. Tuned for sharp, responsive feel.
+ * Each cell is a simple 2-digit text input. Click to place the caret,
+ * double-click to select both digits, type to overwrite, ArrowUp/Down to
+ * step, ArrowLeft/Right or Tab to move between cells. No scroll-wheel
+ * behavior.
  *
- * Guardrail: when "from" moves past "to", "to" auto-bumps to from + 60 min.
+ * Guardrail: when "from" moves past "to", "to" auto-bumps to from + 60 min
+ * (capped at 23:55).
  */
 
 import {
+  ChangeEvent,
+  FocusEvent,
   KeyboardEvent as ReactKeyboardEvent,
-  forwardRef,
   useCallback,
   useEffect,
-  useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -33,364 +31,238 @@ export interface TimeRange {
 interface TimeWheelPickerProps {
   value: TimeRange;
   onChange: (next: TimeRange) => void;
-  /** Minute step for the minute wheels. Defaults to 5. */
+  /** Minute step used when stepping with arrow keys. Defaults to 5. */
   minuteStep?: number;
-  /** Auto-focus the first wheel on mount. Defaults to true. */
-  autoFocus?: boolean;
 }
 
-const ITEM_H = 18; // px — single visible row, matches the header text line-height
-
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const twoDigit = (n: number) => String(n).padStart(2, "0");
 
 export function TimeWheelPicker({
   value,
   onChange,
   minuteStep = 5,
-  autoFocus = true,
 }: TimeWheelPickerProps) {
-  const MINUTES = Array.from(
-    { length: Math.floor(60 / minuteStep) },
-    (_, i) => i * minuteStep,
-  );
-
   const fromH = Math.floor(value.startMin / 60);
   const fromM = value.startMin % 60;
   const toH = Math.floor(value.endMin / 60);
   const toM = value.endMin % 60;
 
-  const snap = (m: number) => {
-    const idx = MINUTES.reduce(
-      (best, mm, i) =>
-        Math.abs(mm - m) < Math.abs(MINUTES[best] - m) ? i : best,
-      0,
-    );
-    return MINUTES[idx];
-  };
-
   const setFrom = (h: number, m: number) => {
-    const start = h * 60 + m;
+    const start = clamp(h, 0, 23) * 60 + clamp(m, 0, 59);
     let end = value.endMin;
-    if (end <= start) end = Math.min(24 * 60 - minuteStep, start + 60);
+    if (end <= start) end = Math.min(23 * 60 + 55, start + 60);
     onChange({ startMin: start, endMin: end });
   };
   const setTo = (h: number, m: number) => {
-    const end = h * 60 + m;
+    const end = clamp(h, 0, 23) * 60 + clamp(m, 0, 59);
     if (end <= value.startMin) {
-      const bumped = Math.min(24 * 60 - minuteStep, value.startMin + minuteStep);
-      onChange({ startMin: value.startMin, endMin: bumped });
+      onChange({
+        startMin: value.startMin,
+        endMin: Math.min(23 * 60 + 55, value.startMin + minuteStep),
+      });
     } else {
       onChange({ startMin: value.startMin, endMin: end });
     }
   };
 
-  // Refs for the 4 wheels, used to move focus left/right.
-  const wheelRefs = [
-    useRef<WheelHandle>(null),
-    useRef<WheelHandle>(null),
-    useRef<WheelHandle>(null),
-    useRef<WheelHandle>(null),
+  const refs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
   ];
-
-  const focusSibling = useCallback(
-    (from: number, dir: -1 | 1) => {
-      const next = Math.max(0, Math.min(3, from + dir));
-      wheelRefs[next].current?.focus();
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-
-  useEffect(() => {
-    if (autoFocus) {
-      // Delay one frame so the popover layout settles first.
-      const t = requestAnimationFrame(() => wheelRefs[0].current?.focus());
-      return () => cancelAnimationFrame(t);
+  const focusSibling = useCallback((from: number, dir: -1 | 1) => {
+    const next = Math.max(0, Math.min(3, from + dir));
+    const el = refs[next].current;
+    if (el) {
+      el.focus();
+      el.select();
     }
-  }, [autoFocus]);
-
-  const advance = useCallback(
-    (from: number) => focusSibling(from, 1),
-    [focusSibling],
-  );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="flex items-center justify-start gap-0 select-none pl-1">
-      <Wheel
-        ref={wheelRefs[0]}
+    <div className="flex items-center select-none">
+      <Cell
+        ref={refs[0]}
         ariaLabel="Fra time"
-        items={HOURS}
         value={fromH}
-        format={twoDigit}
-        onChange={(h) => setFrom(h, snap(fromM))}
+        max={23}
+        step={1}
+        onCommit={(h) => setFrom(h, fromM)}
+        onAutoAdvance={() => focusSibling(0, 1)}
         onArrowH={(d) => focusSibling(0, d)}
-        onTypedComplete={() => advance(0)}
       />
       <Sep />
-      <Wheel
-        ref={wheelRefs[1]}
+      <Cell
+        ref={refs[1]}
         ariaLabel="Fra minutt"
-        items={MINUTES}
-        value={snap(fromM)}
-        format={twoDigit}
-        onChange={(m) => setFrom(fromH, m)}
+        value={fromM}
+        max={59}
+        step={minuteStep}
+        onCommit={(m) => setFrom(fromH, m)}
+        onAutoAdvance={() => focusSibling(1, 1)}
         onArrowH={(d) => focusSibling(1, d)}
-        onTypedComplete={() => advance(1)}
       />
       <span className="mx-1.5 text-[12px] font-medium text-ink/60">–</span>
-      <Wheel
-        ref={wheelRefs[2]}
+      <Cell
+        ref={refs[2]}
         ariaLabel="Til time"
-        items={HOURS}
         value={toH}
-        format={twoDigit}
-        onChange={(h) => setTo(h, snap(toM))}
+        max={23}
+        step={1}
+        onCommit={(h) => setTo(h, toM)}
+        onAutoAdvance={() => focusSibling(2, 1)}
         onArrowH={(d) => focusSibling(2, d)}
-        onTypedComplete={() => advance(2)}
       />
       <Sep />
-      <Wheel
-        ref={wheelRefs[3]}
+      <Cell
+        ref={refs[3]}
         ariaLabel="Til minutt"
-        items={MINUTES}
-        value={snap(toM)}
-        format={twoDigit}
-        onChange={(m) => setTo(toH, m)}
+        value={toM}
+        max={59}
+        step={minuteStep}
+        onCommit={(m) => setTo(toH, m)}
+        onAutoAdvance={() => focusSibling(3, 1)}
         onArrowH={(d) => focusSibling(3, d)}
-        onTypedComplete={() => advance(3)}
       />
     </div>
   );
 }
 
-const twoDigit = (n: number) => String(n).padStart(2, "0");
 const Sep = () => (
   <span className="text-[12px] font-medium text-ink/60">:</span>
 );
 
-interface WheelHandle {
-  focus: () => void;
+function clamp(n: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, n));
 }
 
-interface WheelProps {
-  items: number[];
+interface CellProps {
   value: number;
+  max: number;
+  step: number;
   ariaLabel: string;
-  format: (n: number) => string;
-  onChange: (n: number) => void;
+  onCommit: (n: number) => void;
+  onAutoAdvance: () => void;
   onArrowH: (dir: -1 | 1) => void;
-  onTypedComplete?: () => void;
 }
 
-const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
-  { items, value, ariaLabel, format, onChange, onArrowH, onTypedComplete },
+import { forwardRef } from "react";
+
+const Cell = forwardRef<HTMLInputElement, CellProps>(function Cell(
+  { value, max, step, ariaLabel, onCommit, onAutoAdvance, onArrowH },
   ref,
 ) {
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const snapTimer = useRef<number | null>(null);
-  const wheelCooldown = useRef(0);
-  const typeBuf = useRef("");
-  const typeTimer = useRef<number | null>(null);
-  const [activeIdx, setActiveIdx] = useState(() =>
-    Math.max(0, items.indexOf(value)),
-  );
-  const [focused, setFocused] = useState(false);
+  const [text, setText] = useState(twoDigit(value));
+  const [editing, setEditing] = useState(false);
 
-  const maxVal = items[items.length - 1];
-  const firstDigitMax = Math.floor(maxVal / 10);
-
-  useImperativeHandle(ref, () => ({
-    focus: () => scrollRef.current?.focus(),
-  }));
-
+  // Sync external value when not actively editing.
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const idx = Math.max(0, items.indexOf(value));
-    const target = idx * ITEM_H;
-    if (Math.abs(el.scrollTop - target) > 0.5) {
-      el.scrollTop = target;
-    }
-    setActiveIdx(idx);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, items.length]);
+    if (!editing) setText(twoDigit(value));
+  }, [value, editing]);
 
-  const commitValue = useCallback(
-    (n: number) => {
-      const idx = items.reduce(
-        (best, v, i) =>
-          Math.abs(v - n) < Math.abs(items[best] - n) ? i : best,
-        0,
-      );
-      const next = items[idx];
-      const el = scrollRef.current;
-      if (el) el.scrollTo({ top: idx * ITEM_H, behavior: "smooth" });
-      setActiveIdx(idx);
-      if (next !== value) onChange(next);
-    },
-    [items, onChange, value],
-  );
+  const firstDigitMax = useMemo(() => Math.floor(max / 10), [max]);
 
-  const settle = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const idx = Math.max(
-      0,
-      Math.min(items.length - 1, Math.round(el.scrollTop / ITEM_H)),
-    );
-    const target = idx * ITEM_H;
-    if (Math.abs(el.scrollTop - target) > 0.5) {
-      el.scrollTo({ top: target, behavior: "smooth" });
-    }
-    setActiveIdx(idx);
-    const next = items[idx];
-    if (next !== value) onChange(next);
-  }, [items, onChange, value]);
-
-  const onScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const idx = Math.max(
-      0,
-      Math.min(items.length - 1, Math.round(el.scrollTop / ITEM_H)),
-    );
-    if (idx !== activeIdx) setActiveIdx(idx);
-    if (snapTimer.current) window.clearTimeout(snapTimer.current);
-    snapTimer.current = window.setTimeout(settle, 80);
-  };
-
-  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const el = scrollRef.current;
-    if (!el) return;
-    const now = Date.now();
-    const isNotch =
-      e.deltaMode === 1 || (e.deltaMode === 0 && Math.abs(e.deltaY) >= 50);
-
-    if (isNotch) {
-      if (now < wheelCooldown.current) return;
-      wheelCooldown.current = now + 45;
-      const dir = e.deltaY > 0 ? 1 : -1;
-      const nextIdx = Math.max(0, Math.min(items.length - 1, activeIdx + dir));
-      el.scrollTo({ top: nextIdx * ITEM_H, behavior: "smooth" });
-      setActiveIdx(nextIdx);
-      const next = items[nextIdx];
-      if (next !== value) onChange(next);
+  const commit = (raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length === 0) {
+      setText(twoDigit(value));
       return;
     }
-
-    el.scrollTop = Math.max(
-      0,
-      Math.min((items.length - 1) * ITEM_H, el.scrollTop + e.deltaY),
-    );
-    if (snapTimer.current) window.clearTimeout(snapTimer.current);
-    snapTimer.current = window.setTimeout(settle, 70);
+    const n = clamp(parseInt(digits, 10), 0, max);
+    setText(twoDigit(n));
+    if (n !== value) onCommit(n);
   };
 
-  const clearTypeBuf = () => {
-    typeBuf.current = "";
-    if (typeTimer.current) {
-      window.clearTimeout(typeTimer.current);
-      typeTimer.current = null;
+  const onChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, "").slice(-2);
+    setText(digits);
+    if (digits.length === 1) {
+      const d = parseInt(digits, 10);
+      if (d > firstDigitMax) {
+        // e.g. typing "5" in an hour cell → commit 05 and advance
+        const n = clamp(d, 0, max);
+        setText(twoDigit(n));
+        if (n !== value) onCommit(n);
+        onAutoAdvance();
+      }
+    } else if (digits.length === 2) {
+      const n = clamp(parseInt(digits, 10), 0, max);
+      setText(twoDigit(n));
+      if (n !== value) onCommit(n);
+      onAutoAdvance();
     }
   };
 
-  const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     e.stopPropagation();
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
       e.preventDefault();
-      clearTypeBuf();
-      const dir = e.key === "ArrowDown" ? 1 : -1;
-      const nextIdx = Math.max(0, Math.min(items.length - 1, activeIdx + dir));
-      const el = scrollRef.current;
-      if (el) el.scrollTo({ top: nextIdx * ITEM_H, behavior: "smooth" });
-      setActiveIdx(nextIdx);
-      const next = items[nextIdx];
-      if (next !== value) onChange(next);
+      const dir = e.key === "ArrowUp" ? 1 : -1;
+      const base = parseInt(text || "0", 10) || value;
+      let next = base + dir * step;
+      if (next < 0) next = max - ((-next - 1) % (max + 1));
+      if (next > max) next = next % (max + 1);
+      setText(twoDigit(next));
+      if (next !== value) onCommit(next);
       return;
     }
     if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      clearTypeBuf();
-      onArrowH(-1);
+      const el = e.currentTarget;
+      if (el.selectionStart === 0 && el.selectionEnd === 0) {
+        e.preventDefault();
+        onArrowH(-1);
+      }
       return;
     }
-    if (e.key === "ArrowRight" || e.key === "Tab") {
-      if (e.key === "Tab" && e.shiftKey) return;
+    if (e.key === "ArrowRight") {
+      const el = e.currentTarget;
+      if (
+        el.selectionStart === el.value.length &&
+        el.selectionEnd === el.value.length
+      ) {
+        e.preventDefault();
+        onArrowH(1);
+      }
+      return;
+    }
+    if (e.key === "Tab") {
+      if (e.shiftKey) return;
       e.preventDefault();
-      clearTypeBuf();
       onArrowH(1);
       return;
     }
-    if (/^[0-9]$/.test(e.key)) {
+    if (e.key === "Enter") {
       e.preventDefault();
-      const nb = typeBuf.current + e.key;
-      if (nb.length === 1) {
-        const d = parseInt(nb, 10);
-        if (d > firstDigitMax) {
-          commitValue(d);
-          clearTypeBuf();
-          onTypedComplete?.();
-        } else {
-          typeBuf.current = nb;
-          commitValue(d);
-          if (typeTimer.current) window.clearTimeout(typeTimer.current);
-          typeTimer.current = window.setTimeout(() => {
-            clearTypeBuf();
-            onTypedComplete?.();
-          }, 900);
-        }
-      } else {
-        const n = parseInt(nb, 10);
-        commitValue(Math.min(n, maxVal));
-        clearTypeBuf();
-        onTypedComplete?.();
-      }
+      commit(text);
+      (e.currentTarget as HTMLInputElement).blur();
     }
   };
 
+  const onFocus = (e: FocusEvent<HTMLInputElement>) => {
+    setEditing(true);
+    // Select both digits so typing replaces.
+    e.currentTarget.select();
+  };
+  const onBlur = () => {
+    setEditing(false);
+    commit(text);
+  };
+
   return (
-    <div
-      ref={scrollRef}
-      role="listbox"
+    <input
+      ref={ref}
+      type="text"
+      inputMode="numeric"
       aria-label={ariaLabel}
-      tabIndex={0}
-      onScroll={onScroll}
-      onWheel={onWheel}
+      value={text}
+      onChange={onChange}
       onKeyDown={onKeyDown}
-      onFocus={() => setFocused(true)}
-      onBlur={() => {
-        setFocused(false);
-        clearTypeBuf();
-      }}
-      onMouseDown={() => scrollRef.current?.focus()}
-      className={[
-        "no-scrollbar relative overflow-y-auto outline-none rounded-[5px] transition-colors",
-        focused
-          ? "outline outline-[1.5px] outline-ink outline-offset-[3px]"
-          : "",
-      ].join(" ")}
-      style={{
-        width: 20,
-        height: ITEM_H,
-        scrollSnapType: "y mandatory",
-        scrollbarWidth: "none",
-      }}
-    >
-      {items.map((n, i) => (
-        <div
-          key={n}
-          role="option"
-          aria-selected={i === activeIdx}
-          className="mono flex items-center justify-center text-[12px] tabular-nums text-ink"
-          style={{
-            height: ITEM_H,
-            scrollSnapAlign: "center",
-          }}
-        >
-          {format(n)}
-        </div>
-      ))}
-    </div>
+      onFocus={onFocus}
+      onBlur={onBlur}
+      maxLength={2}
+      className="mono w-[18px] bg-transparent p-0 text-center text-[12px] tabular-nums text-ink outline-none cursor-text caret-ink focus:bg-ink/5 rounded-[3px]"
+    />
   );
 });
