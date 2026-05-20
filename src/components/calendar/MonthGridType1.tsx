@@ -822,6 +822,7 @@ export function MonthGridType1({
                             data-role="item"
                             data-real-event={it.kind === "event" && !it.event.id.startsWith("__ghost__:") ? "1" : undefined}
                             data-ghost-event={it.kind === "event" && it.event.id.startsWith("__ghost__:") ? "1" : undefined}
+                            data-event-id={it.kind === "event" && !it.event.id.startsWith("__ghost__:") ? it.event.id : undefined}
                             draggable={!sortable && !(it.kind === "event" && it.event.id.startsWith("__ghost__:"))}
                             {...(sortable?.attributes ?? {})}
                             {...(sortable?.listeners ?? {})}
