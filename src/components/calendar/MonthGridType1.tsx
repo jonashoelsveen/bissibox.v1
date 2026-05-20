@@ -661,21 +661,48 @@ export function MonthGridType1({
                     if (dragAnchorRef.current) {
                       setRange({ a: dragAnchorRef.current, b: pos });
                     }
-                    if (dragItem) {
-                      // hover preview only — drop logic is in onMouseUp
+                    if (dragItem && dragItem.source === "event" && d.inMonth) {
+                      setHoverDayKey(id);
                     }
                   }}
                   onMouseUp={(e) => {
                     if (dragItem && d.inMonth) {
-                      moveItem(
-                        dragItem.fromKey,
-                        k,
-                        dragItem.text,
-                        dragItem.source === "event"
-                          ? { source: "event", eventId: dragItem.eventId }
-                          : { source: "legacy" },
-                      );
+                      if (dragItem.source === "event") {
+                        // Capture originals before the optimistic move.
+                        const ev = events.find((x) => x.id === dragItem.eventId);
+                        const originalStartISO = ev?.startISO;
+                        const originalEndISO = ev?.endISO;
+                        const movedId = dragItem.eventId;
+                        const sameDayDrop =
+                          dragItem.fromKey.year === k.year &&
+                          dragItem.fromKey.month === k.month &&
+                          dragItem.fromKey.day === k.day;
+                        moveItem(
+                          dragItem.fromKey,
+                          k,
+                          dragItem.text,
+                          { source: "event", eventId: dragItem.eventId },
+                        );
+                        if (!sameDayDrop && originalStartISO && originalEndISO) {
+                          requestAnimationFrame(() => {
+                            const el = document.querySelector<HTMLElement>(
+                              `[data-event-id="${movedId.replace(/"/g, '\\"')}"]`,
+                            );
+                            const rect = el?.getBoundingClientRect();
+                            if (!rect) return;
+                            setPendingMove({
+                              id: movedId,
+                              originalStartISO,
+                              originalEndISO,
+                              anchorRect: rect,
+                            });
+                          });
+                        }
+                      } else {
+                        moveItem(dragItem.fromKey, k, dragItem.text, { source: "legacy" });
+                      }
                       setDragItem(null);
+                      setHoverDayKey(null);
                     }
                     // If user clicked without dragging, collapse range to focus
                     if (
