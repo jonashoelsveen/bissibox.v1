@@ -818,11 +818,10 @@ export function UnifiedElasticGrid({
         <motion.div
           key="month"
           className="w-full"
-          initial={{ opacity: 0, scaleY: 0.85 }}
-          animate={{ opacity: 1, scaleY: 1 }}
-          exit={{ opacity: 0, scaleY: 0.85 }}
-          transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
-          style={{ originY: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
         >
         <MonthGridType1
           calId={calId}
@@ -861,11 +860,10 @@ export function UnifiedElasticGrid({
         <motion.div
           key="week"
           className="w-full"
-          initial={{ opacity: 0, scaleY: 0.85 }}
-          animate={{ opacity: 1, scaleY: 1 }}
-          exit={{ opacity: 0, scaleY: 0.85 }}
-          transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
-          style={{ originY: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
         >
         <div
           ref={scrollRef}
@@ -890,7 +888,7 @@ export function UnifiedElasticGrid({
                 type="button"
                 onClick={() => handleViewModeChange("month")}
                 title={`Uke ${isoWeekNumber(weekDates[0] ?? new Date())} — klikk for å zoome ut`}
-                className="sticky top-0 z-20 select-none border-b border-hairline bg-card px-1 py-2 text-center text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+                className="sticky top-0 z-20 select-none border-b border-r border-hairline bg-card px-1 py-2 text-center text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
                 ref={(el) => {
                   headerRef.current = el;
                 }}
@@ -975,7 +973,7 @@ export function UnifiedElasticGrid({
                   const label = `${String(hh).padStart(2, "0")}:00`;
                   return (
                     <div
-                      className="border-b border-hairline bg-card pl-1.5 pt-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
+                      className="border-b border-r border-hairline bg-card pl-1.5 pt-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
                       style={{ height: rowHeight * 2 }}
                       aria-hidden
                     >
@@ -1882,11 +1880,25 @@ function NowLine({
       });
     };
     measure();
+    const ro = new ResizeObserver(() => measure());
+    if (scrollRef.current) ro.observe(scrollRef.current);
+    const scrollAncestors: (HTMLElement | Window)[] = [window];
+    let node: HTMLElement | null = scrollRef.current?.parentElement ?? null;
+    while (node) {
+      const cs = window.getComputedStyle(node);
+      if (/(auto|scroll)/.test(cs.overflowY) || /(auto|scroll)/.test(cs.overflow)) {
+        scrollAncestors.push(node);
+      }
+      node = node.parentElement;
+    }
+    for (const t of scrollAncestors) t.addEventListener("scroll", measure, { passive: true });
     const id = window.setInterval(measure, 500);
     window.addEventListener("resize", measure);
     return () => {
       window.clearInterval(id);
       window.removeEventListener("resize", measure);
+      ro.disconnect();
+      for (const t of scrollAncestors) t.removeEventListener("scroll", measure);
     };
   }, [colIdx, scrollRef]);
 
@@ -2010,11 +2022,25 @@ function WeekEventsOverlay({
       setHeaderBottom(hb);
     };
     measure();
+    const ro = new ResizeObserver(() => measure());
+    if (scrollRef.current) ro.observe(scrollRef.current);
+    const scrollAncestors: (HTMLElement | Window)[] = [window];
+    let node: HTMLElement | null = scrollRef.current?.parentElement ?? null;
+    while (node) {
+      const cs = window.getComputedStyle(node);
+      if (/(auto|scroll)/.test(cs.overflowY) || /(auto|scroll)/.test(cs.overflow)) {
+        scrollAncestors.push(node);
+      }
+      node = node.parentElement;
+    }
+    for (const t of scrollAncestors) t.addEventListener("scroll", measure, { passive: true });
     const id = window.setInterval(measure, 500);
     window.addEventListener("resize", measure);
     return () => {
       window.clearInterval(id);
       window.removeEventListener("resize", measure);
+      ro.disconnect();
+      for (const t of scrollAncestors) t.removeEventListener("scroll", measure);
     };
   }, [scrollRef]);
 
@@ -2377,11 +2403,25 @@ function DiarySimpleStack({
       if (next.length === 7) setCols(next);
     };
     measure();
+    const ro = new ResizeObserver(() => measure());
+    if (scrollRef.current) ro.observe(scrollRef.current);
+    const scrollAncestors: (HTMLElement | Window)[] = [window];
+    let node: HTMLElement | null = scrollRef.current?.parentElement ?? null;
+    while (node) {
+      const cs = window.getComputedStyle(node);
+      if (/(auto|scroll)/.test(cs.overflowY) || /(auto|scroll)/.test(cs.overflow)) {
+        scrollAncestors.push(node);
+      }
+      node = node.parentElement;
+    }
+    for (const t of scrollAncestors) t.addEventListener("scroll", measure, { passive: true });
     const id = window.setInterval(measure, 500);
     window.addEventListener("resize", measure);
     return () => {
       window.clearInterval(id);
       window.removeEventListener("resize", measure);
+      ro.disconnect();
+      for (const t of scrollAncestors) t.removeEventListener("scroll", measure);
     };
   }, [scrollRef]);
 

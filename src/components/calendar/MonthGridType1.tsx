@@ -503,7 +503,7 @@ export function MonthGridType1({
   // ───────────────────────── Render ─────────────────────────
 
   // Standard row-height target so all weeks stay perfectly aligned.
-  const rowMinHeight = 132;
+  const rowMinHeight = 168;
 
   // 28px leading column for week numbers; remaining 7 day columns share the
   // rest of the width equally. Mirrors Week-view layout exactly so a zoom
@@ -532,7 +532,7 @@ export function MonthGridType1({
         className="sticky top-0 z-20 grid border-b border-hairline bg-card"
         style={{ gridTemplateColumns: GRID_TEMPLATE }}
       >
-        <div />
+        <div className="border-r border-hairline" />
         {WEEKDAYS.map((w, idx) => {
           // The first row of `days` represents this week's Mon..Sun, so we
           // can read each column's date from row 0.
@@ -559,7 +559,7 @@ export function MonthGridType1({
             style={
               {
                 gridTemplateColumns: GRID_TEMPLATE,
-                gridAutoRows: `minmax(${rowMinHeight}px, 1fr)`,
+                gridAutoRows: `${rowMinHeight}px`,
               } as CSSProperties
             }
           >
@@ -570,7 +570,7 @@ export function MonthGridType1({
                 onClick={() => onWeekClick?.(wr.firstDate)}
                 title={`Uke ${wr.weekNo} — klikk for å zoome inn`}
                 style={{ gridColumn: 1, gridRow: wr.row + 1 }}
-                className="flex items-start justify-center border-b border-hairline pt-2 text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+                className="flex items-start justify-center border-b border-r border-hairline pt-2 text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
               >
                 {wr.weekNo}
               </button>
