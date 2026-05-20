@@ -1665,7 +1665,7 @@ export function PopoverEditor({
       : initialColor ?? CAT_TRAINING_COLOR;
   const [color, setColor] = useState<string | null>(resolvedInitial);
   const [time, setTime] = useState<{ startMin: number; endMin: number } | null>(initialTime);
-  const [showDuration, setShowDuration] = useState(false);
+  
   const ref = useRef<HTMLDivElement | null>(null);
 
   // Keep latest values for the unmount-time autosave to avoid stale captures.
@@ -1734,13 +1734,15 @@ export function PopoverEditor({
     >
       <div className="relative flex items-start gap-2">
         <div className="flex-1 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg">
-          <div
-            className={[
-              "flex items-center gap-2 border-b border-hairline px-3",
-              showDuration ? "py-2" : "justify-between py-2",
-            ].join(" ")}
-          >
-            {showDuration ? (
+          <div className="flex items-center gap-2 border-b border-hairline px-3 py-2">
+            {enableDuration && (
+              <Clock
+                className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                strokeWidth={2}
+                aria-hidden
+              />
+            )}
+            {enableDuration ? (
               <div className="flex-1 min-w-0">
                 <TimeWheelPicker
                   value={effectiveTime}
@@ -1751,40 +1753,9 @@ export function PopoverEditor({
                 />
               </div>
             ) : (
-              <>
-                <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  {isEdit ? "Rediger økt" : "Legg til økt"}
-                </span>
-                {enableDuration && time && (
-                  <span className="mono ml-auto text-[10.5px] tabular-nums text-ink/70">
-                    {fmtMin(time.startMin)}–{fmtMin(time.endMin)}
-                  </span>
-                )}
-              </>
-            )}
-            {enableDuration && (
-              <button
-                type="button"
-                aria-label="Sett varighet"
-                title="Sett varighet"
-                onClick={() => {
-                  // Materialize the default time the first time we open the
-                  // wheels so the parent reflects it immediately.
-                  if (!showDuration && !time) {
-                    setTime(effectiveTime);
-                    onTimeChange?.(effectiveTime);
-                  }
-                  setShowDuration((v) => !v);
-                }}
-                className={[
-                  "shrink-0 rounded-md p-1 transition-colors",
-                  showDuration
-                    ? "bg-secondary text-ink"
-                    : "text-muted-foreground hover:bg-secondary hover:text-ink",
-                ].join(" ")}
-              >
-                <Clock className="h-3.5 w-3.5" strokeWidth={2} />
-              </button>
+              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                {isEdit ? "Rediger økt" : "Legg til økt"}
+              </span>
             )}
           </div>
 
