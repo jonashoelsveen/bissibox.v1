@@ -928,7 +928,7 @@ export function UnifiedElasticGrid({
               <Fragment key="simple-body">
                 {/* Empty week-number gutter under the header */}
                 <div
-                  className="bg-card"
+                  className="border-r border-hairline bg-card"
                   style={{ height: rowHeight * 18 }}
                   aria-hidden
                 />
