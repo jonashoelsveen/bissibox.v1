@@ -784,7 +784,7 @@ export function UnifiedElasticGrid({
   return (
     <div
       ref={containerRef}
-      className="relative w-full"
+      className="relative flex h-full min-h-0 w-full flex-col"
     >
       {/* Top-right control cluster: [Mode ▾] [‹ 📅 ›].
           When the parent controls viewMode it also renders these controls
@@ -817,7 +817,7 @@ export function UnifiedElasticGrid({
       {viewMode === "month" ? (
         <motion.div
           key="month"
-          className="w-full"
+          className="flex flex-1 min-h-0 w-full flex-col"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -859,7 +859,7 @@ export function UnifiedElasticGrid({
       ) : (
         <motion.div
           key="week"
-          className="w-full"
+          className="flex flex-1 min-h-0 w-full flex-col"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -867,14 +867,14 @@ export function UnifiedElasticGrid({
         >
         <div
           ref={scrollRef}
-          className="relative w-full"
+          className="relative flex flex-1 min-h-0 w-full flex-col"
           onClick={(e) => {
             if (e.target === e.currentTarget) handleSelect(null);
           }}
           tabIndex={0}
         >
           <div
-            className="grid"
+            className="grid flex-none"
             style={{
               gridTemplateColumns,
               transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
@@ -922,8 +922,17 @@ export function UnifiedElasticGrid({
                 </div>
               );
             })}
+          </div>
 
-
+          <div className="relative flex flex-1 min-h-0 flex-col overflow-y-auto">
+          <div
+            className="grid"
+            style={{
+              gridTemplateColumns,
+              transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
+              willChange: "grid-template-columns",
+            }}
+          >
             {isSimple ? (
               <Fragment key="simple-body">
                 {/* Empty week-number gutter under the header */}
@@ -1036,7 +1045,7 @@ export function UnifiedElasticGrid({
             <div
               className="pointer-events-none absolute inset-x-0"
               style={{
-                top: 36,
+                top: 0,
                 display: "grid",
                 gridTemplateColumns,
                 gridTemplateRows: isSimple
@@ -1112,6 +1121,7 @@ export function UnifiedElasticGrid({
               )}
             </div>
           )}
+          </div>
         </div>
 
         </motion.div>

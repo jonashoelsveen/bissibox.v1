@@ -523,13 +523,13 @@ export function MonthGridType1({
   return (
     <div
       ref={containerRef}
-      className="relative flex w-full flex-col"
+      className="relative flex h-full min-h-0 w-full flex-col"
       tabIndex={0}
     >
       {/* Weekday strip — mirrors the Week view: 28px week-number gutter + 7
           weekday columns. Today's column gets the dark-grey highlight. */}
       <div
-        className="sticky top-0 z-20 grid border-b border-hairline bg-card"
+        className="grid flex-none border-b border-hairline bg-card"
         style={{ gridTemplateColumns: GRID_TEMPLATE }}
       >
         <div className="border-r border-hairline" />
@@ -552,7 +552,7 @@ export function MonthGridType1({
       </div>
 
       {/* The grid */}
-      <div className="relative flex-1">
+      <div className="relative flex-1 min-h-0 overflow-y-auto">
         <LayoutGroup>
           <div
             className="grid w-full"
