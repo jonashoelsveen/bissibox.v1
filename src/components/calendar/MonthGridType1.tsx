@@ -997,21 +997,9 @@ export function MonthGridType1({
                                     <span
                                       className="h-1.5 w-1.5 shrink-0 rounded-full"
                                       style={{ background: itemColor }}
-        />
+                                      style={{ background: itemColor }}
+                                    />
 
-        {pendingMove && (
-          <MoveSavePopover
-            anchor={pendingMove.anchorRect}
-            onCancel={() => {
-              onMoveEvent?.(pendingMove.id, {
-                startISO: pendingMove.originalStartISO,
-                endISO: pendingMove.originalEndISO,
-              });
-              setPendingMove(null);
-            }}
-            onSave={() => setPendingMove(null)}
-          />
-        )}
                                   ) : null;
                                 })()}
                                 <span className="truncate">{displayText}</span>
