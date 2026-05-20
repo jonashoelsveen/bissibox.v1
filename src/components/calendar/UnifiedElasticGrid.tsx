@@ -2039,8 +2039,8 @@ function WeekEventsOverlay({
           style={{
             gridColumnStart: colIdx + 2,
             gridColumnEnd: colIdx + 3,
-            gridRowStart: 2,
-            gridRowEnd: 20,
+            gridRowStart: 1,
+            gridRowEnd: 19,
             position: "relative",
             pointerEvents: "none",
             zIndex: 8,
