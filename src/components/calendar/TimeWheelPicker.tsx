@@ -179,25 +179,30 @@ interface WheelProps {
   format: (n: number) => string;
   onChange: (n: number) => void;
   onArrowH: (dir: -1 | 1) => void;
+  onTypedComplete?: () => void;
 }
 
 const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
-  { items, value, ariaLabel, format, onChange, onArrowH },
+  { items, value, ariaLabel, format, onChange, onArrowH, onTypedComplete },
   ref,
 ) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const snapTimer = useRef<number | null>(null);
   const wheelCooldown = useRef(0);
+  const typeBuf = useRef("");
+  const typeTimer = useRef<number | null>(null);
   const [activeIdx, setActiveIdx] = useState(() =>
     Math.max(0, items.indexOf(value)),
   );
   const [focused, setFocused] = useState(false);
 
+  const maxVal = items[items.length - 1];
+  const firstDigitMax = Math.floor(maxVal / 10);
+
   useImperativeHandle(ref, () => ({
     focus: () => scrollRef.current?.focus(),
   }));
 
-  // Sync external value → scroll position.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -209,6 +214,22 @@ const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
     setActiveIdx(idx);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, items.length]);
+
+  const commitValue = useCallback(
+    (n: number) => {
+      const idx = items.reduce(
+        (best, v, i) =>
+          Math.abs(v - n) < Math.abs(items[best] - n) ? i : best,
+        0,
+      );
+      const next = items[idx];
+      const el = scrollRef.current;
+      if (el) el.scrollTo({ top: idx * ITEM_H, behavior: "smooth" });
+      setActiveIdx(idx);
+      if (next !== value) onChange(next);
+    },
+    [items, onChange, value],
+  );
 
   const settle = useCallback(() => {
     const el = scrollRef.current;
@@ -238,15 +259,11 @@ const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
     snapTimer.current = window.setTimeout(settle, 80);
   };
 
-  // Sharp, responsive scroll handling: every notch / pixel of delta directly
-  // moves the wheel; idle snaps quickly.
   const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
     const el = scrollRef.current;
     if (!el) return;
     const now = Date.now();
-
-    // Classic mouse wheel = large discrete notches (|deltaY| >= 50).
     const isNotch =
       e.deltaMode === 1 || (e.deltaMode === 0 && Math.abs(e.deltaY) >= 50);
 
@@ -262,7 +279,6 @@ const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
       return;
     }
 
-    // Trackpad / fine wheel: 1:1 pixel mapping for a sharp, smooth feel.
     el.scrollTop = Math.max(
       0,
       Math.min((items.length - 1) * ITEM_H, el.scrollTop + e.deltaY),
@@ -271,9 +287,18 @@ const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
     snapTimer.current = window.setTimeout(settle, 70);
   };
 
+  const clearTypeBuf = () => {
+    typeBuf.current = "";
+    if (typeTimer.current) {
+      window.clearTimeout(typeTimer.current);
+      typeTimer.current = null;
+    }
+  };
+
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
+      clearTypeBuf();
       const dir = e.key === "ArrowDown" ? 1 : -1;
       const nextIdx = Math.max(0, Math.min(items.length - 1, activeIdx + dir));
       const el = scrollRef.current;
@@ -281,12 +306,45 @@ const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
       setActiveIdx(nextIdx);
       const next = items[nextIdx];
       if (next !== value) onChange(next);
-    } else if (e.key === "ArrowLeft") {
+      return;
+    }
+    if (e.key === "ArrowLeft") {
       e.preventDefault();
+      clearTypeBuf();
       onArrowH(-1);
-    } else if (e.key === "ArrowRight") {
+      return;
+    }
+    if (e.key === "ArrowRight" || e.key === "Tab") {
+      if (e.key === "Tab" && e.shiftKey) return;
       e.preventDefault();
+      clearTypeBuf();
       onArrowH(1);
+      return;
+    }
+    if (/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+      const nb = typeBuf.current + e.key;
+      if (nb.length === 1) {
+        const d = parseInt(nb, 10);
+        if (d > firstDigitMax) {
+          commitValue(d);
+          clearTypeBuf();
+          onTypedComplete?.();
+        } else {
+          typeBuf.current = nb;
+          commitValue(d);
+          if (typeTimer.current) window.clearTimeout(typeTimer.current);
+          typeTimer.current = window.setTimeout(() => {
+            clearTypeBuf();
+            onTypedComplete?.();
+          }, 900);
+        }
+      } else {
+        const n = parseInt(nb, 10);
+        commitValue(Math.min(n, maxVal));
+        clearTypeBuf();
+        onTypedComplete?.();
+      }
     }
   };
 
@@ -300,11 +358,16 @@ const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
       onWheel={onWheel}
       onKeyDown={onKeyDown}
       onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
+      onBlur={() => {
+        setFocused(false);
+        clearTypeBuf();
+      }}
       onMouseDown={() => scrollRef.current?.focus()}
       className={[
-        "no-scrollbar relative overflow-y-auto outline-none rounded-[4px] transition-colors",
-        focused ? "ring-1 ring-ink" : "ring-1 ring-transparent",
+        "no-scrollbar relative overflow-y-auto outline-none rounded-[5px] transition-colors",
+        focused
+          ? "outline outline-[1.5px] outline-ink outline-offset-[3px]"
+          : "",
       ].join(" ")}
       style={{
         width: 20,
