@@ -503,7 +503,7 @@ export function MonthGridType1({
   // ───────────────────────── Render ─────────────────────────
 
   // Standard row-height target so all weeks stay perfectly aligned.
-  const rowMinHeight = 132;
+  const rowMinHeight = 168;
 
   // 28px leading column for week numbers; remaining 7 day columns share the
   // rest of the width equally. Mirrors Week-view layout exactly so a zoom
