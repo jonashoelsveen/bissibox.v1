@@ -44,6 +44,7 @@ import { useMonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
 
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
+import { TimeWheelPicker } from "./TimeWheelPicker";
 
 function activityIconFor(ev: CalendarEvent): LucideIcon {
   const k = (ev.activity || ev.diarySub || "").toLowerCase();
@@ -1718,15 +1719,11 @@ export function PopoverEditor({
     top = Math.max(margin, window.innerHeight - POPOVER_H - margin);
   }
 
-  // Mini duration column geometry.
-  const DUR_W = 220;
-  const DUR_GAP = 8;
-  const DUR_ROW_H = 36; // matches week-view ROW_MONTH
-  const DUR_START_HOUR = 6;
-  const DUR_ROWS = 36; // 06:00 → 24:00 in 30-min slots
-  const DUR_H = 360;
-
   const adminCategory = adminCategoryFromColor(color);
+
+  // Default range used the first time the user opens the wheels with no
+  // existing time set on the session.
+  const effectiveTime = time ?? { startMin: 8 * 60, endMin: 9 * 60 };
 
   return (
     <div
@@ -1737,32 +1734,57 @@ export function PopoverEditor({
     >
       <div className="relative flex items-start gap-2">
         <div className="flex-1 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg">
-          <div className="flex items-center justify-between gap-2 border-b border-hairline px-3 py-2">
-            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-              {isEdit ? "Rediger økt" : "Legg til økt"}
-            </span>
-            {enableDuration && (
-              <div className="flex items-center gap-1.5">
-                {time && (
-                  <span className="mono text-[10.5px] tabular-nums text-ink/70">
+          <div
+            className={[
+              "flex items-center gap-2 border-b border-hairline px-3",
+              showDuration ? "py-2" : "justify-between py-2",
+            ].join(" ")}
+          >
+            {showDuration ? (
+              <div className="flex-1 min-w-0">
+                <TimeWheelPicker
+                  value={effectiveTime}
+                  onChange={(t) => {
+                    setTime(t);
+                    onTimeChange?.(t);
+                  }}
+                />
+              </div>
+            ) : (
+              <>
+                <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                  {isEdit ? "Rediger økt" : "Legg til økt"}
+                </span>
+                {enableDuration && time && (
+                  <span className="mono ml-auto text-[10.5px] tabular-nums text-ink/70">
                     {fmtMin(time.startMin)}–{fmtMin(time.endMin)}
                   </span>
                 )}
-                <button
-                  type="button"
-                  aria-label="Sett varighet"
-                  title="Sett varighet"
-                  onClick={() => setShowDuration((v) => !v)}
-                  className={[
-                    "rounded-md p-1 transition-colors",
-                    showDuration
-                      ? "bg-secondary text-ink"
-                      : "text-muted-foreground hover:bg-secondary hover:text-ink",
-                  ].join(" ")}
-                >
-                  <Clock className="h-3.5 w-3.5" strokeWidth={2} />
-                </button>
-              </div>
+              </>
+            )}
+            {enableDuration && (
+              <button
+                type="button"
+                aria-label="Sett varighet"
+                title="Sett varighet"
+                onClick={() => {
+                  // Materialize the default time the first time we open the
+                  // wheels so the parent reflects it immediately.
+                  if (!showDuration && !time) {
+                    setTime(effectiveTime);
+                    onTimeChange?.(effectiveTime);
+                  }
+                  setShowDuration((v) => !v);
+                }}
+                className={[
+                  "shrink-0 rounded-md p-1 transition-colors",
+                  showDuration
+                    ? "bg-secondary text-ink"
+                    : "text-muted-foreground hover:bg-secondary hover:text-ink",
+                ].join(" ")}
+              >
+                <Clock className="h-3.5 w-3.5" strokeWidth={2} />
+              </button>
             )}
           </div>
 
@@ -1806,28 +1828,6 @@ export function PopoverEditor({
             </button>
           </div>
         </div>
-
-        {/* Mini duration column — appears next to the editor when toggled. */}
-        {enableDuration && showDuration && (
-          <div
-            className="absolute left-full top-0"
-            style={{ width: DUR_W, height: DUR_H, marginLeft: DUR_GAP }}
-          >
-            <MiniDurationColumn
-              startHour={DUR_START_HOUR}
-              rows={DUR_ROWS}
-              rowHeight={DUR_ROW_H}
-              initial={time}
-              color={color}
-              onCommit={(t) => {
-                setTime(t);
-                onTimeChange?.(t);
-                setShowDuration(false);
-              }}
-              onClose={() => setShowDuration(false)}
-            />
-          </div>
-        )}
       </div>
     </div>
   );
