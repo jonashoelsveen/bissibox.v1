@@ -181,22 +181,31 @@ const Cell = forwardRef<HTMLInputElement, CellProps>(function Cell(
     if (digits.length === 1) {
       const d = parseInt(digits, 10);
       if (d > firstDigitMax) {
-        // e.g. typing "5" in an hour cell → commit 05 and advance
+        // e.g. typing "5" in an hour cell → no valid 2-digit hour can
+        // start with 5, so commit as the full value and advance.
         const n = clamp(d, 0, max);
         setText(twoDigit(n));
         if (n !== value) onCommit(n);
         onAutoAdvance();
       }
     } else if (digits.length === 2) {
+      // Two digits typed (e.g. "03"). Commit the value but do NOT
+      // auto-advance — the user can keep typing in this cell or move on
+      // with Tab / ":" / arrow keys.
       const n = clamp(parseInt(digits, 10), 0, max);
       setText(twoDigit(n));
       if (n !== value) onCommit(n);
-      onAutoAdvance();
     }
   };
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     e.stopPropagation();
+    if (e.key === ":" || e.key === "." || e.key === " ") {
+      e.preventDefault();
+      commit(text);
+      onAutoAdvance();
+      return;
+    }
     if (e.key === "ArrowUp" || e.key === "ArrowDown") {
       e.preventDefault();
       const dir = e.key === "ArrowUp" ? 1 : -1;
