@@ -1026,80 +1026,77 @@ export function UnifiedElasticGrid({
                 />
               </Fragment>
             )))}
+            {/* Week-view session rails — rendered as grid items in the same grid
+                so they stay aligned to cells without any JS measurement. */}
+            {mode.kind === "year" && !isSimple && (
+              <WeekEventsOverlay
+                events={weekEvents}
+                weekDates={weekDates}
+                startHour={WEEK_START_HOUR}
+                appKind={appKind}
+                onEventClick={(ev, anchor) => {
+                  setPopover({
+                    key: { year, month: 0, day: 1, session: 0 },
+                    rect: anchor.getBoundingClientRect(),
+                    initialText: ev.title,
+                    initialColor: ev.color,
+                    isEdit: true,
+                    eventId: ev.id,
+                  });
+                }}
+                onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
+                  const ev = events.find((e) => e.id === id);
+                  if (!ev) return;
+                  setPopover({
+                    key: { year, month: 0, day: 1, session: 0 },
+                    rect: (anchor ?? document.body).getBoundingClientRect(),
+                    initialText: ev.title,
+                    initialColor: ev.color,
+                    isEdit: true,
+                    eventId: id,
+                    pendingDate: newDate,
+                    pendingTime: { startMin: newStartMin, endMin: newStartMin + durationMin },
+                  });
+                }}
+                onDeleteEvent={onDeleteEvent}
+                onSaveSessionNote={(id, note) =>
+                  onUpsertEvent({ id, sessionNote: note || undefined })
+                }
+                onUpsertSession={(patch) => onUpsertEvent(patch)}
+                memberId={memberId}
+                viewerRole={viewerRole}
+              />
+            )}
+            {mode.kind === "year" && isSimple && (
+              <DiarySimpleStack
+                events={weekEvents}
+                weekDates={weekDates}
+                onEventClick={(ev, anchor) => {
+                  setPopover({
+                    key: { year, month: 0, day: 1, session: 0 },
+                    rect: anchor.getBoundingClientRect(),
+                    initialText: ev.title,
+                    initialColor: ev.color,
+                    isEdit: true,
+                    eventId: ev.id,
+                  });
+                }}
+                onDeleteEvent={onDeleteEvent}
+                onUpsertSession={(patch) => onUpsertEvent(patch)}
+                onReorderEvents={onReorderEvents}
+                memberId={memberId}
+                viewerRole={viewerRole}
+              />
+            )}
+            {mode.kind === "year" && todayColIdx >= 0 && nowMinutesSinceStart !== null && (
+              <NowLine
+                colIdx={todayColIdx}
+                nowMinutesSinceStart={nowMinutesSinceStart}
+              />
+            )}
           </div>
-          {mode.kind === "year" && !isSimple && (
-            <WeekEventsOverlay
-              scrollRef={scrollRef}
-              events={weekEvents}
-              weekDates={weekDates}
-              headerH={headerH}
-              rowHeight={rowHeight}
-              startHour={WEEK_START_HOUR}
-              appKind={appKind}
-              onEventClick={(ev, anchor) => {
-                setPopover({
-                  key: { year, month: 0, day: 1, session: 0 },
-                  rect: anchor.getBoundingClientRect(),
-                  initialText: ev.title,
-                  initialColor: ev.color,
-                  isEdit: true,
-                  eventId: ev.id,
-                });
-              }}
-              onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
-                const ev = events.find((e) => e.id === id);
-                if (!ev) return;
-                setPopover({
-                  key: { year, month: 0, day: 1, session: 0 },
-                  rect: (anchor ?? document.body).getBoundingClientRect(),
-                  initialText: ev.title,
-                  initialColor: ev.color,
-                  isEdit: true,
-                  eventId: id,
-                  pendingDate: newDate,
-                  pendingTime: { startMin: newStartMin, endMin: newStartMin + durationMin },
-                });
-              }}
-              onDeleteEvent={onDeleteEvent}
-              onSaveSessionNote={(id, note) =>
-                onUpsertEvent({ id, sessionNote: note || undefined })
-              }
-              onUpsertSession={(patch) => onUpsertEvent(patch)}
-              memberId={memberId}
-              viewerRole={viewerRole}
-            />
-          )}
-          {mode.kind === "year" && isSimple && (
-            <DiarySimpleStack
-              scrollRef={scrollRef}
-              events={weekEvents}
-              weekDates={weekDates}
-              onEventClick={(ev, anchor) => {
-                setPopover({
-                  key: { year, month: 0, day: 1, session: 0 },
-                  rect: anchor.getBoundingClientRect(),
-                  initialText: ev.title,
-                  initialColor: ev.color,
-                  isEdit: true,
-                  eventId: ev.id,
-                });
-              }}
-              onDeleteEvent={onDeleteEvent}
-              onUpsertSession={(patch) => onUpsertEvent(patch)}
-              onReorderEvents={onReorderEvents}
-              memberId={memberId}
-              viewerRole={viewerRole}
-            />
-          )}
-          {mode.kind === "year" && todayColIdx >= 0 && nowMinutesSinceStart !== null && (
-            <NowLine
-              scrollRef={scrollRef}
-              colIdx={todayColIdx}
-              nowMinutesSinceStart={nowMinutesSinceStart}
-              rowHeight={rowHeight}
-            />
-          )}
         </div>
+
         </motion.div>
       )}
       </AnimatePresence>
