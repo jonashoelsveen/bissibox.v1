@@ -1858,8 +1858,10 @@ function NowLine({
     <div
       aria-hidden
       style={{
-        gridColumn: colIdx + 2,
-        gridRow: "2 / span 18",
+        gridColumnStart: colIdx + 2,
+        gridColumnEnd: colIdx + 3,
+        gridRowStart: 2,
+        gridRowEnd: 20,
         position: "relative",
         pointerEvents: "none",
         zIndex: 14,
@@ -2018,8 +2020,10 @@ function WeekEventsOverlay({
         <div
           key={`week-rail-${colIdx}`}
           style={{
-            gridColumn: colIdx + 2,
-            gridRow: "2 / span 18",
+            gridColumnStart: colIdx + 2,
+            gridColumnEnd: colIdx + 3,
+            gridRowStart: 2,
+            gridRowEnd: 20,
             position: "relative",
             pointerEvents: "none",
             zIndex: 8,
@@ -2349,8 +2353,10 @@ function DiarySimpleStack({
         <div
           key={`simple-rail-${colIdx}`}
           style={{
-            gridColumn: colIdx + 2,
-            gridRow: "2",
+            gridColumnStart: colIdx + 2,
+            gridColumnEnd: colIdx + 3,
+            gridRowStart: 2,
+            gridRowEnd: 3,
             position: "relative",
             pointerEvents: "none",
             zIndex: 8,
