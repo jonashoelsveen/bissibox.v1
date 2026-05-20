@@ -315,32 +315,40 @@ export function MonthGridType1({
     [days],
   );
 
+  // Anchor the popover to the day cell (so its top edge aligns with the
+  // week-row's top edge), regardless of where the triggering chip sits
+  // vertically inside the cell. Keeps drag-drop / click / new all consistent.
+  const cellAnchorRect = useCallback((anchor: HTMLElement): DOMRect => {
+    const cell = anchor.closest('[data-day-anchor]') as HTMLElement | null;
+    return (cell ?? anchor).getBoundingClientRect();
+  }, []);
+
   const openItemEditor = useCallback(
     (pos: CellPos, idx: number, raw: string, anchor: HTMLElement) => {
       const { color, text } = splitColor(raw);
       setPopover({
         pos,
-        rect: anchor.getBoundingClientRect(),
+        rect: cellAnchorRect(anchor),
         editIdx: idx,
         initialText: text,
         initialColor: color,
       });
     },
-    [],
+    [cellAnchorRect],
   );
 
   const openEventEditor = useCallback(
     (pos: CellPos, ev: CalendarEvent, anchor: HTMLElement) => {
       setPopover({
         pos,
-        rect: anchor.getBoundingClientRect(),
+        rect: cellAnchorRect(anchor),
         editIdx: -1,
         initialText: ev.title,
         initialColor: ev.color,
         eventId: ev.id,
       });
     },
-    [],
+    [cellAnchorRect],
   );
 
   const closePopover = useCallback(() => setPopover(null), []);
