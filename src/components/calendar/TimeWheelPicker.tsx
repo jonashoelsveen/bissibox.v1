@@ -1,22 +1,26 @@
 /**
- * TimeWheelPicker — iOS-style 3D rotating wheels for picking a "from / to"
- * time range. Used in the calendar week/month edit-session popover header.
+ * TimeWheelPicker — compact inline time-range picker that lives inside the
+ * popover header WITHOUT changing its height.
  *
- * Two pairs of wheels (HH + MM) separated by an en-dash:
- *   [HH] [MM]  –  [HH] [MM]
+ *   [HH][MM] – [HH][MM]
  *
- * • Native momentum + scroll-snap give the spin-and-settle feel on desktop.
- * • Each visible option is rotated around X to fake a 3D cylinder.
- * • Mouse wheel = exactly one step per notch. Trackpad swipes preserve
- *   velocity via native scroll-snap.
- * • Keyboard: Up/Down step through values; Tab moves between wheels.
- * • Guardrail: if "from" passes "to", "to" auto-bumps to from + 60 min.
+ * Each cell is a single-row scrollable wheel. The focused cell gets a thin
+ * black outline ("smile" border). Keyboard:
+ *   ← →   move focus between the four wheels
+ *   ↑ ↓   step one value within the focused wheel
+ * Pointer:
+ *   wheel / trackpad scroll  → smoothly changes the focused value, snapping
+ *   when motion stops. Tuned for sharp, responsive feel.
+ *
+ * Guardrail: when "from" moves past "to", "to" auto-bumps to from + 60 min.
  */
 
 import {
   KeyboardEvent as ReactKeyboardEvent,
+  forwardRef,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useRef,
   useState,
 } from "react";
@@ -31,11 +35,11 @@ interface TimeWheelPickerProps {
   onChange: (next: TimeRange) => void;
   /** Minute step for the minute wheels. Defaults to 5. */
   minuteStep?: number;
+  /** Auto-focus the first wheel on mount. Defaults to true. */
+  autoFocus?: boolean;
 }
 
-const ITEM_H = 28;        // px — height of one option row
-const VISIBLE = 5;        // odd number — center + 2 above + 2 below
-const CENTER_IDX = Math.floor(VISIBLE / 2);
+const ITEM_H = 18; // px — single visible row, matches the header text line-height
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -43,6 +47,7 @@ export function TimeWheelPicker({
   value,
   onChange,
   minuteStep = 5,
+  autoFocus = true,
 }: TimeWheelPickerProps) {
   const MINUTES = Array.from(
     { length: Math.floor(60 / minuteStep) },
@@ -54,7 +59,6 @@ export function TimeWheelPicker({
   const toH = Math.floor(value.endMin / 60);
   const toM = value.endMin % 60;
 
-  // Snap incoming minutes onto the nearest step so the wheel can find them.
   const snap = (m: number) => {
     const idx = MINUTES.reduce(
       (best, mm, i) =>
@@ -73,7 +77,6 @@ export function TimeWheelPicker({
   const setTo = (h: number, m: number) => {
     const end = h * 60 + m;
     if (end <= value.startMin) {
-      // Don't let "to" land at or before "from"; nudge it one step ahead.
       const bumped = Math.min(24 * 60 - minuteStep, value.startMin + minuteStep);
       onChange({ startMin: value.startMin, endMin: bumped });
     } else {
@@ -81,41 +84,83 @@ export function TimeWheelPicker({
     }
   };
 
+  // Refs for the 4 wheels, used to move focus left/right.
+  const wheelRefs = [
+    useRef<WheelHandle>(null),
+    useRef<WheelHandle>(null),
+    useRef<WheelHandle>(null),
+    useRef<WheelHandle>(null),
+  ];
+
+  const focusSibling = useCallback(
+    (from: number, dir: -1 | 1) => {
+      const next = Math.max(0, Math.min(3, from + dir));
+      wheelRefs[next].current?.focus();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  useEffect(() => {
+    if (autoFocus) {
+      // Delay one frame so the popover layout settles first.
+      const t = requestAnimationFrame(() => wheelRefs[0].current?.focus());
+      return () => cancelAnimationFrame(t);
+    }
+  }, [autoFocus]);
+
   return (
-    <div className="flex items-center justify-center gap-1 select-none">
+    <div className="flex items-center justify-center gap-0.5 select-none">
       <Wheel
+        ref={wheelRefs[0]}
         ariaLabel="Fra time"
         items={HOURS}
         value={fromH}
-        format={(n) => String(n).padStart(2, "0")}
+        format={twoDigit}
         onChange={(h) => setFrom(h, snap(fromM))}
+        onArrowH={(d) => focusSibling(0, d)}
       />
-      <span className="text-[12px] font-medium text-ink/60">:</span>
+      <Sep />
       <Wheel
+        ref={wheelRefs[1]}
         ariaLabel="Fra minutt"
         items={MINUTES}
         value={snap(fromM)}
-        format={(n) => String(n).padStart(2, "0")}
+        format={twoDigit}
         onChange={(m) => setFrom(fromH, m)}
+        onArrowH={(d) => focusSibling(1, d)}
       />
       <span className="mx-1.5 text-[12px] font-medium text-ink/60">–</span>
       <Wheel
+        ref={wheelRefs[2]}
         ariaLabel="Til time"
         items={HOURS}
         value={toH}
-        format={(n) => String(n).padStart(2, "0")}
+        format={twoDigit}
         onChange={(h) => setTo(h, snap(toM))}
+        onArrowH={(d) => focusSibling(2, d)}
       />
-      <span className="text-[12px] font-medium text-ink/60">:</span>
+      <Sep />
       <Wheel
+        ref={wheelRefs[3]}
         ariaLabel="Til minutt"
         items={MINUTES}
         value={snap(toM)}
-        format={(n) => String(n).padStart(2, "0")}
+        format={twoDigit}
         onChange={(m) => setTo(toH, m)}
+        onArrowH={(d) => focusSibling(3, d)}
       />
     </div>
   );
+}
+
+const twoDigit = (n: number) => String(n).padStart(2, "0");
+const Sep = () => (
+  <span className="text-[12px] font-medium text-ink/60">:</span>
+);
+
+interface WheelHandle {
+  focus: () => void;
 }
 
 interface WheelProps {
@@ -124,20 +169,28 @@ interface WheelProps {
   ariaLabel: string;
   format: (n: number) => string;
   onChange: (n: number) => void;
+  onArrowH: (dir: -1 | 1) => void;
 }
 
-function Wheel({ items, value, ariaLabel, format, onChange }: WheelProps) {
-  const ref = useRef<HTMLDivElement | null>(null);
+const Wheel = forwardRef<WheelHandle, WheelProps>(function Wheel(
+  { items, value, ariaLabel, format, onChange, onArrowH },
+  ref,
+) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const snapTimer = useRef<number | null>(null);
-  const wheelAccum = useRef(0);
   const wheelCooldown = useRef(0);
   const [activeIdx, setActiveIdx] = useState(() =>
     Math.max(0, items.indexOf(value)),
   );
+  const [focused, setFocused] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => scrollRef.current?.focus(),
+  }));
 
   // Sync external value → scroll position.
   useEffect(() => {
-    const el = ref.current;
+    const el = scrollRef.current;
     if (!el) return;
     const idx = Math.max(0, items.indexOf(value));
     const target = idx * ITEM_H;
@@ -149,7 +202,7 @@ function Wheel({ items, value, ariaLabel, format, onChange }: WheelProps) {
   }, [value, items.length]);
 
   const settle = useCallback(() => {
-    const el = ref.current;
+    const el = scrollRef.current;
     if (!el) return;
     const idx = Math.max(
       0,
@@ -165,7 +218,7 @@ function Wheel({ items, value, ariaLabel, format, onChange }: WheelProps) {
   }, [items, onChange, value]);
 
   const onScroll = () => {
-    const el = ref.current;
+    const el = scrollRef.current;
     if (!el) return;
     const idx = Math.max(
       0,
@@ -173,37 +226,40 @@ function Wheel({ items, value, ariaLabel, format, onChange }: WheelProps) {
     );
     if (idx !== activeIdx) setActiveIdx(idx);
     if (snapTimer.current) window.clearTimeout(snapTimer.current);
-    snapTimer.current = window.setTimeout(settle, 110);
+    snapTimer.current = window.setTimeout(settle, 80);
   };
 
-  // Mouse wheel: one notch = one step. Trackpad swipes accumulate & snap.
+  // Sharp, responsive scroll handling: every notch / pixel of delta directly
+  // moves the wheel; idle snaps quickly.
   const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const el = ref.current;
+    const el = scrollRef.current;
     if (!el) return;
     const now = Date.now();
-    const isLikelyMouse =
-      Math.abs(e.deltaY) >= 40 && e.deltaMode === 0 && Number.isInteger(e.deltaY);
-    if (isLikelyMouse || e.deltaMode === 1) {
-      // Discrete notch — debounce so a single physical click = one step.
+
+    // Classic mouse wheel = large discrete notches (|deltaY| >= 50).
+    const isNotch =
+      e.deltaMode === 1 || (e.deltaMode === 0 && Math.abs(e.deltaY) >= 50);
+
+    if (isNotch) {
       if (now < wheelCooldown.current) return;
-      wheelCooldown.current = now + 70;
+      wheelCooldown.current = now + 45;
       const dir = e.deltaY > 0 ? 1 : -1;
       const nextIdx = Math.max(0, Math.min(items.length - 1, activeIdx + dir));
       el.scrollTo({ top: nextIdx * ITEM_H, behavior: "smooth" });
       setActiveIdx(nextIdx);
       const next = items[nextIdx];
       if (next !== value) onChange(next);
-    } else {
-      // Trackpad: accumulate dampened delta then let snap settle.
-      wheelAccum.current += e.deltaY * 0.6;
-      el.scrollTop = Math.max(
-        0,
-        Math.min((items.length - 1) * ITEM_H, el.scrollTop + e.deltaY * 0.6),
-      );
-      if (snapTimer.current) window.clearTimeout(snapTimer.current);
-      snapTimer.current = window.setTimeout(settle, 120);
+      return;
     }
+
+    // Trackpad / fine wheel: 1:1 pixel mapping for a sharp, smooth feel.
+    el.scrollTop = Math.max(
+      0,
+      Math.min((items.length - 1) * ITEM_H, el.scrollTop + e.deltaY),
+    );
+    if (snapTimer.current) window.clearTimeout(snapTimer.current);
+    snapTimer.current = window.setTimeout(settle, 70);
   };
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -211,73 +267,57 @@ function Wheel({ items, value, ariaLabel, format, onChange }: WheelProps) {
       e.preventDefault();
       const dir = e.key === "ArrowDown" ? 1 : -1;
       const nextIdx = Math.max(0, Math.min(items.length - 1, activeIdx + dir));
-      const el = ref.current;
+      const el = scrollRef.current;
       if (el) el.scrollTo({ top: nextIdx * ITEM_H, behavior: "smooth" });
       setActiveIdx(nextIdx);
       const next = items[nextIdx];
       if (next !== value) onChange(next);
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      onArrowH(-1);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      onArrowH(1);
     }
   };
 
   return (
-    <div className="relative" style={{ width: 36, height: ITEM_H * VISIBLE }}>
-      {/* Focus zone — soft band marking the selected row. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 z-10 rounded-md border-y border-ink/15 bg-ink/[0.04]"
-        style={{ top: CENTER_IDX * ITEM_H, height: ITEM_H }}
-      />
-      {/* Top + bottom fade masks — sell the 3D cylinder edge. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-20"
-        style={{
-          background:
-            "linear-gradient(to bottom, var(--card) 0%, color-mix(in oklab, var(--card) 0%, transparent) 30%, color-mix(in oklab, var(--card) 0%, transparent) 70%, var(--card) 100%)",
-        }}
-      />
-      <div
-        ref={ref}
-        role="listbox"
-        aria-label={ariaLabel}
-        tabIndex={0}
-        onScroll={onScroll}
-        onWheel={onWheel}
-        onKeyDown={onKeyDown}
-        className="no-scrollbar relative h-full w-full overflow-y-auto outline-none focus:ring-0"
-        style={{
-          scrollSnapType: "y mandatory",
-          perspective: 600,
-          scrollbarWidth: "none",
-        }}
-      >
-        <div style={{ height: CENTER_IDX * ITEM_H }} />
-        {items.map((n, i) => {
-          const dist = i - activeIdx;
-          const abs = Math.abs(dist);
-          const angle = Math.max(-60, Math.min(60, dist * 18));
-          const opacity = abs === 0 ? 1 : abs === 1 ? 0.7 : abs === 2 ? 0.35 : 0.15;
-          const scale = abs === 0 ? 1 : 1 - Math.min(0.18, abs * 0.06);
-          return (
-            <div
-              key={n}
-              role="option"
-              aria-selected={i === activeIdx}
-              className="mono flex items-center justify-center text-[13px] tabular-nums text-ink"
-              style={{
-                height: ITEM_H,
-                scrollSnapAlign: "center",
-                transform: `rotateX(${angle}deg) scale(${scale})`,
-                opacity,
-                transition: "opacity 80ms linear, transform 80ms linear",
-              }}
-            >
-              {format(n)}
-            </div>
-          );
-        })}
-        <div style={{ height: CENTER_IDX * ITEM_H }} />
-      </div>
+    <div
+      ref={scrollRef}
+      role="listbox"
+      aria-label={ariaLabel}
+      tabIndex={0}
+      onScroll={onScroll}
+      onWheel={onWheel}
+      onKeyDown={onKeyDown}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      onMouseDown={() => scrollRef.current?.focus()}
+      className={[
+        "no-scrollbar relative overflow-y-auto outline-none rounded-[4px] transition-colors",
+        focused ? "ring-1 ring-ink" : "ring-1 ring-transparent",
+      ].join(" ")}
+      style={{
+        width: 20,
+        height: ITEM_H,
+        scrollSnapType: "y mandatory",
+        scrollbarWidth: "none",
+      }}
+    >
+      {items.map((n, i) => (
+        <div
+          key={n}
+          role="option"
+          aria-selected={i === activeIdx}
+          className="mono flex items-center justify-center text-[12px] tabular-nums text-ink"
+          style={{
+            height: ITEM_H,
+            scrollSnapAlign: "center",
+          }}
+        >
+          {format(n)}
+        </div>
+      ))}
     </div>
   );
-}
+});
