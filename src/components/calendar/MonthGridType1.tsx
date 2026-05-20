@@ -850,11 +850,11 @@ export function MonthGridType1({
                         | UnifiedItem;
                       const renderList: RenderItem[] = [...baseVisible];
                       if (isTargetDay && dragSession) {
-                        const idx = Math.min(
-                          Math.max(0, dragSession.insertIndex),
-                          renderList.length,
-                        );
-                        renderList.splice(idx, 0, { kind: "ghost" });
+                        // Ghost preview always shows at the top of the day
+                        // cell during drag, so the user clearly sees which
+                        // day is targeted. The actual drop still places the
+                        // session in its correct sorted slot by start time.
+                        renderList.splice(0, 0, { kind: "ghost" });
                       }
                       const renderVisible = renderList.slice(0, MAX_VISIBLE);
 
