@@ -109,8 +109,13 @@ export function TimeWheelPicker({
     }
   }, [autoFocus]);
 
+  const advance = useCallback(
+    (from: number) => focusSibling(from, 1),
+    [focusSibling],
+  );
+
   return (
-    <div className="flex items-center justify-center gap-0.5 select-none">
+    <div className="flex items-center justify-start gap-1 select-none pl-1">
       <Wheel
         ref={wheelRefs[0]}
         ariaLabel="Fra time"
@@ -119,6 +124,7 @@ export function TimeWheelPicker({
         format={twoDigit}
         onChange={(h) => setFrom(h, snap(fromM))}
         onArrowH={(d) => focusSibling(0, d)}
+        onTypedComplete={() => advance(0)}
       />
       <Sep />
       <Wheel
@@ -129,6 +135,7 @@ export function TimeWheelPicker({
         format={twoDigit}
         onChange={(m) => setFrom(fromH, m)}
         onArrowH={(d) => focusSibling(1, d)}
+        onTypedComplete={() => advance(1)}
       />
       <span className="mx-1.5 text-[12px] font-medium text-ink/60">–</span>
       <Wheel
@@ -139,6 +146,7 @@ export function TimeWheelPicker({
         format={twoDigit}
         onChange={(h) => setTo(h, snap(toM))}
         onArrowH={(d) => focusSibling(2, d)}
+        onTypedComplete={() => advance(2)}
       />
       <Sep />
       <Wheel
@@ -149,6 +157,7 @@ export function TimeWheelPicker({
         format={twoDigit}
         onChange={(m) => setTo(toH, m)}
         onArrowH={(d) => focusSibling(3, d)}
+        onTypedComplete={() => advance(3)}
       />
     </div>
   );
