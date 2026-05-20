@@ -437,6 +437,10 @@ export function MonthGridType1({
     originalStartISO: string;
     originalEndISO: string;
     event: CalendarEvent;
+    offsetX: number;
+    offsetY: number;
+    chipWidth: number;
+    chipHeight: number;
   } | null>(null);
 
 
