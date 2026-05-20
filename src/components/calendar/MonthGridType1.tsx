@@ -609,48 +609,11 @@ export function MonthGridType1({
                     if (dragAnchorRef.current) {
                       setRange({ a: dragAnchorRef.current, b: pos });
                     }
-                    if (dragItem && dragItem.source === "event" && d.inMonth) {
-                      setHoverDayKey(id);
-                    }
                   }}
                   onMouseUp={(e) => {
                     if (dragItem && d.inMonth) {
-                      if (dragItem.source === "event") {
-                        // Capture originals before the optimistic move.
-                        const ev = events.find((x) => x.id === dragItem.eventId);
-                        const originalStartISO = ev?.startISO;
-                        const originalEndISO = ev?.endISO;
-                        const movedId = dragItem.eventId;
-                        const sameDayDrop =
-                          dragItem.fromKey.year === k.year &&
-                          dragItem.fromKey.month === k.month &&
-                          dragItem.fromKey.day === k.day;
-                        moveItem(
-                          dragItem.fromKey,
-                          k,
-                          dragItem.text,
-                          { source: "event", eventId: dragItem.eventId },
-                        );
-                        if (!sameDayDrop && originalStartISO && originalEndISO) {
-                          requestAnimationFrame(() => {
-                            const el = document.querySelector<HTMLElement>(
-                              `[data-event-id="${movedId.replace(/"/g, '\\"')}"]`,
-                            );
-                            const rect = el?.getBoundingClientRect();
-                            if (!rect) return;
-                            setPendingMove({
-                              id: movedId,
-                              originalStartISO,
-                              originalEndISO,
-                              anchorRect: rect,
-                            });
-                          });
-                        }
-                      } else {
-                        moveItem(dragItem.fromKey, k, dragItem.text, { source: "legacy" });
-                      }
+                      moveItem(dragItem.fromKey, k, dragItem.text, { source: "legacy" });
                       setDragItem(null);
-                      setHoverDayKey(null);
                     }
                     // If user clicked without dragging, collapse range to focus
                     if (
@@ -682,12 +645,9 @@ export function MonthGridType1({
                     "hover:bg-secondary/40",
                   ].join(" ")}
                   data-day-anchor=""
+                  data-day-key={id}
                   style={{ cursor: "default" }}
                 >
-                  {/* Drop-target border preview during cross-day event drag */}
-                  {hoverDayKey === id && dragItem?.source === "event" && (
-                    <div className="pointer-events-none absolute inset-0 z-10 rounded-[3px] border-2 border-solid border-primary/70 bg-primary/10" />
-                  )}
                   {/* Day number — small, top-right, muted */}
                   <div className="flex items-start justify-between px-2 pt-1.5">
                     <span className="invisible text-[11px]">·</span>
