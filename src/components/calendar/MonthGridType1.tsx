@@ -428,6 +428,17 @@ export function MonthGridType1({
     originalEndISO: string;
     anchorRect: DOMRect;
   } | null>(null);
+  // Mutable tracking ref used by chip onPointerDown to remember the press
+  // before deciding if it's a click or a drag (>= 4px movement).
+  const dragStartRef = useRef<{
+    x: number;
+    y: number;
+    eventId: string;
+    fromKey: CellKey;
+    originalStartISO: string;
+    originalEndISO: string;
+    event: CalendarEvent;
+  } | null>(null);
 
   const moveItem = useCallback(
     (
