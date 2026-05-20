@@ -1880,11 +1880,25 @@ function NowLine({
       });
     };
     measure();
+    const ro = new ResizeObserver(() => measure());
+    if (scrollRef.current) ro.observe(scrollRef.current);
+    const scrollAncestors: (HTMLElement | Window)[] = [window];
+    let node: HTMLElement | null = scrollRef.current?.parentElement ?? null;
+    while (node) {
+      const cs = window.getComputedStyle(node);
+      if (/(auto|scroll)/.test(cs.overflowY) || /(auto|scroll)/.test(cs.overflow)) {
+        scrollAncestors.push(node);
+      }
+      node = node.parentElement;
+    }
+    for (const t of scrollAncestors) t.addEventListener("scroll", measure, { passive: true });
     const id = window.setInterval(measure, 500);
     window.addEventListener("resize", measure);
     return () => {
       window.clearInterval(id);
       window.removeEventListener("resize", measure);
+      ro.disconnect();
+      for (const t of scrollAncestors) t.removeEventListener("scroll", measure);
     };
   }, [colIdx, scrollRef]);
 
