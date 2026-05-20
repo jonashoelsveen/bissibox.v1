@@ -488,6 +488,130 @@ export function MonthGridType1({
     [calId, data, onCommitText, events, onMoveEvent],
   );
 
+  // Pointer-based cross-day session drag. We attach window listeners once
+  // and consult dragStartRef + the current events list to compute the
+  // target day cell + the insertion index for the ghost preview chip.
+  useEffect(() => {
+    const eventsRef = events;
+    const onMove = (e: PointerEvent) => {
+      const start = dragStartRef.current;
+      if (!start) return;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      const active = dragSessionRef.current;
+      if (!active && Math.hypot(dx, dy) < 4) return;
+
+      // Hit-test the cell under the pointer.
+      const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const cell = node?.closest<HTMLElement>("[data-cell-pos]");
+      const dayKey = cell?.getAttribute("data-day-key") ?? null;
+      const posStr = cell?.getAttribute("data-cell-pos") ?? null;
+      let targetDate: Date | null = null;
+      let insertIndex = 0;
+      if (cell && posStr && dayKey) {
+        const [rowS, colS] = posStr.split("-");
+        const cellIdx = Number(rowS) * 7 + Number(colS);
+        const d = days[cellIdx];
+        if (d && d.inMonth) {
+          targetDate = d.date;
+          // Compute insertion index by time-of-day, ignoring the moved event.
+          const movedKey = Date.parse(start.originalStartISO);
+          const sorted = eventsRef
+            .filter((ev) => ev.id !== start.eventId && sameDay(fromISOLocal(ev.startISO), d.date))
+            .slice()
+            .sort((a, b) => {
+              const ka = a.sortIndex ?? Date.parse(a.startISO);
+              const kb = b.sortIndex ?? Date.parse(b.startISO);
+              return ka - kb;
+            });
+          insertIndex = sorted.length;
+          for (let i = 0; i < sorted.length; i++) {
+            const ka = sorted[i].sortIndex ?? Date.parse(sorted[i].startISO);
+            if (movedKey < ka) {
+              insertIndex = i;
+              break;
+            }
+          }
+        } else {
+          targetDate = null;
+        }
+      }
+
+      if (!active) {
+        setDragSession({
+          eventId: start.eventId,
+          fromKey: start.fromKey,
+          originalStartISO: start.originalStartISO,
+          originalEndISO: start.originalEndISO,
+          event: start.event,
+          targetDayKey: targetDate ? dayKey : null,
+          targetDate,
+          insertIndex,
+        });
+      } else {
+        setDragSession((prev) =>
+          prev
+            ? {
+                ...prev,
+                targetDayKey: targetDate ? dayKey : null,
+                targetDate,
+                insertIndex,
+              }
+            : prev,
+        );
+      }
+    };
+
+    const onUp = () => {
+      const start = dragStartRef.current;
+      const drag = dragSessionRef.current;
+      dragStartRef.current = null;
+      if (!drag) {
+        return;
+      }
+      setDragSession(null);
+      void start;
+      const td = drag.targetDate;
+      if (!td) return;
+      const sameDayDrop =
+        drag.fromKey.year === td.getFullYear() &&
+        drag.fromKey.month === td.getMonth() &&
+        drag.fromKey.day === td.getDate();
+      if (sameDayDrop) return;
+      const newKey: CellKey = {
+        year: td.getFullYear(),
+        month: td.getMonth(),
+        day: td.getDate(),
+        session: 0,
+      };
+      moveItem(drag.fromKey, newKey, drag.event.title, {
+        source: "event",
+        eventId: drag.eventId,
+      });
+      requestAnimationFrame(() => {
+        const el = document.querySelector<HTMLElement>(
+          `[data-event-id="${drag.eventId.replace(/"/g, '\\"')}"]`,
+        );
+        const rect = el?.getBoundingClientRect();
+        if (!rect) return;
+        setPendingMove({
+          id: drag.eventId,
+          originalStartISO: drag.originalStartISO,
+          originalEndISO: drag.originalEndISO,
+          anchorRect: rect,
+        });
+      });
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [days, events, moveItem]);
+
+
   // ───────────────────────── Render ─────────────────────────
 
   // Standard row-height target so all weeks stay perfectly aligned.
