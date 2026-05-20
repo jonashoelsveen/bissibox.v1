@@ -200,6 +200,12 @@ const Cell = forwardRef<HTMLInputElement, CellProps>(function Cell(
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     e.stopPropagation();
+    if (e.key === ":" || e.key === "." || e.key === " ") {
+      e.preventDefault();
+      commit(text);
+      onAutoAdvance();
+      return;
+    }
     if (e.key === "ArrowUp" || e.key === "ArrowDown") {
       e.preventDefault();
       const dir = e.key === "ArrowUp" ? 1 : -1;
