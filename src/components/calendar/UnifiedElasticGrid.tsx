@@ -784,7 +784,7 @@ export function UnifiedElasticGrid({
   return (
     <div
       ref={containerRef}
-      className="relative w-full"
+      className="relative flex h-full min-h-0 w-full flex-col"
     >
       {/* Top-right control cluster: [Mode ▾] [‹ 📅 ›].
           When the parent controls viewMode it also renders these controls
