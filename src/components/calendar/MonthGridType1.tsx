@@ -526,19 +526,16 @@ export function MonthGridType1({
         const d = days[cellIdx];
         if (d) {
           targetDate = d.date;
-          // Compute insertion index by time-of-day, ignoring the moved event.
+          // Compute insertion index strictly by session start time,
+          // ignoring the moved event. Earlier start = earlier slot.
           const movedKey = Date.parse(start.originalStartISO);
           const sorted = eventsRef
             .filter((ev) => ev.id !== start.eventId && sameDay(fromISOLocal(ev.startISO), d.date))
             .slice()
-            .sort((a, b) => {
-              const ka = a.sortIndex ?? Date.parse(a.startISO);
-              const kb = b.sortIndex ?? Date.parse(b.startISO);
-              return ka - kb;
-            });
+            .sort((a, b) => Date.parse(a.startISO) - Date.parse(b.startISO));
           insertIndex = sorted.length;
           for (let i = 0; i < sorted.length; i++) {
-            const ka = sorted[i].sortIndex ?? Date.parse(sorted[i].startISO);
+            const ka = Date.parse(sorted[i].startISO);
             if (movedKey < ka) {
               insertIndex = i;
               break;
