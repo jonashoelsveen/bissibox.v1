@@ -49,7 +49,7 @@ export function DiaryPage() {
   );
 
   return (
-    <div className="h-full overflow-hidden bg-white pr-4 md:pr-6">
+    <div className="h-full overflow-hidden bg-white">
       <div
         className="relative grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
         style={{ gridTemplateColumns: panelOpen ? "256px 1fr" : "0px 1fr" }}
