@@ -416,6 +416,12 @@ export function MonthGridType1({
     targetDayKey: string | null;
     targetDate: Date | null;
     insertIndex: number;
+    pointerX: number;
+    pointerY: number;
+    offsetX: number;
+    offsetY: number;
+    chipWidth: number;
+    chipHeight: number;
   } | null>(null);
   const dragSessionRef = useRef(dragSession);
   useEffect(() => {
@@ -431,6 +437,10 @@ export function MonthGridType1({
     originalStartISO: string;
     originalEndISO: string;
     event: CalendarEvent;
+    offsetX: number;
+    offsetY: number;
+    chipWidth: number;
+    chipHeight: number;
   } | null>(null);
 
 
@@ -541,6 +551,12 @@ export function MonthGridType1({
           targetDayKey: targetDate ? dayKey : null,
           targetDate,
           insertIndex,
+          pointerX: e.clientX,
+          pointerY: e.clientY,
+          offsetX: start.offsetX,
+          offsetY: start.offsetY,
+          chipWidth: start.chipWidth,
+          chipHeight: start.chipHeight,
         });
       } else {
         setDragSession((prev) =>
@@ -550,6 +566,8 @@ export function MonthGridType1({
                 targetDayKey: targetDate ? dayKey : null,
                 targetDate,
                 insertIndex,
+                pointerX: e.clientX,
+                pointerY: e.clientY,
               }
             : prev,
         );
@@ -888,13 +906,18 @@ export function MonthGridType1({
                             return (
                           <motion.div
                             key={`${id}-${itemKey}`}
-                            layout
-                            layoutId={it.kind === "event" ? `evt-${it.event.id}` : undefined}
-                            initial={{ opacity: 0, y: -2 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -2 }}
+                            initial={{ opacity: 0 }}
+                            animate={{
+                              opacity:
+                                dragSession &&
+                                it.kind === "event" &&
+                                dragSession.eventId === it.event.id
+                                  ? 0
+                                  : 1,
+                            }}
+                            exit={{ opacity: 0 }}
                             transition={{
-                              duration: 0.14,
+                              duration: 0.08,
                               ease: [0.2, 0, 0, 1],
                             }}
                             data-role="item"
@@ -905,6 +928,7 @@ export function MonthGridType1({
                               if (e.button !== 0) return;
                               if (it.kind === "legacy") return;
                               if (it.event.id.startsWith("__ghost__:")) return;
+                              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                               // Start tracking a potential drag.
                               dragStartRef.current = {
                                 x: e.clientX,
@@ -914,6 +938,10 @@ export function MonthGridType1({
                                 originalStartISO: it.event.startISO,
                                 originalEndISO: it.event.endISO,
                                 event: it.event,
+                                offsetX: e.clientX - rect.left,
+                                offsetY: e.clientY - rect.top,
+                                chipWidth: rect.width,
+                                chipHeight: rect.height,
                               };
                               // Prevent cell-level range selection mousedown.
                               e.stopPropagation();
@@ -1331,6 +1359,26 @@ export function MonthGridType1({
             }}
           />
         )}
+        {dragSession && (() => {
+          const ev = dragSession.event;
+          const { color } = splitColor(ev.title ? `[${ev.color ?? ""}] ${ev.title}` : ev.title);
+          void color;
+          return (
+            <div
+              className="pointer-events-none fixed z-[60] truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink shadow-[0_8px_24px_rgba(15,23,42,0.18)] ring-1 ring-ink/10"
+              style={{
+                left: dragSession.pointerX - dragSession.offsetX,
+                top: dragSession.pointerY - dragSession.offsetY,
+                width: dragSession.chipWidth,
+                height: dragSession.chipHeight,
+                background: ev.color ?? "hsl(var(--secondary))",
+                opacity: 0.95,
+              }}
+            >
+              {ev.title}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
