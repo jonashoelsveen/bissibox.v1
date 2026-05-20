@@ -194,9 +194,11 @@ function YearCalendarViewInner({
   };
 
   return (
-    <div className="flex flex-col">
-      {/* Header — title + nav arrows on the left, action cluster on the right */}
-      <div className="sticky top-0 z-30 flex h-12 items-center justify-between gap-3 bg-white px-0.5">
+    <div className="flex h-full min-h-0 flex-col">
+      {/* Header — title + nav arrows on the left, action cluster on the right.
+          Sits OUTSIDE the scrolling region so it stays frozen like the
+          global top tab bar, and the right scrollbar starts under it. */}
+      <div className="flex h-10 shrink-0 items-center justify-between gap-3 bg-white px-0.5">
         <div className={`flex items-center gap-2 min-w-0 transition-[padding-left] duration-300 ease-out ${panelOpen ? "pl-0" : "pl-9"}`}>
           <ViewTitle viewMode={viewMode} currentDate={currentDate} />
           <MonthNavControl
@@ -250,7 +252,7 @@ function YearCalendarViewInner({
         </div>
       </div>
 
-      <div data-preview-active={previewActive ? "true" : "false"}>
+      <div data-preview-active={previewActive ? "true" : "false"} className="flex-1 min-h-0 overflow-y-auto pr-4 md:pr-6">
         <UnifiedElasticGrid
           calId={calId}
           year={meta.year}
