@@ -2343,7 +2343,7 @@ function WeekEventsOverlay({
             }}
           >
             <div
-              className="absolute rounded-[3px] border-2 border-dashed border-primary/70 bg-primary/10"
+              className="absolute rounded-[3px] border-2 border-solid border-primary/70 bg-primary/10"
               style={{ left: 2, right: 2, top, height }}
             />
           </div>

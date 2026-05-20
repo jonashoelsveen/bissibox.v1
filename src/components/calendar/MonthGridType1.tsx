@@ -55,6 +55,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
+import { MoveSavePopover } from "./MoveSavePopover";
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 
 /**
@@ -451,6 +452,20 @@ export function MonthGridType1({
     | { fromKey: CellKey; text: string; source: "event"; eventId: string }
     | null
   >(null);
+  // Highlighted day cell during a cross-day event drag (solid border preview).
+  const [hoverDayKey, setHoverDayKey] = useState<string | null>(null);
+  // Pending move awaiting save/cancel via MoveSavePopover.
+  const [pendingMove, setPendingMove] = useState<{
+    id: string;
+    originalStartISO: string;
+    originalEndISO: string;
+    anchorRect: DOMRect;
+  } | null>(null);
+  useEffect(() => {
+    const onUp = () => setHoverDayKey(null);
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+  }, []);
 
   const moveItem = useCallback(
     (
@@ -646,21 +661,48 @@ export function MonthGridType1({
                     if (dragAnchorRef.current) {
                       setRange({ a: dragAnchorRef.current, b: pos });
                     }
-                    if (dragItem) {
-                      // hover preview only — drop logic is in onMouseUp
+                    if (dragItem && dragItem.source === "event" && d.inMonth) {
+                      setHoverDayKey(id);
                     }
                   }}
                   onMouseUp={(e) => {
                     if (dragItem && d.inMonth) {
-                      moveItem(
-                        dragItem.fromKey,
-                        k,
-                        dragItem.text,
-                        dragItem.source === "event"
-                          ? { source: "event", eventId: dragItem.eventId }
-                          : { source: "legacy" },
-                      );
+                      if (dragItem.source === "event") {
+                        // Capture originals before the optimistic move.
+                        const ev = events.find((x) => x.id === dragItem.eventId);
+                        const originalStartISO = ev?.startISO;
+                        const originalEndISO = ev?.endISO;
+                        const movedId = dragItem.eventId;
+                        const sameDayDrop =
+                          dragItem.fromKey.year === k.year &&
+                          dragItem.fromKey.month === k.month &&
+                          dragItem.fromKey.day === k.day;
+                        moveItem(
+                          dragItem.fromKey,
+                          k,
+                          dragItem.text,
+                          { source: "event", eventId: dragItem.eventId },
+                        );
+                        if (!sameDayDrop && originalStartISO && originalEndISO) {
+                          requestAnimationFrame(() => {
+                            const el = document.querySelector<HTMLElement>(
+                              `[data-event-id="${movedId.replace(/"/g, '\\"')}"]`,
+                            );
+                            const rect = el?.getBoundingClientRect();
+                            if (!rect) return;
+                            setPendingMove({
+                              id: movedId,
+                              originalStartISO,
+                              originalEndISO,
+                              anchorRect: rect,
+                            });
+                          });
+                        }
+                      } else {
+                        moveItem(dragItem.fromKey, k, dragItem.text, { source: "legacy" });
+                      }
                       setDragItem(null);
+                      setHoverDayKey(null);
                     }
                     // If user clicked without dragging, collapse range to focus
                     if (
@@ -694,6 +736,10 @@ export function MonthGridType1({
                   data-day-anchor=""
                   style={{ cursor: "default" }}
                 >
+                  {/* Drop-target border preview during cross-day event drag */}
+                  {hoverDayKey === id && dragItem?.source === "event" && (
+                    <div className="pointer-events-none absolute inset-0 z-10 rounded-[3px] border-2 border-solid border-primary/70 bg-primary/10" />
+                  )}
                   {/* Day number — small, top-right, muted */}
                   <div className="flex items-start justify-between px-2 pt-1.5">
                     <span className="invisible text-[11px]">·</span>
@@ -780,6 +826,7 @@ export function MonthGridType1({
                             data-role="item"
                             data-real-event={it.kind === "event" && !it.event.id.startsWith("__ghost__:") ? "1" : undefined}
                             data-ghost-event={it.kind === "event" && it.event.id.startsWith("__ghost__:") ? "1" : undefined}
+                            data-event-id={it.kind === "event" && !it.event.id.startsWith("__ghost__:") ? it.event.id : undefined}
                             draggable={!sortable && !(it.kind === "event" && it.event.id.startsWith("__ghost__:"))}
                             {...(sortable?.attributes ?? {})}
                             {...(sortable?.listeners ?? {})}
@@ -1023,6 +1070,22 @@ export function MonthGridType1({
             setStravaBlocked(false);
           }}
         />
+
+        {pendingMove && (
+          <MoveSavePopover
+            anchor={pendingMove.anchorRect}
+            onCancel={() => {
+              onMoveEvent?.(pendingMove.id, {
+                startISO: pendingMove.originalStartISO,
+                endISO: pendingMove.originalEndISO,
+              });
+              setPendingMove(null);
+            }}
+            onSave={() => setPendingMove(null)}
+          />
+        )}
+
+
 
         {/* Inline popover (per-item create or edit) */}
         {popover && appKind === "diary" && (() => {
