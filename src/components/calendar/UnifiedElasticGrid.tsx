@@ -1373,19 +1373,6 @@ export function UnifiedElasticGrid({
           }}
         />
       )}
-      {pendingMove && (
-        <MoveSavePopover
-          anchor={pendingMove.anchorRect}
-          onCancel={() => {
-            onMoveEvent(pendingMove.id, {
-              startISO: pendingMove.originalStartISO,
-              endISO: pendingMove.originalEndISO,
-            });
-            setPendingMove(null);
-          }}
-          onSave={() => setPendingMove(null)}
-        />
-      )}
     </div>
   );
 }
