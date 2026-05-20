@@ -973,7 +973,7 @@ export function UnifiedElasticGrid({
                   const label = `${String(hh).padStart(2, "0")}:00`;
                   return (
                     <div
-                      className="border-b border-hairline bg-card pl-1.5 pt-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
+                      className="border-b border-r border-hairline bg-card pl-1.5 pt-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
                       style={{ height: rowHeight * 2 }}
                       aria-hidden
                     >
