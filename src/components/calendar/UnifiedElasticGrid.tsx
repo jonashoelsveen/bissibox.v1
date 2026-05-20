@@ -1045,7 +1045,7 @@ export function UnifiedElasticGrid({
             <div
               className="pointer-events-none absolute inset-x-0"
               style={{
-                top: 36,
+                top: 0,
                 display: "grid",
                 gridTemplateColumns,
                 gridTemplateRows: isSimple
