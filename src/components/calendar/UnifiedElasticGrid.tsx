@@ -818,11 +818,10 @@ export function UnifiedElasticGrid({
         <motion.div
           key="month"
           className="w-full"
-          initial={{ opacity: 0, scaleY: 0.85 }}
-          animate={{ opacity: 1, scaleY: 1 }}
-          exit={{ opacity: 0, scaleY: 0.85 }}
-          transition={{ duration: 0.32, ease: [0.2, 0, 0, 1] }}
-          style={{ originY: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
         >
         <MonthGridType1
           calId={calId}
