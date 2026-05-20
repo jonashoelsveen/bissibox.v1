@@ -412,14 +412,9 @@ export function UnifiedElasticGrid({
     pendingTime?: { startMin: number; endMin: number };
   } | null>(null);
 
-  // Calendar drag-to-move: after the user releases, the tile snaps into the
-  // new slot and this dialog asks for confirmation before persisting.
-  const [pendingMove, setPendingMove] = useState<{
-    id: string;
-    originalStartISO: string;
-    originalEndISO: string;
-    anchorRect: DOMRect;
-  } | null>(null);
+  // Calendar drag-to-move: the time/location is applied immediately on
+  // release; no extra confirmation step is required.
+
 
   // Refs assigned later in render so openPopover can reach the latest
   // week-events lookup without forward-declaration issues.
