@@ -813,17 +813,11 @@ export function MonthGridType1({
                       const isTargetDay =
                         !!dragSession && dragSession.targetDayKey === id && !isSourceDay;
 
-                      // While dragging, hide the source event from the source day
-                      // so the only visible representation is the ghost in the target.
-                      const baseVisible = dragSession
-                        ? visible.filter(
-                            (it) =>
-                              !(
-                                it.kind === "event" &&
-                                it.event.id === dragSession.eventId
-                              ),
-                          )
-                        : visible;
+                      // Keep the source event visible during drag — the
+                      // ghost preview in the target cell simply indicates
+                      // where it will land on release.
+                      const baseVisible = visible;
+
 
                       type RenderItem =
                         | { kind: "ghost" }
