@@ -551,6 +551,12 @@ export function MonthGridType1({
           targetDayKey: targetDate ? dayKey : null,
           targetDate,
           insertIndex,
+          pointerX: e.clientX,
+          pointerY: e.clientY,
+          offsetX: start.offsetX,
+          offsetY: start.offsetY,
+          chipWidth: start.chipWidth,
+          chipHeight: start.chipHeight,
         });
       } else {
         setDragSession((prev) =>
@@ -560,6 +566,8 @@ export function MonthGridType1({
                 targetDayKey: targetDate ? dayKey : null,
                 targetDate,
                 insertIndex,
+                pointerX: e.clientX,
+                pointerY: e.clientY,
               }
             : prev,
         );
