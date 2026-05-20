@@ -784,8 +784,7 @@ export function UnifiedElasticGrid({
   return (
     <div
       ref={containerRef}
-      className="relative w-full overflow-hidden rounded-md border border-hairline bg-card"
-      style={{ height: "calc(100vh - 280px)" }}
+      className="relative w-full"
     >
       {/* Top-right control cluster: [Mode ▾] [‹ 📅 ›].
           When the parent controls viewMode it also renders these controls
