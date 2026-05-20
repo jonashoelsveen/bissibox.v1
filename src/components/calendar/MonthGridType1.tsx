@@ -529,7 +529,7 @@ export function MonthGridType1({
       {/* Weekday strip — mirrors the Week view: 28px week-number gutter + 7
           weekday columns. Today's column gets the dark-grey highlight. */}
       <div
-        className="sticky top-12 z-20 grid border-b border-hairline bg-card"
+        className="sticky top-0 z-20 grid border-b border-hairline bg-card"
         style={{ gridTemplateColumns: GRID_TEMPLATE }}
       >
         <div className="border-r border-hairline" />
