@@ -859,7 +859,7 @@ export function UnifiedElasticGrid({
       ) : (
         <motion.div
           key="week"
-          className="w-full"
+          className="flex flex-1 min-h-0 w-full flex-col"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -867,7 +867,7 @@ export function UnifiedElasticGrid({
         >
         <div
           ref={scrollRef}
-          className="relative w-full"
+          className="relative flex flex-1 min-h-0 w-full flex-col"
           onClick={(e) => {
             if (e.target === e.currentTarget) handleSelect(null);
           }}
