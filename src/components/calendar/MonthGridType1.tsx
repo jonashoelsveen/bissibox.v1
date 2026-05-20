@@ -570,7 +570,7 @@ export function MonthGridType1({
                 onClick={() => onWeekClick?.(wr.firstDate)}
                 title={`Uke ${wr.weekNo} — klikk for å zoome inn`}
                 style={{ gridColumn: 1, gridRow: wr.row + 1 }}
-                className="flex items-start justify-center border-b border-hairline pt-2 text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+                className="flex items-start justify-center border-b border-r border-hairline pt-2 text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
               >
                 {wr.weekNo}
               </button>
