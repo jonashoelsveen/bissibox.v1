@@ -576,20 +576,6 @@ export function MonthGridType1({
                   const kb = b.sortIndex ?? Date.parse(b.startISO);
                   return ka - kb;
                 });
-              // Apply pending reorder locally so the UI reflects the user's intent
-              // until they confirm or cancel.
-              if (pendingReorder && pendingReorder.dayKey === id) {
-                const map = new Map(sortedDayEvents.map((e) => [e.id, e]));
-                const ordered = pendingReorder.ids
-                  .map((eid) => map.get(eid))
-                  .filter((e): e is CalendarEvent => !!e);
-                // Append any events not in the pending list (shouldn't happen) at the end.
-                for (const e of sortedDayEvents) {
-                  if (!pendingReorder.ids.includes(e.id)) ordered.push(e);
-                }
-                sortedDayEvents.length = 0;
-                sortedDayEvents.push(...ordered);
-              }
 
               type UnifiedItem =
                 | { kind: "legacy"; idx: number; raw: string }
