@@ -963,10 +963,10 @@ export function UnifiedElasticGrid({
             ) : (
             Array.from(
               // Week view (compact / kind:"year") renders hour-rows of a
-              // single weekday: 06:00 → 24:30 in 30-min slots = 38 rows
-              // = 19 "days" × 2 sessions. Day view keeps the original
+              // single weekday: 06:00 → 24:00 in 30-min slots = 36 rows
+              // = 18 "days" × 2 sessions. Day view keeps the original
               // 31-day envelope.
-              { length: mode.kind === "year" ? 19 : 31 },
+              { length: mode.kind === "year" ? 18 : 31 },
               (_, i) => i + 1,
             ).map((day) => (
               <Fragment key={day}>
@@ -975,7 +975,7 @@ export function UnifiedElasticGrid({
                   const label = `${String(hh).padStart(2, "0")}:00`;
                   return (
                     <div
-                      className="border-b border-r border-hairline bg-card pl-1.5 pt-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
+                      className="border-b border-hairline bg-card pl-1.5 pt-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
                       style={{ height: rowHeight * 2 }}
                       aria-hidden
                     >
