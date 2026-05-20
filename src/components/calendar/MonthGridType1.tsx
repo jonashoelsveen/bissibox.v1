@@ -997,9 +997,7 @@ export function MonthGridType1({
                                     <span
                                       className="h-1.5 w-1.5 shrink-0 rounded-full"
                                       style={{ background: itemColor }}
-                                      style={{ background: itemColor }}
                                     />
-
                                   ) : null;
                                 })()}
                                 <span className="truncate">{displayText}</span>
