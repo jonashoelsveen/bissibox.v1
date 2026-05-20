@@ -416,12 +416,9 @@ export function UnifiedElasticGrid({
   // new slot and this dialog asks for confirmation before persisting.
   const [pendingMove, setPendingMove] = useState<{
     id: string;
-    name: string;
-    newDate: Date;
-    newStartMin: number;
-    durationMin: number;
     originalStartISO: string;
     originalEndISO: string;
+    anchorRect: DOMRect;
   } | null>(null);
 
   // Refs assigned later in render so openPopover can reach the latest
