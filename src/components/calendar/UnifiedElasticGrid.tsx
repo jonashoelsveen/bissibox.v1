@@ -2136,7 +2136,7 @@ function WeekEventsOverlay({
                   e.stopPropagation();
                   onEventClick(ev, e.currentTarget as HTMLElement);
                 }}
-                className={`absolute cursor-pointer overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
+                className={`absolute overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
                 style={{
                   left: 2,
                   right: 2,
