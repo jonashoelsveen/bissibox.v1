@@ -39,7 +39,7 @@ interface TimeWheelPickerProps {
   autoFocus?: boolean;
 }
 
-const ITEM_H = 22; // px — single visible row height, fits a 32–36px header
+const ITEM_H = 18; // px — single visible row, matches the header text line-height
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
