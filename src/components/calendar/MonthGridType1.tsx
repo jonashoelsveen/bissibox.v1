@@ -42,53 +42,8 @@ import { DayNoteButton } from "./DayNoteButton";
 import { useUserCategories } from "@/hooks/useUserCategories";
 import { useMonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
-import {
-  DndContext,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  pointerWithin,
-  rectIntersection,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
-import { CSS } from "@dnd-kit/utilities";
-import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
 import { MoveSavePopover } from "./MoveSavePopover";
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
-
-/**
- * Render-prop wrapper that registers a child as a vertical-sortable item
- * inside its enclosing SortableContext. The child receives the dnd-kit
- * ref/style/listeners/attributes to spread onto its draggable root.
- */
-function SortableMonthEventChip({
-  id,
-  disabled,
-  children,
-}: {
-  id: string;
-  disabled?: boolean;
-  children: (s: {
-    setNodeRef: (el: HTMLElement | null) => void;
-    style: React.CSSProperties;
-    listeners: ReturnType<typeof useSortable>["listeners"];
-    attributes: ReturnType<typeof useSortable>["attributes"];
-    isDragging: boolean;
-  }) => React.ReactNode;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id,
-    disabled,
-  });
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 30 : undefined,
-  };
-  return <>{children({ setNodeRef, style, listeners, attributes, isDragging })}</>;
-}
 
 function activityIconFor(ev: CalendarEvent): LucideIcon {
   const k = (ev.activity || ev.diarySub || "").toLowerCase();
