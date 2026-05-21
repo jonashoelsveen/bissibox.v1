@@ -1,5 +1,6 @@
-import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/react-router";
+import { Outlet, createRootRoute, HeadContent, Scripts, Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TopBar } from "@/components/TopBar";
@@ -9,6 +10,28 @@ import { TopBarSlotProvider } from "@/components/TopBarSlot";
 import { SettingsModal } from "@/components/SettingsModal";
 import { ProfileModal } from "@/components/ProfileModal";
 import { Toaster } from "@/components/ui/sonner";
+
+const SURFACE_PREFIXES = ["/calendar", "/diary", "/media", "/photos"];
+
+function SurfaceOutlet() {
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const surfaceKey = SURFACE_PREFIXES.find((p) => path === p || path.startsWith(p + "/"));
+  if (!surfaceKey) return <Outlet />;
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={surfaceKey}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+        style={{ height: "100%" }}
+      >
+        <Outlet />
+      </motion.div>
+    </AnimatePresence>
+  );
+}
 
 function NotFoundComponent() {
   return (
