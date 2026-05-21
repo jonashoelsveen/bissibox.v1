@@ -146,9 +146,19 @@ export function useStravaActivities(targetUserId?: string): {
       }
 
       // Only re-sync from Strava for the signed-in user's own diary.
+      // Require a real session access token; invoking without one sends the
+      // anon/publishable key and the edge function rejects with 401.
       if (queryUserId === auth.user.id) {
-        supabase.functions.invoke("strava-sync-recent", { body: { days: 90 } })
-          .catch(() => { /* ignore — user may not be connected */ });
+        const { data: sess } = await supabase.auth.getSession();
+        const token = sess.session?.access_token;
+        if (token) {
+          supabase.functions
+            .invoke("strava-sync-recent", {
+              body: { days: 90 },
+              headers: { Authorization: `Bearer ${token}` },
+            })
+            .catch(() => { /* ignore — user may not be connected */ });
+        }
       }
 
       channel = supabase
