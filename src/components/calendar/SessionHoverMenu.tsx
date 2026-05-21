@@ -212,34 +212,8 @@ export function SessionHoverMenu({
     top = Math.max(8, vh - 8 - totalH);
   }
 
-  const buildEventPatchFromDetails = (v: SessionDetailsValue): Partial<CalendarEvent> & { id: string } => {
-    const start = fromISOLocal(ev.startISO);
-    const time = v.time ?? {
-      startMin: start.getHours() * 60 + start.getMinutes(),
-      endMin: start.getHours() * 60 + start.getMinutes() + 60,
-    };
-    const startISO = toISOLocal(setHM(start, Math.floor(time.startMin / 60), time.startMin % 60));
-    const endISO = toISOLocal(setHM(start, Math.floor(time.endMin / 60), time.endMin % 60));
-    const trainingColor =
-      v.diaryGroup === "endurance" ? colorForActivity(v.diarySub) : CAT_TRAINING_COLOR;
-    const color = v.diaryType === "training" ? trainingColor : "#9CA3AF";
-    const hasSubs = !!DIARY_GROUPS.find((g) => g.id === v.diaryGroup)?.children?.length;
-    return {
-      id: ev.id,
-      title: v.title.trim(),
-      color,
-      startISO,
-      endISO,
-      allDay: false,
-      diaryType: v.diaryType,
-      diaryGroup: v.diaryType === "training" ? v.diaryGroup : undefined,
-      diarySub: v.diaryType === "training" && hasSubs ? v.diarySub : undefined,
-      distanceKm: v.distanceKm,
-      paceSecPerKm: v.paceSecPerKm,
-      sessionNote: v.sessionNote || undefined,
-      activities: v.activities && v.activities.length ? v.activities : undefined,
-    };
-  };
+  // Details modal lifecycle is owned by the parent (lifted out of this menu so
+  // it survives hover transitions, refetches, and menu unmounts).
 
   return (
     <>
