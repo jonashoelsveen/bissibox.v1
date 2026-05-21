@@ -243,18 +243,33 @@ export function GlobalTopTabBar() {
     );
   }
 
+  const revealing = transition === "reveal-dark";
   return (
     <div
       className="global-topbar-dark fixed left-0 right-0 top-0 z-[90]"
       style={{
-        backgroundColor: "rgba(29, 29, 31, 0.91)",
+        backgroundColor: revealing
+          ? "rgba(74, 74, 74, 0.91)"
+          : "rgba(29, 29, 31, 0.91)",
         backdropFilter: "saturate(180%) blur(20px)",
         WebkitBackdropFilter: "saturate(180%) blur(20px)",
-        opacity: authReady ? 1 : 0.5,
-        pointerEvents: authReady ? "auto" : "none",
-        transition: "opacity 180ms ease-out",
+        opacity: revealing ? 0 : authReady ? 1 : 0.5,
+        pointerEvents: revealing || !authReady ? "none" : "auto",
+        transition: revealing
+          ? "opacity 350ms ease-out, background-color 450ms ease-out"
+          : "opacity 350ms ease-out, background-color 350ms ease-out",
+        animation: revealing
+          ? "aponna-bar-reveal 500ms ease-out forwards"
+          : undefined,
       }}
     >
+      <style>{`
+        @keyframes aponna-bar-reveal {
+          0% { opacity: 0; background-color: rgba(74,74,74,0.91); }
+          60% { opacity: 1; }
+          100% { opacity: 1; background-color: rgba(29,29,31,0.91); }
+        }
+      `}</style>
       <style>{`
         .global-topbar-dark .topbar-row { color: #ffffff; }
         .global-topbar-dark .topbar-row > *:not([role="menu"]):not([role="menu"] *) { color: #ffffff; }
