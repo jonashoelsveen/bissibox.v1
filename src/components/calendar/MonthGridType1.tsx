@@ -869,6 +869,7 @@ export function MonthGridType1({
 
                       type RenderItem =
                         | { kind: "ghost" }
+                        | { kind: "creating" }
                         | UnifiedItem;
                       const renderList: RenderItem[] = [...baseVisible];
                       if (isTargetDay && dragSession) {
@@ -877,6 +878,15 @@ export function MonthGridType1({
                         // day is targeted. The actual drop still places the
                         // session in its correct sorted slot by start time.
                         renderList.splice(0, 0, { kind: "ghost" });
+                      }
+                      const isCreatingHere =
+                        !!popover &&
+                        !popover.eventId &&
+                        popover.editIdx < 0 &&
+                        popover.pos.row === pos.row &&
+                        popover.pos.col === pos.col;
+                      if (isCreatingHere) {
+                        renderList.push({ kind: "creating" });
                       }
                       const renderVisible = renderList.slice(0, MAX_VISIBLE);
 
