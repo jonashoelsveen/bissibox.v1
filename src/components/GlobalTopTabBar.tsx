@@ -46,8 +46,9 @@ type CreateKind =
  * Search + Plus menu.
  */
 export function GlobalTopTabBar() {
-  const { user, mode } = useAuth();
+  const { user, mode, authReady } = useAuth();
   const activeKey = useActiveNavKey();
+  const stripped = useIsStrippedSurface();
 
 
   const isEntity = mode === "team" || mode === "organizer";
