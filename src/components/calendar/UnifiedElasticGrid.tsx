@@ -1977,11 +1977,8 @@ function WeekEventsOverlay({
   const [unit] = useDistanceUnit();
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
   const closeTimerRef = useRef<number | null>(null);
-  // While the details modal is open we keep the hover menu mounted so the
-  // modal (which is a React child of the menu via a portal) doesn't unmount
-  // when the cursor leaves the session block.
-  const detailsOpenRef = useRef(false);
   // Mark prop as used to silence ts noUnused warnings; behavior unchanged.
   void onSaveSessionNote;
   const cancelClose = useCallback(() => {
@@ -1991,7 +1988,6 @@ function WeekEventsOverlay({
     }
   }, []);
   const scheduleClose = useCallback(() => {
-    if (detailsOpenRef.current) return;
     cancelClose();
     closeTimerRef.current = window.setTimeout(() => {
       setHoverId(null);
