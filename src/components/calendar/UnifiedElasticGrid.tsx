@@ -510,6 +510,20 @@ export function UnifiedElasticGrid({
     return () => window.removeEventListener("mouseup", onUp);
   }, []);
 
+  // When a mark range is released, automatically open the new-session
+  // popover anchored to the first marked cell so the modal's top aligns
+  // with the top of the selection.
+  useEffect(() => {
+    if (!markReleased || !markRange) return;
+    if (markRange.hi <= markRange.lo) return;
+    const day = Math.floor(markRange.lo / 2);
+    const session = (markRange.lo % 2) as Session;
+    const sel = `[data-cell-key="${markRange.month}:${day}:${session}"]`;
+    const el = document.querySelector(sel) as HTMLElement | null;
+    if (el) openPopover({ year, month: markRange.month, day, session }, el);
+  }, [markReleased, markRange, openPopover, year]);
+
+
   const inDragRange = useCallback(
     (k: CellKey) => {
       if (!dragRange || !dragStartRef.current) return false;
