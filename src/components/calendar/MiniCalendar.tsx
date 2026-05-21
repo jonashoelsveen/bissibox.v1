@@ -213,14 +213,14 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
               className={[
                 "relative grid h-6 w-full place-items-center text-[12px] tabular-nums transition-colors",
                 isSelected
-                  ? "rounded-full bg-primary text-primary-foreground"
+                  ? "rounded-sm bg-primary text-primary-foreground"
                   : weekBg
-                    ? `bg-primary/15 text-ink ${dow === 0 ? "rounded-l-full" : ""} ${dow === 6 ? "rounded-r-full" : ""}`
+                    ? `bg-primary/15 text-ink ${dow === 0 ? "rounded-l-sm" : ""} ${dow === 6 ? "rounded-r-sm" : ""}`
                     : isToday
-                      ? "rounded-full bg-secondary text-ink"
+                      ? "rounded-sm bg-secondary text-ink"
                       : inMonth
-                        ? "rounded-full text-ink hover:bg-secondary"
-                        : "rounded-full text-muted-foreground/40 hover:bg-secondary/60",
+                        ? "rounded-sm text-ink hover:bg-secondary"
+                        : "rounded-sm text-muted-foreground/40 hover:bg-secondary/60",
               ].join(" ")}
             >
               {date.getDate()}
