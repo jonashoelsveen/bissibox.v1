@@ -262,7 +262,7 @@ export function SessionHoverMenu({
             >
               <StickyNote className="h-4 w-4" strokeWidth={2.25} />
             </MenuBtn>
-            <MenuBtn label="Detaljer" onClick={() => setShowDetails(true)}>
+            <MenuBtn label="Detaljer" onClick={onOpenDetails}>
               <Pencil className="h-4 w-4" strokeWidth={2.25} />
             </MenuBtn>
             {isOwner && (
