@@ -22,6 +22,7 @@ import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
 import { ProfileMenuButton } from "@/components/ProfileMenuButton";
 import { HomeIcon } from "@/components/HomeIcon";
+import { useAuthTransition } from "@/lib/auth-transition";
 
 /** Routes whose top tab-bar is stripped down to: Me/We + (conditional)
  *  Group Members. Calendar / Diary / Photos icons move into the apps menu. */
@@ -52,7 +53,14 @@ export function GlobalTopTabBar() {
   const stripped = useIsStrippedSurface();
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const isHome = path === "/";
+  const transition = useAuthTransition();
+  // White minimal bar on landing "/" (logged-out). Keep showing it during
+  // the sign-in exit fade so it can animate away in sync with the modal.
+  const isHome =
+    path === "/" && (!user || transition === "fading-out");
+  // During the gap between the modal vanishing and the dark bar revealing,
+  // render nothing.
+  if (transition === "hidden") return null;
 
 
   const isEntity = mode === "team" || mode === "organizer";
@@ -129,6 +137,7 @@ export function GlobalTopTabBar() {
   };
 
   if (isHome) {
+    const fading = transition === "fading-out";
     return (
       <div
         className="fixed left-0 right-0 top-0 z-[90] flex items-center justify-between"
@@ -137,9 +146,11 @@ export function GlobalTopTabBar() {
           height: 40,
           paddingLeft: 16,
           paddingRight: 16,
-          opacity: authReady ? 1 : 0.5,
-          pointerEvents: authReady ? "auto" : "none",
-          transition: "opacity 180ms ease-out",
+          opacity: fading ? 0 : authReady ? 1 : 0.5,
+          pointerEvents: fading || !authReady ? "none" : "auto",
+          transition: fading
+            ? "opacity 700ms ease-out"
+            : "opacity 180ms ease-out",
         }}
       >
         <button
@@ -232,18 +243,33 @@ export function GlobalTopTabBar() {
     );
   }
 
+  const revealing = transition === "reveal-dark";
   return (
     <div
       className="global-topbar-dark fixed left-0 right-0 top-0 z-[90]"
       style={{
-        backgroundColor: "rgba(29, 29, 31, 0.91)",
+        backgroundColor: revealing
+          ? "rgba(74, 74, 74, 0.91)"
+          : "rgba(29, 29, 31, 0.91)",
         backdropFilter: "saturate(180%) blur(20px)",
         WebkitBackdropFilter: "saturate(180%) blur(20px)",
-        opacity: authReady ? 1 : 0.5,
-        pointerEvents: authReady ? "auto" : "none",
-        transition: "opacity 180ms ease-out",
+        opacity: revealing ? 0 : authReady ? 1 : 0.5,
+        pointerEvents: revealing || !authReady ? "none" : "auto",
+        transition: revealing
+          ? "opacity 350ms ease-out, background-color 450ms ease-out"
+          : "opacity 350ms ease-out, background-color 350ms ease-out",
+        animation: revealing
+          ? "aponna-bar-reveal 500ms ease-out forwards"
+          : undefined,
       }}
     >
+      <style>{`
+        @keyframes aponna-bar-reveal {
+          0% { opacity: 0; background-color: rgba(74,74,74,0.91); }
+          60% { opacity: 1; }
+          100% { opacity: 1; background-color: rgba(29,29,31,0.91); }
+        }
+      `}</style>
       <style>{`
         .global-topbar-dark .topbar-row { color: #ffffff; }
         .global-topbar-dark .topbar-row > *:not([role="menu"]):not([role="menu"] *) { color: #ffffff; }
