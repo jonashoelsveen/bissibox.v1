@@ -158,16 +158,25 @@ export function SessionDetailsModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={requestClose}
+        // IMPORTANT: React portals propagate events through the React tree, so
+        // the click that opened this modal (e.g. the "Detaljer" button in
+        // SessionHoverMenu) would bubble up into this backdrop and close it
+        // immediately. Use mousedown + target===currentTarget to only react to
+        // a fresh press that starts on the backdrop itself.
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) requestClose();
+        }}
       >
         <motion.div
           initial={{ scale: 0.96, opacity: 0, y: 8 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.97, opacity: 0 }}
           transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
           className="w-full max-w-3xl px-4"
         >
+
         <motion.div
           className="relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded-xl border border-hairline bg-card shadow-2xl"
           animate={pulseControls}
