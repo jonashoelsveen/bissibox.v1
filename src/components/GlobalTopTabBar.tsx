@@ -131,7 +131,8 @@ export function GlobalTopTabBar() {
     setPlusOpen(false);
     setMapHover(false);
     if (!user) {
-      void navigate({ to: "/auth", search: { redirect: to } });
+      const ctx = to === "/calendar" ? "calendar" : to === "/diary" ? "diary" : "photos";
+      void navigate({ to: "/", search: { signin: ctx } });
       return;
     }
     void navigate({ to, resetScroll: false });
