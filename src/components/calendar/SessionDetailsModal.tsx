@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
 import { X, Plus, MapPin, StickyNote, Info, Paperclip, Pencil, Check, Lock, Activity, Trash2 } from "lucide-react";
 import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
