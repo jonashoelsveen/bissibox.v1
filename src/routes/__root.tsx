@@ -99,7 +99,7 @@ function RootComponent() {
               : "fixed inset-x-0 top-10 bottom-0 overflow-y-auto"
           }
         >
-          <SurfaceOutlet />
+          <Outlet />
         </main>
         {!isEmbedded && <Toaster />}
         {!isEmbedded && <GlobalCreateOverlay />}
