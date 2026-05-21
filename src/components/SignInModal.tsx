@@ -1,58 +1,116 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
-import { setAuthTransitionPhase } from "@/lib/auth-transition";
+import {
+  setAuthTransitionPhase,
+  setSignInModalOpen,
+} from "@/lib/auth-transition";
+import { COUNTRIES, COUNTRY_CALLING_CODES } from "@/lib/countries";
 
 const HELVETICA =
   '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
+export type SignInContext = "cloud" | "calendar" | "diary" | "photos";
+
 type Mode = "signin" | "signup";
+
+function headerFor(ctx: SignInContext) {
+  switch (ctx) {
+    case "calendar":
+      return "Welcome to Aponna Cloud Calendar";
+    case "diary":
+      return "Welcome to Aponna Cloud Diary";
+    case "photos":
+      return "Welcome to Aponna Cloud Photos";
+    default:
+      return "Welcome to Aponna Cloud";
+  }
+}
 
 export function SignInModal({
   open,
   onClose,
+  context = "cloud",
 }: {
   open: boolean;
   onClose: () => void;
+  context?: SignInContext;
 }) {
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<Mode>("signin");
-  // Reveal fields/buttons 1.7s after the modal first appears.
   const [fieldsReady, setFieldsReady] = useState(false);
+  const [switchingMode, setSwitchingMode] = useState(false);
+
+  // shared
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // signup-only
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [country, setCountry] = useState("");
+  const [bDay, setBDay] = useState("");
+  const [bMonth, setBMonth] = useState("");
+  const [bYear, setBYear] = useState("");
+  const [callingCode, setCallingCode] = useState("+1");
+  const [phone, setPhone] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [verifyVia, setVerifyVia] = useState<"email" | "sms">("email");
+  const [marketing, setMarketing] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [exiting, setExiting] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
+    setSignInModalOpen(open);
     if (!open) return;
     setFieldsReady(false);
     setExiting(false);
     setError(null);
+    setMode("signin");
     const t = setTimeout(() => setFieldsReady(true), 1700);
     timers.current.push(t);
     return () => {
       timers.current.forEach(clearTimeout);
       timers.current = [];
+      setSignInModalOpen(false);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(
     () => () => {
       timers.current.forEach(clearTimeout);
+      setSignInModalOpen(false);
     },
     [],
   );
 
+  const switchMode = (next: Mode) => {
+    if (switchingMode || mode === next) return;
+    setError(null);
+    setSwitchingMode(true);
+    const t = setTimeout(() => {
+      setMode(next);
+      setSwitchingMode(false);
+    }, 650);
+    timers.current.push(t);
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
-    setSubmitting(true);
     setError(null);
+
+    if (mode === "signup") {
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
+    }
+
+    setSubmitting(true);
 
     if (mode === "signin") {
       const { error: err } = await signIn(email.trim(), password);
@@ -81,9 +139,6 @@ export function SignInModal({
     }
 
     // Success — choreograph exit.
-    // 0.2s delay → modal content fades + modal folds from top.
-    // Simultaneously, the white top bar fades to 0.
-    // At 2.1s total, the dark top bar starts to reveal (gray → black).
     const t1 = setTimeout(() => {
       setExiting(true);
       setAuthTransitionPhase("fading-out");
@@ -101,6 +156,8 @@ export function SignInModal({
     timers.current.push(t1, t2, t3, t4);
   };
 
+  const title = headerFor(context);
+
   return (
     <AnimatePresence>
       {open && (
@@ -110,9 +167,10 @@ export function SignInModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-[120] flex items-start justify-center"
+          className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto"
           style={{
-            paddingTop: "min(18vh, 180px)",
+            paddingTop: "min(10vh, 110px)",
+            paddingBottom: "min(10vh, 110px)",
             fontFamily: HELVETICA,
           }}
         >
@@ -122,15 +180,16 @@ export function SignInModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: exiting ? 0 : 1 }}
             transition={{ duration: exiting ? 0.6 : 0.3, ease: "easeOut" }}
-            style={{ background: "rgba(0,0,0,0.18)" }}
+            style={{ background: "rgba(0,0,0,0.28)" }}
             onClick={() => {
               if (!submitting && !exiting) onClose();
             }}
           />
 
-          {/* the modal */}
+          {/* the modal — animates size between signin/signup */}
           <motion.div
             key="signin-card"
+            layout
             initial={{ opacity: 0, scale: 0.96, y: -8 }}
             animate={
               exiting
@@ -142,128 +201,157 @@ export function SignInModal({
                   }
                 : { opacity: 1, scale: 1, y: 0 }
             }
-            transition={{ duration: 0.35, ease: [0.2, 0.8, 0.2, 1] }}
+            transition={{
+              layout: { duration: 0.5, ease: [0.2, 0.8, 0.2, 1] },
+              duration: 0.35,
+              ease: [0.2, 0.8, 0.2, 1],
+            }}
             className="relative"
             style={{
-              width: "min(420px, 92vw)",
+              width:
+                mode === "signup"
+                  ? "min(520px, 94vw)"
+                  : "min(440px, 92vw)",
               background: "#ffffff",
               borderRadius: 18,
               boxShadow:
                 "0 30px 60px -20px rgba(0,0,0,0.25), 0 12px 24px -12px rgba(0,0,0,0.18)",
-              padding: "38px 36px 30px",
+              padding: "44px 40px 32px",
               transformOrigin: "top center",
             }}
           >
             <motion.div
+              layout
               initial={{ opacity: 0 }}
-              animate={{ opacity: exiting ? 0 : fieldsReady ? 1 : 0 }}
+              animate={{
+                opacity:
+                  exiting || switchingMode ? 0 : fieldsReady ? 1 : 0,
+              }}
               transition={{
-                duration: exiting ? 0.5 : 0.45,
+                duration: exiting ? 0.5 : switchingMode ? 0.25 : 0.45,
                 ease: "easeOut",
               }}
             >
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.form
-                  key={mode}
-                  onSubmit={onSubmit}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.22, ease: "easeOut" }}
-                  className="space-y-4"
-                >
-                  {mode === "signup" && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <LabeledField
-                        label="First name"
-                        value={firstName}
-                        onChange={setFirstName}
-                        autoComplete="given-name"
-                        required
-                      />
-                      <LabeledField
-                        label="Last name"
-                        value={lastName}
-                        onChange={setLastName}
-                        autoComplete="family-name"
-                        required
-                      />
-                    </div>
-                  )}
-                  <LabeledField
-                    label="E-mail adress"
-                    value={email}
-                    onChange={setEmail}
-                    type="email"
-                    autoComplete="email"
-                    required
-                  />
-                  <LabeledField
-                    label="Password"
-                    value={password}
-                    onChange={setPassword}
-                    type="password"
-                    autoComplete={
-                      mode === "signin" ? "current-password" : "new-password"
-                    }
-                    required
-                  />
-
-                  {error && (
-                    <div
-                      className="text-[12.5px]"
-                      style={{ color: "#c0392b", fontFamily: HELVETICA }}
+              {/* Headers */}
+              <div className="mb-6 text-center">
+                {mode === "signin" ? (
+                  <>
+                    <h2
+                      style={{
+                        fontFamily: HELVETICA,
+                        fontSize: 22,
+                        fontWeight: 400,
+                        color: "#1d1d1f",
+                        letterSpacing: "-0.01em",
+                        lineHeight: 1.2,
+                      }}
                     >
-                      {error}
-                    </div>
-                  )}
+                      {title}
+                    </h2>
+                    <p
+                      style={{
+                        marginTop: 6,
+                        fontFamily: HELVETICA,
+                        fontSize: 14,
+                        fontWeight: 400,
+                        color: "#86868b",
+                        letterSpacing: "-0.005em",
+                      }}
+                    >
+                      Sign in with your Aponna-account
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2
+                      style={{
+                        fontFamily: HELVETICA,
+                        fontSize: 22,
+                        fontWeight: 400,
+                        color: "#1d1d1f",
+                        letterSpacing: "-0.01em",
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      Create Aponna-account
+                    </h2>
+                    <p
+                      style={{
+                        marginTop: 6,
+                        fontFamily: HELVETICA,
+                        fontSize: 13,
+                        fontWeight: 400,
+                        color: "#86868b",
+                        letterSpacing: "-0.005em",
+                      }}
+                    >
+                      Your key to the Aponna ecosystem
+                    </p>
+                  </>
+                )}
+              </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError(null);
-                      setMode(mode === "signin" ? "signup" : "signin");
-                    }}
-                    className="block w-full text-center"
-                    style={{
-                      fontFamily: HELVETICA,
-                      fontSize: 13,
-                      color: "#1d1d1f",
-                      padding: "6px 0 2px",
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {mode === "signin"
-                      ? "Create Aponna Account"
-                      : "Sign in to existing account"}
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full transition active:scale-[0.99]"
-                    style={{
-                      marginTop: 4,
-                      background: "#1d1d1f",
-                      color: "#ffffff",
-                      borderRadius: 12,
-                      padding: "12px 18px",
-                      fontFamily: HELVETICA,
-                      fontSize: 15,
-                      fontWeight: 500,
-                      letterSpacing: "-0.005em",
-                      border: "none",
-                      cursor: submitting ? "default" : "pointer",
-                      opacity: submitting ? 0.85 : 1,
-                    }}
-                  >
-                    {mode === "signin" ? "Sign in" : "Create account"}
-                  </button>
-                </motion.form>
-              </AnimatePresence>
+              {mode === "signin" ? (
+                <SignInForm
+                  onSubmit={onSubmit}
+                  email={email}
+                  setEmail={setEmail}
+                  password={password}
+                  setPassword={setPassword}
+                  error={error}
+                  submitting={submitting}
+                  onCreate={() => switchMode("signup")}
+                />
+              ) : (
+                <SignUpForm
+                  onSubmit={onSubmit}
+                  firstName={firstName}
+                  setFirstName={setFirstName}
+                  lastName={lastName}
+                  setLastName={setLastName}
+                  country={country}
+                  setCountry={setCountry}
+                  bDay={bDay}
+                  setBDay={setBDay}
+                  bMonth={bMonth}
+                  setBMonth={setBMonth}
+                  bYear={bYear}
+                  setBYear={setBYear}
+                  email={email}
+                  setEmail={setEmail}
+                  callingCode={callingCode}
+                  setCallingCode={setCallingCode}
+                  phone={phone}
+                  setPhone={setPhone}
+                  password={password}
+                  setPassword={setPassword}
+                  confirmPassword={confirmPassword}
+                  setConfirmPassword={setConfirmPassword}
+                  verifyVia={verifyVia}
+                  setVerifyVia={setVerifyVia}
+                  marketing={marketing}
+                  setMarketing={setMarketing}
+                  error={error}
+                  submitting={submitting}
+                  onCancel={() => switchMode("signin")}
+                />
+              )}
             </motion.div>
+
+            {/* loading spinner while mode-transitioning */}
+            <AnimatePresence>
+              {switchingMode && (
+                <motion.div
+                  key="loader"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                >
+                  <Spinner />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </motion.div>
       )}
@@ -271,13 +359,286 @@ export function SignInModal({
   );
 }
 
+function Spinner() {
+  return (
+    <div
+      style={{
+        width: 26,
+        height: 26,
+        borderRadius: "50%",
+        border: "2px solid rgba(29,29,31,0.15)",
+        borderTopColor: "#1d1d1f",
+        animation: "aponna-spin 0.8s linear infinite",
+      }}
+    >
+      <style>{`@keyframes aponna-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+function SignInForm(props: {
+  onSubmit: (e: React.FormEvent) => void;
+  email: string;
+  setEmail: (v: string) => void;
+  password: string;
+  setPassword: (v: string) => void;
+  error: string | null;
+  submitting: boolean;
+  onCreate: () => void;
+}) {
+  const { onSubmit, email, setEmail, password, setPassword, error, submitting, onCreate } = props;
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <LabeledField
+        label="E-mail adress"
+        value={email}
+        onChange={setEmail}
+        type="email"
+        autoComplete="email"
+        required
+      />
+      <LabeledField
+        label="Password"
+        value={password}
+        onChange={setPassword}
+        type="password"
+        autoComplete="current-password"
+        required
+      />
+      {error && <ErrorLine error={error} />}
+
+      <button
+        type="button"
+        onClick={onCreate}
+        className="block w-full text-center"
+        style={{
+          fontFamily: HELVETICA,
+          fontSize: 13,
+          color: "#1d1d1f",
+          padding: "6px 0 2px",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        Create Aponna-account
+      </button>
+
+      <PrimaryButton submitting={submitting} label="Sign in" />
+    </form>
+  );
+}
+
+function SignUpForm(props: {
+  onSubmit: (e: React.FormEvent) => void;
+  firstName: string; setFirstName: (v: string) => void;
+  lastName: string; setLastName: (v: string) => void;
+  country: string; setCountry: (v: string) => void;
+  bDay: string; setBDay: (v: string) => void;
+  bMonth: string; setBMonth: (v: string) => void;
+  bYear: string; setBYear: (v: string) => void;
+  email: string; setEmail: (v: string) => void;
+  callingCode: string; setCallingCode: (v: string) => void;
+  phone: string; setPhone: (v: string) => void;
+  password: string; setPassword: (v: string) => void;
+  confirmPassword: string; setConfirmPassword: (v: string) => void;
+  verifyVia: "email" | "sms"; setVerifyVia: (v: "email" | "sms") => void;
+  marketing: boolean; setMarketing: (v: boolean) => void;
+  error: string | null;
+  submitting: boolean;
+  onCancel: () => void;
+}) {
+  const {
+    onSubmit, firstName, setFirstName, lastName, setLastName,
+    country, setCountry, bDay, setBDay, bMonth, setBMonth, bYear, setBYear,
+    email, setEmail, callingCode, setCallingCode, phone, setPhone,
+    password, setPassword, confirmPassword, setConfirmPassword,
+    verifyVia, setVerifyVia, marketing, setMarketing,
+    error, submitting, onCancel,
+  } = props;
+
+  const years = useMemo(() => {
+    const now = new Date().getFullYear();
+    const arr: number[] = [];
+    for (let y = now; y >= now - 110; y--) arr.push(y);
+    return arr;
+  }, []);
+  const days = useMemo(() => Array.from({ length: 31 }, (_, i) => i + 1), []);
+  const months = [
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December",
+  ];
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <LabeledField label="First name" value={firstName} onChange={setFirstName} autoComplete="given-name" required />
+        <LabeledField label="Last name" value={lastName} onChange={setLastName} autoComplete="family-name" required />
+      </div>
+
+      <LabeledSelect label="Country" value={country} onChange={setCountry} required>
+        <option value="" disabled>Select country</option>
+        {COUNTRIES.map((c) => (
+          <option key={c} value={c}>{c}</option>
+        ))}
+      </LabeledSelect>
+
+      <div>
+        <FieldLabel>Birth date</FieldLabel>
+        <div className="grid grid-cols-3 gap-3">
+          <RawSelect value={bDay} onChange={setBDay} required>
+            <option value="" disabled>Day</option>
+            {days.map((d) => <option key={d} value={d}>{d}</option>)}
+          </RawSelect>
+          <RawSelect value={bMonth} onChange={setBMonth} required>
+            <option value="" disabled>Month</option>
+            {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+          </RawSelect>
+          <RawSelect value={bYear} onChange={setBYear} required>
+            <option value="" disabled>Year</option>
+            {years.map((y) => <option key={y} value={y}>{y}</option>)}
+          </RawSelect>
+        </div>
+      </div>
+
+      <LabeledField label="E-mail adress" value={email} onChange={setEmail} type="email" autoComplete="email" required />
+
+      <div>
+        <FieldLabel>Phone number</FieldLabel>
+        <div className="grid gap-3" style={{ gridTemplateColumns: "110px 1fr" }}>
+          <RawSelect value={callingCode} onChange={setCallingCode} required>
+            {COUNTRY_CALLING_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </RawSelect>
+          <RawInput type="tel" value={phone} onChange={setPhone} autoComplete="tel-national" required />
+        </div>
+      </div>
+
+      <LabeledField label="Password" value={password} onChange={setPassword} type="password" autoComplete="new-password" required />
+      <LabeledField label="Confirm password" value={confirmPassword} onChange={setConfirmPassword} type="password" autoComplete="new-password" required />
+
+      <div>
+        <FieldLabel>Verification</FieldLabel>
+        <div className="space-y-2">
+          <RadioRow
+            label="Verify with code via e-mail"
+            checked={verifyVia === "email"}
+            onChange={() => setVerifyVia("email")}
+          />
+          <RadioRow
+            label="Verify with code via text message"
+            checked={verifyVia === "sms"}
+            onChange={() => setVerifyVia("sms")}
+          />
+        </div>
+      </div>
+
+      <div style={{ marginTop: 8 }}>
+        <div
+          style={{
+            fontFamily: HELVETICA, fontSize: 12, fontWeight: 700,
+            color: "#1d1d1f", marginBottom: 6, letterSpacing: "-0.005em",
+          }}
+        >
+          Announcements
+        </div>
+        <label className="flex items-start gap-2" style={{ cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={marketing}
+            onChange={(e) => setMarketing(e.target.checked)}
+            style={{ marginTop: 3, accentColor: "#1d1d1f" }}
+          />
+          <span style={{ fontFamily: HELVETICA, fontSize: 12, color: "#86868b", lineHeight: 1.4 }}>
+            Receive email-communication from Aponna about marketing, recomendations and updates about Aponna software and services.
+          </span>
+        </label>
+      </div>
+
+      {error && <ErrorLine error={error} />}
+
+      <div className="flex items-center justify-between" style={{ paddingTop: 8 }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={submitting}
+          style={{
+            fontFamily: HELVETICA, fontSize: 14, color: "#1d1d1f",
+            background: "transparent", border: "none",
+            padding: "10px 14px", cursor: "pointer",
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="transition active:scale-[0.99]"
+          style={{
+            background: "#1d1d1f", color: "#ffffff",
+            borderRadius: 12, padding: "11px 22px",
+            fontFamily: HELVETICA, fontSize: 14, fontWeight: 500,
+            letterSpacing: "-0.005em", border: "none",
+            cursor: submitting ? "default" : "pointer",
+            opacity: submitting ? 0.85 : 1,
+          }}
+        >
+          Continue
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function PrimaryButton({ submitting, label }: { submitting: boolean; label: string }) {
+  return (
+    <button
+      type="submit"
+      disabled={submitting}
+      className="w-full transition active:scale-[0.99]"
+      style={{
+        marginTop: 4,
+        background: "#1d1d1f",
+        color: "#ffffff",
+        borderRadius: 12,
+        padding: "12px 18px",
+        fontFamily: HELVETICA,
+        fontSize: 15,
+        fontWeight: 500,
+        letterSpacing: "-0.005em",
+        border: "none",
+        cursor: submitting ? "default" : "pointer",
+        opacity: submitting ? 0.85 : 1,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function ErrorLine({ error }: { error: string }) {
+  return (
+    <div className="text-[12.5px]" style={{ color: "#c0392b", fontFamily: HELVETICA }}>
+      {error}
+    </div>
+  );
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      style={{
+        fontFamily: HELVETICA, display: "block", fontSize: 12,
+        fontWeight: 700, color: "#1d1d1f", marginBottom: 6,
+        letterSpacing: "-0.005em",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 function LabeledField({
-  label,
-  value,
-  onChange,
-  type = "text",
-  required,
-  autoComplete,
+  label, value, onChange, type = "text", required, autoComplete,
 }: {
   label: string;
   value: string;
@@ -288,44 +649,121 @@ function LabeledField({
 }) {
   return (
     <label className="block">
-      <span
-        style={{
-          fontFamily: HELVETICA,
-          display: "block",
-          fontSize: 12,
-          fontWeight: 700,
-          color: "#1d1d1f",
-          marginBottom: 6,
-          letterSpacing: "-0.005em",
-        }}
-      >
-        {label}
-      </span>
-      <input
+      <FieldLabel>{label}</FieldLabel>
+      <RawInput
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
         required={required}
         autoComplete={autoComplete}
-        style={{
-          fontFamily: HELVETICA,
-          width: "100%",
-          background: "#ffffff",
-          color: "#1d1d1f",
-          border: "1px solid #1d1d1f",
-          borderRadius: 10,
-          padding: "10px 12px",
-          fontSize: 14,
-          outline: "none",
-          transition: "border-color 120ms ease-out, box-shadow 120ms ease-out",
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,29,31,0.08)";
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.boxShadow = "none";
-        }}
       />
+    </label>
+  );
+}
+
+function LabeledSelect({
+  label, value, onChange, required, children,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <FieldLabel>{label}</FieldLabel>
+      <RawSelect value={value} onChange={onChange} required={required}>
+        {children}
+      </RawSelect>
+    </label>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  fontFamily: HELVETICA,
+  width: "100%",
+  background: "#ffffff",
+  color: "#1d1d1f",
+  border: "1px solid #1d1d1f",
+  borderRadius: 10,
+  padding: "10px 12px",
+  fontSize: 14,
+  outline: "none",
+  transition: "border-color 120ms ease-out, box-shadow 120ms ease-out",
+};
+
+function RawInput({
+  type = "text", value, onChange, required, autoComplete,
+}: {
+  type?: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+  autoComplete?: string;
+}) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      required={required}
+      autoComplete={autoComplete}
+      style={inputStyle}
+      onFocus={(e) => {
+        e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,29,31,0.08)";
+      }}
+      onBlur={(e) => {
+        e.currentTarget.style.boxShadow = "none";
+      }}
+    />
+  );
+}
+
+function RawSelect({
+  value, onChange, required, children,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      required={required}
+      style={{ ...inputStyle, appearance: "auto" }}
+      onFocus={(e) => {
+        e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,29,31,0.08)";
+      }}
+      onBlur={(e) => {
+        e.currentTarget.style.boxShadow = "none";
+      }}
+    >
+      {children}
+    </select>
+  );
+}
+
+function RadioRow({
+  label, checked, onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <label className="flex items-center gap-2" style={{ cursor: "pointer" }}>
+      <input
+        type="radio"
+        checked={checked}
+        onChange={onChange}
+        style={{ accentColor: "#1d1d1f" }}
+      />
+      <span style={{ fontFamily: HELVETICA, fontSize: 13, color: "#1d1d1f" }}>
+        {label}
+      </span>
     </label>
   );
 }
