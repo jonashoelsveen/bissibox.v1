@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 
 import {
   Plus,
@@ -49,6 +49,7 @@ export function GlobalTopTabBar() {
   const { user, mode, authReady } = useAuth();
   const activeKey = useActiveNavKey();
   const stripped = useIsStrippedSurface();
+  const navigate = useNavigate();
 
 
   const isEntity = mode === "team" || mode === "organizer";
@@ -111,6 +112,13 @@ export function GlobalTopTabBar() {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("global-create", { detail: { kind } }));
     }
+  };
+
+  const handleAppNavigate = (to: "/calendar" | "/diary" | "/photos") => {
+    setAppsOpen(false);
+    setPlusOpen(false);
+    setMapHover(false);
+    void navigate({ to, resetScroll: false });
   };
 
   return (
@@ -316,18 +324,19 @@ export function GlobalTopTabBar() {
               <div className="p-3">
                 <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
                 <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { key: "calendar", label: "Calendar", href: "/calendar", icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
-                    { key: "diary", label: "Diary", href: "/diary", icon: <BookOpen strokeWidth={1.75} />, disabled: false },
-                    { key: "photos", label: "Photos", href: "/photos", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
-                    { key: "soon", label: "Coming soon", href: "#", icon: <Plus strokeWidth={1.75} className="opacity-60" style={{ strokeDasharray: "3 2" }} />, disabled: true },
-                  ].map((app) => (
-                    <a
+                  {([
+                    { key: "calendar", label: "Calendar", to: "/calendar", icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
+                    { key: "diary", label: "Diary", to: "/diary", icon: <BookOpen strokeWidth={1.75} />, disabled: false },
+                    { key: "photos", label: "Photos", to: "/photos", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
+                    { key: "soon", label: "Coming soon", to: null, icon: <Plus strokeWidth={1.75} className="opacity-60" style={{ strokeDasharray: "3 2" }} />, disabled: true },
+                  ] as const).map((app) => (
+                    <button
                       key={app.key}
-                      href={app.disabled ? undefined : app.href}
+                      type="button"
                       aria-label={app.label}
                       aria-disabled={app.disabled || undefined}
-                      onClick={app.disabled ? (e) => e.preventDefault() : undefined}
+                      disabled={app.disabled}
+                      onClick={app.disabled || !app.to ? undefined : () => handleAppNavigate(app.to)}
                       className={
                         "flex aspect-square flex-col items-center justify-center gap-1 rounded-xl p-2 " +
                         (app.disabled
@@ -340,7 +349,7 @@ export function GlobalTopTabBar() {
                         {app.icon}
                       </span>
                       <span className="text-[11px] leading-none">{app.label}</span>
-                    </a>
+                    </button>
                   ))}
                 </div>
               </div>
