@@ -26,7 +26,7 @@
 
 import type React from "react";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Footprints, Bike, Dumbbell, Snowflake, Waves } from "lucide-react";
+import { ChevronDown, Footprints, Bike, Dumbbell, Snowflake, Waves } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, Session, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
@@ -509,6 +509,20 @@ export function UnifiedElasticGrid({
     window.addEventListener("mouseup", onUp);
     return () => window.removeEventListener("mouseup", onUp);
   }, []);
+
+  // When a mark range is released, automatically open the new-session
+  // popover anchored to the first marked cell so the modal's top aligns
+  // with the top of the selection.
+  useEffect(() => {
+    if (!markReleased || !markRange) return;
+    if (markRange.hi <= markRange.lo) return;
+    const day = Math.floor(markRange.lo / 2);
+    const session = (markRange.lo % 2) as Session;
+    const sel = `[data-cell-key="${markRange.month}:${day}:${session}"]`;
+    const el = document.querySelector(sel) as HTMLElement | null;
+    if (el) openPopover({ year, month: markRange.month, day, session }, el);
+  }, [markReleased, markRange, openPopover, year]);
+
 
   const inDragRange = useCallback(
     (k: CellKey) => {
@@ -1685,25 +1699,8 @@ function DayCellPair(props: DayCellPairProps) {
               </>
             )}
 
-            {mk.isPlus && markReleased && mk.size > 1 && !isDraggingMark && (
-              <button
-                type="button"
-                data-role="mark-plus"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Anchor the popover to the full marked range by using
-                  // the cell that was clicked.
-                  onOpenPopover(k, e.currentTarget.parentElement as HTMLElement);
-                }}
-                className="pointer-events-auto absolute left-1/2 top-1/2 z-[5] flex -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-transparent text-muted-foreground/80 hover:text-ink"
-                style={{ padding: 0, lineHeight: 0, border: "none" }}
-                aria-label="Legg til økt"
-              >
-                <Plus className="h-5 w-5" strokeWidth={2} />
-              </button>
-            )}
             {/* Selection outline removed — keep marking subtle (gray fill only) */}
+
 
             {false && showCompact && null}
 
