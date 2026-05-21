@@ -196,8 +196,12 @@ export function GlobalTopTabBar() {
                   </div>
                 </div>
                 <a
-                  href="#"
-                  onClick={(e) => e.preventDefault()}
+                  href="/"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setAppsOpen(false);
+                    void navigate({ to: "/" });
+                  }}
                   className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-sm text-ink"
                   style={{ transition: "none" }}
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
@@ -458,8 +462,12 @@ export function GlobalTopTabBar() {
                 </div>
               </div>
               <a
-                href="#"
-                onClick={(e) => e.preventDefault()}
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setAppsOpen(false);
+                  void navigate({ to: "/" });
+                }}
                 className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-sm text-ink"
                 style={{ transition: "none" }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
