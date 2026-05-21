@@ -212,7 +212,9 @@ const Cell = forwardRef<HTMLInputElement, CellProps>(function Cell(
   };
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
-    e.stopPropagation();
+    // Stop propagation for keys we handle internally (digits, arrows, tab),
+    // but let Enter/Escape bubble so the surrounding popover can close.
+    if (e.key !== "Enter" && e.key !== "Escape") e.stopPropagation();
     if (e.key === ":" || e.key === "." || e.key === " ") {
       e.preventDefault();
       commit(text);
