@@ -1734,6 +1734,16 @@ export function PopoverEditor({
     >
       <div className="relative flex items-start gap-2">
         <div className="flex-1 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg">
+          {/* Session name — header */}
+          <input
+            autoFocus
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="f.eks. Intervaller 5×4min"
+            className="block w-full border-b border-hairline bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
+          />
+
+          {/* Time row */}
           <div className="flex items-center gap-2 border-b border-hairline px-3 py-2">
             {enableDuration && (
               <Clock
@@ -1758,15 +1768,6 @@ export function PopoverEditor({
               </span>
             )}
           </div>
-
-          {/* Session name */}
-          <input
-            autoFocus
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="f.eks. Intervaller 5×4min"
-            className="block w-full bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
-          />
 
           {/* Category dropdown — full-width with vertical color bar at left */}
           <CategoryDropdownRow
