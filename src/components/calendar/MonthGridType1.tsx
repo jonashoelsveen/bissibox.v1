@@ -1397,6 +1397,58 @@ export function MonthGridType1({
             </div>
           );
         })()}
+        {appKind === "diary" && hoverId && hoverRect && (() => {
+          const ev = events.find((e) => e.id === hoverId);
+          if (!ev) return null;
+          return (
+            <SessionHoverMenu
+              ev={ev}
+              blockRect={hoverRect}
+              rowHeight={28}
+              visible={hoverId === ev.id}
+              memberId={memberId}
+              viewerRole={viewerRole}
+              onMenuEnter={cancelHoverClose}
+              onMenuLeave={scheduleHoverClose}
+              onOpenDetails={() => {
+                cancelHoverClose();
+                setDetailsEvId(ev.id);
+                setHoverId(null);
+                setHoverRect(null);
+              }}
+              onForceClose={() => {
+                cancelHoverClose();
+                setHoverId(null);
+                setHoverRect(null);
+              }}
+              onDelete={() => {
+                cancelHoverClose();
+                setHoverId(null);
+                setHoverRect(null);
+                onDeleteEvent?.(ev.id);
+              }}
+              onSaveNote={(note) =>
+                onUpsertEvent?.({
+                  ...ev,
+                  sessionNote: note || undefined,
+                  sessionNoteUpdatedAt: new Date().toISOString(),
+                })
+              }
+              onUpsert={(patch) => { onUpsertEvent?.(patch); }}
+            />
+          );
+        })()}
+        {appKind === "diary" && detailsEvId && (() => {
+          const ev = events.find((e) => e.id === detailsEvId);
+          if (!ev) return null;
+          return (
+            <SessionDetailsContainer
+              ev={ev}
+              onClose={() => setDetailsEvId(null)}
+              onUpsert={(patch) => { onUpsertEvent?.(patch); }}
+            />
+          );
+        })()}
       </div>
     </div>
   );
