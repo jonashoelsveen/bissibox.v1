@@ -39,8 +39,8 @@ function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate:
   // arrows that follow always sit at the same horizontal position regardless
   // of the actual month/week/day text length.
   const widestMonth = "September";
-  let ghost: React.ReactNode;
-  let content: React.ReactNode;
+  let ghost: ReactNode;
+  let content: ReactNode;
   if (viewMode === "week") {
     const wk = isoWeekNumber(currentDate);
     ghost = (
