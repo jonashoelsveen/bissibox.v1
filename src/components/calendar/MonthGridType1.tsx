@@ -1744,7 +1744,7 @@ export function PopoverEditor({
           />
 
           {/* Time row */}
-          <div className="flex items-center gap-2 border-b border-hairline px-3 py-2">
+          <div className="flex items-center gap-2 px-3 py-2">
             {enableDuration && (
               <Clock
                 className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
