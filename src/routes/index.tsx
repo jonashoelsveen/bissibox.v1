@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { SignInModal } from "@/components/SignInModal";
 
@@ -22,6 +22,15 @@ const HELVETICA =
 function HomePage() {
   const { user, authReady } = useAuth();
   const [signInOpen, setSignInOpen] = useState(false);
+
+  // Whenever the user becomes authenticated (or the modal is no longer
+  // needed), make sure the sign-in modal is closed. Without this, the
+  // modal can re-appear on the next sign-out because its 2.1s onClose
+  // timer is cancelled when the parent switches to the logged-in branch
+  // and unmounts the modal.
+  useEffect(() => {
+    if (user) setSignInOpen(false);
+  }, [user]);
 
   // Logged-in Aponna Cloud home — black top tab-bar (rendered globally) + 2×2 cards.
   if (authReady && user) {
