@@ -71,7 +71,11 @@ function HomePage() {
   const pendingRedirect =
     !!user && !!search.signin && search.signin !== "cloud";
 
-  if (authReady && user && !pendingRedirect) {
+  if (pendingRedirect) {
+    return <div className="min-h-full w-full" style={{ backgroundColor: "#fafafa" }} />;
+  }
+
+  if (authReady && user) {
     return (
       <div
         className="min-h-full w-full"
