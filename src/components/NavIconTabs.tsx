@@ -177,11 +177,16 @@ function ActiveTabIcon({
 export function NavIconTabs({
   activeKey,
   onActiveClick,
+  stripped = false,
 }: {
   activeKey: NavKey;
   onActiveClick?: () => void;
+  /** When true, only the group-members icon is shown (Calendar / Diary /
+   *  Library are hidden — they live in the apps menu on these surfaces). */
+  stripped?: boolean;
 }) {
-  const items = useNavItems();
+  const allItems = useNavItems();
+  const items = stripped ? allItems.filter((i) => i.key === "group-members") : allItems;
   const [ordered, persist] = useOrderedItems(items);
   // Calendar/diary are pinned, non-draggable "fixed tabs" rendered to the
   // right of the draggable strip. Everything else stays in the drag pool.
