@@ -2515,9 +2515,11 @@ function DiarySimpleStack({
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
-            onDetailsOpenChange={(open) => {
-              detailsOpenRef.current = open;
-              if (open) cancelClose();
+            onOpenDetails={() => {
+              cancelClose();
+              setDetailsEvId(ev.id);
+              setHoverId(null);
+              setHoverRect(null);
             }}
             onForceClose={() => {
               cancelClose();
@@ -2537,6 +2539,17 @@ function DiarySimpleStack({
                 sessionNoteUpdatedAt: new Date().toISOString(),
               })
             }
+            onUpsert={(patch) => onUpsertSession?.(patch)}
+          />
+        );
+      })()}
+      {detailsEvId && (() => {
+        const ev = events.find((e) => e.id === detailsEvId);
+        if (!ev) return null;
+        return (
+          <SessionDetailsContainer
+            ev={ev}
+            onClose={() => setDetailsEvId(null)}
             onUpsert={(patch) => onUpsertSession?.(patch)}
           />
         );
