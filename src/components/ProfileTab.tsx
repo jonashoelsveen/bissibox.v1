@@ -34,15 +34,14 @@ export function ProfileTab() {
   );
 
   return (
-    <div className="relative flex shrink-0 select-none items-center pr-2">
-      <div className="flex h-14 items-center">
-        {onMedia ? (
-          <LibraryAlbumsHoverMenu>{button}</LibraryAlbumsHoverMenu>
-        ) : (
-          button
-        )}
-      </div>
+    <div className="relative flex h-9 shrink-0 select-none items-center pr-2">
+      {onMedia ? (
+        <LibraryAlbumsHoverMenu>{button}</LibraryAlbumsHoverMenu>
+      ) : (
+        button
+      )}
     </div>
   );
 }
+
 
