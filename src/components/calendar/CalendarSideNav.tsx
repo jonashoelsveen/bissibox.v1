@@ -128,8 +128,8 @@ export function CalendarSideNav({
   const name = displayName ?? (seat === "admin" ? teamName ?? "Team" : "Me");
 
   return (
-    <nav className="flex max-h-[calc(100vh-8rem)] flex-col gap-3 overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
-      <div>
+    <nav className="flex h-full flex-col gap-3 overflow-hidden">
+      <div className="shrink-0">
         <MiniCalendar
           selectedRange={currentRange ?? { start: currentDate, end: currentDate }}
           onSelectRange={(r) => onCurrentDateChange(r.start, r)}
@@ -137,8 +137,8 @@ export function CalendarSideNav({
         />
       </div>
 
-      {/* Category filters */}
-      <div className="flex flex-col gap-0.5 pb-4">
+      {/* Category filters — scrollable */}
+      <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-6 pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
         {seat === "admin" ? (
           <TeamCategorySectionAdapter teamId={teamId} title={teamName ?? "Categories"} />
         ) : (
