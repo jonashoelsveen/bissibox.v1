@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
 import { ProfileTab } from "@/components/ProfileTab";
+import { GroupMemberHoverMenu } from "@/components/team/GroupMemberHoverMenu";
 
 type NavKey =
   | "library"
