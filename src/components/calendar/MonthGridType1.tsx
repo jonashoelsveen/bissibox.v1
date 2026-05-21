@@ -943,7 +943,7 @@ export function MonthGridType1({
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
                                   transition={{ duration: 0.12 }}
-                                  className="pointer-events-none rounded-[3px] border-2 border-dashed border-primary/60 bg-primary/10"
+                                  className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
                                   style={{ minHeight: tallCreate ? 44 : 22 }}
                                 />
                               );
