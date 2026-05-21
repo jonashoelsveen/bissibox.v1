@@ -269,7 +269,7 @@ const Cell = forwardRef<HTMLInputElement, CellProps>(function Cell(
   };
   const onBlur = () => {
     setEditing(false);
-    commit(text);
+    commit(textRef.current);
   };
 
   return (
