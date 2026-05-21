@@ -6,6 +6,7 @@ import { GlobalTopTabBar } from "@/components/GlobalTopTabBar";
 import { GlobalCreateOverlay } from "@/components/GlobalCreateOverlay";
 import { TopBarSlotProvider } from "@/components/TopBarSlot";
 import { SettingsModal } from "@/components/SettingsModal";
+import { ProfileModal } from "@/components/ProfileModal";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
