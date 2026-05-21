@@ -234,76 +234,20 @@ export function SignInModal({
               }}
               className="flex min-h-0 flex-1 flex-col"
             >
-              {/* Headers */}
-              <div className="mb-6 text-center">
-                {mode === "signin" ? (
-                  <>
-                    <h2
-                      style={{
-                        fontFamily: HELVETICA,
-                        fontSize: 22,
-                        fontWeight: 400,
-                        color: "#1d1d1f",
-                        letterSpacing: "-0.01em",
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {title}
-                    </h2>
-                    <p
-                      style={{
-                        marginTop: 6,
-                        fontFamily: HELVETICA,
-                        fontSize: 14,
-                        fontWeight: 400,
-                        color: "#86868b",
-                        letterSpacing: "-0.005em",
-                      }}
-                    >
-                      Sign in with your Aponna-account
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h2
-                      style={{
-                        fontFamily: HELVETICA,
-                        fontSize: 22,
-                        fontWeight: 400,
-                        color: "#1d1d1f",
-                        letterSpacing: "-0.01em",
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      Create Aponna-account
-                    </h2>
-                    <p
-                      style={{
-                        marginTop: 6,
-                        fontFamily: HELVETICA,
-                        fontSize: 13,
-                        fontWeight: 400,
-                        color: "#86868b",
-                        letterSpacing: "-0.005em",
-                      }}
-                    >
-                      Your key to the Aponna ecosystem
-                    </p>
-                  </>
-                )}
-              </div>
-
               {mode === "signin" ? (
-                <SignInForm
-                  onSubmit={onSubmit}
-                  email={email}
-                  setEmail={setEmail}
-                  password={password}
-                  setPassword={setPassword}
-                  error={error}
-                  submitting={submitting}
-                  onCreate={() => switchMode("signup")}
-                />
+                <div style={{ padding: "44px 40px 32px" }}>
+                  <ModalHeader title={title} subtitle="Sign in with your Aponna-account" subtitleSize={14} />
+                  <SignInForm
+                    onSubmit={onSubmit}
+                    email={email}
+                    setEmail={setEmail}
+                    password={password}
+                    setPassword={setPassword}
+                    error={error}
+                    submitting={submitting}
+                    onCreate={() => switchMode("signup")}
+                  />
+                </div>
               ) : (
                 <SignUpForm
                   onSubmit={onSubmit}
