@@ -110,6 +110,26 @@ export function GlobalTopTabBar() {
       <style>{`
         .global-topbar-dark .topbar-row { color: #ffffff; }
         .global-topbar-dark .topbar-row *:not([data-folder-icon]):not([data-folder-icon] *) { color: #ffffff; }
+        /* macOS menu-bar style hover: instant on/off, no easing. */
+        .global-topbar-dark .topbar-row [data-nav-icon] {
+          border-radius: 6px;
+          transition: none !important;
+        }
+        .global-topbar-dark .topbar-row [data-nav-icon]:hover {
+          background-color: rgba(255, 255, 255, 0.10) !important;
+        }
+        .global-topbar-dark .topbar-row [data-nav-icon]:active {
+          background-color: rgba(255, 255, 255, 0.16) !important;
+        }
+        /* Group-members icon: slightly darker hover so it reads as the
+           same tile family as the menu it opens, with a touch more weight. */
+        .global-topbar-dark .topbar-row [data-nav-icon][data-nav-key="group-members"]:hover {
+          background-color: rgba(255, 255, 255, 0.16) !important;
+        }
+        .global-topbar-dark .topbar-row [data-nav-icon][data-nav-key="group-members"]:active {
+          background-color: rgba(255, 255, 255, 0.22) !important;
+        }
+        /* Generic button hover fallback for plus/apps icons. */
         .global-topbar-dark .topbar-row button:hover {
           background-color: rgba(255,255,255,0.10) !important;
         }
@@ -162,7 +182,8 @@ export function GlobalTopTabBar() {
         .global-topbar-dark .topbar-row [role="menu"] * { color: oklch(0.14 0.012 260); }
         .global-topbar-dark .topbar-row [role="menu"] .text-muted-foreground { color: oklch(0.5 0.01 260); }
         .global-topbar-dark .topbar-row [role="menu"] button:hover {
-          background-color: oklch(0.94 0.005 90) !important;
+          background-color: rgba(0, 0, 0, 0.06) !important;
+          transition: none !important;
         }
       `}</style>
       <div className="topbar-row relative z-10 flex items-end gap-1 px-4 md:px-6">
