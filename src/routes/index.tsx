@@ -1,5 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { SignInModal } from "@/components/SignInModal";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -18,21 +20,41 @@ const HELVETICA =
   '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
 function HomePage() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const { user, authReady } = useAuth();
+  const [signInOpen, setSignInOpen] = useState(false);
 
-  const onSignIn = () => {
-    if (user) void navigate({ to: "/calendar" });
-    else void navigate({ to: "/auth", search: { redirect: "/" } });
-  };
+  // Logged-in Aponna Cloud home — black top tab-bar (rendered globally) + 2×2 cards.
+  if (authReady && user) {
+    return (
+      <div
+        className="min-h-full w-full"
+        style={{ backgroundColor: "#fafafa", fontFamily: HELVETICA }}
+      >
+        <div className="mx-auto grid h-full max-w-[1600px] grid-cols-2 grid-rows-2 gap-6 px-6 py-6"
+             style={{ minHeight: "calc(100vh - 80px)" }}>
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-full w-full bg-white"
+              style={{
+                borderRadius: 24,
+                boxShadow:
+                  "0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.05)",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
+  // Landing (logged out).
   return (
     <div
       className="min-h-full w-full"
       style={{ backgroundColor: "#fafafa", fontFamily: HELVETICA }}
     >
       <div className="mx-auto flex max-w-6xl flex-col items-center px-6">
-        {/* Hero — centered slightly below middle of viewport */}
         <div
           className="flex w-full flex-col items-center text-center"
           style={{ paddingTop: "clamp(120px, 22vh, 240px)" }}
@@ -61,7 +83,7 @@ function HomePage() {
 
           <button
             type="button"
-            onClick={onSignIn}
+            onClick={() => setSignInOpen(true)}
             className="mt-10 text-white transition active:scale-[0.98]"
             style={{
               backgroundColor: "#1d1d1f",
@@ -73,11 +95,10 @@ function HomePage() {
               letterSpacing: "-0.01em",
             }}
           >
-            {user ? "Open" : "Sign in"}
+            Sign in
           </button>
         </div>
 
-        {/* Empty content cards */}
         <div className="mt-24 grid w-full grid-cols-1 gap-5 pb-24 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <div
@@ -92,6 +113,8 @@ function HomePage() {
           ))}
         </div>
       </div>
+
+      <SignInModal open={signInOpen} onClose={() => setSignInOpen(false)} />
     </div>
   );
 }
