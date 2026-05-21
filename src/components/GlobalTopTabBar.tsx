@@ -21,6 +21,7 @@ import { ProfileTab } from "@/components/ProfileTab";
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
 import { ProfileMenuButton } from "@/components/ProfileMenuButton";
+import { HomeIcon } from "@/components/HomeIcon";
 
 /** Routes whose top tab-bar is stripped down to: Me/We + (conditional)
  *  Group Members. Calendar / Diary / Photos icons move into the apps menu. */
@@ -50,6 +51,8 @@ export function GlobalTopTabBar() {
   const activeKey = useActiveNavKey();
   const stripped = useIsStrippedSurface();
   const navigate = useNavigate();
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const isHome = path === "/";
 
 
   const isEntity = mode === "team" || mode === "organizer";
@@ -120,6 +123,104 @@ export function GlobalTopTabBar() {
     setMapHover(false);
     void navigate({ to, resetScroll: false });
   };
+
+  if (isHome) {
+    return (
+      <div
+        className="fixed left-0 right-0 top-0 z-[90] flex items-center justify-between"
+        style={{
+          backgroundColor: "#fafafa",
+          height: 40,
+          paddingLeft: 16,
+          paddingRight: 16,
+          opacity: authReady ? 1 : 0.5,
+          pointerEvents: authReady ? "auto" : "none",
+          transition: "opacity 180ms ease-out",
+        }}
+      >
+        <button
+          type="button"
+          aria-label="Home"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-[#1d1d1f] hover:bg-black/5"
+        >
+          <HomeIcon className="h-[20px] w-[20px]" strokeWidth={1.8} />
+        </button>
+        {user && (
+          <div className="relative" ref={appsRef}>
+            <button
+              onClick={() => setAppsOpen((v) => !v)}
+              aria-label="Apps"
+              aria-haspopup="menu"
+              aria-expanded={appsOpen}
+              className="flex h-9 w-9 items-center justify-center rounded-md text-[#1d1d1f] transition hover:bg-black/5"
+            >
+              <AppsIcon className="h-[18px] w-[18px]" />
+            </button>
+            {appsOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-50 mt-2 w-56 origin-top-right overflow-hidden rounded-xl border border-hairline bg-popover text-ink shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
+              >
+                <div className="p-3">
+                  <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { key: "calendar", label: "Calendar", to: "/calendar", icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
+                      { key: "diary", label: "Diary", to: "/diary", icon: <BookOpen strokeWidth={1.75} />, disabled: false },
+                      { key: "photos", label: "Photos", to: "/photos", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
+                      { key: "soon", label: "Coming soon", to: null, icon: <Plus strokeWidth={1.75} className="opacity-60" style={{ strokeDasharray: "3 2" }} />, disabled: true },
+                    ] as const).map((app) => (
+                      <button
+                        key={app.key}
+                        type="button"
+                        aria-label={app.label}
+                        aria-disabled={app.disabled || undefined}
+                        disabled={app.disabled}
+                        onClick={app.disabled || !app.to ? undefined : () => handleAppNavigate(app.to)}
+                        className={
+                          "flex aspect-square flex-col items-center justify-center gap-1 rounded-xl p-2 " +
+                          (app.disabled
+                            ? "pointer-events-none opacity-50 text-muted-foreground"
+                            : "text-ink hover:bg-secondary")
+                        }
+                        style={{ transition: "none" }}
+                      >
+                        <span className="flex h-[58%] w-full items-center justify-center [&_svg]:h-full [&_svg]:w-auto">
+                          {app.icon}
+                        </span>
+                        <span className="text-[11px] leading-none">{app.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <a
+                  href="#"
+                  onClick={(e) => e.preventDefault()}
+                  className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-sm text-ink"
+                  style={{ transition: "none" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
+                >
+                  <Home className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
+                  <span>aponnacloud.com</span>
+                </a>
+                <a
+                  href="#"
+                  onClick={(e) => e.preventDefault()}
+                  className="flex w-full items-center border-t border-hairline px-3 py-2.5 text-sm text-ink"
+                  style={{ transition: "none" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
+                >
+                  <span>account.aponna.com</span>
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
