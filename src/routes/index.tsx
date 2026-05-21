@@ -67,7 +67,11 @@ function HomePage() {
   };
 
   // Logged-in Aponna Cloud home — 2×2 cards.
-  if (authReady && user) {
+  // Avoid flashing the Cloud home when a context-driven redirect is pending.
+  const pendingRedirect =
+    !!user && !!search.signin && search.signin !== "cloud";
+
+  if (authReady && user && !pendingRedirect) {
     return (
       <div
         className="min-h-full w-full"
