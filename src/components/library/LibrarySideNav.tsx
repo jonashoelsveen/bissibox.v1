@@ -372,10 +372,11 @@ export function LibrarySideNav({
                         return (
                           <button
                             key={f.id}
-                            onClick={() => onChange({ category: "media", folder: f.id })}
-                            onDoubleClick={() =>
-                              onOpenAsTab?.({ category: "media", folder: f.id }, f.name, f.color ?? null)
-                            }
+                            onClick={() => {
+                              onChange({ category: "media", folder: f.id });
+                              onOpenAsTab?.({ category: "media", folder: f.id }, f.name, f.color ?? null);
+                            }}
+
                             className={`flex min-w-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-left text-xs transition ${
                               active
                                 ? "bg-secondary font-medium text-ink"
