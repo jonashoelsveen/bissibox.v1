@@ -1150,12 +1150,6 @@ export function MonthGridType1({
                     )}
                   </div>
 
-                  {/* Hover "+" affordance — visible only when cell is empty + in month */}
-                  {d.inMonth && allItems.length === 0 && (
-                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover/cell:opacity-100">
-                      <Plus className="h-3.5 w-3.5 text-muted-foreground/60" strokeWidth={2.25} />
-                    </span>
-                  )}
 
                   {/* Diary: per-day note (bottom-right corner) */}
                   {appKind === "diary" && d.inMonth && (
