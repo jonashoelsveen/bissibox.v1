@@ -476,9 +476,9 @@ function TitleInput({
       className="min-w-0 flex-1 self-center overflow-hidden whitespace-nowrap bg-transparent pl-1.5 pr-2 text-[12px] text-ink outline-none placeholder:text-muted-foreground/60 disabled:cursor-default"
       style={{
         WebkitMaskImage:
-          "linear-gradient(to right, #000 0, #000 calc(100% - 16px), transparent 100%)",
+          "linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%)",
         maskImage:
-          "linear-gradient(to right, #000 0, #000 calc(100% - 16px), transparent 100%)",
+          "linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%)",
       }}
     />
   );
