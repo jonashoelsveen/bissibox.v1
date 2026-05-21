@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -8,35 +8,84 @@ interface AuthContextValue {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  /** True once the initial session check (via /api/auth/session) has completed. */
+  authReady: boolean;
   mode: Mode;
   setMode: (m: Mode) => void;
-  /** Currently selected entity (team/company/cooperation) id, or null when on the individual profile. */
   activeEntityId: string | null;
-  /** Pass an entity id to switch into team mode for that entity, or null to switch back to the individual profile. */
   setActiveEntity: (id: string | null) => void;
+  signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  signUp: (args: { email: string; password: string; first_name?: string; last_name?: string }) => Promise<{ error?: string; needsEmailConfirmation?: boolean }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+interface SessionResponse {
+  user?: User | null;
+  access_token?: string;
+  refresh_token?: string;
+  error?: string;
+}
+
+async function fetchSession(): Promise<SessionResponse | null> {
+  try {
+    const res = await fetch("/api/auth/session", {
+      method: "GET",
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (res.status === 401) return null;
+    if (!res.ok) return null;
+    return (await res.json()) as SessionResponse;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
   const [mode, setModeState] = useState<Mode>("participant");
   const [activeEntityId, setActiveEntityIdState] = useState<string | null>(null);
+  const bootedRef = useRef(false);
 
+  // Boot: hydrate from the HTTP-only cookie via /api/auth/session.
   useEffect(() => {
-    // Set up listener FIRST
+    if (bootedRef.current) return;
+    bootedRef.current = true;
+
+    // Listener for in-tab auth changes (token refresh, sign-out).
     const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
       setSession(sess);
       setUser(sess?.user ?? null);
     });
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      setUser(s?.user ?? null);
+
+    (async () => {
+      const data = await fetchSession();
+      if (data && data.user && data.access_token && data.refresh_token) {
+        // Hydrate the in-memory Supabase client so existing .from() calls and
+        // the attachSupabaseAuth middleware have a valid bearer token.
+        await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        });
+        setUser(data.user);
+      } else {
+        // Cookie missing/invalid → make sure no stale localStorage session lingers.
+        try {
+          await supabase.auth.signOut({ scope: "local" });
+        } catch {
+          /* ignore */
+        }
+        setUser(null);
+        setSession(null);
+      }
       setLoading(false);
-    });
+      setAuthReady(true);
+    })();
 
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("rl_mode");
@@ -59,19 +108,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (id) localStorage.setItem("rl_active_entity", id);
       else localStorage.removeItem("rl_active_entity");
     }
-    // Keep mode in sync so existing UI continues to work.
     const next: Mode = id ? "team" : "participant";
     setModeState(next);
     if (typeof window !== "undefined") localStorage.setItem("rl_mode", next);
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
+  const signIn = useCallback(async (email: string, password: string) => {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const body = (await res.json().catch(() => ({}))) as SessionResponse;
+      if (!res.ok || !body.user || !body.access_token || !body.refresh_token) {
+        return { error: body.error ?? "Sign-in failed" };
+      }
+      await supabase.auth.setSession({
+        access_token: body.access_token,
+        refresh_token: body.refresh_token,
+      });
+      setUser(body.user);
+      return {};
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "Network error" };
+    }
+  }, []);
+
+  const signUp = useCallback(
+    async (args: { email: string; password: string; first_name?: string; last_name?: string }) => {
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(args),
+        });
+        const body = (await res.json().catch(() => ({}))) as SessionResponse & { needsEmailConfirmation?: boolean };
+        if (!res.ok) return { error: body.error ?? "Sign-up failed" };
+        if (body.needsEmailConfirmation) return { needsEmailConfirmation: true };
+        if (body.user && body.access_token && body.refresh_token) {
+          await supabase.auth.setSession({
+            access_token: body.access_token,
+            refresh_token: body.refresh_token,
+          });
+          setUser(body.user);
+        }
+        return {};
+      } catch (e) {
+        return { error: e instanceof Error ? e.message : "Network error" };
+      }
+    },
+    [],
+  );
+
+  const signOut = useCallback(async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } catch {
+      /* ignore */
+    }
+    await supabase.auth.signOut().catch(() => {});
+    setUser(null);
+    setSession(null);
+  }, []);
 
   return (
     <AuthContext.Provider
-      value={{ user, session, loading, mode, setMode, activeEntityId, setActiveEntity, signOut }}
+      value={{ user, session, loading, authReady, mode, setMode, activeEntityId, setActiveEntity, signIn, signUp, signOut }}
     >
       {children}
     </AuthContext.Provider>

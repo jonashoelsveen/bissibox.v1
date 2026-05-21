@@ -17,7 +17,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
-  const { user } = useAuth();
+  const { user, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -35,17 +35,15 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     if (mode === "signup") {
-      const { data, error } = await supabase.auth.signUp({
+      const { error, needsEmailConfirmation } = await signUp({
         email,
         password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/profile`,
-          data: { first_name: firstName, last_name: lastName },
-        },
+        first_name: firstName,
+        last_name: lastName,
       });
       setLoading(false);
-      if (error) return toast.error(error.message);
-      if (!data.session) {
+      if (error) return toast.error(error);
+      if (needsEmailConfirmation) {
         toast.success("Check your email to confirm your account.");
         setPassword("");
         setMode("signin");
@@ -53,9 +51,9 @@ function AuthPage() {
       }
       toast.success("Account created. You're signed in.");
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await signIn(email, password);
       setLoading(false);
-      if (error) return toast.error(error.message);
+      if (error) return toast.error(error);
     }
   };
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
 
 import {
   Plus,
@@ -21,6 +22,15 @@ import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
 import { ProfileMenuButton } from "@/components/ProfileMenuButton";
 
+/** Routes whose top tab-bar is stripped down to: Me/We + (conditional)
+ *  Group Members. Calendar / Diary / Photos icons move into the apps menu. */
+const STRIPPED_SURFACE_PREFIXES = ["/calendar", "/diary", "/media", "/photos"];
+
+function useIsStrippedSurface(): boolean {
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  return STRIPPED_SURFACE_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
+}
+
 type CreateKind =
   | "meeting"
   | "note"
@@ -36,8 +46,9 @@ type CreateKind =
  * Search + Plus menu.
  */
 export function GlobalTopTabBar() {
-  const { user, mode } = useAuth();
+  const { user, mode, authReady } = useAuth();
   const activeKey = useActiveNavKey();
+  const stripped = useIsStrippedSurface();
 
 
   const isEntity = mode === "team" || mode === "organizer";
@@ -109,6 +120,9 @@ export function GlobalTopTabBar() {
         backgroundColor: "rgba(29, 29, 31, 0.91)",
         backdropFilter: "saturate(180%) blur(20px)",
         WebkitBackdropFilter: "saturate(180%) blur(20px)",
+        opacity: authReady ? 1 : 0.5,
+        pointerEvents: authReady ? "auto" : "none",
+        transition: "opacity 180ms ease-out",
       }}
     >
       <style>{`
@@ -193,7 +207,7 @@ export function GlobalTopTabBar() {
       `}</style>
       <div className="topbar-row relative z-10 flex items-end gap-1 px-4 md:px-6">
         <ProfileTab />
-        <NavIconTabs activeKey={activeKey} />
+        <NavIconTabs activeKey={activeKey} stripped={stripped} />
         {/* Page-provided slot — open notes/event tabs etc. */}
         <TopBarSlotMount className="flex min-w-0 flex-1 items-end pl-2" />
         {/* Plus */}
@@ -305,7 +319,7 @@ export function GlobalTopTabBar() {
                   {[
                     { key: "calendar", label: "Calendar", href: "/calendar", icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
                     { key: "diary", label: "Diary", href: "/diary", icon: <BookOpen strokeWidth={1.75} />, disabled: false },
-                    { key: "photos", label: "Photos", href: "/media", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
+                    { key: "photos", label: "Photos", href: "/photos", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
                     { key: "soon", label: "Coming soon", href: "#", icon: <Plus strokeWidth={1.75} className="opacity-60" style={{ strokeDasharray: "3 2" }} />, disabled: true },
                   ].map((app) => (
                     <a

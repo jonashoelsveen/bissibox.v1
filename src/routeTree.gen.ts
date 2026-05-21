@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PhotosRouteImport } from './routes/photos'
 import { Route as MediaRouteImport } from './routes/media'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as DiaryRouteImport } from './routes/diary'
 import { Route as CalendarRouteImport } from './routes/calendar'
@@ -23,6 +25,10 @@ import { Route as TeamGroupMembersRouteImport } from './routes/team.group-member
 import { Route as TeamBoardRouteImport } from './routes/team.board'
 import { Route as TTeamIdRouteImport } from './routes/t.$teamId'
 import { Route as CCompanyIdRouteImport } from './routes/c.$companyId'
+import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
+import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
+import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
+import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 
 const SettingsRoute = SettingsRouteImport.update({
@@ -35,9 +41,19 @@ const ProfileRoute = ProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PhotosRoute = PhotosRouteImport.update({
+  id: '/photos',
+  path: '/photos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MediaRoute = MediaRouteImport.update({
   id: '/media',
   path: '/media',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HomeRoute = HomeRouteImport.update({
@@ -95,6 +111,26 @@ const CCompanyIdRoute = CCompanyIdRouteImport.update({
   path: '/c/$companyId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
+  id: '/api/auth/session',
+  path: '/api/auth/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthRegisterRoute = ApiAuthRegisterRouteImport.update({
+  id: '/api/auth/register',
+  path: '/api/auth/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
+  id: '/api/auth/logout',
+  path: '/api/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
+  id: '/api/auth/login',
+  path: '/api/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
     id: '/lovable/email/queue/process',
@@ -109,7 +145,9 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof CalendarRoute
   '/diary': typeof DiaryRoute
   '/home': typeof HomeRoute
+  '/login': typeof LoginRoute
   '/media': typeof MediaRoute
+  '/photos': typeof PhotosRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
@@ -117,6 +155,10 @@ export interface FileRoutesByFullPath {
   '/team/board': typeof TeamBoardRoute
   '/team/group-members': typeof TeamGroupMembersRoute
   '/u/$userId': typeof UUserIdRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
@@ -126,7 +168,9 @@ export interface FileRoutesByTo {
   '/calendar': typeof CalendarRoute
   '/diary': typeof DiaryRoute
   '/home': typeof HomeRoute
+  '/login': typeof LoginRoute
   '/media': typeof MediaRoute
+  '/photos': typeof PhotosRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
@@ -134,6 +178,10 @@ export interface FileRoutesByTo {
   '/team/board': typeof TeamBoardRoute
   '/team/group-members': typeof TeamGroupMembersRoute
   '/u/$userId': typeof UUserIdRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
@@ -144,7 +192,9 @@ export interface FileRoutesById {
   '/calendar': typeof CalendarRoute
   '/diary': typeof DiaryRoute
   '/home': typeof HomeRoute
+  '/login': typeof LoginRoute
   '/media': typeof MediaRoute
+  '/photos': typeof PhotosRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
@@ -152,6 +202,10 @@ export interface FileRoutesById {
   '/team/board': typeof TeamBoardRoute
   '/team/group-members': typeof TeamGroupMembersRoute
   '/u/$userId': typeof UUserIdRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/register': typeof ApiAuthRegisterRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
@@ -163,7 +217,9 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/diary'
     | '/home'
+    | '/login'
     | '/media'
+    | '/photos'
     | '/profile'
     | '/settings'
     | '/c/$companyId'
@@ -171,6 +227,10 @@ export interface FileRouteTypes {
     | '/team/board'
     | '/team/group-members'
     | '/u/$userId'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/register'
+    | '/api/auth/session'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -180,7 +240,9 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/diary'
     | '/home'
+    | '/login'
     | '/media'
+    | '/photos'
     | '/profile'
     | '/settings'
     | '/c/$companyId'
@@ -188,6 +250,10 @@ export interface FileRouteTypes {
     | '/team/board'
     | '/team/group-members'
     | '/u/$userId'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/register'
+    | '/api/auth/session'
     | '/lovable/email/queue/process'
   id:
     | '__root__'
@@ -197,7 +263,9 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/diary'
     | '/home'
+    | '/login'
     | '/media'
+    | '/photos'
     | '/profile'
     | '/settings'
     | '/c/$companyId'
@@ -205,6 +273,10 @@ export interface FileRouteTypes {
     | '/team/board'
     | '/team/group-members'
     | '/u/$userId'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/register'
+    | '/api/auth/session'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
@@ -215,7 +287,9 @@ export interface RootRouteChildren {
   CalendarRoute: typeof CalendarRoute
   DiaryRoute: typeof DiaryRoute
   HomeRoute: typeof HomeRoute
+  LoginRoute: typeof LoginRoute
   MediaRoute: typeof MediaRoute
+  PhotosRoute: typeof PhotosRoute
   ProfileRoute: typeof ProfileRoute
   SettingsRoute: typeof SettingsRoute
   CCompanyIdRoute: typeof CCompanyIdRoute
@@ -223,6 +297,10 @@ export interface RootRouteChildren {
   TeamBoardRoute: typeof TeamBoardRoute
   TeamGroupMembersRoute: typeof TeamGroupMembersRoute
   UUserIdRoute: typeof UUserIdRoute
+  ApiAuthLoginRoute: typeof ApiAuthLoginRoute
+  ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
+  ApiAuthRegisterRoute: typeof ApiAuthRegisterRoute
+  ApiAuthSessionRoute: typeof ApiAuthSessionRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
@@ -242,11 +320,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/photos': {
+      id: '/photos'
+      path: '/photos'
+      fullPath: '/photos'
+      preLoaderRoute: typeof PhotosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/media': {
       id: '/media'
       path: '/media'
       fullPath: '/media'
       preLoaderRoute: typeof MediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/home': {
@@ -326,6 +418,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CCompanyIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/session': {
+      id: '/api/auth/session'
+      path: '/api/auth/session'
+      fullPath: '/api/auth/session'
+      preLoaderRoute: typeof ApiAuthSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/register': {
+      id: '/api/auth/register'
+      path: '/api/auth/register'
+      fullPath: '/api/auth/register'
+      preLoaderRoute: typeof ApiAuthRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/logout': {
+      id: '/api/auth/logout'
+      path: '/api/auth/logout'
+      fullPath: '/api/auth/logout'
+      preLoaderRoute: typeof ApiAuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/login': {
+      id: '/api/auth/login'
+      path: '/api/auth/login'
+      fullPath: '/api/auth/login'
+      preLoaderRoute: typeof ApiAuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
       path: '/lovable/email/queue/process'
@@ -343,7 +463,9 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarRoute: CalendarRoute,
   DiaryRoute: DiaryRoute,
   HomeRoute: HomeRoute,
+  LoginRoute: LoginRoute,
   MediaRoute: MediaRoute,
+  PhotosRoute: PhotosRoute,
   ProfileRoute: ProfileRoute,
   SettingsRoute: SettingsRoute,
   CCompanyIdRoute: CCompanyIdRoute,
@@ -351,6 +473,10 @@ const rootRouteChildren: RootRouteChildren = {
   TeamBoardRoute: TeamBoardRoute,
   TeamGroupMembersRoute: TeamGroupMembersRoute,
   UUserIdRoute: UUserIdRoute,
+  ApiAuthLoginRoute: ApiAuthLoginRoute,
+  ApiAuthLogoutRoute: ApiAuthLogoutRoute,
+  ApiAuthRegisterRoute: ApiAuthRegisterRoute,
+  ApiAuthSessionRoute: ApiAuthSessionRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
