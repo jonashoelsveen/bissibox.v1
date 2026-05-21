@@ -92,12 +92,13 @@ function HomePage() {
           style={{ paddingTop: "clamp(120px, 22vh, 240px)" }}
         >
           <h1
-            className="font-bold tracking-tight text-[#1d1d1f]"
+            className="tracking-tight text-[#1d1d1f]"
             style={{
               fontFamily: HELVETICA,
               fontSize: "clamp(56px, 9vw, 112px)",
               lineHeight: 1.02,
               letterSpacing: "-0.04em",
+              fontWeight: 600,
             }}
           >
             Aponna Cloud
