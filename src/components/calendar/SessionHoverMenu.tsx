@@ -147,8 +147,8 @@ export function SessionHoverMenu({
   }, [visible, noteEdit, showDetails, confirm]);
 
   // Lock the menu open while note edit / details / confirm is in flight.
-  const sticky = noteEdit || leaderNoteEdit || showDetails || confirm;
-  const menuVisible = visible || sticky;
+  const sticky = noteEdit || leaderNoteEdit || confirm;
+  const menuVisible = (visible || sticky) && !showDetails;
 
   // Outside-click closes everything when the note panel is open.
   const menuRef = useRef<HTMLDivElement | null>(null);
