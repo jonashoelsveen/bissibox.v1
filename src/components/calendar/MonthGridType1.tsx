@@ -32,7 +32,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { Plus, Trash2, PersonStanding, GraduationCap, Briefcase, Sparkles, Clock, Bike, Waves, Dumbbell, Snowflake, Footprints } from "lucide-react";
+import { Trash2, PersonStanding, GraduationCap, Briefcase, Sparkles, Clock, Bike, Waves, Dumbbell, Snowflake, Footprints } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
@@ -869,6 +869,7 @@ export function MonthGridType1({
 
                       type RenderItem =
                         | { kind: "ghost" }
+                        | { kind: "creating" }
                         | UnifiedItem;
                       const renderList: RenderItem[] = [...baseVisible];
                       if (isTargetDay && dragSession) {
@@ -877,6 +878,15 @@ export function MonthGridType1({
                         // day is targeted. The actual drop still places the
                         // session in its correct sorted slot by start time.
                         renderList.splice(0, 0, { kind: "ghost" });
+                      }
+                      const isCreatingHere =
+                        !!popover &&
+                        !popover.eventId &&
+                        popover.editIdx < 0 &&
+                        popover.pos.row === pos.row &&
+                        popover.pos.col === pos.col;
+                      if (isCreatingHere) {
+                        renderList.push({ kind: "creating" });
                       }
                       const renderVisible = renderList.slice(0, MAX_VISIBLE);
 
@@ -920,6 +930,22 @@ export function MonthGridType1({
                                 >
                                   {renderGhost()}
                                 </motion.div>
+                              );
+                            }
+                            if (it.kind === "creating") {
+                              const tallCreate =
+                                appKind === "diary" &&
+                                (monthTileDesign === "split" || monthTileDesign === "stacked");
+                              return (
+                                <motion.div
+                                  key={`${id}-creating-${idx}`}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.12 }}
+                                  className="pointer-events-none rounded-[3px] border-2 border-dashed border-primary/60 bg-primary/10"
+                                  style={{ minHeight: tallCreate ? 44 : 22 }}
+                                />
                               );
                             }
                             const raw = it.kind === "legacy" ? it.raw : it.event.title;
@@ -1150,12 +1176,6 @@ export function MonthGridType1({
                     )}
                   </div>
 
-                  {/* Hover "+" affordance — visible only when cell is empty + in month */}
-                  {d.inMonth && allItems.length === 0 && (
-                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover/cell:opacity-100">
-                      <Plus className="h-3.5 w-3.5 text-muted-foreground/60" strokeWidth={2.25} />
-                    </span>
-                  )}
 
                   {/* Diary: per-day note (bottom-right corner) */}
                   {appKind === "diary" && d.inMonth && (
