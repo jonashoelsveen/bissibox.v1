@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth";
 import { ProfileTab } from "@/components/ProfileTab";
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
+import { ProfileMenuButton } from "@/components/ProfileMenuButton";
 
 type CreateKind =
   | "meeting"
@@ -311,6 +312,7 @@ export function GlobalTopTabBar() {
             </div>
           )}
         </div>
+        <ProfileMenuButton />
       </div>
     </div>
   );

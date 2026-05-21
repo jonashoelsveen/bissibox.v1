@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Library,
-  Settings,
   LogIn,
   UsersRound,
   CalendarDays,
@@ -50,7 +49,6 @@ function useNavItems(): NavItem[] {
   if (isIndividual) {
     items.push({ key: "diary", to: "/diary", label: "Diary", icon: BookOpen });
   }
-  items.push({ key: "settings", to: "/settings", label: "Settings", icon: Settings });
   return items;
 }
 

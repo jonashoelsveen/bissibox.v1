@@ -1,4 +1,5 @@
 import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TopBar } from "@/components/TopBar";
@@ -6,6 +7,7 @@ import { GlobalTopTabBar } from "@/components/GlobalTopTabBar";
 import { GlobalCreateOverlay } from "@/components/GlobalCreateOverlay";
 import { TopBarSlotProvider } from "@/components/TopBarSlot";
 import { SettingsModal } from "@/components/SettingsModal";
+import { ProfileModal } from "@/components/ProfileModal";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -72,17 +74,35 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  // When rendered inside an iframe (e.g. the ProfileModal), hide the global
+  // chrome so only the page content is visible inside the modal.
+  const [isEmbedded, setIsEmbedded] = useState(false);
+  useEffect(() => {
+    try {
+      setIsEmbedded(window.self !== window.top);
+    } catch {
+      setIsEmbedded(true);
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <TopBarSlotProvider>
-        <TopBar />
-        <GlobalTopTabBar />
-        <main className="fixed inset-x-0 top-10 bottom-0 overflow-y-auto">
+        {!isEmbedded && <TopBar />}
+        {!isEmbedded && <GlobalTopTabBar />}
+        <main
+          className={
+            isEmbedded
+              ? "fixed inset-0 overflow-y-auto"
+              : "fixed inset-x-0 top-10 bottom-0 overflow-y-auto"
+          }
+        >
           <Outlet />
         </main>
-        <Toaster />
-        <GlobalCreateOverlay />
-        <SettingsModal />
+        {!isEmbedded && <Toaster />}
+        {!isEmbedded && <GlobalCreateOverlay />}
+        {!isEmbedded && <SettingsModal />}
+        {!isEmbedded && <ProfileModal />}
       </TopBarSlotProvider>
     </AuthProvider>
   );
