@@ -44,6 +44,8 @@ import { useMonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
 
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
+import { SessionHoverMenu } from "./SessionHoverMenu";
+import { SessionDetailsContainer } from "./SessionDetailsContainer";
 import { TimeWheelPicker } from "./TimeWheelPicker";
 
 function activityIconFor(ev: CalendarEvent): LucideIcon {
@@ -287,6 +289,25 @@ export function MonthGridType1({
     window.addEventListener("mouseup", onUp);
     return () => window.removeEventListener("mouseup", onUp);
   }, []);
+
+  // ───────────────────── Diary hover menu (mirrors week view) ──────────────
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
+  const hoverCloseTimerRef = useRef<number | null>(null);
+  const cancelHoverClose = useCallback(() => {
+    if (hoverCloseTimerRef.current != null) {
+      window.clearTimeout(hoverCloseTimerRef.current);
+      hoverCloseTimerRef.current = null;
+    }
+  }, []);
+  const scheduleHoverClose = useCallback(() => {
+    cancelHoverClose();
+    hoverCloseTimerRef.current = window.setTimeout(() => {
+      setHoverId(null);
+      setHoverRect(null);
+    }, 180);
+  }, [cancelHoverClose]);
 
   // ───────────────────────── Popover (add/edit) ─────────────────────────
 
@@ -927,6 +948,20 @@ export function MonthGridType1({
                             data-real-event={isRealEvent ? "1" : undefined}
                             data-ghost-event={it.kind === "event" && it.event.id.startsWith("__ghost__:") ? "1" : undefined}
                             data-event-id={isRealEvent ? it.event.id : undefined}
+                            onMouseEnter={(e) => {
+                              if (appKind !== "diary" || !isRealEvent) return;
+                              cancelHoverClose();
+                              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                              setHoverId(it.kind === "event" ? it.event.id : null);
+                              setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+                            }}
+                            onMouseLeave={(e) => {
+                              if (appKind !== "diary" || !isRealEvent) return;
+                              const related = e.relatedTarget as Node | null;
+                              const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
+                              if (goingIntoMenu) return;
+                              scheduleHoverClose();
+                            }}
                             onPointerDown={(e) => {
                               if (e.button !== 0) return;
                               if (it.kind === "legacy") return;
@@ -1360,6 +1395,58 @@ export function MonthGridType1({
             >
               {ev.title}
             </div>
+          );
+        })()}
+        {appKind === "diary" && hoverId && hoverRect && (() => {
+          const ev = events.find((e) => e.id === hoverId);
+          if (!ev) return null;
+          return (
+            <SessionHoverMenu
+              ev={ev}
+              blockRect={hoverRect}
+              rowHeight={28}
+              visible={hoverId === ev.id}
+              memberId={memberId}
+              viewerRole={viewerRole}
+              onMenuEnter={cancelHoverClose}
+              onMenuLeave={scheduleHoverClose}
+              onOpenDetails={() => {
+                cancelHoverClose();
+                setDetailsEvId(ev.id);
+                setHoverId(null);
+                setHoverRect(null);
+              }}
+              onForceClose={() => {
+                cancelHoverClose();
+                setHoverId(null);
+                setHoverRect(null);
+              }}
+              onDelete={() => {
+                cancelHoverClose();
+                setHoverId(null);
+                setHoverRect(null);
+                onDeleteEvent?.(ev.id);
+              }}
+              onSaveNote={(note) =>
+                onUpsertEvent?.({
+                  ...ev,
+                  sessionNote: note || undefined,
+                  sessionNoteUpdatedAt: new Date().toISOString(),
+                })
+              }
+              onUpsert={(patch) => { onUpsertEvent?.(patch); }}
+            />
+          );
+        })()}
+        {appKind === "diary" && detailsEvId && (() => {
+          const ev = events.find((e) => e.id === detailsEvId);
+          if (!ev) return null;
+          return (
+            <SessionDetailsContainer
+              ev={ev}
+              onClose={() => setDetailsEvId(null)}
+              onUpsert={(patch) => { onUpsertEvent?.(patch); }}
+            />
           );
         })()}
       </div>
