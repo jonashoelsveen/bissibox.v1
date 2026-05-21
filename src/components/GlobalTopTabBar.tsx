@@ -100,7 +100,7 @@ export function GlobalTopTabBar() {
     };
   }, [appsOpen]);
 
-  if (!user) return null;
+  
 
   const close = () => {
     setPlusOpen(false);
@@ -215,10 +215,10 @@ export function GlobalTopTabBar() {
       `}</style>
       <div className="topbar-row relative z-10 flex items-end gap-1 pl-0 pr-4 md:pr-6">
         <ProfileTab />
-        <NavIconTabs activeKey={activeKey} stripped={stripped} />
+        {user && <NavIconTabs activeKey={activeKey} stripped={stripped} />}
         {/* Page-provided slot — open notes/event tabs etc. */}
         <TopBarSlotMount className="flex min-w-0 flex-1 items-end pl-2" />
-        {/* Plus */}
+        {user && (
         <div className="relative mb-1" ref={plusRef}>
           <button
             onClick={() => { setAppsOpen(false); setPlusOpen((v) => !v); }}
@@ -305,7 +305,8 @@ export function GlobalTopTabBar() {
             </div>
           )}
         </div>
-        {/* Apps */}
+        )}
+        {user && (
         <div className="relative mb-1" ref={appsRef}>
           <button
             onClick={() => { setPlusOpen(false); setMapHover(false); setAppsOpen((v) => !v); }}
@@ -377,7 +378,8 @@ export function GlobalTopTabBar() {
             </div>
           )}
         </div>
-        <ProfileMenuButton />
+        )}
+        {user && <ProfileMenuButton />}
       </div>
     </div>
   );
