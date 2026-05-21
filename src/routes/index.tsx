@@ -34,7 +34,19 @@ function HomePage() {
   const [signInContext, setSignInContext] = useState<SignInContext>("cloud");
 
   useEffect(() => {
-    if (user) setSignInOpen(false);
+    if (!user) return;
+    const wasOpen = signInOpen;
+    setSignInOpen(false);
+    if (!wasOpen) return;
+    const target =
+      signInContext === "calendar"
+        ? "/calendar"
+        : signInContext === "diary"
+          ? "/diary"
+          : signInContext === "photos"
+            ? "/photos"
+            : null;
+    if (target) void navigate({ to: target, replace: true });
   }, [user]);
 
   // Open the modal automatically when arriving with ?signin=<ctx>.
