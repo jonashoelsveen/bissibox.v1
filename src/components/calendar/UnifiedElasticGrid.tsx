@@ -26,7 +26,7 @@
 
 import type React from "react";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, Footprints, Bike, Dumbbell, Snowflake, Waves } from "lucide-react";
+import { ChevronDown, Footprints, Bike, Dumbbell, Snowflake, Waves } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, Session, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
