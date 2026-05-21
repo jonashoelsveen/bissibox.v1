@@ -206,17 +206,18 @@ export function SignInModal({
               duration: 0.35,
               ease: [0.2, 0.8, 0.2, 1],
             }}
-            className="relative"
+            className="relative flex flex-col"
             style={{
               width:
                 mode === "signup"
                   ? "min(520px, 94vw)"
                   : "min(440px, 92vw)",
+              maxHeight: "88vh",
               background: "#ffffff",
               borderRadius: 18,
               boxShadow:
                 "0 30px 60px -20px rgba(0,0,0,0.25), 0 12px 24px -12px rgba(0,0,0,0.18)",
-              padding: "44px 40px 32px",
+              overflow: "hidden",
               transformOrigin: "top center",
             }}
           >
@@ -231,6 +232,7 @@ export function SignInModal({
                 duration: exiting ? 0.5 : switchingMode ? 0.25 : 0.45,
                 ease: "easeOut",
               }}
+              className="flex min-h-0 flex-1 flex-col"
             >
               {/* Headers */}
               <div className="mb-6 text-center">
