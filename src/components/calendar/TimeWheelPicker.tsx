@@ -189,20 +189,23 @@ const Cell = forwardRef<HTMLInputElement, CellProps>(function Cell(
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
     const digits = e.target.value.replace(/\D/g, "").slice(-2);
     setText(digits);
+    textRef.current = digits;
     if (digits.length === 1) {
       const d = parseInt(digits, 10);
       if (d > firstDigitMax) {
-        // e.g. typing "5" in an hour cell → no valid 2-digit hour can
-        // start with 5, so commit as the full value and advance.
         const n = clamp(d, 0, max);
-        setText(twoDigit(n));
+        const next = twoDigit(n);
+        setText(next);
+        textRef.current = next;
         if (n !== value) onCommit(n);
         onAutoAdvance();
       }
     } else if (digits.length === 2) {
-      // Two digits typed (e.g. "03"). Commit and auto-advance to the next cell.
+      // Two digits typed (e.g. "03"). Commit and auto-advance.
       const n = clamp(parseInt(digits, 10), 0, max);
-      setText(twoDigit(n));
+      const next = twoDigit(n);
+      setText(next);
+      textRef.current = next;
       if (n !== value) onCommit(n);
       onAutoAdvance();
     }
