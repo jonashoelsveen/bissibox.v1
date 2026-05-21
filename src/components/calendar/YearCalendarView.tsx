@@ -11,7 +11,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { Settings as SettingsIcon } from "lucide-react";
+
 import { useYearStore, useEventStore, type CellKey } from "./yearStore";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode } from "./UnifiedElasticGrid";
 import { MonthNavControl } from "./MonthNavControl";
