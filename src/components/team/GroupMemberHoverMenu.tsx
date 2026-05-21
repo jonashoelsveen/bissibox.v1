@@ -61,7 +61,7 @@ export function GroupMemberHoverMenu({
           role="menu"
           onMouseEnter={cancelClose}
           onMouseLeave={scheduleClose}
-          className="absolute left-1/2 top-full z-[100] mt-1.5 w-60 -translate-x-1/2 overflow-hidden rounded-lg border border-hairline bg-subtle py-1 shadow-2xl"
+          className="mac-menu absolute left-0 top-full z-[100] mt-1.5 w-60 overflow-hidden rounded-lg py-1"
           style={{ transition: "none" }}
         >
           {loading && (
@@ -82,8 +82,14 @@ export function GroupMemberHoverMenu({
                 type="button"
                 role="menuitem"
                 onClick={() => openMember(m)}
-                className="group flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs text-ink outline-none hover:bg-secondary focus:bg-secondary"
-                style={{ transition: "none" }}
+                className="group flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs outline-none"
+                style={{ transition: "none", color: "#1d1d1f" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.06)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
                 title={name}
               >
                 {m.avatar_url ? (
