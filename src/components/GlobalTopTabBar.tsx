@@ -324,7 +324,7 @@ export function GlobalTopTabBar() {
               <div className="p-3">
                 <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
                 <div className="grid grid-cols-2 gap-2">
-                  {[
+                  {([
                     { key: "calendar", label: "Calendar", to: "/calendar", icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
                     { key: "diary", label: "Diary", to: "/diary", icon: <BookOpen strokeWidth={1.75} />, disabled: false },
                     { key: "photos", label: "Photos", to: "/photos", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
