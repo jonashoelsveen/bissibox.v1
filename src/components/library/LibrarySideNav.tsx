@@ -515,8 +515,11 @@ function FolderRow({
         />
       ) : (
         <button
-          onClick={onSelect}
-          onDoubleClick={onOpenAsTab}
+          onClick={() => {
+            onSelect();
+            onOpenAsTab?.();
+          }}
+
           className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-3 py-1.5 text-left text-xs transition ${
             active ? "font-medium text-ink" : "text-muted-foreground group-hover:text-ink"
           }`}
