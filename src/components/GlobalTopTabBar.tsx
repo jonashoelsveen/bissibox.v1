@@ -121,6 +121,10 @@ export function GlobalTopTabBar() {
     setAppsOpen(false);
     setPlusOpen(false);
     setMapHover(false);
+    if (!user) {
+      void navigate({ to: "/auth", search: { redirect: to } });
+      return;
+    }
     void navigate({ to, resetScroll: false });
   };
 
