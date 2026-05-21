@@ -144,7 +144,7 @@ export function GlobalTopTabBar() {
           className="flex items-center justify-center text-[#1d1d1f] hover:bg-black/5"
           style={{ height: 34, width: 34 }}
         >
-          <HomeIcon style={{ height: 30, width: 30 }} strokeWidth={2.2} />
+          <HomeIcon className="h-[30px] w-[30px]" strokeWidth={2.2} />
         </button>
         {(
           
