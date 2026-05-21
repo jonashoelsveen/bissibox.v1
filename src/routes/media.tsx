@@ -283,8 +283,19 @@ function LibraryPage() {
       // Other types (note/meeting/file) are ignored — those surfaces were removed.
     };
     window.addEventListener("library:open-tab", onOpenTab);
-    return () => window.removeEventListener("library:open-tab", onOpenTab);
-  }, [openMediaTab]);
+    const onOpenAlbumTab = (e: Event) => {
+      const d = (e as CustomEvent).detail as
+        | { folder: string; title: string; color?: string | null }
+        | null;
+      if (!d) return;
+      openAlbumTab(d.folder, d.title, d.color ?? null);
+    };
+    window.addEventListener("library:open-album-tab", onOpenAlbumTab);
+    return () => {
+      window.removeEventListener("library:open-tab", onOpenTab);
+      window.removeEventListener("library:open-album-tab", onOpenAlbumTab);
+    };
+  }, [openMediaTab, openAlbumTab]);
 
   const activeTabEntry = activeNoteId ? openNoteTabs.find((t) => t.id === activeNoteId) ?? null : null;
   const showingMedia = !!activeTabEntry && activeTabEntry.type === "media";
