@@ -23,7 +23,7 @@ export function ProfileTab() {
       data-nav-icon=""
       data-nav-key="profile-label"
       aria-label={label}
-      className="flex h-9 select-none items-center rounded-md px-3 text-[13px] font-semibold text-ink"
+      className="flex h-8 select-none items-center rounded-md px-3 text-[15px] font-semibold leading-none text-ink"
       style={{
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif',
@@ -34,8 +34,8 @@ export function ProfileTab() {
   );
 
   return (
-    <div className="-mb-px relative flex shrink-0 select-none items-end pr-2">
-      <div className="flex h-[42px] items-center border-b-2 border-transparent">
+    <div className="relative flex shrink-0 select-none items-center pr-2">
+      <div className="flex h-14 items-center">
         {onMedia ? (
           <LibraryAlbumsHoverMenu>{button}</LibraryAlbumsHoverMenu>
         ) : (
@@ -45,3 +45,4 @@ export function ProfileTab() {
     </div>
   );
 }
+
