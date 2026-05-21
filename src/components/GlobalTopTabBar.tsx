@@ -11,9 +11,9 @@ import {
   ChevronRight,
   MapPin,
   Route as RouteIcon,
-  Calendar as CalendarIcon,
+  CalendarDays,
   BookOpen,
-  Sparkles,
+  Home,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { ProfileTab } from "@/components/ProfileTab";
@@ -297,26 +297,60 @@ export function GlobalTopTabBar() {
           {appsOpen && (
             <div
               role="menu"
-              className="absolute right-0 top-full z-50 mt-2 w-56 origin-top-right rounded-xl border border-hairline bg-popover p-3 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
+              className="absolute right-0 top-full z-50 mt-2 w-56 origin-top-right overflow-hidden rounded-xl border border-hairline bg-popover shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
             >
-              <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { key: "calendar", label: "Calendar", href: "/calendar", icon: <CalendarIcon className="h-7 w-7" strokeWidth={1.5} /> },
-                  { key: "diary", label: "Diary", href: "/diary", icon: <BookOpen className="h-7 w-7" strokeWidth={1.5} /> },
-                  { key: "photos", label: "Photos", href: "/media", icon: <ImageIcon className="h-7 w-7" strokeWidth={1.5} /> },
-                  { key: "soon", label: "Coming soon", href: "#", icon: <Sparkles className="h-7 w-7 opacity-40" strokeWidth={1.5} /> },
-                ].map((app) => (
-                  <a
-                    key={app.key}
-                    href={app.href}
-                    aria-label={app.label}
-                    className="flex aspect-square items-center justify-center rounded-xl bg-foreground text-background transition hover:opacity-90"
-                  >
-                    {app.icon}
-                  </a>
-                ))}
+              <div className="p-3">
+                <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: "calendar", label: "Calendar", href: "/calendar", icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
+                    { key: "diary", label: "Diary", href: "/diary", icon: <BookOpen strokeWidth={1.75} />, disabled: false },
+                    { key: "photos", label: "Photos", href: "/media", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
+                    { key: "soon", label: "Coming soon", href: "#", icon: <Plus strokeWidth={1.75} className="opacity-60" style={{ strokeDasharray: "3 2" }} />, disabled: true },
+                  ].map((app) => (
+                    <a
+                      key={app.key}
+                      href={app.disabled ? undefined : app.href}
+                      aria-label={app.label}
+                      aria-disabled={app.disabled || undefined}
+                      onClick={app.disabled ? (e) => e.preventDefault() : undefined}
+                      className={
+                        "flex aspect-square flex-col items-center justify-center gap-1 rounded-xl p-2 " +
+                        (app.disabled
+                          ? "pointer-events-none opacity-50 text-muted-foreground"
+                          : "text-ink hover:bg-secondary")
+                      }
+                      style={{ transition: "none" }}
+                    >
+                      <span className="flex h-[58%] w-full items-center justify-center [&_svg]:h-full [&_svg]:w-auto">
+                        {app.icon}
+                      </span>
+                      <span className="text-[11px] leading-none">{app.label}</span>
+                    </a>
+                  ))}
+                </div>
               </div>
+              <a
+                href="#"
+                onClick={(e) => e.preventDefault()}
+                className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-sm text-ink"
+                style={{ transition: "none" }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
+              >
+                <Home className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
+                <span>aponnacloud.com</span>
+              </a>
+              <a
+                href="#"
+                onClick={(e) => e.preventDefault()}
+                className="flex w-full items-center border-t border-hairline px-3 py-2.5 text-sm text-ink"
+                style={{ transition: "none" }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
+              >
+                <span>account.aponna.com</span>
+              </a>
             </div>
           )}
         </div>
