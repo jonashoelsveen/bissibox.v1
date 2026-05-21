@@ -312,6 +312,7 @@ export function GlobalTopTabBar() {
             </div>
           )}
         </div>
+        <ProfileMenuButton />
       </div>
     </div>
   );
