@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MediaRouteImport } from './routes/media'
+import { Route as HomeRouteImport } from './routes/home'
 import { Route as DiaryRouteImport } from './routes/diary'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -37,6 +38,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const MediaRoute = MediaRouteImport.update({
   id: '/media',
   path: '/media',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiaryRoute = DiaryRouteImport.update({
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/diary': typeof DiaryRoute
+  '/home': typeof HomeRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/diary': typeof DiaryRoute
+  '/home': typeof HomeRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/diary': typeof DiaryRoute
+  '/home': typeof HomeRoute
   '/media': typeof MediaRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/calendar'
     | '/diary'
+    | '/home'
     | '/media'
     | '/profile'
     | '/settings'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/calendar'
     | '/diary'
+    | '/home'
     | '/media'
     | '/profile'
     | '/settings'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/calendar'
     | '/diary'
+    | '/home'
     | '/media'
     | '/profile'
     | '/settings'
@@ -202,6 +214,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CalendarRoute: typeof CalendarRoute
   DiaryRoute: typeof DiaryRoute
+  HomeRoute: typeof HomeRoute
   MediaRoute: typeof MediaRoute
   ProfileRoute: typeof ProfileRoute
   SettingsRoute: typeof SettingsRoute
@@ -234,6 +247,13 @@ declare module '@tanstack/react-router' {
       path: '/media'
       fullPath: '/media'
       preLoaderRoute: typeof MediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/diary': {
@@ -322,6 +342,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CalendarRoute: CalendarRoute,
   DiaryRoute: DiaryRoute,
+  HomeRoute: HomeRoute,
   MediaRoute: MediaRoute,
   ProfileRoute: ProfileRoute,
   SettingsRoute: SettingsRoute,
