@@ -21,6 +21,7 @@ import { ProfileTab } from "@/components/ProfileTab";
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
 import { ProfileMenuButton } from "@/components/ProfileMenuButton";
+import { HomeIcon } from "@/components/HomeIcon";
 
 /** Routes whose top tab-bar is stripped down to: Me/We + (conditional)
  *  Group Members. Calendar / Diary / Photos icons move into the apps menu. */
@@ -50,6 +51,8 @@ export function GlobalTopTabBar() {
   const activeKey = useActiveNavKey();
   const stripped = useIsStrippedSurface();
   const navigate = useNavigate();
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const isHome = path === "/";
 
 
   const isEntity = mode === "team" || mode === "organizer";
