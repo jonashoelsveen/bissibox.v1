@@ -221,6 +221,39 @@ export function NavIconTabs({
                 : undefined,
             };
         const isActive = item.key === activeKey;
+        const linkEl = (
+          <Link
+            to={item.to}
+            search={item.search as never}
+            aria-label={item.label}
+            title={item.label}
+            onPointerDown={(e) => onPointerDown(e, item.key)}
+            onClick={(e) => {
+              if (stateRef.current?.moved) {
+                e.preventDefault();
+                return;
+              }
+              if (item.key === "settings") {
+                e.preventDefault();
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("open-settings"));
+                }
+                return;
+              }
+              if (isActive && onActiveClick) {
+                e.preventDefault();
+                onActiveClick();
+              }
+            }}
+            className={`flex h-9 w-9 select-none items-center justify-center transition ${
+              isActive
+                ? "text-ink"
+                : "text-muted-foreground hover:text-ink"
+            }`}
+          >
+            <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </Link>
+        );
         return (
           <div
             key={item.key}
@@ -231,37 +264,11 @@ export function NavIconTabs({
             style={style}
             className="relative"
           >
-            <Link
-              to={item.to}
-              search={item.search as never}
-              aria-label={item.label}
-              title={item.label}
-              onPointerDown={(e) => onPointerDown(e, item.key)}
-              onClick={(e) => {
-                if (stateRef.current?.moved) {
-                  e.preventDefault();
-                  return;
-                }
-                if (item.key === "settings") {
-                  e.preventDefault();
-                  if (typeof window !== "undefined") {
-                    window.dispatchEvent(new CustomEvent("open-settings"));
-                  }
-                  return;
-                }
-                if (isActive && onActiveClick) {
-                  e.preventDefault();
-                  onActiveClick();
-                }
-              }}
-              className={`flex h-9 w-9 select-none items-center justify-center transition ${
-                isActive
-                  ? "text-ink"
-                  : "text-muted-foreground hover:text-ink"
-              }`}
-            >
-              <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
-            </Link>
+            {item.key === "group-members" ? (
+              <GroupMemberHoverMenu>{linkEl}</GroupMemberHoverMenu>
+            ) : (
+              linkEl
+            )}
           </div>
         );
       })}
