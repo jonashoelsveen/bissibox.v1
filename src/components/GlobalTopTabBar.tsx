@@ -213,7 +213,7 @@ export function GlobalTopTabBar() {
           transition: none !important;
         }
       `}</style>
-      <div className="topbar-row relative z-10 flex items-end gap-1 px-4 md:px-6">
+      <div className="topbar-row relative z-10 flex items-end gap-1 pl-0 pr-4 md:pr-6">
         <ProfileTab />
         <NavIconTabs activeKey={activeKey} stripped={stripped} />
         {/* Page-provided slot — open notes/event tabs etc. */}
