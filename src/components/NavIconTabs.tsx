@@ -30,6 +30,10 @@ interface NavItem {
   search?: Record<string, string>;
 }
 
+/** Keys that render as a fixed, non-draggable "active-tab" style icon
+ *  rather than the standard hover-tile nav icon. */
+const FIXED_TAB_KEYS = new Set<NavKey>(["calendar", "diary"]);
+
 function useNavItems(): NavItem[] {
   const { user, mode } = useAuth();
   const isGroupLeader = useIsGroupLeader();
@@ -97,6 +101,79 @@ function useOrderedItems(items: NavItem[]): [NavItem[], (next: NavItem[]) => voi
   return [ordered, persist];
 }
 
+/** Renders the calendar/diary nav icon as an active tab — replicating the
+ *  curved white pill used by the page-tab strip so the visual reads as the
+ *  same family. */
+function ActiveTabIcon({
+  to,
+  label,
+  Icon,
+  navKey,
+  onClick,
+}: {
+  to: string;
+  label: string;
+  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  navKey: NavKey;
+  onClick?: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <div
+      data-tab
+      data-active-tab=""
+      style={{
+        position: "relative",
+        height: 38,
+        width: 52,
+        marginBottom: -1,
+        paddingBottom: 1,
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 12,
+          right: 12,
+          bottom: -1,
+          background: "#FFFFFF",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+      <svg
+        aria-hidden
+        width="28"
+        height="39"
+        viewBox="0 0 32 39"
+        style={{ position: "absolute", top: 0, left: -16, pointerEvents: "none", zIndex: 0, overflow: "visible", display: "block" }}
+      >
+        <path d="M 0 39 L 0 38 A 16 16 0 0 0 16 22 L 16 8 A 8 8 0 0 1 24 0 L 32 0 L 32 39 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
+      </svg>
+      <svg
+        aria-hidden
+        width="28"
+        height="39"
+        viewBox="0 0 32 39"
+        style={{ position: "absolute", top: 0, right: -16, pointerEvents: "none", zIndex: 0, overflow: "visible", display: "block" }}
+      >
+        <path d="M 32 39 L 32 38 A 16 16 0 0 1 16 22 L 16 8 A 8 8 0 0 0 8 0 L 0 0 L 0 39 Z" fill="#FFFFFF" shapeRendering="geometricPrecision" />
+      </svg>
+      <Link
+        to={to}
+        aria-label={label}
+        title={label}
+        data-nav-key={navKey}
+        onClick={onClick}
+        className="relative z-[1] flex h-full w-full items-center justify-center text-ink"
+      >
+        <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
+      </Link>
+    </div>
+  );
+}
+
 export function NavIconTabs({
   activeKey,
   onActiveClick,
@@ -106,7 +183,10 @@ export function NavIconTabs({
 }) {
   const items = useNavItems();
   const [ordered, persist] = useOrderedItems(items);
-  const visible = ordered;
+  // Calendar/diary are pinned, non-draggable "fixed tabs" rendered to the
+  // right of the draggable strip. Everything else stays in the drag pool.
+  const draggable = ordered.filter((i) => !FIXED_TAB_KEYS.has(i.key));
+  const fixed = items.filter((i) => FIXED_TAB_KEYS.has(i.key));
 
   const stripRef = useRef<HTMLDivElement | null>(null);
   const btnRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -126,12 +206,12 @@ export function NavIconTabs({
     if (e.button !== 0) return;
     const strip = stripRef.current;
     if (!strip) return;
-    const startIndex = visible.findIndex((i) => i.key === key);
+    const startIndex = draggable.findIndex((i) => i.key === key);
     if (startIndex < 0) return;
-    const buttons = visible
+    const buttons = draggable
       .map((i) => btnRefs.current.get(i.key))
       .filter((b): b is HTMLDivElement => !!b);
-    if (buttons.length !== visible.length) return;
+    if (buttons.length !== draggable.length) return;
     const stripRect = strip.getBoundingClientRect();
     const offsets = buttons.map((b) => b.getBoundingClientRect().left - stripRect.left);
     const width = buttons[startIndex].getBoundingClientRect().width;
@@ -176,9 +256,10 @@ export function NavIconTabs({
       const st = stateRef.current;
       stateRef.current = null;
       if (st && st.moved && st.currentIndex !== st.startIndex) {
-        const next = visible.slice();
+        const next = draggable.slice();
         const [moved] = next.splice(st.startIndex, 1);
         next.splice(st.currentIndex, 0, moved);
+        // Persist drag order — fixed items keep their natural position.
         persist(next);
       } else if (st && !st.moved) {
         const target = ev.target as HTMLElement;
@@ -193,11 +274,11 @@ export function NavIconTabs({
     window.addEventListener("pointercancel", onUp);
   };
 
-  if (visible.length === 0) return null;
+  if (draggable.length === 0 && fixed.length === 0) return null;
 
   return (
     <div ref={stripRef} className="-mb-px flex shrink-0 items-end gap-0.5 pr-2">
-      {visible.map((item, idx) => {
+      {draggable.map((item, idx) => {
         const Icon = item.icon;
         const isDragging = dragKey === item.key;
         let translateX = 0;
@@ -240,10 +321,6 @@ export function NavIconTabs({
                 }
                 return;
               }
-              // Clicking the group-members icon always shows the members
-              // list view (clears any active member tab). This way clicking
-              // the icon — fresh or while already on the page — reliably
-              // brings the left panel + list back.
               if (item.key === "group-members" && typeof window !== "undefined") {
                 window.dispatchEvent(new CustomEvent("group-members:show-list"));
               }
@@ -274,6 +351,41 @@ export function NavIconTabs({
             ) : (
               linkEl
             )}
+          </div>
+        );
+      })}
+      {fixed.map((item) => {
+        const Icon = item.icon;
+        const isActive = item.key === activeKey;
+        if (isActive) {
+          return (
+            <ActiveTabIcon
+              key={item.key}
+              to={item.to}
+              label={item.label}
+              Icon={Icon}
+              navKey={item.key}
+              onClick={(e) => {
+                if (onActiveClick) {
+                  e.preventDefault();
+                  onActiveClick();
+                }
+              }}
+            />
+          );
+        }
+        return (
+          <div key={item.key} className="relative">
+            <Link
+              to={item.to}
+              aria-label={item.label}
+              title={item.label}
+              data-nav-icon=""
+              data-nav-key={item.key}
+              className="flex h-9 w-9 select-none items-center justify-center text-muted-foreground hover:text-ink"
+            >
+              <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
+            </Link>
           </div>
         );
       })}
