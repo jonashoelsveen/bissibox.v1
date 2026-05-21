@@ -60,7 +60,10 @@ export function unsealSession(cookie: string | undefined | null): SessionPayload
   }
 }
 
-export function buildCookieHeader(value: string, opts: { maxAge?: number; clear?: boolean } = {}): string {
+export function buildCookieHeader(
+  value: string,
+  opts: { maxAge?: number; clear?: boolean; requestHost?: string | null } = {},
+): string {
   const parts: string[] = [`${SESSION_COOKIE_NAME}=${value}`];
   parts.push("Path=/");
   parts.push("HttpOnly");
@@ -68,7 +71,18 @@ export function buildCookieHeader(value: string, opts: { maxAge?: number; clear?
   // Always Secure — Lovable preview and prod are both HTTPS.
   parts.push("Secure");
   const domain = process.env.APONNA_COOKIE_DOMAIN;
-  if (domain && domain.length > 0) parts.push(`Domain=${domain}`);
+  // Only attach Domain when the current request host is actually a
+  // subdomain of the configured cookie domain. On Lovable preview hosts
+  // (*.lovableproject.com / *.lovable.app) a Domain=.aponna.com cookie
+  // would be silently dropped by the browser, causing /api/auth/session
+  // to 401 on every page load and the top tab-bar to never render.
+  if (domain && domain.length > 0) {
+    const host = (opts.requestHost ?? "").toLowerCase();
+    const bare = domain.replace(/^\./, "").toLowerCase();
+    if (host === bare || host.endsWith("." + bare)) {
+      parts.push(`Domain=${domain}`);
+    }
+  }
   if (opts.clear) {
     parts.push("Max-Age=0");
   } else if (opts.maxAge !== undefined) {
