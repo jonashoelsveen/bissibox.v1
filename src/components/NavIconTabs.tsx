@@ -227,6 +227,8 @@ export function NavIconTabs({
             search={item.search as never}
             aria-label={item.label}
             title={item.label}
+            data-nav-icon=""
+            data-nav-key={item.key}
             onPointerDown={(e) => onPointerDown(e, item.key)}
             onClick={(e) => {
               if (stateRef.current?.moved) {
@@ -240,15 +242,20 @@ export function NavIconTabs({
                 }
                 return;
               }
+              // Clicking the group-members icon always shows the members
+              // list view (clears any active member tab). This way clicking
+              // the icon — fresh or while already on the page — reliably
+              // brings the left panel + list back.
+              if (item.key === "group-members" && typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("group-members:show-list"));
+              }
               if (isActive && onActiveClick) {
                 e.preventDefault();
                 onActiveClick();
               }
             }}
-            className={`flex h-9 w-9 select-none items-center justify-center transition ${
-              isActive
-                ? "text-ink"
-                : "text-muted-foreground hover:text-ink"
+            className={`flex h-9 w-9 select-none items-center justify-center ${
+              isActive ? "text-ink" : "text-muted-foreground hover:text-ink"
             }`}
           >
             <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
