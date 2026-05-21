@@ -932,6 +932,22 @@ export function MonthGridType1({
                                 </motion.div>
                               );
                             }
+                            if (it.kind === "creating") {
+                              const tallCreate =
+                                appKind === "diary" &&
+                                (monthTileDesign === "split" || monthTileDesign === "stacked");
+                              return (
+                                <motion.div
+                                  key={`${id}-creating-${idx}`}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.12 }}
+                                  className="pointer-events-none rounded-[3px] border-2 border-dashed border-primary/60 bg-primary/10"
+                                  style={{ minHeight: tallCreate ? 44 : 22 }}
+                                />
+                              );
+                            }
                             const raw = it.kind === "legacy" ? it.raw : it.event.title;
                             const itemColor = it.kind === "legacy" ? splitColor(it.raw).color : it.event.color;
                             const displayText = it.kind === "legacy" ? splitColor(it.raw).text : it.event.title;
