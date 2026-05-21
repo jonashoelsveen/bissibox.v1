@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
 
 import {
   Plus,
@@ -20,6 +21,15 @@ import { ProfileTab } from "@/components/ProfileTab";
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
 import { ProfileMenuButton } from "@/components/ProfileMenuButton";
+
+/** Routes whose top tab-bar is stripped down to: Me/We + (conditional)
+ *  Group Members. Calendar / Diary / Photos icons move into the apps menu. */
+const STRIPPED_SURFACE_PREFIXES = ["/calendar", "/diary", "/media", "/photos"];
+
+function useIsStrippedSurface(): boolean {
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  return STRIPPED_SURFACE_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
+}
 
 type CreateKind =
   | "meeting"
