@@ -36,6 +36,7 @@ export const Route = createFileRoute("/api/auth/login")({
           user_id: data.user.id,
           issued_at: Date.now(),
         });
+        const requestHost = new URL(request.url).host;
         return new Response(
           JSON.stringify({
             user: data.user,
@@ -47,7 +48,7 @@ export const Route = createFileRoute("/api/auth/login")({
             status: 200,
             headers: {
               "Content-Type": "application/json",
-              "Set-Cookie": buildCookieHeader(cookie),
+              "Set-Cookie": buildCookieHeader(cookie, { requestHost }),
             },
           },
         );

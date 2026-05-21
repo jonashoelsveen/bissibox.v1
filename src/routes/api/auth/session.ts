@@ -11,6 +11,7 @@ export const Route = createFileRoute("/api/auth/session")({
   server: {
     handlers: {
       GET: async ({ request }) => {
+        const requestHost = new URL(request.url).host;
         const cookie = readCookieFromHeader(request.headers.get("cookie"));
         const sealed = unsealSession(cookie);
         if (!sealed) {
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/api/auth/session")({
             status: 401,
             headers: {
               "Content-Type": "application/json",
-              "Set-Cookie": buildCookieHeader("", { clear: true }),
+              "Set-Cookie": buildCookieHeader("", { clear: true, requestHost }),
             },
           });
         }
@@ -48,7 +49,7 @@ export const Route = createFileRoute("/api/auth/session")({
             status: 200,
             headers: {
               "Content-Type": "application/json",
-              "Set-Cookie": buildCookieHeader(nextCookie),
+              "Set-Cookie": buildCookieHeader(nextCookie, { requestHost }),
             },
           },
         );

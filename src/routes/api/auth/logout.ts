@@ -19,11 +19,12 @@ export const Route = createFileRoute("/api/auth/logout")({
             /* ignore — clearing the cookie is what matters */
           }
         }
+        const requestHost = new URL(request.url).host;
         return new Response(JSON.stringify({ ok: true }), {
           status: 200,
           headers: {
             "Content-Type": "application/json",
-            "Set-Cookie": buildCookieHeader("", { clear: true }),
+            "Set-Cookie": buildCookieHeader("", { clear: true, requestHost }),
           },
         });
       },
