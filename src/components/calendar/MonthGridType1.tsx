@@ -1694,7 +1694,14 @@ export function PopoverEditor({
         // this handler runs, so when its panel is open we never commit
         // the whole popover from Enter.
         e.preventDefault();
-        onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
+        // Defer so React flushes any pending state updates from the
+        // currently-focused TimeWheelPicker cell (which also handles Enter
+        // and commits its value via setState) before we read the refs.
+        // Without this, timeRef holds the stale time and the chip order
+        // doesn't update until the user clicks outside.
+        setTimeout(() => {
+          onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
+        }, 0);
       }
     };
     window.addEventListener("mousedown", onDown);
