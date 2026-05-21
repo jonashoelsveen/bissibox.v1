@@ -140,6 +140,7 @@ export function GlobalTopTabBar() {
 
   if (isHome) {
     const fading = transition === "fading-out";
+    const recede = signInOpen && !fading;
     return (
       <div
         className="fixed left-0 right-0 top-0 z-[90] flex items-center justify-between"
@@ -148,11 +149,11 @@ export function GlobalTopTabBar() {
           height: 40,
           paddingLeft: 16,
           paddingRight: 16,
-          opacity: fading ? 0 : authReady ? 1 : 0.5,
-          pointerEvents: fading || !authReady ? "none" : "auto",
+          opacity: fading ? 0 : recede ? 0 : authReady ? 1 : 0.5,
+          pointerEvents: fading || recede || !authReady ? "none" : "auto",
           transition: fading
             ? "opacity 700ms ease-out"
-            : "opacity 180ms ease-out",
+            : "opacity 220ms ease-out",
         }}
       >
         <button
