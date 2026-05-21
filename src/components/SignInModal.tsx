@@ -206,17 +206,18 @@ export function SignInModal({
               duration: 0.35,
               ease: [0.2, 0.8, 0.2, 1],
             }}
-            className="relative"
+            className="relative flex flex-col"
             style={{
               width:
                 mode === "signup"
                   ? "min(520px, 94vw)"
                   : "min(440px, 92vw)",
+              maxHeight: "88vh",
               background: "#ffffff",
               borderRadius: 18,
               boxShadow:
                 "0 30px 60px -20px rgba(0,0,0,0.25), 0 12px 24px -12px rgba(0,0,0,0.18)",
-              padding: "44px 40px 32px",
+              overflow: "hidden",
               transformOrigin: "top center",
             }}
           >
@@ -231,77 +232,22 @@ export function SignInModal({
                 duration: exiting ? 0.5 : switchingMode ? 0.25 : 0.45,
                 ease: "easeOut",
               }}
+              className="flex min-h-0 flex-1 flex-col"
             >
-              {/* Headers */}
-              <div className="mb-6 text-center">
-                {mode === "signin" ? (
-                  <>
-                    <h2
-                      style={{
-                        fontFamily: HELVETICA,
-                        fontSize: 22,
-                        fontWeight: 400,
-                        color: "#1d1d1f",
-                        letterSpacing: "-0.01em",
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {title}
-                    </h2>
-                    <p
-                      style={{
-                        marginTop: 6,
-                        fontFamily: HELVETICA,
-                        fontSize: 14,
-                        fontWeight: 400,
-                        color: "#86868b",
-                        letterSpacing: "-0.005em",
-                      }}
-                    >
-                      Sign in with your Aponna-account
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h2
-                      style={{
-                        fontFamily: HELVETICA,
-                        fontSize: 22,
-                        fontWeight: 400,
-                        color: "#1d1d1f",
-                        letterSpacing: "-0.01em",
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      Create Aponna-account
-                    </h2>
-                    <p
-                      style={{
-                        marginTop: 6,
-                        fontFamily: HELVETICA,
-                        fontSize: 13,
-                        fontWeight: 400,
-                        color: "#86868b",
-                        letterSpacing: "-0.005em",
-                      }}
-                    >
-                      Your key to the Aponna ecosystem
-                    </p>
-                  </>
-                )}
-              </div>
-
               {mode === "signin" ? (
-                <SignInForm
-                  onSubmit={onSubmit}
-                  email={email}
-                  setEmail={setEmail}
-                  password={password}
-                  setPassword={setPassword}
-                  error={error}
-                  submitting={submitting}
-                  onCreate={() => switchMode("signup")}
-                />
+                <div style={{ padding: "44px 40px 32px" }}>
+                  <ModalHeader title={title} subtitle="Sign in with your Aponna-account" subtitleSize={14} />
+                  <SignInForm
+                    onSubmit={onSubmit}
+                    email={email}
+                    setEmail={setEmail}
+                    password={password}
+                    setPassword={setPassword}
+                    error={error}
+                    submitting={submitting}
+                    onCreate={() => switchMode("signup")}
+                  />
+                </div>
               ) : (
                 <SignUpForm
                   onSubmit={onSubmit}
@@ -470,93 +416,113 @@ function SignUpForm(props: {
   ];
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <LabeledField label="First name" value={firstName} onChange={setFirstName} autoComplete="given-name" required />
-        <LabeledField label="Last name" value={lastName} onChange={setLastName} autoComplete="family-name" required />
-      </div>
-
-      <LabeledSelect label="Country" value={country} onChange={setCountry} required>
-        <option value="" disabled>Select country</option>
-        {COUNTRIES.map((c) => (
-          <option key={c} value={c}>{c}</option>
-        ))}
-      </LabeledSelect>
-
-      <div>
-        <FieldLabel>Birth date</FieldLabel>
-        <div className="grid grid-cols-3 gap-3">
-          <RawSelect value={bDay} onChange={setBDay} required>
-            <option value="" disabled>Day</option>
-            {days.map((d) => <option key={d} value={d}>{d}</option>)}
-          </RawSelect>
-          <RawSelect value={bMonth} onChange={setBMonth} required>
-            <option value="" disabled>Month</option>
-            {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-          </RawSelect>
-          <RawSelect value={bYear} onChange={setBYear} required>
-            <option value="" disabled>Year</option>
-            {years.map((y) => <option key={y} value={y}>{y}</option>)}
-          </RawSelect>
+    <form
+      onSubmit={onSubmit}
+      className="flex min-h-0 flex-1 flex-col"
+    >
+      <div
+        className="space-y-4 overflow-y-auto"
+        style={{ padding: "44px 40px 20px" }}
+      >
+        <ModalHeader
+          title="Create Aponna-account"
+          subtitle="Your key to the Aponna ecosystem"
+          subtitleSize={13}
+        />
+        <div className="grid grid-cols-2 gap-3">
+          <LabeledField label="First name" value={firstName} onChange={setFirstName} autoComplete="given-name" required />
+          <LabeledField label="Last name" value={lastName} onChange={setLastName} autoComplete="family-name" required />
         </div>
-      </div>
 
-      <LabeledField label="E-mail adress" value={email} onChange={setEmail} type="email" autoComplete="email" required />
+        <LabeledSelect label="Country" value={country} onChange={setCountry} required>
+          <option value="" disabled>Select country</option>
+          {COUNTRIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </LabeledSelect>
 
-      <div>
-        <FieldLabel>Phone number</FieldLabel>
-        <div className="grid gap-3" style={{ gridTemplateColumns: "110px 1fr" }}>
-          <RawSelect value={callingCode} onChange={setCallingCode} required>
-            {COUNTRY_CALLING_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </RawSelect>
-          <RawInput type="tel" value={phone} onChange={setPhone} autoComplete="tel-national" required />
+        <div>
+          <FieldLabel>Birth date</FieldLabel>
+          <div className="grid grid-cols-3 gap-3">
+            <RawSelect value={bDay} onChange={setBDay} required>
+              <option value="" disabled>Day</option>
+              {days.map((d) => <option key={d} value={d}>{d}</option>)}
+            </RawSelect>
+            <RawSelect value={bMonth} onChange={setBMonth} required>
+              <option value="" disabled>Month</option>
+              {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+            </RawSelect>
+            <RawSelect value={bYear} onChange={setBYear} required>
+              <option value="" disabled>Year</option>
+              {years.map((y) => <option key={y} value={y}>{y}</option>)}
+            </RawSelect>
+          </div>
         </div>
-      </div>
 
-      <LabeledField label="Password" value={password} onChange={setPassword} type="password" autoComplete="new-password" required />
-      <LabeledField label="Confirm password" value={confirmPassword} onChange={setConfirmPassword} type="password" autoComplete="new-password" required />
+        <LabeledField label="E-mail adress" value={email} onChange={setEmail} type="email" autoComplete="email" required />
 
-      <div>
-        <FieldLabel>Verification</FieldLabel>
-        <div className="space-y-2">
-          <RadioRow
-            label="Verify with code via e-mail"
-            checked={verifyVia === "email"}
-            onChange={() => setVerifyVia("email")}
-          />
-          <RadioRow
-            label="Verify with code via text message"
-            checked={verifyVia === "sms"}
-            onChange={() => setVerifyVia("sms")}
-          />
+        <div>
+          <FieldLabel>Phone number</FieldLabel>
+          <div className="grid gap-3" style={{ gridTemplateColumns: "110px 1fr" }}>
+            <RawSelect value={callingCode} onChange={setCallingCode} required>
+              {COUNTRY_CALLING_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </RawSelect>
+            <RawInput type="tel" value={phone} onChange={setPhone} autoComplete="tel-national" required />
+          </div>
         </div>
-      </div>
 
-      <div style={{ marginTop: 8 }}>
-        <div
-          style={{
-            fontFamily: HELVETICA, fontSize: 12, fontWeight: 700,
-            color: "#1d1d1f", marginBottom: 6, letterSpacing: "-0.005em",
-          }}
-        >
-          Announcements
+        <LabeledField label="Password" value={password} onChange={setPassword} type="password" autoComplete="new-password" required />
+        <LabeledField label="Confirm password" value={confirmPassword} onChange={setConfirmPassword} type="password" autoComplete="new-password" required />
+
+        <div>
+          <FieldLabel>Verification</FieldLabel>
+          <div className="space-y-2">
+            <RadioRow
+              label="Verify with code via e-mail"
+              checked={verifyVia === "email"}
+              onChange={() => setVerifyVia("email")}
+            />
+            <RadioRow
+              label="Verify with code via text message"
+              checked={verifyVia === "sms"}
+              onChange={() => setVerifyVia("sms")}
+            />
+          </div>
         </div>
-        <label className="flex items-start gap-2" style={{ cursor: "pointer" }}>
-          <input
-            type="checkbox"
-            checked={marketing}
-            onChange={(e) => setMarketing(e.target.checked)}
-            style={{ marginTop: 3, accentColor: "#1d1d1f" }}
-          />
-          <span style={{ fontFamily: HELVETICA, fontSize: 12, color: "#86868b", lineHeight: 1.4 }}>
-            Receive email-communication from Aponna about marketing, recomendations and updates about Aponna software and services.
-          </span>
-        </label>
+
+        <div style={{ marginTop: 8 }}>
+          <div
+            style={{
+              fontFamily: HELVETICA, fontSize: 12, fontWeight: 700,
+              color: "#1d1d1f", marginBottom: 6, letterSpacing: "-0.005em",
+            }}
+          >
+            Announcements
+          </div>
+          <label className="flex items-start gap-2" style={{ cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={marketing}
+              onChange={(e) => setMarketing(e.target.checked)}
+              style={{ marginTop: 3, accentColor: "#1d1d1f" }}
+            />
+            <span style={{ fontFamily: HELVETICA, fontSize: 12, color: "#86868b", lineHeight: 1.4 }}>
+              Receive email-communication from Aponna about marketing, recomendations and updates about Aponna software and services.
+            </span>
+          </label>
+        </div>
+
+        {error && <ErrorLine error={error} />}
       </div>
 
-      {error && <ErrorLine error={error} />}
-
-      <div className="flex items-center justify-between" style={{ paddingTop: 8 }}>
+      <div
+        className="flex items-center justify-between"
+        style={{
+          padding: "14px 40px 20px",
+          borderTop: "1px solid rgba(0,0,0,0.08)",
+          background: "#ffffff",
+        }}
+      >
         <button
           type="button"
           onClick={onCancel}
@@ -590,6 +556,31 @@ function SignUpForm(props: {
         </button>
       </div>
     </form>
+  );
+}
+
+function ModalHeader({
+  title, subtitle, subtitleSize,
+}: { title: string; subtitle: string; subtitleSize: number }) {
+  return (
+    <div className="mb-6 text-center">
+      <h2
+        style={{
+          fontFamily: HELVETICA, fontSize: 22, fontWeight: 400,
+          color: "#1d1d1f", letterSpacing: "-0.01em", lineHeight: 1.2,
+        }}
+      >
+        {title}
+      </h2>
+      <p
+        style={{
+          marginTop: 6, fontFamily: HELVETICA, fontSize: subtitleSize,
+          fontWeight: 400, color: "#86868b", letterSpacing: "-0.005em",
+        }}
+      >
+        {subtitle}
+      </p>
+    </div>
   );
 }
 
