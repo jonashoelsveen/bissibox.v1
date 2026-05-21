@@ -54,8 +54,13 @@ export function GlobalTopTabBar() {
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const transition = useAuthTransition();
-  // White minimal bar only on the landing-page version of "/" (logged-out).
-  const isHome = path === "/" && !user;
+  // White minimal bar on landing "/" (logged-out). Keep showing it during
+  // the sign-in exit fade so it can animate away in sync with the modal.
+  const isHome =
+    path === "/" && (!user || transition === "fading-out");
+  // During the gap between the modal vanishing and the dark bar revealing,
+  // render nothing.
+  if (transition === "hidden") return null;
 
 
   const isEntity = mode === "team" || mode === "organizer";
