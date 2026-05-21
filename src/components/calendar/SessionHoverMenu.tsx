@@ -63,14 +63,13 @@ export interface SessionHoverMenuProps {
   onDelete: () => void;
   onSaveNote: (text: string) => void;
   onUpsert: (patch: Partial<CalendarEvent> & { id: string }) => void;
+  /** Open the details modal for this event. Owned by the parent so the
+   *  modal's lifecycle is independent of hover state. */
+  onOpenDetails: () => void;
   visible: boolean;
   onMenuEnter?: () => void;
   onMenuLeave?: () => void;
   onForceClose?: () => void;
-  /** Fires whenever the details modal opens/closes so the parent can keep
-   *  this menu mounted (the modal lives in a portal but is a React child of
-   *  this menu — unmounting the menu also unmounts the open modal). */
-  onDetailsOpenChange?: (open: boolean) => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
