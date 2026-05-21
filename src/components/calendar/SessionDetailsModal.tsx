@@ -396,7 +396,8 @@ export function SessionDetailsModal({
         </motion.div>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
 
