@@ -14,15 +14,26 @@ import type { DateRange } from "./MiniCalendar";
 import type { ViewMode } from "./UnifiedElasticGrid";
 
 export function DiaryPage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   const { calId, calTitle } = useMemo(
     () => ({
-      calId: user ? `diary:${user.id}` : "diary:anon",
+      // IMPORTANT: never fall back to a shared "anon" key. Diary events are
+      // persisted in localStorage keyed by calId, so a shared key would leak
+      // sessions across accounts on the same browser. We render nothing until
+      // we have an authenticated user id.
+      calId: user ? `diary:${user.id}` : "",
       calTitle: "My diary",
     }),
     [user],
   );
+
+  // Gate the entire diary on a resolved auth state. Without this, the page
+  // briefly mounts with no user during auth bootstrap and any writes would
+  // land in a shared bucket that the next signed-in user would inherit.
+  if (loading || !user) {
+    return <div className="h-full w-full bg-white" />;
+  }
 
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [currentRange, setCurrentRange] = useState<DateRange>(() => {
