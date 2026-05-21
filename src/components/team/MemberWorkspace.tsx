@@ -50,7 +50,7 @@ export function MemberWorkspace({ userId, name }: Props) {
     >
       <aside className="relative md:h-full overflow-hidden">
         <div className="relative h-full pl-2 pr-2 py-2">
-          <div className="relative h-full overflow-hidden rounded-lg border border-hairline bg-subtle shadow-sm">
+          <div className="mac-panel relative h-full overflow-hidden rounded-lg border border-hairline shadow-sm">
             <div className="h-full overflow-y-auto px-3 pb-6 pt-3">
               <nav className="flex max-h-[calc(100vh-8rem)] flex-col gap-3 overflow-y-auto pr-1 [scrollbar-width:thin]">
                 <div className="flex items-center gap-1">
@@ -82,7 +82,7 @@ export function MemberWorkspace({ userId, name }: Props) {
                 </div>
               </nav>
             </div>
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg bg-gradient-to-t from-subtle to-transparent" />
+            <div className="mac-panel-fade pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg" />
           </div>
         </div>
       </aside>

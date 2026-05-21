@@ -171,7 +171,7 @@ export function CalendarPage() {
               transform: panelOpen ? "translateX(0)" : "translateX(-100%)",
             }}
           >
-            <div className="relative h-full overflow-hidden rounded-lg border border-hairline bg-subtle shadow-sm">
+            <div className="mac-panel relative h-full overflow-hidden rounded-lg border border-hairline shadow-sm">
               <div className="h-full overflow-y-auto px-3 pb-6 pt-[48px]">
                 <CalendarSideNav
                   currentDate={currentDate}
@@ -189,7 +189,7 @@ export function CalendarPage() {
                   teamName={entityName}
                 />
               </div>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg bg-gradient-to-t from-subtle to-transparent" />
+              <div className="mac-panel-fade pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg" />
             </div>
           </div>
         </aside>

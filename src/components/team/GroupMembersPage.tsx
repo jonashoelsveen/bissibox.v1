@@ -1,11 +1,24 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { useNavigate } from "@tanstack/react-router";
-import { Search } from "lucide-react";
+import { PanelLeft, Search, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
+import { useLibrarySetting } from "@/lib/library-settings";
 import { TopBarSlot } from "@/components/TopBarSlot";
-import { useGroupMembers, memberDisplayName, type GroupMemberRow } from "@/hooks/useGroupMembers";
+import {
+  useGroupMembers,
+  memberDisplayName,
+  type GroupMemberRow,
+} from "@/hooks/useGroupMembers";
 import { MemberWorkspace } from "./MemberWorkspace";
 
 interface OpenMemberTab {
@@ -25,11 +38,15 @@ export function GroupMembersPage() {
   const { members, loading } = useGroupMembers();
   const [openTabs, setOpenTabs] = useState<OpenMemberTab[]>([]);
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
-  // Member selected in the left list (single-click) — shows the info pane on
-  // the right without opening a tab.
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
   const isTeamMode = mode === "team" || mode === "organizer" || !!activeEntityId;
+
+  const panelScopeKey = activeEntityId ?? user?.id ?? "anon";
+  const [panelOpen, setPanelOpen] = useLibrarySetting<boolean>(
+    `group-members:panel:open:${panelScopeKey}`,
+    true,
+  );
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -44,27 +61,38 @@ export function GroupMembersPage() {
     });
   }, [members, query]);
 
-  const openMemberTab = useCallback((m: { user_id: string; group_id: string; name: string; avatar_url: string | null }) => {
-    setOpenTabs((prev) => {
-      if (prev.some((t) => t.user_id === m.user_id)) return prev;
-      if (prev.length >= MAX_TABS) return prev;
-      return [...prev, m];
-    });
-    setActiveMemberId(m.user_id);
-  }, []);
+  const openMemberTab = useCallback(
+    (m: { user_id: string; group_id: string; name: string; avatar_url: string | null }) => {
+      setOpenTabs((prev) => {
+        if (prev.some((t) => t.user_id === m.user_id)) return prev;
+        if (prev.length >= MAX_TABS) return prev;
+        return [...prev, m];
+      });
+      setActiveMemberId(m.user_id);
+    },
+    [],
+  );
 
-  /* Listen for "open from hover menu" events. */
+  /* Listen for "open from hover menu" + "show list (icon click)" events. */
   useEffect(() => {
     const onOpen = (e: Event) => {
-      const detail = (e as CustomEvent).detail as {
-        user_id: string; group_id: string; name: string; avatar_url: string | null;
-      } | undefined;
+      const detail = (e as CustomEvent).detail as
+        | { user_id: string; group_id: string; name: string; avatar_url: string | null }
+        | undefined;
       if (!detail) return;
       openMemberTab(detail);
     };
+    const onShowList = () => {
+      setActiveMemberId(null);
+      setPanelOpen(true);
+    };
     window.addEventListener("group-member:open", onOpen);
-    return () => window.removeEventListener("group-member:open", onOpen);
-  }, [openMemberTab]);
+    window.addEventListener("group-members:show-list", onShowList);
+    return () => {
+      window.removeEventListener("group-member:open", onOpen);
+      window.removeEventListener("group-members:show-list", onShowList);
+    };
+  }, [openMemberTab, setPanelOpen]);
 
   const openMemberFromRow = (m: GroupMemberRow) =>
     openMemberTab({
@@ -86,7 +114,7 @@ export function GroupMembersPage() {
     });
   };
 
-  /* ----- tab DnD (replica of /map) ----- */
+  /* ----- tab DnD (matches /media album tabs) ----- */
   const tabStripRef = useRef<HTMLDivElement | null>(null);
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [dragId, setDragId] = useState<string | null>(null);
@@ -155,7 +183,13 @@ export function GroupMembersPage() {
     );
     const width = buttons[startIndex].getBoundingClientRect().width;
     dragStateRef.current = {
-      id, startX: e.clientX, startIndex, currentIndex: startIndex, width, offsets, moved: false,
+      id,
+      startX: e.clientX,
+      startIndex,
+      currentIndex: startIndex,
+      width,
+      offsets,
+      moved: false,
     };
     const onMove = (ev: PointerEvent) => {
       const st = dragStateRef.current;
@@ -171,7 +205,10 @@ export function GroupMembersPage() {
       let newIdx = 0;
       for (let i = 0; i < st.offsets.length; i++) {
         const mid = st.offsets[i] + st.width / 2;
-        if (pointerX < mid) { newIdx = i; break; }
+        if (pointerX < mid) {
+          newIdx = i;
+          break;
+        }
         newIdx = i;
       }
       if (newIdx !== st.currentIndex) st.currentIndex = newIdx;
@@ -213,11 +250,11 @@ export function GroupMembersPage() {
   const activeTab = activeMemberId
     ? openTabs.find((t) => t.user_id === activeMemberId) ?? null
     : null;
-
   const selectedMember = selectedMemberId
     ? members.find((m) => m.user_id === selectedMemberId) ?? null
     : null;
 
+  /* ===== Top-tab strip — matches /media album tabs visually. ===== */
   const tabStrip = (
     <TopBarSlot>
       <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
@@ -237,8 +274,6 @@ export function GroupMembersPage() {
             >
               {openTabs.map((t, idx) => {
                 const isActive = activeMemberId === t.user_id;
-                const colorActive = "border-muted-foreground text-ink";
-                const colorIdle = "border-transparent text-muted-foreground hover:text-ink";
                 const isDragging = dragId === t.user_id;
                 let translateX = 0;
                 if (dragId && !isDragging) {
@@ -253,54 +288,161 @@ export function GroupMembersPage() {
                 const dragStyle: React.CSSProperties = isDragging
                   ? { transform: `translate3d(${dragDx}px,0,0)`, transition: "none", zIndex: 5 }
                   : { transform: `translate3d(${translateX}px,0,0)` };
+
+                const next = openTabs[idx + 1];
+                const nextIsActive = next ? activeMemberId === next.user_id : false;
+                const showDivider =
+                  idx < openTabs.length - 1 && !isActive && !nextIsActive;
+
                 return (
-                  <button
-                    key={t.user_id}
-                    ref={(el) => {
-                      if (el) tabRefs.current.set(t.user_id, el);
-                      else tabRefs.current.delete(t.user_id);
-                    }}
-                    onPointerDown={(e) => onTabPointerDown(e, t.user_id)}
-                    onClick={() => setActiveMemberId(t.user_id)}
-                    style={{
-                      flex: "1 1 200px",
-                      minWidth: 140,
-                      maxWidth: 240,
-                      touchAction: "pan-y",
-                      ...dragStyle,
-                      transition: isDragging
-                        ? "none"
-                        : dragId
-                          ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms, border-color 150ms"
-                          : "color 150ms, border-color 150ms",
-                    }}
-                    className={`group -mb-px inline-flex shrink-0 select-none items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm ${
-                      isActive ? colorActive : colorIdle
-                    }`}
-                    title={t.name}
-                  >
-                    {t.avatar_url ? (
-                      <img src={t.avatar_url} alt="" className="h-3.5 w-3.5 shrink-0 rounded-full object-cover" />
-                    ) : (
-                      <span className="grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full bg-secondary text-[8px] uppercase text-muted-foreground">
-                        {t.name.slice(0, 1)}
-                      </span>
-                    )}
-                    <span className="min-w-0 flex-1 truncate text-left">{t.name}</span>
-                    <span
-                      data-tab-close
-                      role="button"
-                      tabIndex={0}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        closeMemberTab(t.user_id);
+                  <Fragment key={t.user_id}>
+                    <button
+                      data-tab
+                      data-active-tab={isActive ? "" : undefined}
+                      ref={(el) => {
+                        if (el) tabRefs.current.set(t.user_id, el);
+                        else tabRefs.current.delete(t.user_id);
                       }}
-                      className="ml-1 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                      onPointerDown={(e) => onTabPointerDown(e, t.user_id)}
+                      style={{
+                        flex: "1 1 200px",
+                        minWidth: 140,
+                        maxWidth: 220,
+                        height: 38,
+                        marginRight: 4,
+                        background: "transparent",
+                        padding: "0 28px 0 12px",
+                        marginBottom: -1,
+                        paddingBottom: 1,
+                        touchAction: "pan-y",
+                        ...dragStyle,
+                        transition: isDragging
+                          ? "none"
+                          : dragId
+                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms"
+                            : "color 150ms",
+                      }}
+                      className={`group relative inline-flex shrink-0 select-none items-center gap-1.5 text-sm ${
+                        isActive ? "" : "rounded-t-[10px]"
+                      }`}
+                      title={t.name}
                     >
-                      ✕
-                    </span>
-                  </button>
+                      {(isActive || isDragging) && (
+                        <>
+                          <span
+                            aria-hidden
+                            style={{
+                              position: "absolute",
+                              top: 0,
+                              left: 15,
+                              right: 15,
+                              bottom: -1,
+                              background: "#FFFFFF",
+                              pointerEvents: "none",
+                              zIndex: 0,
+                            }}
+                          />
+                          <svg
+                            aria-hidden
+                            width="32"
+                            height="39"
+                            viewBox="0 0 32 39"
+                            style={{
+                              position: "absolute",
+                              top: 0,
+                              left: -16,
+                              pointerEvents: "none",
+                              zIndex: 0,
+                              overflow: "visible",
+                              display: "block",
+                            }}
+                          >
+                            <path
+                              d="M 0 39 L 0 38 A 16 16 0 0 0 16 22 L 16 8 A 8 8 0 0 1 24 0 L 32 0 L 32 39 Z"
+                              fill="#FFFFFF"
+                              shapeRendering="geometricPrecision"
+                            />
+                          </svg>
+                          <svg
+                            aria-hidden
+                            width="32"
+                            height="39"
+                            viewBox="0 0 32 39"
+                            style={{
+                              position: "absolute",
+                              top: 0,
+                              right: -16,
+                              pointerEvents: "none",
+                              zIndex: 0,
+                              overflow: "visible",
+                              display: "block",
+                            }}
+                          >
+                            <path
+                              d="M 32 39 L 32 38 A 16 16 0 0 1 16 22 L 16 8 A 8 8 0 0 0 8 0 L 0 0 L 0 39 Z"
+                              fill="#FFFFFF"
+                              shapeRendering="geometricPrecision"
+                            />
+                          </svg>
+                        </>
+                      )}
+                      {t.avatar_url ? (
+                        <img
+                          data-folder-icon
+                          src={t.avatar_url}
+                          alt=""
+                          className="relative z-[1] h-3.5 w-3.5 shrink-0 rounded-full object-cover"
+                        />
+                      ) : (
+                        <UserIcon
+                          data-folder-icon
+                          className="relative z-[1] h-3.5 w-3.5 shrink-0"
+                          style={{ color: isActive ? "#111111" : "#ffffff", opacity: 0.85 }}
+                        />
+                      )}
+                      <span
+                        className="relative z-[1] min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left"
+                        style={{
+                          WebkitMaskImage:
+                            "linear-gradient(to right, #000 0, #000 calc(100% - 20px), transparent 100%)",
+                          maskImage:
+                            "linear-gradient(to right, #000 0, #000 calc(100% - 20px), transparent 100%)",
+                        }}
+                      >
+                        {t.name}
+                      </span>
+                      <span
+                        data-tab-close
+                        role="button"
+                        tabIndex={0}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeMemberTab(t.user_id);
+                        }}
+                        className="absolute right-2 top-1/2 z-[2] -translate-y-1/2 shrink-0 rounded px-1 text-xs opacity-60 hover:opacity-100"
+                      >
+                        ✕
+                      </span>
+                    </button>
+                    {showDivider && (
+                      <span
+                        data-tab-divider
+                        aria-hidden
+                        style={{
+                          alignSelf: "center",
+                          width: 1,
+                          height: 17,
+                          marginLeft: -2,
+                          marginRight: 1,
+                          marginBottom: 4,
+                          background: "rgba(255,255,255,0.45)",
+                          pointerEvents: "none",
+                          flex: "0 0 1px",
+                        }}
+                      />
+                    )}
+                  </Fragment>
                 );
               })}
             </div>
@@ -310,8 +452,7 @@ export function GroupMembersPage() {
     </TopBarSlot>
   );
 
-  /* ----- When a member tab is active, render the full MemberWorkspace
-       (which provides its own calendar/diary left rail). ----- */
+  /* If a member tab is active, render the full MemberWorkspace below. */
   if (activeTab) {
     return (
       <div className="h-full overflow-hidden bg-white">
@@ -325,18 +466,24 @@ export function GroupMembersPage() {
     );
   }
 
-  /* ----- Default: members list on the left, info pane on the right. ----- */
+  /* ===== Default view: members list (left panel) + main view area. ===== */
   return (
     <div className="h-full overflow-hidden bg-white">
       {tabStrip}
       <div
-        className="grid h-full overflow-hidden"
-        style={{ gridTemplateColumns: "256px 1fr" }}
+        className="relative grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
+        style={{ gridTemplateColumns: panelOpen ? "256px 1fr" : "0px 1fr" }}
       >
         <aside className="relative md:h-full overflow-hidden">
-          <div className="relative h-full pl-2 pr-2 py-2">
-            <div className="relative h-full overflow-hidden rounded-lg border border-hairline bg-subtle shadow-sm">
-              <div className="h-full overflow-y-auto px-3 pb-6 pt-3">
+          <div
+            className="relative h-full pl-2 pr-2 py-2 transition-transform duration-300 ease-out"
+            style={{
+              width: 256,
+              transform: panelOpen ? "translateX(0)" : "translateX(-100%)",
+            }}
+          >
+            <div className="mac-panel relative h-full overflow-hidden rounded-lg border border-hairline shadow-sm">
+              <div className="h-full overflow-y-auto px-3 pb-6 pt-[48px]">
                 <div className="flex flex-col gap-2">
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
@@ -350,10 +497,14 @@ export function GroupMembersPage() {
                   </div>
                   <div className="flex flex-col gap-0.5">
                     {loading && (
-                      <div className="px-2 py-1.5 text-[11px] text-muted-foreground">Loading…</div>
+                      <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                        Loading…
+                      </div>
                     )}
                     {!loading && filtered.length === 0 && (
-                      <div className="px-2 py-1.5 text-[11px] text-muted-foreground">No members yet.</div>
+                      <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                        No members yet.
+                      </div>
                     )}
                     {filtered.map((m) => {
                       const name = memberDisplayName(m);
@@ -364,13 +515,18 @@ export function GroupMembersPage() {
                           type="button"
                           onClick={() => setSelectedMemberId(m.user_id)}
                           onDoubleClick={() => openMemberFromRow(m)}
-                          className={`group flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs text-ink transition ${
-                            isSelected ? "bg-secondary" : "hover:bg-secondary/60"
+                          className={`group flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs text-ink ${
+                            isSelected ? "bg-black/[0.06]" : "hover:bg-black/[0.06]"
                           }`}
+                          style={{ transition: "none" }}
                           title={name}
                         >
                           {m.avatar_url ? (
-                            <img src={m.avatar_url} alt="" className="h-5 w-5 shrink-0 rounded-full object-cover" />
+                            <img
+                              src={m.avatar_url}
+                              alt=""
+                              className="h-5 w-5 shrink-0 rounded-full object-cover"
+                            />
                           ) : (
                             <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-secondary text-[9px] uppercase text-muted-foreground">
                               {name.slice(0, 1)}
@@ -383,12 +539,22 @@ export function GroupMembersPage() {
                   </div>
                 </div>
               </div>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg bg-gradient-to-t from-subtle to-transparent" />
+              <div className="mac-panel-fade pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg" />
             </div>
           </div>
         </aside>
 
-        <div className="min-w-0 md:h-full md:overflow-y-auto">
+        <button
+          type="button"
+          onClick={() => setPanelOpen(!panelOpen)}
+          aria-label={panelOpen ? "Hide panel" : "Show panel"}
+          title={panelOpen ? "Hide panel" : "Show panel"}
+          className="absolute left-3 top-[12px] z-40 grid h-7 w-7 place-items-center rounded-md bg-white/0 text-muted-foreground hover:bg-secondary/60 hover:text-ink"
+        >
+          <PanelLeft className="h-4 w-4" />
+        </button>
+
+        <div className="relative min-w-0 md:h-full md:overflow-y-auto">
           {selectedMember ? (
             <MemberInfoPlaceholder member={selectedMember} />
           ) : (
