@@ -11,6 +11,9 @@ import {
   ChevronRight,
   MapPin,
   Route as RouteIcon,
+  Calendar as CalendarIcon,
+  BookOpen,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { ProfileTab } from "@/components/ProfileTab";
@@ -298,15 +301,20 @@ export function GlobalTopTabBar() {
             >
               <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
               <div className="grid grid-cols-2 gap-2">
-                {[1, 2, 3, 4].map((n) => (
+                {[
+                  { key: "calendar", label: "Calendar", href: "/calendar", icon: <CalendarIcon className="h-7 w-7" strokeWidth={1.5} /> },
+                  { key: "diary", label: "Diary", href: "/diary", icon: <BookOpen className="h-7 w-7" strokeWidth={1.5} /> },
+                  { key: "photos", label: "Photos", href: "/media", icon: <ImageIcon className="h-7 w-7" strokeWidth={1.5} /> },
+                  { key: "soon", label: "Coming soon", href: "#", icon: <Sparkles className="h-7 w-7 opacity-40" strokeWidth={1.5} /> },
+                ].map((app) => (
                   <a
-                    key={n}
-                    href="#"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`App ${n}`}
-                    className="aspect-square rounded-xl bg-foreground transition hover:opacity-90"
-                  />
+                    key={app.key}
+                    href={app.href}
+                    aria-label={app.label}
+                    className="flex aspect-square items-center justify-center rounded-xl bg-foreground text-background transition hover:opacity-90"
+                  >
+                    {app.icon}
+                  </a>
                 ))}
               </div>
             </div>
