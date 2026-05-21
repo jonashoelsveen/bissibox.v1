@@ -329,7 +329,7 @@ export function GlobalTopTabBar() {
                     { key: "diary", label: "Diary", to: "/diary", icon: <BookOpen strokeWidth={1.75} />, disabled: false },
                     { key: "photos", label: "Photos", to: "/photos", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
                     { key: "soon", label: "Coming soon", to: null, icon: <Plus strokeWidth={1.75} className="opacity-60" style={{ strokeDasharray: "3 2" }} />, disabled: true },
-                  ].map((app) => (
+                  ] as const).map((app) => (
                     <button
                       key={app.key}
                       type="button"
