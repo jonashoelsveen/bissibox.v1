@@ -189,12 +189,11 @@ const Cell = forwardRef<HTMLInputElement, CellProps>(function Cell(
         onAutoAdvance();
       }
     } else if (digits.length === 2) {
-      // Two digits typed (e.g. "03"). Commit the value but do NOT
-      // auto-advance — the user can keep typing in this cell or move on
-      // with Tab / ":" / arrow keys.
+      // Two digits typed (e.g. "03"). Commit and auto-advance to the next cell.
       const n = clamp(parseInt(digits, 10), 0, max);
       setText(twoDigit(n));
       if (n !== value) onCommit(n);
+      onAutoAdvance();
     }
   };
 
