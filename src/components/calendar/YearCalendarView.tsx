@@ -9,7 +9,7 @@
  * calendar in the grid header and the main view stay in lockstep.
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Settings as SettingsIcon } from "lucide-react";
 import { useYearStore, useEventStore, type CellKey } from "./yearStore";
@@ -35,27 +35,57 @@ function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate:
   const month = MONTHS_NB[currentDate.getMonth()];
   const year = currentDate.getFullYear();
   const fontStyle = { fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif' };
+  // Widest possible label per view, used as an invisible sizer so the nav
+  // arrows that follow always sit at the same horizontal position regardless
+  // of the actual month/week/day text length.
+  const widestMonth = "September";
+  let ghost: ReactNode;
+  let content: ReactNode;
   if (viewMode === "week") {
     const wk = isoWeekNumber(currentDate);
-    return (
-      <h1 className="truncate text-xl text-ink" style={fontStyle}>
+    ghost = (
+      <>
+        <span className="font-semibold">Uke 53 {widestMonth}</span>{" "}
+        <span className="font-normal">{year}</span>
+      </>
+    );
+    content = (
+      <>
         <span className="font-semibold">Uke {wk} {month}</span>{" "}
         <span className="font-normal">{year}</span>
-      </h1>
+      </>
     );
-  }
-  if (viewMode === "day") {
-    return (
-      <h1 className="truncate text-xl text-ink" style={fontStyle}>
+  } else if (viewMode === "day") {
+    ghost = (
+      <>
+        <span className="font-semibold">30. {widestMonth}</span>{" "}
+        <span className="font-normal">{year}</span>
+      </>
+    );
+    content = (
+      <>
         <span className="font-semibold">{currentDate.getDate()}. {month}</span>{" "}
         <span className="font-normal">{year}</span>
-      </h1>
+      </>
+    );
+  } else {
+    ghost = (
+      <>
+        <span className="font-semibold">{widestMonth}</span>{" "}
+        <span className="font-normal">{year}</span>
+      </>
+    );
+    content = (
+      <>
+        <span className="font-semibold">{month}</span>{" "}
+        <span className="font-normal">{year}</span>
+      </>
     );
   }
   return (
-    <h1 className="truncate text-xl text-ink" style={fontStyle}>
-      <span className="font-semibold">{month}</span>{" "}
-      <span className="font-normal">{year}</span>
+    <h1 className="relative whitespace-nowrap text-xl text-ink" style={fontStyle}>
+      <span className="invisible" aria-hidden="true">{ghost}</span>
+      <span className="absolute inset-0">{content}</span>
     </h1>
   );
 }
