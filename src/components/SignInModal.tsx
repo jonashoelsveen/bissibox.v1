@@ -208,10 +208,7 @@ export function SignInModal({
             }}
             className="relative flex flex-col"
             style={{
-              width:
-                mode === "signup"
-                  ? "min(520px, 94vw)"
-                  : "min(440px, 92vw)",
+              width: "min(480px, 94vw)",
               maxHeight: "88vh",
               background: "#ffffff",
               borderRadius: 18,
