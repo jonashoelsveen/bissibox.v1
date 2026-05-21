@@ -319,7 +319,7 @@ export function GlobalTopTabBar() {
                   {[
                     { key: "calendar", label: "Calendar", href: "/calendar", icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
                     { key: "diary", label: "Diary", href: "/diary", icon: <BookOpen strokeWidth={1.75} />, disabled: false },
-                    { key: "photos", label: "Photos", href: "/media", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
+                    { key: "photos", label: "Photos", href: "/photos", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
                     { key: "soon", label: "Coming soon", href: "#", icon: <Plus strokeWidth={1.75} className="opacity-60" style={{ strokeDasharray: "3 2" }} />, disabled: true },
                   ].map((app) => (
                     <a
