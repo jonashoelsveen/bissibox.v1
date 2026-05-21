@@ -11,9 +11,9 @@ import {
   ChevronRight,
   MapPin,
   Route as RouteIcon,
-  Calendar as CalendarIcon,
+  CalendarDays,
   BookOpen,
-  Sparkles,
+  Home,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { ProfileTab } from "@/components/ProfileTab";
