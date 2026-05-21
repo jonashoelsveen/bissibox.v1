@@ -151,10 +151,10 @@ export function SessionDetailsModal({
 
   const saveDisabled = !isDirty || readOnly;
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 backdrop-blur-sm"
+        className="fixed inset-0 z-[200] flex items-center justify-center bg-ink/40 backdrop-blur-sm"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
