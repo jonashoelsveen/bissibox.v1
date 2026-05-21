@@ -19,7 +19,7 @@ export type AuthTransitionPhase =
   | "reveal-dark";
 
 let _phase: AuthTransitionPhase = "idle";
-const listeners = new Set<() => void>();
+const phaseListeners = new Set<() => void>();
 
 export function getAuthTransitionPhase(): AuthTransitionPhase {
   return _phase;
@@ -27,16 +27,37 @@ export function getAuthTransitionPhase(): AuthTransitionPhase {
 
 export function setAuthTransitionPhase(p: AuthTransitionPhase): void {
   _phase = p;
-  listeners.forEach((l) => l());
+  phaseListeners.forEach((l) => l());
 }
 
 export function useAuthTransition(): AuthTransitionPhase {
   const [, force] = useReducer((x: number) => x + 1, 0);
   useEffect(() => {
-    listeners.add(force);
+    phaseListeners.add(force);
     return () => {
-      listeners.delete(force);
+      phaseListeners.delete(force);
     };
   }, []);
   return _phase;
+}
+
+// Separate signal for whether the sign-in modal is currently open.
+// The top tab-bar uses this to recede behind the modal backdrop.
+let _modalOpen = false;
+const modalListeners = new Set<() => void>();
+
+export function setSignInModalOpen(v: boolean): void {
+  _modalOpen = v;
+  modalListeners.forEach((l) => l());
+}
+
+export function useSignInModalOpen(): boolean {
+  const [, force] = useReducer((x: number) => x + 1, 0);
+  useEffect(() => {
+    modalListeners.add(force);
+    return () => {
+      modalListeners.delete(force);
+    };
+  }, []);
+  return _modalOpen;
 }

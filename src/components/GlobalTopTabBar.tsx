@@ -22,7 +22,7 @@ import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
 import { ProfileMenuButton } from "@/components/ProfileMenuButton";
 import { HomeIcon } from "@/components/HomeIcon";
-import { useAuthTransition } from "@/lib/auth-transition";
+import { useAuthTransition, useSignInModalOpen } from "@/lib/auth-transition";
 
 /** Routes whose top tab-bar is stripped down to: Me/We + (conditional)
  *  Group Members. Calendar / Diary / Photos icons move into the apps menu. */
@@ -54,6 +54,7 @@ export function GlobalTopTabBar() {
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const transition = useAuthTransition();
+  const signInOpen = useSignInModalOpen();
   // White minimal bar on landing "/" (logged-out). Keep showing it during
   // the sign-in exit fade so it can animate away in sync with the modal.
   const isHome =
@@ -130,7 +131,8 @@ export function GlobalTopTabBar() {
     setPlusOpen(false);
     setMapHover(false);
     if (!user) {
-      void navigate({ to: "/auth", search: { redirect: to } });
+      const ctx = to === "/calendar" ? "calendar" : to === "/diary" ? "diary" : "photos";
+      void navigate({ to: "/", search: { signin: ctx } });
       return;
     }
     void navigate({ to, resetScroll: false });
@@ -138,6 +140,7 @@ export function GlobalTopTabBar() {
 
   if (isHome) {
     const fading = transition === "fading-out";
+    const recede = signInOpen && !fading;
     return (
       <div
         className="fixed left-0 right-0 top-0 z-[90] flex items-center justify-between"
@@ -146,11 +149,11 @@ export function GlobalTopTabBar() {
           height: 40,
           paddingLeft: 16,
           paddingRight: 16,
-          opacity: fading ? 0 : authReady ? 1 : 0.5,
-          pointerEvents: fading || !authReady ? "none" : "auto",
+          opacity: fading ? 0 : recede ? 0 : authReady ? 1 : 0.5,
+          pointerEvents: fading || recede || !authReady ? "none" : "auto",
           transition: fading
             ? "opacity 700ms ease-out"
-            : "opacity 180ms ease-out",
+            : "opacity 220ms ease-out",
         }}
       >
         <button
