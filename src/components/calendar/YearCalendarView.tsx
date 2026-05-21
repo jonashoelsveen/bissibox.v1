@@ -268,12 +268,6 @@ function YearCalendarViewInner({
                   ]
             }
           />
-          <button
-            aria-label="Calendar settings"
-            className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-secondary hover:text-ink"
-          >
-            <SettingsIcon className="h-4 w-4" />
-          </button>
           {appKind !== "diary" && (
             <ImportButton seat={seat} onCommit={(patch) => upsertEvent(patch)} />
           )}
