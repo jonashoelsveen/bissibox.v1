@@ -120,6 +120,9 @@ export function GlobalTopTabBar() {
         backgroundColor: "rgba(29, 29, 31, 0.91)",
         backdropFilter: "saturate(180%) blur(20px)",
         WebkitBackdropFilter: "saturate(180%) blur(20px)",
+        opacity: authReady ? 1 : 0.5,
+        pointerEvents: authReady ? "auto" : "none",
+        transition: "opacity 180ms ease-out",
       }}
     >
       <style>{`
