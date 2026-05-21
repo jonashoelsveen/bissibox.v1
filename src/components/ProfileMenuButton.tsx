@@ -118,7 +118,7 @@ export function ProfileMenuButton() {
     setOpen(false);
     setChangeHover(false);
     await signOut();
-    void navigate({ to: "/auth" });
+    void navigate({ to: "/" });
   };
 
   const Avatar = ({ size = 18 }: { size?: number }) => (
