@@ -2387,6 +2387,7 @@ function DiarySimpleStack({
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const closeTimerRef = useRef<number | null>(null);
+  const detailsOpenRef = useRef(false);
   const cancelClose = useCallback(() => {
     if (closeTimerRef.current != null) {
       window.clearTimeout(closeTimerRef.current);
@@ -2394,12 +2395,14 @@ function DiarySimpleStack({
     }
   }, []);
   const scheduleClose = useCallback(() => {
+    if (detailsOpenRef.current) return;
     cancelClose();
     closeTimerRef.current = window.setTimeout(() => {
       setHoverId(null);
       setHoverRect(null);
     }, 180);
   }, [cancelClose]);
+
 
   // Group events by column, sorted by sortIndex (fallback startISO).
   // Local order overrides while a reorder is pending.
