@@ -138,7 +138,7 @@ export function CalendarSideNav({
       </div>
 
       {/* Category filters — scrollable */}
-      <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-6 pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
+      <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
         {seat === "admin" ? (
           <TeamCategorySectionAdapter teamId={teamId} title={teamName ?? "Categories"} />
         ) : (
