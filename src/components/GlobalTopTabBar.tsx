@@ -109,7 +109,8 @@ export function GlobalTopTabBar() {
     >
       <style>{`
         .global-topbar-dark .topbar-row { color: #ffffff; }
-        .global-topbar-dark .topbar-row *:not([data-folder-icon]):not([data-folder-icon] *) { color: #ffffff; }
+        .global-topbar-dark .topbar-row > *:not([role="menu"]):not([role="menu"] *) { color: #ffffff; }
+        .global-topbar-dark .topbar-row > *:not([role="menu"]):not([role="menu"] *) *:not([data-folder-icon]):not([data-folder-icon] *):not([role="menu"]):not([role="menu"] *) { color: #ffffff; }
         /* macOS menu-bar style hover: instant on/off, no easing. */
         .global-topbar-dark .topbar-row [data-nav-icon] {
           border-radius: 6px;
@@ -179,8 +180,8 @@ export function GlobalTopTabBar() {
           opacity: 0 !important;
         }
         .global-topbar-dark .topbar-row [role="menu"],
-        .global-topbar-dark .topbar-row [role="menu"] * { color: oklch(0.14 0.012 260); }
-        .global-topbar-dark .topbar-row [role="menu"] .text-muted-foreground { color: oklch(0.5 0.01 260); }
+        .global-topbar-dark .topbar-row [role="menu"] * { color: oklch(0.14 0.012 260) !important; }
+        .global-topbar-dark .topbar-row [role="menu"] .text-muted-foreground { color: oklch(0.5 0.01 260) !important; }
         .global-topbar-dark .topbar-row [role="menu"] button:hover {
           background-color: rgba(0, 0, 0, 0.06) !important;
           transition: none !important;
