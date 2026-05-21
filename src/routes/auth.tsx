@@ -28,7 +28,7 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user) navigate({ to: search.redirect ?? "/profile" });
+    if (user) navigate({ to: search.redirect ?? "/calendar", replace: true });
   }, [user, navigate, search.redirect]);
 
   const submit = async (e: React.FormEvent) => {
