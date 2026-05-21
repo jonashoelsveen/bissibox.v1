@@ -100,7 +100,7 @@ export function GlobalTopTabBar() {
     };
   }, [appsOpen]);
 
-  if (!user) return null;
+  
 
   const close = () => {
     setPlusOpen(false);
