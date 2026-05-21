@@ -15,12 +15,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { StickyNote, Pencil, Trash2 } from "lucide-react";
 import { NotePanel, isUpdatedToday, useMemberFirstName } from "./DayNoteButton";
-import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
-import { CAT_TRAINING_COLOR } from "./MonthGridType1";
-import { colorForActivity } from "@/lib/activity-colors";
-import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import type { CalendarEvent } from "./yearStore";
-import { fromISOLocal, toISOLocal, setHM } from "./dateUtils";
+import { fromISOLocal } from "./dateUtils";
 import { useDiarySessionNote } from "@/hooks/useDiarySessionNote";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,14 +63,13 @@ export interface SessionHoverMenuProps {
   onDelete: () => void;
   onSaveNote: (text: string) => void;
   onUpsert: (patch: Partial<CalendarEvent> & { id: string }) => void;
+  /** Open the details modal for this event. Owned by the parent so the
+   *  modal's lifecycle is independent of hover state. */
+  onOpenDetails: () => void;
   visible: boolean;
   onMenuEnter?: () => void;
   onMenuLeave?: () => void;
   onForceClose?: () => void;
-  /** Fires whenever the details modal opens/closes so the parent can keep
-   *  this menu mounted (the modal lives in a portal but is a React child of
-   *  this menu — unmounting the menu also unmounts the open modal). */
-  onDetailsOpenChange?: (open: boolean) => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
@@ -86,11 +81,11 @@ export function SessionHoverMenu({
   onDelete,
   onSaveNote,
   onUpsert,
+  onOpenDetails,
   visible,
   onMenuEnter,
   onMenuLeave,
   onForceClose,
-  onDetailsOpenChange,
   memberId,
   viewerRole = "owner",
 }: SessionHoverMenuProps) {
@@ -98,10 +93,6 @@ export function SessionHoverMenu({
   const [confirm, setConfirm] = useState(false);
   const [noteEdit, setNoteEdit] = useState(false);
   const [leaderNoteEdit, setLeaderNoteEdit] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
-  useEffect(() => {
-    onDetailsOpenChange?.(showDetails);
-  }, [showDetails, onDetailsOpenChange]);
 
   const hasNote = !!ev.sessionNote?.trim();
 
@@ -115,49 +106,16 @@ export function SessionHoverMenu({
   const baseHeaderName = ownerFirstName || undefined;
   const hasLeaderNote = leader.leaderNotes.length > 0 || !!leader.viewerNote.trim();
 
-  // Initialize the SessionDetailsValue from the event.
-  const [detailsValue, setDetailsValue] = useState<SessionDetailsValue | null>(null);
-  useEffect(() => {
-    if (!showDetails) return;
-    const start = fromISOLocal(ev.startISO);
-    const end = fromISOLocal(ev.endISO);
-    const startMin = start.getHours() * 60 + start.getMinutes();
-    const endMin = end.getHours() * 60 + end.getMinutes();
-    const durationMin = Math.max(0, endMin - startMin);
-    let activities = ev.activities ?? [];
-    // Seed an activity row from Strava data when none is stored yet.
-    if (activities.length === 0 && ev.stravaActivityId) {
-      activities = [
-        {
-          type: ev.diarySub ?? ev.diaryGroup ?? "running",
-          durationMin,
-          distanceKm: ev.distanceKm,
-        },
-      ];
-    }
-    setDetailsValue({
-      title: ev.title,
-      diaryType: (ev.diaryType as DiaryType) ?? "training",
-      diaryGroup: ev.diaryGroup,
-      diarySub: ev.diarySub,
-      time: ev.allDay ? null : { startMin, endMin },
-      distanceKm: ev.distanceKm,
-      paceSecPerKm: ev.paceSecPerKm,
-      sessionNote: ev.sessionNote ?? "",
-      activities,
-    });
-  }, [showDetails, ev]);
-
   // Reset edit state when the session is no longer hovered AND nothing is open.
   useEffect(() => {
-    if (!visible && !noteEdit && !showDetails && !confirm) {
+    if (!visible && !noteEdit && !confirm) {
       setNoteEdit(false);
     }
-  }, [visible, noteEdit, showDetails, confirm]);
+  }, [visible, noteEdit, confirm]);
 
-  // Lock the menu open while note edit / details / confirm is in flight.
+  // Lock the menu open while note edit / confirm is in flight.
   const sticky = noteEdit || leaderNoteEdit || confirm;
-  const menuVisible = (visible || sticky) && !showDetails;
+  const menuVisible = visible || sticky;
 
   // Outside-click closes everything when the note panel is open.
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -254,34 +212,8 @@ export function SessionHoverMenu({
     top = Math.max(8, vh - 8 - totalH);
   }
 
-  const buildEventPatchFromDetails = (v: SessionDetailsValue): Partial<CalendarEvent> & { id: string } => {
-    const start = fromISOLocal(ev.startISO);
-    const time = v.time ?? {
-      startMin: start.getHours() * 60 + start.getMinutes(),
-      endMin: start.getHours() * 60 + start.getMinutes() + 60,
-    };
-    const startISO = toISOLocal(setHM(start, Math.floor(time.startMin / 60), time.startMin % 60));
-    const endISO = toISOLocal(setHM(start, Math.floor(time.endMin / 60), time.endMin % 60));
-    const trainingColor =
-      v.diaryGroup === "endurance" ? colorForActivity(v.diarySub) : CAT_TRAINING_COLOR;
-    const color = v.diaryType === "training" ? trainingColor : "#9CA3AF";
-    const hasSubs = !!DIARY_GROUPS.find((g) => g.id === v.diaryGroup)?.children?.length;
-    return {
-      id: ev.id,
-      title: v.title.trim(),
-      color,
-      startISO,
-      endISO,
-      allDay: false,
-      diaryType: v.diaryType,
-      diaryGroup: v.diaryType === "training" ? v.diaryGroup : undefined,
-      diarySub: v.diaryType === "training" && hasSubs ? v.diarySub : undefined,
-      distanceKm: v.distanceKm,
-      paceSecPerKm: v.paceSecPerKm,
-      sessionNote: v.sessionNote || undefined,
-      activities: v.activities && v.activities.length ? v.activities : undefined,
-    };
-  };
+  // Details modal lifecycle is owned by the parent (lifted out of this menu so
+  // it survives hover transitions, refetches, and menu unmounts).
 
   return (
     <>
@@ -330,7 +262,7 @@ export function SessionHoverMenu({
             >
               <StickyNote className="h-4 w-4" strokeWidth={2.25} />
             </MenuBtn>
-            <MenuBtn label="Detaljer" onClick={() => setShowDetails(true)}>
+            <MenuBtn label="Detaljer" onClick={onOpenDetails}>
               <Pencil className="h-4 w-4" strokeWidth={2.25} />
             </MenuBtn>
             {isOwner && (
@@ -407,34 +339,6 @@ export function SessionHoverMenu({
           </div>,
           document.body,
         )}
-
-      {showDetails && detailsValue && (
-        <SessionDetailsModal
-          isEdit={true}
-          date={fromISOLocal(ev.startISO)}
-          strava={
-            ev.summaryPolyline
-              ? {
-                  polyline: ev.summaryPolyline,
-                  elevationGainM: ev.totalElevationGainM ?? null,
-                  distanceKm: ev.distanceKm ?? null,
-                  stravaActivityId: ev.stravaActivityId ?? null,
-                }
-              : null
-          }
-          value={detailsValue}
-          onChange={(v) => setDetailsValue(v)}
-          onClose={() => {
-            setShowDetails(false);
-            onForceClose?.();
-          }}
-          onSave={(v) => {
-            onUpsert(buildEventPatchFromDetails(v));
-            setShowDetails(false);
-            onForceClose?.();
-          }}
-        />
-      )}
 
       {confirm && (
         <ConfirmDeleteDialog
