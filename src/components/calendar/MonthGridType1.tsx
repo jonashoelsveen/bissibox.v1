@@ -948,6 +948,20 @@ export function MonthGridType1({
                             data-real-event={isRealEvent ? "1" : undefined}
                             data-ghost-event={it.kind === "event" && it.event.id.startsWith("__ghost__:") ? "1" : undefined}
                             data-event-id={isRealEvent ? it.event.id : undefined}
+                            onMouseEnter={(e) => {
+                              if (appKind !== "diary" || !isRealEvent) return;
+                              cancelHoverClose();
+                              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                              setHoverId(it.kind === "event" ? it.event.id : null);
+                              setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+                            }}
+                            onMouseLeave={(e) => {
+                              if (appKind !== "diary" || !isRealEvent) return;
+                              const related = e.relatedTarget as Node | null;
+                              const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
+                              if (goingIntoMenu) return;
+                              scheduleHoverClose();
+                            }}
                             onPointerDown={(e) => {
                               if (e.button !== 0) return;
                               if (it.kind === "legacy") return;
