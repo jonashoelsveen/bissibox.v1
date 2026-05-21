@@ -561,10 +561,14 @@ function SignUpForm(props: {
           type="button"
           onClick={onCancel}
           disabled={submitting}
+          className="transition active:scale-[0.99]"
           style={{
-            fontFamily: HELVETICA, fontSize: 14, color: "#1d1d1f",
-            background: "transparent", border: "none",
-            padding: "10px 14px", cursor: "pointer",
+            background: "#ffffff", color: "#1d1d1f",
+            borderRadius: 12, padding: "11px 22px",
+            fontFamily: HELVETICA, fontSize: 14, fontWeight: 500,
+            letterSpacing: "-0.005em",
+            border: "1px solid #1d1d1f",
+            cursor: submitting ? "default" : "pointer",
           }}
         >
           Cancel
