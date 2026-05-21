@@ -141,11 +141,13 @@ export function GlobalTopTabBar() {
         <button
           type="button"
           aria-label="Home"
-          className="flex h-8 w-8 items-center justify-center rounded-md text-[#1d1d1f] hover:bg-black/5"
+          className="flex items-center justify-center text-[#1d1d1f] hover:bg-black/5"
+          style={{ height: 34, width: 34 }}
         >
-          <HomeIcon className="h-[20px] w-[20px]" strokeWidth={1.8} />
+          <HomeIcon className="h-[30px] w-[30px]" strokeWidth={2.2} />
         </button>
-        {user && (
+        {(
+          
           <div className="relative" ref={appsRef}>
             <button
               onClick={() => setAppsOpen((v) => !v)}
