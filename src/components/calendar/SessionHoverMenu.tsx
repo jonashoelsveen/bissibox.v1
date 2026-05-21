@@ -81,11 +81,11 @@ export function SessionHoverMenu({
   onDelete,
   onSaveNote,
   onUpsert,
+  onOpenDetails,
   visible,
   onMenuEnter,
   onMenuLeave,
   onForceClose,
-  onDetailsOpenChange,
   memberId,
   viewerRole = "owner",
 }: SessionHoverMenuProps) {
@@ -93,10 +93,6 @@ export function SessionHoverMenu({
   const [confirm, setConfirm] = useState(false);
   const [noteEdit, setNoteEdit] = useState(false);
   const [leaderNoteEdit, setLeaderNoteEdit] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
-  useEffect(() => {
-    onDetailsOpenChange?.(showDetails);
-  }, [showDetails, onDetailsOpenChange]);
 
   const hasNote = !!ev.sessionNote?.trim();
 
@@ -110,49 +106,16 @@ export function SessionHoverMenu({
   const baseHeaderName = ownerFirstName || undefined;
   const hasLeaderNote = leader.leaderNotes.length > 0 || !!leader.viewerNote.trim();
 
-  // Initialize the SessionDetailsValue from the event.
-  const [detailsValue, setDetailsValue] = useState<SessionDetailsValue | null>(null);
-  useEffect(() => {
-    if (!showDetails) return;
-    const start = fromISOLocal(ev.startISO);
-    const end = fromISOLocal(ev.endISO);
-    const startMin = start.getHours() * 60 + start.getMinutes();
-    const endMin = end.getHours() * 60 + end.getMinutes();
-    const durationMin = Math.max(0, endMin - startMin);
-    let activities = ev.activities ?? [];
-    // Seed an activity row from Strava data when none is stored yet.
-    if (activities.length === 0 && ev.stravaActivityId) {
-      activities = [
-        {
-          type: ev.diarySub ?? ev.diaryGroup ?? "running",
-          durationMin,
-          distanceKm: ev.distanceKm,
-        },
-      ];
-    }
-    setDetailsValue({
-      title: ev.title,
-      diaryType: (ev.diaryType as DiaryType) ?? "training",
-      diaryGroup: ev.diaryGroup,
-      diarySub: ev.diarySub,
-      time: ev.allDay ? null : { startMin, endMin },
-      distanceKm: ev.distanceKm,
-      paceSecPerKm: ev.paceSecPerKm,
-      sessionNote: ev.sessionNote ?? "",
-      activities,
-    });
-  }, [showDetails, ev]);
-
   // Reset edit state when the session is no longer hovered AND nothing is open.
   useEffect(() => {
-    if (!visible && !noteEdit && !showDetails && !confirm) {
+    if (!visible && !noteEdit && !confirm) {
       setNoteEdit(false);
     }
-  }, [visible, noteEdit, showDetails, confirm]);
+  }, [visible, noteEdit, confirm]);
 
-  // Lock the menu open while note edit / details / confirm is in flight.
+  // Lock the menu open while note edit / confirm is in flight.
   const sticky = noteEdit || leaderNoteEdit || confirm;
-  const menuVisible = (visible || sticky) && !showDetails;
+  const menuVisible = visible || sticky;
 
   // Outside-click closes everything when the note panel is open.
   const menuRef = useRef<HTMLDivElement | null>(null);
