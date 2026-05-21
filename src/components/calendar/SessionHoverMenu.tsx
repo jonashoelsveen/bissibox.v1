@@ -71,6 +71,10 @@ export interface SessionHoverMenuProps {
   onMenuEnter?: () => void;
   onMenuLeave?: () => void;
   onForceClose?: () => void;
+  /** Fires whenever the details modal opens/closes so the parent can keep
+   *  this menu mounted (the modal lives in a portal but is a React child of
+   *  this menu — unmounting the menu also unmounts the open modal). */
+  onDetailsOpenChange?: (open: boolean) => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
@@ -86,6 +90,7 @@ export function SessionHoverMenu({
   onMenuEnter,
   onMenuLeave,
   onForceClose,
+  onDetailsOpenChange,
   memberId,
   viewerRole = "owner",
 }: SessionHoverMenuProps) {
@@ -94,6 +99,10 @@ export function SessionHoverMenu({
   const [noteEdit, setNoteEdit] = useState(false);
   const [leaderNoteEdit, setLeaderNoteEdit] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  useEffect(() => {
+    onDetailsOpenChange?.(showDetails);
+  }, [showDetails, onDetailsOpenChange]);
+
   const hasNote = !!ev.sessionNote?.trim();
 
   // Leader / active-follower notes (Supabase).

@@ -1977,6 +1977,10 @@ function WeekEventsOverlay({
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const closeTimerRef = useRef<number | null>(null);
+  // While the details modal is open we keep the hover menu mounted so the
+  // modal (which is a React child of the menu via a portal) doesn't unmount
+  // when the cursor leaves the session block.
+  const detailsOpenRef = useRef(false);
   // Mark prop as used to silence ts noUnused warnings; behavior unchanged.
   void onSaveSessionNote;
   const cancelClose = useCallback(() => {
@@ -1986,12 +1990,14 @@ function WeekEventsOverlay({
     }
   }, []);
   const scheduleClose = useCallback(() => {
+    if (detailsOpenRef.current) return;
     cancelClose();
     closeTimerRef.current = window.setTimeout(() => {
       setHoverId(null);
       setHoverRect(null);
     }, 180);
   }, [cancelClose]);
+
 
   const [drag, setDrag] = useState<{
     id: string;
@@ -2325,6 +2331,10 @@ function WeekEventsOverlay({
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
+            onDetailsOpenChange={(open) => {
+              detailsOpenRef.current = open;
+              if (open) cancelClose();
+            }}
             onForceClose={() => {
               cancelClose();
               setHoverId(null);
@@ -2381,6 +2391,7 @@ function DiarySimpleStack({
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const closeTimerRef = useRef<number | null>(null);
+  const detailsOpenRef = useRef(false);
   const cancelClose = useCallback(() => {
     if (closeTimerRef.current != null) {
       window.clearTimeout(closeTimerRef.current);
@@ -2388,12 +2399,14 @@ function DiarySimpleStack({
     }
   }, []);
   const scheduleClose = useCallback(() => {
+    if (detailsOpenRef.current) return;
     cancelClose();
     closeTimerRef.current = window.setTimeout(() => {
       setHoverId(null);
       setHoverRect(null);
     }, 180);
   }, [cancelClose]);
+
 
   // Group events by column, sorted by sortIndex (fallback startISO).
   // Local order overrides while a reorder is pending.
@@ -2492,6 +2505,10 @@ function DiarySimpleStack({
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
+            onDetailsOpenChange={(open) => {
+              detailsOpenRef.current = open;
+              if (open) cancelClose();
+            }}
             onForceClose={() => {
               cancelClose();
               setHoverId(null);
