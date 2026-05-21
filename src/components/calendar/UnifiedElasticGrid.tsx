@@ -2505,6 +2505,10 @@ function DiarySimpleStack({
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
+            onDetailsOpenChange={(open) => {
+              detailsOpenRef.current = open;
+              if (open) cancelClose();
+            }}
             onForceClose={() => {
               cancelClose();
               setHoverId(null);
