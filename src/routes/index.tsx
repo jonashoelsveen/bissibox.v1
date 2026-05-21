@@ -1,10 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { SignInModal } from "@/components/SignInModal";
+import { SignInModal, type SignInContext } from "@/components/SignInModal";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
+  validateSearch: (s: Record<string, unknown>): { signin?: SignInContext } => {
+    const v = s.signin;
+    if (v === "cloud" || v === "calendar" || v === "diary" || v === "photos") {
+      return { signin: v };
+    }
+    return {};
+  },
   head: () => ({
     meta: [
       { title: "Aponna Cloud" },
@@ -21,26 +28,43 @@ const HELVETICA =
 
 function HomePage() {
   const { user, authReady } = useAuth();
+  const search = useSearch({ from: "/" });
+  const navigate = useNavigate();
   const [signInOpen, setSignInOpen] = useState(false);
+  const [signInContext, setSignInContext] = useState<SignInContext>("cloud");
 
-  // Whenever the user becomes authenticated (or the modal is no longer
-  // needed), make sure the sign-in modal is closed. Without this, the
-  // modal can re-appear on the next sign-out because its 2.1s onClose
-  // timer is cancelled when the parent switches to the logged-in branch
-  // and unmounts the modal.
   useEffect(() => {
     if (user) setSignInOpen(false);
   }, [user]);
 
-  // Logged-in Aponna Cloud home — black top tab-bar (rendered globally) + 2×2 cards.
+  // Open the modal automatically when arriving with ?signin=<ctx>.
+  useEffect(() => {
+    if (user) return;
+    const ctx = search.signin;
+    if (ctx) {
+      setSignInContext(ctx);
+      setSignInOpen(true);
+    }
+  }, [search.signin, user]);
+
+  const closeSignIn = () => {
+    setSignInOpen(false);
+    if (search.signin) {
+      void navigate({ to: "/", search: {}, replace: true });
+    }
+  };
+
+  // Logged-in Aponna Cloud home — 2×2 cards.
   if (authReady && user) {
     return (
       <div
         className="min-h-full w-full"
         style={{ backgroundColor: "#fafafa", fontFamily: HELVETICA }}
       >
-        <div className="mx-auto grid h-full max-w-[1600px] grid-cols-2 grid-rows-2 gap-6 px-6 py-6"
-             style={{ minHeight: "calc(100vh - 80px)" }}>
+        <div
+          className="mx-auto grid h-full max-w-[1600px] grid-cols-2 grid-rows-2 gap-6 px-6 py-6"
+          style={{ minHeight: "calc(100vh - 80px)" }}
+        >
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
@@ -57,7 +81,6 @@ function HomePage() {
     );
   }
 
-  // Landing (logged out).
   return (
     <div
       className="min-h-full w-full"
@@ -92,7 +115,10 @@ function HomePage() {
 
           <button
             type="button"
-            onClick={() => setSignInOpen(true)}
+            onClick={() => {
+              setSignInContext("cloud");
+              setSignInOpen(true);
+            }}
             className="mt-10 text-white transition active:scale-[0.98]"
             style={{
               backgroundColor: "#1d1d1f",
@@ -123,7 +149,11 @@ function HomePage() {
         </div>
       </div>
 
-      <SignInModal open={signInOpen} onClose={() => setSignInOpen(false)} />
+      <SignInModal
+        open={signInOpen}
+        onClose={closeSignIn}
+        context={signInContext}
+      />
     </div>
   );
 }
