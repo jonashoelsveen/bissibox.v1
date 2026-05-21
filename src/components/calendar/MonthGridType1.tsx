@@ -290,6 +290,25 @@ export function MonthGridType1({
     return () => window.removeEventListener("mouseup", onUp);
   }, []);
 
+  // ───────────────────── Diary hover menu (mirrors week view) ──────────────
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
+  const hoverCloseTimerRef = useRef<number | null>(null);
+  const cancelHoverClose = useCallback(() => {
+    if (hoverCloseTimerRef.current != null) {
+      window.clearTimeout(hoverCloseTimerRef.current);
+      hoverCloseTimerRef.current = null;
+    }
+  }, []);
+  const scheduleHoverClose = useCallback(() => {
+    cancelHoverClose();
+    hoverCloseTimerRef.current = window.setTimeout(() => {
+      setHoverId(null);
+      setHoverRect(null);
+    }, 180);
+  }, [cancelHoverClose]);
+
   // ───────────────────────── Popover (add/edit) ─────────────────────────
 
   const [popover, setPopover] = useState<{
