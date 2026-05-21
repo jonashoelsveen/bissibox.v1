@@ -73,18 +73,28 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  // When rendered inside an iframe (e.g. the ProfileModal), hide the global
+  // chrome so only the page content is visible inside the modal.
+  const isEmbedded =
+    typeof window !== "undefined" && window.self !== window.top;
   return (
     <AuthProvider>
       <TopBarSlotProvider>
-        <TopBar />
-        <GlobalTopTabBar />
-        <main className="fixed inset-x-0 top-10 bottom-0 overflow-y-auto">
+        {!isEmbedded && <TopBar />}
+        {!isEmbedded && <GlobalTopTabBar />}
+        <main
+          className={
+            isEmbedded
+              ? "fixed inset-0 overflow-y-auto"
+              : "fixed inset-x-0 top-10 bottom-0 overflow-y-auto"
+          }
+        >
           <Outlet />
         </main>
-        <Toaster />
-        <GlobalCreateOverlay />
-        <SettingsModal />
-        <ProfileModal />
+        {!isEmbedded && <Toaster />}
+        {!isEmbedded && <GlobalCreateOverlay />}
+        {!isEmbedded && <SettingsModal />}
+        {!isEmbedded && <ProfileModal />}
       </TopBarSlotProvider>
     </AuthProvider>
   );
