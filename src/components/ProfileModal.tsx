@@ -55,8 +55,8 @@ export function ProfileModal() {
   if (!open || !user) return null;
 
   const src = activeEntityId
-    ? `/t/${activeEntityId}`
-    : `/u/${user.id}`;
+    ? `/t/${activeEntityId}#embed=1`
+    : `/u/${user.id}#embed=1`;
 
   return (
     <div

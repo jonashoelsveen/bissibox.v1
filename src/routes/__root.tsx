@@ -79,11 +79,12 @@ function RootComponent() {
   const [isEmbedded, setIsEmbedded] = useState(false);
   useEffect(() => {
     try {
-      setIsEmbedded(window.self !== window.top);
+      setIsEmbedded(window.location.hash.includes("embed=1"));
     } catch {
-      setIsEmbedded(true);
+      setIsEmbedded(false);
     }
   }, []);
+
 
   return (
     <AuthProvider>
