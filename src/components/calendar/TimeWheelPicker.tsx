@@ -156,10 +156,21 @@ const Cell = forwardRef<HTMLInputElement, CellProps>(function Cell(
 ) {
   const [text, setText] = useState(twoDigit(value));
   const [editing, setEditing] = useState(false);
+  // Keep latest text in a ref so onBlur (which may fire synchronously right
+  // after an auto-advance, before React has flushed the setText from
+  // onChange) reads the up-to-date value instead of a stale closure.
+  const textRef = useRef(text);
+  useEffect(() => {
+    textRef.current = text;
+  }, [text]);
 
   // Sync external value when not actively editing.
   useEffect(() => {
-    if (!editing) setText(twoDigit(value));
+    if (!editing) {
+      const next = twoDigit(value);
+      setText(next);
+      textRef.current = next;
+    }
   }, [value, editing]);
 
   const firstDigitMax = useMemo(() => Math.floor(max / 10), [max]);
