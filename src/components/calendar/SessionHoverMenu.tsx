@@ -340,34 +340,6 @@ export function SessionHoverMenu({
           document.body,
         )}
 
-      {showDetails && detailsValue && (
-        <SessionDetailsModal
-          isEdit={true}
-          date={fromISOLocal(ev.startISO)}
-          strava={
-            ev.summaryPolyline
-              ? {
-                  polyline: ev.summaryPolyline,
-                  elevationGainM: ev.totalElevationGainM ?? null,
-                  distanceKm: ev.distanceKm ?? null,
-                  stravaActivityId: ev.stravaActivityId ?? null,
-                }
-              : null
-          }
-          value={detailsValue}
-          onChange={(v) => setDetailsValue(v)}
-          onClose={() => {
-            setShowDetails(false);
-            onForceClose?.();
-          }}
-          onSave={(v) => {
-            onUpsert(buildEventPatchFromDetails(v));
-            setShowDetails(false);
-            onForceClose?.();
-          }}
-        />
-      )}
-
       {confirm && (
         <ConfirmDeleteDialog
           title="Slett økt?"
