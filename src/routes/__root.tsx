@@ -84,6 +84,7 @@ function RootComponent() {
         <Toaster />
         <GlobalCreateOverlay />
         <SettingsModal />
+        <ProfileModal />
       </TopBarSlotProvider>
     </AuthProvider>
   );
