@@ -22,7 +22,7 @@ import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
 import { ProfileMenuButton } from "@/components/ProfileMenuButton";
 import { HomeIcon } from "@/components/HomeIcon";
-import { useAuthTransition } from "@/lib/auth-transition";
+import { useAuthTransition, useSignInModalOpen } from "@/lib/auth-transition";
 
 /** Routes whose top tab-bar is stripped down to: Me/We + (conditional)
  *  Group Members. Calendar / Diary / Photos icons move into the apps menu. */
