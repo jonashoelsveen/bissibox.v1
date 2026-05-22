@@ -688,13 +688,14 @@ const inputStyle: React.CSSProperties = {
 };
 
 function RawInput({
-  type = "text", value, onChange, required, autoComplete,
+  type = "text", value, onChange, required, autoComplete, autoFocus,
 }: {
   type?: string;
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
   autoComplete?: string;
+  autoFocus?: boolean;
 }) {
   return (
     <input
@@ -703,6 +704,7 @@ function RawInput({
       onChange={(e) => onChange(e.target.value)}
       required={required}
       autoComplete={autoComplete}
+      autoFocus={autoFocus}
       style={inputStyle}
       onFocus={(e) => {
         e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,29,31,0.08)";
