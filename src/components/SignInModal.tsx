@@ -630,7 +630,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 }
 
 function LabeledField({
-  label, value, onChange, type = "text", required, autoComplete,
+  label, value, onChange, type = "text", required, autoComplete, autoFocus,
 }: {
   label: string;
   value: string;
@@ -638,6 +638,7 @@ function LabeledField({
   type?: string;
   required?: boolean;
   autoComplete?: string;
+  autoFocus?: boolean;
 }) {
   return (
     <label className="block">
@@ -648,6 +649,7 @@ function LabeledField({
         onChange={onChange}
         required={required}
         autoComplete={autoComplete}
+        autoFocus={autoFocus}
       />
     </label>
   );
