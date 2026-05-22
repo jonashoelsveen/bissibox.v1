@@ -514,11 +514,12 @@ export function GlobalTopTabBar() {
               <a
                 href="#"
                 onClick={(e) => e.preventDefault()}
-                className="flex w-full items-center border-t border-hairline px-3 py-2.5 text-sm text-ink"
+                className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-sm text-ink"
                 style={{ transition: "none" }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
               >
+                <UserRound className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
                 <span>account.aponna.com</span>
               </a>
             </div>
