@@ -338,6 +338,7 @@ function SignInForm(props: {
         onChange={setEmail}
         type="email"
         autoComplete="email"
+        autoFocus
         required
       />
       <LabeledField
