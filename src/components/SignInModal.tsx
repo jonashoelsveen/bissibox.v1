@@ -428,7 +428,7 @@ function SignUpForm(props: {
           subtitleSize={13}
         />
         <div className="grid grid-cols-2 gap-3">
-          <LabeledField label="First name" value={firstName} onChange={setFirstName} autoComplete="given-name" required />
+          <LabeledField label="First name" value={firstName} onChange={setFirstName} autoComplete="given-name" autoFocus required />
           <LabeledField label="Last name" value={lastName} onChange={setLastName} autoComplete="family-name" required />
         </div>
 
