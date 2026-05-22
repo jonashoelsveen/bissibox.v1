@@ -338,6 +338,7 @@ function SignInForm(props: {
         onChange={setEmail}
         type="email"
         autoComplete="email"
+        autoFocus
         required
       />
       <LabeledField
@@ -427,7 +428,7 @@ function SignUpForm(props: {
           subtitleSize={13}
         />
         <div className="grid grid-cols-2 gap-3">
-          <LabeledField label="First name" value={firstName} onChange={setFirstName} autoComplete="given-name" required />
+          <LabeledField label="First name" value={firstName} onChange={setFirstName} autoComplete="given-name" autoFocus required />
           <LabeledField label="Last name" value={lastName} onChange={setLastName} autoComplete="family-name" required />
         </div>
 
@@ -630,7 +631,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 }
 
 function LabeledField({
-  label, value, onChange, type = "text", required, autoComplete,
+  label, value, onChange, type = "text", required, autoComplete, autoFocus,
 }: {
   label: string;
   value: string;
@@ -638,6 +639,7 @@ function LabeledField({
   type?: string;
   required?: boolean;
   autoComplete?: string;
+  autoFocus?: boolean;
 }) {
   return (
     <label className="block">
@@ -648,6 +650,7 @@ function LabeledField({
         onChange={onChange}
         required={required}
         autoComplete={autoComplete}
+        autoFocus={autoFocus}
       />
     </label>
   );
@@ -686,13 +689,14 @@ const inputStyle: React.CSSProperties = {
 };
 
 function RawInput({
-  type = "text", value, onChange, required, autoComplete,
+  type = "text", value, onChange, required, autoComplete, autoFocus,
 }: {
   type?: string;
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
   autoComplete?: string;
+  autoFocus?: boolean;
 }) {
   return (
     <input
@@ -701,6 +705,7 @@ function RawInput({
       onChange={(e) => onChange(e.target.value)}
       required={required}
       autoComplete={autoComplete}
+      autoFocus={autoFocus}
       style={inputStyle}
       onFocus={(e) => {
         e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,29,31,0.08)";
