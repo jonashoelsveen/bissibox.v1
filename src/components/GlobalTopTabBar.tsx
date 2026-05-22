@@ -15,6 +15,7 @@ import {
   CalendarDays,
   BookOpen,
   Home,
+  UserRound,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { ProfileTab } from "@/components/ProfileTab";
