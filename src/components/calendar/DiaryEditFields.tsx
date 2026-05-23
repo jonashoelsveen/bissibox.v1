@@ -140,7 +140,7 @@ export function DurationInput({
   const m = durationMin % 60;
 
   const inputCls =
-    "mono w-7 rounded-[3px] border border-input bg-background px-1 py-0.5 text-center text-[12px] font-semibold tabular-nums text-ink outline-none focus:border-primary [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+    "mono w-[18px] bg-transparent p-0 text-center text-[12px] font-semibold tabular-nums text-ink outline-none cursor-text caret-ink focus:bg-ink/5 rounded-[3px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
   const hasValue = durationMin > 0;
 
