@@ -479,7 +479,7 @@ export function SessionHoverMenu({
         createPortal(
           <div
             data-session-note-panel="1"
-            className="fixed z-[20] flex flex-col overflow-y-auto"
+            className="fixed z-[20] flex flex-col overflow-y-auto transition-[left,top] duration-150 ease-out"
             style={{ left, top: top + menuH, width: NOTE_PANEL_W, maxHeight: panelMaxH }}
             onMouseEnter={onMenuEnter}
             onMouseLeave={() => { if (!sticky) onMenuLeave?.(); }}
