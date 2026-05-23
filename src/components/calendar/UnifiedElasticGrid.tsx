@@ -2700,6 +2700,7 @@ function SimpleColumn({
                 tileDesign={tileDesign}
                 unit={unit}
                 disabled={list.length < 2}
+                isActive={activeSessionId === ev.id}
                 onEventClick={onEventClick}
                 onHoverChange={onHoverChange}
                 onHoverEnd={onHoverEnd}
