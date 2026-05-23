@@ -184,11 +184,12 @@ export function DayNoteButton({
   };
 
   const refreshRect = () => {
-    const anchor = btnRef.current?.closest(anchorSelector) as HTMLElement | null;
-    if (anchor) {
-      anchorElRef.current = anchor;
-      setAnchorRect(anchor.getBoundingClientRect());
-    } else if (btnRef.current) {
+    // Anchor strictly to the icon button container — NOT the day cell —
+    // so the hover-close logic only treats the icons (and panel) as
+    // "inside". Moving the cursor elsewhere in the cell must close the
+    // panel and free up other hover menus.
+    if (btnRef.current) {
+      anchorElRef.current = btnRef.current;
       setAnchorRect(btnRef.current.getBoundingClientRect());
     }
   };
