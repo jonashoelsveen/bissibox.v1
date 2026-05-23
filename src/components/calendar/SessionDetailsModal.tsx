@@ -15,6 +15,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
 import { X, Plus, MapPin, StickyNote, Info, Paperclip, Pencil, Check, Lock, Activity, Trash2 } from "lucide-react";
 import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
+import { useDiarySessionNote } from "@/hooks/useDiarySessionNote";
 import { useLibrarySetting, diaryAutosyncKey } from "@/lib/library-settings";
 import { StravaMapPanel } from "./StravaMapPanel";
 import { colorForActivity } from "@/lib/activity-colors";
