@@ -1984,7 +1984,10 @@ function WeekEventsOverlay({
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
   // A session is "locked" when it has an open edit panel, note panel, or is
   // being created. While locked, hovering other tiles must not open menus.
-  const hoverLocked = lockedId !== null || forceEditId !== null;
+  const globalLock = useHoverLock();
+  const ownLockId = (forceEditId ?? lockedId) != null ? `session-${forceEditId ?? lockedId}` : null;
+  const foreignLock = globalLock !== null && globalLock !== ownLockId;
+  const hoverLocked = lockedId !== null || forceEditId !== null || foreignLock;
   const safeSetHoverId = useCallback((id: string | null) => {
     if (hoverLocked) {
       const allowed = lockedId ?? forceEditId;
