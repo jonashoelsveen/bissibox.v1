@@ -107,10 +107,12 @@ export function SessionHoverMenu({
   const [leaderNoteEdit, setLeaderNoteEdit] = useState(false);
 
   // --- Edit mode (replaces the old DiaryPopoverEditor for existing sessions) ---
-  const [editMode, setEditMode] = useState(defaultEditMode);
+  // Edit mode is owner-only. Group leaders / followers click → open details
+  // modal (handled by the parent). They never see an inline edit panel.
+  const [editMode, setEditMode] = useState(defaultEditMode && viewerRole === "owner");
   useEffect(() => {
-    if (defaultEditMode) setEditMode(true);
-  }, [defaultEditMode, ev.id]);
+    if (defaultEditMode && viewerRole === "owner") setEditMode(true);
+  }, [defaultEditMode, ev.id, viewerRole]);
 
   // Derive initial edit-state from the event whenever it identity-changes.
   const inferred = useMemo(() => {
