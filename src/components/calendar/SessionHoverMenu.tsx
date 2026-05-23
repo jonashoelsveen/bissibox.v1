@@ -350,20 +350,14 @@ export function SessionHoverMenu({
                 onUpsert({ id: ev.id, title: trimmed });
               }}
             />
-            <MenuBtn
-              label={
-                isOwner
-                  ? hasNote ? "Rediger notat" : "Legg til notat"
-                  : leader.viewerNote.trim() ? "Rediger ditt notat" : "Legg til notat"
-              }
-              accent={!isOwner ? "leader" : undefined}
-              onClick={() => {
-                if (isOwner) setNoteEdit(true);
-                else if (leader.canEdit) setLeaderNoteEdit(true);
-              }}
-            >
-              <StickyNote className="h-4 w-4" strokeWidth={2.25} />
-            </MenuBtn>
+            {isOwner && (
+              <MenuBtn
+                label={hasNote ? "Rediger notat" : "Legg til notat"}
+                onClick={() => setNoteEdit(true)}
+              >
+                <StickyNote className="h-4 w-4" strokeWidth={2.25} />
+              </MenuBtn>
+            )}
             <MenuBtn label="Detaljer" onClick={onOpenDetails}>
               <Pencil className="h-4 w-4" strokeWidth={2.25} />
             </MenuBtn>
