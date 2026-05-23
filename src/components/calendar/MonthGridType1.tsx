@@ -1999,14 +1999,28 @@ function CategoryDropdownRow({
   const [selectedId, setSelectedId] = useState<string>(initialId);
 
   // If the list loads after mount and selectedId is still empty, hydrate it.
+  // Also push the resolved category's color up so the autosave / Enter-commit
+  // writes the actual selected category color (not the hardcoded fallback).
   useEffect(() => {
     if (!selectedId && categories.length > 0) {
       const fromColor = categories.find((c) => c.color.toLowerCase() === lcColor)?.id;
-      setSelectedId(fromColor ?? categories[0].id);
+      const id = fromColor ?? categories[0].id;
+      setSelectedId(id);
+      const cat = categories.find((c) => c.id === id);
+      if (cat && cat.color.toLowerCase() !== lcColor) onSetColor(cat.color);
     }
-  }, [categories, lcColor, selectedId]);
+  }, [categories, lcColor, selectedId, onSetColor]);
 
+  // Sync color whenever the resolved category color differs from the current
+  // popover color (e.g. initial render where initialColor was a default that
+  // doesn't match the top user category).
   const selectedCat = categories.find((c) => c.id === selectedId);
+  useEffect(() => {
+    if (selectedCat && selectedCat.color.toLowerCase() !== lcColor) {
+      onSetColor(selectedCat.color);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCat?.id]);
   const sideColor = selectedCat?.color ?? color ?? "transparent";
 
   return (
