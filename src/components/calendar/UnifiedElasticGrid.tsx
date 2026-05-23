@@ -2471,21 +2471,15 @@ function DiarySimpleStack({
             list={list}
             tileDesign={tileDesign}
             unit={unit}
-            onEventClick={(ev, anchor) => {
+            onEventClick={(ev, _anchor) => {
               cancelClose();
-              // Group leaders / followers cannot edit — clicking opens the
-              // session details modal instead of the inline edit panel.
-              if (viewerRole !== "owner") {
-                setDetailsEvId(ev.id);
-                setHoverId(null);
-                setHoverRect(null);
-                return;
-              }
-              const r = anchor.getBoundingClientRect();
-              setHoverId(ev.id);
-              setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
-              setForceEditId(ev.id);
-              // Suppress the legacy parent handler (which used to open the popover).
+              // Clicking a session — owner or viewer — opens the centered
+              // SessionDetailsModal. The modal handles read-only vs editable
+              // based on viewerRole internally.
+              setDetailsEvId(ev.id);
+              setHoverId(null);
+              setHoverRect(null);
+              setForceEditId(null);
               void onEventClick;
             }}
             onHoverChange={(id, rect) => {
