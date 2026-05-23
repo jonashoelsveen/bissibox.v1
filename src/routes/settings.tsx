@@ -346,6 +346,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
         "diary",
         "library",
         "divider-2",
+        "coaches",
         "connectors",
         "system",
         "appearance",
