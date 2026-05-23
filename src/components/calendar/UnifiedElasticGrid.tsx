@@ -34,6 +34,7 @@ import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, con
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 import { DayNoteButton } from "./DayNoteButton";
 import { SessionHoverMenu } from "./SessionHoverMenu";
+import { useHoverLock } from "./hoverLock";
 import { SessionDetailsContainer } from "./SessionDetailsContainer";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
@@ -1983,7 +1984,10 @@ function WeekEventsOverlay({
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
   // A session is "locked" when it has an open edit panel, note panel, or is
   // being created. While locked, hovering other tiles must not open menus.
-  const hoverLocked = lockedId !== null || forceEditId !== null;
+  const globalLock = useHoverLock();
+  const ownLockId = (forceEditId ?? lockedId) != null ? `session-${forceEditId ?? lockedId}` : null;
+  const foreignLock = globalLock !== null && globalLock !== ownLockId;
+  const hoverLocked = lockedId !== null || forceEditId !== null || foreignLock;
   const safeSetHoverId = useCallback((id: string | null) => {
     if (hoverLocked) {
       const allowed = lockedId ?? forceEditId;
@@ -2444,7 +2448,10 @@ function DiarySimpleStack({
   const [forceEditId, setForceEditId] = useState<string | null>(null);
   const [lockedId, setLockedId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
-  const hoverLocked = lockedId !== null || forceEditId !== null;
+  const globalLock = useHoverLock();
+  const ownLockId = (forceEditId ?? lockedId) != null ? `session-${forceEditId ?? lockedId}` : null;
+  const foreignLock = globalLock !== null && globalLock !== ownLockId;
+  const hoverLocked = lockedId !== null || forceEditId !== null || foreignLock;
   const closeTimerRef = useRef<number | null>(null);
   const cancelClose = useCallback(() => {
     if (closeTimerRef.current != null) {

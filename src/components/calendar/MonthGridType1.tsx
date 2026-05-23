@@ -45,6 +45,7 @@ import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
 
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 import { SessionHoverMenu } from "./SessionHoverMenu";
+import { useHoverLock } from "./hoverLock";
 import { SessionDetailsContainer } from "./SessionDetailsContainer";
 import { TimeWheelPicker } from "./TimeWheelPicker";
 
@@ -296,7 +297,10 @@ export function MonthGridType1({
   const [forceEditId, setForceEditId] = useState<string | null>(null);
   const [lockedId, setLockedId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
-  const hoverLocked = lockedId !== null || forceEditId !== null;
+  const globalLock = useHoverLock();
+  const ownSessionLockId = (forceEditId ?? lockedId) != null ? `session-${forceEditId ?? lockedId}` : null;
+  const foreignLock = globalLock !== null && globalLock !== ownSessionLockId;
+  const hoverLocked = lockedId !== null || forceEditId !== null || foreignLock;
   const hoverCloseTimerRef = useRef<number | null>(null);
   const cancelHoverClose = useCallback(() => {
     if (hoverCloseTimerRef.current != null) {

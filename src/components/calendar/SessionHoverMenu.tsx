@@ -28,6 +28,7 @@ import {
   GroupSelectRow,
   SubgroupSelectRow,
 } from "./DiaryEditFields";
+import { setHoverLock, releaseHoverLockIf } from "./hoverLock";
 
 function dayLabel(date: Date): string {
   return `${String(date.getDate()).padStart(2, "0")}.${String(
@@ -203,6 +204,15 @@ export function SessionHoverMenu({
     onActiveChangeRef.current?.(sticky);
     if (sticky) return () => onActiveChangeRef.current?.(false);
   }, [sticky]);
+
+  // Acquire the shared hover lock while this menu is sticky so other panels
+  // (other sessions, day-notes) cannot open on hover.
+  const lockId = `session-${ev.id}`;
+  useEffect(() => {
+    if (sticky) setHoverLock(lockId);
+    else releaseHoverLockIf(lockId);
+    return () => releaseHoverLockIf(lockId);
+  }, [sticky, lockId]);
 
   // Outside-click closes everything when the note panel or edit mode is open.
   const menuRef = useRef<HTMLDivElement | null>(null);
