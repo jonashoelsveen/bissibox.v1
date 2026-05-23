@@ -1129,6 +1129,11 @@ export function UnifiedElasticGrid({
                 <DiarySimpleStack
                   events={weekEvents}
                   weekDates={weekDates}
+                  creatingColIdx={
+                    popover && !popover.eventId && !popover.isEdit
+                      ? popover.key.month
+                      : null
+                  }
                   onEventClick={(ev, anchor) => {
                     setPopover({
                       key: { year, month: 0, day: 1, session: 0 },
