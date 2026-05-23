@@ -2359,7 +2359,10 @@ function WeekEventsOverlay({
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
-            onActiveChange={(active) => setLockedId(active ? ev.id : null)}
+            onActiveChange={(active) => {
+              setLockedId(active ? ev.id : null);
+              if (!active) setForceEditId(null);
+            }}
             onOpenDetails={() => {
               cancelClose();
               setDetailsEvId(ev.id);
