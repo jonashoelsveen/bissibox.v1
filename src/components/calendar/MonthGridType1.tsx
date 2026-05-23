@@ -293,6 +293,7 @@ export function MonthGridType1({
   // ───────────────────── Diary hover menu (mirrors week view) ──────────────
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [forceEditId, setForceEditId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
   const hoverCloseTimerRef = useRef<number | null>(null);
   const cancelHoverClose = useCallback(() => {
@@ -304,10 +305,11 @@ export function MonthGridType1({
   const scheduleHoverClose = useCallback(() => {
     cancelHoverClose();
     hoverCloseTimerRef.current = window.setTimeout(() => {
+      if (forceEditId) return;
       setHoverId(null);
       setHoverRect(null);
     }, 180);
-  }, [cancelHoverClose]);
+  }, [cancelHoverClose, forceEditId]);
 
   // ───────────────────────── Popover (add/edit) ─────────────────────────
 
