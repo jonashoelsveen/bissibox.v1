@@ -879,3 +879,74 @@ function NoteBody({
     </div>
   );
 }
+
+/* --------------------------- Split note tab body ---------------------------
+ * Leader / active-follower view: owner note on the left (read-only),
+ * viewer's editable leader note (with attach button) on the right.
+ * Each panel has its own scrollbar.
+ * --------------------------------------------------------------------------*/
+function SplitNoteTabBody({
+  title,
+  ownerNote,
+  eventId,
+  memberId,
+  viewerRole,
+}: {
+  title: string;
+  ownerNote: string;
+  eventId: string;
+  memberId: string;
+  viewerRole: import("@/hooks/useViewerRole").ViewerRole;
+}) {
+  const leader = useDiarySessionNote(eventId, memberId, viewerRole);
+  const [draft, setDraft] = useState(leader.viewerNote);
+  useEffect(() => { setDraft(leader.viewerNote); }, [leader.viewerNote]);
+
+  const headerLabel = (title || "Session note").toUpperCase();
+
+  return (
+    <div className="grid h-full grid-cols-2 gap-3">
+      <section className="flex min-h-0 flex-col rounded-lg border border-hairline bg-card shadow-sm">
+        <div className="flex items-center gap-2 border-b border-hairline px-4 py-2">
+          <span className="flex-1 truncate text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
+            {headerLabel}
+          </span>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          {ownerNote.trim() ? (
+            <p className="whitespace-pre-wrap text-sm text-ink">{ownerNote}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">No note from the athlete.</p>
+          )}
+        </div>
+      </section>
+
+      <section className="flex min-h-0 flex-col rounded-lg border border-hairline bg-card shadow-sm">
+        <div className="flex items-center gap-2 border-b border-hairline px-4 py-2">
+          <button
+            type="button"
+            title="Attach documents"
+            disabled={!leader.canEdit}
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-secondary hover:text-ink disabled:opacity-50"
+          >
+            <Paperclip className="h-4 w-4" />
+            <span>Attach</span>
+          </button>
+          <span className="ml-3 flex-1 truncate text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
+            Your note
+          </span>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => { if (draft !== leader.viewerNote) void leader.saveViewerNote(draft); }}
+            placeholder="Write your note…"
+            readOnly={!leader.canEdit}
+            className="block min-h-[260px] w-full resize-y rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none placeholder:text-muted-foreground/60 focus:border-primary"
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
