@@ -152,7 +152,8 @@ export function DayNoteButton({
   // Shared cross-component lock: while another panel (session or day-note)
   // owns the lock, this button must NOT open on hover or click. The user
   // has to click outside the active panel first.
-  const lockId = `daynote-${effectiveMemberId}-${dayKey(date)}`;
+  const dayKeyStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const lockId = `daynote-${effectiveMemberId}-${dayKeyStr}`;
   const globalLock = useHoverLock();
   const foreignLock = globalLock !== null && globalLock !== lockId;
 
