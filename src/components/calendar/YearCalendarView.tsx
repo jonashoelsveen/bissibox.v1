@@ -186,10 +186,10 @@ function YearCalendarViewInner({
       const local = localById.get(s.id);
       if (!local) return s;
       const overrides: Record<string, unknown> = {};
-      (Object.keys(local) as (keyof CalendarEvent)[]).forEach((k) => {
+      for (const k of Object.keys(local) as Array<keyof CalendarEvent>) {
         const v = local[k];
-        if (v !== undefined && v !== null && v !== "") overrides[k] = v;
-      });
+        if (v !== undefined && v !== null && v !== "") overrides[k as string] = v;
+      }
       return { ...s, ...overrides, id: s.id } as CalendarEvent;
     });
     const localOnly = events.filter((e) => !stravaIds.has(e.id));
