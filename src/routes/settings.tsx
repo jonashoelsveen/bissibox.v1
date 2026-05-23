@@ -16,6 +16,7 @@ import {
   useLibrarySetting,
 } from "@/lib/library-settings";
 import { MapSettingsPanel } from "@/components/settings/MapSettingsPanel";
+import { CoachesPanel, type CoachesPanelHandle } from "@/components/settings/CoachesPanel";
 import { Footprints, Check, Bike, Dumbbell } from "lucide-react";
 import { SESSION_TILE_DESIGNS, useSessionTileDesign, useDiarySimpleView, type SessionTileDesign, COMBINED_SESSION_TILE_DESIGNS, useCombinedSessionTileDesign, type CombinedSessionTileDesign } from "@/lib/session-tile-design";
 import { Switch } from "@/components/ui/switch";
@@ -97,6 +98,7 @@ type Tab =
   | "calendar"
   | "diary"
   | "library"
+  | "coaches"
   | "connectors"
   | "system"
   | "appearance"
@@ -137,9 +139,12 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   // Active selection: null = individual profile, otherwise the entity id.
   const isTeamMode = !!activeEntityId;
 
+  const coachesRef = useRef<CoachesPanelHandle | null>(null);
+  const [coachesDirty, setCoachesDirty] = useState(false);
+
   const isDirty = isTeamMode
     ? !!team && JSON.stringify(team) !== teamBaseline
-    : !!profile && JSON.stringify(profile) !== profileBaseline;
+    : (!!profile && JSON.stringify(profile) !== profileBaseline) || coachesDirty;
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
@@ -206,7 +211,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   }, [user, activeEntityId]);
 
   useEffect(() => {
-    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "diary" || tab === "library" || tab === "connectors")) {
+    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "diary" || tab === "library" || tab === "coaches" || tab === "connectors")) {
       setTab("entity-profile");
     }
     if (
@@ -257,11 +262,20 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       // Refresh entity name in dropdown list
       setEntities((prev) => prev.map((e) => (e.id === id ? { ...e, name: team.name } : e)));
     } else if (profile) {
-      const { error } = await supabase.from("profiles").update(profile).eq("id", user.id);
+      const profileChanged = JSON.stringify(profile) !== profileBaseline;
+      if (profileChanged) {
+        const { error } = await supabase.from("profiles").update(profile).eq("id", user.id);
+        if (error) {
+          setSaving(false);
+          return toast.error(error.message);
+        }
+        setProfileBaseline(JSON.stringify(profile));
+      }
+      if (coachesRef.current?.isDirty()) {
+        await coachesRef.current.save();
+      }
       setSaving(false);
-      if (error) return toast.error(error.message);
-      toast.success("Settings saved.");
-      setProfileBaseline(JSON.stringify(profile));
+      if (profileChanged) toast.success("Settings saved.");
     } else {
       setSaving(false);
     }
@@ -345,6 +359,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
         "diary",
         "library",
         "divider-2",
+        "coaches",
         "connectors",
         "system",
         "appearance",
@@ -357,6 +372,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       case "calendar": return "Calendar";
       case "diary": return "Diary";
       case "library": return "Library";
+      case "coaches": return "Coaches";
       case "connectors": return "Connectors";
       case "system": return "System";
       case "appearance": return "Appearance";
@@ -580,6 +596,10 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
         <LibrarySettingsPanel scopeKey={`user:${user.id}`} />
       )}
 
+
+      {tab === "coaches" && !isTeamMode && (
+        <CoachesPanel ref={coachesRef} onDirtyChange={setCoachesDirty} />
+      )}
 
       {tab === "connectors" && <ConnectorsPanel />}
 

@@ -2365,6 +2365,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_coaches: {
+        Row: {
+          calendar_access: string
+          coach_email: string
+          coach_user_id: string | null
+          created_at: string
+          diary_access: string
+          id: string
+          owner_id: string
+          photos_access: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          calendar_access?: string
+          coach_email: string
+          coach_user_id?: string | null
+          created_at?: string
+          diary_access?: string
+          id?: string
+          owner_id: string
+          photos_access?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          calendar_access?: string
+          coach_email?: string
+          coach_user_id?: string | null
+          created_at?: string
+          diary_access?: string
+          id?: string
+          owner_id?: string
+          photos_access?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_follows: {
         Row: {
           created_at: string
