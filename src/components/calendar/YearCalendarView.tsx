@@ -25,6 +25,7 @@ import { buildGhostEvents } from "./ImportCalendar/ghost";
 import { isoWeekNumber } from "./dateUtils";
 import { categoryKeyFromColor, type CategoryKey } from "./CalendarSideNav";
 import { useStravaActivities } from "./useStravaActivities";
+import { useUserCategories } from "@/hooks/useUserCategories";
 
 const MONTHS_NB = [
   "Januar", "Februar", "Mars", "April", "Mai", "Juni",
