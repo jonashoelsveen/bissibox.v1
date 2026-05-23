@@ -154,8 +154,7 @@ export function DayNoteButton({
   // has to click outside the active panel first.
   const dayKeyStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
   const lockId = `daynote-${effectiveMemberId}-${dayKeyStr}`;
-  const globalLock = useHoverLock();
-  const foreignLock = globalLock !== null && globalLock !== lockId;
+  void useHoverLock(); // re-render on global lock change
 
   const isEditing = editingMember || editingViewer;
   useEffect(() => {
