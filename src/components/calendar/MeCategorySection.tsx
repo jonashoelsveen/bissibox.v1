@@ -35,7 +35,7 @@ export function MeCategorySection({
   /** Header label for the section. Defaults to "Me". */
   title?: string;
 }) {
-  const { categories, create, update, remove, reorder } = useUserCategories({ teamId });
+  const { categories, create, update, remove, reorder, refetch } = useUserCategories({ teamId });
   const [open, setOpen] = useState(true);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -52,6 +52,10 @@ export function MeCategorySection({
     setRenamingId(null);
     if (!v || v === c.name) return;
     await update(c.id, { name: v });
+    // Ensure the renamed row is reflected from the DB — guards against
+    // realtime races where the optimistic local row could otherwise be
+    // replaced by a stale snapshot that omits the just-created tab.
+    await refetch();
   };
 
   const handleAdd = async () => {
@@ -62,6 +66,7 @@ export function MeCategorySection({
       setRenameValue(created.name);
     }
   };
+
 
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
@@ -231,7 +236,8 @@ function SortableCategoryRow(props: {
         currentColor={cat.color}
         onColorChange={props.onColorChange}
         onRename={canEdit ? props.onRename : undefined}
-        onDelete={canEdit ? props.onDelete : undefined}
+        onDelete={props.onDelete}
+
         extraItems={[
           {
             top: true,
