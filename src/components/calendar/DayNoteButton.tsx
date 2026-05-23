@@ -667,7 +667,12 @@ export function NotePanel({
 
   // Use the raw token value: --primary is `oklch(...)` already, so it must
   // be substituted directly, not wrapped in `hsl(...)` (which yields invalid color).
-  const sideLineColor = tone === "leader" ? "var(--primary)" : "#9CA3AF";
+  const sideLineColor =
+    tone === "leader"
+      ? "var(--primary)"
+      : tone === "gray"
+        ? "#9CA3AF"
+        : tone; // custom color string (e.g. hex from session accent)
 
   const content = (
     <motion.div
