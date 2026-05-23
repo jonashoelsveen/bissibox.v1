@@ -25,6 +25,7 @@ import { buildGhostEvents } from "./ImportCalendar/ghost";
 import { isoWeekNumber } from "./dateUtils";
 import { categoryKeyFromColor, type CategoryKey } from "./CalendarSideNav";
 import { useStravaActivities } from "./useStravaActivities";
+import { useUserCategories } from "@/hooks/useUserCategories";
 
 const MONTHS_NB = [
   "Januar", "Februar", "Mars", "April", "Mai", "Juni",
@@ -111,6 +112,8 @@ export interface YearCalendarViewProps {
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
   /** When the surrounding left panel is closed, the header makes room for the panel toggle icon. */
   panelOpen?: boolean;
+  /** Team scope for resolving the user's category list (defaults to personal). */
+  teamId?: string | null;
 }
 
 export function YearCalendarView(props: YearCalendarViewProps) {
@@ -135,6 +138,7 @@ function YearCalendarViewInner({
   memberId,
   viewerRole = "owner",
   panelOpen = true,
+  teamId = null,
 }: YearCalendarViewProps) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta } =
     useYearStore(calId, defaultTitle);
@@ -171,6 +175,22 @@ function YearCalendarViewInner({
   );
   const previewActive = overlay.events !== null;
   const { events: stravaEvents } = useStravaActivities(memberId);
+
+  // Read the user's category list so we can tell which `me:#color` keys are
+  // explicitly hidden. Anything NOT in this hidden set is treated as visible —
+  // including freshly-created categories that haven't propagated through the
+  // sidebar's realtime refresh yet. This eliminates the race where a new
+  // category was picked for a session immediately after creation and the
+  // resulting event got filtered out until the page refreshed.
+  const { categories: userCats } = useUserCategories({ teamId });
+  const hiddenMeColors = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of userCats) {
+      if (c.hidden) s.add(`me:${c.color.toLowerCase()}`);
+    }
+    return s;
+  }, [userCats]);
+
   const mergedEvents = useMemo(() => {
     const stravaForDiary = appKind === "diary" ? stravaEvents : [];
     // Merge strategy: the Strava activity is the source-of-truth for time,
@@ -199,9 +219,13 @@ function YearCalendarViewInner({
     if (!visibleCategories) return base;
     return base.filter((e) => {
       if (e.diaryType === "training") return visibleCategories.has("ind:training");
-      return visibleCategories.has(categoryKeyFromColor(e.color));
+      const key = categoryKeyFromColor(e.color);
+      // For user ("me:*") categories, default to visible unless the user has
+      // explicitly hidden that color via the side panel.
+      if (key.startsWith("me:")) return !hiddenMeColors.has(key);
+      return visibleCategories.has(key);
     });
-  }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind]);
+  }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind, hiddenMeColors]);
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
