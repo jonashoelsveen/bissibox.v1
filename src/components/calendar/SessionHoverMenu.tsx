@@ -342,12 +342,10 @@ export function SessionHoverMenu({
         if (r.bottom > 0 && r.top < vh) headerBottom = Math.max(headerBottom, r.bottom);
       });
 
-      // If the tile scrolled completely above the header or below the
-      // viewport, close the menu — there's nothing to anchor to.
-      if (anchor && (rect.bottom <= headerBottom + 2 || rect.top >= vh - 2)) {
-        onForceClose?.();
-        return;
-      }
+      // NOTE: We intentionally do NOT close the menu when the tile scrolls
+      // out of view. The panel stays pinned to the top header edge (tile
+      // scrolled up past header) or to the viewport bottom (tile scrolled
+      // below viewport), so the user never loses their edit context.
 
       let left = rect.left + rect.width + gap;
       let flipped = false;
@@ -360,9 +358,13 @@ export function SessionHoverMenu({
       const maxTop = Math.max(minTop, vh - 8 - menuH);
       const desiredTop = Math.min(Math.max(rect.top, minTop), maxTop);
       // Contact-aware: keep prior top while still overlapping the tile
-      // vertically; otherwise snap to desiredTop. CSS transition smooths it.
+      // vertically AND while the tile is at least partially visible;
+      // otherwise snap to desiredTop (clamped to header/bottom edge).
+      // CSS transition smooths the snap into a calm follow animation.
       const prev = prevTopRef.current;
+      const tileVisible = rect.bottom > headerBottom + 2 && rect.top < vh - 2;
       const inContact =
+        tileVisible &&
         prev !== null &&
         prev + menuH > rect.top - 4 &&
         prev < rect.bottom + 4 &&
