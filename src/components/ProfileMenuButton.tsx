@@ -190,6 +190,7 @@ export function ProfileMenuButton({ hideChangeProfile = false }: { hideChangePro
             <span className="min-w-0 flex-1 truncate">Settings</span>
           </button>
 
+          {!hideChangeProfile && (
           <div
             className="relative"
             onMouseEnter={() => setChangeHover(true)}
@@ -237,6 +238,7 @@ export function ProfileMenuButton({ hideChangeProfile = false }: { hideChangePro
               </>
             )}
           </div>
+          )}
 
           <button
             type="button"
