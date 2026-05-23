@@ -157,11 +157,14 @@ export function DayNoteButton({
   void useHoverLock(); // re-render on global lock change
 
   const isEditing = editingMember || editingViewer;
+  // Hold the global hover-lock while the panel is open OR being edited so
+  // other day-notes / session hover menus can't open simultaneously. The
+  // user must click outside this panel first.
   useEffect(() => {
-    if (isEditing) setHoverLock(lockId);
+    if (open || isEditing) setHoverLock(lockId);
     else releaseHoverLockIf(lockId);
     return () => releaseHoverLockIf(lockId);
-  }, [isEditing, lockId]);
+  }, [open, isEditing, lockId]);
 
   const hasMemberNote = !!memberNote.trim();
   const hasViewerNote = !!viewerNote.trim();
@@ -181,11 +184,12 @@ export function DayNoteButton({
   };
 
   const refreshRect = () => {
-    const anchor = btnRef.current?.closest(anchorSelector) as HTMLElement | null;
-    if (anchor) {
-      anchorElRef.current = anchor;
-      setAnchorRect(anchor.getBoundingClientRect());
-    } else if (btnRef.current) {
+    // Anchor strictly to the icon button container — NOT the day cell —
+    // so the hover-close logic only treats the icons (and panel) as
+    // "inside". Moving the cursor elsewhere in the cell must close the
+    // panel and free up other hover menus.
+    if (btnRef.current) {
+      anchorElRef.current = btnRef.current;
       setAnchorRect(btnRef.current.getBoundingClientRect());
     }
   };
@@ -356,14 +360,25 @@ export function DayNoteButton({
   const memberIconVisible = isOwner || hasMemberNote;
   const otherIconVisible = isOwner ? hasOtherNotes : true;
 
-  // Container position for the stack of panels.
+  // Container position for the stack of panels. Flip above the icon when
+  // there's not enough room below (so day-notes near the bottom of the
+  // month grid still render fully on-screen).
   const margin = 8;
   let stackLeft = anchorRect?.left ?? 0;
   if (anchorRect && stackLeft + PANEL_W > window.innerWidth - margin) {
     stackLeft = Math.max(margin, window.innerWidth - PANEL_W - margin);
   }
-  const stackTop = anchorRect?.bottom ?? 0;
-  const stackMaxH = anchorRect ? Math.max(120, window.innerHeight - stackTop - margin) : 400;
+  const spaceBelow = anchorRect ? window.innerHeight - anchorRect.bottom - margin : 0;
+  const spaceAbove = anchorRect ? anchorRect.top - margin : 0;
+  const flipAbove = !!anchorRect && spaceBelow < 200 && spaceAbove > spaceBelow;
+  const stackTop = anchorRect
+    ? flipAbove
+      ? Math.max(margin, anchorRect.top - Math.min(spaceAbove, 400) - PANEL_GAP)
+      : anchorRect.bottom
+    : 0;
+  const stackMaxH = anchorRect
+    ? Math.max(120, flipAbove ? spaceAbove : spaceBelow)
+    : 400;
 
   return (
     <>
