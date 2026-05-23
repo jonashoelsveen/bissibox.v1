@@ -2469,7 +2469,15 @@ function DiarySimpleStack({
             list={list}
             tileDesign={tileDesign}
             unit={unit}
-            onEventClick={onEventClick}
+            onEventClick={(ev, anchor) => {
+              cancelClose();
+              const r = anchor.getBoundingClientRect();
+              setHoverId(ev.id);
+              setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+              setForceEditId(ev.id);
+              // Suppress the legacy parent handler (which used to open the popover).
+              void onEventClick;
+            }}
             onHoverChange={(id, rect) => {
               cancelClose();
               setHoverId(id);
