@@ -360,14 +360,25 @@ export function DayNoteButton({
   const memberIconVisible = isOwner || hasMemberNote;
   const otherIconVisible = isOwner ? hasOtherNotes : true;
 
-  // Container position for the stack of panels.
+  // Container position for the stack of panels. Flip above the icon when
+  // there's not enough room below (so day-notes near the bottom of the
+  // month grid still render fully on-screen).
   const margin = 8;
   let stackLeft = anchorRect?.left ?? 0;
   if (anchorRect && stackLeft + PANEL_W > window.innerWidth - margin) {
     stackLeft = Math.max(margin, window.innerWidth - PANEL_W - margin);
   }
-  const stackTop = anchorRect?.bottom ?? 0;
-  const stackMaxH = anchorRect ? Math.max(120, window.innerHeight - stackTop - margin) : 400;
+  const spaceBelow = anchorRect ? window.innerHeight - anchorRect.bottom - margin : 0;
+  const spaceAbove = anchorRect ? anchorRect.top - margin : 0;
+  const flipAbove = !!anchorRect && spaceBelow < 200 && spaceAbove > spaceBelow;
+  const stackTop = anchorRect
+    ? flipAbove
+      ? Math.max(margin, anchorRect.top - Math.min(spaceAbove, 400) - PANEL_GAP)
+      : anchorRect.bottom
+    : 0;
+  const stackMaxH = anchorRect
+    ? Math.max(120, flipAbove ? spaceAbove : spaceBelow)
+    : 400;
 
   return (
     <>
