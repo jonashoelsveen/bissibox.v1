@@ -28,9 +28,9 @@ import { NotePanel } from "./DayNoteButton";
 import {
   DIARY_GROUPS,
   DurationRow,
-  GroupSelectRow,
-  SubgroupSelectRow,
+  ActivitySelectRow,
 } from "./DiaryEditFields";
+
 
 export { DIARY_GROUPS };
 
