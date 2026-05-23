@@ -2248,7 +2248,7 @@ function WeekEventsOverlay({
                       );
                     }
                     return (
-                      <div className="-mx-2 -my-0.5 flex h-full items-stretch">
+                      <div className="absolute inset-0 flex items-stretch overflow-hidden rounded-[3px]">
                         <div
                           className="flex w-1/2 items-center justify-center"
                           style={{ background: iconHalfBg }}
