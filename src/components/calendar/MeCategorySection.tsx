@@ -44,8 +44,15 @@ export function MeCategorySection({
 
   const startRename = (c: UserCategory) => {
     if (c.is_default) return;
-    setRenamingId(c.id);
-    setRenameValue(c.name);
+    // Defer to the next macrotask so the actions menu (Radix dropdown) can
+    // finish closing and restore focus to its trigger BEFORE we mount the
+    // rename input. Otherwise Radix's focus-restore lands after our input
+    // mounts and focuses, blurs the input, and commitRename() fires with
+    // an unchanged value — exiting rename mode after a single frame.
+    setTimeout(() => {
+      setRenamingId(c.id);
+      setRenameValue(c.name);
+    }, 0);
   };
   const commitRename = async (c: UserCategory) => {
     const v = renameValue.trim();
