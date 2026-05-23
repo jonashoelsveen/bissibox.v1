@@ -2337,6 +2337,7 @@ function WeekEventsOverlay({
             blockRect={hoverRect}
             rowHeight={ROW_HEIGHT}
             visible={hoverId === ev.id}
+            defaultEditMode={forceEditId === ev.id}
             memberId={memberId}
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
@@ -2346,16 +2347,19 @@ function WeekEventsOverlay({
               setDetailsEvId(ev.id);
               setHoverId(null);
               setHoverRect(null);
+              setForceEditId(null);
             }}
             onForceClose={() => {
               cancelClose();
               setHoverId(null);
               setHoverRect(null);
+              setForceEditId(null);
             }}
             onDelete={() => {
               cancelClose();
               setHoverId(null);
               setHoverRect(null);
+              setForceEditId(null);
               onDeleteEvent?.(ev.id);
             }}
             onSaveNote={(note) =>
