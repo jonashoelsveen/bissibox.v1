@@ -2448,7 +2448,10 @@ function DiarySimpleStack({
   const [forceEditId, setForceEditId] = useState<string | null>(null);
   const [lockedId, setLockedId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
-  const hoverLocked = lockedId !== null || forceEditId !== null;
+  const globalLock = useHoverLock();
+  const ownLockId = (forceEditId ?? lockedId) != null ? `session-${forceEditId ?? lockedId}` : null;
+  const foreignLock = globalLock !== null && globalLock !== ownLockId;
+  const hoverLocked = lockedId !== null || forceEditId !== null || foreignLock;
   const closeTimerRef = useRef<number | null>(null);
   const cancelClose = useCallback(() => {
     if (closeTimerRef.current != null) {
