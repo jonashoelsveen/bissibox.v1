@@ -572,7 +572,7 @@ export function SessionHoverMenu({
                     panelWidth={NOTE_PANEL_W}
                     closeOnEnter={false}
                     closeOnOutsideClick={false}
-                    onSave={(text) => onSaveNote(text)}
+                    onSave={(text) => { onSaveNote(text); setNoteEdit(false); }}
                     onClose={() => setNoteEdit(false)}
                     onRequestEdit={() => setNoteEdit(true)}
                   />
