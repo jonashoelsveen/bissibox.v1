@@ -177,7 +177,7 @@ export function DayNoteButton({
     cancelClose();
     closeTimerRef.current = window.setTimeout(() => {
       if (!editingMember && !editingViewer) setOpen(false);
-    }, 120);
+    }, 0);
   };
 
   const refreshRect = () => {

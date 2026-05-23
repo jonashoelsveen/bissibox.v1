@@ -2010,7 +2010,7 @@ function WeekEventsOverlay({
       if (forceEditId) return; // keep menu open while in edit mode
       setHoverId(null);
       setHoverRect(null);
-    }, 180);
+    }, 0);
   }, [cancelClose, forceEditId]);
 
 
@@ -2465,7 +2465,7 @@ function DiarySimpleStack({
       if (forceEditId) return; // keep menu open while in edit mode
       setHoverId(null);
       setHoverRect(null);
-    }, 180);
+    }, 0);
   }, [cancelClose, forceEditId]);
 
 
