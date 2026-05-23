@@ -479,6 +479,8 @@ function DurationInput({
     "mono w-7 rounded-[3px] border border-input bg-background px-1 py-0.5 text-center text-[12px] font-semibold tabular-nums text-ink outline-none focus:border-primary [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
   const hasValue = durationMin > 0;
+  void hasValue;
+
 
   return (
     <div className="flex flex-1 items-center gap-1" title="f.eks. 1h 30min">
