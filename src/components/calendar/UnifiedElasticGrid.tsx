@@ -2633,7 +2633,7 @@ function SimpleColumn({
   list,
   tileDesign,
   unit,
-  activeId,
+  activeSessionId,
   onEventClick,
   onHoverChange,
   onHoverEnd,
@@ -2643,7 +2643,7 @@ function SimpleColumn({
   list: CalendarEvent[];
   tileDesign: "split" | "stacked" | "icon";
   unit: ReturnType<typeof useDistanceUnit>[0];
-  activeId?: string | null;
+  activeSessionId?: string | null;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onHoverChange: (id: string, rect: { left: number; top: number; width: number; height: number }) => void;
   onHoverEnd: () => void;
