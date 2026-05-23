@@ -580,9 +580,9 @@ export function NotePanel({
   useLayoutEffect(() => {
     const ta = taRef.current;
     if (!ta) return;
-    ta.style.height = "auto";
-    const next = Math.max(effectiveBodyHeight + extra, ta.scrollHeight);
-    ta.style.height = next + "px";
+    // Fixed height capped at the initial body height (+ user drag extra).
+    // Overflow scrolls inside the textarea instead of growing the panel.
+    ta.style.height = effectiveBodyHeight + extra + "px";
   }, [val, extra, effectiveBodyHeight]);
 
   useEffect(() => {
