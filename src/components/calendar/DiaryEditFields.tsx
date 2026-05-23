@@ -4,7 +4,7 @@
  * identical duration / group / subgroup controls.
  */
 
-import { useRef } from "react";
+import { useRef, useState, useEffect, forwardRef, useCallback, ChangeEvent, FocusEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Clock } from "lucide-react";
 
 export type DiaryGroupDef = { id: string; label: string; children?: { id: string; label: string }[] };
