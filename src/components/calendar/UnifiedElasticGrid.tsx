@@ -2723,6 +2723,7 @@ function SortableSimpleTile({
   tileDesign,
   unit,
   disabled,
+  isActive,
   onEventClick,
   onHoverChange,
   onHoverEnd,
@@ -2731,6 +2732,7 @@ function SortableSimpleTile({
   tileDesign: "split" | "stacked" | "icon";
   unit: ReturnType<typeof useDistanceUnit>[0];
   disabled?: boolean;
+  isActive?: boolean;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onHoverChange: (id: string, rect: { left: number; top: number; width: number; height: number }) => void;
   onHoverEnd: () => void;
