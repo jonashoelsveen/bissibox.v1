@@ -13,14 +13,20 @@ export interface UserCategory {
   default_key: string | null;
 }
 
+export type CategoryKind = "calendar" | "diary_activity" | "diary_strava";
+
 /**
  * Manage calendar categories for either the current user (personal) or a
  * given team (entity scope). When `teamId` is provided, queries/inserts are
  * scoped to that team; otherwise they are scoped to the user's personal
  * (team_id IS NULL) categories.
+ *
+ * `kind` switches between calendar categories (default) and diary-specific
+ * lists (diary_activity, diary_strava) stored in the same table.
  */
-export function useUserCategories(opts?: { teamId?: string | null }) {
+export function useUserCategories(opts?: { teamId?: string | null; kind?: CategoryKind }) {
   const teamId = opts?.teamId ?? null;
+  const kind: CategoryKind = opts?.kind ?? "calendar";
   const { user } = useAuth();
   const [categories, setCategories] = useState<UserCategory[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -33,7 +39,8 @@ export function useUserCategories(opts?: { teamId?: string | null }) {
     }
     let q = supabase
       .from("calendar_categories")
-      .select("id,name,color,pinned,hidden,sort_order,is_default,default_key");
+      .select("id,name,color,pinned,hidden,sort_order,is_default,default_key")
+      .eq("kind", kind);
     if (teamId) q = q.eq("team_id", teamId);
     else q = q.is("team_id", null).eq("user_id", user.id);
     const { data } = await q
@@ -41,14 +48,14 @@ export function useUserCategories(opts?: { teamId?: string | null }) {
       .order("sort_order", { ascending: true });
     setCategories((data ?? []) as UserCategory[]);
     setLoaded(true);
-  }, [user, teamId]);
+  }, [user, teamId, kind]);
 
   useEffect(() => {
     void load();
     if (!user) return;
     const filter = teamId ? `team_id=eq.${teamId}` : `user_id=eq.${user.id}`;
     const ch = supabase
-      .channel(`calendar-categories-${teamId ?? user.id}-${Math.random().toString(36).slice(2)}`)
+      .channel(`calendar-categories-${kind}-${teamId ?? user.id}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "calendar_categories", filter },
@@ -58,7 +65,7 @@ export function useUserCategories(opts?: { teamId?: string | null }) {
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [load, user, teamId]);
+  }, [load, user, teamId, kind]);
 
   const create = useCallback(
     async (name: string, color: string): Promise<UserCategory | null> => {
@@ -71,6 +78,7 @@ export function useUserCategories(opts?: { teamId?: string | null }) {
           team_id: teamId,
           name,
           color,
+          kind,
           sort_order: maxOrder + 1,
         })
         .select()
@@ -80,8 +88,9 @@ export function useUserCategories(opts?: { teamId?: string | null }) {
       setCategories((prev) => (prev.some((c) => c.id === created.id) ? prev : [...prev, created]));
       return created;
     },
-    [user, teamId, categories],
+    [user, teamId, kind, categories],
   );
+
 
   const update = useCallback(
     async (id: string, patch: Partial<Pick<UserCategory, "name" | "color" | "pinned" | "hidden">>) => {
