@@ -389,22 +389,15 @@ export function SessionHoverMenu({
             onMouseLeave={() => { if (!sticky) onMenuLeave?.(); }}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            {showMemberPanel && (
+            {!editMode && showMemberPanel && (
               <NotePanel
                 inline
                 attached
-                flush={editMode}
-                tone={editMode ? accent : "gray"}
-                headerLabel={ownerEditDivider ? undefined : baseHeader}
-                headerName={ownerEditDivider ? undefined : baseHeaderName}
-                headerTime={
-                  ownerEditDivider
-                    ? undefined
-                    : memberUpdatedAt
-                      ? formatHHMM(memberUpdatedAt)
-                      : undefined
-                }
-                headerTimeFresh={ownerEditDivider ? undefined : isUpdatedToday(memberUpdatedAt)}
+                tone="gray"
+                headerLabel={baseHeader}
+                headerName={baseHeaderName}
+                headerTime={memberUpdatedAt ? formatHHMM(memberUpdatedAt) : undefined}
+                headerTimeFresh={isUpdatedToday(memberUpdatedAt)}
                 initialValue={ev.sessionNote ?? ""}
                 mode={isOwner && noteEdit ? "edit" : "preview"}
                 defaultBodyHeight={140}
@@ -419,7 +412,7 @@ export function SessionHoverMenu({
                 onRequestEdit={isOwner ? () => setNoteEdit(true) : undefined}
               />
             )}
-            {showLeaderPanels &&
+            {!editMode && showLeaderPanels &&
               leaderPanels.map((p) => (
                 <div key={p.key} style={{ marginTop: 4 }}>
                   <NotePanel
@@ -466,6 +459,53 @@ export function SessionHoverMenu({
                   diarySub={diarySub}
                   onChange={setDiarySub}
                 />
+                {showMemberPanel && (
+                  <NotePanel
+                    inline
+                    attached
+                    flush
+                    tone={accent}
+                    headerLabel={baseHeader}
+                    headerName={baseHeaderName}
+                    headerTime={memberUpdatedAt ? formatHHMM(memberUpdatedAt) : undefined}
+                    headerTimeFresh={isUpdatedToday(memberUpdatedAt)}
+                    initialValue={ev.sessionNote ?? ""}
+                    mode={isOwner && noteEdit ? "edit" : "preview"}
+                    defaultBodyHeight={120}
+                    panelWidth={NOTE_PANEL_W}
+                    closeOnEnter={false}
+                    closeOnOutsideClick={false}
+                    onSave={(text) => onSaveNote(text)}
+                    onClose={() => {
+                      setNoteEdit(false);
+                    }}
+                    onRequestEdit={isOwner ? () => setNoteEdit(true) : undefined}
+                  />
+                )}
+                {leaderPanels.map((p) => (
+                  <NotePanel
+                    key={p.key}
+                    inline
+                    attached
+                    flush
+                    tone="leader"
+                    headerLabel={p.header}
+                    headerName={p.headerName}
+                    headerTime={p.headerTime}
+                    headerTimeFresh={p.headerTimeFresh}
+                    initialValue={p.value}
+                    mode={p.mode}
+                    defaultBodyHeight={120}
+                    panelWidth={NOTE_PANEL_W}
+                    closeOnEnter={false}
+                    closeOnOutsideClick={false}
+                    onSave={p.onSave}
+                    onClose={() => {
+                      setLeaderNoteEdit(false);
+                    }}
+                    onRequestEdit={p.onRequestEdit}
+                  />
+                ))}
                 <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
                   <span className="mono tabular-nums">⏎ for å lagre</span>
                   <button
