@@ -181,21 +181,25 @@ export function CategoryActionsMenu({
             >
               <ColorsPanel
                 currentColor={currentColor}
+                swatches={colorSwatches ?? STANDARD_COLORS}
                 onPick={(hex) => {
                   onColorChange(hex);
                   close();
                 }}
                 customPanel={
-                  <CustomPanel
-                    initial={currentColor}
-                    onPreview={(hex) => onColorChange(hex)}
-                    onSave={(hex) => {
-                      onColorChange(hex);
-                      close();
-                    }}
-                  />
+                  allowCustomColor ? (
+                    <CustomPanel
+                      initial={currentColor}
+                      onPreview={(hex) => onColorChange(hex)}
+                      onSave={(hex) => {
+                        onColorChange(hex);
+                        close();
+                      }}
+                    />
+                  ) : null
                 }
               />
+
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         )}
