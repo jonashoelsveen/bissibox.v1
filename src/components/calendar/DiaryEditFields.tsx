@@ -127,6 +127,51 @@ export function SubgroupSelectRow({
   );
 }
 
+/** Flat list of every selectable activity across all diary groups. */
+export type DiaryActivityOption = { groupId: string; subId: string; label: string };
+export const DIARY_ACTIVITIES: DiaryActivityOption[] = DIARY_GROUPS.flatMap((g) =>
+  g.children?.length
+    ? g.children.map((c) => ({ groupId: g.id, subId: c.id, label: c.label }))
+    : [{ groupId: g.id, subId: "", label: g.label }],
+);
+
+/**
+ * Single combined activity dropdown — replaces the previous
+ * GroupSelectRow + SubgroupSelectRow pair. Lists every leaf activity
+ * across all diary groups in one flat select.
+ */
+export function ActivitySelectRow({
+  accent,
+  diaryGroup,
+  diarySub,
+  onChange,
+}: {
+  accent: string;
+  diaryGroup: string;
+  diarySub: string;
+  onChange: (groupId: string, subId: string) => void;
+}) {
+  const value = `${diaryGroup}:${diarySub}`;
+  return (
+    <SideRailRow accent={accent}>
+      <select
+        value={value}
+        onChange={(e) => {
+          const [g, s = ""] = e.target.value.split(":");
+          onChange(g, s);
+        }}
+        className="block flex-1 bg-transparent py-1 pr-3 text-[12px] text-ink outline-none"
+      >
+        {DIARY_ACTIVITIES.map((a) => (
+          <option key={`${a.groupId}:${a.subId}`} value={`${a.groupId}:${a.subId}`}>
+            {a.label}
+          </option>
+        ))}
+      </select>
+    </SideRailRow>
+  );
+}
+
 export function DurationInput({
   durationMin,
   onChange,
