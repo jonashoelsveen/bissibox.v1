@@ -138,6 +138,7 @@ function YearCalendarViewInner({
   memberId,
   viewerRole = "owner",
   panelOpen = true,
+  teamId = null,
 }: YearCalendarViewProps) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta } =
     useYearStore(calId, defaultTitle);
