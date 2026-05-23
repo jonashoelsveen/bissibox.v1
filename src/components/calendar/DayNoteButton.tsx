@@ -157,11 +157,14 @@ export function DayNoteButton({
   void useHoverLock(); // re-render on global lock change
 
   const isEditing = editingMember || editingViewer;
+  // Hold the global hover-lock while the panel is open OR being edited so
+  // other day-notes / session hover menus can't open simultaneously. The
+  // user must click outside this panel first.
   useEffect(() => {
-    if (isEditing) setHoverLock(lockId);
+    if (open || isEditing) setHoverLock(lockId);
     else releaseHoverLockIf(lockId);
     return () => releaseHoverLockIf(lockId);
-  }, [isEditing, lockId]);
+  }, [open, isEditing, lockId]);
 
   const hasMemberNote = !!memberNote.trim();
   const hasViewerNote = !!viewerNote.trim();
