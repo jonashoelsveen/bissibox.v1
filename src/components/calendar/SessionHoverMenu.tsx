@@ -196,6 +196,12 @@ export function SessionHoverMenu({
   const sticky = noteEdit || leaderNoteEdit || confirm || editMode;
   const menuVisible = visible || sticky;
 
+  // Notify parent so it can suppress hover on other tiles while this one is active.
+  useEffect(() => {
+    onActiveChange?.(sticky);
+    if (sticky) return () => onActiveChange?.(false);
+  }, [sticky, onActiveChange]);
+
   // Outside-click closes everything when the note panel or edit mode is open.
   const menuRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
