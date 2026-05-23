@@ -262,11 +262,20 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       // Refresh entity name in dropdown list
       setEntities((prev) => prev.map((e) => (e.id === id ? { ...e, name: team.name } : e)));
     } else if (profile) {
-      const { error } = await supabase.from("profiles").update(profile).eq("id", user.id);
+      const profileChanged = JSON.stringify(profile) !== profileBaseline;
+      if (profileChanged) {
+        const { error } = await supabase.from("profiles").update(profile).eq("id", user.id);
+        if (error) {
+          setSaving(false);
+          return toast.error(error.message);
+        }
+        setProfileBaseline(JSON.stringify(profile));
+      }
+      if (coachesRef.current?.isDirty()) {
+        await coachesRef.current.save();
+      }
       setSaving(false);
-      if (error) return toast.error(error.message);
-      toast.success("Settings saved.");
-      setProfileBaseline(JSON.stringify(profile));
+      if (profileChanged) toast.success("Settings saved.");
     } else {
       setSaving(false);
     }
