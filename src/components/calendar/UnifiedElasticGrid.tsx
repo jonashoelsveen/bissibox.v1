@@ -2175,7 +2175,7 @@ function WeekEventsOverlay({
                   background: bg,
                   color: fg,
                   opacity: isDragging ? 0.85 : 1,
-                  filter: isActive ? "brightness(0.9) saturate(1.15)" : undefined,
+                  filter: isActive ? "brightness(0.82) saturate(1.2)" : undefined,
                   pointerEvents: "auto",
                 }}
                 title={ev.title}
@@ -2359,7 +2359,10 @@ function WeekEventsOverlay({
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
-            onActiveChange={(active) => setLockedId(active ? ev.id : null)}
+            onActiveChange={(active) => {
+              setLockedId(active ? ev.id : null);
+              if (!active) setForceEditId(null);
+            }}
             onOpenDetails={() => {
               cancelClose();
               setDetailsEvId(ev.id);
@@ -2574,7 +2577,10 @@ function DiarySimpleStack({
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
-            onActiveChange={(active) => setLockedId(active ? ev.id : null)}
+            onActiveChange={(active) => {
+              setLockedId(active ? ev.id : null);
+              if (!active) setForceEditId(null);
+            }}
             onOpenDetails={() => {
               cancelClose();
               setDetailsEvId(ev.id);
@@ -2826,7 +2832,7 @@ function SimpleTileBody({
         height: SIMPLE_TILE_H,
         background: bg,
         color: fg,
-        filter: isActive ? "brightness(0.9) saturate(1.15)" : undefined,
+        filter: isActive ? "brightness(0.82) saturate(1.2)" : undefined,
       }}
       title={ev.title}
     >

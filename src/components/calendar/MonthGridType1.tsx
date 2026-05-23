@@ -1058,7 +1058,7 @@ export function MonthGridType1({
                             style={(() => {
                               const evId = it.kind === "event" ? it.event.id : null;
                               const isActive = isRealEvent && evId !== null && (lockedId ?? forceEditId) === evId;
-                              const activeFilter = isActive ? "brightness(0.9) saturate(1.15)" : undefined;
+                              const activeFilter = isActive ? "brightness(0.82) saturate(1.2)" : undefined;
                               return tall
                                 ? {
                                     minHeight: 44,
