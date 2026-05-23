@@ -1429,7 +1429,7 @@ export function MonthGridType1({
             </div>
           );
         })()}
-        {appKind === "diary" && hoverId && hoverRect && (() => {
+        {appKind === "diary" && !popover && hoverId && hoverRect && (() => {
           const ev = events.find((e) => e.id === hoverId);
           if (!ev) return null;
           return (
