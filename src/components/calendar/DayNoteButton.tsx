@@ -752,7 +752,7 @@ export function NotePanel({
             ) : null}
           </div>
         ) : null}
-        <div className="pl-4 pr-3 py-2">
+        <div className="pl-4 pr-0 py-2">
           {isEdit ? (
             <textarea
               ref={taRef}
@@ -765,13 +765,13 @@ export function NotePanel({
                 if (footerHidden) setFooterHidden(false);
               }}
               placeholder="Skriv notat…"
-              className="block w-full resize-none overflow-y-auto bg-transparent text-[12px] leading-snug text-ink outline-none placeholder:text-muted-foreground/60"
+              className="block w-full resize-none overflow-y-auto bg-transparent pr-3 text-[12px] leading-snug text-ink outline-none placeholder:text-muted-foreground/60"
               style={{ height: effectiveBodyHeight + extra, maxHeight: effectiveBodyHeight + extra }}
             />
           ) : (
             <div
               ref={previewRef}
-              className="block w-full overflow-y-auto whitespace-pre-wrap text-[12px] leading-snug text-ink"
+              className="block w-full overflow-y-auto whitespace-pre-wrap pr-3 text-[12px] leading-snug text-ink"
               style={{
                 minHeight: inline ? undefined : effectiveBodyHeight,
                 maxHeight: effectiveBodyHeight,

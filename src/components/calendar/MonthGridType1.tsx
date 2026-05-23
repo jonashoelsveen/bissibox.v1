@@ -690,6 +690,7 @@ export function MonthGridType1({
       {/* Weekday strip — mirrors the Week view: 28px week-number gutter + 7
           weekday columns. Today's column gets the dark-grey highlight. */}
       <div
+        data-grid-header="1"
         className="grid flex-none border-b border-hairline bg-card"
         style={{ gridTemplateColumns: GRID_TEMPLATE }}
       >
