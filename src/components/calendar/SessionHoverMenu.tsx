@@ -309,7 +309,39 @@ export function SessionHoverMenu({
   const EDIT_EXTRA_H = editMode ? 260 : 0; // duration + group + subgroup + footer rows + paddings
   const panelCount = (showMemberPanel ? 1 : 0) + (showLeaderPanels ? leaderPanels.length : 0);
   const totalH = menuH + panelCount * PANEL_EST_H + EDIT_EXTRA_H;
-...
+
+  // ─── Live anchor + header-aware positioning ──────────────────────────
+  const gap = 4;
+  const [pos, setPos] = useState<{ left: number; top: number; maxPanelH: number; flipped: boolean } | null>(null);
+  const prevTopRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let raf = 0;
+    let alive = true;
+    const compute = () => {
+      if (!alive) return;
+      const anchor = document.querySelector(
+        `[data-event-id="${CSS.escape(ev.id)}"]`,
+      ) as HTMLElement | null;
+      const ar = anchor?.getBoundingClientRect();
+      const rect = ar
+        ? { left: ar.left, top: ar.top, width: ar.width, height: ar.height, right: ar.right, bottom: ar.bottom }
+        : { left: blockRect.left, top: blockRect.top, width: blockRect.width, height: blockRect.height, right: blockRect.left + blockRect.width, bottom: blockRect.top + blockRect.height };
+      const vh = window.innerHeight;
+      const vw = window.innerWidth;
+      let headerBottom = 0;
+      document.querySelectorAll<HTMLElement>('[data-grid-header="1"]').forEach((el) => {
+        const r = el.getBoundingClientRect();
+        if (r.bottom > 0 && r.top < vh) headerBottom = Math.max(headerBottom, r.bottom);
+      });
+
+      let left = rect.left + rect.width + gap;
+      let flipped = false;
+      if (left + NOTE_PANEL_W > vw - 8) {
+        left = Math.max(8, rect.left - NOTE_PANEL_W - gap);
+        flipped = true;
+      }
+
       const minTop = headerBottom + 2;
       // Estimate full stack height so the panel can lift up when anchored
       // near the bottom edge — otherwise the edit panel would clip off.
