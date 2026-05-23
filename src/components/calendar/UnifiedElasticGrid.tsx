@@ -1978,7 +1978,18 @@ function WeekEventsOverlay({
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [forceEditId, setForceEditId] = useState<string | null>(null);
+  const [lockedId, setLockedId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
+  // A session is "locked" when it has an open edit panel, note panel, or is
+  // being created. While locked, hovering other tiles must not open menus.
+  const hoverLocked = lockedId !== null || forceEditId !== null;
+  const safeSetHoverId = useCallback((id: string | null) => {
+    if (hoverLocked) {
+      const allowed = lockedId ?? forceEditId;
+      if (id !== null && id !== allowed) return;
+    }
+    setHoverId(id);
+  }, [hoverLocked, lockedId, forceEditId]);
   const closeTimerRef = useRef<number | null>(null);
   // Mark prop as used to silence ts noUnused warnings; behavior unchanged.
   void onSaveSessionNote;
