@@ -2430,6 +2430,7 @@ function WeekEventsOverlay({
 function DiarySimpleStack({
   events,
   weekDates,
+  creatingColIdx = null,
   onEventClick,
   onDeleteEvent,
   onUpsertSession,
@@ -2439,6 +2440,7 @@ function DiarySimpleStack({
 }: {
   events: CalendarEvent[];
   weekDates: Date[];
+  creatingColIdx?: number | null;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onDeleteEvent?: (id: string) => void;
   onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
