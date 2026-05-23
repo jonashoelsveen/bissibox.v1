@@ -1436,6 +1436,7 @@ export function MonthGridType1({
               visible={hoverId === ev.id}
               memberId={memberId}
               viewerRole={viewerRole}
+              defaultEditMode={forceEditId === ev.id}
               onMenuEnter={cancelHoverClose}
               onMenuLeave={scheduleHoverClose}
               onOpenDetails={() => {
@@ -1443,16 +1444,19 @@ export function MonthGridType1({
                 setDetailsEvId(ev.id);
                 setHoverId(null);
                 setHoverRect(null);
+                setForceEditId(null);
               }}
               onForceClose={() => {
                 cancelHoverClose();
                 setHoverId(null);
                 setHoverRect(null);
+                setForceEditId(null);
               }}
               onDelete={() => {
                 cancelHoverClose();
                 setHoverId(null);
                 setHoverRect(null);
+                setForceEditId(null);
                 onDeleteEvent?.(ev.id);
               }}
               onSaveNote={(note) =>
