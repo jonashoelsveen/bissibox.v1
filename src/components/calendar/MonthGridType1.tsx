@@ -297,7 +297,9 @@ export function MonthGridType1({
   const [forceEditId, setForceEditId] = useState<string | null>(null);
   const [lockedId, setLockedId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
-  const hoverLocked = lockedId !== null || forceEditId !== null;
+  const globalLock = useHoverLock();
+  const foreignLock = globalLock !== null && globalLock !== `session-${forceEditId ?? lockedId ?? ""}` && globalLock !== `session-${lockedId ?? forceEditId ?? ""}`;
+  const hoverLocked = lockedId !== null || forceEditId !== null || foreignLock;
   const hoverCloseTimerRef = useRef<number | null>(null);
   const cancelHoverClose = useCallback(() => {
     if (hoverCloseTimerRef.current != null) {
