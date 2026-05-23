@@ -268,7 +268,7 @@ export function SessionHoverMenu({
       headerTimeFresh: isUpdatedToday(leader.viewerNoteUpdatedAt),
       value: leader.viewerNote,
       mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
-      onSave: (text) => { void leader.saveViewerNote(text); },
+      onSave: (text) => { void leader.saveViewerNote(text); setLeaderNoteEdit(false); },
       onRequestEdit: leader.canEdit ? () => setLeaderNoteEdit(true) : undefined,
     });
   }
