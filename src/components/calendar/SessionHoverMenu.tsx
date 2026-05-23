@@ -241,7 +241,7 @@ export function SessionHoverMenu({
   void (ICON_W * iconCount + GAP + PADDING_X);
   // Member-side preview panel: shown when member has a note and menu is visible,
   // OR when the owner is editing their note.
-  const showMemberPanel = (hasNote && menuVisible) || (isOwner && noteEdit);
+  const showMemberPanel = isOwner && ((hasNote && menuVisible) || noteEdit);
 
   // Build the list of leader-side panels rendered BELOW the member panel.
   // Includes the viewer's own note (when non-owner & editable) plus every
