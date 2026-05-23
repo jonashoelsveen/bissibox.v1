@@ -703,8 +703,13 @@ export function NotePanel({
     >
       <div
         className={[
-          "relative overflow-hidden border-x border-b border-ink/15 bg-card shadow-lg rounded-b-md",
-          attached ? "" : "border-t rounded-t-md",
+          "relative overflow-hidden bg-card",
+          flush
+            ? ""
+            : [
+                "border-x border-b border-ink/15 shadow-lg rounded-b-md",
+                attached ? "" : "border-t rounded-t-md",
+              ].join(" "),
         ].join(" ")}
       >
         <span
