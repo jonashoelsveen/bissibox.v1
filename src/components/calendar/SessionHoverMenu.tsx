@@ -314,6 +314,7 @@ export function SessionHoverMenu({
   // decide whether the menu's bottom-right/bottom-left corners stay rounded.
   const stackBelow = showMemberPanel || showLeaderPanels || editMode;
   const railColor = editMode ? accent : "#9CA3AF";
+  const ownerEditDivider = editMode && isOwner;
 
   return (
     <>
@@ -324,7 +325,11 @@ export function SessionHoverMenu({
             data-session-hover-menu="1"
             className={[
               "fixed z-[20] flex items-stretch gap-1 border border-hairline bg-card/95 px-1.5 shadow-md backdrop-blur transition-[width] duration-150",
-              stackBelow ? "rounded-t-md border-b-0" : "rounded-md",
+              stackBelow
+                ? ownerEditDivider
+                  ? "rounded-t-md"
+                  : "rounded-t-md border-b-0"
+                : "rounded-md",
             ].join(" ")}
             style={{ left, top, width: menuW, height: menuH }}
             onMouseEnter={onMenuEnter}
@@ -395,10 +400,16 @@ export function SessionHoverMenu({
                 attached
                 flush={editMode}
                 tone={editMode ? accent : "gray"}
-                headerLabel={baseHeader}
-                headerName={baseHeaderName}
-                headerTime={memberUpdatedAt ? formatHHMM(memberUpdatedAt) : undefined}
-                headerTimeFresh={isUpdatedToday(memberUpdatedAt)}
+                headerLabel={ownerEditDivider ? undefined : baseHeader}
+                headerName={ownerEditDivider ? undefined : baseHeaderName}
+                headerTime={
+                  ownerEditDivider
+                    ? undefined
+                    : memberUpdatedAt
+                      ? formatHHMM(memberUpdatedAt)
+                      : undefined
+                }
+                headerTimeFresh={ownerEditDivider ? undefined : isUpdatedToday(memberUpdatedAt)}
                 initialValue={ev.sessionNote ?? ""}
                 mode={isOwner && noteEdit ? "edit" : "preview"}
                 defaultBodyHeight={140}

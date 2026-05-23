@@ -231,7 +231,6 @@ export function DiaryPopoverEditor({
             <HeaderIconBtn
               label={sessionNote ? "Rediger notat" : "Legg til notat"}
               onClick={() => setShowNote((v) => !v)}
-              active={showNote}
             >
               <StickyNote className="h-4 w-4" strokeWidth={2.25} />
             </HeaderIconBtn>
