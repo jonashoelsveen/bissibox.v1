@@ -121,10 +121,10 @@ export function ProfileSwitcherBar() {
   return (
     <div
       ref={wrapRef}
-      className="relative flex h-full shrink-0 items-end"
-      style={{ width: RAIL_WIDTH }}
+      className="relative flex shrink-0 items-center"
+      style={{ width: RAIL_WIDTH, height: 38, marginBottom: -1, paddingBottom: 1 }}
     >
-      <div className="mb-1 flex items-center gap-1 pl-2" style={{ width: "100%" }}>
+      <div className="flex items-center gap-1 pl-2" style={{ width: "100%" }}>
         <ProfileMenuButton hideChangeProfile align="left" />
         <button
           ref={nameBtnRef}
