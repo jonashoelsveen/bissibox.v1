@@ -2523,6 +2523,7 @@ function DiarySimpleStack({
           <SimpleColumn
             colIdx={colIdx}
             list={list}
+            creating={creatingColIdx === colIdx}
             tileDesign={tileDesign}
             unit={unit}
             activeSessionId={lockedId ?? forceEditId}
