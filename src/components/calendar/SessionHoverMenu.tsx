@@ -550,20 +550,16 @@ export function SessionHoverMenu({
                 onClick={(e) => e.stopPropagation()}
               >
                 <DurationRow accent={accent} durationMin={durationMin} onChange={setDurationMin} />
-                <GroupSelectRow
-                  accent={accent}
-                  diaryGroup={diaryGroup}
-                  onChange={(g, firstSub) => {
-                    setDiaryGroup(g);
-                    setDiarySub(firstSub);
-                  }}
-                />
-                <SubgroupSelectRow
+                <ActivitySelectRow
                   accent={accent}
                   diaryGroup={diaryGroup}
                   diarySub={diarySub}
-                  onChange={setDiarySub}
+                  onChange={(g, s) => {
+                    setDiaryGroup(g);
+                    setDiarySub(s);
+                  }}
                 />
+
                 {isOwner && (
                   <NotePanel
                     inline
