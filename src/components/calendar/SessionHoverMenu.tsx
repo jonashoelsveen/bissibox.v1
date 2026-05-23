@@ -94,6 +94,7 @@ export function SessionHoverMenu({
   onUpsert,
   onOpenDetails,
   visible,
+  defaultEditMode = false,
   onMenuEnter,
   onMenuLeave,
   onForceClose,
@@ -104,6 +105,66 @@ export function SessionHoverMenu({
   const [confirm, setConfirm] = useState(false);
   const [noteEdit, setNoteEdit] = useState(false);
   const [leaderNoteEdit, setLeaderNoteEdit] = useState(false);
+
+  // --- Edit mode (replaces the old DiaryPopoverEditor for existing sessions) ---
+  const [editMode, setEditMode] = useState(defaultEditMode);
+  useEffect(() => {
+    if (defaultEditMode) setEditMode(true);
+  }, [defaultEditMode, ev.id]);
+
+  // Derive initial edit-state from the event whenever it identity-changes.
+  const inferred = useMemo(() => {
+    const a = (ev.activity || "").toLowerCase();
+    if (a === "strength") return { group: "strength", sub: "max" };
+    if (a === "cycling") return { group: "endurance", sub: "cycling" };
+    if (a === "swimming") return { group: "endurance", sub: "swimming" };
+    if (a === "xcskiing") return { group: "endurance", sub: "other" };
+    if (a === "running") return { group: "endurance", sub: "running" };
+    return { group: "endurance", sub: "running" };
+  }, [ev.activity]);
+  const initialDuration = useMemo(() => {
+    if (!ev.startISO || !ev.endISO) return 0;
+    const s = new Date(ev.startISO).getTime();
+    const e = new Date(ev.endISO).getTime();
+    if (!Number.isFinite(s) || !Number.isFinite(e)) return 0;
+    return Math.max(0, Math.round((e - s) / 60000));
+  }, [ev.startISO, ev.endISO]);
+
+  const [durationMin, setDurationMin] = useState<number>(initialDuration);
+  const [diaryGroup, setDiaryGroup] = useState<string>(ev.diaryGroup ?? inferred.group);
+  const [diarySub, setDiarySub] = useState<string>(ev.diarySub ?? inferred.sub);
+  // Re-seed editing fields when switching to a different event.
+  useEffect(() => {
+    setDurationMin(initialDuration);
+    setDiaryGroup(ev.diaryGroup ?? inferred.group);
+    setDiarySub(ev.diarySub ?? inferred.sub);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ev.id]);
+
+  const groupDef = DIARY_GROUPS.find((g) => g.id === diaryGroup);
+  const hasSubs = !!groupDef?.children?.length;
+  const accent =
+    diaryGroup === "endurance" ? colorForActivity(diarySub) : CAT_TRAINING_COLOR;
+
+  const commitEdit = () => {
+    const start = fromISOLocal(ev.startISO);
+    const startMin = start.getHours() * 60 + start.getMinutes();
+    const endMin = startMin + Math.max(0, durationMin);
+    const startISO = toISOLocal(setHM(start, Math.floor(startMin / 60), startMin % 60));
+    const endISO = toISOLocal(setHM(start, Math.floor(endMin / 60), endMin % 60));
+    const trainingColor =
+      diaryGroup === "endurance" ? colorForActivity(diarySub) : CAT_TRAINING_COLOR;
+    onUpsert({
+      id: ev.id,
+      startISO,
+      endISO,
+      color: trainingColor,
+      diaryType: "training",
+      diaryGroup,
+      diarySub: hasSubs ? diarySub : undefined,
+    });
+    setEditMode(false);
+  };
 
   const hasNote = !!ev.sessionNote?.trim();
 
