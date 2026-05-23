@@ -81,6 +81,10 @@ export interface SessionHoverMenuProps {
   onMenuEnter?: () => void;
   onMenuLeave?: () => void;
   onForceClose?: () => void;
+  /** Fired whenever the menu becomes "sticky" (note panel open, leader note
+   *  open, edit mode, or confirm dialog). Parent uses this to lock hover
+   *  state to this event id so hovering other tiles cannot steal focus. */
+  onActiveChange?: (active: boolean) => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
@@ -98,6 +102,7 @@ export function SessionHoverMenu({
   onMenuEnter,
   onMenuLeave,
   onForceClose,
+  onActiveChange,
   memberId,
   viewerRole = "owner",
 }: SessionHoverMenuProps) {
@@ -190,6 +195,14 @@ export function SessionHoverMenu({
   // Lock the menu open while note edit / confirm / edit mode is in flight.
   const sticky = noteEdit || leaderNoteEdit || confirm || editMode;
   const menuVisible = visible || sticky;
+
+  // Notify parent so it can suppress hover on other tiles while this one is active.
+  const onActiveChangeRef = useRef(onActiveChange);
+  useEffect(() => { onActiveChangeRef.current = onActiveChange; }, [onActiveChange]);
+  useEffect(() => {
+    onActiveChangeRef.current?.(sticky);
+    if (sticky) return () => onActiveChangeRef.current?.(false);
+  }, [sticky]);
 
   // Outside-click closes everything when the note panel or edit mode is open.
   const menuRef = useRef<HTMLDivElement | null>(null);

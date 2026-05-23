@@ -294,7 +294,9 @@ export function MonthGridType1({
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [forceEditId, setForceEditId] = useState<string | null>(null);
+  const [lockedId, setLockedId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
+  const hoverLocked = lockedId !== null || forceEditId !== null;
   const hoverCloseTimerRef = useRef<number | null>(null);
   const cancelHoverClose = useCallback(() => {
     if (hoverCloseTimerRef.current != null) {
@@ -978,9 +980,11 @@ export function MonthGridType1({
                             data-event-id={isRealEvent ? it.event.id : undefined}
                             onMouseEnter={(e) => {
                               if (appKind !== "diary" || !isRealEvent) return;
+                              const evId = it.kind === "event" ? it.event.id : null;
+                              if (hoverLocked && evId !== (lockedId ?? forceEditId)) return;
                               cancelHoverClose();
                               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                              setHoverId(it.kind === "event" ? it.event.id : null);
+                              setHoverId(evId);
                               setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
                             }}
                             onMouseLeave={(e) => {
@@ -1425,7 +1429,7 @@ export function MonthGridType1({
             </div>
           );
         })()}
-        {appKind === "diary" && hoverId && hoverRect && (() => {
+        {appKind === "diary" && !popover && hoverId && hoverRect && (() => {
           const ev = events.find((e) => e.id === hoverId);
           if (!ev) return null;
           return (
@@ -1439,6 +1443,7 @@ export function MonthGridType1({
               defaultEditMode={forceEditId === ev.id}
               onMenuEnter={cancelHoverClose}
               onMenuLeave={scheduleHoverClose}
+              onActiveChange={(active) => setLockedId(active ? ev.id : null)}
               onOpenDetails={() => {
                 cancelHoverClose();
                 setDetailsEvId(ev.id);

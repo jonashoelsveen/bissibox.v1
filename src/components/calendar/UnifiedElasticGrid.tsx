@@ -1978,7 +1978,18 @@ function WeekEventsOverlay({
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [forceEditId, setForceEditId] = useState<string | null>(null);
+  const [lockedId, setLockedId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
+  // A session is "locked" when it has an open edit panel, note panel, or is
+  // being created. While locked, hovering other tiles must not open menus.
+  const hoverLocked = lockedId !== null || forceEditId !== null;
+  const safeSetHoverId = useCallback((id: string | null) => {
+    if (hoverLocked) {
+      const allowed = lockedId ?? forceEditId;
+      if (id !== null && id !== allowed) return;
+    }
+    setHoverId(id);
+  }, [hoverLocked, lockedId, forceEditId]);
   const closeTimerRef = useRef<number | null>(null);
   // Mark prop as used to silence ts noUnused warnings; behavior unchanged.
   void onSaveSessionNote;
@@ -2100,9 +2111,10 @@ function WeekEventsOverlay({
                 data-ghost-event={isGhost ? "1" : undefined}
                 onMouseEnter={(e) => {
                   if (isGhost || appKind !== "diary") return;
+                  if (hoverLocked && (lockedId ?? forceEditId) !== ev.id) return;
                   cancelClose();
                   const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                  setHoverId(ev.id);
+                  safeSetHoverId(ev.id);
                   setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
                 }}
                 onMouseLeave={(e) => {
@@ -2343,6 +2355,7 @@ function WeekEventsOverlay({
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
+            onActiveChange={(active) => setLockedId(active ? ev.id : null)}
             onOpenDetails={() => {
               cancelClose();
               setDetailsEvId(ev.id);
@@ -2422,7 +2435,9 @@ function DiarySimpleStack({
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [forceEditId, setForceEditId] = useState<string | null>(null);
+  const [lockedId, setLockedId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
+  const hoverLocked = lockedId !== null || forceEditId !== null;
   const closeTimerRef = useRef<number | null>(null);
   const cancelClose = useCallback(() => {
     if (closeTimerRef.current != null) {
@@ -2506,6 +2521,7 @@ function DiarySimpleStack({
               void onEventClick;
             }}
             onHoverChange={(id, rect) => {
+              if (hoverLocked && id !== (lockedId ?? forceEditId)) return;
               cancelClose();
               setHoverId(id);
               setHoverRect(rect);
@@ -2553,6 +2569,7 @@ function DiarySimpleStack({
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
+            onActiveChange={(active) => setLockedId(active ? ev.id : null)}
             onOpenDetails={() => {
               cancelClose();
               setDetailsEvId(ev.id);
