@@ -2131,6 +2131,18 @@ function WeekEventsOverlay({
                   if (isGhost) return;
                   if (appKind === "diary") {
                     e.stopPropagation();
+                    if (drag?.moved) return;
+                    if (viewerRole === "owner") {
+                      cancelClose();
+                      const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      setHoverId(ev.id);
+                      setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+                      setForceEditId(ev.id);
+                    } else {
+                      setDetailsEvId(ev.id);
+                      setHoverId(null);
+                      setHoverRect(null);
+                    }
                     return;
                   }
                   if (drag?.moved) return;
