@@ -314,6 +314,7 @@ export function SessionHoverMenu({
   // decide whether the menu's bottom-right/bottom-left corners stay rounded.
   const stackBelow = showMemberPanel || showLeaderPanels || editMode;
   const railColor = editMode ? accent : "#9CA3AF";
+  const ownerEditDivider = editMode && isOwner;
 
   return (
     <>
