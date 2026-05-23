@@ -500,6 +500,7 @@ export function SessionHoverMenu({
                       closeOnEnter={false}
                       closeOnOutsideClick={false}
                       onSave={() => {}}
+                      onClose={() => {}}
                     />
                   );
                 })}
