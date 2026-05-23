@@ -314,7 +314,7 @@ export function MonthGridType1({
       if (forceEditId) return;
       setHoverId(null);
       setHoverRect(null);
-    }, 180);
+    }, 0);
   }, [cancelHoverClose, forceEditId]);
 
   // ───────────────────────── Popover (add/edit) ─────────────────────────
