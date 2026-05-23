@@ -310,24 +310,101 @@ export function SessionHoverMenu({
   const panelCount = (showMemberPanel ? 1 : 0) + (showLeaderPanels ? leaderPanels.length : 0);
   const totalH = menuH + panelCount * PANEL_EST_H + EDIT_EXTRA_H;
 
+  // ─── Live anchor + header-aware positioning ──────────────────────────
+  // Track the session tile element by data-event-id so the menu can stay
+  // glued to its side as the grid scrolls, and so the menu never crosses
+  // above the column-header strip. We snap (not drift) on every frame, but
+  // keep the prior top when the tile is still in vertical contact — that
+  // way casual scrolling doesn't shift the panel, while losing-contact
+  // scrolls cause a smooth transition to the new position.
   const gap = 4;
-  let left = blockRect.left + blockRect.width + gap;
-  if (left + menuW > window.innerWidth - 8) {
-    // Flip to the left side of the block when there's no room on the right.
-    left = Math.max(8, blockRect.left - menuW - gap);
-  }
-  // Vertical: prefer aligning with the block top, but shift up if the full
-  // stack would overflow the viewport bottom (sessions near the bottom or on
-  // the right side of the week grid).
-  let top = blockRect.top;
-  const vh = window.innerHeight;
-  if (top + totalH > vh - 8) {
-    top = Math.max(8, vh - 8 - totalH);
-  }
-  // Final safety cap for the panel container — if even after shifting the
-  // stack still doesn't fit, allow the panel container itself to scroll so
-  // nothing is cut off the bottom of the viewport.
-  const panelMaxH = Math.max(120, vh - 8 - (top + menuH));
+  const [pos, setPos] = useState<{ left: number; top: number; maxPanelH: number; flipped: boolean } | null>(null);
+  const prevTopRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let raf = 0;
+    let alive = true;
+    const compute = () => {
+      if (!alive) return;
+      const anchor = document.querySelector(
+        `[data-event-id="${CSS.escape(ev.id)}"]`,
+      ) as HTMLElement | null;
+      const rect = anchor?.getBoundingClientRect() ?? blockRect;
+      const vh = window.innerHeight;
+      const vw = window.innerWidth;
+      // Header floor: max bottom of any visible grid header in the viewport.
+      let headerBottom = 0;
+      document.querySelectorAll<HTMLElement>('[data-grid-header="1"]').forEach((el) => {
+        const r = el.getBoundingClientRect();
+        if (r.bottom > 0 && r.top < vh) headerBottom = Math.max(headerBottom, r.bottom);
+      });
+
+      // If the tile scrolled completely above the header or below the
+      // viewport, close the menu — there's nothing to anchor to.
+      if (anchor && (rect.bottom <= headerBottom + 2 || rect.top >= vh - 2)) {
+        onForceClose?.();
+        return;
+      }
+
+      let left = rect.left + rect.width + gap;
+      let flipped = false;
+      if (left + NOTE_PANEL_W > vw - 8) {
+        left = Math.max(8, rect.left - NOTE_PANEL_W - gap);
+        flipped = true;
+      }
+
+      const minTop = headerBottom + 2;
+      const maxTop = Math.max(minTop, vh - 8 - menuH);
+      const desiredTop = Math.min(Math.max(rect.top, minTop), maxTop);
+      // Contact-aware: keep prior top while still overlapping the tile
+      // vertically; otherwise snap to desiredTop. CSS transition smooths it.
+      const prev = prevTopRef.current;
+      const inContact =
+        prev !== null &&
+        prev + menuH > rect.top - 4 &&
+        prev < rect.bottom + 4 &&
+        prev >= minTop &&
+        prev <= maxTop;
+      const top = inContact ? prev! : desiredTop;
+      prevTopRef.current = top;
+      const maxPanelH = Math.max(120, vh - 8 - (top + menuH));
+      setPos((p) =>
+        p && p.left === left && p.top === top && p.maxPanelH === maxPanelH && p.flipped === flipped
+          ? p
+          : { left, top, maxPanelH, flipped },
+      );
+    };
+
+    const schedule = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        compute();
+      });
+    };
+
+    compute();
+    window.addEventListener("scroll", schedule, true);
+    window.addEventListener("resize", schedule);
+    const ro = new ResizeObserver(schedule);
+    ro.observe(document.body);
+    return () => {
+      alive = false;
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", schedule, true);
+      window.removeEventListener("resize", schedule);
+      ro.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ev.id, blockRect.left, blockRect.top, blockRect.width, blockRect.height, menuH, showMemberPanel, showLeaderPanels, editMode, panelCount]);
+
+  // Reset contact-anchor when the event id changes so a new tile snaps fresh.
+  useEffect(() => { prevTopRef.current = null; }, [ev.id]);
+
+  const left = pos?.left ?? blockRect.left + blockRect.width + gap;
+  const top = pos?.top ?? blockRect.top;
+  const panelMaxH = pos?.maxPanelH ?? Math.max(120, window.innerHeight - 8 - (top + menuH));
+  void totalH; // retained for potential future use
 
   // Details modal lifecycle is owned by the parent (lifted out of this menu so
   // it survives hover transitions, refetches, and menu unmounts).
