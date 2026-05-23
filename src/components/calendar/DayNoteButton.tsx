@@ -765,15 +765,16 @@ export function NotePanel({
                 if (footerHidden) setFooterHidden(false);
               }}
               placeholder="Skriv notat…"
-              className="block w-full resize-none bg-transparent text-[12px] leading-snug text-ink outline-none placeholder:text-muted-foreground/60"
-              style={{ minHeight: effectiveBodyHeight + extra }}
+              className="block w-full resize-none overflow-y-auto bg-transparent text-[12px] leading-snug text-ink outline-none placeholder:text-muted-foreground/60"
+              style={{ height: effectiveBodyHeight + extra, maxHeight: effectiveBodyHeight + extra }}
             />
           ) : (
             <div
               ref={previewRef}
-              className="block w-full whitespace-pre-wrap text-[12px] leading-snug text-ink"
+              className="block w-full overflow-y-auto whitespace-pre-wrap text-[12px] leading-snug text-ink"
               style={{
                 minHeight: inline ? undefined : effectiveBodyHeight,
+                maxHeight: effectiveBodyHeight,
                 cursor: onRequestEdit ? "text" : "default",
               }}
             >
