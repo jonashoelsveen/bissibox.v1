@@ -211,7 +211,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   }, [user, activeEntityId]);
 
   useEffect(() => {
-    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "diary" || tab === "library" || tab === "connectors")) {
+    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "diary" || tab === "library" || tab === "coaches" || tab === "connectors")) {
       setTab("entity-profile");
     }
     if (
