@@ -88,6 +88,9 @@ export function SessionDetailsModal({
   strava,
   date,
   readOnly = false,
+  memberId,
+  viewerRole,
+  eventId,
 }: {
   isEdit: boolean;
   value: SessionDetailsValue;
@@ -103,6 +106,9 @@ export function SessionDetailsModal({
   } | null;
   date?: Date;
   readOnly?: boolean;
+  memberId?: string;
+  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
+  eventId?: string;
 }) {
   const [tab, setTab] = useState<Tab>("about");
   const [autosync] = useLibrarySetting<boolean>(diaryAutosyncKey("global"), false);
