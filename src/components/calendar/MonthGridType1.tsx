@@ -45,6 +45,7 @@ import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
 
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 import { SessionHoverMenu } from "./SessionHoverMenu";
+import { useHoverLock } from "./hoverLock";
 import { SessionDetailsContainer } from "./SessionDetailsContainer";
 import { TimeWheelPicker } from "./TimeWheelPicker";
 
