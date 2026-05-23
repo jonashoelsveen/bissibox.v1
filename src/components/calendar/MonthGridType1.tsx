@@ -1443,6 +1443,7 @@ export function MonthGridType1({
               defaultEditMode={forceEditId === ev.id}
               onMenuEnter={cancelHoverClose}
               onMenuLeave={scheduleHoverClose}
+              onActiveChange={(active) => setLockedId(active ? ev.id : null)}
               onOpenDetails={() => {
                 cancelHoverClose();
                 setDetailsEvId(ev.id);
