@@ -638,17 +638,12 @@ function ActivityRow({
           }}
           className="bg-transparent text-sm font-medium text-ink outline-none disabled:cursor-not-allowed"
         >
-          {DIARY_GROUPS.map((g) =>
-            g.children && g.children.length ? (
-              <optgroup key={g.id} label={g.label}>
-                {g.children.map((c) => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
-              </optgroup>
-            ) : (
-              <option key={g.id} value={g.id}>{g.label}</option>
-            ),
-          )}
+          {DIARY_ACTIVITIES.map((a) => {
+            const v = a.subId || a.groupId;
+            return (
+              <option key={v} value={v}>{a.label}</option>
+            );
+          })}
         </select>
 
         <div className="ml-auto flex items-center gap-8">
