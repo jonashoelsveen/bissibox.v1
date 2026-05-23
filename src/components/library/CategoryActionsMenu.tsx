@@ -114,12 +114,15 @@ export function CategoryActionsMenu({
   onColorChange,
   extraItems = [],
   allowColor = true,
+  allowCustomColor = true,
+  colorSwatches,
 }: CategoryActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const topExtras = extraItems.filter((i) => i.top);
   const bottomExtras = extraItems.filter((i) => !i.top);
 
   const close = () => setOpen(false);
+
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
