@@ -2165,6 +2165,7 @@ function WeekEventsOverlay({
                   onEventClick(ev, e.currentTarget as HTMLElement);
                 }}
                 className={`absolute overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
+                data-session-active={isActive ? "1" : undefined}
                 style={{
                   left: 2,
                   right: 2,
@@ -2174,6 +2175,7 @@ function WeekEventsOverlay({
                   background: bg,
                   color: fg,
                   opacity: isDragging ? 0.85 : 1,
+                  filter: isActive ? "brightness(0.9) saturate(1.15)" : undefined,
                   pointerEvents: "auto",
                 }}
                 title={ev.title}
