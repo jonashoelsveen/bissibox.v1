@@ -329,7 +329,10 @@ export function SessionHoverMenu({
       const anchor = document.querySelector(
         `[data-event-id="${CSS.escape(ev.id)}"]`,
       ) as HTMLElement | null;
-      const rect = anchor?.getBoundingClientRect() ?? blockRect;
+      const ar = anchor?.getBoundingClientRect();
+      const rect = ar
+        ? { left: ar.left, top: ar.top, width: ar.width, height: ar.height, right: ar.right, bottom: ar.bottom }
+        : { left: blockRect.left, top: blockRect.top, width: blockRect.width, height: blockRect.height, right: blockRect.left + blockRect.width, bottom: blockRect.top + blockRect.height };
       const vh = window.innerHeight;
       const vw = window.innerWidth;
       // Header floor: max bottom of any visible grid header in the viewport.
