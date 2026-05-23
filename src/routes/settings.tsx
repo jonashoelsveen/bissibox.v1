@@ -597,6 +597,10 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       )}
 
 
+      {tab === "coaches" && !isTeamMode && (
+        <CoachesPanel ref={coachesRef} onDirtyChange={setCoachesDirty} />
+      )}
+
       {tab === "connectors" && <ConnectorsPanel />}
 
       {tab === "system" && <SystemPanel />}
