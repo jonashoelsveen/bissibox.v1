@@ -441,6 +441,43 @@ export function SessionHoverMenu({
                   />
                 </div>
               ))}
+            {editMode && (
+              <div
+                data-session-edit-panel="1"
+                className="overflow-hidden rounded-b-md border-x border-b border-ink/15 bg-card shadow-md"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <DurationRow accent={accent} durationMin={durationMin} onChange={setDurationMin} />
+                <GroupSelectRow
+                  accent={accent}
+                  diaryGroup={diaryGroup}
+                  onChange={(g, firstSub) => {
+                    setDiaryGroup(g);
+                    setDiarySub(firstSub);
+                  }}
+                />
+                <SubgroupSelectRow
+                  accent={accent}
+                  diaryGroup={diaryGroup}
+                  diarySub={diarySub}
+                  onChange={setDiarySub}
+                />
+                <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
+                  <span className="mono tabular-nums">⏎ for å lagre</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      commitEdit();
+                    }}
+                    className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
+                  >
+                    Lagre
+                  </button>
+                </div>
+              </div>
+            )}
           </div>,
           document.body,
         )}
