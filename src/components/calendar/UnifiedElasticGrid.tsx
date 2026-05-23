@@ -2826,6 +2826,7 @@ function SimpleTileBody({
         height: SIMPLE_TILE_H,
         background: bg,
         color: fg,
+        filter: isActive ? "brightness(0.9) saturate(1.15)" : undefined,
       }}
       title={ev.title}
     >
