@@ -2729,6 +2729,13 @@ function SimpleColumn({
                 onHoverEnd={onHoverEnd}
               />
             ))}
+            {creating && (
+              <div
+                aria-hidden
+                className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
+                style={{ height: SIMPLE_TILE_H }}
+              />
+            )}
           </div>
         </SortableContext>
         <DragOverlay dropAnimation={{ duration: 160, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
