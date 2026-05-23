@@ -1025,6 +1025,12 @@ export function MonthGridType1({
                               }
                               if (it.kind === "legacy") {
                                 openItemEditor(pos, it.idx, it.raw, e.currentTarget as HTMLElement);
+                              } else if (appKind === "diary" && viewerRole === "owner") {
+                                cancelHoverClose();
+                                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                setHoverId(it.event.id);
+                                setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+                                setForceEditId(it.event.id);
                               } else {
                                 openEventEditor(pos, it.event, e.currentTarget as HTMLElement);
                               }
