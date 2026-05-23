@@ -1977,6 +1977,7 @@ function WeekEventsOverlay({
   const [unit] = useDistanceUnit();
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [forceEditId, setForceEditId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
   const closeTimerRef = useRef<number | null>(null);
   // Mark prop as used to silence ts noUnused warnings; behavior unchanged.
