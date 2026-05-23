@@ -403,6 +403,7 @@ export function DayNoteButton({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
+              setHoverLock(lockId);
               refreshRect();
               setOpen(true);
               if (isOwner) setEditingMember(true);
@@ -427,6 +428,7 @@ export function DayNoteButton({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
+              setHoverLock(lockId);
               refreshRect();
               setOpen(true);
               if (canEdit && !isOwner) setEditingViewer(true);
