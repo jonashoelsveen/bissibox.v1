@@ -508,8 +508,12 @@ export interface NotePanelProps {
   inline?: boolean;
   /** When true, this panel is stacked beneath another — drop top border + radius. */
   attached?: boolean;
-  /** Side-line tone. "gray" = member; "leader" = brand primary blue. */
-  tone?: "gray" | "leader";
+  /** Side-line tone. "gray" = member; "leader" = brand primary blue.
+   *  Pass any other string to use a custom CSS color (e.g. a hex). */
+  tone?: "gray" | "leader" | string;
+  /** When true, drop the rounded corners, side/bottom border, and shadow
+   *  so the panel visually merges into its parent container. */
+  flush?: boolean;
   onSave: (text: string) => void;
   onClose: () => void;
   onRequestEdit?: () => void;
