@@ -2573,6 +2573,8 @@ function DiarySimpleStack({
         return (
           <SessionDetailsContainer
             ev={ev}
+            memberId={memberId}
+            viewerRole={viewerRole}
             onClose={() => setDetailsEvId(null)}
             onUpsert={(patch) => onUpsertSession?.(patch)}
           />
