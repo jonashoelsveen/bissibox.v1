@@ -2489,15 +2489,20 @@ function DiarySimpleStack({
             list={list}
             tileDesign={tileDesign}
             unit={unit}
-            onEventClick={(ev, _anchor) => {
+            onEventClick={(ev, anchor) => {
               cancelClose();
-              // Clicking a session — owner or viewer — opens the centered
-              // SessionDetailsModal. The modal handles read-only vs editable
-              // based on viewerRole internally.
-              setDetailsEvId(ev.id);
-              setHoverId(null);
-              setHoverRect(null);
-              setForceEditId(null);
+              if (viewerRole === "owner") {
+                // Owner click extends the hover menu into edit mode in-place.
+                const r = anchor.getBoundingClientRect();
+                setHoverId(ev.id);
+                setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+                setForceEditId(ev.id);
+              } else {
+                setDetailsEvId(ev.id);
+                setHoverId(null);
+                setHoverRect(null);
+                setForceEditId(null);
+              }
               void onEventClick;
             }}
             onHoverChange={(id, rect) => {
