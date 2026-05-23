@@ -166,7 +166,7 @@ export function ProfileMenuButton({
       {open && (
         <div
           role="menu"
-          className="mac-menu absolute right-0 top-full z-[100] mt-1.5 w-64 overflow-visible rounded-lg p-1"
+          className={`mac-menu absolute ${align === "left" ? "left-0" : "right-0"} top-full z-[100] mt-1.5 w-64 overflow-visible rounded-lg p-1`}
           style={{ transition: "none" }}
         >
           <button
