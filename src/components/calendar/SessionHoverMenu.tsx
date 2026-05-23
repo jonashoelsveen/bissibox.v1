@@ -185,27 +185,50 @@ export function SessionHoverMenu({
     }
   }, [visible, noteEdit, confirm]);
 
-  // Lock the menu open while note edit / confirm is in flight.
-  const sticky = noteEdit || leaderNoteEdit || confirm;
+  // Lock the menu open while note edit / confirm / edit mode is in flight.
+  const sticky = noteEdit || leaderNoteEdit || confirm || editMode;
   const menuVisible = visible || sticky;
 
-  // Outside-click closes everything when the note panel is open.
+  // Outside-click closes everything when the note panel or edit mode is open.
   const menuRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (!noteEdit && !leaderNoteEdit) return;
+    if (!noteEdit && !leaderNoteEdit && !editMode) return;
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node | null;
       const inMenu = menuRef.current?.contains(t as Node);
       const inNote = (t as HTMLElement | null)?.closest('[data-note-panel="1"]');
-      if (!inMenu && !inNote) {
+      const inEditPanel = (t as HTMLElement | null)?.closest('[data-session-edit-panel="1"]');
+      if (!inMenu && !inNote && !inEditPanel) {
+        if (editMode) commitEdit();
         setNoteEdit(false);
         setLeaderNoteEdit(false);
+        setEditMode(false);
         onForceClose?.();
       }
     };
     window.addEventListener("mousedown", onDown);
     return () => window.removeEventListener("mousedown", onDown);
-  }, [noteEdit, leaderNoteEdit, onForceClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteEdit, leaderNoteEdit, editMode, onForceClose]);
+
+  // Enter to save edits, Escape to cancel.
+  useEffect(() => {
+    if (!editMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && t.tagName === "TEXTAREA") return;
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        commitEdit();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setEditMode(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editMode, durationMin, diaryGroup, diarySub]);
 
   const menuH = Math.max(28, rowHeight * 1.4);
   const ICON_W = 32;
