@@ -251,25 +251,6 @@ export function DiaryPopoverEditor({
             )}
           </div>
 
-          {/* Optional note panel directly under the header */}
-          {showNote && (
-            <NotePanel
-              inline
-              attached
-              flush
-              tone={accent}
-              initialValue={sessionNote}
-              mode="edit"
-              defaultBodyHeight={120}
-              panelWidth={POPOVER_W}
-              closeOnEnter={false}
-              closeOnOutsideClick={false}
-              showFooter={false}
-              onSave={(text) => setSessionNote(text)}
-              onClose={() => setShowNote(false)}
-            />
-          )}
-
           {/* Duration row — clock icon + auto-advance HH/MM inputs */}
           <DurationRow accent={accent} durationMin={durationMin} onChange={setDurationMin} />
 
@@ -290,6 +271,25 @@ export function DiaryPopoverEditor({
             diarySub={diarySub}
             onChange={setDiarySub}
           />
+
+          {/* Note panel — sits directly above the Save bar */}
+          {showNote && (
+            <NotePanel
+              inline
+              attached
+              flush
+              tone={accent}
+              initialValue={sessionNote}
+              mode="edit"
+              defaultBodyHeight={120}
+              panelWidth={POPOVER_W}
+              closeOnEnter={false}
+              closeOnOutsideClick={false}
+              showFooter={false}
+              onSave={(text) => setSessionNote(text)}
+              onClose={() => setShowNote(false)}
+            />
+          )}
 
           {/* Footer */}
           <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
