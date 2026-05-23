@@ -2103,6 +2103,7 @@ function WeekEventsOverlay({
             const fg = "hsl(var(--ink, 220 13% 13%))";
             const Icon = iconForColor(ev.color);
             const isGhost = ev.id.startsWith("__ghost__:");
+            const isActive = !isGhost && (lockedId ?? forceEditId) === ev.id;
             return (
               <div
                 key={ev.id}
