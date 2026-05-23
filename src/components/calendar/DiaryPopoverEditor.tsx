@@ -481,23 +481,14 @@ function DurationInput({
   const hasValue = durationMin > 0;
 
   return (
-    <div className="flex flex-1 items-center gap-1">
-      {!hasValue && (
-        <button
-          type="button"
-          onClick={() => requestAnimationFrame(() => { hRef.current?.focus(); hRef.current?.select(); })}
-          className="absolute left-9 cursor-text bg-transparent text-[12px] text-muted-foreground/60 outline-none"
-        >
-          f.eks. 1h 30min
-        </button>
-      )}
+    <div className="flex flex-1 items-center gap-1" title="f.eks. 1h 30min">
       <input
         ref={hRef}
         type="text"
         inputMode="numeric"
         maxLength={2}
         aria-label="Hours"
-        value={hasValue ? String(h) : ""}
+        value={hasValue ? String(h).padStart(2, "0") : ""}
         placeholder="00"
         onChange={(e) => {
           const v = e.target.value.replace(/\D/g, "").slice(0, 2);
@@ -521,9 +512,9 @@ function DurationInput({
             }
           }
         }}
-        className={hasValue ? inputCls : `${inputCls} hidden`}
+        className={inputCls}
       />
-      {hasValue && <span className="text-[11px] font-semibold text-ink">h</span>}
+      <span className="text-[11px] font-semibold text-ink">h</span>
       <input
         ref={mRef}
         type="text"
@@ -551,9 +542,9 @@ function DurationInput({
             }
           }
         }}
-        className={hasValue ? inputCls : `${inputCls} hidden`}
+        className={inputCls}
       />
-      {hasValue && <span className="text-[11px] font-semibold text-ink">min</span>}
+      <span className="text-[11px] font-semibold text-ink">min</span>
     </div>
   );
 }
