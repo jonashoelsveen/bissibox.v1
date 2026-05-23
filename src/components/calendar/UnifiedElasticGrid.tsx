@@ -2769,7 +2769,7 @@ function SortableSimpleTile({
         onEventClick(ev, e.currentTarget as HTMLElement);
       }}
     >
-      <SimpleTileBody ev={ev} tileDesign={tileDesign} unit={unit} />
+      <SimpleTileBody ev={ev} tileDesign={tileDesign} unit={unit} isActive={isActive} />
     </div>
   );
 }
