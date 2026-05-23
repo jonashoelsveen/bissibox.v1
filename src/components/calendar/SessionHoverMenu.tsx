@@ -303,9 +303,12 @@ export function SessionHoverMenu({
   const menuW = showAnyPanel ? NOTE_PANEL_W : compactW;
 
   // Estimate stack height for collision-aware vertical placement.
-  const PANEL_EST_H = 200;
+  // Note panels are now capped (textarea is fixed-height with internal scroll),
+  // so each panel is bounded. We still overestimate slightly to be safe.
+  const PANEL_EST_H = 180;
+  const EDIT_EXTRA_H = editMode ? 200 : 0; // duration + group + subgroup + footer rows
   const panelCount = (showMemberPanel ? 1 : 0) + (showLeaderPanels ? leaderPanels.length : 0);
-  const totalH = menuH + panelCount * PANEL_EST_H;
+  const totalH = menuH + panelCount * PANEL_EST_H + EDIT_EXTRA_H;
 
   const gap = 4;
   let left = blockRect.left + blockRect.width + gap;
@@ -321,6 +324,10 @@ export function SessionHoverMenu({
   if (top + totalH > vh - 8) {
     top = Math.max(8, vh - 8 - totalH);
   }
+  // Final safety cap for the panel container — if even after shifting the
+  // stack still doesn't fit, allow the panel container itself to scroll so
+  // nothing is cut off the bottom of the viewport.
+  const panelMaxH = Math.max(120, vh - 8 - (top + menuH));
 
   // Details modal lifecycle is owned by the parent (lifted out of this menu so
   // it survives hover transitions, refetches, and menu unmounts).
@@ -392,8 +399,8 @@ export function SessionHoverMenu({
         createPortal(
           <div
             data-session-note-panel="1"
-            className="fixed z-[20] flex flex-col"
-            style={{ left, top: top + menuH, width: NOTE_PANEL_W }}
+            className="fixed z-[20] flex flex-col overflow-y-auto"
+            style={{ left, top: top + menuH, width: NOTE_PANEL_W, maxHeight: panelMaxH }}
             onMouseEnter={onMenuEnter}
             onMouseLeave={() => { if (!sticky) onMenuLeave?.(); }}
             onMouseDown={(e) => e.stopPropagation()}
