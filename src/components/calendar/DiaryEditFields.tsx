@@ -139,76 +139,155 @@ export function DurationInput({
   const h = Math.floor(durationMin / 60);
   const m = durationMin % 60;
 
-  const inputCls =
-    "mono w-[18px] bg-transparent p-0 text-center text-[12px] font-semibold tabular-nums text-ink outline-none cursor-text caret-ink focus:bg-ink/5 rounded-[3px] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
-
-  const hasValue = durationMin > 0;
+  const focusSibling = useCallback((from: 0 | 1, dir: -1 | 1) => {
+    const next = Math.max(0, Math.min(1, from + dir));
+    const el = next === 0 ? hRef.current : mRef.current;
+    if (el) { el.focus(); el.select(); }
+  }, []);
 
   return (
-    <div className="flex flex-1 items-center gap-1" title="f.eks. 1h 30min">
-      <input
+    <div className="flex flex-1 items-center gap-1 select-none" title="f.eks. 1h 30min">
+      <DurCell
         ref={hRef}
-        type="text"
-        inputMode="numeric"
-        maxLength={2}
-        aria-label="Hours"
-        value={hasValue ? String(h).padStart(2, "0") : ""}
-        placeholder="00"
-        onChange={(e) => {
-          const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-          const nh = v === "" ? 0 : Math.max(0, Number(v));
-          onChange(nh * 60 + m);
-          if (v.length === 2) {
-            requestAnimationFrame(() => { mRef.current?.focus(); mRef.current?.select(); });
-          }
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "h" || e.key === ":" || e.key === ".") {
-            e.preventDefault();
-            mRef.current?.focus();
-            mRef.current?.select();
-          } else if (e.key === "ArrowRight") {
-            const el = e.currentTarget;
-            if (el.selectionStart === el.value.length) {
-              e.preventDefault();
-              mRef.current?.focus();
-              mRef.current?.select();
-            }
-          }
-        }}
-        className={inputCls}
+        ariaLabel="Hours"
+        value={h}
+        max={99}
+        onCommit={(nh) => onChange(nh * 60 + m)}
+        onAutoAdvance={() => focusSibling(0, 1)}
+        onArrowH={(d) => focusSibling(0, d)}
       />
-      <span className="text-[11px] font-semibold text-ink">h</span>
-      <input
+      <span className="text-[11px] text-ink">h</span>
+      <DurCell
         ref={mRef}
-        type="text"
-        inputMode="numeric"
-        maxLength={2}
-        aria-label="Minutes"
-        value={hasValue ? String(m).padStart(2, "0") : ""}
-        placeholder="00"
-        onChange={(e) => {
-          const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-          const nm = v === "" ? 0 : Math.max(0, Math.min(59, Number(v)));
-          onChange(h * 60 + nm);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Backspace" && (e.currentTarget.value === "" || e.currentTarget.selectionStart === 0)) {
-            e.preventDefault();
-            hRef.current?.focus();
-            hRef.current?.select();
-          } else if (e.key === "ArrowLeft") {
-            const el = e.currentTarget;
-            if (el.selectionStart === 0) {
-              e.preventDefault();
-              hRef.current?.focus();
-              hRef.current?.select();
-            }
-          }
-        }}
-        className={inputCls}
+        ariaLabel="Minutes"
+        value={m}
+        max={59}
+        onCommit={(nm) => onChange(h * 60 + nm)}
+        onAutoAdvance={() => focusSibling(1, 1)}
+        onArrowH={(d) => focusSibling(1, d)}
       />
-      <span className="text-[11px] font-semibold text-ink">min</span>
+      <span className="text-[11px] text-ink">min</span>
     </div>
   );
 }
+
+interface DurCellProps {
+  value: number;
+  max: number;
+  ariaLabel: string;
+  onCommit: (n: number) => void;
+  onAutoAdvance: () => void;
+  onArrowH: (dir: -1 | 1) => void;
+}
+
+const twoDigit = (n: number) => String(n).padStart(2, "0");
+const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
+
+const DurCell = forwardRef<HTMLInputElement, DurCellProps>(function DurCell(
+  { value, max, ariaLabel, onCommit, onAutoAdvance, onArrowH },
+  ref,
+) {
+  const [text, setText] = useState(twoDigit(value));
+  const [editing, setEditing] = useState(false);
+  const textRef = useRef(text);
+  useEffect(() => { textRef.current = text; }, [text]);
+  useEffect(() => {
+    if (!editing) {
+      const next = twoDigit(value);
+      setText(next);
+      textRef.current = next;
+    }
+  }, [value, editing]);
+
+  const firstDigitMax = Math.floor(max / 10);
+
+  const commit = (raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length === 0) { setText(twoDigit(value)); return; }
+    const n = clamp(parseInt(digits, 10), 0, max);
+    setText(twoDigit(n));
+    if (n !== value) onCommit(n);
+  };
+
+  const onChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, "").slice(-2);
+    setText(digits);
+    textRef.current = digits;
+    if (digits.length === 1) {
+      const d = parseInt(digits, 10);
+      if (d > firstDigitMax) {
+        const n = clamp(d, 0, max);
+        const next = twoDigit(n);
+        setText(next); textRef.current = next;
+        if (n !== value) onCommit(n);
+        onAutoAdvance();
+      }
+    } else if (digits.length === 2) {
+      const n = clamp(parseInt(digits, 10), 0, max);
+      const next = twoDigit(n);
+      setText(next); textRef.current = next;
+      if (n !== value) onCommit(n);
+      onAutoAdvance();
+    }
+  };
+
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter" && e.key !== "Escape") e.stopPropagation();
+    if (e.key === "h" || e.key === ":" || e.key === "." || e.key === " ") {
+      e.preventDefault();
+      commit(text);
+      onAutoAdvance();
+      return;
+    }
+    if (e.key === "ArrowLeft") {
+      const el = e.currentTarget;
+      if (el.selectionStart === 0 && el.selectionEnd === 0) {
+        e.preventDefault(); onArrowH(-1);
+      }
+      return;
+    }
+    if (e.key === "ArrowRight") {
+      const el = e.currentTarget;
+      if (el.selectionStart === el.value.length && el.selectionEnd === el.value.length) {
+        e.preventDefault(); onArrowH(1);
+      }
+      return;
+    }
+    if (e.key === "Tab") {
+      if (e.shiftKey) return;
+      e.preventDefault(); onArrowH(1); return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commit(text);
+      (e.currentTarget as HTMLInputElement).blur();
+    }
+  };
+
+  const onFocus = (e: FocusEvent<HTMLInputElement>) => {
+    setEditing(true);
+    e.currentTarget.select();
+  };
+  const onBlur = () => {
+    setEditing(false);
+    commit(textRef.current);
+  };
+
+  return (
+    <input
+      ref={ref}
+      type="text"
+      inputMode="numeric"
+      aria-label={ariaLabel}
+      value={text}
+      placeholder="00"
+      onChange={onChange}
+      onKeyDown={onKeyDown}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      maxLength={2}
+      className="mono w-[18px] bg-transparent p-0 text-center text-[12px] tabular-nums text-ink outline-none cursor-text caret-ink focus:bg-ink/5 rounded-[3px] placeholder:text-ink/30"
+    />
+  );
+});
+
