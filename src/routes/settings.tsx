@@ -16,6 +16,7 @@ import {
   useLibrarySetting,
 } from "@/lib/library-settings";
 import { MapSettingsPanel } from "@/components/settings/MapSettingsPanel";
+import { CoachesPanel, type CoachesPanelHandle } from "@/components/settings/CoachesPanel";
 import { Footprints, Check, Bike, Dumbbell } from "lucide-react";
 import { SESSION_TILE_DESIGNS, useSessionTileDesign, useDiarySimpleView, type SessionTileDesign, COMBINED_SESSION_TILE_DESIGNS, useCombinedSessionTileDesign, type CombinedSessionTileDesign } from "@/lib/session-tile-design";
 import { Switch } from "@/components/ui/switch";
