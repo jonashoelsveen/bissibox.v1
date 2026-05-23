@@ -118,6 +118,7 @@ export function CategoryActionsMenu({
   colorSwatches,
 }: CategoryActionsMenuProps) {
   const [open, setOpen] = useState(false);
+  const skipCloseAutoFocusRef = useRef(false);
   const topExtras = extraItems.filter((i) => i.top);
   const bottomExtras = extraItems.filter((i) => !i.top);
 
@@ -134,6 +135,11 @@ export function CategoryActionsMenu({
         collisionPadding={8}
         className="w-44 p-1"
         onPointerDown={(e) => e.stopPropagation()}
+        onCloseAutoFocus={(e) => {
+          if (!skipCloseAutoFocusRef.current) return;
+          e.preventDefault();
+          skipCloseAutoFocusRef.current = false;
+        }}
       >
         {topExtras.map((it, i) => (
           <Item
@@ -152,6 +158,7 @@ export function CategoryActionsMenu({
             icon={<Pencil className="h-3.5 w-3.5" />}
             label="Rename"
             onClick={() => {
+              skipCloseAutoFocusRef.current = true;
               onRename();
               close();
             }}
