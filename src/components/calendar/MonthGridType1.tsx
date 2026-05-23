@@ -294,7 +294,9 @@ export function MonthGridType1({
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [forceEditId, setForceEditId] = useState<string | null>(null);
+  const [lockedId, setLockedId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
+  const hoverLocked = lockedId !== null || forceEditId !== null;
   const hoverCloseTimerRef = useRef<number | null>(null);
   const cancelHoverClose = useCallback(() => {
     if (hoverCloseTimerRef.current != null) {
