@@ -516,7 +516,7 @@ export function SessionHoverMenu({
                     panelWidth={NOTE_PANEL_W}
                     closeOnEnter={false}
                     closeOnOutsideClick={false}
-                    onSave={(text) => { void leader.saveViewerNote(text); }}
+                    onSave={(text) => { void leader.saveViewerNote(text); setLeaderNoteEdit(false); }}
                     onClose={() => setLeaderNoteEdit(false)}
                     onRequestEdit={leader.canEdit ? () => setLeaderNoteEdit(true) : undefined}
                   />
