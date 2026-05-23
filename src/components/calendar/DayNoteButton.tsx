@@ -154,7 +154,7 @@ export function DayNoteButton({
   // has to click outside the active panel first.
   const dayKeyStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
   const lockId = `daynote-${effectiveMemberId}-${dayKeyStr}`;
-  void useHoverLock(); // re-render on global lock change
+  const currentLock = useHoverLock(); // re-render on global lock change
 
   const isEditing = editingMember || editingViewer;
   // Hold the global hover-lock while the panel is open OR being edited so
@@ -165,6 +165,17 @@ export function DayNoteButton({
     else releaseHoverLockIf(lockId);
     return () => releaseHoverLockIf(lockId);
   }, [open, isEditing, lockId]);
+
+  // If another panel acquires the lock while we're open/editing, close ours
+  // immediately. This ensures clicking a second day-note icon closes the
+  // first one rather than leaving two panels open.
+  useEffect(() => {
+    if (currentLock && currentLock !== lockId && (open || isEditing)) {
+      setEditingMember(false);
+      setEditingViewer(false);
+      setOpen(false);
+    }
+  }, [currentLock, lockId, open, isEditing]);
 
   const hasMemberNote = !!memberNote.trim();
   const hasViewerNote = !!viewerNote.trim();
