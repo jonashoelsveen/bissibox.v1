@@ -127,13 +127,35 @@ export function SubgroupSelectRow({
   );
 }
 
-/** Flat list of every selectable activity across all diary groups. */
-export type DiaryActivityOption = { groupId: string; subId: string; label: string };
-export const DIARY_ACTIVITIES: DiaryActivityOption[] = DIARY_GROUPS.flatMap((g) =>
-  g.children?.length
-    ? g.children.map((c) => ({ groupId: g.id, subId: c.id, label: c.label }))
-    : [{ groupId: g.id, subId: "", label: g.label }],
-);
+/**
+ * Curated flat list of selectable activities shown in every diary
+ * activity dropdown (new-session, hover-edit and details-modal) and
+ * mirrored as the default tabs in the left-rail Activities section.
+ *
+ * Each entry maps to a legacy (groupId, subId) pair so existing data
+ * keeps working without migration.
+ */
+export type DiaryActivityOption = {
+  groupId: string;
+  subId: string;
+  label: string;
+  /** Primary swatch used as the default tab color in the left rail. */
+  color: string;
+};
+export const DIARY_ACTIVITIES: DiaryActivityOption[] = [
+  { groupId: "endurance", subId: "running",  label: "Running",    color: "#ef4444" },
+  { groupId: "endurance", subId: "cycling",  label: "Cycling",    color: "#f97316" },
+  { groupId: "endurance", subId: "swimming", label: "Swimming",   color: "#eab308" },
+  { groupId: "strength",  subId: "core",     label: "Core",       color: "#22c55e" },
+  { groupId: "strength",  subId: "max",      label: "Lifting",    color: "#3b82f6" },
+  { groupId: "stretch",   subId: "",         label: "Stretching", color: "#8b5cf6" },
+];
+
+/** Resolve a flat activity option from a single `type` id (subId or groupId). */
+export function findActivityByType(type: string | null | undefined): DiaryActivityOption | undefined {
+  const t = (type || "").toLowerCase();
+  return DIARY_ACTIVITIES.find((a) => (a.subId || a.groupId) === t);
+}
 
 /**
  * Single combined activity dropdown — replaces the previous
