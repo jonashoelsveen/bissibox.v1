@@ -149,6 +149,25 @@ export function DayNoteButton({
   const anchorElRef = useRef<HTMLElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
 
+  // Shared cross-component lock: while another panel (session or day-note)
+  // owns the lock, this button must NOT open on hover or click. The user
+  // has to click outside the active panel first.
+  const lockId = `daynote-${effectiveMemberId}-${dayKey(date)}`;
+  const globalLock = useHoverLock();
+  const foreignLock = globalLock !== null && globalLock !== lockId;
+
+  const isEditing = editingMember || editingViewer;
+  useEffect(() => {
+    if (isEditing) setHoverLock(lockId);
+    else releaseHoverLockIf(lockId);
+    return () => releaseHoverLockIf(lockId);
+  }, [isEditing, lockId]);
+
+  function dayKeyLocal(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  void dayKeyLocal;
+
   const hasMemberNote = !!memberNote.trim();
   const hasViewerNote = !!viewerNote.trim();
   const hasAnyNote = hasMemberNote || hasViewerNote || leaderNotes.length > 0;
@@ -183,6 +202,8 @@ export function DayNoteButton({
     if (!btn) return;
     anchorElRef.current = btn;
     const onEnter = () => {
+      // Block hover-open while another panel is sticky.
+      if (getHoverLockSnapshot() !== null && getHoverLockSnapshot() !== lockId) return;
       cancelClose();
       setOpen(true);
       refreshRect();
@@ -190,7 +211,7 @@ export function DayNoteButton({
     btn.addEventListener("mouseenter", onEnter);
     return () => btn.removeEventListener("mouseenter", onEnter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasAnyNote, anchorSelector]);
+  }, [hasAnyNote, anchorSelector, lockId]);
 
   // Close when leaving both anchor and any open panel.
   useEffect(() => {
