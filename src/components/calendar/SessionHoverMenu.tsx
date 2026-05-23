@@ -459,7 +459,7 @@ export function SessionHoverMenu({
                   diarySub={diarySub}
                   onChange={setDiarySub}
                 />
-                {showMemberPanel && (
+                {isOwner && (
                   <NotePanel
                     inline
                     attached
@@ -470,42 +470,60 @@ export function SessionHoverMenu({
                     headerTime={memberUpdatedAt ? formatHHMM(memberUpdatedAt) : undefined}
                     headerTimeFresh={isUpdatedToday(memberUpdatedAt)}
                     initialValue={ev.sessionNote ?? ""}
-                    mode={isOwner && noteEdit ? "edit" : "preview"}
+                    mode={hasNote && !noteEdit ? "preview" : "edit"}
                     defaultBodyHeight={120}
                     panelWidth={NOTE_PANEL_W}
                     closeOnEnter={false}
                     closeOnOutsideClick={false}
                     onSave={(text) => onSaveNote(text)}
-                    onClose={() => {
-                      setNoteEdit(false);
-                    }}
-                    onRequestEdit={isOwner ? () => setNoteEdit(true) : undefined}
+                    onClose={() => setNoteEdit(false)}
+                    onRequestEdit={() => setNoteEdit(true)}
                   />
                 )}
-                {leaderPanels.map((p) => (
+                {leader.leaderNotes.map((n) => {
+                  const hasStamp = !!n.updatedAt;
+                  return (
+                    <NotePanel
+                      key={`leader-${n.authorId}`}
+                      inline
+                      attached
+                      flush
+                      tone="leader"
+                      headerLabel={hasStamp ? dayLabel(new Date(n.updatedAt)) : ""}
+                      headerName={n.authorName || undefined}
+                      headerTime={hasStamp ? formatHHMM(n.updatedAt) : undefined}
+                      headerTimeFresh={isUpdatedToday(n.updatedAt)}
+                      initialValue={n.body}
+                      mode="preview"
+                      defaultBodyHeight={120}
+                      panelWidth={NOTE_PANEL_W}
+                      closeOnEnter={false}
+                      closeOnOutsideClick={false}
+                      onSave={() => {}}
+                    />
+                  );
+                })}
+                {!isOwner && (leader.canEdit || leader.viewerNote.trim()) && (
                   <NotePanel
-                    key={p.key}
                     inline
                     attached
                     flush
                     tone="leader"
-                    headerLabel={p.header}
-                    headerName={p.headerName}
-                    headerTime={p.headerTime}
-                    headerTimeFresh={p.headerTimeFresh}
-                    initialValue={p.value}
-                    mode={p.mode}
+                    headerLabel={leader.viewerNoteUpdatedAt ? dayLabel(new Date(leader.viewerNoteUpdatedAt)) : ""}
+                    headerName={viewerName || undefined}
+                    headerTime={leader.viewerNoteUpdatedAt ? formatHHMM(leader.viewerNoteUpdatedAt) : undefined}
+                    headerTimeFresh={isUpdatedToday(leader.viewerNoteUpdatedAt)}
+                    initialValue={leader.viewerNote}
+                    mode={leader.viewerNote.trim() && !leaderNoteEdit ? "preview" : "edit"}
                     defaultBodyHeight={120}
                     panelWidth={NOTE_PANEL_W}
                     closeOnEnter={false}
                     closeOnOutsideClick={false}
-                    onSave={p.onSave}
-                    onClose={() => {
-                      setLeaderNoteEdit(false);
-                    }}
-                    onRequestEdit={p.onRequestEdit}
+                    onSave={(text) => { void leader.saveViewerNote(text); }}
+                    onClose={() => setLeaderNoteEdit(false)}
+                    onRequestEdit={leader.canEdit ? () => setLeaderNoteEdit(true) : undefined}
                   />
-                ))}
+                )}
                 <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
                   <span className="mono tabular-nums">⏎ for å lagre</span>
                   <button
