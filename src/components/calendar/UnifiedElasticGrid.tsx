@@ -2569,6 +2569,7 @@ function DiarySimpleStack({
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
+            onActiveChange={(active) => setLockedId(active ? ev.id : null)}
             onOpenDetails={() => {
               cancelClose();
               setDetailsEvId(ev.id);
