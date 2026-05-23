@@ -2111,9 +2111,10 @@ function WeekEventsOverlay({
                 data-ghost-event={isGhost ? "1" : undefined}
                 onMouseEnter={(e) => {
                   if (isGhost || appKind !== "diary") return;
+                  if (hoverLocked && (lockedId ?? forceEditId) !== ev.id) return;
                   cancelClose();
                   const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                  setHoverId(ev.id);
+                  safeSetHoverId(ev.id);
                   setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
                 }}
                 onMouseLeave={(e) => {
