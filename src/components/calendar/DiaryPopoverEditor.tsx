@@ -482,14 +482,15 @@ function DurationInput({
 
   return (
     <div className="flex flex-1 items-center gap-1">
-      {!hasValue ? (
-        <span
+      {!hasValue && (
+        <button
+          type="button"
           onClick={() => requestAnimationFrame(() => { hRef.current?.focus(); hRef.current?.select(); })}
-          className="cursor-text text-[12px] text-muted-foreground/60"
+          className="absolute left-9 cursor-text bg-transparent text-[12px] text-muted-foreground/60 outline-none"
         >
           f.eks. 1h 30min
-        </span>
-      ) : null}
+        </button>
+      )}
       <input
         ref={hRef}
         type="text"
