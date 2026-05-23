@@ -21,7 +21,6 @@ import { useAuth } from "@/lib/auth";
 import { ProfileTab } from "@/components/ProfileTab";
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
-import { ProfileMenuButton } from "@/components/ProfileMenuButton";
 import { ProfileSwitcherBar } from "@/components/ProfileSwitcherBar";
 import { HomeIcon } from "@/components/HomeIcon";
 import { useAuthTransition, useSignInModalOpen } from "@/lib/auth-transition";
