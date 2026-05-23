@@ -257,6 +257,8 @@ export function DiaryPopoverEditor({
             <NotePanel
               inline
               attached
+              flush
+              tone={accent}
               initialValue={sessionNote}
               mode="edit"
               defaultBodyHeight={120}
@@ -270,46 +272,25 @@ export function DiaryPopoverEditor({
           )}
 
           {/* Duration row — clock icon + auto-advance HH/MM inputs */}
-          <SideRailRow accent={accent}>
-            <Clock className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={2} />
-            <DurationInput
-              durationMin={durationMin}
-              onChange={setDurationMin}
-            />
-          </SideRailRow>
+          <DurationRow accent={accent} durationMin={durationMin} onChange={setDurationMin} />
 
           {/* Group dropdown */}
-          <SideRailRow accent={accent}>
-            <select
-              value={diaryGroup}
-              onChange={(e) => {
-                const next = e.target.value;
-                setDiaryGroup(next);
-                const ng = DIARY_GROUPS.find((g) => g.id === next);
-                setDiarySub(ng?.children?.[0]?.id ?? "");
-              }}
-              className="block flex-1 bg-transparent py-1 pr-3 text-[12px] text-ink outline-none"
-            >
-              {DIARY_GROUPS.map((g) => (
-                <option key={g.id} value={g.id}>{g.label}</option>
-              ))}
-            </select>
-          </SideRailRow>
+          <GroupSelectRow
+            accent={accent}
+            diaryGroup={diaryGroup}
+            onChange={(g, firstSub) => {
+              setDiaryGroup(g);
+              setDiarySub(firstSub);
+            }}
+          />
 
           {/* Subgroup dropdown */}
-          {hasSubs && (
-            <SideRailRow accent={accent}>
-              <select
-                value={diarySub}
-                onChange={(e) => setDiarySub(e.target.value)}
-                className="block flex-1 bg-transparent py-1 pr-3 text-[12px] text-ink outline-none"
-              >
-                {groupDef!.children!.map((c) => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
-              </select>
-            </SideRailRow>
-          )}
+          <SubgroupSelectRow
+            accent={accent}
+            diaryGroup={diaryGroup}
+            diarySub={diarySub}
+            onChange={setDiarySub}
+          />
 
           {/* Footer */}
           <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
