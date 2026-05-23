@@ -289,33 +289,19 @@ function EntityGroup({
   }, [open, storageKey]);
   const items = useMemo(() => ADMIN_SIDENAV_CATEGORIES, []);
   return (
-    <div className="mt-1 flex flex-col">
-      <div className="group flex w-full items-center gap-1.5 rounded-md px-3 py-1.5 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80 hover:bg-secondary/60">
+    <div className="flex flex-col">
+      <div className="group flex w-full items-center gap-1.5 rounded-md px-3 py-2 text-sm transition hover:bg-secondary/60">
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="flex min-w-0 flex-1 items-center gap-1.5"
           aria-expanded={open}
+          aria-label={open ? "Collapse" : "Expand"}
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-ink"
         >
           <ChevronRight
-            className={`h-3 w-3 shrink-0 transition-transform ${open ? "rotate-90" : ""}`}
+            className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-90" : ""}`}
           />
-          <span className="min-w-0 flex-1 truncate text-left">{entity.name}</span>
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleAll();
-          }}
-          aria-label={allHidden ? "Vis alle" : "Skjul alle"}
-          className="grid h-5 w-5 shrink-0 place-items-center rounded hover:bg-secondary"
-        >
-          {allHidden ? (
-            <EyeOff className="h-3 w-3 text-muted-foreground/70" />
-          ) : (
-            <Eye className="h-3 w-3 text-muted-foreground/60" />
-          )}
+          <span className="min-w-0 flex-1 truncate font-medium">{entity.name}</span>
         </button>
       </div>
       <AnimatePresence initial={false}>
