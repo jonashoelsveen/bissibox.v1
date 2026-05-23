@@ -97,6 +97,7 @@ export type Database = {
           hidden: boolean
           id: string
           is_default: boolean
+          kind: string
           name: string
           pinned: boolean
           sort_order: number
@@ -111,6 +112,7 @@ export type Database = {
           hidden?: boolean
           id?: string
           is_default?: boolean
+          kind?: string
           name: string
           pinned?: boolean
           sort_order?: number
@@ -125,6 +127,7 @@ export type Database = {
           hidden?: boolean
           id?: string
           is_default?: boolean
+          kind?: string
           name?: string
           pinned?: boolean
           sort_order?: number

@@ -2,9 +2,11 @@ import { useMemo, useState } from "react";
 import { BookOpen, CalendarDays } from "lucide-react";
 import { MiniCalendar, type DateRange } from "@/components/calendar/MiniCalendar";
 import { YearCalendarView } from "@/components/calendar/YearCalendarView";
+import { DiaryActivitiesSection } from "@/components/calendar/DiaryActivitiesSection";
 import type { ViewMode } from "@/components/calendar/UnifiedElasticGrid";
 import type { CategoryKey } from "@/components/calendar/CalendarSideNav";
 import { useViewerRole } from "@/hooks/useViewerRole";
+
 
 export type MemberSubTab = "calendar" | "diary";
 
@@ -80,7 +82,23 @@ export function MemberWorkspace({ userId, name }: Props) {
                     viewMode={viewMode}
                   />
                 </div>
+
+                {subTab === "diary" && (
+                  <div className="flex flex-col gap-1 pb-4">
+                    <DiaryActivitiesSection
+                      title="Activities"
+                      canEdit={false}
+                      kind="diary_activity"
+                    />
+                    <DiaryActivitiesSection
+                      title="Strava activities"
+                      canEdit={false}
+                      kind="diary_strava"
+                    />
+                  </div>
+                )}
               </nav>
+
             </div>
             <div className="mac-panel-fade pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg" />
           </div>
