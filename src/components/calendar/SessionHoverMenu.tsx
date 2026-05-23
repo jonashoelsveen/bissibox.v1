@@ -11,15 +11,23 @@
  * - Delete opens a confirm dialog.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { StickyNote, Pencil, Trash2 } from "lucide-react";
 import { NotePanel, isUpdatedToday, useMemberFirstName } from "./DayNoteButton";
 import type { CalendarEvent } from "./yearStore";
-import { fromISOLocal } from "./dateUtils";
+import { fromISOLocal, toISOLocal, setHM } from "./dateUtils";
 import { useDiarySessionNote } from "@/hooks/useDiarySessionNote";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { CAT_TRAINING_COLOR } from "./MonthGridType1";
+import { colorForActivity } from "@/lib/activity-colors";
+import {
+  DIARY_GROUPS,
+  DurationRow,
+  GroupSelectRow,
+  SubgroupSelectRow,
+} from "./DiaryEditFields";
 
 function dayLabel(date: Date): string {
   return `${String(date.getDate()).padStart(2, "0")}.${String(
