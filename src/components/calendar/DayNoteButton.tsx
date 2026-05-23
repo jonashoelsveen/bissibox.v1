@@ -31,7 +31,7 @@ import { useDiaryDayNote, type AuthoredNote } from "@/hooks/useDiaryDayNote";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import type { ViewerRole } from "@/hooks/useViewerRole";
-import { setHoverLock, releaseHoverLockIf, useHoverLock } from "./hoverLock";
+import { setHoverLock, releaseHoverLockIf, useHoverLock, getHoverLock } from "./hoverLock";
 
 interface DayNoteButtonProps {
   calId: string;
