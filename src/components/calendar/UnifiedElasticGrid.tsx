@@ -2508,7 +2508,7 @@ function DiarySimpleStack({
             list={list}
             tileDesign={tileDesign}
             unit={unit}
-            activeId={lockedId ?? forceEditId}
+            activeSessionId={lockedId ?? forceEditId}
             onEventClick={(ev, anchor) => {
               cancelClose();
               if (viewerRole === "owner") {
