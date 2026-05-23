@@ -79,28 +79,56 @@ export function useDiarySessionNote(
       if (!canAnnotate(role)) return;
       if (role === "owner") return; // owner uses event.sessionNote
       const trimmed = text.trim();
-      if (!trimmed) {
-        await supabase
-          .from("diary_session_notes")
-          .delete()
-          .eq("event_id", eventId)
-          .eq("author_id", viewerId)
-          .eq("kind", "leader");
-      } else {
-        await supabase.from("diary_session_notes").upsert(
-          {
-            event_id: eventId,
-            member_id: memberId,
-            author_id: viewerId,
-            body: text,
-            kind: "leader",
-          },
-          { onConflict: "event_id,author_id,kind" },
-        );
+      const optimisticUpdatedAt = new Date().toISOString();
+
+      setState((current) => {
+        const otherRows = current.rows.filter((row) => row.author_id !== viewerId);
+
+        if (!trimmed) {
+          return { ...current, rows: otherRows };
+        }
+
+        return {
+          ...current,
+          rows: [
+            ...otherRows,
+            {
+              author_id: viewerId,
+              body: text,
+              kind: "leader",
+              updated_at: optimisticUpdatedAt,
+            },
+          ],
+        };
+      });
+
+      try {
+        if (!trimmed) {
+          await supabase
+            .from("diary_session_notes")
+            .delete()
+            .eq("event_id", eventId)
+            .eq("author_id", viewerId)
+            .eq("kind", "leader");
+        } else {
+          await supabase.from("diary_session_notes").upsert(
+            {
+              event_id: eventId,
+              member_id: memberId,
+              author_id: viewerId,
+              body: text,
+              kind: "leader",
+            },
+            { onConflict: "event_id,author_id,kind" },
+          );
+        }
+
+        window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: { eventId } }));
+      } catch {
+        void reload();
       }
-      window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: { eventId } }));
     },
-    [eventId, memberId, viewerId, role],
+    [eventId, memberId, viewerId, role, reload],
   );
 
   const isOwner = role === "owner";
