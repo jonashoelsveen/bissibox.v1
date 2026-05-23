@@ -285,7 +285,7 @@ export function SessionHoverMenu({
       onSave: () => {},
     });
   }
-  const showLeaderPanels = menuVisible && leaderPanels.length > 0;
+  const showLeaderPanels = isOwner && menuVisible && leaderPanels.length > 0;
   const showAnyPanel = showMemberPanel || showLeaderPanels;
   const menuW = showAnyPanel ? NOTE_PANEL_W : compactW;
 
