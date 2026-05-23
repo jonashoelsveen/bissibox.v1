@@ -1977,6 +1977,7 @@ function WeekEventsOverlay({
   const [unit] = useDistanceUnit();
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [forceEditId, setForceEditId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
   const closeTimerRef = useRef<number | null>(null);
   // Mark prop as used to silence ts noUnused warnings; behavior unchanged.
@@ -1990,10 +1991,11 @@ function WeekEventsOverlay({
   const scheduleClose = useCallback(() => {
     cancelClose();
     closeTimerRef.current = window.setTimeout(() => {
+      if (forceEditId) return; // keep menu open while in edit mode
       setHoverId(null);
       setHoverRect(null);
     }, 180);
-  }, [cancelClose]);
+  }, [cancelClose, forceEditId]);
 
 
   const [drag, setDrag] = useState<{
@@ -2130,6 +2132,18 @@ function WeekEventsOverlay({
                   if (isGhost) return;
                   if (appKind === "diary") {
                     e.stopPropagation();
+                    if (drag?.moved) return;
+                    if (viewerRole === "owner") {
+                      cancelClose();
+                      const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      setHoverId(ev.id);
+                      setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+                      setForceEditId(ev.id);
+                    } else {
+                      setDetailsEvId(ev.id);
+                      setHoverId(null);
+                      setHoverRect(null);
+                    }
                     return;
                   }
                   if (drag?.moved) return;
@@ -2324,6 +2338,7 @@ function WeekEventsOverlay({
             blockRect={hoverRect}
             rowHeight={ROW_HEIGHT}
             visible={hoverId === ev.id}
+            defaultEditMode={forceEditId === ev.id}
             memberId={memberId}
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
@@ -2333,16 +2348,19 @@ function WeekEventsOverlay({
               setDetailsEvId(ev.id);
               setHoverId(null);
               setHoverRect(null);
+              setForceEditId(null);
             }}
             onForceClose={() => {
               cancelClose();
               setHoverId(null);
               setHoverRect(null);
+              setForceEditId(null);
             }}
             onDelete={() => {
               cancelClose();
               setHoverId(null);
               setHoverRect(null);
+              setForceEditId(null);
               onDeleteEvent?.(ev.id);
             }}
             onSaveNote={(note) =>
@@ -2471,15 +2489,20 @@ function DiarySimpleStack({
             list={list}
             tileDesign={tileDesign}
             unit={unit}
-            onEventClick={(ev, _anchor) => {
+            onEventClick={(ev, anchor) => {
               cancelClose();
-              // Clicking a session — owner or viewer — opens the centered
-              // SessionDetailsModal. The modal handles read-only vs editable
-              // based on viewerRole internally.
-              setDetailsEvId(ev.id);
-              setHoverId(null);
-              setHoverRect(null);
-              setForceEditId(null);
+              if (viewerRole === "owner") {
+                // Owner click extends the hover menu into edit mode in-place.
+                const r = anchor.getBoundingClientRect();
+                setHoverId(ev.id);
+                setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+                setForceEditId(ev.id);
+              } else {
+                setDetailsEvId(ev.id);
+                setHoverId(null);
+                setHoverRect(null);
+                setForceEditId(null);
+              }
               void onEventClick;
             }}
             onHoverChange={(id, rect) => {
