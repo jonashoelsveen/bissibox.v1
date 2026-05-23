@@ -2471,6 +2471,14 @@ function DiarySimpleStack({
             unit={unit}
             onEventClick={(ev, anchor) => {
               cancelClose();
+              // Group leaders / followers cannot edit — clicking opens the
+              // session details modal instead of the inline edit panel.
+              if (viewerRole !== "owner") {
+                setDetailsEvId(ev.id);
+                setHoverId(null);
+                setHoverRect(null);
+                return;
+              }
               const r = anchor.getBoundingClientRect();
               setHoverId(ev.id);
               setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
