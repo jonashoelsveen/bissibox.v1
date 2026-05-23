@@ -394,12 +394,22 @@ export function SessionDetailsModal({
                   )
                 )}
                 {tab === "note" && (
-                  <NoteTabBody
-                    title={value.title}
-                    note={value.sessionNote ?? ""}
-                    onNote={(n) => !readOnly && set("sessionNote", n)}
-                    readOnly={readOnly}
-                  />
+                  readOnly && memberId && eventId && viewerRole && viewerRole !== "owner" ? (
+                    <SplitNoteTabBody
+                      title={value.title}
+                      ownerNote={value.sessionNote ?? ""}
+                      eventId={eventId}
+                      memberId={memberId}
+                      viewerRole={viewerRole}
+                    />
+                  ) : (
+                    <NoteTabBody
+                      title={value.title}
+                      note={value.sessionNote ?? ""}
+                      onNote={(n) => !readOnly && set("sessionNote", n)}
+                      readOnly={readOnly}
+                    />
+                  )
                 )}
               </div>
             </>
