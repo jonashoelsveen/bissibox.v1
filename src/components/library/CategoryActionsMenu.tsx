@@ -36,6 +36,10 @@ export type CategoryActionsMenuProps = {
   onColorChange: (color: ColorValue) => void;
   extraItems?: CategoryExtraItem[];
   allowColor?: boolean;
+  /** When false the Custom (hue/sat) panel is hidden — only the swatches show. */
+  allowCustomColor?: boolean;
+  /** Optional override for the swatch palette (defaults to STANDARD_COLORS). */
+  colorSwatches?: ColorValue[];
 };
 
 // 9 standard colors (3x3 grid)
@@ -50,6 +54,10 @@ export const STANDARD_COLORS: ColorValue[] = [
   "#ec4899",
   "#64748b",
 ];
+
+/** 8-swatch palette (no neutral gray) used by diary activity tabs. */
+export const STANDARD_COLORS_8: ColorValue[] = STANDARD_COLORS.slice(0, 8);
+
 
 // ---- color math ----
 function hsl2hex(h: number, s = 1, l = 0.5): string {
