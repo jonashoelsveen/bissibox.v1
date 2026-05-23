@@ -18,7 +18,7 @@ const ENTITY_LABEL: Record<Entity["entity_type"], string> = {
   cooperation: "Cooperation",
 };
 
-export function ProfileMenuButton() {
+export function ProfileMenuButton({ hideChangeProfile = false }: { hideChangeProfile?: boolean } = {}) {
   const { user, activeEntityId, setActiveEntity, signOut } = useAuth();
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement | null>(null);
