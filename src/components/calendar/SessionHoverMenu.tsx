@@ -330,10 +330,7 @@ export function SessionHoverMenu({
             onMouseEnter={onMenuEnter}
             onMouseLeave={() => { if (!sticky) onMenuLeave?.(); }}
             onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isOwner && !editMode) setEditMode(true);
-            }}
+            onClick={(e) => e.stopPropagation()}
           >
             {stackBelow && (
               <span
