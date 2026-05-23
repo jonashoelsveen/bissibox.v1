@@ -293,6 +293,7 @@ export function MonthGridType1({
   // ───────────────────── Diary hover menu (mirrors week view) ──────────────
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [forceEditId, setForceEditId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
   const hoverCloseTimerRef = useRef<number | null>(null);
   const cancelHoverClose = useCallback(() => {
@@ -304,10 +305,11 @@ export function MonthGridType1({
   const scheduleHoverClose = useCallback(() => {
     cancelHoverClose();
     hoverCloseTimerRef.current = window.setTimeout(() => {
+      if (forceEditId) return;
       setHoverId(null);
       setHoverRect(null);
     }, 180);
-  }, [cancelHoverClose]);
+  }, [cancelHoverClose, forceEditId]);
 
   // ───────────────────────── Popover (add/edit) ─────────────────────────
 
@@ -1023,6 +1025,12 @@ export function MonthGridType1({
                               }
                               if (it.kind === "legacy") {
                                 openItemEditor(pos, it.idx, it.raw, e.currentTarget as HTMLElement);
+                              } else if (appKind === "diary" && viewerRole === "owner") {
+                                cancelHoverClose();
+                                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                setHoverId(it.event.id);
+                                setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+                                setForceEditId(it.event.id);
                               } else {
                                 openEventEditor(pos, it.event, e.currentTarget as HTMLElement);
                               }
@@ -1428,6 +1436,7 @@ export function MonthGridType1({
               visible={hoverId === ev.id}
               memberId={memberId}
               viewerRole={viewerRole}
+              defaultEditMode={forceEditId === ev.id}
               onMenuEnter={cancelHoverClose}
               onMenuLeave={scheduleHoverClose}
               onOpenDetails={() => {
@@ -1435,16 +1444,19 @@ export function MonthGridType1({
                 setDetailsEvId(ev.id);
                 setHoverId(null);
                 setHoverRect(null);
+                setForceEditId(null);
               }}
               onForceClose={() => {
                 cancelHoverClose();
                 setHoverId(null);
                 setHoverRect(null);
+                setForceEditId(null);
               }}
               onDelete={() => {
                 cancelHoverClose();
                 setHoverId(null);
                 setHoverRect(null);
+                setForceEditId(null);
                 onDeleteEvent?.(ev.id);
               }}
               onSaveNote={(note) =>

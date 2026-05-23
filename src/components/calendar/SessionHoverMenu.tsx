@@ -460,6 +460,7 @@ export function SessionHoverMenu({
                     inline
                     attached
                     flush
+                    showFooter={false}
                     tone={accent}
                     headerLabel={baseHeader}
                     headerName={baseHeaderName}
@@ -484,6 +485,7 @@ export function SessionHoverMenu({
                       inline
                       attached
                       flush
+                      showFooter={false}
                       tone="leader"
                       headerLabel={hasStamp ? dayLabel(new Date(n.updatedAt)) : ""}
                       headerName={n.authorName || undefined}
@@ -505,6 +507,7 @@ export function SessionHoverMenu({
                     inline
                     attached
                     flush
+                    showFooter={false}
                     tone="leader"
                     headerLabel={leader.viewerNoteUpdatedAt ? dayLabel(new Date(leader.viewerNoteUpdatedAt)) : ""}
                     headerName={viewerName || undefined}
