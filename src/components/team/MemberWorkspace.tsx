@@ -2,9 +2,11 @@ import { useMemo, useState } from "react";
 import { BookOpen, CalendarDays } from "lucide-react";
 import { MiniCalendar, type DateRange } from "@/components/calendar/MiniCalendar";
 import { YearCalendarView } from "@/components/calendar/YearCalendarView";
+import { DiaryActivitiesSection } from "@/components/calendar/DiaryActivitiesSection";
 import type { ViewMode } from "@/components/calendar/UnifiedElasticGrid";
 import type { CategoryKey } from "@/components/calendar/CalendarSideNav";
 import { useViewerRole } from "@/hooks/useViewerRole";
+
 
 export type MemberSubTab = "calendar" | "diary";
 
