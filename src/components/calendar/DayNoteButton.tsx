@@ -538,6 +538,7 @@ export function NotePanel({
   inline = false,
   attached = false,
   tone = "gray",
+  flush = false,
   onSave,
   onClose,
   onRequestEdit,
