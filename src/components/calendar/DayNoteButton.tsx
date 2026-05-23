@@ -508,8 +508,12 @@ export interface NotePanelProps {
   inline?: boolean;
   /** When true, this panel is stacked beneath another — drop top border + radius. */
   attached?: boolean;
-  /** Side-line tone. "gray" = member; "leader" = brand primary blue. */
-  tone?: "gray" | "leader";
+  /** Side-line tone. "gray" = member; "leader" = brand primary blue.
+   *  Pass any other string to use a custom CSS color (e.g. a hex). */
+  tone?: "gray" | "leader" | string;
+  /** When true, drop the rounded corners, side/bottom border, and shadow
+   *  so the panel visually merges into its parent container. */
+  flush?: boolean;
   onSave: (text: string) => void;
   onClose: () => void;
   onRequestEdit?: () => void;
@@ -534,6 +538,7 @@ export function NotePanel({
   inline = false,
   attached = false,
   tone = "gray",
+  flush = false,
   onSave,
   onClose,
   onRequestEdit,
@@ -662,7 +667,12 @@ export function NotePanel({
 
   // Use the raw token value: --primary is `oklch(...)` already, so it must
   // be substituted directly, not wrapped in `hsl(...)` (which yields invalid color).
-  const sideLineColor = tone === "leader" ? "var(--primary)" : "#9CA3AF";
+  const sideLineColor =
+    tone === "leader"
+      ? "var(--primary)"
+      : tone === "gray"
+        ? "#9CA3AF"
+        : tone; // custom color string (e.g. hex from session accent)
 
   const content = (
     <motion.div
@@ -693,8 +703,13 @@ export function NotePanel({
     >
       <div
         className={[
-          "relative overflow-hidden border-x border-b border-ink/15 bg-card shadow-lg rounded-b-md",
-          attached ? "" : "border-t rounded-t-md",
+          "relative overflow-hidden bg-card",
+          flush
+            ? ""
+            : [
+                "border-x border-b border-ink/15 shadow-lg rounded-b-md",
+                attached ? "" : "border-t rounded-t-md",
+              ].join(" "),
         ].join(" ")}
       >
         <span

@@ -2401,6 +2401,7 @@ function DiarySimpleStack({
   const [unit] = useDistanceUnit();
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [forceEditId, setForceEditId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
   const closeTimerRef = useRef<number | null>(null);
   const cancelClose = useCallback(() => {
@@ -2412,10 +2413,11 @@ function DiarySimpleStack({
   const scheduleClose = useCallback(() => {
     cancelClose();
     closeTimerRef.current = window.setTimeout(() => {
+      if (forceEditId) return; // keep menu open while in edit mode
       setHoverId(null);
       setHoverRect(null);
     }, 180);
-  }, [cancelClose]);
+  }, [cancelClose, forceEditId]);
 
 
   // Group events by column, sorted by sortIndex (fallback startISO).
@@ -2467,7 +2469,15 @@ function DiarySimpleStack({
             list={list}
             tileDesign={tileDesign}
             unit={unit}
-            onEventClick={onEventClick}
+            onEventClick={(ev, anchor) => {
+              cancelClose();
+              const r = anchor.getBoundingClientRect();
+              setHoverId(ev.id);
+              setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+              setForceEditId(ev.id);
+              // Suppress the legacy parent handler (which used to open the popover).
+              void onEventClick;
+            }}
             onHoverChange={(id, rect) => {
               cancelClose();
               setHoverId(id);
@@ -2511,6 +2521,7 @@ function DiarySimpleStack({
             blockRect={hoverRect}
             rowHeight={28}
             visible={hoverId === ev.id}
+            defaultEditMode={forceEditId === ev.id}
             memberId={memberId}
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
@@ -2520,16 +2531,19 @@ function DiarySimpleStack({
               setDetailsEvId(ev.id);
               setHoverId(null);
               setHoverRect(null);
+              setForceEditId(null);
             }}
             onForceClose={() => {
               cancelClose();
               setHoverId(null);
               setHoverRect(null);
+              setForceEditId(null);
             }}
             onDelete={() => {
               cancelClose();
               setHoverId(null);
               setHoverRect(null);
+              setForceEditId(null);
               onDeleteEvent?.(ev.id);
             }}
             onSaveNote={(note) =>

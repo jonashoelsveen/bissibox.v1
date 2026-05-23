@@ -11,15 +11,23 @@
  * - Delete opens a confirm dialog.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { StickyNote, Pencil, Trash2 } from "lucide-react";
 import { NotePanel, isUpdatedToday, useMemberFirstName } from "./DayNoteButton";
 import type { CalendarEvent } from "./yearStore";
-import { fromISOLocal } from "./dateUtils";
+import { fromISOLocal, toISOLocal, setHM } from "./dateUtils";
 import { useDiarySessionNote } from "@/hooks/useDiarySessionNote";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { CAT_TRAINING_COLOR } from "./MonthGridType1";
+import { colorForActivity } from "@/lib/activity-colors";
+import {
+  DIARY_GROUPS,
+  DurationRow,
+  GroupSelectRow,
+  SubgroupSelectRow,
+} from "./DiaryEditFields";
 
 function dayLabel(date: Date): string {
   return `${String(date.getDate()).padStart(2, "0")}.${String(
@@ -67,6 +75,9 @@ export interface SessionHoverMenuProps {
    *  modal's lifecycle is independent of hover state. */
   onOpenDetails: () => void;
   visible: boolean;
+  /** When true, immediately enter edit mode (used when the parent routes a
+   *  click on the session block into this menu instead of opening a modal). */
+  defaultEditMode?: boolean;
   onMenuEnter?: () => void;
   onMenuLeave?: () => void;
   onForceClose?: () => void;
@@ -83,6 +94,7 @@ export function SessionHoverMenu({
   onUpsert,
   onOpenDetails,
   visible,
+  defaultEditMode = false,
   onMenuEnter,
   onMenuLeave,
   onForceClose,
@@ -93,6 +105,66 @@ export function SessionHoverMenu({
   const [confirm, setConfirm] = useState(false);
   const [noteEdit, setNoteEdit] = useState(false);
   const [leaderNoteEdit, setLeaderNoteEdit] = useState(false);
+
+  // --- Edit mode (replaces the old DiaryPopoverEditor for existing sessions) ---
+  const [editMode, setEditMode] = useState(defaultEditMode);
+  useEffect(() => {
+    if (defaultEditMode) setEditMode(true);
+  }, [defaultEditMode, ev.id]);
+
+  // Derive initial edit-state from the event whenever it identity-changes.
+  const inferred = useMemo(() => {
+    const a = (ev.activity || "").toLowerCase();
+    if (a === "strength") return { group: "strength", sub: "max" };
+    if (a === "cycling") return { group: "endurance", sub: "cycling" };
+    if (a === "swimming") return { group: "endurance", sub: "swimming" };
+    if (a === "xcskiing") return { group: "endurance", sub: "other" };
+    if (a === "running") return { group: "endurance", sub: "running" };
+    return { group: "endurance", sub: "running" };
+  }, [ev.activity]);
+  const initialDuration = useMemo(() => {
+    if (!ev.startISO || !ev.endISO) return 0;
+    const s = new Date(ev.startISO).getTime();
+    const e = new Date(ev.endISO).getTime();
+    if (!Number.isFinite(s) || !Number.isFinite(e)) return 0;
+    return Math.max(0, Math.round((e - s) / 60000));
+  }, [ev.startISO, ev.endISO]);
+
+  const [durationMin, setDurationMin] = useState<number>(initialDuration);
+  const [diaryGroup, setDiaryGroup] = useState<string>(ev.diaryGroup ?? inferred.group);
+  const [diarySub, setDiarySub] = useState<string>(ev.diarySub ?? inferred.sub);
+  // Re-seed editing fields when switching to a different event.
+  useEffect(() => {
+    setDurationMin(initialDuration);
+    setDiaryGroup(ev.diaryGroup ?? inferred.group);
+    setDiarySub(ev.diarySub ?? inferred.sub);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ev.id]);
+
+  const groupDef = DIARY_GROUPS.find((g) => g.id === diaryGroup);
+  const hasSubs = !!groupDef?.children?.length;
+  const accent =
+    diaryGroup === "endurance" ? colorForActivity(diarySub) : CAT_TRAINING_COLOR;
+
+  const commitEdit = () => {
+    const start = fromISOLocal(ev.startISO);
+    const startMin = start.getHours() * 60 + start.getMinutes();
+    const endMin = startMin + Math.max(0, durationMin);
+    const startISO = toISOLocal(setHM(start, Math.floor(startMin / 60), startMin % 60));
+    const endISO = toISOLocal(setHM(start, Math.floor(endMin / 60), endMin % 60));
+    const trainingColor =
+      diaryGroup === "endurance" ? colorForActivity(diarySub) : CAT_TRAINING_COLOR;
+    onUpsert({
+      id: ev.id,
+      startISO,
+      endISO,
+      color: trainingColor,
+      diaryType: "training",
+      diaryGroup,
+      diarySub: hasSubs ? diarySub : undefined,
+    });
+    setEditMode(false);
+  };
 
   const hasNote = !!ev.sessionNote?.trim();
 
@@ -113,27 +185,50 @@ export function SessionHoverMenu({
     }
   }, [visible, noteEdit, confirm]);
 
-  // Lock the menu open while note edit / confirm is in flight.
-  const sticky = noteEdit || leaderNoteEdit || confirm;
+  // Lock the menu open while note edit / confirm / edit mode is in flight.
+  const sticky = noteEdit || leaderNoteEdit || confirm || editMode;
   const menuVisible = visible || sticky;
 
-  // Outside-click closes everything when the note panel is open.
+  // Outside-click closes everything when the note panel or edit mode is open.
   const menuRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (!noteEdit && !leaderNoteEdit) return;
+    if (!noteEdit && !leaderNoteEdit && !editMode) return;
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node | null;
       const inMenu = menuRef.current?.contains(t as Node);
       const inNote = (t as HTMLElement | null)?.closest('[data-note-panel="1"]');
-      if (!inMenu && !inNote) {
+      const inEditPanel = (t as HTMLElement | null)?.closest('[data-session-edit-panel="1"]');
+      if (!inMenu && !inNote && !inEditPanel) {
+        if (editMode) commitEdit();
         setNoteEdit(false);
         setLeaderNoteEdit(false);
+        setEditMode(false);
         onForceClose?.();
       }
     };
     window.addEventListener("mousedown", onDown);
     return () => window.removeEventListener("mousedown", onDown);
-  }, [noteEdit, leaderNoteEdit, onForceClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteEdit, leaderNoteEdit, editMode, onForceClose]);
+
+  // Enter to save edits, Escape to cancel.
+  useEffect(() => {
+    if (!editMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && t.tagName === "TEXTAREA") return;
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        commitEdit();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setEditMode(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editMode, durationMin, diaryGroup, diarySub]);
 
   const menuH = Math.max(28, rowHeight * 1.4);
   const ICON_W = 32;
@@ -215,6 +310,11 @@ export function SessionHoverMenu({
   // Details modal lifecycle is owned by the parent (lifted out of this menu so
   // it survives hover transitions, refetches, and menu unmounts).
 
+  // Whether the stack continues below (note panel or edit panel) — used to
+  // decide whether the menu's bottom-right/bottom-left corners stay rounded.
+  const stackBelow = showMemberPanel || showLeaderPanels || editMode;
+  const railColor = editMode ? accent : "#9CA3AF";
+
   return (
     <>
       {menuVisible && (
@@ -224,7 +324,7 @@ export function SessionHoverMenu({
             data-session-hover-menu="1"
             className={[
               "fixed z-[20] flex items-stretch gap-1 border border-hairline bg-card/95 px-1.5 shadow-md backdrop-blur transition-[width] duration-150",
-              showMemberPanel ? "rounded-t-md border-b-0" : "rounded-md",
+              stackBelow ? "rounded-t-md border-b-0" : "rounded-md",
             ].join(" ")}
             style={{ left, top, width: menuW, height: menuH }}
             onMouseEnter={onMenuEnter}
@@ -232,11 +332,11 @@ export function SessionHoverMenu({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
-            {showMemberPanel && (
+            {stackBelow && (
               <span
                 aria-hidden
                 className="pointer-events-none absolute left-0 top-0 h-full w-[3px] rounded-tl-md"
-                style={{ background: "#9CA3AF" }}
+                style={{ background: railColor }}
               />
             )}
             <TitleInput
@@ -279,7 +379,7 @@ export function SessionHoverMenu({
         )
       )}
 
-      {showAnyPanel &&
+      {(showAnyPanel || editMode) &&
         createPortal(
           <div
             data-session-note-panel="1"
@@ -293,6 +393,8 @@ export function SessionHoverMenu({
               <NotePanel
                 inline
                 attached
+                flush={editMode}
+                tone={editMode ? accent : "gray"}
                 headerLabel={baseHeader}
                 headerName={baseHeaderName}
                 headerTime={memberUpdatedAt ? formatHHMM(memberUpdatedAt) : undefined}
@@ -336,6 +438,43 @@ export function SessionHoverMenu({
                   />
                 </div>
               ))}
+            {editMode && (
+              <div
+                data-session-edit-panel="1"
+                className="overflow-hidden rounded-b-md border-x border-b border-ink/15 bg-card shadow-md"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <DurationRow accent={accent} durationMin={durationMin} onChange={setDurationMin} />
+                <GroupSelectRow
+                  accent={accent}
+                  diaryGroup={diaryGroup}
+                  onChange={(g, firstSub) => {
+                    setDiaryGroup(g);
+                    setDiarySub(firstSub);
+                  }}
+                />
+                <SubgroupSelectRow
+                  accent={accent}
+                  diaryGroup={diaryGroup}
+                  diarySub={diarySub}
+                  onChange={setDiarySub}
+                />
+                <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
+                  <span className="mono tabular-nums">⏎ for å lagre</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      commitEdit();
+                    }}
+                    className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
+                  >
+                    Lagre
+                  </button>
+                </div>
+              </div>
+            )}
           </div>,
           document.body,
         )}
