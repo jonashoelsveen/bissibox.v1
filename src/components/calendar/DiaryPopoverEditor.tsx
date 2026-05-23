@@ -178,23 +178,23 @@ export function DiaryPopoverEditor({
         onCommit(buildValue());
       }
     };
-    const onKey = (e: KeyboardEvent | globalThis.KeyboardEvent) => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
       if (showDetails) return;
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
-      } else if (e.key === "Enter" && !(e as globalThis.KeyboardEvent).shiftKey) {
-        const t = (e as globalThis.KeyboardEvent).target as HTMLElement | null;
+      } else if (e.key === "Enter" && !e.shiftKey) {
+        const t = e.target as HTMLElement | null;
         if (t && t.tagName === "TEXTAREA") return;
         e.preventDefault();
         onCommit(buildValue());
       }
     };
     window.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey as (ev: globalThis.KeyboardEvent) => void);
+    window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey as (ev: globalThis.KeyboardEvent) => void);
+      window.removeEventListener("keydown", onKey);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onCommit, onClose, showDetails]);
