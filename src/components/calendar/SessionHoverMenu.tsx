@@ -355,8 +355,14 @@ export function SessionHoverMenu({
       }
 
       const minTop = headerBottom + 2;
+      // Estimate full stack height so the panel can lift up when anchored
+      // near the bottom edge — otherwise the edit panel would clip off.
+      const stackH = menuH + panelCount * PANEL_EST_H + EDIT_EXTRA_H;
       const maxTop = Math.max(minTop, vh - 8 - menuH);
-      const desiredTop = Math.min(Math.max(rect.top, minTop), maxTop);
+      // Preferred top: aligned with the tile, but lifted so the whole stack
+      // fits above the viewport bottom when possible.
+      const bottomFitTop = Math.min(rect.top, vh - 8 - stackH);
+      const desiredTop = Math.min(Math.max(bottomFitTop, minTop), maxTop);
       // Contact-aware: keep prior top while still overlapping the tile
       // vertically AND while the tile is at least partially visible;
       // otherwise snap to desiredTop (clamped to header/bottom edge).
@@ -369,7 +375,8 @@ export function SessionHoverMenu({
         prev + menuH > rect.top - 4 &&
         prev < rect.bottom + 4 &&
         prev >= minTop &&
-        prev <= maxTop;
+        prev <= maxTop &&
+        prev + stackH <= vh - 6;
       const top = inContact ? prev! : desiredTop;
       prevTopRef.current = top;
       const maxPanelH = Math.max(120, vh - 8 - (top + menuH));
