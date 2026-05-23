@@ -81,6 +81,10 @@ export interface SessionHoverMenuProps {
   onMenuEnter?: () => void;
   onMenuLeave?: () => void;
   onForceClose?: () => void;
+  /** Fired whenever the menu becomes "sticky" (note panel open, leader note
+   *  open, edit mode, or confirm dialog). Parent uses this to lock hover
+   *  state to this event id so hovering other tiles cannot steal focus. */
+  onActiveChange?: (active: boolean) => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }
