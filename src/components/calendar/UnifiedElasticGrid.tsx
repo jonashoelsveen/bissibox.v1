@@ -2652,6 +2652,7 @@ const SIMPLE_PAD = 6;
 function SimpleColumn({
   colIdx,
   list,
+  creating = false,
   tileDesign,
   unit,
   activeSessionId,
@@ -2662,6 +2663,7 @@ function SimpleColumn({
 }: {
   colIdx: number;
   list: CalendarEvent[];
+  creating?: boolean;
   tileDesign: "split" | "stacked" | "icon";
   unit: ReturnType<typeof useDistanceUnit>[0];
   activeSessionId?: string | null;
