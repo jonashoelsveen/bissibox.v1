@@ -12,7 +12,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
-import { useYearStore, useEventStore, type CellKey } from "./yearStore";
+import { useYearStore, useEventStore, type CellKey, type CalendarEvent } from "./yearStore";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode } from "./UnifiedElasticGrid";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
