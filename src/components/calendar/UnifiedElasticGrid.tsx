@@ -1129,6 +1129,11 @@ export function UnifiedElasticGrid({
                 <DiarySimpleStack
                   events={weekEvents}
                   weekDates={weekDates}
+                  creatingColIdx={
+                    popover && !popover.eventId && !popover.isEdit
+                      ? popover.key.month
+                      : null
+                  }
                   onEventClick={(ev, anchor) => {
                     setPopover({
                       key: { year, month: 0, day: 1, session: 0 },
@@ -2425,6 +2430,7 @@ function WeekEventsOverlay({
 function DiarySimpleStack({
   events,
   weekDates,
+  creatingColIdx = null,
   onEventClick,
   onDeleteEvent,
   onUpsertSession,
@@ -2434,6 +2440,7 @@ function DiarySimpleStack({
 }: {
   events: CalendarEvent[];
   weekDates: Date[];
+  creatingColIdx?: number | null;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onDeleteEvent?: (id: string) => void;
   onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
@@ -2516,6 +2523,7 @@ function DiarySimpleStack({
           <SimpleColumn
             colIdx={colIdx}
             list={list}
+            creating={creatingColIdx === colIdx}
             tileDesign={tileDesign}
             unit={unit}
             activeSessionId={lockedId ?? forceEditId}
@@ -2644,6 +2652,7 @@ const SIMPLE_PAD = 6;
 function SimpleColumn({
   colIdx,
   list,
+  creating = false,
   tileDesign,
   unit,
   activeSessionId,
@@ -2654,6 +2663,7 @@ function SimpleColumn({
 }: {
   colIdx: number;
   list: CalendarEvent[];
+  creating?: boolean;
   tileDesign: "split" | "stacked" | "icon";
   unit: ReturnType<typeof useDistanceUnit>[0];
   activeSessionId?: string | null;
@@ -2719,6 +2729,13 @@ function SimpleColumn({
                 onHoverEnd={onHoverEnd}
               />
             ))}
+            {creating && (
+              <div
+                aria-hidden
+                className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
+                style={{ height: SIMPLE_TILE_H }}
+              />
+            )}
           </div>
         </SortableContext>
         <DragOverlay dropAnimation={{ duration: 160, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
