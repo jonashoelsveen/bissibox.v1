@@ -2779,11 +2779,13 @@ function SimpleTileBody({
   tileDesign,
   unit,
   dragging = false,
+  isActive = false,
 }: {
   ev: CalendarEvent;
   tileDesign: "split" | "stacked" | "icon";
   unit: ReturnType<typeof useDistanceUnit>[0];
   dragging?: boolean;
+  isActive?: boolean;
 }) {
   const accent = ev.color ?? "hsl(var(--primary))";
   const bg = ev.color ? `color-mix(in srgb, ${ev.color} 18%, white)` : "hsl(var(--primary) / 0.15)";
