@@ -400,10 +400,16 @@ export function SessionHoverMenu({
                 attached
                 flush={editMode}
                 tone={editMode ? accent : "gray"}
-                headerLabel={baseHeader}
-                headerName={baseHeaderName}
-                headerTime={memberUpdatedAt ? formatHHMM(memberUpdatedAt) : undefined}
-                headerTimeFresh={isUpdatedToday(memberUpdatedAt)}
+                headerLabel={ownerEditDivider ? undefined : baseHeader}
+                headerName={ownerEditDivider ? undefined : baseHeaderName}
+                headerTime={
+                  ownerEditDivider
+                    ? undefined
+                    : memberUpdatedAt
+                      ? formatHHMM(memberUpdatedAt)
+                      : undefined
+                }
+                headerTimeFresh={ownerEditDivider ? undefined : isUpdatedToday(memberUpdatedAt)}
                 initialValue={ev.sessionNote ?? ""}
                 mode={isOwner && noteEdit ? "edit" : "preview"}
                 defaultBodyHeight={140}
