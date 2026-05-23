@@ -268,7 +268,7 @@ export function SessionHoverMenu({
       headerTimeFresh: isUpdatedToday(leader.viewerNoteUpdatedAt),
       value: leader.viewerNote,
       mode: leaderNoteEdit && leader.canEdit ? "edit" : "preview",
-      onSave: (text) => { void leader.saveViewerNote(text); },
+      onSave: (text) => { void leader.saveViewerNote(text); setLeaderNoteEdit(false); },
       onRequestEdit: leader.canEdit ? () => setLeaderNoteEdit(true) : undefined,
     });
   }
@@ -516,7 +516,7 @@ export function SessionHoverMenu({
                     panelWidth={NOTE_PANEL_W}
                     closeOnEnter={false}
                     closeOnOutsideClick={false}
-                    onSave={(text) => { void leader.saveViewerNote(text); }}
+                    onSave={(text) => { void leader.saveViewerNote(text); setLeaderNoteEdit(false); }}
                     onClose={() => setLeaderNoteEdit(false)}
                     onRequestEdit={leader.canEdit ? () => setLeaderNoteEdit(true) : undefined}
                   />
