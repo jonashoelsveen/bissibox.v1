@@ -25,8 +25,7 @@ import { colorForActivity } from "@/lib/activity-colors";
 import {
   DIARY_GROUPS,
   DurationRow,
-  GroupSelectRow,
-  SubgroupSelectRow,
+  ActivitySelectRow,
 } from "./DiaryEditFields";
 import { setHoverLock, releaseHoverLockIf } from "./hoverLock";
 
