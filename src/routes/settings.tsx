@@ -97,6 +97,7 @@ type Tab =
   | "calendar"
   | "diary"
   | "library"
+  | "coaches"
   | "connectors"
   | "system"
   | "appearance"
