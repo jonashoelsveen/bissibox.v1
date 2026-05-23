@@ -894,6 +894,7 @@ export function UnifiedElasticGrid({
           tabIndex={0}
         >
           <div
+            data-grid-header="1"
             className="grid flex-none"
             style={{
               gridTemplateColumns,
