@@ -18,7 +18,7 @@
  * Session Details modal (opened via the pencil icon).
  */
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pencil, Clock, Trash2, StickyNote } from "lucide-react";
 import type { CalendarEvent } from "./yearStore";
 import { CAT_TRAINING_COLOR } from "./MonthGridType1";
