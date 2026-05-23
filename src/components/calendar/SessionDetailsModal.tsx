@@ -15,6 +15,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
 import { X, Plus, MapPin, StickyNote, Info, Paperclip, Pencil, Check, Lock, Activity, Trash2 } from "lucide-react";
 import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
+import { useDiarySessionNote } from "@/hooks/useDiarySessionNote";
 import { useLibrarySetting, diaryAutosyncKey } from "@/lib/library-settings";
 import { StravaMapPanel } from "./StravaMapPanel";
 import { colorForActivity } from "@/lib/activity-colors";
@@ -88,6 +89,9 @@ export function SessionDetailsModal({
   strava,
   date,
   readOnly = false,
+  memberId,
+  viewerRole,
+  eventId,
 }: {
   isEdit: boolean;
   value: SessionDetailsValue;
@@ -103,6 +107,9 @@ export function SessionDetailsModal({
   } | null;
   date?: Date;
   readOnly?: boolean;
+  memberId?: string;
+  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
+  eventId?: string;
 }) {
   const [tab, setTab] = useState<Tab>("about");
   const [autosync] = useLibrarySetting<boolean>(diaryAutosyncKey("global"), false);
@@ -198,15 +205,13 @@ export function SessionDetailsModal({
               )}
             </div>
             <div className="flex items-center gap-2">
-              {!readOnly && (
-                <button
-                  type="button"
-                  onClick={requestClose}
-                  className="whitespace-nowrap rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary/80 hover:text-ink"
-                >
-                  Cancel
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={requestClose}
+                className="whitespace-nowrap rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary/80 hover:text-ink"
+              >
+                Cancel
+              </button>
               {!readOnly && (
                 <button
                   type="button"
@@ -390,12 +395,22 @@ export function SessionDetailsModal({
                   )
                 )}
                 {tab === "note" && (
-                  <NoteTabBody
-                    title={value.title}
-                    note={value.sessionNote ?? ""}
-                    onNote={(n) => !readOnly && set("sessionNote", n)}
-                    readOnly={readOnly}
-                  />
+                  readOnly && memberId && eventId && viewerRole && viewerRole !== "owner" ? (
+                    <SplitNoteTabBody
+                      title={value.title}
+                      ownerNote={value.sessionNote ?? ""}
+                      eventId={eventId}
+                      memberId={memberId}
+                      viewerRole={viewerRole}
+                    />
+                  ) : (
+                    <NoteTabBody
+                      title={value.title}
+                      note={value.sessionNote ?? ""}
+                      onNote={(n) => !readOnly && set("sessionNote", n)}
+                      readOnly={readOnly}
+                    />
+                  )
                 )}
               </div>
             </>
@@ -859,6 +874,77 @@ function NoteBody({
             readOnly={readOnly}
             placeholder="Write your note here…"
             className="flex-1 resize-none border-0 bg-transparent text-base leading-relaxed text-ink outline-none placeholder:text-muted-foreground/60"
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* --------------------------- Split note tab body ---------------------------
+ * Leader / active-follower view: owner note on the left (read-only),
+ * viewer's editable leader note (with attach button) on the right.
+ * Each panel has its own scrollbar.
+ * --------------------------------------------------------------------------*/
+function SplitNoteTabBody({
+  title,
+  ownerNote,
+  eventId,
+  memberId,
+  viewerRole,
+}: {
+  title: string;
+  ownerNote: string;
+  eventId: string;
+  memberId: string;
+  viewerRole: import("@/hooks/useViewerRole").ViewerRole;
+}) {
+  const leader = useDiarySessionNote(eventId, memberId, viewerRole);
+  const [draft, setDraft] = useState(leader.viewerNote);
+  useEffect(() => { setDraft(leader.viewerNote); }, [leader.viewerNote]);
+
+  const headerLabel = (title || "Session note").toUpperCase();
+
+  return (
+    <div className="grid h-full grid-cols-2 gap-3">
+      <section className="flex min-h-0 flex-col rounded-lg border border-hairline bg-card shadow-sm">
+        <div className="flex items-center gap-2 border-b border-hairline px-4 py-2">
+          <span className="flex-1 truncate text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
+            {headerLabel}
+          </span>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          {ownerNote.trim() ? (
+            <p className="whitespace-pre-wrap text-sm text-ink">{ownerNote}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">No note from the athlete.</p>
+          )}
+        </div>
+      </section>
+
+      <section className="flex min-h-0 flex-col rounded-lg border border-hairline bg-card shadow-sm">
+        <div className="flex items-center gap-2 border-b border-hairline px-4 py-2">
+          <button
+            type="button"
+            title="Attach documents"
+            disabled={!leader.canEdit}
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-secondary hover:text-ink disabled:opacity-50"
+          >
+            <Paperclip className="h-4 w-4" />
+            <span>Attach</span>
+          </button>
+          <span className="ml-3 flex-1 truncate text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
+            Your note
+          </span>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => { if (draft !== leader.viewerNote) void leader.saveViewerNote(draft); }}
+            placeholder="Write your note…"
+            readOnly={!leader.canEdit}
+            className="block min-h-[260px] w-full resize-y rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none placeholder:text-muted-foreground/60 focus:border-primary"
           />
         </div>
       </section>

@@ -107,10 +107,12 @@ export function SessionHoverMenu({
   const [leaderNoteEdit, setLeaderNoteEdit] = useState(false);
 
   // --- Edit mode (replaces the old DiaryPopoverEditor for existing sessions) ---
-  const [editMode, setEditMode] = useState(defaultEditMode);
+  // Edit mode is owner-only. Group leaders / followers click → open details
+  // modal (handled by the parent). They never see an inline edit panel.
+  const [editMode, setEditMode] = useState(defaultEditMode && viewerRole === "owner");
   useEffect(() => {
-    if (defaultEditMode) setEditMode(true);
-  }, [defaultEditMode, ev.id]);
+    if (defaultEditMode && viewerRole === "owner") setEditMode(true);
+  }, [defaultEditMode, ev.id, viewerRole]);
 
   // Derive initial edit-state from the event whenever it identity-changes.
   const inferred = useMemo(() => {
@@ -239,7 +241,7 @@ export function SessionHoverMenu({
   void (ICON_W * iconCount + GAP + PADDING_X);
   // Member-side preview panel: shown when member has a note and menu is visible,
   // OR when the owner is editing their note.
-  const showMemberPanel = (hasNote && menuVisible) || (isOwner && noteEdit);
+  const showMemberPanel = isOwner && ((hasNote && menuVisible) || noteEdit);
 
   // Build the list of leader-side panels rendered BELOW the member panel.
   // Includes the viewer's own note (when non-owner & editable) plus every
@@ -283,7 +285,7 @@ export function SessionHoverMenu({
       onSave: () => {},
     });
   }
-  const showLeaderPanels = menuVisible && leaderPanels.length > 0;
+  const showLeaderPanels = isOwner && menuVisible && leaderPanels.length > 0;
   const showAnyPanel = showMemberPanel || showLeaderPanels;
   const menuW = showAnyPanel ? NOTE_PANEL_W : compactW;
 
@@ -348,20 +350,14 @@ export function SessionHoverMenu({
                 onUpsert({ id: ev.id, title: trimmed });
               }}
             />
-            <MenuBtn
-              label={
-                isOwner
-                  ? hasNote ? "Rediger notat" : "Legg til notat"
-                  : leader.viewerNote.trim() ? "Rediger ditt notat" : "Legg til notat"
-              }
-              accent={!isOwner ? "leader" : undefined}
-              onClick={() => {
-                if (isOwner) setNoteEdit(true);
-                else if (leader.canEdit) setLeaderNoteEdit(true);
-              }}
-            >
-              <StickyNote className="h-4 w-4" strokeWidth={2.25} />
-            </MenuBtn>
+            {isOwner && (
+              <MenuBtn
+                label={hasNote ? "Rediger notat" : "Legg til notat"}
+                onClick={() => setNoteEdit(true)}
+              >
+                <StickyNote className="h-4 w-4" strokeWidth={2.25} />
+              </MenuBtn>
+            )}
             <MenuBtn label="Detaljer" onClick={onOpenDetails}>
               <Pencil className="h-4 w-4" strokeWidth={2.25} />
             </MenuBtn>

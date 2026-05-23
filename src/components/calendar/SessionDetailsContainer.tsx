@@ -13,13 +13,23 @@ import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import type { CalendarEvent } from "./yearStore";
 import { fromISOLocal, toISOLocal, setHM } from "./dateUtils";
 
+import type { ViewerRole } from "@/hooks/useViewerRole";
+
 export interface SessionDetailsContainerProps {
   ev: CalendarEvent;
   onClose: () => void;
   onUpsert: (patch: Partial<CalendarEvent> & { id: string }) => void;
+  memberId?: string;
+  viewerRole?: ViewerRole;
 }
 
-export function SessionDetailsContainer({ ev, onClose, onUpsert }: SessionDetailsContainerProps) {
+export function SessionDetailsContainer({
+  ev,
+  onClose,
+  onUpsert,
+  memberId,
+  viewerRole = "owner",
+}: SessionDetailsContainerProps) {
   const [detailsValue, setDetailsValue] = useState<SessionDetailsValue | null>(null);
 
   useEffect(() => {
@@ -89,6 +99,10 @@ export function SessionDetailsContainer({ ev, onClose, onUpsert }: SessionDetail
     <SessionDetailsModal
       isEdit={true}
       date={fromISOLocal(ev.startISO)}
+      readOnly={viewerRole !== "owner"}
+      memberId={memberId}
+      viewerRole={viewerRole}
+      eventId={ev.id}
       strava={
         ev.summaryPolyline
           ? {
