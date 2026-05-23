@@ -1055,20 +1055,25 @@ export function MonthGridType1({
                                   ].join(" ")
 
                             }
-                            style={
-                              tall
+                            style={(() => {
+                              const evId = it.kind === "event" ? it.event.id : null;
+                              const isActive = isRealEvent && evId !== null && (lockedId ?? forceEditId) === evId;
+                              const activeFilter = isActive ? "brightness(0.9) saturate(1.15)" : undefined;
+                              return tall
                                 ? {
                                     minHeight: 44,
                                     backgroundColor: itemColor ? `${itemColor}1F` : undefined,
                                     boxShadow: itemColor ? `inset 2px 0 0 ${itemColor}` : undefined,
+                                    filter: activeFilter,
                                   }
                                 : itemColor
                                   ? {
                                       backgroundColor: `${itemColor}1F`,
                                       boxShadow: `inset 2px 0 0 ${itemColor}`,
+                                      filter: activeFilter,
                                     }
-                                  : {}
-                            }
+                                  : { filter: activeFilter };
+                            })()}
                             title={displayText}
                           >
                             {isDiaryEvent ? (() => {

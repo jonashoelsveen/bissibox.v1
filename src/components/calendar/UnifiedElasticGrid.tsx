@@ -2103,6 +2103,7 @@ function WeekEventsOverlay({
             const fg = "hsl(var(--ink, 220 13% 13%))";
             const Icon = iconForColor(ev.color);
             const isGhost = ev.id.startsWith("__ghost__:");
+            const isActive = !isGhost && (lockedId ?? forceEditId) === ev.id;
             return (
               <div
                 key={ev.id}
@@ -2164,6 +2165,7 @@ function WeekEventsOverlay({
                   onEventClick(ev, e.currentTarget as HTMLElement);
                 }}
                 className={`absolute overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
+                data-session-active={isActive ? "1" : undefined}
                 style={{
                   left: 2,
                   right: 2,
@@ -2173,6 +2175,7 @@ function WeekEventsOverlay({
                   background: bg,
                   color: fg,
                   opacity: isDragging ? 0.85 : 1,
+                  filter: isActive ? "brightness(0.9) saturate(1.15)" : undefined,
                   pointerEvents: "auto",
                 }}
                 title={ev.title}
@@ -2505,6 +2508,7 @@ function DiarySimpleStack({
             list={list}
             tileDesign={tileDesign}
             unit={unit}
+            activeSessionId={lockedId ?? forceEditId}
             onEventClick={(ev, anchor) => {
               cancelClose();
               if (viewerRole === "owner") {
@@ -2629,6 +2633,7 @@ function SimpleColumn({
   list,
   tileDesign,
   unit,
+  activeSessionId,
   onEventClick,
   onHoverChange,
   onHoverEnd,
@@ -2638,6 +2643,7 @@ function SimpleColumn({
   list: CalendarEvent[];
   tileDesign: "split" | "stacked" | "icon";
   unit: ReturnType<typeof useDistanceUnit>[0];
+  activeSessionId?: string | null;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onHoverChange: (id: string, rect: { left: number; top: number; width: number; height: number }) => void;
   onHoverEnd: () => void;
@@ -2694,6 +2700,7 @@ function SimpleColumn({
                 tileDesign={tileDesign}
                 unit={unit}
                 disabled={list.length < 2}
+                isActive={activeSessionId === ev.id}
                 onEventClick={onEventClick}
                 onHoverChange={onHoverChange}
                 onHoverEnd={onHoverEnd}
@@ -2716,6 +2723,7 @@ function SortableSimpleTile({
   tileDesign,
   unit,
   disabled,
+  isActive,
   onEventClick,
   onHoverChange,
   onHoverEnd,
@@ -2724,6 +2732,7 @@ function SortableSimpleTile({
   tileDesign: "split" | "stacked" | "icon";
   unit: ReturnType<typeof useDistanceUnit>[0];
   disabled?: boolean;
+  isActive?: boolean;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onHoverChange: (id: string, rect: { left: number; top: number; width: number; height: number }) => void;
   onHoverEnd: () => void;
@@ -2760,7 +2769,7 @@ function SortableSimpleTile({
         onEventClick(ev, e.currentTarget as HTMLElement);
       }}
     >
-      <SimpleTileBody ev={ev} tileDesign={tileDesign} unit={unit} />
+      <SimpleTileBody ev={ev} tileDesign={tileDesign} unit={unit} isActive={isActive} />
     </div>
   );
 }
@@ -2770,11 +2779,13 @@ function SimpleTileBody({
   tileDesign,
   unit,
   dragging = false,
+  isActive = false,
 }: {
   ev: CalendarEvent;
   tileDesign: "split" | "stacked" | "icon";
   unit: ReturnType<typeof useDistanceUnit>[0];
   dragging?: boolean;
+  isActive?: boolean;
 }) {
   const accent = ev.color ?? "hsl(var(--primary))";
   const bg = ev.color ? `color-mix(in srgb, ${ev.color} 18%, white)` : "hsl(var(--primary) / 0.15)";
@@ -2815,6 +2826,7 @@ function SimpleTileBody({
         height: SIMPLE_TILE_H,
         background: bg,
         color: fg,
+        filter: isActive ? "brightness(0.9) saturate(1.15)" : undefined,
       }}
       title={ev.title}
     >
