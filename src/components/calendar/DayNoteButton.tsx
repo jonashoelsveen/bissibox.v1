@@ -199,7 +199,7 @@ export function DayNoteButton({
     anchorElRef.current = btn;
     const onEnter = () => {
       // Block hover-open while another panel is sticky.
-      if (getHoverLockSnapshot() !== null && getHoverLockSnapshot() !== lockId) return;
+      if (getHoverLock() !== null && getHoverLock() !== lockId) return;
       cancelClose();
       setOpen(true);
       refreshRect();
