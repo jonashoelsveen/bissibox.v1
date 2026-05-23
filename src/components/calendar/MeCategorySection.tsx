@@ -236,7 +236,8 @@ function SortableCategoryRow(props: {
         currentColor={cat.color}
         onColorChange={props.onColorChange}
         onRename={canEdit ? props.onRename : undefined}
-        onDelete={canEdit ? props.onDelete : undefined}
+        onDelete={props.onDelete}
+
         extraItems={[
           {
             top: true,
