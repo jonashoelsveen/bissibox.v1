@@ -305,60 +305,19 @@ export function SessionHoverMenu({
   // Estimate stack height for collision-aware vertical placement.
   // Note panels are now capped (textarea is fixed-height with internal scroll),
   // so each panel is bounded. We still overestimate slightly to be safe.
-  const PANEL_EST_H = 180;
-  const EDIT_EXTRA_H = editMode ? 200 : 0; // duration + group + subgroup + footer rows
+  const PANEL_EST_H = 200;
+  const EDIT_EXTRA_H = editMode ? 260 : 0; // duration + group + subgroup + footer rows + paddings
   const panelCount = (showMemberPanel ? 1 : 0) + (showLeaderPanels ? leaderPanels.length : 0);
   const totalH = menuH + panelCount * PANEL_EST_H + EDIT_EXTRA_H;
-
-  // ─── Live anchor + header-aware positioning ──────────────────────────
-  // Track the session tile element by data-event-id so the menu can stay
-  // glued to its side as the grid scrolls, and so the menu never crosses
-  // above the column-header strip. We snap (not drift) on every frame, but
-  // keep the prior top when the tile is still in vertical contact — that
-  // way casual scrolling doesn't shift the panel, while losing-contact
-  // scrolls cause a smooth transition to the new position.
-  const gap = 4;
-  const [pos, setPos] = useState<{ left: number; top: number; maxPanelH: number; flipped: boolean } | null>(null);
-  const prevTopRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    let raf = 0;
-    let alive = true;
-    const compute = () => {
-      if (!alive) return;
-      const anchor = document.querySelector(
-        `[data-event-id="${CSS.escape(ev.id)}"]`,
-      ) as HTMLElement | null;
-      const ar = anchor?.getBoundingClientRect();
-      const rect = ar
-        ? { left: ar.left, top: ar.top, width: ar.width, height: ar.height, right: ar.right, bottom: ar.bottom }
-        : { left: blockRect.left, top: blockRect.top, width: blockRect.width, height: blockRect.height, right: blockRect.left + blockRect.width, bottom: blockRect.top + blockRect.height };
-      const vh = window.innerHeight;
-      const vw = window.innerWidth;
-      // Header floor: max bottom of any visible grid header in the viewport.
-      let headerBottom = 0;
-      document.querySelectorAll<HTMLElement>('[data-grid-header="1"]').forEach((el) => {
-        const r = el.getBoundingClientRect();
-        if (r.bottom > 0 && r.top < vh) headerBottom = Math.max(headerBottom, r.bottom);
-      });
-
-      // NOTE: We intentionally do NOT close the menu when the tile scrolls
-      // out of view. The panel stays pinned to the top header edge (tile
-      // scrolled up past header) or to the viewport bottom (tile scrolled
-      // below viewport), so the user never loses their edit context.
-
-      let left = rect.left + rect.width + gap;
-      let flipped = false;
-      if (left + NOTE_PANEL_W > vw - 8) {
-        left = Math.max(8, rect.left - NOTE_PANEL_W - gap);
-        flipped = true;
-      }
-
+...
       const minTop = headerBottom + 2;
       // Estimate full stack height so the panel can lift up when anchored
       // near the bottom edge — otherwise the edit panel would clip off.
       const stackH = menuH + panelCount * PANEL_EST_H + EDIT_EXTRA_H;
-      const maxTop = Math.max(minTop, vh - 8 - menuH);
+      // Clamp so the ENTIRE stack (menu + note/leader panels + edit fields)
+      // fits above the viewport bottom. If the stack is taller than the
+      // available vertical space, pin to minTop and rely on internal scroll.
+      const maxTop = Math.max(minTop, vh - 8 - stackH);
       // Preferred top: aligned with the tile, but lifted so the whole stack
       // fits above the viewport bottom when possible.
       const bottomFitTop = Math.min(rect.top, vh - 8 - stackH);
