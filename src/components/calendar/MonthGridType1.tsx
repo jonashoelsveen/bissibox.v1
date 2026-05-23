@@ -980,9 +980,11 @@ export function MonthGridType1({
                             data-event-id={isRealEvent ? it.event.id : undefined}
                             onMouseEnter={(e) => {
                               if (appKind !== "diary" || !isRealEvent) return;
+                              const evId = it.kind === "event" ? it.event.id : null;
+                              if (hoverLocked && evId !== (lockedId ?? forceEditId)) return;
                               cancelHoverClose();
                               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                              setHoverId(it.kind === "event" ? it.event.id : null);
+                              setHoverId(evId);
                               setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
                             }}
                             onMouseLeave={(e) => {
