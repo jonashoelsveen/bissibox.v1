@@ -264,15 +264,17 @@ function ColorsPanel({
   currentColor,
   onPick,
   customPanel,
+  swatches = STANDARD_COLORS,
 }: {
   currentColor: ColorValue;
   onPick: (hex: ColorValue) => void;
   customPanel: React.ReactNode;
+  swatches?: ColorValue[];
 }) {
   return (
     <div className="flex flex-col text-xs">
-      <div className="grid grid-cols-3 place-items-center gap-2 px-1 py-1">
-        {STANDARD_COLORS.map((hex) => {
+      <div className="grid grid-cols-4 place-items-center gap-2 px-1 py-1">
+        {swatches.map((hex) => {
           const selected = currentColor.toLowerCase() === hex.toLowerCase();
           return (
             <button
@@ -288,25 +290,30 @@ function ColorsPanel({
           );
         })}
       </div>
-      {/* Negative margins extend the divider + Custom row to the full panel width, mirroring the Delete row in the main menu */}
-      <DropdownMenuSeparator className="-mx-2 my-1" />
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger className="-mx-2 box-border h-6 min-h-6 w-[calc(100%+1rem)] cursor-pointer rounded-sm px-2 py-0 text-xs text-ink transition hover:bg-secondary focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary [&_svg]:shrink-0">
-          <Palette className="h-3.5 w-3.5" />
-          <span className="flex-1 text-left leading-none">Custom</span>
-        </DropdownMenuSubTrigger>
-        <DropdownMenuSubContent
-          sideOffset={4}
-          collisionPadding={8}
-          className="p-2"
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          {customPanel}
-        </DropdownMenuSubContent>
-      </DropdownMenuSub>
+      {customPanel ? (
+        <>
+          {/* Negative margins extend the divider + Custom row to the full panel width, mirroring the Delete row in the main menu */}
+          <DropdownMenuSeparator className="-mx-2 my-1" />
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="-mx-2 box-border h-6 min-h-6 w-[calc(100%+1rem)] cursor-pointer rounded-sm px-2 py-0 text-xs text-ink transition hover:bg-secondary focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary [&_svg]:shrink-0">
+              <Palette className="h-3.5 w-3.5" />
+              <span className="flex-1 text-left leading-none">Custom</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent
+              sideOffset={4}
+              collisionPadding={8}
+              className="p-2"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {customPanel}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        </>
+      ) : null}
     </div>
   );
 }
+
 
 // ---- Custom picker panel ----
 // HSV color: hue (0-360) selected via vertical strip, saturation+value via 2D canvas.
