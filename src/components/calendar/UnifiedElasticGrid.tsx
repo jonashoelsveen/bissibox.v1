@@ -2521,6 +2521,7 @@ function DiarySimpleStack({
               void onEventClick;
             }}
             onHoverChange={(id, rect) => {
+              if (hoverLocked && id !== (lockedId ?? forceEditId)) return;
               cancelClose();
               setHoverId(id);
               setHoverRect(rect);
