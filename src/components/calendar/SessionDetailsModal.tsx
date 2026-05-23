@@ -493,8 +493,8 @@ function AboutTab({
     onChange(list.map((a, i) => (i === idx ? { ...a, ...patch } : a)));
   };
   const add = () => {
-    const first = DIARY_GROUPS[0];
-    const sub = first.children?.[0]?.id ?? first.id;
+    const first = DIARY_ACTIVITIES[0];
+    const sub = first.subId || first.groupId;
     setAutoEditIdx(list.length);
     onChange([...list, { type: sub }]);
   };
