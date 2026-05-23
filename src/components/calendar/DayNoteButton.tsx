@@ -718,7 +718,7 @@ export function NotePanel({
           style={{ background: sideLineColor }}
         />
         {(headerLabel || headerName || headerTime) ? (
-          <div className="flex items-center justify-between gap-2 border-b border-hairline pl-4 pr-3 py-1.5">
+          <div className="flex items-center justify-between gap-2 border-t border-hairline pl-4 pr-3 py-1.5">
             <span
               className="text-[11px] font-medium uppercase tracking-[0.08em]"
               style={{
