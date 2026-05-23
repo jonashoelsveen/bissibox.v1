@@ -12,7 +12,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
-import { useYearStore, useEventStore, type CellKey } from "./yearStore";
+import { useYearStore, useEventStore, type CellKey, type CalendarEvent } from "./yearStore";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode } from "./UnifiedElasticGrid";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
@@ -173,12 +173,29 @@ function YearCalendarViewInner({
   const { events: stravaEvents } = useStravaActivities(memberId);
   const mergedEvents = useMemo(() => {
     const stravaForDiary = appKind === "diary" ? stravaEvents : [];
-    // De-duplicate: a manually-logged event with the same id (strava:<id>) takes precedence.
-    const ids = new Set(events.map((e) => e.id));
-    const stravaUnique = stravaForDiary.filter((e) => !ids.has(e.id));
+    // Merge strategy: the Strava activity is the source-of-truth for time,
+    // polyline, distance, etc. A local edit with the same id (`strava:<id>`)
+    // holds per-user overrides (title, note, group/sub, sortIndex, …).
+    // We layer the local overrides ON TOP of the Strava base, so partial
+    // patches like `{ id, title }` coming from the hover menu can never
+    // wipe out `startISO`/`endISO` or other Strava-only fields — otherwise
+    // the tile disappears from the calendar because its date becomes empty.
+    const localById = new Map(events.map((e) => [e.id, e]));
+    const stravaIds = new Set(stravaForDiary.map((e) => e.id));
+    const mergedStrava = stravaForDiary.map((s) => {
+      const local = localById.get(s.id);
+      if (!local) return s;
+      const overrides: Record<string, unknown> = {};
+      for (const k of Object.keys(local) as Array<keyof CalendarEvent>) {
+        const v = local[k];
+        if (v !== undefined && v !== null && v !== "") overrides[k as string] = v;
+      }
+      return { ...s, ...overrides, id: s.id } as CalendarEvent;
+    });
+    const localOnly = events.filter((e) => !stravaIds.has(e.id));
     const base = previewActive
-      ? [...events, ...stravaUnique, ...ghostEvents]
-      : [...events, ...stravaUnique];
+      ? [...localOnly, ...mergedStrava, ...ghostEvents]
+      : [...localOnly, ...mergedStrava];
     if (!visibleCategories) return base;
     return base.filter((e) => {
       if (e.diaryType === "training") return visibleCategories.has("ind:training");
