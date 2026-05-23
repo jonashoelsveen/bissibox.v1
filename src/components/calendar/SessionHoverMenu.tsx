@@ -75,6 +75,9 @@ export interface SessionHoverMenuProps {
    *  modal's lifecycle is independent of hover state. */
   onOpenDetails: () => void;
   visible: boolean;
+  /** When true, immediately enter edit mode (used when the parent routes a
+   *  click on the session block into this menu instead of opening a modal). */
+  defaultEditMode?: boolean;
   onMenuEnter?: () => void;
   onMenuLeave?: () => void;
   onForceClose?: () => void;
