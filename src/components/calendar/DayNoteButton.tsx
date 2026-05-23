@@ -163,11 +163,6 @@ export function DayNoteButton({
     return () => releaseHoverLockIf(lockId);
   }, [isEditing, lockId]);
 
-  function dayKeyLocal(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }
-  void dayKeyLocal;
-
   const hasMemberNote = !!memberNote.trim();
   const hasViewerNote = !!viewerNote.trim();
   const hasAnyNote = hasMemberNote || hasViewerNote || leaderNotes.length > 0;
