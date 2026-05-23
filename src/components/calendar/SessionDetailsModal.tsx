@@ -204,15 +204,13 @@ export function SessionDetailsModal({
               )}
             </div>
             <div className="flex items-center gap-2">
-              {!readOnly && (
-                <button
-                  type="button"
-                  onClick={requestClose}
-                  className="whitespace-nowrap rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary/80 hover:text-ink"
-                >
-                  Cancel
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={requestClose}
+                className="whitespace-nowrap rounded-md bg-secondary px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary/80 hover:text-ink"
+              >
+                Cancel
+              </button>
               {!readOnly && (
                 <button
                   type="button"
