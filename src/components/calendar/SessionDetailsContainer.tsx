@@ -99,6 +99,10 @@ export function SessionDetailsContainer({
     <SessionDetailsModal
       isEdit={true}
       date={fromISOLocal(ev.startISO)}
+      readOnly={viewerRole !== "owner"}
+      memberId={memberId}
+      viewerRole={viewerRole}
+      eventId={ev.id}
       strava={
         ev.summaryPolyline
           ? {
