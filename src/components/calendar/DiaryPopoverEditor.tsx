@@ -19,36 +19,22 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Pencil, Clock, Trash2, StickyNote } from "lucide-react";
+import { Pencil, Trash2, StickyNote } from "lucide-react";
 import type { CalendarEvent } from "./yearStore";
 import { CAT_TRAINING_COLOR } from "./MonthGridType1";
 import { colorForActivity } from "@/lib/activity-colors";
 import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
 import { NotePanel } from "./DayNoteButton";
+import {
+  DIARY_GROUPS,
+  DurationRow,
+  GroupSelectRow,
+  SubgroupSelectRow,
+} from "./DiaryEditFields";
+
+export { DIARY_GROUPS };
 
 export type DiaryType = "training" | "note";
-
-export const DIARY_GROUPS: { id: string; label: string; children?: { id: string; label: string }[] }[] = [
-  {
-    id: "endurance",
-    label: "Endurance",
-    children: [
-      { id: "running", label: "Running" },
-      { id: "swimming", label: "Swimming" },
-      { id: "cycling", label: "Cycling" },
-      { id: "other", label: "Other" },
-    ],
-  },
-  {
-    id: "strength",
-    label: "Strength",
-    children: [
-      { id: "core", label: "Core" },
-      { id: "max", label: "Max" },
-    ],
-  },
-  { id: "stretch", label: "Stretch" },
-];
 
 export interface DiaryPopoverValue {
   title: string;
