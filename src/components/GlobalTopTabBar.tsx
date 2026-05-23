@@ -21,7 +21,7 @@ import { useAuth } from "@/lib/auth";
 import { ProfileTab } from "@/components/ProfileTab";
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
-import { ProfileMenuButton } from "@/components/ProfileMenuButton";
+import { ProfileSwitcherBar } from "@/components/ProfileSwitcherBar";
 import { HomeIcon } from "@/components/HomeIcon";
 import { useAuthTransition, useSignInModalOpen } from "@/lib/auth-transition";
 
@@ -356,6 +356,7 @@ export function GlobalTopTabBar() {
         }
       `}</style>
       <div className="topbar-row relative z-10 flex items-end gap-1 pl-0 pr-4 md:pr-6">
+        {user && <ProfileSwitcherBar />}
         <ProfileTab />
         {user && <NavIconTabs activeKey={activeKey} stripped={stripped} />}
         {/* Page-provided slot — open notes/event tabs etc. */}
@@ -526,7 +527,6 @@ export function GlobalTopTabBar() {
           )}
         </div>
         )}
-        {user && <ProfileMenuButton />}
       </div>
     </div>
   );

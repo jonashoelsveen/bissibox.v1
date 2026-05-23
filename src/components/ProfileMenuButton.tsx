@@ -18,7 +18,10 @@ const ENTITY_LABEL: Record<Entity["entity_type"], string> = {
   cooperation: "Cooperation",
 };
 
-export function ProfileMenuButton() {
+export function ProfileMenuButton({
+  hideChangeProfile = false,
+  align = "right",
+}: { hideChangeProfile?: boolean; align?: "left" | "right" } = {}) {
   const { user, activeEntityId, setActiveEntity, signOut } = useAuth();
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement | null>(null);
@@ -163,7 +166,7 @@ export function ProfileMenuButton() {
       {open && (
         <div
           role="menu"
-          className="mac-menu absolute right-0 top-full z-[100] mt-1.5 w-64 overflow-visible rounded-lg p-1"
+          className={`mac-menu absolute ${align === "left" ? "left-0" : "right-0"} top-full z-[100] mt-1.5 w-64 overflow-visible rounded-lg p-1`}
           style={{ transition: "none" }}
         >
           <button
@@ -190,6 +193,7 @@ export function ProfileMenuButton() {
             <span className="min-w-0 flex-1 truncate">Settings</span>
           </button>
 
+          {!hideChangeProfile && (
           <div
             className="relative"
             onMouseEnter={() => setChangeHover(true)}
@@ -237,6 +241,7 @@ export function ProfileMenuButton() {
               </>
             )}
           </div>
+          )}
 
           <button
             type="button"
