@@ -139,9 +139,12 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   // Active selection: null = individual profile, otherwise the entity id.
   const isTeamMode = !!activeEntityId;
 
+  const coachesRef = useRef<CoachesPanelHandle | null>(null);
+  const [coachesDirty, setCoachesDirty] = useState(false);
+
   const isDirty = isTeamMode
     ? !!team && JSON.stringify(team) !== teamBaseline
-    : !!profile && JSON.stringify(profile) !== profileBaseline;
+    : (!!profile && JSON.stringify(profile) !== profileBaseline) || coachesDirty;
 
   useEffect(() => {
     if (!authLoading && !user) navigate({ to: "/auth" });
