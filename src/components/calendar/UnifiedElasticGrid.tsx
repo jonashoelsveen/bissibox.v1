@@ -2401,6 +2401,7 @@ function DiarySimpleStack({
   const [unit] = useDistanceUnit();
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [forceEditId, setForceEditId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
   const closeTimerRef = useRef<number | null>(null);
   const cancelClose = useCallback(() => {
@@ -2412,10 +2413,11 @@ function DiarySimpleStack({
   const scheduleClose = useCallback(() => {
     cancelClose();
     closeTimerRef.current = window.setTimeout(() => {
+      if (forceEditId) return; // keep menu open while in edit mode
       setHoverId(null);
       setHoverRect(null);
     }, 180);
-  }, [cancelClose]);
+  }, [cancelClose, forceEditId]);
 
 
   // Group events by column, sorted by sortIndex (fallback startISO).
