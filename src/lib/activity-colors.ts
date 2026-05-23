@@ -27,12 +27,14 @@ export type ActivityKind = keyof typeof ACTIVITY_COLORS;
 /** Resolve a color for a diary sub-group / activity id (e.g. "running"). */
 export function colorForActivity(activity?: string | null): string {
   const a = (activity || "").toLowerCase();
-  if (a === "running") return ACTIVITY_COLORS.running;
-  if (a === "swimming" || a === "swim") return ACTIVITY_COLORS.swimming;
-  if (a === "cycling" || a === "cycle" || a === "bike" || a === "ride") return ACTIVITY_COLORS.cycling;
+  // Curated 6 primary-color palette used in the Activities tab + dropdowns.
+  if (a === "running") return "#ef4444";
+  if (a === "cycling" || a === "cycle" || a === "bike" || a === "ride") return "#f97316";
+  if (a === "swimming" || a === "swim") return "#eab308";
+  if (a === "core" || a === "basis") return "#22c55e";
+  if (a === "max" || a === "lifting" || a === "strength" || a === "weighttraining" || a === "weight_training") return "#3b82f6";
+  if (a === "stretch" || a === "stretching") return "#8b5cf6";
   if (a === "track") return ACTIVITY_COLORS.track;
-  if (a === "strength" || a === "weighttraining" || a === "weight_training") return ACTIVITY_COLORS.strength;
-  if (a === "core" || a === "basis") return ACTIVITY_COLORS.strengthCore;
   return ACTIVITY_COLORS.else;
 }
 
