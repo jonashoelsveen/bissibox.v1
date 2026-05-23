@@ -264,6 +264,9 @@ export function DayNoteButton({
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // Claim the lock synchronously BEFORE opening so the close-on-foreign-lock
+    // effect doesn't see a stale lock owner and immediately close us.
+    setHoverLock(lockId);
     refreshRect();
     setOpen(true);
     if (isOwner) setEditingMember(true);
@@ -400,6 +403,7 @@ export function DayNoteButton({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
+              setHoverLock(lockId);
               refreshRect();
               setOpen(true);
               if (isOwner) setEditingMember(true);
@@ -424,6 +428,7 @@ export function DayNoteButton({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
+              setHoverLock(lockId);
               refreshRect();
               setOpen(true);
               if (canEdit && !isOwner) setEditingViewer(true);
