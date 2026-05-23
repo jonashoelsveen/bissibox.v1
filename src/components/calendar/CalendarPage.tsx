@@ -218,6 +218,7 @@ export function CalendarPage() {
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             visibleCategories={visibleCategories}
+            teamId={teamId}
             panelOpen={panelOpen}
           />
         </div>
