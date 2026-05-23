@@ -112,6 +112,8 @@ export interface YearCalendarViewProps {
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
   /** When the surrounding left panel is closed, the header makes room for the panel toggle icon. */
   panelOpen?: boolean;
+  /** Team scope for resolving the user's category list (defaults to personal). */
+  teamId?: string | null;
 }
 
 export function YearCalendarView(props: YearCalendarViewProps) {
