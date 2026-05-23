@@ -254,23 +254,17 @@ export function DiaryPopoverEditor({
           {/* Duration row — clock icon + auto-advance HH/MM inputs */}
           <DurationRow accent={accent} durationMin={durationMin} onChange={setDurationMin} />
 
-          {/* Group dropdown */}
-          <GroupSelectRow
-            accent={accent}
-            diaryGroup={diaryGroup}
-            onChange={(g, firstSub) => {
-              setDiaryGroup(g);
-              setDiarySub(firstSub);
-            }}
-          />
-
-          {/* Subgroup dropdown */}
-          <SubgroupSelectRow
+          {/* Combined activity dropdown (group + subgroup in one) */}
+          <ActivitySelectRow
             accent={accent}
             diaryGroup={diaryGroup}
             diarySub={diarySub}
-            onChange={setDiarySub}
+            onChange={(g, s) => {
+              setDiaryGroup(g);
+              setDiarySub(s);
+            }}
           />
+
 
           {/* Note panel — sits directly above the Save bar */}
           {showNote && (
