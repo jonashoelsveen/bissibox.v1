@@ -1991,10 +1991,11 @@ function WeekEventsOverlay({
   const scheduleClose = useCallback(() => {
     cancelClose();
     closeTimerRef.current = window.setTimeout(() => {
+      if (forceEditId) return; // keep menu open while in edit mode
       setHoverId(null);
       setHoverRect(null);
     }, 180);
-  }, [cancelClose]);
+  }, [cancelClose, forceEditId]);
 
 
   const [drag, setDrag] = useState<{
