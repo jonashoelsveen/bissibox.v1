@@ -48,6 +48,7 @@ import { SessionHoverMenu } from "./SessionHoverMenu";
 import { useHoverLock } from "./hoverLock";
 import { SessionDetailsContainer } from "./SessionDetailsContainer";
 import { TimeWheelPicker } from "./TimeWheelPicker";
+import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
 
 function activityIconFor(ev: CalendarEvent): LucideIcon {
   const k = (ev.activity || ev.diarySub || "").toLowerCase();
