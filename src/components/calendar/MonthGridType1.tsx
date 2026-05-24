@@ -720,17 +720,24 @@ export function MonthGridType1({
           clampedTop = Math.min(Math.max(clampedTop, slotTop), maxTop ?? slotTop);
           const dragMid = clampedTop + start.chipHeight / 2;
           const rel = dragMid - slotTop;
-          // Because the source chip is hidden and the remaining chips
-          // collapse upward, the neighbor at logical slot i is visually
-          // centered at slotTop + (i + 0.5) * slotH. The swap should fire
-          // when the dragged tile's midpoint crosses that visible midpoint,
-          // i.e. when rel crosses (i + 0.5) * slotH. That is exactly
-          // `Math.round(rel / slotH)`. Using `floor` shifts the threshold
-          // to the neighbor's bottom edge (too late on first swap, and the
-          // ongoing framer layout animation makes subsequent swaps feel
-          // off by half a slot in the opposite direction — the bug the
-          // user reported as "switching before the tile's mid passes").
-          insertIndex = Math.max(0, Math.min(count, Math.round(rel / slotH)));
+          // Port of week-view (dnd-kit closestCenter + verticalListSorting)
+          // threshold logic. Treat the dragged chip as still occupying its
+          // original full-array slot — the chip with original slot index
+          // `fullSlot` is centered at slotTop + (fullSlot + 0.5) * slotH.
+          // The "closest slot center" to the dragged midpoint is
+          //   fullSlot = round(rel / slotH - 0.5)
+          // and that value is also the correct insertion index into the
+          // others array (others.length === N - 1). This avoids the
+          // off-by-one that `Math.round(rel / slotH)` produced (which made
+          // neighbors swap at drag-start before the cursor moved past any
+          // midpoint), and it avoids the "swap-too-late on first drag,
+          // too-early afterwards" asymmetry of `Math.floor(rel / slotH)`.
+          // Net effect: swap fires exactly when the dragged center crosses
+          // the boundary halfway between two slots — the week-view feel.
+          insertIndex = Math.max(
+            0,
+            Math.min(count, Math.round(rel / slotH - 0.5)),
+          );
           diaryGhostTop = clampedTop;
         } else {
           insertIndex = count;
