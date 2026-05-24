@@ -1597,9 +1597,14 @@ function DayCellPair(props: DayCellPairProps) {
         const cellLabel = parsed.text;
 
         // Outlook/Motion style: soft tinted body, bright left edge accent.
-        const bg = cellColor
-          ? `color-mix(in srgb, ${cellColor} 18%, white)`
-          : undefined;
+        // When the cell is the active/clicked one, fill with the accent color
+        // and switch the label to white (Notion / iCloud style).
+        const isActiveColored = isSelected && !!cellColor;
+        const bg = isActiveColored
+          ? (cellColor as string)
+          : cellColor
+            ? `color-mix(in srgb, ${cellColor} 18%, white)`
+            : undefined;
 
         // Merge with neighbouring sessions of the same color so a multi-cell
         // session reads as one continuous block (no inner divider lines).
@@ -1637,14 +1642,16 @@ function DayCellPair(props: DayCellPairProps) {
             }}
             className={`relative flex-1 select-none text-[12px] leading-tight ${
               !isFirst && !hideTopDivider ? "border-t border-hairline/60" : ""
-            } ${(ranged || isSelected) && !mk.in ? "bg-muted-foreground/15" : ""} transition-colors`}
+            } ${(ranged || isSelected) && !mk.in && !isActiveColored ? "bg-muted-foreground/15" : ""} transition-colors`}
             style={{
               background: mk.in ? undefined : bg,
+              color: isActiveColored ? "#fff" : undefined,
               minHeight: rowHeight,
-              transition: `min-height ${DUR_MS}ms ${EASE}`,
+              transition: `min-height ${DUR_MS}ms ${EASE}, background-color 120ms ease`,
               willChange: "min-height",
             }}
           >
+
             {cellColor && (
               <span
                 className="pointer-events-none absolute left-0 top-0 bottom-0 z-[1] w-[3px]"
