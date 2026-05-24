@@ -33,7 +33,7 @@ export function CreateEntityModal({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [workEmail, setWorkEmail] = useState("");
-  const [role, setRole] = useState("Admin");
+  const [role, setRole] = useState("admin");
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
