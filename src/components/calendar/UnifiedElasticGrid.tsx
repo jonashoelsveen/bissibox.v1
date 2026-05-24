@@ -1740,7 +1740,7 @@ function DayCellPair(props: DayCellPairProps) {
                     return `${String(hh).padStart(2, "0")}:00`;
                   })()}
                 </div>
-                <div className="min-w-0 border-l border-hairline px-3 text-[13px] text-ink">
+                <div className={`min-w-0 border-l px-3 text-[13px] ${isActiveColored ? "border-white/30 text-white" : "border-hairline text-ink"}`}>
                   {isEditing ? (
                     <input
                       autoFocus
