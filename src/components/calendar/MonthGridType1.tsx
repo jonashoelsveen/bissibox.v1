@@ -1166,7 +1166,7 @@ export function MonthGridType1({
                         | { kind: "creating" }
                         | UnifiedItem;
                       const renderList: RenderItem[] = [...baseVisible];
-                      if (isTargetDay && dragSession) {
+                      if (isTargetDay && dragSession && !dragSession.landing) {
                         const insertAt = appKind === "diary"
                           ? Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex))
                           : 0;
