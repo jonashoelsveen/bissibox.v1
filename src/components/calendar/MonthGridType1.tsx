@@ -611,6 +611,7 @@ export function MonthGridType1({
     diarySlotHeight?: number;
     diaryOtherCount?: number;
     diaryChipLeft?: number;
+    diaryMaxTop?: number;
   } | null>(null);
 
   // Diary reorder confirmation state.
@@ -708,13 +709,15 @@ export function MonthGridType1({
         const count = start.diaryOtherCount ?? 0;
         const slotTop = start.diarySlotTop;
         const slotH = start.diarySlotHeight;
+        const maxTop = start.diaryMaxTop;
+        let clampedTop = e.clientY - start.offsetY;
         if (slotTop != null && slotH != null && slotH > 0) {
           // Use the dragged tile's visual midpoint rather than the raw cursor
           // position. This matches week-view sortable feel no matter where
           // inside the tile the user grabbed it, so neighbors do not switch
           // places too early when the pointer is near the tile's top edge.
-          const dragTop = e.clientY - start.offsetY;
-          const dragMid = dragTop + start.chipHeight / 2;
+          clampedTop = Math.min(Math.max(clampedTop, slotTop), maxTop ?? slotTop);
+          const dragMid = clampedTop + start.chipHeight / 2;
           const rel = dragMid - slotTop;
           // Use floor (not round) so the dragged tile only switches places
           // once its midpoint actually crosses a neighbor's midpoint. Round
@@ -724,6 +727,7 @@ export function MonthGridType1({
         } else {
           insertIndex = count;
         }
+        e = new PointerEvent(e.type, { ...e, clientX: start.x, clientY: clampedTop + start.offsetY });
       } else {
         // Hit-test the cell under the pointer.
         const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
@@ -760,6 +764,7 @@ export function MonthGridType1({
       // For diary, keep the ghost chip strictly vertical by pinning X to the
       // initial pointer X.
       const ghostX = appKind === "diary" ? start.x : e.clientX;
+      const ghostY = appKind === "diary" ? e.clientY : e.clientY;
 
       if (!active) {
         setDragSession({
@@ -772,7 +777,7 @@ export function MonthGridType1({
           targetDate,
           insertIndex,
           pointerX: ghostX,
-          pointerY: e.clientY,
+          pointerY: ghostY,
           offsetX: start.offsetX,
           offsetY: start.offsetY,
           chipWidth: start.chipWidth,
@@ -787,7 +792,7 @@ export function MonthGridType1({
                 targetDate,
                 insertIndex,
                 pointerX: ghostX,
-                pointerY: e.clientY,
+                pointerY: ghostY,
               }
             : prev,
         );
