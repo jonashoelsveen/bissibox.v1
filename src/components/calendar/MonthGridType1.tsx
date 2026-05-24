@@ -1030,10 +1030,11 @@ export function MonthGridType1({
                               return (
                                 <motion.div
                                   key={`${id}-ghost-${idx}`}
+                                  layout
                                   initial={{ opacity: 0 }}
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
-                                  transition={{ duration: 0.1 }}
+                                  transition={{ duration: 0.12, layout: { duration: 0.18, ease: [0.2, 0, 0, 1] } }}
                                 >
                                   {renderGhost()}
                                 </motion.div>
@@ -1046,6 +1047,7 @@ export function MonthGridType1({
                               return (
                                 <motion.div
                                   key={`${id}-creating-${idx}`}
+                                  layout
                                   initial={{ opacity: 0 }}
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
