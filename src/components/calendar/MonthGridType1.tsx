@@ -682,29 +682,24 @@ export function MonthGridType1({
 
       if (appKind === "diary") {
         // Diary: lock the target to the source day cell. Movement is vertical
-        // only — no cross-day drops. Insertion index is computed against the
-        // source day's chips, hit-testing by pointer Y.
+        // only — no cross-day drops. Insertion index is computed arithmetically
+        // from the pointer Y against geometry frozen at drag start, so the
+        // layout animation that slides chips into the gap cannot feed back
+        // into the index calculation (which is what caused the "jump").
         const fk = start.fromKey;
         const sourceDate = new Date(fk.year, fk.month, fk.day);
         targetDate = sourceDate;
         dayKey = makeCellId(calId, { ...fk, session: 0 });
-        const sourceCell = document.querySelector<HTMLElement>(
-          `[data-day-key="${dayKey.replace(/"/g, '\\"')}"]`,
-        );
-        const chips = sourceCell
-          ? Array.from(
-              sourceCell.querySelectorAll<HTMLElement>(
-                '[data-real-event="1"][data-event-id]',
-              ),
-            ).filter((el) => el.getAttribute("data-event-id") !== start.eventId)
-          : [];
-        insertIndex = chips.length;
-        for (let i = 0; i < chips.length; i++) {
-          const r = chips[i].getBoundingClientRect();
-          if (e.clientY < r.top + r.height / 2) {
-            insertIndex = i;
-            break;
-          }
+        const count = start.diaryOtherCount ?? 0;
+        const slotTop = start.diarySlotTop;
+        const slotH = start.diarySlotHeight;
+        if (slotTop != null && slotH != null && slotH > 0) {
+          const rel = e.clientY - slotTop;
+          // Round to nearest slot boundary so the ghost snaps between rows
+          // exactly like dnd-kit's verticalListSortingStrategy in the week view.
+          insertIndex = Math.max(0, Math.min(count, Math.round(rel / slotH)));
+        } else {
+          insertIndex = count;
         }
       } else {
         // Hit-test the cell under the pointer.
