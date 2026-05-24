@@ -610,11 +610,21 @@ export function MonthGridType1({
     diarySlotTop?: number;
     diarySlotHeight?: number;
     diaryOtherCount?: number;
+    diaryChipLeft?: number;
   } | null>(null);
 
   // Diary reorder confirmation state.
   const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
   const [stravaBlocked, setStravaBlocked] = useState(false);
+  // Delays the confirm/strava dialog by ~300ms after pointerup so the
+  // landing snap-in animation can finish first.
+  const [modalReady, setModalReady] = useState(false);
+  const modalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const landingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+    if (landingTimerRef.current) clearTimeout(landingTimerRef.current);
+  }, []);
 
 
 
