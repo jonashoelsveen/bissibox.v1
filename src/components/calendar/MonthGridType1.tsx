@@ -1005,6 +1005,21 @@ export function MonthGridType1({
                           isDiaryEvent &&
                           (monthTileDesign === "split" ||
                             monthTileDesign === "stacked");
+                        // In diary mode mirror the week-view style: the source
+                        // slot simply becomes empty space (no border, no fill).
+                        // The floating drag clone follows the cursor and the
+                        // surrounding chips smoothly slide via `layout`.
+                        if (isDiaryEvent) {
+                          return (
+                            <div
+                              key={`${id}-ghost-move`}
+                              data-role="ghost-move"
+                              aria-hidden
+                              className="pointer-events-none"
+                              style={{ minHeight: tall ? 44 : 22 }}
+                            />
+                          );
+                        }
                         return (
                           <div
                             key={`${id}-ghost-move`}
