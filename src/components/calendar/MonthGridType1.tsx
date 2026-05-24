@@ -849,12 +849,18 @@ export function MonthGridType1({
         // to the final slot using frozen geometry, so when dragSession
         // clears the real chip is already at the exact same spot — no
         // perceived jump on release.
+        const landingNode = document.querySelector<HTMLElement>(
+          `[data-event-id="${drag.eventId.replace(/"/g, '\\"')}"]`,
+        );
+        const landingRect = landingNode?.getBoundingClientRect() ?? null;
         const slotTop = start?.diarySlotTop;
         const slotH = start?.diarySlotHeight;
         const chipLeft = start?.diaryChipLeft;
-        const landing = (slotTop != null && slotH != null && chipLeft != null)
-          ? { left: chipLeft, top: slotTop + insertAt * slotH }
-          : null;
+        const landing = landingRect
+          ? { left: landingRect.left, top: landingRect.top }
+          : (slotTop != null && slotH != null && chipLeft != null)
+              ? { left: chipLeft, top: slotTop + insertAt * slotH }
+              : null;
 
         // Block reorder when any moved session is Strava-synced.
         const movedStrava = newIds.some(
@@ -875,7 +881,7 @@ export function MonthGridType1({
         if (landingTimerRef.current) clearTimeout(landingTimerRef.current);
         landingTimerRef.current = setTimeout(() => {
           setDragSession(null);
-        }, 200);
+        }, landingRect ? 180 : 200);
 
         if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
         modalTimerRef.current = setTimeout(() => {
