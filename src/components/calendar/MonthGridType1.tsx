@@ -738,9 +738,80 @@ export function MonthGridType1({
       let targetDate: Date | null = null;
       let dayKey: string | null = null;
       let insertIndex = 0;
-      let diaryGhostTop: number | null = null;
 
+      // Diary mode uses dnd-kit per-cell SortableContext for same-day reorder;
+      // this pointer flow handles only cross-day calendar drag.
       if (appKind === "diary") {
+        return;
+      }
+
+      // Hit-test the cell under the pointer.
+      const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const cell = node?.closest<HTMLElement>("[data-cell-pos]");
+      dayKey = cell?.getAttribute("data-day-key") ?? null;
+      const posStr = cell?.getAttribute("data-cell-pos") ?? null;
+      if (cell && posStr && dayKey) {
+        const [rowS, colS] = posStr.split("-");
+        const cellIdx = Number(rowS) * 7 + Number(colS);
+        const d = days[cellIdx];
+        if (d) {
+          targetDate = d.date;
+          // Compute insertion index strictly by session start time,
+          // ignoring the moved event. Earlier start = earlier slot.
+          const movedKey = Date.parse(start.originalStartISO);
+          const sorted = eventsRef
+            .filter((ev) => ev.id !== start.eventId && sameDay(fromISOLocal(ev.startISO), d.date))
+            .slice()
+            .sort((a, b) => Date.parse(a.startISO) - Date.parse(b.startISO));
+          insertIndex = sorted.length;
+          for (let i = 0; i < sorted.length; i++) {
+            const ka = Date.parse(sorted[i].startISO);
+            if (movedKey < ka) {
+              insertIndex = i;
+              break;
+            }
+          }
+        } else {
+          targetDate = null;
+        }
+      }
+
+      const ghostX = e.clientX;
+      const ghostY = e.clientY;
+
+      if (!active) {
+        setDragSession({
+          eventId: start.eventId,
+          fromKey: start.fromKey,
+          originalStartISO: start.originalStartISO,
+          originalEndISO: start.originalEndISO,
+          event: start.event,
+          targetDayKey: targetDate ? dayKey : null,
+          targetDate,
+          insertIndex,
+          pointerX: ghostX,
+          pointerY: ghostY,
+          offsetX: start.offsetX,
+          offsetY: start.offsetY,
+          chipWidth: start.chipWidth,
+          chipHeight: start.chipHeight,
+        });
+      } else {
+        setDragSession((prev) =>
+          prev
+            ? {
+                ...prev,
+                targetDayKey: targetDate ? dayKey : null,
+                targetDate,
+                insertIndex,
+                pointerX: ghostX,
+                pointerY: ghostY,
+              }
+            : prev,
+        );
+      }
+    };
+
         // Diary: lock the target to the source day cell. Movement is vertical
         // only — no cross-day drops. Insertion index is computed arithmetically
         // from the pointer Y against geometry frozen at drag start, so the
