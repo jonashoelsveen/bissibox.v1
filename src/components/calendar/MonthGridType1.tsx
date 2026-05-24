@@ -498,6 +498,12 @@ export function MonthGridType1({
     chipHeight: number;
   } | null>(null);
 
+  // Diary reorder confirmation state.
+  const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
+  const [stravaBlocked, setStravaBlocked] = useState(false);
+
+
+
 
   const moveItem = useCallback(
     (
