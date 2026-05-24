@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { COUNTRIES, COUNTRY_CALLING_CODES } from "@/lib/countries";
-import { TIMEZONES, COUNTRY_TO_TIMEZONE, LANGUAGES } from "@/lib/timezones";
+import { TIMEZONES, COUNTRY_TO_TIMEZONE, COUNTRY_TO_LANGUAGE, LANGUAGES } from "@/lib/timezones";
 
 const HELVETICA =
   '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
