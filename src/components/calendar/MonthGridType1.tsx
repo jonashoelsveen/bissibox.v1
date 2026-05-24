@@ -458,7 +458,7 @@ function DiaryMonthDndCell({
       <SortableContext items={realIds} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col" style={{ gap: 2 }}>
           {sortedEvents.map((ev, index) => (
-            <>
+            <div key={ev.id} className="contents">
               {creating && index === createAt && (
                 <div
                   aria-hidden
@@ -482,7 +482,7 @@ function DiaryMonthDndCell({
                 setHoverRect={setHoverRect}
                 setForceEditId={setForceEditId}
               />
-            </>
+            </div>
           ))}
           {ghostEvents.map((ev) => (
             <div key={ev.id} data-role="item" data-ghost-event="1">
