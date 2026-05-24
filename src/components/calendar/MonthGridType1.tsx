@@ -1073,7 +1073,7 @@ export function MonthGridType1({
                             }
                             style={(() => {
                               const evId = it.kind === "event" ? it.event.id : null;
-                              const isActive = isRealEvent && evId !== null && ((lockedId ?? forceEditId) === evId || popover?.eventId === evId);
+                              const isActive = isRealEvent && evId !== null && ((lockedId ?? forceEditId) === evId || popover?.eventId === evId || dragSession?.eventId === evId);
                               if (isActive && itemColor) {
                                 return tall
                                   ? {
@@ -1108,7 +1108,7 @@ export function MonthGridType1({
                               if (!ev) return null;
                               const ActIcon = activityIconFor(ev);
                               const accent = itemColor ?? "currentColor";
-                              const isActive = (lockedId ?? forceEditId) === ev.id || popover?.eventId === ev.id;
+                              const isActive = (lockedId ?? forceEditId) === ev.id || popover?.eventId === ev.id || dragSession?.eventId === ev.id;
 
                               const km = ev.distanceKm;
                               const distVal = km != null ? kmToUnit(km, distanceUnit) : null;
