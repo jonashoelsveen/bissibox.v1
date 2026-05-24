@@ -396,6 +396,7 @@ function DiaryMonthDndCell({
   sortedEvents,
   ghostEvents,
   creating,
+  createInsertIndex,
   tall,
   monthTileDesign,
   distanceUnit,
@@ -412,6 +413,7 @@ function DiaryMonthDndCell({
   sortedEvents: CalendarEvent[];
   ghostEvents: CalendarEvent[];
   creating: boolean;
+  createInsertIndex?: number;
   tall: boolean;
   monthTileDesign: string;
   distanceUnit: ReturnType<typeof useDistanceUnit>[0];
@@ -430,6 +432,7 @@ function DiaryMonthDndCell({
   const realIds = sortedEvents.map((e) => e.id);
   const canReorder = viewerRole === "owner" && sortedEvents.length >= 2;
   const height = tall ? 44 : 22;
+  const createAt = Math.max(0, Math.min(sortedEvents.length, createInsertIndex ?? sortedEvents.length));
 
   const handleDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id));
   const handleDragEnd = (e: DragEndEvent) => {
@@ -454,30 +457,39 @@ function DiaryMonthDndCell({
     >
       <SortableContext items={realIds} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col" style={{ gap: 2 }}>
-          {sortedEvents.map((ev) => (
-            <SortableDiaryMonthChip
-              key={ev.id}
-              ev={ev}
-              tileDesign={monthTileDesign}
-              unit={distanceUnit}
-              height={height}
-              disabled={!canReorder}
-              isActive={lockedActiveId === ev.id}
-              hoverLocked={hoverLocked}
-              lockedActiveId={lockedActiveId}
-              cancelHoverClose={cancelHoverClose}
-              scheduleHoverClose={scheduleHoverClose}
-              setHoverId={setHoverId}
-              setHoverRect={setHoverRect}
-              setForceEditId={setForceEditId}
-            />
+          {sortedEvents.map((ev, index) => (
+            <>
+              {creating && index === createAt && (
+                <div
+                  aria-hidden
+                  className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
+                  style={{ height }}
+                />
+              )}
+              <SortableDiaryMonthChip
+                key={ev.id}
+                ev={ev}
+                tileDesign={monthTileDesign}
+                unit={distanceUnit}
+                height={height}
+                disabled={!canReorder}
+                isActive={lockedActiveId === ev.id}
+                hoverLocked={hoverLocked}
+                lockedActiveId={lockedActiveId}
+                cancelHoverClose={cancelHoverClose}
+                scheduleHoverClose={scheduleHoverClose}
+                setHoverId={setHoverId}
+                setHoverRect={setHoverRect}
+                setForceEditId={setForceEditId}
+              />
+            </>
           ))}
           {ghostEvents.map((ev) => (
             <div key={ev.id} data-role="item" data-ghost-event="1">
               <DiaryMonthReorderTile ev={ev} tileDesign={monthTileDesign} unit={distanceUnit} height={height} />
             </div>
           ))}
-          {creating && (
+          {creating && createAt === sortedEvents.length && (
             <div
               aria-hidden
               className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
