@@ -598,6 +598,13 @@ export function MonthGridType1({
     offsetY: number;
     chipWidth: number;
     chipHeight: number;
+    // Diary-only: frozen geometry of the source cell captured at drag start.
+    // Used to compute insertIndex arithmetically (slot index based on pointer Y),
+    // avoiding feedback from the framer-motion layout animation that would
+    // otherwise make the index oscillate as chips slide to fill the gap.
+    diarySlotTop?: number;
+    diarySlotHeight?: number;
+    diaryOtherCount?: number;
   } | null>(null);
 
   // Diary reorder confirmation state.
