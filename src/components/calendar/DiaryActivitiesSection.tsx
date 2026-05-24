@@ -201,8 +201,12 @@ function SortableActivityRow(props: {
   });
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+    transition: isDragging ? "none" : transition,
+    zIndex: isDragging ? 50 : undefined,
+    background: isDragging ? "#ffffff" : undefined,
+    boxShadow: isDragging
+      ? "0 1px 0 rgba(0,0,0,0.04), 0 10px 24px -10px rgba(0,0,0,0.25)"
+      : undefined,
   };
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -226,9 +230,9 @@ function SortableActivityRow(props: {
         if (tgt.closest("button")) return;
         props.onToggleHidden();
       }}
-      className={`group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs transition hover:bg-secondary/60 ${
-        props.hidden ? "text-muted-foreground" : "text-ink"
-      }`}
+      className={`group flex items-center gap-2 rounded-md px-2 py-1 text-xs transition-colors hover:bg-secondary/60 ${
+        isDragging ? "cursor-grabbing" : "cursor-default"
+      } ${props.hidden ? "text-muted-foreground" : "text-ink"}`}
     >
       <span
         aria-hidden
