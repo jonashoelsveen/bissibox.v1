@@ -719,7 +719,7 @@ export function MonthGridType1({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [days, events, moveItem]);
+  }, [days, events, moveItem, appKind]);
 
 
   // ───────────────────────── Render ─────────────────────────
