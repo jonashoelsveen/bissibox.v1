@@ -33,6 +33,7 @@ function HomePage() {
   const navigate = useNavigate();
   const [signInOpen, setSignInOpen] = useState(false);
   const [signInContext, setSignInContext] = useState<SignInContext>("cloud");
+  const [createEntityOpen, setCreateEntityOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
