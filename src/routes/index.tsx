@@ -171,11 +171,34 @@ function HomePage() {
           ))}
         </div>
 
-        <div className="flex w-full justify-center pb-24 pt-10">
+        <div className="flex w-full flex-col items-center pb-24 pt-16">
+          <h2
+            className="tracking-tight text-[#1d1d1f]"
+            style={{
+              fontFamily: HELVETICA,
+              fontSize: "clamp(32px, 4.5vw, 56px)",
+              lineHeight: 1.05,
+              letterSpacing: "-0.03em",
+              fontWeight: 600,
+            }}
+          >
+            Aponna Cloud for organizations
+          </h2>
+          <p
+            className="mt-4 text-[#1d1d1f]"
+            style={{
+              fontFamily: HELVETICA,
+              fontSize: "clamp(15px, 1.2vw, 19px)",
+              fontWeight: 400,
+              opacity: 0.55,
+            }}
+          >
+            Manage your team.
+          </p>
           <button
             type="button"
             onClick={() => setCreateEntityOpen(true)}
-            className="text-white transition active:scale-[0.98]"
+            className="mt-8 text-white transition active:scale-[0.98]"
             style={{
               backgroundColor: "#1d1d1f",
               borderRadius: 14,
@@ -186,7 +209,7 @@ function HomePage() {
               letterSpacing: "-0.01em",
             }}
           >
-            Create entity
+            Register your organization
           </button>
         </div>
       </div>

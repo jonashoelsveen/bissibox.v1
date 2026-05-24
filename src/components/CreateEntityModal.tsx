@@ -37,6 +37,7 @@ export function CreateEntityModal({
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [fieldsReady, setFieldsReady] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Default timezone from country selection.
@@ -49,6 +50,9 @@ export function CreateEntityModal({
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setFieldsReady(false);
+    const t = setTimeout(() => setFieldsReady(true), 1500);
+    timers.current.push(t);
     return () => {
       timers.current.forEach(clearTimeout);
       timers.current = [];
@@ -127,8 +131,11 @@ export function CreateEntityModal({
               transformOrigin: "top center",
             }}
           >
-            <form
+            <motion.form
               onSubmit={onSubmit}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: fieldsReady ? 1 : 0 }}
+              transition={{ duration: 0.45, ease: "easeOut" }}
               className="flex min-h-0 flex-1 flex-col"
             >
               <div
@@ -281,7 +288,7 @@ export function CreateEntityModal({
                   Continue
                 </button>
               </div>
-            </form>
+            </motion.form>
           </motion.div>
         </motion.div>
       )}
