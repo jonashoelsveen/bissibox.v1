@@ -1021,6 +1021,9 @@ export function MonthGridType1({
                               if (e.button !== 0) return;
                               if (it.kind === "legacy") return;
                               if (it.event.id.startsWith("__ghost__:")) return;
+                              // Diary: only owners (the individual) can drag sessions.
+                              // Group leaders / coaches viewing someone else's diary cannot reorder.
+                              if (appKind === "diary" && viewerRole !== "owner") return;
                               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                               // Start tracking a potential drag.
                               dragStartRef.current = {
