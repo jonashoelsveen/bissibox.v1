@@ -128,6 +128,10 @@ function HomePage() {
             </button>
           </div>
         </div>
+        <CreateEntityModal
+          open={createEntityOpen}
+          onClose={() => setCreateEntityOpen(false)}
+        />
       </div>
     );
   }
