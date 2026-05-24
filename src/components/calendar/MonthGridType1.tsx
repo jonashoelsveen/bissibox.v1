@@ -1056,6 +1056,30 @@ export function MonthGridType1({
         });
       };
 
+      // Non-diary calendar: no in-flow ghost slot is rendered during drag
+      // and no `layout` mismatch exists between drop time and final chip
+      // position, so we can hand off immediately. The real chip already
+      // lives at its correct index (source on same-day, or freshly moved
+      // to the target day) — instant unmount of the floating clone shows
+      // no jump.
+      if (appKind !== "diary") {
+        if (td && !sameDayDrop) {
+          const newKey: CellKey = {
+            year: td.getFullYear(),
+            month: td.getMonth(),
+            day: td.getDate(),
+            session: 0,
+          };
+          moveItem(drag.fromKey, newKey, drag.event.title, {
+            source: "event",
+            eventId: drag.eventId,
+          });
+        }
+        setDragSession(null);
+        setPressedEventId(null);
+        return;
+      }
+
       if (!td) {
         // Dropped outside any cell — snap back to the source chip.
         snapToChip();
@@ -1379,10 +1403,16 @@ export function MonthGridType1({
                         | { kind: "creating" }
                         | UnifiedItem;
                       const renderList: RenderItem[] = [...baseVisible];
-                      if (isTargetDay && dragSession && !dragSession.landing) {
-                        const insertAt = appKind === "diary"
-                          ? Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex))
-                          : 0;
+                      // Only diary mode uses the in-flow ghost-slot preview
+                      // during drag. For non-diary calendar, the floating
+                      // clone alone provides drag feedback — inserting an
+                      // in-flow placeholder caused a visible "jump" when it
+                      // was removed after drop (real chip shifts up to its
+                      // true index). Same reasoning for the create
+                      // placeholder: appending a slot at the end that the
+                      // committed chip then jumps out of when sorted.
+                      if (isTargetDay && dragSession && !dragSession.landing && appKind === "diary") {
+                        const insertAt = Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex));
                         renderList.splice(insertAt, 0, { kind: "ghost" });
                       }
                       const isCreatingHere =
@@ -1391,7 +1421,7 @@ export function MonthGridType1({
                         popover.editIdx < 0 &&
                         popover.pos.row === pos.row &&
                         popover.pos.col === pos.col;
-                      if (isCreatingHere) {
+                      if (isCreatingHere && appKind === "diary") {
                         renderList.push({ kind: "creating" });
                       }
                       const renderVisible = renderList.slice(0, MAX_VISIBLE);
