@@ -160,14 +160,14 @@ export function DiaryPopoverEditor({
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
-      if (showDetails) return;
+      if (showDetails || confirmDelete) return;
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
         onCommit(buildValue());
       }
     };
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (showDetails) return;
+      if (showDetails || confirmDelete) return;
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
@@ -185,7 +185,7 @@ export function DiaryPopoverEditor({
       window.removeEventListener("keydown", onKey);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onCommit, onClose, showDetails]);
+  }, [onCommit, onClose, showDetails, confirmDelete]);
 
   // Positioning — same heuristic as before.
   const POPOVER_W = 280;
