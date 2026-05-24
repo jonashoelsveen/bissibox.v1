@@ -598,6 +598,13 @@ export function MonthGridType1({
     offsetY: number;
     chipWidth: number;
     chipHeight: number;
+    // Diary-only: frozen geometry of the source cell captured at drag start.
+    // Used to compute insertIndex arithmetically (slot index based on pointer Y),
+    // avoiding feedback from the framer-motion layout animation that would
+    // otherwise make the index oscillate as chips slide to fill the gap.
+    diarySlotTop?: number;
+    diarySlotHeight?: number;
+    diaryOtherCount?: number;
   } | null>(null);
 
   // Diary reorder confirmation state.
@@ -675,29 +682,24 @@ export function MonthGridType1({
 
       if (appKind === "diary") {
         // Diary: lock the target to the source day cell. Movement is vertical
-        // only — no cross-day drops. Insertion index is computed against the
-        // source day's chips, hit-testing by pointer Y.
+        // only — no cross-day drops. Insertion index is computed arithmetically
+        // from the pointer Y against geometry frozen at drag start, so the
+        // layout animation that slides chips into the gap cannot feed back
+        // into the index calculation (which is what caused the "jump").
         const fk = start.fromKey;
         const sourceDate = new Date(fk.year, fk.month, fk.day);
         targetDate = sourceDate;
         dayKey = makeCellId(calId, { ...fk, session: 0 });
-        const sourceCell = document.querySelector<HTMLElement>(
-          `[data-day-key="${dayKey.replace(/"/g, '\\"')}"]`,
-        );
-        const chips = sourceCell
-          ? Array.from(
-              sourceCell.querySelectorAll<HTMLElement>(
-                '[data-real-event="1"][data-event-id]',
-              ),
-            ).filter((el) => el.getAttribute("data-event-id") !== start.eventId)
-          : [];
-        insertIndex = chips.length;
-        for (let i = 0; i < chips.length; i++) {
-          const r = chips[i].getBoundingClientRect();
-          if (e.clientY < r.top + r.height / 2) {
-            insertIndex = i;
-            break;
-          }
+        const count = start.diaryOtherCount ?? 0;
+        const slotTop = start.diarySlotTop;
+        const slotH = start.diarySlotHeight;
+        if (slotTop != null && slotH != null && slotH > 0) {
+          const rel = e.clientY - slotTop;
+          // Round to nearest slot boundary so the ghost snaps between rows
+          // exactly like dnd-kit's verticalListSortingStrategy in the week view.
+          insertIndex = Math.max(0, Math.min(count, Math.round(rel / slotH)));
+        } else {
+          insertIndex = count;
         }
       } else {
         // Hit-test the cell under the pointer.
@@ -1147,12 +1149,12 @@ export function MonthGridType1({
                             if (it.kind === "ghost") {
                               return (
                                 <motion.div
-                                  key={`${id}-ghost-${idx}`}
+                                  key={`${id}-ghost-slot`}
                                   layout
-                                  initial={{ opacity: 0 }}
+                                  initial={false}
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
-                                  transition={{ duration: 0.12, layout: { duration: 0.18, ease: [0.2, 0, 0, 1] } }}
+                                  transition={{ layout: { duration: 0.18, ease: [0.2, 0, 0, 1] } }}
                                 >
                                   {renderGhost()}
                                 </motion.div>
@@ -1229,6 +1231,38 @@ export function MonthGridType1({
                               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                               // Start tracking a potential drag.
                               suppressClickAfterDragRef.current = false;
+                              // For diary, freeze the source-cell row geometry NOW so the
+                              // pointermove handler can compute the slot index by arithmetic
+                              // (no live DOM hit-testing while chips animate into the gap).
+                              let diarySlotTop: number | undefined;
+                              let diarySlotHeight: number | undefined;
+                              let diaryOtherCount: number | undefined;
+                              if (appKind === "diary") {
+                                const cellEl = (e.currentTarget as HTMLElement).closest<HTMLElement>("[data-day-key]");
+                                const chips = cellEl
+                                  ? Array.from(
+                                      cellEl.querySelectorAll<HTMLElement>(
+                                        '[data-real-event="1"][data-event-id]',
+                                      ),
+                                    )
+                                  : [];
+                                const others = chips.filter(
+                                  (el) => el.getAttribute("data-event-id") !== it.event.id,
+                                );
+                                diaryOtherCount = others.length;
+                                // Slot height = chip height + vertical gap between chips.
+                                // Container uses Tailwind `space-y-0.5` (2px gap).
+                                const gap = 2;
+                                diarySlotHeight = rect.height + gap;
+                                // Slot top = top of the first row in the chip list, after the
+                                // dragged chip is conceptually removed and the rest collapse.
+                                if (chips.length > 0) {
+                                  const firstTop = chips[0].getBoundingClientRect().top;
+                                  // If the dragged chip is the first one, the "new first row"
+                                  // starts where it currently does (the next chip slides up).
+                                  diarySlotTop = firstTop;
+                                }
+                              }
                               dragStartRef.current = {
                                 x: e.clientX,
                                 y: e.clientY,
@@ -1241,6 +1275,9 @@ export function MonthGridType1({
                                 offsetY: e.clientY - rect.top,
                                 chipWidth: rect.width,
                                 chipHeight: rect.height,
+                                diarySlotTop,
+                                diarySlotHeight,
+                                diaryOtherCount,
                               };
                               if (appKind !== "diary") {
                                 setPressedEventId(it.event.id);
