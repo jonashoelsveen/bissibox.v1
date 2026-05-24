@@ -701,7 +701,11 @@ export function MonthGridType1({
           const dragTop = e.clientY - start.offsetY;
           const dragMid = dragTop + start.chipHeight / 2;
           const rel = dragMid - slotTop;
-          insertIndex = Math.max(0, Math.min(count, Math.round(rel / slotH)));
+          // Use floor (not round) so the dragged tile only switches places
+          // once its midpoint actually crosses a neighbor's midpoint. Round
+          // makes the switch trigger ~1px past the slot edge which felt
+          // far too eager compared to the week-view dnd-kit behavior.
+          insertIndex = Math.max(0, Math.min(count, Math.floor(rel / slotH)));
         } else {
           insertIndex = count;
         }
