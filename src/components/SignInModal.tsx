@@ -355,22 +355,24 @@ function SignInForm(props: {
       />
       {error && <ErrorLine error={error} />}
 
-      <button
-        type="button"
-        onClick={onCreate}
-        className="block w-full text-center hover:underline"
-        style={{
-          fontFamily: HELVETICA,
-          fontSize: 13,
-          color: "#1d1d1f",
-          padding: "6px 0 2px",
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-        }}
-      >
-        Create Aponna-account
-      </button>
+      <div className="flex w-full justify-center" style={{ padding: "6px 0 2px" }}>
+        <button
+          type="button"
+          onClick={onCreate}
+          className="hover:underline"
+          style={{
+            fontFamily: HELVETICA,
+            fontSize: 13,
+            color: "#1d1d1f",
+            background: "transparent",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+          }}
+        >
+          Create Aponna-account
+        </button>
+      </div>
 
       <PrimaryButton submitting={submitting} label="Sign in" />
     </form>
