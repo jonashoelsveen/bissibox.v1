@@ -1231,6 +1231,38 @@ export function MonthGridType1({
                               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                               // Start tracking a potential drag.
                               suppressClickAfterDragRef.current = false;
+                              // For diary, freeze the source-cell row geometry NOW so the
+                              // pointermove handler can compute the slot index by arithmetic
+                              // (no live DOM hit-testing while chips animate into the gap).
+                              let diarySlotTop: number | undefined;
+                              let diarySlotHeight: number | undefined;
+                              let diaryOtherCount: number | undefined;
+                              if (appKind === "diary") {
+                                const cellEl = (e.currentTarget as HTMLElement).closest<HTMLElement>("[data-day-key]");
+                                const chips = cellEl
+                                  ? Array.from(
+                                      cellEl.querySelectorAll<HTMLElement>(
+                                        '[data-real-event="1"][data-event-id]',
+                                      ),
+                                    )
+                                  : [];
+                                const others = chips.filter(
+                                  (el) => el.getAttribute("data-event-id") !== it.event.id,
+                                );
+                                diaryOtherCount = others.length;
+                                // Slot height = chip height + vertical gap between chips.
+                                // Container uses Tailwind `space-y-0.5` (2px gap).
+                                const gap = 2;
+                                diarySlotHeight = rect.height + gap;
+                                // Slot top = top of the first row in the chip list, after the
+                                // dragged chip is conceptually removed and the rest collapse.
+                                if (chips.length > 0) {
+                                  const firstTop = chips[0].getBoundingClientRect().top;
+                                  // If the dragged chip is the first one, the "new first row"
+                                  // starts where it currently does (the next chip slides up).
+                                  diarySlotTop = firstTop;
+                                }
+                              }
                               dragStartRef.current = {
                                 x: e.clientX,
                                 y: e.clientY,
@@ -1243,6 +1275,9 @@ export function MonthGridType1({
                                 offsetY: e.clientY - rect.top,
                                 chipWidth: rect.width,
                                 chipHeight: rect.height,
+                                diarySlotTop,
+                                diarySlotHeight,
+                                diaryOtherCount,
                               };
                               if (appKind !== "diary") {
                                 setPressedEventId(it.event.id);
