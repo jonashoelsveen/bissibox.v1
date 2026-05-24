@@ -110,6 +110,7 @@ export function DiaryPopoverEditor({
 
   const [showDetails, setShowDetails] = useState(false);
   const [showNote, setShowNote] = useState(!!initialEvent?.sessionNote);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [distanceKm, setDistanceKm] = useState<number | undefined>(initialEvent?.distanceKm);
   const [paceSecPerKm] = useState<number | undefined>(initialEvent?.paceSecPerKm);
