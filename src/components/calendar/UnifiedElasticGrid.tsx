@@ -2662,6 +2662,7 @@ function DiarySimpleStack({
             viewerRole={viewerRole}
             onClose={() => setDetailsEvId(null)}
             onUpsert={(patch) => onUpsertSession?.(patch)}
+            onDelete={onDeleteEvent ? () => onDeleteEvent(ev.id) : undefined}
           />
         );
       })()}
