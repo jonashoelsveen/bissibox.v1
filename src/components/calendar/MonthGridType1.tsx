@@ -1056,6 +1056,30 @@ export function MonthGridType1({
         });
       };
 
+      // Non-diary calendar: no in-flow ghost slot is rendered during drag
+      // and no `layout` mismatch exists between drop time and final chip
+      // position, so we can hand off immediately. The real chip already
+      // lives at its correct index (source on same-day, or freshly moved
+      // to the target day) — instant unmount of the floating clone shows
+      // no jump.
+      if (appKind !== "diary") {
+        if (td && !sameDayDrop) {
+          const newKey: CellKey = {
+            year: td.getFullYear(),
+            month: td.getMonth(),
+            day: td.getDate(),
+            session: 0,
+          };
+          moveItem(drag.fromKey, newKey, drag.event.title, {
+            source: "event",
+            eventId: drag.eventId,
+          });
+        }
+        setDragSession(null);
+        setPressedEventId(null);
+        return;
+      }
+
       if (!td) {
         // Dropped outside any cell — snap back to the source chip.
         snapToChip();
