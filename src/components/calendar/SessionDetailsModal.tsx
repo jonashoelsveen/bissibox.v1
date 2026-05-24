@@ -230,29 +230,15 @@ export function SessionDetailsModal({
             </div>
           </div>
 
-          <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-            <AlertDialogContent className="z-[300]">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure you want to delete this session?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. The session and its details will be permanently removed from your diary.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => {
-                    setConfirmDelete(false);
-                    if (onDelete) onDelete();
-                    else onClose();
-                  }}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Delete session
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <ConfirmDeleteSessionDialog
+            open={confirmDelete}
+            onOpenChange={setConfirmDelete}
+            onConfirm={() => {
+              setConfirmDelete(false);
+              if (onDelete) onDelete();
+              else onClose();
+            }}
+          />
 
           <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
             <AlertDialogContent className="z-[300]">
