@@ -13,6 +13,7 @@
 
 import { MiniCalendar, type DateRange } from "./MiniCalendar";
 import { DiaryActivitiesSection } from "./DiaryActivitiesSection";
+import { DiaryStravaActivitiesSection } from "./DiaryStravaActivitiesSection";
 import type { CategoryKey } from "./CalendarSideNav";
 
 export interface DiarySideNavProps {
