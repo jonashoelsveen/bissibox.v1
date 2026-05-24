@@ -2701,6 +2701,7 @@ function SimpleColumn({
   tileDesign,
   unit,
   activeSessionId,
+  viewerRole = "owner",
   onEventClick,
   onHoverChange,
   onHoverEnd,
@@ -2712,6 +2713,7 @@ function SimpleColumn({
   tileDesign: "split" | "stacked" | "icon";
   unit: ReturnType<typeof useDistanceUnit>[0];
   activeSessionId?: string | null;
+  viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onHoverChange: (id: string, rect: { left: number; top: number; width: number; height: number }) => void;
   onHoverEnd: () => void;
@@ -2721,6 +2723,7 @@ function SimpleColumn({
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const ids = list.map((e) => e.id);
+  const canReorder = viewerRole === "owner";
 
   const handleDragEnd = (e: DragEndEvent) => {
     setActiveId(null);
@@ -2767,7 +2770,7 @@ function SimpleColumn({
                 ev={ev}
                 tileDesign={tileDesign}
                 unit={unit}
-                disabled={list.length < 2}
+                disabled={list.length < 2 || !canReorder}
                 isActive={activeSessionId === ev.id}
                 onEventClick={onEventClick}
                 onHoverChange={onHoverChange}
