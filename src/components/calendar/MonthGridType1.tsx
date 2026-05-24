@@ -1148,8 +1148,16 @@ export function MonthGridType1({
                       // computed insertion index. Combined with framer-motion
                       // `layout`, the other chips smoothly slide to make room
                       // (snap-in), matching the week-view sortable behavior.
-                      const baseVisible = (appKind === "diary" && isSourceDay && dragSession)
-                        ? visible.filter((it) => !(it.kind === "event" && it.event.id === dragSession.eventId))
+                      // Once `landing` is set (pointer released), the source
+                      // chip is re-included so it mounts at the final slot
+                      // (sorted by pendingOrder) while the floating clone
+                      // CSS-transitions to the same pixel — no jump.
+                      const hideSource = appKind === "diary"
+                        && isSourceDay
+                        && dragSession
+                        && !dragSession.landing;
+                      const baseVisible = hideSource
+                        ? visible.filter((it) => !(it.kind === "event" && it.event.id === dragSession!.eventId))
                         : visible;
 
 
