@@ -1036,6 +1036,7 @@ export function MonthGridType1({
                                 chipWidth: rect.width,
                                 chipHeight: rect.height,
                               };
+                              setPressedEventId(it.event.id);
                               // Prevent cell-level range selection mousedown.
                               e.stopPropagation();
                             }}
