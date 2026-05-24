@@ -303,6 +303,199 @@ function DiaryMonthReorderTile({
   );
 }
 
+/**
+ * SortableDiaryMonthChip — single diary event chip inside a month-view day
+ * cell. Wraps DiaryMonthReorderTile with dnd-kit `useSortable` so neighbors
+ * smoothly slide during drag (matches week-view SortableSimpleTile feel).
+ */
+function SortableDiaryMonthChip({
+  ev,
+  tileDesign,
+  unit,
+  height,
+  disabled,
+  isActive,
+  hoverLocked,
+  lockedActiveId,
+  cancelHoverClose,
+  scheduleHoverClose,
+  setHoverId,
+  setHoverRect,
+  setForceEditId,
+}: {
+  ev: CalendarEvent;
+  tileDesign: string;
+  unit: ReturnType<typeof useDistanceUnit>[0];
+  height: number;
+  disabled: boolean;
+  isActive: boolean;
+  hoverLocked: boolean;
+  lockedActiveId: string | null;
+  cancelHoverClose: () => void;
+  scheduleHoverClose: () => void;
+  setHoverId: (id: string | null) => void;
+  setHoverRect: (r: { left: number; top: number; width: number; height: number } | null) => void;
+  setForceEditId: (id: string | null) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: ev.id,
+    disabled,
+  });
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0 : 1,
+  };
+  void isActive;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      data-role="item"
+      data-real-event="1"
+      data-event-id={ev.id}
+      onMouseEnter={(e) => {
+        if (hoverLocked && ev.id !== lockedActiveId) return;
+        cancelHoverClose();
+        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setHoverId(ev.id);
+        setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+      }}
+      onMouseLeave={(e) => {
+        const related = e.relatedTarget as Node | null;
+        const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
+        if (goingIntoMenu) return;
+        scheduleHoverClose();
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (isDragging) return;
+        cancelHoverClose();
+        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setHoverId(ev.id);
+        setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+        setForceEditId(ev.id);
+      }}
+      className="cursor-pointer"
+    >
+      <DiaryMonthReorderTile ev={ev} tileDesign={tileDesign} unit={unit} height={height} />
+    </div>
+  );
+}
+
+/**
+ * DiaryMonthDndCell — wraps a diary day cell's chip list in a per-cell
+ * `<DndContext>` + `<SortableContext>` so same-day reorder uses dnd-kit
+ * (same setup as week-view's SimpleColumn). `<DragOverlay>` provides the
+ * smooth snap-in on release. A "creating" placeholder added during session
+ * logging gets the same flex+sortable slide animation as week-view.
+ */
+function DiaryMonthDndCell({
+  sortedEvents,
+  ghostEvents,
+  creating,
+  tall,
+  monthTileDesign,
+  distanceUnit,
+  viewerRole,
+  lockedActiveId,
+  hoverLocked,
+  cancelHoverClose,
+  scheduleHoverClose,
+  setHoverId,
+  setHoverRect,
+  setForceEditId,
+  onReorder,
+}: {
+  sortedEvents: CalendarEvent[];
+  ghostEvents: CalendarEvent[];
+  creating: boolean;
+  tall: boolean;
+  monthTileDesign: string;
+  distanceUnit: ReturnType<typeof useDistanceUnit>[0];
+  viewerRole: import("@/hooks/useViewerRole").ViewerRole;
+  lockedActiveId: string | null;
+  hoverLocked: boolean;
+  cancelHoverClose: () => void;
+  scheduleHoverClose: () => void;
+  setHoverId: (id: string | null) => void;
+  setHoverRect: (r: { left: number; top: number; width: number; height: number } | null) => void;
+  setForceEditId: (id: string | null) => void;
+  onReorder: (newIds: string[]) => void;
+}) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const realIds = sortedEvents.map((e) => e.id);
+  const canReorder = viewerRole === "owner" && sortedEvents.length >= 2;
+  const height = tall ? 44 : 22;
+
+  const handleDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id));
+  const handleDragEnd = (e: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldI = realIds.indexOf(String(active.id));
+    const newI = realIds.indexOf(String(over.id));
+    if (oldI < 0 || newI < 0) return;
+    onReorder(arrayMove(realIds, oldI, newI));
+  };
+  const activeEv = activeId ? sortedEvents.find((e) => e.id === activeId) ?? null : null;
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveId(null)}
+    >
+      <SortableContext items={realIds} strategy={verticalListSortingStrategy}>
+        <div className="flex flex-col" style={{ gap: 2 }}>
+          {sortedEvents.map((ev) => (
+            <SortableDiaryMonthChip
+              key={ev.id}
+              ev={ev}
+              tileDesign={monthTileDesign}
+              unit={distanceUnit}
+              height={height}
+              disabled={!canReorder}
+              isActive={lockedActiveId === ev.id}
+              hoverLocked={hoverLocked}
+              lockedActiveId={lockedActiveId}
+              cancelHoverClose={cancelHoverClose}
+              scheduleHoverClose={scheduleHoverClose}
+              setHoverId={setHoverId}
+              setHoverRect={setHoverRect}
+              setForceEditId={setForceEditId}
+            />
+          ))}
+          {ghostEvents.map((ev) => (
+            <div key={ev.id} data-role="item" data-ghost-event="1">
+              <DiaryMonthReorderTile ev={ev} tileDesign={monthTileDesign} unit={distanceUnit} height={height} />
+            </div>
+          ))}
+          {creating && (
+            <div
+              aria-hidden
+              className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
+              style={{ height }}
+            />
+          )}
+        </div>
+      </SortableContext>
+      <DragOverlay dropAnimation={{ duration: 160, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
+        {activeEv ? (
+          <DiaryMonthReorderTile ev={activeEv} tileDesign={monthTileDesign} unit={distanceUnit} height={height} dragging />
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+
 interface CellPos {
   row: number;
   col: number;
