@@ -1159,9 +1159,11 @@ export function MonthGridType1({
                                       <ActIcon className="h-6 w-6 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
                                     </div>
                                     <div
-                                      className="flex w-1/2 items-center justify-center text-ink"
+                                      className={`flex w-1/2 items-center justify-center ${isActive ? "" : "text-ink"}`}
                                       title={distLabel}
+                                      style={{ color: isActive ? "#fff" : undefined }}
                                     >
+
                                       {isStrength ? (
                                         <span
                                           className="flex items-baseline gap-1"
