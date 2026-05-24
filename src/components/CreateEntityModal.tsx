@@ -56,9 +56,9 @@ export function CreateEntityModal({
   }, [open]);
 
   const groupedTz = useMemo(() => {
-    const groups: Record<string, typeof TIMEZONES> = {};
+    const groups: Record<string, Array<typeof TIMEZONES[number]>> = {};
     for (const tz of TIMEZONES) {
-      (groups[tz.group] ||= [] as never).push(tz as never);
+      (groups[tz.group] ||= []).push(tz);
     }
     return groups;
   }, []);
