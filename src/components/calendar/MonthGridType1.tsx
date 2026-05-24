@@ -477,6 +477,10 @@ export function MonthGridType1({
   useEffect(() => {
     dragSessionRef.current = dragSession;
   }, [dragSession]);
+  // Tracks the event id currently pressed (pointer down) before drag threshold.
+  // Used so the chip keeps its "active" styling from mousedown through drag,
+  // without a flash back to the idle color.
+  const [pressedEventId, setPressedEventId] = useState<string | null>(null);
   // Mutable tracking ref used by chip onPointerDown to remember the press
   // before deciding if it's a click or a drag (>= 4px movement).
   const dragStartRef = useRef<{
