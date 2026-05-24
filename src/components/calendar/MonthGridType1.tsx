@@ -1149,12 +1149,12 @@ export function MonthGridType1({
                             if (it.kind === "ghost") {
                               return (
                                 <motion.div
-                                  key={`${id}-ghost-${idx}`}
+                                  key={`${id}-ghost-slot`}
                                   layout
-                                  initial={{ opacity: 0 }}
+                                  initial={false}
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
-                                  transition={{ duration: 0.12, layout: { duration: 0.18, ease: [0.2, 0, 0, 1] } }}
+                                  transition={{ layout: { duration: 0.18, ease: [0.2, 0, 0, 1] } }}
                                 >
                                   {renderGhost()}
                                 </motion.div>
