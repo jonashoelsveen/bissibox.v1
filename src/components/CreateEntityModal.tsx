@@ -448,6 +448,28 @@ function LabeledSelect({
   );
 }
 
+function RadioRow({
+  label, checked, onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <label className="flex items-center gap-2" style={{ cursor: "pointer" }}>
+      <input
+        type="radio"
+        checked={checked}
+        onChange={onChange}
+        style={{ accentColor: "#1d1d1f" }}
+      />
+      <span style={{ fontFamily: HELVETICA, fontSize: 13, color: "#1d1d1f" }}>
+        {label}
+      </span>
+    </label>
+  );
+}
+
 const inputStyle: React.CSSProperties = {
   fontFamily: HELVETICA,
   width: "100%",
