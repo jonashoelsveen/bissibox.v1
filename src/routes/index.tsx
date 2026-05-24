@@ -2,6 +2,7 @@ import { createFileRoute, useSearch, useNavigate } from "@tanstack/react-router"
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { SignInModal, type SignInContext } from "@/components/SignInModal";
+import { CreateEntityModal } from "@/components/CreateEntityModal";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
