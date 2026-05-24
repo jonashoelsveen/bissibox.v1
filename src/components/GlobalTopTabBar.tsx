@@ -15,6 +15,7 @@ import {
   CalendarDays,
   BookOpen,
   Home,
+  Building2,
   UserRound,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
