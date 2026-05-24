@@ -833,8 +833,12 @@ export function MonthGridType1({
   // of the already-reordered list (matches week-view UX).
   const [modalReady, setModalReady] = useState(false);
   const modalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Calendar (non-diary) cross-day drop: holds the deferred unmount of the
+  // floating clone so the CSS snap-in (`landing` transition) can play.
+  const landingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+    if (landingTimerRef.current) clearTimeout(landingTimerRef.current);
   }, []);
   const scheduleModalOpen = useCallback(() => {
     if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
