@@ -1410,18 +1410,8 @@ export function MonthGridType1({
                         | { kind: "creating" }
                         | UnifiedItem;
                       const renderList: RenderItem[] = [...baseVisible];
-                      // Only diary mode uses the in-flow ghost-slot preview
-                      // during drag. For non-diary calendar, the floating
-                      // clone alone provides drag feedback — inserting an
-                      // in-flow placeholder caused a visible "jump" when it
-                      // was removed after drop (real chip shifts up to its
-                      // true index). Same reasoning for the create
-                      // placeholder: appending a slot at the end that the
-                      // committed chip then jumps out of when sorted.
                       if (isTargetDay && dragSession && !dragSession.landing) {
-                        const insertAt = appKind === "diary"
-                          ? Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex))
-                          : 0;
+                        const insertAt = Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex));
                         renderList.splice(insertAt, 0, { kind: "ghost" });
                       }
                       const isCreatingHere =
@@ -1430,8 +1420,29 @@ export function MonthGridType1({
                         popover.editIdx < 0 &&
                         popover.pos.row === pos.row &&
                         popover.pos.col === pos.col;
-                      if (isCreatingHere && appKind === "diary") {
-                        renderList.push({ kind: "creating" });
+                      if (isCreatingHere) {
+                        const createKey = createPreviewTime
+                          ? Date.UTC(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), Math.floor(createPreviewTime.startMin / 60), createPreviewTime.startMin % 60)
+                          : Date.parse(new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), 9, 0).toISOString());
+                        const realVisibleCount = baseVisible.filter((it) => it.kind === "event").length;
+                        const createInsertAt = appKind === "diary"
+                          ? renderList.length
+                          : Math.max(
+                              0,
+                              Math.min(
+                                renderList.length,
+                                sortedDayEvents.findIndex((ev) => {
+                                  const evKey = ev.sortIndex ?? Date.parse(ev.startISO);
+                                  return createKey < evKey;
+                                }) >= 0
+                                  ? sortedDayEvents.findIndex((ev) => {
+                                      const evKey = ev.sortIndex ?? Date.parse(ev.startISO);
+                                      return createKey < evKey;
+                                    })
+                                  : realVisibleCount,
+                              ),
+                            );
+                        renderList.splice(createInsertAt, 0, { kind: "creating" });
                       }
                       const renderVisible = renderList.slice(0, MAX_VISIBLE);
 
