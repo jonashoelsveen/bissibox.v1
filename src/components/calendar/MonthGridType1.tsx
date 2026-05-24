@@ -1379,10 +1379,16 @@ export function MonthGridType1({
                         | { kind: "creating" }
                         | UnifiedItem;
                       const renderList: RenderItem[] = [...baseVisible];
-                      if (isTargetDay && dragSession && !dragSession.landing) {
-                        const insertAt = appKind === "diary"
-                          ? Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex))
-                          : 0;
+                      // Only diary mode uses the in-flow ghost-slot preview
+                      // during drag. For non-diary calendar, the floating
+                      // clone alone provides drag feedback — inserting an
+                      // in-flow placeholder caused a visible "jump" when it
+                      // was removed after drop (real chip shifts up to its
+                      // true index). Same reasoning for the create
+                      // placeholder: appending a slot at the end that the
+                      // committed chip then jumps out of when sorted.
+                      if (isTargetDay && dragSession && !dragSession.landing && appKind === "diary") {
+                        const insertAt = Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex));
                         renderList.splice(insertAt, 0, { kind: "ghost" });
                       }
                       const isCreatingHere =
@@ -1391,7 +1397,7 @@ export function MonthGridType1({
                         popover.editIdx < 0 &&
                         popover.pos.row === pos.row &&
                         popover.pos.col === pos.col;
-                      if (isCreatingHere) {
+                      if (isCreatingHere && appKind === "diary") {
                         renderList.push({ kind: "creating" });
                       }
                       const renderVisible = renderList.slice(0, MAX_VISIBLE);
