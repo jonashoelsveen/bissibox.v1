@@ -477,6 +477,10 @@ export function MonthGridType1({
   useEffect(() => {
     dragSessionRef.current = dragSession;
   }, [dragSession]);
+  // Tracks the event id currently pressed (pointer down) before drag threshold.
+  // Used so the chip keeps its "active" styling from mousedown through drag,
+  // without a flash back to the idle color.
+  const [pressedEventId, setPressedEventId] = useState<string | null>(null);
   // Mutable tracking ref used by chip onPointerDown to remember the press
   // before deciding if it's a click or a drag (>= 4px movement).
   const dragStartRef = useRef<{
@@ -626,9 +630,11 @@ export function MonthGridType1({
       const drag = dragSessionRef.current;
       dragStartRef.current = null;
       if (!drag) {
+        setPressedEventId(null);
         return;
       }
       setDragSession(null);
+      setPressedEventId(null);
       void start;
       const td = drag.targetDate;
       if (!td) return;
@@ -1030,6 +1036,7 @@ export function MonthGridType1({
                                 chipWidth: rect.width,
                                 chipHeight: rect.height,
                               };
+                              setPressedEventId(it.event.id);
                               // Prevent cell-level range selection mousedown.
                               e.stopPropagation();
                             }}
@@ -1073,7 +1080,7 @@ export function MonthGridType1({
                             }
                             style={(() => {
                               const evId = it.kind === "event" ? it.event.id : null;
-                              const isActive = isRealEvent && evId !== null && ((lockedId ?? forceEditId) === evId || popover?.eventId === evId || dragSession?.eventId === evId);
+                              const isActive = isRealEvent && evId !== null && ((lockedId ?? forceEditId) === evId || popover?.eventId === evId || dragSession?.eventId === evId || pressedEventId === evId);
                               if (isActive && itemColor) {
                                 return tall
                                   ? {
@@ -1108,7 +1115,7 @@ export function MonthGridType1({
                               if (!ev) return null;
                               const ActIcon = activityIconFor(ev);
                               const accent = itemColor ?? "currentColor";
-                              const isActive = (lockedId ?? forceEditId) === ev.id || popover?.eventId === ev.id || dragSession?.eventId === ev.id;
+                              const isActive = (lockedId ?? forceEditId) === ev.id || popover?.eventId === ev.id || dragSession?.eventId === ev.id || pressedEventId === ev.id;
 
                               const km = ev.distanceKm;
                               const distVal = km != null ? kmToUnit(km, distanceUnit) : null;
