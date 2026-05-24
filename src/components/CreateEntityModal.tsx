@@ -224,6 +224,54 @@ export function CreateEntityModal({
                 />
 
                 <div>
+                  <FieldLabel>Phone number</FieldLabel>
+                  <div className="grid gap-3" style={{ gridTemplateColumns: "110px 1fr" }}>
+                    <RawSelect value={personalCallingCode} onChange={setPersonalCallingCode} required>
+                      {COUNTRY_CALLING_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </RawSelect>
+                    <RawInput type="tel" value={personalPhone} onChange={setPersonalPhone} autoComplete="tel-national" required />
+                  </div>
+                </div>
+
+                <div>
+                  <FieldLabel>Verification</FieldLabel>
+                  <div className="space-y-2">
+                    <RadioRow
+                      label="Verify with code via e-mail"
+                      checked={verifyVia === "email"}
+                      onChange={() => setVerifyVia("email")}
+                    />
+                    <RadioRow
+                      label="Verify with code via text message"
+                      checked={verifyVia === "sms"}
+                      onChange={() => setVerifyVia("sms")}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 8 }}>
+                  <div
+                    style={{
+                      fontFamily: HELVETICA, fontSize: 12, fontWeight: 700,
+                      color: "#1d1d1f", marginBottom: 6, letterSpacing: "-0.005em",
+                    }}
+                  >
+                    Announcements
+                  </div>
+                  <label className="flex items-start gap-2" style={{ cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={marketing}
+                      onChange={(e) => setMarketing(e.target.checked)}
+                      style={{ marginTop: 3, accentColor: "#1d1d1f" }}
+                    />
+                    <span style={{ fontFamily: HELVETICA, fontSize: 12, color: "#86868b", lineHeight: 1.4 }}>
+                      Receive Aponna emails and communication including marketing, recomendations and updaes about Aponna software and services.
+                    </span>
+                  </label>
+                </div>
+
+                <div>
                   <FieldLabel>Role</FieldLabel>
                   <RawSelect value={role} onChange={setRole} required>
                     <option value="admin">Admin</option>
