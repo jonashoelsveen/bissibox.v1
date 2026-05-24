@@ -357,7 +357,18 @@ export function SessionDetailsModal({
                 {tab === "about" && (
                   <AboutTab
                     activities={value.activities}
-                    onChange={(a) => set("activities", a)}
+                    onChange={(a) => {
+                      const totalDur = (a ?? []).reduce(
+                        (sum, it) => sum + (it.durationMin ?? 0),
+                        0,
+                      );
+                      const startMin = value.time?.startMin ?? 0;
+                      const nextTime =
+                        totalDur > 0
+                          ? { startMin, endMin: startMin + totalDur }
+                          : value.time;
+                      onChange({ ...value, activities: a, time: nextTime });
+                    }}
                     isStravaSynced={isStravaSynced}
                     readOnly={readOnly}
                   />
