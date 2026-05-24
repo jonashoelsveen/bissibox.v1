@@ -33,18 +33,20 @@ export function CreateEntityModal({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [workEmail, setWorkEmail] = useState("");
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState("Admin");
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [fieldsReady, setFieldsReady] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Default timezone from country selection.
+  // Default timezone + language from country selection.
   useEffect(() => {
     if (!country) return;
     const tz = COUNTRY_TO_TIMEZONE[country];
     if (tz) setTimezone(tz);
+    const lang = COUNTRY_TO_LANGUAGE[country];
+    if (lang) setLanguage(lang);
   }, [country]);
 
   useEffect(() => {
