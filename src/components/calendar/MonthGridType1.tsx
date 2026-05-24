@@ -345,6 +345,7 @@ function SortableDiaryMonthChip({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0 : 1,
+    cursor: "default",
   };
   void isActive;
   return (
@@ -378,7 +379,6 @@ function SortableDiaryMonthChip({
         setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
         setForceEditId(ev.id);
       }}
-      style={{ ...style, cursor: "default" }}
     >
       <DiaryMonthReorderTile ev={ev} tileDesign={tileDesign} unit={unit} height={height} />
     </div>
