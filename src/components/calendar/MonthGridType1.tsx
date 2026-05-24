@@ -611,6 +611,7 @@ export function MonthGridType1({
     diarySlotHeight?: number;
     diaryOtherCount?: number;
     diaryChipLeft?: number;
+    diaryMaxTop?: number;
   } | null>(null);
 
   // Diary reorder confirmation state.
@@ -694,6 +695,7 @@ export function MonthGridType1({
       let targetDate: Date | null = null;
       let dayKey: string | null = null;
       let insertIndex = 0;
+      let diaryGhostTop: number | null = null;
 
       if (appKind === "diary") {
         // Diary: lock the target to the source day cell. Movement is vertical
@@ -708,19 +710,22 @@ export function MonthGridType1({
         const count = start.diaryOtherCount ?? 0;
         const slotTop = start.diarySlotTop;
         const slotH = start.diarySlotHeight;
+        const maxTop = start.diaryMaxTop;
+        let clampedTop = e.clientY - start.offsetY;
         if (slotTop != null && slotH != null && slotH > 0) {
           // Use the dragged tile's visual midpoint rather than the raw cursor
           // position. This matches week-view sortable feel no matter where
           // inside the tile the user grabbed it, so neighbors do not switch
           // places too early when the pointer is near the tile's top edge.
-          const dragTop = e.clientY - start.offsetY;
-          const dragMid = dragTop + start.chipHeight / 2;
+          clampedTop = Math.min(Math.max(clampedTop, slotTop), maxTop ?? slotTop);
+          const dragMid = clampedTop + start.chipHeight / 2;
           const rel = dragMid - slotTop;
           // Use floor (not round) so the dragged tile only switches places
           // once its midpoint actually crosses a neighbor's midpoint. Round
           // makes the switch trigger ~1px past the slot edge which felt
           // far too eager compared to the week-view dnd-kit behavior.
           insertIndex = Math.max(0, Math.min(count, Math.floor(rel / slotH)));
+          diaryGhostTop = clampedTop;
         } else {
           insertIndex = count;
         }
@@ -760,6 +765,9 @@ export function MonthGridType1({
       // For diary, keep the ghost chip strictly vertical by pinning X to the
       // initial pointer X.
       const ghostX = appKind === "diary" ? start.x : e.clientX;
+      const ghostY = appKind === "diary"
+        ? (diaryGhostTop != null ? diaryGhostTop + start.offsetY : e.clientY)
+        : e.clientY;
 
       if (!active) {
         setDragSession({
@@ -772,7 +780,7 @@ export function MonthGridType1({
           targetDate,
           insertIndex,
           pointerX: ghostX,
-          pointerY: e.clientY,
+          pointerY: ghostY,
           offsetX: start.offsetX,
           offsetY: start.offsetY,
           chipWidth: start.chipWidth,
@@ -787,7 +795,7 @@ export function MonthGridType1({
                 targetDate,
                 insertIndex,
                 pointerX: ghostX,
-                pointerY: e.clientY,
+                pointerY: ghostY,
               }
             : prev,
         );
@@ -841,12 +849,18 @@ export function MonthGridType1({
         // to the final slot using frozen geometry, so when dragSession
         // clears the real chip is already at the exact same spot — no
         // perceived jump on release.
+        const landingNode = document.querySelector<HTMLElement>(
+          `[data-event-id="${drag.eventId.replace(/"/g, '\\"')}"]`,
+        );
+        const landingRect = landingNode?.getBoundingClientRect() ?? null;
         const slotTop = start?.diarySlotTop;
         const slotH = start?.diarySlotHeight;
         const chipLeft = start?.diaryChipLeft;
-        const landing = (slotTop != null && slotH != null && chipLeft != null)
-          ? { left: chipLeft, top: slotTop + insertAt * slotH }
-          : null;
+        const landing = landingRect
+          ? { left: landingRect.left, top: landingRect.top }
+          : (slotTop != null && slotH != null && chipLeft != null)
+              ? { left: chipLeft, top: slotTop + insertAt * slotH }
+              : null;
 
         // Block reorder when any moved session is Strava-synced.
         const movedStrava = newIds.some(
@@ -867,7 +881,7 @@ export function MonthGridType1({
         if (landingTimerRef.current) clearTimeout(landingTimerRef.current);
         landingTimerRef.current = setTimeout(() => {
           setDragSession(null);
-        }, 200);
+        }, landingRect ? 180 : 200);
 
         if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
         modalTimerRef.current = setTimeout(() => {
@@ -1318,6 +1332,7 @@ export function MonthGridType1({
                               let diarySlotTop: number | undefined;
                               let diarySlotHeight: number | undefined;
                               let diaryOtherCount: number | undefined;
+                              let diaryMaxTop: number | undefined;
                               if (appKind === "diary") {
                                 const cellEl = (e.currentTarget as HTMLElement).closest<HTMLElement>("[data-day-key]");
                                 const chips = cellEl
@@ -1342,6 +1357,8 @@ export function MonthGridType1({
                                   // If the dragged chip is the first one, the "new first row"
                                   // starts where it currently does (the next chip slides up).
                                   diarySlotTop = firstTop;
+                                  const maxIndex = others.length;
+                                  diaryMaxTop = firstTop + maxIndex * diarySlotHeight;
                                 }
                               }
                               dragStartRef.current = {
@@ -1360,6 +1377,7 @@ export function MonthGridType1({
                                 diarySlotHeight,
                                 diaryOtherCount,
                                 diaryChipLeft: appKind === "diary" ? rect.left : undefined,
+                                diaryMaxTop,
                               };
                               if (appKind !== "diary") {
                                 setPressedEventId(it.event.id);
