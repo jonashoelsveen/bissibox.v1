@@ -3,12 +3,20 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { SignInModal, type SignInContext } from "@/components/SignInModal";
 import { CreateEntityModal } from "@/components/CreateEntityModal";
+import { GetRoleModal } from "@/components/GetRoleModal";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
   validateSearch: (s: Record<string, unknown>): { signin?: SignInContext } => {
     const v = s.signin;
-    if (v === "cloud" || v === "calendar" || v === "diary" || v === "photos") {
+    if (
+      v === "cloud" ||
+      v === "calendar" ||
+      v === "diary" ||
+      v === "photos" ||
+      v === "entity" ||
+      v === "role"
+    ) {
       return { signin: v };
     }
     return {};
@@ -34,8 +42,9 @@ function HomePage() {
   const [signInOpen, setSignInOpen] = useState(false);
   const [signInContext, setSignInContext] = useState<SignInContext>("cloud");
   const [createEntityOpen, setCreateEntityOpen] = useState(false);
-  // When set, opening the entity modal is pending until the user signs in.
+  const [getRoleOpen, setGetRoleOpen] = useState(false);
   const [pendingEntityAfterSignIn, setPendingEntityAfterSignIn] = useState(false);
+  const [pendingRoleAfterSignIn, setPendingRoleAfterSignIn] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -44,6 +53,11 @@ function HomePage() {
     if (pendingEntityAfterSignIn) {
       setPendingEntityAfterSignIn(false);
       setCreateEntityOpen(true);
+      return;
+    }
+    if (pendingRoleAfterSignIn) {
+      setPendingRoleAfterSignIn(false);
+      setGetRoleOpen(true);
       return;
     }
     if (!wasOpen) return;
@@ -72,13 +86,23 @@ function HomePage() {
   const closeSignIn = () => {
     setSignInOpen(false);
     setPendingEntityAfterSignIn(false);
+    setPendingRoleAfterSignIn(false);
     if (search.signin) {
       void navigate({ to: "/", search: {}, replace: true });
     }
   };
 
+  const primaryButtonStyle: React.CSSProperties = {
+    backgroundColor: "#1d1d1f",
+    borderRadius: 14,
+    padding: "14px 36px",
+    fontFamily: HELVETICA,
+    fontSize: 17,
+    fontWeight: 500,
+    letterSpacing: "-0.01em",
+  };
+
   // Logged-in Aponna Cloud home — 2×2 cards.
-  // Avoid flashing the Cloud home when a context-driven redirect is pending.
   const pendingRedirect =
     !!user && !!search.signin && search.signin !== "cloud";
 
@@ -109,28 +133,32 @@ function HomePage() {
               />
             ))}
           </div>
-          <div className="flex w-full justify-center pb-12 pt-16">
+          <div className="flex w-full justify-center gap-4 pb-12 pt-16">
             <button
               type="button"
               onClick={() => setCreateEntityOpen(true)}
               className="text-white transition active:scale-[0.98]"
-              style={{
-                backgroundColor: "#1d1d1f",
-                borderRadius: 14,
-                padding: "14px 36px",
-                fontFamily: HELVETICA,
-                fontSize: 17,
-                fontWeight: 500,
-                letterSpacing: "-0.01em",
-              }}
+              style={primaryButtonStyle}
             >
               Register your organization
+            </button>
+            <button
+              type="button"
+              onClick={() => setGetRoleOpen(true)}
+              className="text-white transition active:scale-[0.98]"
+              style={primaryButtonStyle}
+            >
+              Get a role
             </button>
           </div>
         </div>
         <CreateEntityModal
           open={createEntityOpen}
           onClose={() => setCreateEntityOpen(false)}
+        />
+        <GetRoleModal
+          open={getRoleOpen}
+          onClose={() => setGetRoleOpen(false)}
         />
       </div>
     );
@@ -177,35 +205,50 @@ function HomePage() {
               setSignInOpen(true);
             }}
             className="mt-10 text-white transition active:scale-[0.98]"
-            style={{
-              backgroundColor: "#1d1d1f",
-              borderRadius: 14,
-              padding: "14px 36px",
-              fontFamily: HELVETICA,
-              fontSize: 17,
-              fontWeight: 500,
-              letterSpacing: "-0.01em",
-            }}
+            style={primaryButtonStyle}
           >
             Sign in
           </button>
         </div>
 
-        <div className="mt-24 grid w-full grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="aspect-[4/5] w-full bg-white"
-              style={{
-                borderRadius: 22,
-                boxShadow:
-                  "0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04)",
-              }}
-            />
-          ))}
+        <div className="flex w-full flex-col items-center pb-16 pt-24">
+          <h2
+            className="tracking-tight text-[#1d1d1f]"
+            style={{
+              fontFamily: HELVETICA,
+              fontSize: "clamp(32px, 4.5vw, 56px)",
+              lineHeight: 1.05,
+              letterSpacing: "-0.03em",
+              fontWeight: 600,
+            }}
+          >
+            Get a role
+          </h2>
+          <p
+            className="mt-4 text-[#1d1d1f]"
+            style={{
+              fontFamily: HELVETICA,
+              fontSize: "clamp(15px, 1.2vw, 19px)",
+              fontWeight: 400,
+            }}
+          >
+            Athletes, coaches, photographers.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setPendingRoleAfterSignIn(true);
+              setSignInContext("role");
+              setSignInOpen(true);
+            }}
+            className="mt-8 text-white transition active:scale-[0.98]"
+            style={primaryButtonStyle}
+          >
+            Get a role
+          </button>
         </div>
 
-        <div className="flex w-full flex-col items-center pb-24 pt-16">
+        <div className="flex w-full flex-col items-center pb-24 pt-8">
           <h2
             className="tracking-tight text-[#1d1d1f]"
             style={{
@@ -237,15 +280,7 @@ function HomePage() {
               setSignInOpen(true);
             }}
             className="mt-8 text-white transition active:scale-[0.98]"
-            style={{
-              backgroundColor: "#1d1d1f",
-              borderRadius: 14,
-              padding: "14px 36px",
-              fontFamily: HELVETICA,
-              fontSize: 17,
-              fontWeight: 500,
-              letterSpacing: "-0.01em",
-            }}
+            style={primaryButtonStyle}
           >
             Register your organization
           </button>
@@ -260,6 +295,10 @@ function HomePage() {
       <CreateEntityModal
         open={createEntityOpen}
         onClose={() => setCreateEntityOpen(false)}
+      />
+      <GetRoleModal
+        open={getRoleOpen}
+        onClose={() => setGetRoleOpen(false)}
       />
     </div>
   );
