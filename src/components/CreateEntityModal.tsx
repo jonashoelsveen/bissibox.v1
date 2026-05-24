@@ -33,6 +33,10 @@ export function CreateEntityModal({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [workEmail, setWorkEmail] = useState("");
+  const [personalCallingCode, setPersonalCallingCode] = useState("+1");
+  const [personalPhone, setPersonalPhone] = useState("");
+  const [verifyVia, setVerifyVia] = useState<"email" | "sms">("email");
+  const [marketing, setMarketing] = useState(true);
   const [role, setRole] = useState("admin");
 
   const [error, setError] = useState<string | null>(null);
