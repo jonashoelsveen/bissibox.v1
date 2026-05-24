@@ -231,7 +231,7 @@ export function SessionDetailsModal({
           </div>
 
           <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-            <AlertDialogContent>
+            <AlertDialogContent className="z-[300]">
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure you want to delete this session?</AlertDialogTitle>
                 <AlertDialogDescription>
@@ -255,7 +255,7 @@ export function SessionDetailsModal({
           </AlertDialog>
 
           <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
-            <AlertDialogContent>
+            <AlertDialogContent className="z-[300]">
               <AlertDialogHeader>
                 <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
                 <AlertDialogDescription>
