@@ -71,6 +71,7 @@ function HomePage() {
 
   const closeSignIn = () => {
     setSignInOpen(false);
+    setPendingEntityAfterSignIn(false);
     if (search.signin) {
       void navigate({ to: "/", search: {}, replace: true });
     }
