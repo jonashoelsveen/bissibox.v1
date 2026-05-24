@@ -1081,6 +1081,7 @@ export function UnifiedElasticGrid({
                   weekDates={weekDates}
                   startHour={WEEK_START_HOUR}
                   appKind={appKind}
+                  activeEventId={popover?.eventId ?? null}
                   onEventClick={(ev, anchor) => {
                     setPopover({
                       key: { year, month: 0, day: 1, session: 0 },
