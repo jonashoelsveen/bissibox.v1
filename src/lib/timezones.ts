@@ -75,6 +75,42 @@ export const COUNTRY_TO_TIMEZONE: Record<string, string> = {
   "New Zealand": "Pacific/Auckland",
 };
 
+/** Default language code per country (matches LANGUAGES below). */
+export const COUNTRY_TO_LANGUAGE: Record<string, string> = {
+  "United States": "en",
+  "Canada": "en",
+  "Brazil": "pt",
+  "Argentina": "es",
+  "United Kingdom": "en",
+  "Ireland": "en",
+  "Morocco": "ar",
+  "France": "fr",
+  "Germany": "de",
+  "Netherlands": "nl",
+  "Norway": "no",
+  "Sweden": "sv",
+  "Denmark": "da",
+  "Finland": "fi",
+  "Poland": "pl",
+  "Spain": "es",
+  "Italy": "it",
+  "Portugal": "pt",
+  "Egypt": "ar",
+  "South Africa": "en",
+  "Ukraine": "uk",
+  "Türkiye": "tr",
+  "Saudi Arabia": "ar",
+  "United Arab Emirates": "ar",
+  "India": "hi",
+  "Thailand": "th",
+  "Singapore": "en",
+  "China": "zh",
+  "Japan": "ja",
+  "South Korea": "ko",
+  "Australia": "en",
+  "New Zealand": "en",
+};
+
 /** Common languages for the entity language selector. */
 export const LANGUAGES: ReadonlyArray<{ code: string; label: string }> = [
   { code: "en", label: "English" },
