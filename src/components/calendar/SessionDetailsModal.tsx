@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ConfirmDeleteSessionDialog } from "./ConfirmDeleteSessionDialog";
 
 export interface SessionDetailsValue {
   title: string;
