@@ -2614,24 +2614,30 @@ function DiarySimpleStack({
               );
               if (movedStrava) {
                 setStravaBlocked(true);
+                scheduleModalOpen();
                 return;
               }
               setPendingOrder({ colIdx, ids });
+              scheduleModalOpen();
             }}
           />
         </div>
       ))}
       <ReorderConfirmDialog
-        open={!!pendingOrder || stravaBlocked}
+        open={(!!pendingOrder || stravaBlocked) && modalReady}
         mode={stravaBlocked ? "stravaBlocked" : "confirm"}
         onCancel={() => {
+          if (modalTimerRef.current) { clearTimeout(modalTimerRef.current); modalTimerRef.current = null; }
           setPendingOrder(null);
           setStravaBlocked(false);
+          setModalReady(false);
         }}
         onConfirm={() => {
+          if (modalTimerRef.current) { clearTimeout(modalTimerRef.current); modalTimerRef.current = null; }
           if (pendingOrder) onReorderEvents?.(pendingOrder.ids);
           setPendingOrder(null);
           setStravaBlocked(false);
+          setModalReady(false);
         }}
       />
       {hoverId && hoverRect && (() => {
