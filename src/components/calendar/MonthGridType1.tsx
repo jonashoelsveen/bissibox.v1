@@ -48,6 +48,7 @@ import { SessionHoverMenu } from "./SessionHoverMenu";
 import { useHoverLock } from "./hoverLock";
 import { SessionDetailsContainer } from "./SessionDetailsContainer";
 import { TimeWheelPicker } from "./TimeWheelPicker";
+import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
 
 function activityIconFor(ev: CalendarEvent): LucideIcon {
   const k = (ev.activity || ev.diarySub || "").toLowerCase();
@@ -497,6 +498,12 @@ export function MonthGridType1({
     chipHeight: number;
   } | null>(null);
 
+  // Diary reorder confirmation state.
+  const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
+  const [stravaBlocked, setStravaBlocked] = useState(false);
+
+
+
 
   const moveItem = useCallback(
     (
@@ -642,6 +649,38 @@ export function MonthGridType1({
         drag.fromKey.year === td.getFullYear() &&
         drag.fromKey.month === td.getMonth() &&
         drag.fromKey.day === td.getDate();
+
+      // ── Diary: same-day reorder only. Cross-day drops are blocked. ──
+      if (appKind === "diary") {
+        if (!sameDayDrop) return;
+        // Build the new ordered id list for that day.
+        const dayEvents = events
+          .filter((ev) => sameDay(fromISOLocal(ev.startISO), td))
+          .slice()
+          .sort((a, b) => {
+            const ka = a.sortIndex ?? Date.parse(a.startISO);
+            const kb = b.sortIndex ?? Date.parse(b.startISO);
+            return ka - kb;
+          });
+        const oldIds = dayEvents.map((e) => e.id);
+        const without = oldIds.filter((id) => id !== drag.eventId);
+        const insertAt = Math.max(0, Math.min(without.length, drag.insertIndex));
+        const newIds = [...without.slice(0, insertAt), drag.eventId, ...without.slice(insertAt)];
+        // No-op: order unchanged.
+        const unchanged = newIds.length === oldIds.length && newIds.every((id, i) => id === oldIds[i]);
+        if (unchanged) return;
+        // Block reorder when any moved session is Strava-synced.
+        const movedStrava = newIds.some(
+          (id, i) => id !== oldIds[i] && dayEvents.find((e) => e.id === id)?.stravaActivityId != null,
+        );
+        if (movedStrava) {
+          setStravaBlocked(true);
+          return;
+        }
+        setPendingOrder(newIds);
+        return;
+      }
+
       if (sameDayDrop) return;
       const newKey: CellKey = {
         year: td.getFullYear(),
@@ -680,7 +719,7 @@ export function MonthGridType1({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [days, events, moveItem]);
+  }, [days, events, moveItem, appKind]);
 
 
   // ───────────────────────── Render ─────────────────────────
@@ -1021,6 +1060,9 @@ export function MonthGridType1({
                               if (e.button !== 0) return;
                               if (it.kind === "legacy") return;
                               if (it.event.id.startsWith("__ghost__:")) return;
+                              // Diary: only owners (the individual) can drag sessions.
+                              // Group leaders / coaches viewing someone else's diary cannot reorder.
+                              if (appKind === "diary" && viewerRole !== "owner") return;
                               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                               // Start tracking a potential drag.
                               dragStartRef.current = {
@@ -1531,6 +1573,19 @@ export function MonthGridType1({
             />
           );
         })()}
+        <ReorderConfirmDialog
+          open={!!pendingOrder || stravaBlocked}
+          mode={stravaBlocked ? "stravaBlocked" : "confirm"}
+          onCancel={() => {
+            setPendingOrder(null);
+            setStravaBlocked(false);
+          }}
+          onConfirm={() => {
+            if (pendingOrder) onReorderEvents?.(pendingOrder);
+            setPendingOrder(null);
+            setStravaBlocked(false);
+          }}
+        />
       </div>
     </div>
   );
