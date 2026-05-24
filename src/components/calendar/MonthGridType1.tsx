@@ -643,6 +643,38 @@ export function MonthGridType1({
         drag.fromKey.year === td.getFullYear() &&
         drag.fromKey.month === td.getMonth() &&
         drag.fromKey.day === td.getDate();
+
+      // ── Diary: same-day reorder only. Cross-day drops are blocked. ──
+      if (appKind === "diary") {
+        if (!sameDayDrop) return;
+        // Build the new ordered id list for that day.
+        const dayEvents = events
+          .filter((ev) => sameDay(fromISOLocal(ev.startISO), td))
+          .slice()
+          .sort((a, b) => {
+            const ka = a.sortIndex ?? Date.parse(a.startISO);
+            const kb = b.sortIndex ?? Date.parse(b.startISO);
+            return ka - kb;
+          });
+        const oldIds = dayEvents.map((e) => e.id);
+        const without = oldIds.filter((id) => id !== drag.eventId);
+        const insertAt = Math.max(0, Math.min(without.length, drag.insertIndex));
+        const newIds = [...without.slice(0, insertAt), drag.eventId, ...without.slice(insertAt)];
+        // No-op: order unchanged.
+        const unchanged = newIds.length === oldIds.length && newIds.every((id, i) => id === oldIds[i]);
+        if (unchanged) return;
+        // Block reorder when any moved session is Strava-synced.
+        const movedStrava = newIds.some(
+          (id, i) => id !== oldIds[i] && dayEvents.find((e) => e.id === id)?.stravaActivityId != null,
+        );
+        if (movedStrava) {
+          setStravaBlocked(true);
+          return;
+        }
+        setPendingOrder(newIds);
+        return;
+      }
+
       if (sameDayDrop) return;
       const newKey: CellKey = {
         year: td.getFullYear(),
