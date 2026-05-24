@@ -1913,13 +1913,27 @@ export function MonthGridType1({
                   : undefined,
               }}
             >
-              <DiaryMonthReorderTile
-                ev={ev}
-                tileDesign={monthTileDesign}
-                unit={distanceUnit}
-                height="100%"
-                dragging
-              />
+              {appKind === "diary" ? (
+                <DiaryMonthReorderTile
+                  ev={ev}
+                  tileDesign={monthTileDesign}
+                  unit={distanceUnit}
+                  height="100%"
+                  dragging
+                />
+              ) : (
+                <div
+                  className="flex h-full w-full items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px]"
+                  style={{
+                    backgroundColor: ev.color ?? "hsl(var(--secondary))",
+                    boxShadow: ev.color ? `inset 2px 0 0 ${ev.color}` : undefined,
+                    color: "#fff",
+                  }}
+                  title={ev.title}
+                >
+                  <span className="truncate">{ev.title}</span>
+                </div>
+              )}
             </div>
           );
         })()}
