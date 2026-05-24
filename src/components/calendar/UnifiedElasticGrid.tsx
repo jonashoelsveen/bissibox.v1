@@ -1966,6 +1966,7 @@ function WeekEventsOverlay({
   weekDates,
   startHour,
   appKind = "calendar",
+  activeEventId = null,
   onEventClick,
   onEventDrop,
   onDeleteEvent,
@@ -1978,6 +1979,7 @@ function WeekEventsOverlay({
   weekDates: Date[];
   startHour: number;
   appKind?: "calendar" | "diary";
+  activeEventId?: string | null;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
   onDeleteEvent?: (id: string) => void;
