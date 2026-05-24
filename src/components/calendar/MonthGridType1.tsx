@@ -633,6 +633,7 @@ export function MonthGridType1({
         return;
       }
       setDragSession(null);
+      setPressedEventId(null);
       void start;
       const td = drag.targetDate;
       if (!td) return;
