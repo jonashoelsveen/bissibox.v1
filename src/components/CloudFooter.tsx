@@ -35,18 +35,18 @@ export function CloudFooter() {
     }
   };
 
-  // When user signs in via footer modal, open pending modal
-  // (uses simple effect via render check)
-  if (user && signInOpen) {
-    setSignInOpen(false);
+  useEffect(() => {
+    if (!user) return;
     if (pendingEntity) {
       setPendingEntity(false);
+      setSignInOpen(false);
       setCreateEntityOpen(true);
     } else if (pendingRole) {
       setPendingRole(false);
+      setSignInOpen(false);
       setGetRoleOpen(true);
     }
-  }
+  }, [user, pendingEntity, pendingRole]);
 
   const linkStyle: React.CSSProperties = {
     fontFamily: HELVETICA,
