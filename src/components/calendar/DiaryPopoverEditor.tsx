@@ -24,6 +24,7 @@ import type { CalendarEvent } from "./yearStore";
 import { CAT_TRAINING_COLOR } from "./MonthGridType1";
 import { colorForActivity } from "@/lib/activity-colors";
 import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
+import { ConfirmDeleteSessionDialog } from "./ConfirmDeleteSessionDialog";
 import { NotePanel } from "./DayNoteButton";
 import {
   DIARY_GROUPS,
