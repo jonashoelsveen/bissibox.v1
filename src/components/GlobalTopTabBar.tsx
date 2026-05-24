@@ -15,9 +15,10 @@ import {
   CalendarDays,
   BookOpen,
   Home,
-  Building2,
   UserRound,
 } from "lucide-react";
+import { OrganizationIcon } from "@/components/OrganizationIcon";
+// removed:
 import { useAuth } from "@/lib/auth";
 import { ProfileTab } from "@/components/ProfileTab";
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
@@ -190,7 +191,7 @@ export function GlobalTopTabBar() {
                       { key: "calendar", label: "Calendar", to: "/calendar", icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
                       { key: "diary", label: "Diary", to: "/diary", icon: <BookOpen strokeWidth={1.75} />, disabled: false },
                       { key: "photos", label: "Photos", to: "/photos", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
-                      { key: "entity", label: "Entity", to: null, icon: <Building2 strokeWidth={1.75} />, disabled: true },
+                      { key: "organization", label: "Organization", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: true },
                     ] as const).map((app) => (
                       <button
                         key={app.key}
@@ -473,7 +474,7 @@ export function GlobalTopTabBar() {
                     { key: "calendar", label: "Calendar", to: "/calendar", icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
                     { key: "diary", label: "Diary", to: "/diary", icon: <BookOpen strokeWidth={1.75} />, disabled: false },
                     { key: "photos", label: "Photos", to: "/photos", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
-                    { key: "entity", label: "Entity", to: null, icon: <Building2 strokeWidth={1.75} />, disabled: true },
+                    { key: "organization", label: "Organization", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: true },
                   ] as const).map((app) => (
                     <button
                       key={app.key}

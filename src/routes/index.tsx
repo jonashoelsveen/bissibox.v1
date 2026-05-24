@@ -2,6 +2,7 @@ import { createFileRoute, useSearch, useNavigate } from "@tanstack/react-router"
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { SignInModal, type SignInContext } from "@/components/SignInModal";
+import { CreateEntityModal } from "@/components/CreateEntityModal";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -32,6 +33,7 @@ function HomePage() {
   const navigate = useNavigate();
   const [signInOpen, setSignInOpen] = useState(false);
   const [signInContext, setSignInContext] = useState<SignInContext>("cloud");
+  const [createEntityOpen, setCreateEntityOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -155,7 +157,7 @@ function HomePage() {
           </button>
         </div>
 
-        <div className="mt-24 grid w-full grid-cols-1 gap-5 pb-24 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-24 grid w-full grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
@@ -168,12 +170,35 @@ function HomePage() {
             />
           ))}
         </div>
+
+        <div className="flex w-full justify-center pb-24 pt-10">
+          <button
+            type="button"
+            onClick={() => setCreateEntityOpen(true)}
+            className="text-white transition active:scale-[0.98]"
+            style={{
+              backgroundColor: "#1d1d1f",
+              borderRadius: 14,
+              padding: "14px 36px",
+              fontFamily: HELVETICA,
+              fontSize: 17,
+              fontWeight: 500,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Create entity
+          </button>
+        </div>
       </div>
 
       <SignInModal
         open={signInOpen}
         onClose={closeSignIn}
         context={signInContext}
+      />
+      <CreateEntityModal
+        open={createEntityOpen}
+        onClose={() => setCreateEntityOpen(false)}
       />
     </div>
   );
