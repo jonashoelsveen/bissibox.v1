@@ -1421,25 +1421,22 @@ export function MonthGridType1({
                         popover.pos.row === pos.row &&
                         popover.pos.col === pos.col;
                       if (isCreatingHere) {
-                        const createKey = createPreviewTime
-                          ? Date.UTC(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), Math.floor(createPreviewTime.startMin / 60), createPreviewTime.startMin % 60)
-                          : Date.parse(new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), 9, 0).toISOString());
+                        const createStart = createPreviewTime
+                          ? new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), Math.floor(createPreviewTime.startMin / 60), createPreviewTime.startMin % 60)
+                          : new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), 9, 0);
+                        const createKey = Date.parse(toISOLocal(createStart));
                         const realVisibleCount = baseVisible.filter((it) => it.kind === "event").length;
+                        const createSortedIndex = sortedDayEvents.findIndex((ev) => {
+                          const evKey = ev.sortIndex ?? Date.parse(ev.startISO);
+                          return createKey < evKey;
+                        });
                         const createInsertAt = appKind === "diary"
                           ? renderList.length
                           : Math.max(
                               0,
                               Math.min(
                                 renderList.length,
-                                sortedDayEvents.findIndex((ev) => {
-                                  const evKey = ev.sortIndex ?? Date.parse(ev.startISO);
-                                  return createKey < evKey;
-                                }) >= 0
-                                  ? sortedDayEvents.findIndex((ev) => {
-                                      const evKey = ev.sortIndex ?? Date.parse(ev.startISO);
-                                      return createKey < evKey;
-                                    })
-                                  : realVisibleCount,
+                                createSortedIndex >= 0 ? createSortedIndex : realVisibleCount,
                               ),
                             );
                         renderList.splice(createInsertAt, 0, { kind: "creating" });
