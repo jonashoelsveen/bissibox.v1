@@ -366,6 +366,15 @@ export function DiaryPopoverEditor({
           }}
         />
       )}
+
+      <ConfirmDeleteSessionDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        onConfirm={() => {
+          setConfirmDelete(false);
+          onCommit(buildValue(), { delete: true });
+        }}
+      />
     </>
   );
 }
