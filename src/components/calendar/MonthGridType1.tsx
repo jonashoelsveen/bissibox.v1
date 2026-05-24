@@ -1568,7 +1568,7 @@ export function MonthGridType1({
                 height: dragSession.chipHeight,
                 background: color ? `${color}1F` : "hsl(var(--secondary))",
                 boxShadow: color ? `inset 2px 0 0 ${color}, 0 8px 24px rgba(15,23,42,0.18)` : undefined,
-                opacity: 0.95,
+                opacity: 1,
               }}
             >
               {ev.title}
