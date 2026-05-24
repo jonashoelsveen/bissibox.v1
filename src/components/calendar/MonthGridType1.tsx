@@ -1474,7 +1474,7 @@ export function MonthGridType1({
                               data-role="ghost-move"
                               aria-hidden
                               className="pointer-events-none"
-                              style={{ minHeight: tall ? 44 : 22 }}
+                              style={{ height: tall ? 44 : 22 }}
                             />
                           );
                         }
@@ -1484,7 +1484,7 @@ export function MonthGridType1({
                             data-role="ghost-move"
                             className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/70 bg-primary/10"
                             style={{
-                              minHeight: tall ? 44 : 22,
+                              height: tall ? 44 : 22,
                               borderColor: ev.color
                                 ? `${ev.color}CC`
                                 : undefined,
@@ -1526,7 +1526,7 @@ export function MonthGridType1({
                                   exit={{ opacity: 0 }}
                                   transition={{ duration: 0.12 }}
                                   className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
-                                  style={{ minHeight: tallCreate ? 44 : 22 }}
+                                  style={{ height: tallCreate ? 44 : 22 }}
                                 />
                               );
                             }
@@ -1718,11 +1718,16 @@ export function MonthGridType1({
                                     backgroundColor: itemColor ? `${itemColor}1F` : undefined,
                                     boxShadow: itemColor ? `inset 2px 0 0 ${itemColor}` : undefined,
                                   }
-                                : itemColor
-                                  ? {
-                                      backgroundColor: `${itemColor}1F`,
-                                      boxShadow: `inset 2px 0 0 ${itemColor}`,
-                                    }
+                                : it.kind === "event"
+                                  ? itemColor
+                                    ? {
+                                        height: 22,
+                                        backgroundColor: `${itemColor}1F`,
+                                        boxShadow: `inset 2px 0 0 ${itemColor}`,
+                                      }
+                                    : {
+                                        height: 22,
+                                      }
                                   : {};
                             })()}
                             title={isDiaryEvent ? undefined : displayText}
