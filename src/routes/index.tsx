@@ -302,6 +302,7 @@ function HomePage() {
         open={getRoleOpen}
         onClose={() => setGetRoleOpen(false)}
       />
+      <CloudFooter />
     </div>
   );
 }
