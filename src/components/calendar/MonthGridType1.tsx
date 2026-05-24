@@ -2132,6 +2132,14 @@ export interface PopoverEditorProps {
    * its marked range immediately so the calendar stays in sync.
    */
   onTimeChange?: (time: { startMin: number; endMin: number } | null) => void;
+  /**
+   * When true, the popover renders as a view-only panel: the title input is
+   * not focusable/editable, the category dropdown and time wheel are
+   * non-interactive, and the bottom action bar is hidden. Used when a
+   * coach / group leader views a client's session — they can see the
+   * details but cannot change them.
+   */
+  readOnly?: boolean;
 }
 
 // Category defaults — color is the source of truth.
