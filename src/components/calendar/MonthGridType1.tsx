@@ -396,7 +396,6 @@ function DiaryMonthDndCell({
   sortedEvents,
   ghostEvents,
   creating,
-  createInsertIndex,
   tall,
   monthTileDesign,
   distanceUnit,
@@ -413,7 +412,6 @@ function DiaryMonthDndCell({
   sortedEvents: CalendarEvent[];
   ghostEvents: CalendarEvent[];
   creating: boolean;
-  createInsertIndex?: number;
   tall: boolean;
   monthTileDesign: string;
   distanceUnit: ReturnType<typeof useDistanceUnit>[0];
@@ -432,7 +430,6 @@ function DiaryMonthDndCell({
   const realIds = sortedEvents.map((e) => e.id);
   const canReorder = viewerRole === "owner" && sortedEvents.length >= 2;
   const height = tall ? 44 : 22;
-  const createAt = Math.max(0, Math.min(sortedEvents.length, createInsertIndex ?? sortedEvents.length));
 
   const handleDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id));
   const handleDragEnd = (e: DragEndEvent) => {
