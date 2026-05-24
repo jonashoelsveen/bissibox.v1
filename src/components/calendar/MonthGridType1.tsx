@@ -1456,6 +1456,7 @@ export function MonthGridType1({
                             animate={{
                               opacity:
                                 dragSession &&
+                                !dragSession.landing &&
                                 it.kind === "event" &&
                                 dragSession.eventId === it.event.id
                                   ? 0
