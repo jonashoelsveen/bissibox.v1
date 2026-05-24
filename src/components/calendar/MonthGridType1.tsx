@@ -1483,9 +1483,18 @@ export function MonthGridType1({
                               if (e.button !== 0) return;
                               if (it.kind === "legacy") return;
                               if (it.event.id.startsWith("__ghost__:")) return;
+                              // Immediate press feedback for calendar mode
+                              // (matches week-view click-down speed). Coaches
+                              // also get the pressed state so click feels
+                              // instant; they just can't initiate a drag.
+                              if (appKind !== "diary") {
+                                setPressedEventId(it.event.id);
+                              }
                               // Only the owner can drag sessions. Coaches /
                               // group leaders viewing someone else's calendar
-                              // or diary cannot move anything.
+                              // or diary cannot move anything — but the
+                              // pressed state above stays until pointerup
+                              // (cleared by the window pointerup listener).
                               if (viewerRole !== "owner") return;
                               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                               // Start tracking a potential drag.
@@ -1593,7 +1602,7 @@ export function MonthGridType1({
                             style={(() => {
                               if (isDiaryEvent) return undefined;
                               const evId = it.kind === "event" ? it.event.id : null;
-                              const isActive = isRealEvent && evId !== null && ((lockedId ?? forceEditId) === evId || popover?.eventId === evId);
+                              const isActive = isRealEvent && evId !== null && ((lockedId ?? forceEditId) === evId || popover?.eventId === evId || pressedEventId === evId);
                               if (isActive && itemColor) {
                                 return tall
                                   ? {
@@ -1904,13 +1913,27 @@ export function MonthGridType1({
                   : undefined,
               }}
             >
-              <DiaryMonthReorderTile
-                ev={ev}
-                tileDesign={monthTileDesign}
-                unit={distanceUnit}
-                height="100%"
-                dragging
-              />
+              {appKind === "diary" ? (
+                <DiaryMonthReorderTile
+                  ev={ev}
+                  tileDesign={monthTileDesign}
+                  unit={distanceUnit}
+                  height="100%"
+                  dragging
+                />
+              ) : (
+                <div
+                  className="flex h-full w-full items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px]"
+                  style={{
+                    backgroundColor: ev.color ?? "hsl(var(--secondary))",
+                    boxShadow: ev.color ? `inset 2px 0 0 ${ev.color}` : undefined,
+                    color: "#fff",
+                  }}
+                  title={ev.title}
+                >
+                  <span className="truncate">{ev.title}</span>
+                </div>
+              )}
             </div>
           );
         })()}
