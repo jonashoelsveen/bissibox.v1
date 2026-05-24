@@ -48,12 +48,7 @@ export function DiarySideNav({
 
       <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
         <DiaryActivitiesSection title="Activities" canEdit={canEdit} kind="diary_activity" />
-        <DiaryActivitiesSection
-          title="Strava activities"
-          canEdit={canEdit}
-          kind="diary_strava"
-          showAdd={false}
-        />
+        <DiaryStravaActivitiesSection title="Strava activities" canEdit={canEdit} />
       </div>
     </nav>
   );
