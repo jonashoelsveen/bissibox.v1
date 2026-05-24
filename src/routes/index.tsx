@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { SignInModal, type SignInContext } from "@/components/SignInModal";
 import { CreateEntityModal } from "@/components/CreateEntityModal";
 import { GetRoleModal } from "@/components/GetRoleModal";
+import { CloudFooter } from "@/components/CloudFooter";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -160,6 +161,7 @@ function HomePage() {
           open={getRoleOpen}
           onClose={() => setGetRoleOpen(false)}
         />
+        <CloudFooter />
       </div>
     );
   }
@@ -300,6 +302,7 @@ function HomePage() {
         open={getRoleOpen}
         onClose={() => setGetRoleOpen(false)}
       />
+      <CloudFooter />
     </div>
   );
 }
