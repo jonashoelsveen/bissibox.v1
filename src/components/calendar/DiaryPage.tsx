@@ -74,7 +74,7 @@ export function DiaryPage() {
             }}
           >
             <div className="mac-panel relative h-full overflow-hidden rounded-lg border border-hairline shadow-sm">
-              <div className="h-full overflow-y-auto px-3 pb-6 pt-[48px]">
+              <div className="h-full overflow-y-auto px-1.5 pb-6 pt-[48px]">
                 <DiarySideNav
                   currentDate={currentDate}
                   currentRange={currentRange}
