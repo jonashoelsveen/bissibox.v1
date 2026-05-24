@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { SignInModal, type SignInContext } from "@/components/SignInModal";
 import { CreateEntityModal } from "@/components/CreateEntityModal";
