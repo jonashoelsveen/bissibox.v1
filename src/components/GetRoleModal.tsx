@@ -13,9 +13,9 @@ const ROLE_LABEL: Record<Role, string> = {
 };
 
 const ROLE_HEADING: Record<Role, string> = {
-  athlete: "Aponna Athlete Role Confirmation",
-  coach: "Aponna Coach Role Confirmation",
-  photographer: "Aponna Photographer Role Confirmation",
+  athlete: "Athlete-role Confirmation",
+  coach: "Coach-role Confirmation",
+  photographer: "Photographer-role Confirmation",
 };
 
 const ROLE_BODY: Record<Role, React.ReactNode> = {
