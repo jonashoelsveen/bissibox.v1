@@ -1353,27 +1353,11 @@ export function MonthGridType1({
                       const visibleReal = realEvents.slice(0, maxEvents);
                       const remaining = Math.max(0, maxEvents - visibleReal.length);
                       const visibleGhosts = ghostsList.slice(0, remaining);
-                      const createStart = createPreviewTime
-                        ? new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), Math.floor(createPreviewTime.startMin / 60), createPreviewTime.startMin % 60)
-                        : new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), 9, 0);
-                      const createKey = Date.parse(toISOLocal(createStart));
-                      const createSortedIndex = realEvents.findIndex((ev) => {
-                        const evKey = ev.sortIndex ?? Date.parse(ev.startISO);
-                        return createKey < evKey;
-                      });
-                      const createInsertIndex = Math.max(
-                        0,
-                        Math.min(
-                          visibleReal.length,
-                          createSortedIndex >= 0 ? createSortedIndex : visibleReal.length,
-                        ),
-                      );
                       return (
                         <DiaryMonthDndCell
                           sortedEvents={visibleReal}
                           ghostEvents={visibleGhosts}
                           creating={isCreatingHere}
-                          createInsertIndex={createInsertIndex}
                           tall={tall}
                           monthTileDesign={monthTileDesign}
                           distanceUnit={distanceUnit}
