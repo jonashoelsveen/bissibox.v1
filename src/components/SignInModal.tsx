@@ -69,7 +69,7 @@ export function SignInModal({
     setExiting(false);
     setError(null);
     setMode("signin");
-    const t = setTimeout(() => setFieldsReady(true), 1700);
+    const t = setTimeout(() => setFieldsReady(true), 1500);
     timers.current.push(t);
     return () => {
       timers.current.forEach(clearTimeout);
