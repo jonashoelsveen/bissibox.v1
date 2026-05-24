@@ -1115,7 +1115,7 @@ export function MonthGridType1({
                               if (!ev) return null;
                               const ActIcon = activityIconFor(ev);
                               const accent = itemColor ?? "currentColor";
-                              const isActive = (lockedId ?? forceEditId) === ev.id || popover?.eventId === ev.id || dragSession?.eventId === ev.id;
+                              const isActive = (lockedId ?? forceEditId) === ev.id || popover?.eventId === ev.id || dragSession?.eventId === ev.id || pressedEventId === ev.id;
 
                               const km = ev.distanceKm;
                               const distVal = km != null ? kmToUnit(km, distanceUnit) : null;
