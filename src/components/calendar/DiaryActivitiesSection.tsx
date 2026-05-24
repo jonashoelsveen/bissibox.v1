@@ -124,7 +124,7 @@ export function DiaryActivitiesSection({
           />
           <span className="min-w-0 flex-1 truncate font-medium">{title}</span>
         </button>
-        {canEdit && (
+        {canEdit && showAdd && (
           <button
             type="button"
             onClick={(e) => {
