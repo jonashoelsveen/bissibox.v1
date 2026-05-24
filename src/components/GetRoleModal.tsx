@@ -21,12 +21,11 @@ const ROLE_HEADING: Record<Role, string> = {
 const ROLE_BODY: Record<Role, React.ReactNode> = {
   photographer: (
     <>
-      By checking this box, you agree to the terms and conditions of the Aponna Photographer Program.
-      You understand that your role as an Aponna Photographer is strictly limited to sports-related
-      photography intended to benefit the client. You agree to operate entirely within the Aponna
-      platform, which includes processing all bookings and payments through the Aponna ecosystem.
-      Accepting external payments or bypassing the platform for client engagements is strictly
-      prohibited.
+      By checking this box, you agree to the terms and conditions of the Photographer-role.
+      You understand that your role is strictly limited to sports-related photography intended to
+      benefit the client. You agree to operate entirely within the Aponna platform, which includes
+      processing all bookings and payments through the Aponna ecosystem. Accepting external payments
+      or bypassing the platform for client engagements is strictly prohibited.
       <br />
       <br />
       You acknowledge that you have read, understood, and agree to be bound by the full{" "}
@@ -42,7 +41,7 @@ const ROLE_BODY: Record<Role, React.ReactNode> = {
   ),
   athlete: (
     <>
-      By checking this box, you agree to the terms and conditions of the Aponna Athlete Program.
+      By checking this box, you agree to the terms and conditions of the Athlete-role.
       You agree to operate entirely within the Aponna platform for all athlete-related activities,
       bookings, and engagements.
       <br />
@@ -60,7 +59,7 @@ const ROLE_BODY: Record<Role, React.ReactNode> = {
   ),
   coach: (
     <>
-      By checking this box, you agree to the terms and conditions of the Aponna Coach Program.
+      By checking this box, you agree to the terms and conditions of the Coach-role.
       You agree to operate entirely within the Aponna platform for all coaching engagements,
       bookings, and payments. Accepting external payments or bypassing the platform is strictly
       prohibited.
