@@ -1074,21 +1074,32 @@ export function MonthGridType1({
                             style={(() => {
                               const evId = it.kind === "event" ? it.event.id : null;
                               const isActive = isRealEvent && evId !== null && (lockedId ?? forceEditId) === evId;
-                              const activeFilter = isActive ? "brightness(0.82) saturate(1.2)" : undefined;
+                              if (isActive && itemColor) {
+                                return tall
+                                  ? {
+                                      minHeight: 44,
+                                      backgroundColor: itemColor,
+                                      boxShadow: `inset 2px 0 0 ${itemColor}`,
+                                      color: "#fff",
+                                    }
+                                  : {
+                                      backgroundColor: itemColor,
+                                      boxShadow: `inset 2px 0 0 ${itemColor}`,
+                                      color: "#fff",
+                                    };
+                              }
                               return tall
                                 ? {
                                     minHeight: 44,
                                     backgroundColor: itemColor ? `${itemColor}1F` : undefined,
                                     boxShadow: itemColor ? `inset 2px 0 0 ${itemColor}` : undefined,
-                                    filter: activeFilter,
                                   }
                                 : itemColor
                                   ? {
                                       backgroundColor: `${itemColor}1F`,
                                       boxShadow: `inset 2px 0 0 ${itemColor}`,
-                                      filter: activeFilter,
                                     }
-                                  : { filter: activeFilter };
+                                  : {};
                             })()}
                             title={displayText}
                           >
