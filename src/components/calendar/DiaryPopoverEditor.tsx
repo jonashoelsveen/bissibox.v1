@@ -24,6 +24,7 @@ import type { CalendarEvent } from "./yearStore";
 import { CAT_TRAINING_COLOR } from "./MonthGridType1";
 import { colorForActivity } from "@/lib/activity-colors";
 import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
+import { ConfirmDeleteSessionDialog } from "./ConfirmDeleteSessionDialog";
 import { NotePanel } from "./DayNoteButton";
 import {
   DIARY_GROUPS,
@@ -110,6 +111,7 @@ export function DiaryPopoverEditor({
 
   const [showDetails, setShowDetails] = useState(false);
   const [showNote, setShowNote] = useState(!!initialEvent?.sessionNote);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [distanceKm, setDistanceKm] = useState<number | undefined>(initialEvent?.distanceKm);
   const [paceSecPerKm] = useState<number | undefined>(initialEvent?.paceSecPerKm);
@@ -244,7 +246,7 @@ export function DiaryPopoverEditor({
               <HeaderIconBtn
                 label="Slett"
                 destructive
-                onClick={() => onCommit(buildValue(), { delete: true })}
+                onClick={() => setConfirmDelete(true)}
               >
                 <Trash2 className="h-4 w-4" strokeWidth={2.25} />
               </HeaderIconBtn>
@@ -364,6 +366,15 @@ export function DiaryPopoverEditor({
           }}
         />
       )}
+
+      <ConfirmDeleteSessionDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        onConfirm={() => {
+          setConfirmDelete(false);
+          onCommit(buildValue(), { delete: true });
+        }}
+      />
     </>
   );
 }
