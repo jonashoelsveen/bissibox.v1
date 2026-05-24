@@ -45,6 +45,8 @@ export interface DiaryActivitiesSectionProps {
   onAddClick?: () => void;
   /** Which row kind to query/create — "diary_activity" (default) or "diary_strava". */
   kind?: "diary_activity" | "diary_strava";
+  /** When false, hide the header plus icon entirely. Defaults to true. */
+  showAdd?: boolean;
 }
 
 export function DiaryActivitiesSection({
@@ -52,6 +54,7 @@ export function DiaryActivitiesSection({
   canEdit = true,
   onAddClick,
   kind = "diary_activity",
+  showAdd = true,
 }: DiaryActivitiesSectionProps) {
   const { categories, create, update, remove, reorder } = useUserCategories({ kind });
   const [open, setOpen] = useState(true);
@@ -121,7 +124,7 @@ export function DiaryActivitiesSection({
           />
           <span className="min-w-0 flex-1 truncate font-medium">{title}</span>
         </button>
-        {canEdit && (
+        {canEdit && showAdd && (
           <button
             type="button"
             onClick={(e) => {

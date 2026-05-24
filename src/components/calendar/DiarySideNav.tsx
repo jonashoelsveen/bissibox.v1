@@ -4,22 +4,15 @@
  * Mini calendar at the top, then two collapsible sections:
  *   - Activities         (user-defined tabs, drive the activity dropdown
  *                         used in the new/edit session panel).
- *   - Strava activities  (Strava sport types the user opts in to show).
+ *   - Strava activities  (Strava sport types currently synced for the user;
+ *                         no add button — list is driven by Strava sync).
  *
  * In group-leader (read-only) mode, the plus icons are hidden; the
  * sections can still be collapsed/expanded.
  */
 
-import { useState } from "react";
 import { MiniCalendar, type DateRange } from "./MiniCalendar";
 import { DiaryActivitiesSection } from "./DiaryActivitiesSection";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import type { CategoryKey } from "./CalendarSideNav";
 
 export interface DiarySideNavProps {
@@ -42,44 +35,25 @@ export function DiarySideNav({
   viewMode,
   canEdit = true,
 }: DiarySideNavProps) {
-  const [stravaPickerOpen, setStravaPickerOpen] = useState(false);
-
   return (
-    <>
-      <nav className="flex h-full flex-col gap-3 overflow-hidden">
-        <div className="shrink-0">
-          <MiniCalendar
-            selectedRange={currentRange ?? { start: currentDate, end: currentDate }}
-            onSelectRange={(r) => onCurrentDateChange(r.start, r)}
-            viewMode={viewMode}
-          />
-        </div>
+    <nav className="flex h-full flex-col gap-3 overflow-hidden">
+      <div className="shrink-0">
+        <MiniCalendar
+          selectedRange={currentRange ?? { start: currentDate, end: currentDate }}
+          onSelectRange={(r) => onCurrentDateChange(r.start, r)}
+          viewMode={viewMode}
+        />
+      </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
-          <DiaryActivitiesSection title="Activities" canEdit={canEdit} kind="diary_activity" />
-          <DiaryActivitiesSection
-            title="Strava activities"
-            canEdit={canEdit}
-            kind="diary_strava"
-            onAddClick={() => setStravaPickerOpen(true)}
-          />
-        </div>
-      </nav>
-
-      <Dialog open={stravaPickerOpen} onOpenChange={setStravaPickerOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Choose Strava activities</DialogTitle>
-            <DialogDescription>
-              Pick which Strava activity types should appear in your diary left panel.
-              Detailed picker coming soon.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-6 text-center text-sm text-muted-foreground">
-            Strava activity picker — to be implemented.
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
+        <DiaryActivitiesSection title="Activities" canEdit={canEdit} kind="diary_activity" />
+        <DiaryActivitiesSection
+          title="Strava activities"
+          canEdit={canEdit}
+          kind="diary_strava"
+          showAdd={false}
+        />
+      </div>
+    </nav>
   );
 }
