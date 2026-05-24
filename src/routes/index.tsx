@@ -226,7 +226,11 @@ function HomePage() {
           </p>
           <button
             type="button"
-            onClick={() => setCreateEntityOpen(true)}
+            onClick={() => {
+              setPendingEntityAfterSignIn(true);
+              setSignInContext("entity");
+              setSignInOpen(true);
+            }}
             className="mt-8 text-white transition active:scale-[0.98]"
             style={{
               backgroundColor: "#1d1d1f",
