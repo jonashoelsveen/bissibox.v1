@@ -1597,9 +1597,14 @@ function DayCellPair(props: DayCellPairProps) {
         const cellLabel = parsed.text;
 
         // Outlook/Motion style: soft tinted body, bright left edge accent.
-        const bg = cellColor
-          ? `color-mix(in srgb, ${cellColor} 18%, white)`
-          : undefined;
+        // When the cell is the active/clicked one, fill with the accent color
+        // and switch the label to white (Notion / iCloud style).
+        const isActiveColored = isSelected && !!cellColor;
+        const bg = isActiveColored
+          ? (cellColor as string)
+          : cellColor
+            ? `color-mix(in srgb, ${cellColor} 18%, white)`
+            : undefined;
 
         // Merge with neighbouring sessions of the same color so a multi-cell
         // session reads as one continuous block (no inner divider lines).
@@ -1637,14 +1642,16 @@ function DayCellPair(props: DayCellPairProps) {
             }}
             className={`relative flex-1 select-none text-[12px] leading-tight ${
               !isFirst && !hideTopDivider ? "border-t border-hairline/60" : ""
-            } ${(ranged || isSelected) && !mk.in ? "bg-muted-foreground/15" : ""} transition-colors`}
+            } ${(ranged || isSelected) && !mk.in && !isActiveColored ? "bg-muted-foreground/15" : ""} transition-colors`}
             style={{
               background: mk.in ? undefined : bg,
+              color: isActiveColored ? "#fff" : undefined,
               minHeight: rowHeight,
-              transition: `min-height ${DUR_MS}ms ${EASE}`,
+              transition: `min-height ${DUR_MS}ms ${EASE}, background-color 120ms ease`,
               willChange: "min-height",
             }}
           >
+
             {cellColor && (
               <span
                 className="pointer-events-none absolute left-0 top-0 bottom-0 z-[1] w-[3px]"
@@ -1733,7 +1740,7 @@ function DayCellPair(props: DayCellPairProps) {
                     return `${String(hh).padStart(2, "0")}:00`;
                   })()}
                 </div>
-                <div className="min-w-0 border-l border-hairline px-3 text-[13px] text-ink">
+                <div className={`min-w-0 border-l px-3 text-[13px] ${isActiveColored ? "border-white/30 text-white" : "border-hairline text-ink"}`}>
                   {isEditing ? (
                     <input
                       autoFocus
@@ -1776,8 +1783,8 @@ function DayCellPair(props: DayCellPairProps) {
 
             {showCompact && !isEditing && (() => {
               const Icon = iconForColor(cellColor);
-              const labelColor = "hsl(var(--ink, 220 13% 13%))";
-              const iconColor = cellColor ?? labelColor;
+              const labelColor = isActiveColored ? "#fff" : "hsl(var(--ink, 220 13% 13%))";
+              const iconColor = isActiveColored ? "#fff" : (cellColor ?? labelColor);
               return (
                 <span
                   className={`pointer-events-none absolute left-14 right-1.5 top-0.5 flex items-center gap-1 truncate text-[12px] ${
@@ -2118,13 +2125,15 @@ function WeekEventsOverlay({
             const dragDx = isDragging ? drag.delta.dx : 0;
             const dragDy = isDragging ? drag.delta.dy : 0;
             const accent = ev.color ?? "hsl(var(--primary))";
-            const bg = ev.color
-              ? `color-mix(in srgb, ${ev.color} 18%, white)`
-              : "hsl(var(--primary) / 0.15)";
-            const fg = "hsl(var(--ink, 220 13% 13%))";
-            const Icon = iconForColor(ev.color);
             const isGhost = ev.id.startsWith("__ghost__:");
             const isActive = !isGhost && (lockedId ?? forceEditId) === ev.id;
+            const bg = isActive
+              ? accent
+              : ev.color
+                ? `color-mix(in srgb, ${ev.color} 18%, white)`
+                : "hsl(var(--primary) / 0.15)";
+            const fg = isActive ? "#fff" : "hsl(var(--ink, 220 13% 13%))";
+            const Icon = iconForColor(ev.color);
             return (
               <div
                 key={ev.id}
@@ -2196,7 +2205,6 @@ function WeekEventsOverlay({
                   background: bg,
                   color: fg,
                   opacity: isDragging ? 0.85 : 1,
-                  filter: isActive ? "brightness(0.82) saturate(1.2)" : undefined,
                   pointerEvents: "auto",
                 }}
                 title={ev.title}
