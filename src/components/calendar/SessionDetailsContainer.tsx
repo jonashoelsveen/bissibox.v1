@@ -122,6 +122,14 @@ export function SessionDetailsContainer({
         onUpsert(buildPatch(v));
         onClose();
       }}
+      onDelete={
+        onDelete
+          ? () => {
+              onDelete();
+              onClose();
+            }
+          : undefined
+      }
     />
   );
 }
