@@ -2125,10 +2125,14 @@ function WeekEventsOverlay({
             const dragDx = isDragging ? drag.delta.dx : 0;
             const dragDy = isDragging ? drag.delta.dy : 0;
             const accent = ev.color ?? "hsl(var(--primary))";
-            const bg = ev.color
-              ? `color-mix(in srgb, ${ev.color} 18%, white)`
-              : "hsl(var(--primary) / 0.15)";
-            const fg = "hsl(var(--ink, 220 13% 13%))";
+            const isGhost = ev.id.startsWith("__ghost__:");
+            const isActive = !isGhost && (lockedId ?? forceEditId) === ev.id;
+            const bg = isActive
+              ? accent
+              : ev.color
+                ? `color-mix(in srgb, ${ev.color} 18%, white)`
+                : "hsl(var(--primary) / 0.15)";
+            const fg = isActive ? "#fff" : "hsl(var(--ink, 220 13% 13%))";
             const Icon = iconForColor(ev.color);
             const isGhost = ev.id.startsWith("__ghost__:");
             const isActive = !isGhost && (lockedId ?? forceEditId) === ev.id;
