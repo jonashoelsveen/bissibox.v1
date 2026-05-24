@@ -1875,6 +1875,11 @@ export function MonthGridType1({
               return null;
             })()}
             onClose={closePopover}
+            onTimeChange={(time) => {
+              if (!popover.eventId && popover.editIdx < 0) {
+                setCreatePreviewTime(time ?? { startMin: 9 * 60, endMin: 10 * 60 });
+              }
+            }}
             onCommit={(text, color, time) => {
               const cell = days.find(
                 (d) => d.row === popover.pos.row && d.col === popover.pos.col,
