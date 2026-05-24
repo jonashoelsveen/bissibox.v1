@@ -1139,7 +1139,7 @@ export function MonthGridType1({
                                     >
                                       <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
                                     </div>
-                                    <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
+                                    <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight" style={{ color: isActive ? "#fff" : undefined }}>
                                       <span className="truncate text-[11px] font-semibold">{ev.title}</span>
                                       <span className="mono truncate text-[10px] tabular-nums opacity-70">{durStr}</span>
                                       {!isStrength && (
