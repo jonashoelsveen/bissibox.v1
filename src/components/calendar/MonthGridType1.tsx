@@ -1483,9 +1483,18 @@ export function MonthGridType1({
                               if (e.button !== 0) return;
                               if (it.kind === "legacy") return;
                               if (it.event.id.startsWith("__ghost__:")) return;
+                              // Immediate press feedback for calendar mode
+                              // (matches week-view click-down speed). Coaches
+                              // also get the pressed state so click feels
+                              // instant; they just can't initiate a drag.
+                              if (appKind !== "diary") {
+                                setPressedEventId(it.event.id);
+                              }
                               // Only the owner can drag sessions. Coaches /
                               // group leaders viewing someone else's calendar
-                              // or diary cannot move anything.
+                              // or diary cannot move anything — but the
+                              // pressed state above stays until pointerup
+                              // (cleared by the window pointerup listener).
                               if (viewerRole !== "owner") return;
                               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                               // Start tracking a potential drag.
