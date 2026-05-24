@@ -574,6 +574,11 @@ export function MonthGridType1({
     offsetY: number;
     chipWidth: number;
     chipHeight: number;
+    // Set on pointerup for diary same-day reorder. While set, the floating
+    // clone CSS-transitions toward { left, top } and the source chip is
+    // re-included in baseVisible (sorted by pendingOrder) so the real chip
+    // and the clone land at the same pixel — no jump.
+    landing?: { left: number; top: number } | null;
   } | null>(null);
   const dragSessionRef = useRef(dragSession);
   useEffect(() => {
@@ -605,11 +610,21 @@ export function MonthGridType1({
     diarySlotTop?: number;
     diarySlotHeight?: number;
     diaryOtherCount?: number;
+    diaryChipLeft?: number;
   } | null>(null);
 
   // Diary reorder confirmation state.
   const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
   const [stravaBlocked, setStravaBlocked] = useState(false);
+  // Delays the confirm/strava dialog by ~300ms after pointerup so the
+  // landing snap-in animation can finish first.
+  const [modalReady, setModalReady] = useState(false);
+  const modalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const landingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+    if (landingTimerRef.current) clearTimeout(landingTimerRef.current);
+  }, []);
 
 
 
@@ -701,7 +716,11 @@ export function MonthGridType1({
           const dragTop = e.clientY - start.offsetY;
           const dragMid = dragTop + start.chipHeight / 2;
           const rel = dragMid - slotTop;
-          insertIndex = Math.max(0, Math.min(count, Math.round(rel / slotH)));
+          // Use floor (not round) so the dragged tile only switches places
+          // once its midpoint actually crosses a neighbor's midpoint. Round
+          // makes the switch trigger ~1px past the slot edge which felt
+          // far too eager compared to the week-view dnd-kit behavior.
+          insertIndex = Math.max(0, Math.min(count, Math.floor(rel / slotH)));
         } else {
           insertIndex = count;
         }
@@ -784,19 +803,19 @@ export function MonthGridType1({
         setPressedEventId(null);
         return;
       }
-      setDragSession(null);
-      setPressedEventId(null);
-      void start;
       const td = drag.targetDate;
-      if (!td) return;
-      const sameDayDrop =
+      const sameDayDrop = !!td &&
         drag.fromKey.year === td.getFullYear() &&
         drag.fromKey.month === td.getMonth() &&
         drag.fromKey.day === td.getDate();
 
       // ── Diary: same-day reorder only. Cross-day drops are blocked. ──
       if (appKind === "diary") {
-        if (!sameDayDrop) return;
+        if (!td || !sameDayDrop) {
+          setDragSession(null);
+          setPressedEventId(null);
+          return;
+        }
         // Build the new ordered id list for that day.
         const dayEvents = events
           .filter((ev) => sameDay(fromISOLocal(ev.startISO), td))
@@ -810,20 +829,59 @@ export function MonthGridType1({
         const without = oldIds.filter((id) => id !== drag.eventId);
         const insertAt = Math.max(0, Math.min(without.length, drag.insertIndex));
         const newIds = [...without.slice(0, insertAt), drag.eventId, ...without.slice(insertAt)];
-        // No-op: order unchanged.
+        // No-op: order unchanged → just unmount the clone, no dialog.
         const unchanged = newIds.length === oldIds.length && newIds.every((id, i) => id === oldIds[i]);
-        if (unchanged) return;
+        if (unchanged) {
+          setDragSession(null);
+          setPressedEventId(null);
+          return;
+        }
+
+        // Compute landing pixel for the floating clone. We snap the clone
+        // to the final slot using frozen geometry, so when dragSession
+        // clears the real chip is already at the exact same spot — no
+        // perceived jump on release.
+        const slotTop = start?.diarySlotTop;
+        const slotH = start?.diarySlotHeight;
+        const chipLeft = start?.diaryChipLeft;
+        const landing = (slotTop != null && slotH != null && chipLeft != null)
+          ? { left: chipLeft, top: slotTop + insertAt * slotH }
+          : null;
+
         // Block reorder when any moved session is Strava-synced.
         const movedStrava = newIds.some(
           (id, i) => id !== oldIds[i] && dayEvents.find((e) => e.id === id)?.stravaActivityId != null,
         );
-        if (movedStrava) {
-          setStravaBlocked(true);
-          return;
+
+        // Begin the snap-in animation. Keep dragSession alive briefly so
+        // the floating clone CSS-transitions to the landing slot. When
+        // landing is set, the source chip is re-included in baseVisible
+        // (sorted by pendingOrder for non-strava case, or unchanged for
+        // strava), so the real chip mounts at the exact landing pixel.
+        if (!movedStrava) {
+          setPendingOrder(newIds);
         }
-        setPendingOrder(newIds);
+        setDragSession((prev) => (prev ? { ...prev, landing } : prev));
+        setPressedEventId(null);
+
+        if (landingTimerRef.current) clearTimeout(landingTimerRef.current);
+        landingTimerRef.current = setTimeout(() => {
+          setDragSession(null);
+        }, 200);
+
+        if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+        modalTimerRef.current = setTimeout(() => {
+          if (movedStrava) setStravaBlocked(true);
+          setModalReady(true);
+        }, 300);
         return;
       }
+
+      // Cross-day (calendar mode): unmount clone immediately.
+      setDragSession(null);
+      setPressedEventId(null);
+      void start;
+      if (!td) return;
 
       if (sameDayDrop) return;
       const newKey: CellKey = {
@@ -1090,8 +1148,16 @@ export function MonthGridType1({
                       // computed insertion index. Combined with framer-motion
                       // `layout`, the other chips smoothly slide to make room
                       // (snap-in), matching the week-view sortable behavior.
-                      const baseVisible = (appKind === "diary" && isSourceDay && dragSession)
-                        ? visible.filter((it) => !(it.kind === "event" && it.event.id === dragSession.eventId))
+                      // Once `landing` is set (pointer released), the source
+                      // chip is re-included so it mounts at the final slot
+                      // (sorted by pendingOrder) while the floating clone
+                      // CSS-transitions to the same pixel — no jump.
+                      const hideSource = appKind === "diary"
+                        && isSourceDay
+                        && dragSession
+                        && !dragSession.landing;
+                      const baseVisible = hideSource
+                        ? visible.filter((it) => !(it.kind === "event" && it.event.id === dragSession!.eventId))
                         : visible;
 
 
@@ -1100,7 +1166,7 @@ export function MonthGridType1({
                         | { kind: "creating" }
                         | UnifiedItem;
                       const renderList: RenderItem[] = [...baseVisible];
-                      if (isTargetDay && dragSession) {
+                      if (isTargetDay && dragSession && !dragSession.landing) {
                         const insertAt = appKind === "diary"
                           ? Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex))
                           : 0;
@@ -1293,6 +1359,7 @@ export function MonthGridType1({
                                 diarySlotTop,
                                 diarySlotHeight,
                                 diaryOtherCount,
+                                diaryChipLeft: appKind === "diary" ? rect.left : undefined,
                               };
                               if (appKind !== "diary") {
                                 setPressedEventId(it.event.id);
@@ -1634,14 +1701,25 @@ export function MonthGridType1({
         )}
         {dragSession && (() => {
           const ev = dragSession.event;
+          const landing = dragSession.landing;
+          const left = landing ? landing.left : dragSession.pointerX - dragSession.offsetX;
+          const top = landing ? landing.top : dragSession.pointerY - dragSession.offsetY;
           return (
             <div
               className="pointer-events-none fixed z-[60]"
               style={{
-                left: dragSession.pointerX - dragSession.offsetX,
-                top: dragSession.pointerY - dragSession.offsetY,
+                left,
+                top,
                 width: dragSession.chipWidth,
                 height: dragSession.chipHeight,
+                // Smoothly snap the floating clone into the destination slot
+                // on release. The real chip is already mounted at the same
+                // landing pixel (via baseVisible re-include + pendingOrder
+                // sort), so when the clone unmounts there is no visible
+                // jump — it simply hands off to the real chip.
+                transition: landing
+                  ? "left 180ms cubic-bezier(0.22, 1, 0.36, 1), top 180ms cubic-bezier(0.22, 1, 0.36, 1)"
+                  : undefined,
               }}
             >
               <DiaryMonthReorderTile
@@ -1713,16 +1791,20 @@ export function MonthGridType1({
           );
         })()}
         <ReorderConfirmDialog
-          open={!!pendingOrder || stravaBlocked}
+          open={(!!pendingOrder || stravaBlocked) && modalReady}
           mode={stravaBlocked ? "stravaBlocked" : "confirm"}
           onCancel={() => {
+            if (modalTimerRef.current) { clearTimeout(modalTimerRef.current); modalTimerRef.current = null; }
             setPendingOrder(null);
             setStravaBlocked(false);
+            setModalReady(false);
           }}
           onConfirm={() => {
+            if (modalTimerRef.current) { clearTimeout(modalTimerRef.current); modalTimerRef.current = null; }
             if (pendingOrder) onReorderEvents?.(pendingOrder);
             setPendingOrder(null);
             setStravaBlocked(false);
+            setModalReady(false);
           }}
         />
       </div>

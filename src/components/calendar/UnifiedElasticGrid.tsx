@@ -2526,6 +2526,15 @@ function DiarySimpleStack({
   // Local order overrides while a reorder is pending.
   const [pendingOrder, setPendingOrder] = useState<{ colIdx: number; ids: string[] } | null>(null);
   const [stravaBlocked, setStravaBlocked] = useState(false);
+  // Delay the confirm/strava dialog ~300ms so the dnd-kit snap-in finishes
+  // first; the modal then slides up on top of the already-reordered list.
+  const [modalReady, setModalReady] = useState(false);
+  const modalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (modalTimerRef.current) clearTimeout(modalTimerRef.current); }, []);
+  const scheduleModalOpen = () => {
+    if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+    modalTimerRef.current = setTimeout(() => setModalReady(true), 300);
+  };
   const byCol = useMemo(() => {
     const arr: CalendarEvent[][] = Array.from({ length: 7 }, () => []);
     for (const ev of events) {
@@ -2605,24 +2614,30 @@ function DiarySimpleStack({
               );
               if (movedStrava) {
                 setStravaBlocked(true);
+                scheduleModalOpen();
                 return;
               }
               setPendingOrder({ colIdx, ids });
+              scheduleModalOpen();
             }}
           />
         </div>
       ))}
       <ReorderConfirmDialog
-        open={!!pendingOrder || stravaBlocked}
+        open={(!!pendingOrder || stravaBlocked) && modalReady}
         mode={stravaBlocked ? "stravaBlocked" : "confirm"}
         onCancel={() => {
+          if (modalTimerRef.current) { clearTimeout(modalTimerRef.current); modalTimerRef.current = null; }
           setPendingOrder(null);
           setStravaBlocked(false);
+          setModalReady(false);
         }}
         onConfirm={() => {
+          if (modalTimerRef.current) { clearTimeout(modalTimerRef.current); modalTimerRef.current = null; }
           if (pendingOrder) onReorderEvents?.(pendingOrder.ids);
           setPendingOrder(null);
           setStravaBlocked(false);
+          setModalReady(false);
         }}
       />
       {hoverId && hoverRect && (() => {
