@@ -720,11 +720,17 @@ export function MonthGridType1({
           clampedTop = Math.min(Math.max(clampedTop, slotTop), maxTop ?? slotTop);
           const dragMid = clampedTop + start.chipHeight / 2;
           const rel = dragMid - slotTop;
-          // Use floor (not round) so the dragged tile only switches places
-          // once its midpoint actually crosses a neighbor's midpoint. Round
-          // makes the switch trigger ~1px past the slot edge which felt
-          // far too eager compared to the week-view dnd-kit behavior.
-          insertIndex = Math.max(0, Math.min(count, Math.floor(rel / slotH)));
+          // Because the source chip is hidden and the remaining chips
+          // collapse upward, the neighbor at logical slot i is visually
+          // centered at slotTop + (i + 0.5) * slotH. The swap should fire
+          // when the dragged tile's midpoint crosses that visible midpoint,
+          // i.e. when rel crosses (i + 0.5) * slotH. That is exactly
+          // `Math.round(rel / slotH)`. Using `floor` shifts the threshold
+          // to the neighbor's bottom edge (too late on first swap, and the
+          // ongoing framer layout animation makes subsequent swaps feel
+          // off by half a slot in the opposite direction — the bug the
+          // user reported as "switching before the tile's mid passes").
+          insertIndex = Math.max(0, Math.min(count, Math.round(rel / slotH)));
           diaryGhostTop = clampedTop;
         } else {
           insertIndex = count;
