@@ -1862,6 +1862,7 @@ export function MonthGridType1({
             isEdit={popover.editIdx >= 0 || !!popover.eventId}
             anchor={popover.rect}
             enableDuration={!!onUpsertEvent}
+            readOnly={viewerRole !== "owner"}
             initialTime={(() => {
               if (popover.eventId) {
                 const ev = events.find((e) => e.id === popover.eventId);
@@ -2132,6 +2133,14 @@ export interface PopoverEditorProps {
    * its marked range immediately so the calendar stays in sync.
    */
   onTimeChange?: (time: { startMin: number; endMin: number } | null) => void;
+  /**
+   * When true, the popover renders as a view-only panel: the title input is
+   * not focusable/editable, the category dropdown and time wheel are
+   * non-interactive, and the bottom action bar is hidden. Used when a
+   * coach / group leader views a client's session — they can see the
+   * details but cannot change them.
+   */
+  readOnly?: boolean;
 }
 
 // Category defaults — color is the source of truth.
@@ -2395,6 +2404,7 @@ export function PopoverEditor({
   onClose,
   onCommit,
   onTimeChange,
+  readOnly = false,
 }: PopoverEditorProps) {
   const [value, setValue] = useState(initialText);
   // Resolve initial color according to seat
@@ -2425,7 +2435,11 @@ export function PopoverEditor({
     const onDown = (e: MouseEvent) => {
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
-        onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
+        if (readOnly) {
+          onClose();
+        } else {
+          onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
+        }
       }
     };
     const onKey = (e: KeyboardEvent) => {
@@ -2433,6 +2447,11 @@ export function PopoverEditor({
         e.preventDefault();
         onClose();
       } else if (e.key === "Enter" && !e.shiftKey) {
+        if (readOnly) {
+          e.preventDefault();
+          onClose();
+          return;
+        }
         // The mini duration column captures Enter at capture-phase before
         // this handler runs, so when its panel is open we never commit
         // the whole popover from Enter.
@@ -2453,7 +2472,7 @@ export function PopoverEditor({
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("keydown", onKey);
     };
-  }, [onCommit, onClose]);
+  }, [onCommit, onClose, readOnly]);
 
   const POPOVER_W = 280;
   const POPOVER_H = seat === "individual" ? 220 : 190;
@@ -2486,11 +2505,17 @@ export function PopoverEditor({
         <div className="flex-1 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg">
           {/* Session name — header */}
           <input
-            autoFocus
+            autoFocus={!readOnly}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="f.eks. Intervaller 5×4min"
-            className="block w-full border-b border-hairline bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60"
+            readOnly={readOnly}
+            tabIndex={readOnly ? -1 : 0}
+            onMouseDown={readOnly ? (e) => e.preventDefault() : undefined}
+            className={[
+              "block w-full border-b border-hairline bg-transparent px-3 py-2.5 text-[13px] text-ink outline-none placeholder:text-muted-foreground/60",
+              readOnly ? "cursor-default select-text caret-transparent" : "",
+            ].join(" ")}
           />
 
           {/* Time row */}
@@ -2503,10 +2528,13 @@ export function PopoverEditor({
               />
             )}
             {enableDuration ? (
-              <div className="flex-1 min-w-0">
+              <div
+                className={["flex-1 min-w-0", readOnly ? "pointer-events-none opacity-90" : ""].join(" ")}
+              >
                 <TimeWheelPicker
                   value={effectiveTime}
                   onChange={(t) => {
+                    if (readOnly) return;
                     setTime(t);
                     onTimeChange?.(t);
                   }}
@@ -2520,35 +2548,39 @@ export function PopoverEditor({
           </div>
 
           {/* Category dropdown — full-width with vertical color bar at left */}
-          <CategoryDropdownRow
-            seat={seat}
-            color={color}
-            adminCategory={adminCategory}
-            onSetColor={setColor}
-          />
+          <div className={readOnly ? "pointer-events-none" : undefined}>
+            <CategoryDropdownRow
+              seat={seat}
+              color={color}
+              adminCategory={adminCategory}
+              onSetColor={setColor}
+            />
+          </div>
 
-          <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
-            {isEdit ? (
+          {!readOnly && (
+            <div className="flex items-center justify-between border-t border-hairline px-3 py-2 text-[11px] text-muted-foreground">
+              {isEdit ? (
+                <button
+                  type="button"
+                  aria-label="Slett"
+                  title="Slett"
+                  onClick={() => onCommit("", color, time)}
+                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              ) : (
+                <span className="mono tabular-nums">⏎ for å lagre</span>
+              )}
               <button
                 type="button"
-                aria-label="Slett"
-                title="Slett"
-                onClick={() => onCommit("", color, time)}
-                className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => onCommit(value.trim(), color, time)}
+                className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                {isEdit ? "Lagre" : "Legg til"}
               </button>
-            ) : (
-              <span className="mono tabular-nums">⏎ for å lagre</span>
-            )}
-            <button
-              type="button"
-              onClick={() => onCommit(value.trim(), color, time)}
-              className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
-            >
-              {isEdit ? "Lagre" : "Legg til"}
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

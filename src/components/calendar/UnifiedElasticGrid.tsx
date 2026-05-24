@@ -1272,6 +1272,7 @@ export function UnifiedElasticGrid({
           isEdit={popover.isEdit}
           anchor={popover.rect}
           enableDuration={mode.kind === "year"}
+          readOnly={viewerRole !== "owner"}
           initialTime={(() => {
             if (mode.kind !== "year") return null;
             if (popover.pendingTime) return popover.pendingTime;
