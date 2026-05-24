@@ -245,7 +245,7 @@ export function DiaryPopoverEditor({
               <HeaderIconBtn
                 label="Slett"
                 destructive
-                onClick={() => onCommit(buildValue(), { delete: true })}
+                onClick={() => setConfirmDelete(true)}
               >
                 <Trash2 className="h-4 w-4" strokeWidth={2.25} />
               </HeaderIconBtn>
