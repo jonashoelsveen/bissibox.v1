@@ -315,7 +315,7 @@ export function GetRoleModal({
                     opacity: agreed ? 1 : 0.5,
                   }}
                 >
-                  Become an Aponna {ROLE_LABEL[role]}
+                  Become a {ROLE_LABEL[role]}-role
                 </button>
               </div>
             </motion.form>
