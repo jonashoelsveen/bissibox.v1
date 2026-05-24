@@ -358,7 +358,7 @@ function SignInForm(props: {
       <button
         type="button"
         onClick={onCreate}
-        className="block w-full text-center"
+        className="block w-full text-center hover:underline"
         style={{
           fontFamily: HELVETICA,
           fontSize: 13,
