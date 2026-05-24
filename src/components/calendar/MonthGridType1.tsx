@@ -2434,7 +2434,11 @@ export function PopoverEditor({
     const onDown = (e: MouseEvent) => {
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
-        onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
+        if (readOnly) {
+          onClose();
+        } else {
+          onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
+        }
       }
     };
     const onKey = (e: KeyboardEvent) => {
@@ -2442,6 +2446,11 @@ export function PopoverEditor({
         e.preventDefault();
         onClose();
       } else if (e.key === "Enter" && !e.shiftKey) {
+        if (readOnly) {
+          e.preventDefault();
+          onClose();
+          return;
+        }
         // The mini duration column captures Enter at capture-phase before
         // this handler runs, so when its panel is open we never commit
         // the whole popover from Enter.
@@ -2462,7 +2471,7 @@ export function PopoverEditor({
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("keydown", onKey);
     };
-  }, [onCommit, onClose]);
+  }, [onCommit, onClose, readOnly]);
 
   const POPOVER_W = 280;
   const POPOVER_H = seat === "individual" ? 220 : 190;
