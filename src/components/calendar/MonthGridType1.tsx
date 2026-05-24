@@ -1411,8 +1411,10 @@ export function MonthGridType1({
                       // true index). Same reasoning for the create
                       // placeholder: appending a slot at the end that the
                       // committed chip then jumps out of when sorted.
-                      if (isTargetDay && dragSession && !dragSession.landing && appKind === "diary") {
-                        const insertAt = Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex));
+                      if (isTargetDay && dragSession && !dragSession.landing) {
+                        const insertAt = appKind === "diary"
+                          ? Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex))
+                          : 0;
                         renderList.splice(insertAt, 0, { kind: "ghost" });
                       }
                       const isCreatingHere =
