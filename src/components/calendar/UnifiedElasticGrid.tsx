@@ -2569,6 +2569,7 @@ function DiarySimpleStack({
             creating={creatingColIdx === colIdx}
             tileDesign={tileDesign}
             unit={unit}
+            viewerRole={viewerRole}
             activeSessionId={lockedId ?? forceEditId}
             onEventClick={(ev, anchor) => {
               cancelClose();
