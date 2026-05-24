@@ -2128,7 +2128,7 @@ function WeekEventsOverlay({
             const dragDy = isDragging ? drag.delta.dy : 0;
             const accent = ev.color ?? "hsl(var(--primary))";
             const isGhost = ev.id.startsWith("__ghost__:");
-            const isActive = !isGhost && (lockedId ?? forceEditId) === ev.id;
+            const isActive = !isGhost && ((lockedId ?? forceEditId) === ev.id || activeEventId === ev.id);
             const bg = isActive
               ? accent
               : ev.color
