@@ -37,6 +37,7 @@ export function CreateEntityModal({
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [fieldsReady, setFieldsReady] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Default timezone from country selection.
@@ -49,6 +50,9 @@ export function CreateEntityModal({
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setFieldsReady(false);
+    const t = setTimeout(() => setFieldsReady(true), 1500);
+    timers.current.push(t);
     return () => {
       timers.current.forEach(clearTimeout);
       timers.current = [];
