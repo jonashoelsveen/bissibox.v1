@@ -396,7 +396,6 @@ function DiaryMonthDndCell({
   sortedEvents,
   ghostEvents,
   creating,
-  createInsertIndex,
   tall,
   monthTileDesign,
   distanceUnit,
@@ -413,7 +412,6 @@ function DiaryMonthDndCell({
   sortedEvents: CalendarEvent[];
   ghostEvents: CalendarEvent[];
   creating: boolean;
-  createInsertIndex?: number;
   tall: boolean;
   monthTileDesign: string;
   distanceUnit: ReturnType<typeof useDistanceUnit>[0];
@@ -432,7 +430,6 @@ function DiaryMonthDndCell({
   const realIds = sortedEvents.map((e) => e.id);
   const canReorder = viewerRole === "owner" && sortedEvents.length >= 2;
   const height = tall ? 44 : 22;
-  const createAt = Math.max(0, Math.min(sortedEvents.length, createInsertIndex ?? sortedEvents.length));
 
   const handleDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id));
   const handleDragEnd = (e: DragEndEvent) => {
@@ -457,39 +454,30 @@ function DiaryMonthDndCell({
     >
       <SortableContext items={realIds} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col" style={{ gap: 2 }}>
-          {sortedEvents.map((ev, index) => (
-            <div key={ev.id} className="contents">
-              {creating && index === createAt && (
-                <div
-                  aria-hidden
-                  className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
-                  style={{ height }}
-                />
-              )}
-              <SortableDiaryMonthChip
-                key={ev.id}
-                ev={ev}
-                tileDesign={monthTileDesign}
-                unit={distanceUnit}
-                height={height}
-                disabled={!canReorder}
-                isActive={lockedActiveId === ev.id}
-                hoverLocked={hoverLocked}
-                lockedActiveId={lockedActiveId}
-                cancelHoverClose={cancelHoverClose}
-                scheduleHoverClose={scheduleHoverClose}
-                setHoverId={setHoverId}
-                setHoverRect={setHoverRect}
-                setForceEditId={setForceEditId}
-              />
-            </div>
+          {sortedEvents.map((ev) => (
+            <SortableDiaryMonthChip
+              key={ev.id}
+              ev={ev}
+              tileDesign={monthTileDesign}
+              unit={distanceUnit}
+              height={height}
+              disabled={!canReorder}
+              isActive={lockedActiveId === ev.id}
+              hoverLocked={hoverLocked}
+              lockedActiveId={lockedActiveId}
+              cancelHoverClose={cancelHoverClose}
+              scheduleHoverClose={scheduleHoverClose}
+              setHoverId={setHoverId}
+              setHoverRect={setHoverRect}
+              setForceEditId={setForceEditId}
+            />
           ))}
           {ghostEvents.map((ev) => (
             <div key={ev.id} data-role="item" data-ghost-event="1">
               <DiaryMonthReorderTile ev={ev} tileDesign={monthTileDesign} unit={distanceUnit} height={height} />
             </div>
           ))}
-          {creating && createAt === sortedEvents.length && (
+          {creating && (
             <div
               aria-hidden
               className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
@@ -1365,27 +1353,11 @@ export function MonthGridType1({
                       const visibleReal = realEvents.slice(0, maxEvents);
                       const remaining = Math.max(0, maxEvents - visibleReal.length);
                       const visibleGhosts = ghostsList.slice(0, remaining);
-                      const createStart = createPreviewTime
-                        ? new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), Math.floor(createPreviewTime.startMin / 60), createPreviewTime.startMin % 60)
-                        : new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), 9, 0);
-                      const createKey = Date.parse(toISOLocal(createStart));
-                      const createSortedIndex = realEvents.findIndex((ev) => {
-                        const evKey = ev.sortIndex ?? Date.parse(ev.startISO);
-                        return createKey < evKey;
-                      });
-                      const createInsertIndex = Math.max(
-                        0,
-                        Math.min(
-                          visibleReal.length,
-                          createSortedIndex >= 0 ? createSortedIndex : visibleReal.length,
-                        ),
-                      );
                       return (
                         <DiaryMonthDndCell
                           sortedEvents={visibleReal}
                           ghostEvents={visibleGhosts}
                           creating={isCreatingHere}
-                          createInsertIndex={createInsertIndex}
                           tall={tall}
                           monthTileDesign={monthTileDesign}
                           distanceUnit={distanceUnit}
