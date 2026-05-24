@@ -2245,7 +2245,7 @@ function WeekEventsOverlay({
                     if (tileDesign === "icon") {
                       return (
                         <div className="flex h-full w-full items-center justify-center pl-1">
-                          <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+                          <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: isActive ? "#fff" : accent }} />
                         </div>
                       );
                     }
@@ -2258,7 +2258,10 @@ function WeekEventsOverlay({
                           >
                             <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
                           </div>
-                          <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
+                          <div
+                            className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight"
+                            style={{ color: isActive ? "#fff" : undefined }}
+                          >
                             <span className="truncate text-[12px] font-semibold">{ev.title}</span>
                             <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{durStr}</span>
                             {!isStrength && (
@@ -2279,8 +2282,9 @@ function WeekEventsOverlay({
                           <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
                         </div>
                         <div
-                          className="flex w-1/2 items-center justify-center text-ink"
+                          className={`flex w-1/2 items-center justify-center ${isActive ? "" : "text-ink"}`}
                           title={distLabel}
+                          style={{ color: isActive ? "#fff" : undefined }}
                         >
                           {isStrength ? (
                             <span
