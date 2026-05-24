@@ -1701,14 +1701,25 @@ export function MonthGridType1({
         )}
         {dragSession && (() => {
           const ev = dragSession.event;
+          const landing = dragSession.landing;
+          const left = landing ? landing.left : dragSession.pointerX - dragSession.offsetX;
+          const top = landing ? landing.top : dragSession.pointerY - dragSession.offsetY;
           return (
             <div
               className="pointer-events-none fixed z-[60]"
               style={{
-                left: dragSession.pointerX - dragSession.offsetX,
-                top: dragSession.pointerY - dragSession.offsetY,
+                left,
+                top,
                 width: dragSession.chipWidth,
                 height: dragSession.chipHeight,
+                // Smoothly snap the floating clone into the destination slot
+                // on release. The real chip is already mounted at the same
+                // landing pixel (via baseVisible re-include + pendingOrder
+                // sort), so when the clone unmounts there is no visible
+                // jump — it simply hands off to the real chip.
+                transition: landing
+                  ? "left 180ms cubic-bezier(0.22, 1, 0.36, 1), top 180ms cubic-bezier(0.22, 1, 0.36, 1)"
+                  : undefined,
               }}
             >
               <DiaryMonthReorderTile
