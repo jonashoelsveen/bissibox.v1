@@ -2888,9 +2888,9 @@ function SimpleTileBody({
   const distLabel = isStrength
     ? strengthLabel
     : distVal != null ? `${distVal.toFixed(1)} ${unitLabel(unit)}` : "—";
-  const iconHalfBg = isActive
-    ? "rgba(0,0,0,0.18)"
-    : ev.color ? `color-mix(in srgb, ${ev.color} 40%, white)` : "rgba(0,0,0,0.05)";
+  const iconHalfBg = ev.color
+    ? `color-mix(in srgb, ${ev.color} 40%, white)`
+    : "rgba(0,0,0,0.05)";
   const durStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
 
   return (
