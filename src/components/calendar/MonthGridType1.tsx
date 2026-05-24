@@ -1573,6 +1573,19 @@ export function MonthGridType1({
             />
           );
         })()}
+        <ReorderConfirmDialog
+          open={!!pendingOrder || stravaBlocked}
+          mode={stravaBlocked ? "stravaBlocked" : "confirm"}
+          onCancel={() => {
+            setPendingOrder(null);
+            setStravaBlocked(false);
+          }}
+          onConfirm={() => {
+            if (pendingOrder) onReorderEvents?.(pendingOrder);
+            setPendingOrder(null);
+            setStravaBlocked(false);
+          }}
+        />
       </div>
     </div>
   );
