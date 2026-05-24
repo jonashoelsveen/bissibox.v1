@@ -2923,12 +2923,12 @@ function SimpleTileBody({
       ) : (
         <div className="absolute inset-0 flex items-stretch overflow-hidden rounded-[3px]">
           <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
-            <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+            <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: isActive ? "#fff" : accent }} />
           </div>
           <div
-            className="flex w-1/2 items-center justify-center text-ink"
+            className="flex w-1/2 items-center justify-center"
             title={distLabel}
-            style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18 }}
+            style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18, color: isActive ? "#fff" : undefined }}
           >
             {isStrength ? (
               <span className="flex items-baseline gap-1" style={{ lineHeight: 1 }}>
