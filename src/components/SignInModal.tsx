@@ -10,7 +10,7 @@ import { COUNTRIES, COUNTRY_CALLING_CODES } from "@/lib/countries";
 const HELVETICA =
   '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
-export type SignInContext = "cloud" | "calendar" | "diary" | "photos";
+export type SignInContext = "cloud" | "calendar" | "diary" | "photos" | "entity";
 
 type Mode = "signin" | "signup";
 
@@ -22,6 +22,8 @@ function headerFor(ctx: SignInContext) {
       return "Welcome to Aponna Cloud Diary";
     case "photos":
       return "Welcome to Aponna Cloud Photos";
+    case "entity":
+      return "Sign in before creating Aponna-entity";
     default:
       return "Welcome to Aponna Cloud";
   }
