@@ -454,39 +454,30 @@ function DiaryMonthDndCell({
     >
       <SortableContext items={realIds} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col" style={{ gap: 2 }}>
-          {sortedEvents.map((ev, index) => (
-            <div key={ev.id} className="contents">
-              {creating && index === createAt && (
-                <div
-                  aria-hidden
-                  className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
-                  style={{ height }}
-                />
-              )}
-              <SortableDiaryMonthChip
-                key={ev.id}
-                ev={ev}
-                tileDesign={monthTileDesign}
-                unit={distanceUnit}
-                height={height}
-                disabled={!canReorder}
-                isActive={lockedActiveId === ev.id}
-                hoverLocked={hoverLocked}
-                lockedActiveId={lockedActiveId}
-                cancelHoverClose={cancelHoverClose}
-                scheduleHoverClose={scheduleHoverClose}
-                setHoverId={setHoverId}
-                setHoverRect={setHoverRect}
-                setForceEditId={setForceEditId}
-              />
-            </div>
+          {sortedEvents.map((ev) => (
+            <SortableDiaryMonthChip
+              key={ev.id}
+              ev={ev}
+              tileDesign={monthTileDesign}
+              unit={distanceUnit}
+              height={height}
+              disabled={!canReorder}
+              isActive={lockedActiveId === ev.id}
+              hoverLocked={hoverLocked}
+              lockedActiveId={lockedActiveId}
+              cancelHoverClose={cancelHoverClose}
+              scheduleHoverClose={scheduleHoverClose}
+              setHoverId={setHoverId}
+              setHoverRect={setHoverRect}
+              setForceEditId={setForceEditId}
+            />
           ))}
           {ghostEvents.map((ev) => (
             <div key={ev.id} data-role="item" data-ghost-event="1">
               <DiaryMonthReorderTile ev={ev} tileDesign={monthTileDesign} unit={distanceUnit} height={height} />
             </div>
           ))}
-          {creating && createAt === sortedEvents.length && (
+          {creating && (
             <div
               aria-hidden
               className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
