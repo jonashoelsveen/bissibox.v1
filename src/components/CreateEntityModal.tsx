@@ -209,9 +209,22 @@ export function CreateEntityModal({
 
                 <Divider label="About you" />
 
-                <div className="grid grid-cols-2 gap-3">
-                  <LabeledField label="First name" value={firstName} onChange={setFirstName} autoComplete="given-name" required />
-                  <LabeledField label="Surname" value={lastName} onChange={setLastName} autoComplete="family-name" required />
+                <div>
+                  <FieldLabel>Role</FieldLabel>
+                  <RawSelect value={role} onChange={setRole} required>
+                    <option value="admin">Admin</option>
+                  </RawSelect>
+                  <p
+                    style={{
+                      marginTop: 6,
+                      fontFamily: HELVETICA,
+                      fontSize: 12,
+                      color: "#86868b",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    At least one admin role is required to create the entity. Roles can be added and managed once the entity is created.
+                  </p>
                 </div>
 
                 <LabeledField
@@ -271,23 +284,6 @@ export function CreateEntityModal({
                   </label>
                 </div>
 
-                <div>
-                  <FieldLabel>Role</FieldLabel>
-                  <RawSelect value={role} onChange={setRole} required>
-                    <option value="admin">Admin</option>
-                  </RawSelect>
-                  <p
-                    style={{
-                      marginTop: 6,
-                      fontFamily: HELVETICA,
-                      fontSize: 12,
-                      color: "#86868b",
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    At least one admin role is required to create the entity. Roles can be added and managed once the entity is created.
-                  </p>
-                </div>
 
                 {error && (
                   <div
