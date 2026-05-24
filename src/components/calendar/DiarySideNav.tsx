@@ -61,7 +61,7 @@ export function DiarySideNav({
             title="Strava activities"
             canEdit={canEdit}
             kind="diary_strava"
-            onAddClick={() => setStravaPickerOpen(true)}
+            showAdd={false}
           />
         </div>
       </nav>
