@@ -2164,6 +2164,9 @@ function WeekEventsOverlay({
                 onPointerDown={(e) => {
                   if (isGhost) return;
                   if (appKind === "diary") return;
+                  // Only the owner can drag sessions in calendar week view.
+                  // Coaches / group leaders viewing someone else cannot move.
+                  if (viewerRole !== "owner") return;
                   e.stopPropagation();
                   (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
                   setDrag({
