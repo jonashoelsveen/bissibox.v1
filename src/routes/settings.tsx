@@ -2130,6 +2130,7 @@ function ConnectorsPanel() {
   const q = query.trim().toLowerCase();
   const [stravaConnected, setStravaConnected] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
+  const [detail, setDetail] = useState<null | "strava">(null);
 
   useEffect(() => {
     let active = true;
@@ -2196,6 +2197,10 @@ function ConnectorsPanel() {
     }
   };
 
+  if (detail === "strava") {
+    return <StravaConnectorDetail onBack={() => setDetail(null)} />;
+  }
+
   const renderRow = (name: string, key?: string) => {
     if (name === "Strava") {
       return (
@@ -2206,7 +2211,14 @@ function ConnectorsPanel() {
               <div>
               <div className="text-sm text-ink">Strava</div>
               <div className="mt-0.5 text-xs text-muted-foreground">
-                Auto-syncs your activities into the Diary. Recent activities cover the <strong>last 90 days</strong>.
+                Auto-syncs your activities into the Diary. Recent activities cover the <strong>last 90 days</strong>.{" "}
+                <button
+                  type="button"
+                  onClick={() => setDetail("strava")}
+                  className="text-ink underline-offset-2 hover:underline"
+                >
+                  Read more
+                </button>
               </div>
               </div>
             </div>
@@ -2280,6 +2292,125 @@ function ConnectorsPanel() {
     </div>
   );
 }
+
+const STRAVA_ACTIVITY_CATEGORIES: { title: string; items: string[] }[] = [
+  {
+    title: "Foot Sports",
+    items: ["Run", "Trail Run", "Walk", "Hike", "Wheelchair"],
+  },
+  {
+    title: "Cycle Sports",
+    items: [
+      "Ride (Standard Cycling)",
+      "Mountain Bike Ride",
+      "Gravel Ride",
+      "E-Bike Ride",
+      "E-Mountain Bike Ride",
+      "Handcycle",
+      "Velomobile",
+    ],
+  },
+  {
+    title: "Water Sports",
+    items: [
+      "Swim",
+      "Surfing",
+      "Stand Up Paddling (SUP)",
+      "Kayak",
+      "Canoe",
+      "Rowing",
+      "Windsurf",
+      "Kitesurf",
+      "Sailing",
+    ],
+  },
+  {
+    title: "Winter Sports",
+    items: [
+      "Alpine Ski",
+      "Backcountry Ski",
+      "Nordic Ski",
+      "Snowboard",
+      "Snowshoe",
+      "Ice Skate",
+    ],
+  },
+  {
+    title: "Racquet Sports",
+    items: ["Tennis", "Pickleball", "Padel", "Badminton", "Squash", "Racquetball", "Table Tennis"],
+  },
+  {
+    title: "Team & Ball Sports",
+    items: ["Football (Soccer)", "Basketball", "Volleyball", "Cricket"],
+  },
+  {
+    title: "Gym & Studio Fitness",
+    items: [
+      "Workout (Catch-all generic category)",
+      "Weight Training",
+      "Crossfit",
+      "HIIT (High-Intensity Interval Training)",
+      "Yoga",
+      "Pilates",
+      "Dance",
+      "Physical Therapy",
+    ],
+  },
+  {
+    title: "Machines & Other Sports",
+    items: [
+      "Stair Stepper",
+      "Elliptical",
+      "Rock Climbing",
+      "Skateboarding",
+      "Inline Skate",
+      "Roller Ski",
+      "Golf",
+    ],
+  },
+  {
+    title: "Virtual Sports (e.g., Zwift)",
+    items: ["Virtual Ride", "Virtual Run"],
+  },
+];
+
+function StravaConnectorDetail({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onBack}
+          className="rounded-md p-1 text-muted-foreground transition hover:text-ink"
+          aria-label="Back"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <h2 className="text-base font-semibold text-ink">Strava connector</h2>
+      </div>
+
+      <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        Connecting Strava auto-syncs your training activities straight into your Diary,
+        so every run, ride, swim or session you record on Strava appears as a tile on
+        the matching day without any manual entry. The platform recognises and imports
+        every Strava sport type listed below.
+      </p>
+
+      <div className="space-y-6">
+        {STRAVA_ACTIVITY_CATEGORIES.map((cat) => (
+          <div key={cat.title}>
+            <h3 className="text-sm font-semibold text-ink">{cat.title}</h3>
+            <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+              {cat.items.map((it) => (
+                <li key={it}>{it}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 
 function ConnectorRow({ name }: { name: string }) {
   const logo = CONNECTOR_LOGOS[name];
