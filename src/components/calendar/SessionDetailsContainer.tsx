@@ -19,6 +19,7 @@ export interface SessionDetailsContainerProps {
   ev: CalendarEvent;
   onClose: () => void;
   onUpsert: (patch: Partial<CalendarEvent> & { id: string }) => void;
+  onDelete?: () => void;
   memberId?: string;
   viewerRole?: ViewerRole;
 }
@@ -27,6 +28,7 @@ export function SessionDetailsContainer({
   ev,
   onClose,
   onUpsert,
+  onDelete,
   memberId,
   viewerRole = "owner",
 }: SessionDetailsContainerProps) {
@@ -120,6 +122,14 @@ export function SessionDetailsContainer({
         onUpsert(buildPatch(v));
         onClose();
       }}
+      onDelete={
+        onDelete
+          ? () => {
+              onDelete();
+              onClose();
+            }
+          : undefined
+      }
     />
   );
 }

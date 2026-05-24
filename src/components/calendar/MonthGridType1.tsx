@@ -1505,6 +1505,7 @@ export function MonthGridType1({
               ev={ev}
               onClose={() => setDetailsEvId(null)}
               onUpsert={(patch) => { onUpsertEvent?.(patch); }}
+              onDelete={onDeleteEvent ? () => onDeleteEvent(ev.id) : undefined}
             />
           );
         })()}
