@@ -46,8 +46,8 @@ export function DiarySideNav({
 
   return (
     <>
-      <nav className="flex max-h-[calc(100vh-8rem)] flex-col gap-3 overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
-        <div>
+      <nav className="flex h-full flex-col gap-3 overflow-hidden">
+        <div className="shrink-0">
           <MiniCalendar
             selectedRange={currentRange ?? { start: currentDate, end: currentDate }}
             onSelectRange={(r) => onCurrentDateChange(r.start, r)}
@@ -55,7 +55,7 @@ export function DiarySideNav({
           />
         </div>
 
-        <div className="flex flex-col gap-1 pb-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
           <DiaryActivitiesSection title="Activities" canEdit={canEdit} kind="diary_activity" />
           <DiaryActivitiesSection
             title="Strava activities"
