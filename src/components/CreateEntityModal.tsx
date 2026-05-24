@@ -30,8 +30,6 @@ export function CreateEntityModal({
   const [language, setLanguage] = useState("en");
 
   // About you
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [workEmail, setWorkEmail] = useState("");
   const [personalCallingCode, setPersonalCallingCode] = useState("+1");
   const [personalPhone, setPersonalPhone] = useState("");
