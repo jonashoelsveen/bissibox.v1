@@ -635,15 +635,40 @@ export function MonthGridType1({
   // Diary reorder confirmation state.
   const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
   const [stravaBlocked, setStravaBlocked] = useState(false);
-  // Delays the confirm/strava dialog by ~300ms after pointerup so the
-  // landing snap-in animation can finish first.
+  // Delays the confirm/strava dialog ~300ms after drop so the dnd-kit
+  // dropAnimation snap-in finishes first; the modal then slides up on top
+  // of the already-reordered list (matches week-view UX).
   const [modalReady, setModalReady] = useState(false);
   const modalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const landingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
-    if (landingTimerRef.current) clearTimeout(landingTimerRef.current);
   }, []);
+  const scheduleModalOpen = useCallback(() => {
+    if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+    modalTimerRef.current = setTimeout(() => setModalReady(true), 300);
+  }, []);
+
+  // Diary-only: triggered by dnd-kit onDragEnd inside DiaryMonthDndCell.
+  // Mirrors the week-view (SimpleColumn) flow: arrayMove → check Strava →
+  // set pendingOrder + schedule modal.
+  const handleDiaryReorder = useCallback(
+    (dayEvents: CalendarEvent[], newIds: string[]) => {
+      const oldIds = dayEvents.map((e) => e.id);
+      const unchanged = newIds.length === oldIds.length && newIds.every((id, i) => id === oldIds[i]);
+      if (unchanged) return;
+      const movedStrava = newIds.some(
+        (id, i) => id !== oldIds[i] && dayEvents.find((e) => e.id === id)?.stravaActivityId != null,
+      );
+      if (movedStrava) {
+        setStravaBlocked(true);
+      } else {
+        setPendingOrder(newIds);
+      }
+      scheduleModalOpen();
+    },
+    [scheduleModalOpen],
+  );
+
 
 
 
