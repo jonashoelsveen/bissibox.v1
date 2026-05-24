@@ -396,6 +396,7 @@ function DiaryMonthDndCell({
   sortedEvents,
   ghostEvents,
   creating,
+  createInsertIndex,
   tall,
   monthTileDesign,
   distanceUnit,
@@ -412,6 +413,7 @@ function DiaryMonthDndCell({
   sortedEvents: CalendarEvent[];
   ghostEvents: CalendarEvent[];
   creating: boolean;
+  createInsertIndex?: number;
   tall: boolean;
   monthTileDesign: string;
   distanceUnit: ReturnType<typeof useDistanceUnit>[0];
@@ -430,6 +432,7 @@ function DiaryMonthDndCell({
   const realIds = sortedEvents.map((e) => e.id);
   const canReorder = viewerRole === "owner" && sortedEvents.length >= 2;
   const height = tall ? 44 : 22;
+  const createAt = Math.max(0, Math.min(sortedEvents.length, createInsertIndex ?? sortedEvents.length));
 
   const handleDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id));
   const handleDragEnd = (e: DragEndEvent) => {
@@ -454,30 +457,39 @@ function DiaryMonthDndCell({
     >
       <SortableContext items={realIds} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col" style={{ gap: 2 }}>
-          {sortedEvents.map((ev) => (
-            <SortableDiaryMonthChip
-              key={ev.id}
-              ev={ev}
-              tileDesign={monthTileDesign}
-              unit={distanceUnit}
-              height={height}
-              disabled={!canReorder}
-              isActive={lockedActiveId === ev.id}
-              hoverLocked={hoverLocked}
-              lockedActiveId={lockedActiveId}
-              cancelHoverClose={cancelHoverClose}
-              scheduleHoverClose={scheduleHoverClose}
-              setHoverId={setHoverId}
-              setHoverRect={setHoverRect}
-              setForceEditId={setForceEditId}
-            />
+          {sortedEvents.map((ev, index) => (
+            <div key={ev.id} className="contents">
+              {creating && index === createAt && (
+                <div
+                  aria-hidden
+                  className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
+                  style={{ height }}
+                />
+              )}
+              <SortableDiaryMonthChip
+                key={ev.id}
+                ev={ev}
+                tileDesign={monthTileDesign}
+                unit={distanceUnit}
+                height={height}
+                disabled={!canReorder}
+                isActive={lockedActiveId === ev.id}
+                hoverLocked={hoverLocked}
+                lockedActiveId={lockedActiveId}
+                cancelHoverClose={cancelHoverClose}
+                scheduleHoverClose={scheduleHoverClose}
+                setHoverId={setHoverId}
+                setHoverRect={setHoverRect}
+                setForceEditId={setForceEditId}
+              />
+            </div>
           ))}
           {ghostEvents.map((ev) => (
             <div key={ev.id} data-role="item" data-ghost-event="1">
               <DiaryMonthReorderTile ev={ev} tileDesign={monthTileDesign} unit={distanceUnit} height={height} />
             </div>
           ))}
-          {creating && (
+          {creating && createAt === sortedEvents.length && (
             <div
               aria-hidden
               className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
@@ -1353,11 +1365,27 @@ export function MonthGridType1({
                       const visibleReal = realEvents.slice(0, maxEvents);
                       const remaining = Math.max(0, maxEvents - visibleReal.length);
                       const visibleGhosts = ghostsList.slice(0, remaining);
+                      const createStart = createPreviewTime
+                        ? new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), Math.floor(createPreviewTime.startMin / 60), createPreviewTime.startMin % 60)
+                        : new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), 9, 0);
+                      const createKey = Date.parse(toISOLocal(createStart));
+                      const createSortedIndex = realEvents.findIndex((ev) => {
+                        const evKey = ev.sortIndex ?? Date.parse(ev.startISO);
+                        return createKey < evKey;
+                      });
+                      const createInsertIndex = Math.max(
+                        0,
+                        Math.min(
+                          visibleReal.length,
+                          createSortedIndex >= 0 ? createSortedIndex : visibleReal.length,
+                        ),
+                      );
                       return (
                         <DiaryMonthDndCell
                           sortedEvents={visibleReal}
                           ghostEvents={visibleGhosts}
                           creating={isCreatingHere}
+                          createInsertIndex={createInsertIndex}
                           tall={tall}
                           monthTileDesign={monthTileDesign}
                           distanceUnit={distanceUnit}
@@ -1462,7 +1490,7 @@ export function MonthGridType1({
                               data-role="ghost-move"
                               aria-hidden
                               className="pointer-events-none"
-                              style={{ minHeight: tall ? 44 : 22 }}
+                              style={{ height: tall ? 44 : 22 }}
                             />
                           );
                         }
@@ -1472,7 +1500,7 @@ export function MonthGridType1({
                             data-role="ghost-move"
                             className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/70 bg-primary/10"
                             style={{
-                              minHeight: tall ? 44 : 22,
+                              height: tall ? 44 : 22,
                               borderColor: ev.color
                                 ? `${ev.color}CC`
                                 : undefined,
@@ -1514,7 +1542,7 @@ export function MonthGridType1({
                                   exit={{ opacity: 0 }}
                                   transition={{ duration: 0.12 }}
                                   className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
-                                  style={{ minHeight: tallCreate ? 44 : 22 }}
+                                  style={{ height: tallCreate ? 44 : 22 }}
                                 />
                               );
                             }
@@ -1689,7 +1717,7 @@ export function MonthGridType1({
                               if (isActive && itemColor) {
                                 return tall
                                   ? {
-                                      minHeight: 44,
+                                      height: 44,
                                       backgroundColor: itemColor,
                                       boxShadow: `inset 2px 0 0 ${itemColor}`,
                                       color: "#fff",
@@ -1702,15 +1730,20 @@ export function MonthGridType1({
                               }
                               return tall
                                 ? {
-                                    minHeight: 44,
+                                    height: 44,
                                     backgroundColor: itemColor ? `${itemColor}1F` : undefined,
                                     boxShadow: itemColor ? `inset 2px 0 0 ${itemColor}` : undefined,
                                   }
-                                : itemColor
-                                  ? {
-                                      backgroundColor: `${itemColor}1F`,
-                                      boxShadow: `inset 2px 0 0 ${itemColor}`,
-                                    }
+                                : it.kind === "event"
+                                  ? itemColor
+                                    ? {
+                                        height: 22,
+                                        backgroundColor: `${itemColor}1F`,
+                                        boxShadow: `inset 2px 0 0 ${itemColor}`,
+                                      }
+                                    : {
+                                        height: 22,
+                                      }
                                   : {};
                             })()}
                             title={isDiaryEvent ? undefined : displayText}
