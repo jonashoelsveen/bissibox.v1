@@ -1081,6 +1081,7 @@ export function UnifiedElasticGrid({
                   weekDates={weekDates}
                   startHour={WEEK_START_HOUR}
                   appKind={appKind}
+                  activeEventId={popover?.eventId ?? null}
                   onEventClick={(ev, anchor) => {
                     setPopover({
                       key: { year, month: 0, day: 1, session: 0 },
@@ -1966,6 +1967,7 @@ function WeekEventsOverlay({
   weekDates,
   startHour,
   appKind = "calendar",
+  activeEventId = null,
   onEventClick,
   onEventDrop,
   onDeleteEvent,
@@ -1978,6 +1980,7 @@ function WeekEventsOverlay({
   weekDates: Date[];
   startHour: number;
   appKind?: "calendar" | "diary";
+  activeEventId?: string | null;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
   onDeleteEvent?: (id: string) => void;
@@ -2126,7 +2129,7 @@ function WeekEventsOverlay({
             const dragDy = isDragging ? drag.delta.dy : 0;
             const accent = ev.color ?? "hsl(var(--primary))";
             const isGhost = ev.id.startsWith("__ghost__:");
-            const isActive = !isGhost && (lockedId ?? forceEditId) === ev.id;
+            const isActive = !isGhost && ((lockedId ?? forceEditId) === ev.id || activeEventId === ev.id);
             const bg = isActive
               ? accent
               : ev.color
@@ -2852,8 +2855,12 @@ function SimpleTileBody({
   isActive?: boolean;
 }) {
   const accent = ev.color ?? "hsl(var(--primary))";
-  const bg = ev.color ? `color-mix(in srgb, ${ev.color} 18%, white)` : "hsl(var(--primary) / 0.15)";
-  const fg = "hsl(var(--ink, 220 13% 13%))";
+  const bg = isActive
+    ? accent
+    : ev.color
+      ? `color-mix(in srgb, ${ev.color} 18%, white)`
+      : "hsl(var(--primary) / 0.15)";
+  const fg = isActive ? "#fff" : "hsl(var(--ink, 220 13% 13%))";
   const start = fromISOLocal(ev.startISO);
   const end = fromISOLocal(ev.endISO);
   const startMin = start.getHours() * 60 + start.getMinutes();
@@ -2877,7 +2884,9 @@ function SimpleTileBody({
   const distLabel = isStrength
     ? strengthLabel
     : distVal != null ? `${distVal.toFixed(1)} ${unitLabel(unit)}` : "—";
-  const iconHalfBg = ev.color ? `color-mix(in srgb, ${ev.color} 40%, white)` : "rgba(0,0,0,0.05)";
+  const iconHalfBg = isActive
+    ? "rgba(0,0,0,0.18)"
+    : ev.color ? `color-mix(in srgb, ${ev.color} 40%, white)` : "rgba(0,0,0,0.05)";
   const durStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
 
   return (
@@ -2890,19 +2899,18 @@ function SimpleTileBody({
         height: SIMPLE_TILE_H,
         background: bg,
         color: fg,
-        filter: isActive ? "brightness(0.82) saturate(1.2)" : undefined,
       }}
       title={ev.title}
     >
       <span className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: accent }} />
       {tileDesign === "icon" ? (
         <div className="flex h-full w-full items-center justify-center pl-1">
-          <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+          <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: isActive ? "#fff" : accent }} />
         </div>
       ) : tileDesign === "stacked" ? (
         <div className="absolute inset-0 flex items-stretch overflow-hidden rounded-[3px]">
           <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
-            <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+            <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: isActive ? "#fff" : accent }} />
           </div>
           <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
             <span className="truncate text-[12px] font-semibold">{ev.title}</span>
@@ -2915,12 +2923,12 @@ function SimpleTileBody({
       ) : (
         <div className="absolute inset-0 flex items-stretch overflow-hidden rounded-[3px]">
           <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
-            <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+            <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: isActive ? "#fff" : accent }} />
           </div>
           <div
-            className="flex w-1/2 items-center justify-center text-ink"
+            className="flex w-1/2 items-center justify-center"
             title={distLabel}
-            style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18 }}
+            style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18, color: isActive ? "#fff" : undefined }}
           >
             {isStrength ? (
               <span className="flex items-baseline gap-1" style={{ lineHeight: 1 }}>
