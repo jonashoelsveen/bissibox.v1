@@ -184,6 +184,107 @@ function serializeItems(items: DayItem[]): string {
   return items.map((i) => i.text).join("\n");
 }
 
+function DiaryMonthReorderTile({
+  ev,
+  tileDesign,
+  unit,
+  height,
+  dragging = false,
+}: {
+  ev: CalendarEvent;
+  tileDesign: string;
+  unit: ReturnType<typeof useDistanceUnit>[0];
+  height: number | string;
+  dragging?: boolean;
+}) {
+  const accent = ev.color ?? "hsl(var(--primary))";
+  const bg = ev.color
+    ? `color-mix(in srgb, ${ev.color} 18%, white)`
+    : "hsl(var(--primary) / 0.15)";
+  const startDate = fromISOLocal(ev.startISO);
+  const endDate = fromISOLocal(ev.endISO);
+  const totalMin = Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / 60000));
+  const durH = Math.floor(totalMin / 60);
+  const durM = totalMin % 60;
+  const isNorwegian = typeof navigator !== "undefined" && /^nb|^nn|^no/i.test(navigator.language || "");
+  const hourSuffix = isNorwegian ? "t" : "h";
+  const durStr = `${String(startDate.getHours()).padStart(2, "0")}:${String(startDate.getMinutes()).padStart(2, "0")} – ${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
+  const ActIcon = activityIconFor(ev);
+  const km = ev.distanceKm;
+  const distVal = km != null ? kmToUnit(km, unit) : null;
+  const actKey = (ev.activity || ev.diarySub || "").toLowerCase();
+  const isStrength = actKey === "strength";
+  const strengthLabel = durH > 0 ? `${durH}${hourSuffix} ${durM}m` : `${durM}m`;
+  const distLabel = isStrength
+    ? strengthLabel
+    : distVal != null ? `${distVal.toFixed(1)} ${unitLabel(unit)}` : "—";
+  const iconHalfBg = ev.color
+    ? `color-mix(in srgb, ${ev.color} 40%, white)`
+    : "rgba(0,0,0,0.05)";
+
+  return (
+    <div
+      className={[
+        "relative overflow-hidden rounded-[3px] text-[12px] text-ink shadow-sm ring-1 ring-black/5 transition-shadow",
+        dragging ? "shadow-lg" : "hover:shadow-md",
+      ].join(" ")}
+      style={{ height, background: bg }}
+      title={ev.title}
+    >
+      <span className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: accent }} />
+      {tileDesign === "stacked" ? (
+        <div className="absolute inset-0 flex items-stretch overflow-hidden rounded-[3px]">
+          <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
+            <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+          </div>
+          <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
+            <span className="truncate text-[12px] font-semibold">{ev.title}</span>
+            <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{durStr}</span>
+            {!isStrength && (
+              <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{distLabel}</span>
+            )}
+          </div>
+        </div>
+      ) : tileDesign === "split" ? (
+        <div className="absolute inset-0 flex items-stretch overflow-hidden rounded-[3px]">
+          <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
+            <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+          </div>
+          <div
+            className="flex w-1/2 items-center justify-center"
+            title={distLabel}
+            style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18 }}
+          >
+            {isStrength ? (
+              <span className="flex items-baseline gap-1" style={{ lineHeight: 1 }}>
+                {durH > 0 && (
+                  <>
+                    <span>{durH}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{hourSuffix}</span>
+                  </>
+                )}
+                <span>{durM}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>m</span>
+              </span>
+            ) : distVal != null ? (
+              <span className="flex items-baseline gap-1" style={{ lineHeight: 1 }}>
+                <span>{distVal.toFixed(1)}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{unitLabel(unit)}</span>
+              </span>
+            ) : (
+              "—"
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex h-full items-center truncate pl-2 pr-1.5 py-0.5">
+          <span className="truncate">{ev.title}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface CellPos {
   row: number;
   col: number;
@@ -478,6 +579,7 @@ export function MonthGridType1({
   useEffect(() => {
     dragSessionRef.current = dragSession;
   }, [dragSession]);
+  const suppressClickAfterDragRef = useRef(false);
   // Tracks the event id currently pressed (pointer down) before drag threshold.
   // Used so the chip keeps its "active" styling from mousedown through drag,
   // without a flash back to the idle color.
@@ -565,6 +667,7 @@ export function MonthGridType1({
       const dy = e.clientY - start.y;
       const active = dragSessionRef.current;
       if (!active && Math.hypot(dx, dy) < 4) return;
+      suppressClickAfterDragRef.current = true;
 
       let targetDate: Date | null = null;
       let dayKey: string | null = null;
@@ -1125,6 +1228,7 @@ export function MonthGridType1({
                               if (viewerRole !== "owner") return;
                               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                               // Start tracking a potential drag.
+                              suppressClickAfterDragRef.current = false;
                               dragStartRef.current = {
                                 x: e.clientX,
                                 y: e.clientY,
@@ -1138,7 +1242,9 @@ export function MonthGridType1({
                                 chipWidth: rect.width,
                                 chipHeight: rect.height,
                               };
-                              setPressedEventId(it.event.id);
+                              if (appKind !== "diary") {
+                                setPressedEventId(it.event.id);
+                              }
                               // Prevent cell-level range selection mousedown.
                               e.stopPropagation();
                             }}
@@ -1149,6 +1255,10 @@ export function MonthGridType1({
                             draggable={false}
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (suppressClickAfterDragRef.current) {
+                                suppressClickAfterDragRef.current = false;
+                                return;
+                              }
                               if (dragSessionRef.current) return;
                               if (it.kind === "event" && it.event.id.startsWith("__ghost__:")) {
                                 return;
@@ -1165,8 +1275,9 @@ export function MonthGridType1({
                                 openEventEditor(pos, it.event, e.currentTarget as HTMLElement);
                               }
                             }}
-                            className={
-                              tall
+                            className={isDiaryEvent
+                              ? "relative"
+                              : tall
                                 ? [
                                     "relative flex items-stretch overflow-hidden rounded-[3px] text-[11.5px] text-ink",
                                     "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
@@ -1177,10 +1288,9 @@ export function MonthGridType1({
                                     "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                                     itemColor ? "" : "bg-secondary/70",
                                     itemColor ? "" : "hover:bg-secondary",
-                                  ].join(" ")
-
-                            }
+                                  ].join(" ")}
                             style={(() => {
+                              if (isDiaryEvent) return undefined;
                               const evId = it.kind === "event" ? it.event.id : null;
                               const isActive = isRealEvent && evId !== null && ((lockedId ?? forceEditId) === evId || popover?.eventId === evId || (appKind !== "diary" && (dragSession?.eventId === evId || pressedEventId === evId)));
                               if (isActive && itemColor) {
@@ -1210,103 +1320,18 @@ export function MonthGridType1({
                                     }
                                   : {};
                             })()}
-                            title={displayText}
+                            title={isDiaryEvent ? undefined : displayText}
                           >
                             {isDiaryEvent ? (() => {
                               const ev = it.kind === "event" ? it.event : null;
                               if (!ev) return null;
-                              const ActIcon = activityIconFor(ev);
-                              const accent = itemColor ?? "currentColor";
-                              const isActive = (lockedId ?? forceEditId) === ev.id || popover?.eventId === ev.id || (appKind !== "diary" && (dragSession?.eventId === ev.id || pressedEventId === ev.id));
-
-                              const km = ev.distanceKm;
-                              const distVal = km != null ? kmToUnit(km, distanceUnit) : null;
-                              const actKey = (ev.activity || ev.diarySub || "").toLowerCase();
-                              const isStrength = actKey === "strength";
-                              const startDate = fromISOLocal(ev.startISO);
-                              const endDate = fromISOLocal(ev.endISO);
-                              const totalMin = Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / 60000));
-                              const durH = Math.floor(totalMin / 60);
-                              const durM = totalMin % 60;
-                              const isNorwegian = typeof navigator !== "undefined" && /^nb|^nn|^no/i.test(navigator.language || "");
-                              const hourSuffix = isNorwegian ? "t" : "h";
-                              const durStr = `${String(startDate.getHours()).padStart(2, "0")}:${String(startDate.getMinutes()).padStart(2, "0")} – ${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
-                              const strengthLabel = durH > 0 ? `${durH}${hourSuffix} ${durM}m` : `${durM}m`;
-                              const distLabel = isStrength
-                                ? strengthLabel
-                                : distVal != null ? `${distVal.toFixed(1)} ${unitLabel(distanceUnit)}` : "—";
-                              const iconHalfBg = itemColor
-                                ? `color-mix(in srgb, ${itemColor} 40%, white)`
-                                : "rgba(0,0,0,0.05)";
-
-                              if (monthTileDesign === "stacked") {
-                                return (
-                                  <>
-                                    <div
-                                      className="flex w-1/2 items-center justify-center"
-                                      style={{ background: iconHalfBg }}
-                                    >
-                                      <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
-                                    </div>
-                                    <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight" style={{ color: isActive ? "#fff" : undefined }}>
-                                      <span className="truncate text-[11px] font-semibold">{ev.title}</span>
-                                      <span className="mono truncate text-[10px] tabular-nums opacity-70">{durStr}</span>
-                                      {!isStrength && (
-                                        <span className="mono truncate text-[10px] tabular-nums opacity-70">{distLabel}</span>
-                                      )}
-                                    </div>
-                                  </>
-                                );
-                              }
-                              if (monthTileDesign === "split") {
-                                return (
-                                  <>
-                                    <div
-                                      className="flex w-1/2 items-center justify-center"
-                                      style={{ background: iconHalfBg }}
-                                    >
-                                      <ActIcon className="h-6 w-6 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
-                                    </div>
-                                    <div
-                                      className={`flex w-1/2 items-center justify-center ${isActive ? "" : "text-ink"}`}
-                                      title={distLabel}
-                                      style={{ color: isActive ? "#fff" : undefined }}
-                                    >
-
-                                      {isStrength ? (
-                                        <span
-                                          className="flex items-baseline gap-1"
-                                          style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18, lineHeight: 1 }}
-                                        >
-                                          {durH > 0 && (
-                                            <>
-                                              <span>{durH}</span>
-                                              <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>{hourSuffix}</span>
-                                            </>
-                                          )}
-                                          <span>{durM}</span>
-                                          <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>m</span>
-                                        </span>
-                                      ) : distVal != null ? (
-                                        <span
-                                          className="flex items-baseline gap-1"
-                                          style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18, lineHeight: 1 }}
-                                        >
-                                          <span>{distVal.toFixed(1)}</span>
-                                          <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.7 }}>{unitLabel(distanceUnit)}</span>
-                                        </span>
-                                      ) : (
-                                        "—"
-                                      )}
-                                    </div>
-                                  </>
-                                );
-                              }
-                              // "compact" — current low tile
                               return (
-                                <>
-                                  <span className="truncate">{displayText}</span>
-                                </>
+                                <DiaryMonthReorderTile
+                                  ev={ev}
+                                  tileDesign={monthTileDesign}
+                                  unit={distanceUnit}
+                                  height={tall ? 44 : 22}
+                                />
                               );
                             })() : (
                               <>
@@ -1557,21 +1582,23 @@ export function MonthGridType1({
         )}
         {dragSession && (() => {
           const ev = dragSession.event;
-          const color = ev.color;
           return (
             <div
-              className="pointer-events-none fixed z-[60] truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink shadow-[0_8px_24px_rgba(15,23,42,0.18)] ring-1 ring-ink/10"
+              className="pointer-events-none fixed z-[60]"
               style={{
                 left: dragSession.pointerX - dragSession.offsetX,
                 top: dragSession.pointerY - dragSession.offsetY,
                 width: dragSession.chipWidth,
                 height: dragSession.chipHeight,
-                background: color ? `${color}1F` : "hsl(var(--secondary))",
-                boxShadow: color ? `inset 2px 0 0 ${color}, 0 8px 24px rgba(15,23,42,0.18)` : undefined,
-                opacity: 1,
               }}
             >
-              {ev.title}
+              <DiaryMonthReorderTile
+                ev={ev}
+                tileDesign={monthTileDesign}
+                unit={distanceUnit}
+                height="100%"
+                dragging
+              />
             </div>
           );
         })()}
