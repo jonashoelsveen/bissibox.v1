@@ -2855,8 +2855,12 @@ function SimpleTileBody({
   isActive?: boolean;
 }) {
   const accent = ev.color ?? "hsl(var(--primary))";
-  const bg = ev.color ? `color-mix(in srgb, ${ev.color} 18%, white)` : "hsl(var(--primary) / 0.15)";
-  const fg = "hsl(var(--ink, 220 13% 13%))";
+  const bg = isActive
+    ? accent
+    : ev.color
+      ? `color-mix(in srgb, ${ev.color} 18%, white)`
+      : "hsl(var(--primary) / 0.15)";
+  const fg = isActive ? "#fff" : "hsl(var(--ink, 220 13% 13%))";
   const start = fromISOLocal(ev.startISO);
   const end = fromISOLocal(ev.endISO);
   const startMin = start.getHours() * 60 + start.getMinutes();
@@ -2880,7 +2884,9 @@ function SimpleTileBody({
   const distLabel = isStrength
     ? strengthLabel
     : distVal != null ? `${distVal.toFixed(1)} ${unitLabel(unit)}` : "—";
-  const iconHalfBg = ev.color ? `color-mix(in srgb, ${ev.color} 40%, white)` : "rgba(0,0,0,0.05)";
+  const iconHalfBg = isActive
+    ? "rgba(0,0,0,0.18)"
+    : ev.color ? `color-mix(in srgb, ${ev.color} 40%, white)` : "rgba(0,0,0,0.05)";
   const durStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
 
   return (
@@ -2893,7 +2899,6 @@ function SimpleTileBody({
         height: SIMPLE_TILE_H,
         background: bg,
         color: fg,
-        filter: isActive ? "brightness(0.82) saturate(1.2)" : undefined,
       }}
       title={ev.title}
     >
