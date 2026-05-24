@@ -255,7 +255,7 @@ export function SessionDetailsModal({
           </AlertDialog>
 
           <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
-            <AlertDialogContent>
+            <AlertDialogContent className="z-[300]">
               <AlertDialogHeader>
                 <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
                 <AlertDialogDescription>
