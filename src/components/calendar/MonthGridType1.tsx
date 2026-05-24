@@ -803,19 +803,19 @@ export function MonthGridType1({
         setPressedEventId(null);
         return;
       }
-      setDragSession(null);
-      setPressedEventId(null);
-      void start;
       const td = drag.targetDate;
-      if (!td) return;
-      const sameDayDrop =
+      const sameDayDrop = !!td &&
         drag.fromKey.year === td.getFullYear() &&
         drag.fromKey.month === td.getMonth() &&
         drag.fromKey.day === td.getDate();
 
       // ── Diary: same-day reorder only. Cross-day drops are blocked. ──
       if (appKind === "diary") {
-        if (!sameDayDrop) return;
+        if (!td || !sameDayDrop) {
+          setDragSession(null);
+          setPressedEventId(null);
+          return;
+        }
         // Build the new ordered id list for that day.
         const dayEvents = events
           .filter((ev) => sameDay(fromISOLocal(ev.startISO), td))
@@ -829,20 +829,59 @@ export function MonthGridType1({
         const without = oldIds.filter((id) => id !== drag.eventId);
         const insertAt = Math.max(0, Math.min(without.length, drag.insertIndex));
         const newIds = [...without.slice(0, insertAt), drag.eventId, ...without.slice(insertAt)];
-        // No-op: order unchanged.
+        // No-op: order unchanged → just unmount the clone, no dialog.
         const unchanged = newIds.length === oldIds.length && newIds.every((id, i) => id === oldIds[i]);
-        if (unchanged) return;
+        if (unchanged) {
+          setDragSession(null);
+          setPressedEventId(null);
+          return;
+        }
+
+        // Compute landing pixel for the floating clone. We snap the clone
+        // to the final slot using frozen geometry, so when dragSession
+        // clears the real chip is already at the exact same spot — no
+        // perceived jump on release.
+        const slotTop = start?.diarySlotTop;
+        const slotH = start?.diarySlotHeight;
+        const chipLeft = start?.diaryChipLeft;
+        const landing = (slotTop != null && slotH != null && chipLeft != null)
+          ? { left: chipLeft, top: slotTop + insertAt * slotH }
+          : null;
+
         // Block reorder when any moved session is Strava-synced.
         const movedStrava = newIds.some(
           (id, i) => id !== oldIds[i] && dayEvents.find((e) => e.id === id)?.stravaActivityId != null,
         );
-        if (movedStrava) {
-          setStravaBlocked(true);
-          return;
+
+        // Begin the snap-in animation. Keep dragSession alive briefly so
+        // the floating clone CSS-transitions to the landing slot. When
+        // landing is set, the source chip is re-included in baseVisible
+        // (sorted by pendingOrder for non-strava case, or unchanged for
+        // strava), so the real chip mounts at the exact landing pixel.
+        if (!movedStrava) {
+          setPendingOrder(newIds);
         }
-        setPendingOrder(newIds);
+        setDragSession((prev) => (prev ? { ...prev, landing } : prev));
+        setPressedEventId(null);
+
+        if (landingTimerRef.current) clearTimeout(landingTimerRef.current);
+        landingTimerRef.current = setTimeout(() => {
+          setDragSession(null);
+        }, 200);
+
+        if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+        modalTimerRef.current = setTimeout(() => {
+          if (movedStrava) setStravaBlocked(true);
+          setModalReady(true);
+        }, 300);
         return;
       }
+
+      // Cross-day (calendar mode): unmount clone immediately.
+      setDragSession(null);
+      setPressedEventId(null);
+      void start;
+      if (!td) return;
 
       if (sameDayDrop) return;
       const newKey: CellKey = {
