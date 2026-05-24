@@ -2905,12 +2905,12 @@ function SimpleTileBody({
       <span className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: accent }} />
       {tileDesign === "icon" ? (
         <div className="flex h-full w-full items-center justify-center pl-1">
-          <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+          <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: isActive ? "#fff" : accent }} />
         </div>
       ) : tileDesign === "stacked" ? (
         <div className="absolute inset-0 flex items-stretch overflow-hidden rounded-[3px]">
           <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
-            <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
+            <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: isActive ? "#fff" : accent }} />
           </div>
           <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
             <span className="truncate text-[12px] font-semibold">{ev.title}</span>
