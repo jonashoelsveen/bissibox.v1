@@ -1783,8 +1783,8 @@ function DayCellPair(props: DayCellPairProps) {
 
             {showCompact && !isEditing && (() => {
               const Icon = iconForColor(cellColor);
-              const labelColor = "hsl(var(--ink, 220 13% 13%))";
-              const iconColor = cellColor ?? labelColor;
+              const labelColor = isActiveColored ? "#fff" : "hsl(var(--ink, 220 13% 13%))";
+              const iconColor = isActiveColored ? "#fff" : (cellColor ?? labelColor);
               return (
                 <span
                   className={`pointer-events-none absolute left-14 right-1.5 top-0.5 flex items-center gap-1 truncate text-[12px] ${
