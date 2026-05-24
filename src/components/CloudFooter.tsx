@@ -98,6 +98,7 @@ export function CloudFooter() {
         </div>
       </div>
       <style>{`
+        .footer-link { text-decoration: none; }
         .footer-link:hover { text-decoration: underline; }
       `}</style>
 
