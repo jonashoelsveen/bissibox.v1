@@ -953,19 +953,26 @@ export function MonthGridType1({
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
                     {(() => {
                       // Decide whether to splice a ghost preview chip into
-                      // this day's list during a cross-day drag.
+                      // this day's list during a drag.
                       const isSourceDay =
                         !!dragSession &&
                         dragSession.fromKey.year === d.date.getFullYear() &&
                         dragSession.fromKey.month === d.date.getMonth() &&
                         dragSession.fromKey.day === d.date.getDate();
-                      const isTargetDay =
-                        !!dragSession && dragSession.targetDayKey === id && !isSourceDay;
+                      // In diary mode drags are locked to the source day, so
+                      // the target day is always the source day.
+                      const isTargetDay = appKind === "diary"
+                        ? isSourceDay
+                        : !!dragSession && dragSession.targetDayKey === id && !isSourceDay;
 
-                      // Keep the source event visible during drag — the
-                      // ghost preview in the target cell simply indicates
-                      // where it will land on release.
-                      const baseVisible = visible;
+                      // For diary same-day reorder, fully remove the dragged
+                      // source chip from the flow and re-insert a ghost at the
+                      // computed insertion index. Combined with framer-motion
+                      // `layout`, the other chips smoothly slide to make room
+                      // (snap-in), matching the week-view sortable behavior.
+                      const baseVisible = (appKind === "diary" && isSourceDay && dragSession)
+                        ? visible.filter((it) => !(it.kind === "event" && it.event.id === dragSession.eventId))
+                        : visible;
 
 
                       type RenderItem =
@@ -974,11 +981,10 @@ export function MonthGridType1({
                         | UnifiedItem;
                       const renderList: RenderItem[] = [...baseVisible];
                       if (isTargetDay && dragSession) {
-                        // Ghost preview always shows at the top of the day
-                        // cell during drag, so the user clearly sees which
-                        // day is targeted. The actual drop still places the
-                        // session in its correct sorted slot by start time.
-                        renderList.splice(0, 0, { kind: "ghost" });
+                        const insertAt = appKind === "diary"
+                          ? Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex))
+                          : 0;
+                        renderList.splice(insertAt, 0, { kind: "ghost" });
                       }
                       const isCreatingHere =
                         !!popover &&
@@ -1024,10 +1030,11 @@ export function MonthGridType1({
                               return (
                                 <motion.div
                                   key={`${id}-ghost-${idx}`}
+                                  layout
                                   initial={{ opacity: 0 }}
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
-                                  transition={{ duration: 0.1 }}
+                                  transition={{ duration: 0.12, layout: { duration: 0.18, ease: [0.2, 0, 0, 1] } }}
                                 >
                                   {renderGhost()}
                                 </motion.div>
@@ -1040,6 +1047,7 @@ export function MonthGridType1({
                               return (
                                 <motion.div
                                   key={`${id}-creating-${idx}`}
+                                  layout
                                   initial={{ opacity: 0 }}
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
@@ -1060,6 +1068,7 @@ export function MonthGridType1({
                             return (
                           <motion.div
                             key={`${id}-${itemKey}`}
+                            layout
                             initial={false}
                             animate={{
                               opacity:
@@ -1070,7 +1079,7 @@ export function MonthGridType1({
                                   : 1,
                             }}
                             exit={{ opacity: 0 }}
-                            transition={{ duration: 0 }}
+                            transition={{ duration: 0, layout: { duration: 0.18, ease: [0.2, 0, 0, 1] } }}
                             data-role="item"
                             data-real-event={isRealEvent ? "1" : undefined}
                             data-ghost-event={it.kind === "event" && it.event.id.startsWith("__ghost__:") ? "1" : undefined}
@@ -1158,7 +1167,7 @@ export function MonthGridType1({
                             }
                             style={(() => {
                               const evId = it.kind === "event" ? it.event.id : null;
-                              const isActive = isRealEvent && evId !== null && ((lockedId ?? forceEditId) === evId || popover?.eventId === evId || dragSession?.eventId === evId || pressedEventId === evId);
+                              const isActive = isRealEvent && evId !== null && ((lockedId ?? forceEditId) === evId || popover?.eventId === evId || (appKind !== "diary" && (dragSession?.eventId === evId || pressedEventId === evId)));
                               if (isActive && itemColor) {
                                 return tall
                                   ? {
@@ -1193,7 +1202,7 @@ export function MonthGridType1({
                               if (!ev) return null;
                               const ActIcon = activityIconFor(ev);
                               const accent = itemColor ?? "currentColor";
-                              const isActive = (lockedId ?? forceEditId) === ev.id || popover?.eventId === ev.id || dragSession?.eventId === ev.id || pressedEventId === ev.id;
+                              const isActive = (lockedId ?? forceEditId) === ev.id || popover?.eventId === ev.id || (appKind !== "diary" && (dragSession?.eventId === ev.id || pressedEventId === ev.id));
 
                               const km = ev.distanceKm;
                               const distVal = km != null ? kmToUnit(km, distanceUnit) : null;
@@ -1533,8 +1542,7 @@ export function MonthGridType1({
         )}
         {dragSession && (() => {
           const ev = dragSession.event;
-          const { color } = splitColor(ev.title ? `[${ev.color ?? ""}] ${ev.title}` : ev.title);
-          void color;
+          const color = ev.color;
           return (
             <div
               className="pointer-events-none fixed z-[60] truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink shadow-[0_8px_24px_rgba(15,23,42,0.18)] ring-1 ring-ink/10"
@@ -1543,7 +1551,8 @@ export function MonthGridType1({
                 top: dragSession.pointerY - dragSession.offsetY,
                 width: dragSession.chipWidth,
                 height: dragSession.chipHeight,
-                background: ev.color ?? "hsl(var(--secondary))",
+                background: color ? `${color}1F` : "hsl(var(--secondary))",
+                boxShadow: color ? `inset 2px 0 0 ${color}, 0 8px 24px rgba(15,23,42,0.18)` : undefined,
                 opacity: 0.95,
               }}
             >
