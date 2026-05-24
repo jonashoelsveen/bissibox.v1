@@ -134,24 +134,6 @@ function HomePage() {
               />
             ))}
           </div>
-          <div className="flex w-full justify-center gap-4 pb-12 pt-16">
-            <button
-              type="button"
-              onClick={() => setCreateEntityOpen(true)}
-              className="text-white transition active:scale-[0.98]"
-              style={primaryButtonStyle}
-            >
-              Register your organization
-            </button>
-            <button
-              type="button"
-              onClick={() => setGetRoleOpen(true)}
-              className="text-white transition active:scale-[0.98]"
-              style={primaryButtonStyle}
-            >
-              Get a role
-            </button>
-          </div>
         </div>
         <CreateEntityModal
           open={createEntityOpen}
