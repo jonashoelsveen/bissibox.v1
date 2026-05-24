@@ -15,9 +15,10 @@ import {
   CalendarDays,
   BookOpen,
   Home,
-  Building2,
   UserRound,
 } from "lucide-react";
+import { OrganizationIcon } from "@/components/OrganizationIcon";
+// removed:
 import { useAuth } from "@/lib/auth";
 import { ProfileTab } from "@/components/ProfileTab";
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
