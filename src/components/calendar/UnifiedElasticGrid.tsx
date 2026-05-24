@@ -2202,7 +2202,7 @@ function WeekEventsOverlay({
                   e.stopPropagation();
                   onEventClick(ev, e.currentTarget as HTMLElement);
                 }}
-                className={`absolute overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
+                className={`absolute select-none overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
                 data-session-active={isActive ? "1" : undefined}
                 style={{
                   left: 2,
@@ -2287,8 +2287,8 @@ function WeekEventsOverlay({
                         >
                           <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
                         </div>
-                        <div
-                          className={`flex w-1/2 items-center justify-center ${isActive ? "" : "text-ink"}`}
+                          <div
+                            className={`flex w-1/2 select-none items-center justify-center ${isActive ? "" : "text-ink"}`}
                           title={distLabel}
                           style={{ color: isActive ? "#fff" : undefined }}
                         >
@@ -2906,7 +2906,7 @@ function SimpleTileBody({
   return (
     <div
       className={[
-        "relative overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md",
+        "relative select-none overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md",
         dragging ? "shadow-lg" : "",
       ].join(" ")}
       style={{
@@ -2941,7 +2941,7 @@ function SimpleTileBody({
             <ActIcon className="h-7 w-7 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
           </div>
           <div
-            className="flex w-1/2 items-center justify-center"
+            className="flex w-1/2 select-none items-center justify-center"
             title={distLabel}
             style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18, color: isActive ? "#fff" : undefined }}
           >
