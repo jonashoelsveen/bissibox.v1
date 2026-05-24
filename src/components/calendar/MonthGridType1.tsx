@@ -1273,7 +1273,41 @@ export function MonthGridType1({
 
                   {/* Items list */}
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
-                    {(() => {
+                    {appKind === "diary" ? (() => {
+                      const isCreatingHere =
+                        !!popover &&
+                        !popover.eventId &&
+                        popover.editIdx < 0 &&
+                        popover.pos.row === pos.row &&
+                        popover.pos.col === pos.col;
+                      const realEvents = sortedDayEvents.filter((ev) => !ev.id.startsWith("__ghost__:"));
+                      const ghostsList = sortedDayEvents.filter((ev) => ev.id.startsWith("__ghost__:"));
+                      const tall = monthTileDesign === "split" || monthTileDesign === "stacked";
+                      const maxEvents = Math.max(0, MAX_VISIBLE - (isCreatingHere ? 1 : 0));
+                      const visibleReal = realEvents.slice(0, maxEvents);
+                      const remaining = Math.max(0, maxEvents - visibleReal.length);
+                      const visibleGhosts = ghostsList.slice(0, remaining);
+                      return (
+                        <DiaryMonthDndCell
+                          sortedEvents={visibleReal}
+                          ghostEvents={visibleGhosts}
+                          creating={isCreatingHere}
+                          tall={tall}
+                          monthTileDesign={monthTileDesign}
+                          distanceUnit={distanceUnit}
+                          viewerRole={viewerRole}
+                          lockedActiveId={lockedId ?? forceEditId}
+                          hoverLocked={hoverLocked}
+                          cancelHoverClose={cancelHoverClose}
+                          scheduleHoverClose={scheduleHoverClose}
+                          setHoverId={setHoverId}
+                          setHoverRect={setHoverRect}
+                          setForceEditId={setForceEditId}
+                          onReorder={(newIds) => handleDiaryReorder(realEvents, newIds)}
+                        />
+                      );
+                    })() : (() => {
+
                       // Decide whether to splice a ghost preview chip into
                       // this day's list during a drag.
                       const isSourceDay =
