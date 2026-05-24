@@ -1273,7 +1273,7 @@ export function MonthGridType1({
 
                   {/* Items list */}
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
-                    {appKind === "diary" ? (() => {
+                    {(appKind as string) === "diary" ? (() => {
                       const isCreatingHere =
                         !!popover &&
                         !popover.eventId &&
