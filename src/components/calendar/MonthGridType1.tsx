@@ -1326,6 +1326,7 @@ export function MonthGridType1({
                               let diarySlotTop: number | undefined;
                               let diarySlotHeight: number | undefined;
                               let diaryOtherCount: number | undefined;
+                              let diaryMaxTop: number | undefined;
                               if (appKind === "diary") {
                                 const cellEl = (e.currentTarget as HTMLElement).closest<HTMLElement>("[data-day-key]");
                                 const chips = cellEl
@@ -1350,6 +1351,8 @@ export function MonthGridType1({
                                   // If the dragged chip is the first one, the "new first row"
                                   // starts where it currently does (the next chip slides up).
                                   diarySlotTop = firstTop;
+                                  const maxIndex = others.length;
+                                  diaryMaxTop = firstTop + maxIndex * diarySlotHeight;
                                 }
                               }
                               dragStartRef.current = {
@@ -1368,6 +1371,7 @@ export function MonthGridType1({
                                 diarySlotHeight,
                                 diaryOtherCount,
                                 diaryChipLeft: appKind === "diary" ? rect.left : undefined,
+                                diaryMaxTop,
                               };
                               if (appKind !== "diary") {
                                 setPressedEventId(it.event.id);
