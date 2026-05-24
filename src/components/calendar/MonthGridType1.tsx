@@ -378,7 +378,7 @@ function SortableDiaryMonthChip({
         setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
         setForceEditId(ev.id);
       }}
-      className="cursor-pointer"
+      style={{ ...style, cursor: "default" }}
     >
       <DiaryMonthReorderTile ev={ev} tileDesign={tileDesign} unit={unit} height={height} />
     </div>
