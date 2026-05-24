@@ -1108,6 +1108,8 @@ export function MonthGridType1({
                               if (!ev) return null;
                               const ActIcon = activityIconFor(ev);
                               const accent = itemColor ?? "currentColor";
+                              const isActive = (lockedId ?? forceEditId) === ev.id || popover?.eventId === ev.id;
+
                               const km = ev.distanceKm;
                               const distVal = km != null ? kmToUnit(km, distanceUnit) : null;
                               const actKey = (ev.activity || ev.diarySub || "").toLowerCase();
