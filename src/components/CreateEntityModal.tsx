@@ -288,7 +288,7 @@ export function CreateEntityModal({
                   Continue
                 </button>
               </div>
-            </form>
+            </motion.form>
           </motion.div>
         </motion.div>
       )}
