@@ -654,11 +654,13 @@ export function MonthGridType1({
     /** When set, this popover is editing a unified CalendarEvent. */
     eventId?: string;
   } | null>(null);
+  const [createPreviewTime, setCreatePreviewTime] = useState<{ startMin: number; endMin: number } | null>(null);
 
   const openPopoverAt = useCallback(
     (pos: CellPos, anchor: HTMLElement) => {
       const cell = days.find((d) => d.row === pos.row && d.col === pos.col);
       if (!cell || !cell.inMonth) return;
+      setCreatePreviewTime({ startMin: 9 * 60, endMin: 10 * 60 });
       setPopover({
         pos,
         rect: anchor.getBoundingClientRect(),
@@ -681,6 +683,7 @@ export function MonthGridType1({
   const openItemEditor = useCallback(
     (pos: CellPos, idx: number, raw: string, anchor: HTMLElement) => {
       const { color, text } = splitColor(raw);
+      setCreatePreviewTime(null);
       setPopover({
         pos,
         rect: cellAnchorRect(anchor),
@@ -694,6 +697,7 @@ export function MonthGridType1({
 
   const openEventEditor = useCallback(
     (pos: CellPos, ev: CalendarEvent, anchor: HTMLElement) => {
+      setCreatePreviewTime(null);
       setPopover({
         pos,
         rect: cellAnchorRect(anchor),
@@ -706,7 +710,10 @@ export function MonthGridType1({
     [cellAnchorRect],
   );
 
-  const closePopover = useCallback(() => setPopover(null), []);
+  const closePopover = useCallback(() => {
+    setCreatePreviewTime(null);
+    setPopover(null);
+  }, []);
 
   // ───────────────────────── Keyboard ─────────────────────────
 
