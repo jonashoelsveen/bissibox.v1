@@ -55,7 +55,7 @@ export function SignInModal({
   const [phone, setPhone] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [verifyVia, setVerifyVia] = useState<"email" | "sms">("email");
-  const [marketing, setMarketing] = useState(false);
+  const [marketing, setMarketing] = useState(true);
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
