@@ -574,6 +574,11 @@ export function MonthGridType1({
     offsetY: number;
     chipWidth: number;
     chipHeight: number;
+    // Set on pointerup for diary same-day reorder. While set, the floating
+    // clone CSS-transitions toward { left, top } and the source chip is
+    // re-included in baseVisible (sorted by pendingOrder) so the real chip
+    // and the clone land at the same pixel — no jump.
+    landing?: { left: number; top: number } | null;
   } | null>(null);
   const dragSessionRef = useRef(dragSession);
   useEffect(() => {
