@@ -1167,7 +1167,7 @@ export function MonthGridType1({
                             }
                             style={(() => {
                               const evId = it.kind === "event" ? it.event.id : null;
-                              const isActive = isRealEvent && evId !== null && ((lockedId ?? forceEditId) === evId || popover?.eventId === evId || dragSession?.eventId === evId || pressedEventId === evId);
+                              const isActive = isRealEvent && evId !== null && ((lockedId ?? forceEditId) === evId || popover?.eventId === evId || (appKind !== "diary" && (dragSession?.eventId === evId || pressedEventId === evId)));
                               if (isActive && itemColor) {
                                 return tall
                                   ? {
