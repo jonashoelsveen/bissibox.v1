@@ -1022,16 +1022,49 @@ export function MonthGridType1({
         drag.fromKey.year === td.getFullYear() &&
         drag.fromKey.month === td.getMonth() &&
         drag.fromKey.day === td.getDate();
-
-
-
-      // Cross-day (calendar mode): unmount clone immediately.
-      setDragSession(null);
-      setPressedEventId(null);
       void start;
-      if (!td) return;
 
-      if (sameDayDrop) return;
+      // Defer unmount of the floating clone so the CSS `landing` transition
+      // (left/top easing, see line ~1911) plays as a snap-in to the
+      // destination chip. The real chip is opacity:0 until `landing` is set,
+      // then becomes visible at the same pixel — no jump.
+      const SNAP_MS = 200;
+      const scheduleUnmount = (after?: () => void) => {
+        if (landingTimerRef.current) clearTimeout(landingTimerRef.current);
+        landingTimerRef.current = setTimeout(() => {
+          setDragSession(null);
+          setPressedEventId(null);
+          after?.();
+        }, SNAP_MS);
+      };
+      const snapToChip = (after?: () => void) => {
+        requestAnimationFrame(() => {
+          const el = document.querySelector<HTMLElement>(
+            `[data-event-id="${drag.eventId.replace(/"/g, '\\"')}"]`,
+          );
+          if (!el) {
+            setDragSession(null);
+            setPressedEventId(null);
+            after?.();
+            return;
+          }
+          const r = el.getBoundingClientRect();
+          setDragSession((prev) =>
+            prev ? { ...prev, landing: { left: r.left, top: r.top } } : prev,
+          );
+          scheduleUnmount(after);
+        });
+      };
+
+      if (!td) {
+        // Dropped outside any cell — snap back to the source chip.
+        snapToChip();
+        return;
+      }
+      if (sameDayDrop) {
+        snapToChip();
+        return;
+      }
       const newKey: CellKey = {
         year: td.getFullYear(),
         month: td.getMonth(),
@@ -1042,7 +1075,7 @@ export function MonthGridType1({
         source: "event",
         eventId: drag.eventId,
       });
-      requestAnimationFrame(() => {
+      snapToChip(() => {
         const el = document.querySelector<HTMLElement>(
           `[data-event-id="${drag.eventId.replace(/"/g, '\\"')}"]`,
         );
@@ -1054,13 +1087,11 @@ export function MonthGridType1({
             d.date.getDate() === td.getDate(),
         );
         if (!cell) return;
-        // Fetch the freshest event by id; fall back to the dragged copy.
         const fresh = events.find((e) => e.id === drag.eventId) ?? {
           ...drag.event,
         };
         openEventEditor({ row: cell.row, col: cell.col }, fresh, el);
       });
-
     };
 
     window.addEventListener("pointermove", onMove);
