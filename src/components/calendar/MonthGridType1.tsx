@@ -1312,6 +1312,7 @@ export function MonthGridType1({
                                 diarySlotTop,
                                 diarySlotHeight,
                                 diaryOtherCount,
+                                diaryChipLeft: appKind === "diary" ? rect.left : undefined,
                               };
                               if (appKind !== "diary") {
                                 setPressedEventId(it.event.id);
