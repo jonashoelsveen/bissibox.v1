@@ -2018,6 +2018,18 @@ function WeekEventsOverlay({
     }, 0);
   }, [cancelClose, forceEditId]);
 
+  // When another component (e.g. a day-note button) claims the global hover
+  // lock, close any open session edit panel so the new panel can take over.
+  useEffect(() => {
+    if (foreignLock) {
+      setForceEditId(null);
+      setLockedId(null);
+      setHoverId(null);
+      setHoverRect(null);
+    }
+  }, [foreignLock]);
+
+
 
   const [drag, setDrag] = useState<{
     id: string;
@@ -2474,6 +2486,18 @@ function DiarySimpleStack({
       setHoverRect(null);
     }, 0);
   }, [cancelClose, forceEditId]);
+
+  // When another component (e.g. a day-note button) claims the global hover
+  // lock, close any open session edit panel so the new panel can take over.
+  useEffect(() => {
+    if (foreignLock) {
+      setForceEditId(null);
+      setLockedId(null);
+      setHoverId(null);
+      setHoverRect(null);
+    }
+  }, [foreignLock]);
+
 
 
   // Group events by column, sorted by sortIndex (fallback startISO).

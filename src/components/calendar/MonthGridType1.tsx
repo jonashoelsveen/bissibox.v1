@@ -317,6 +317,18 @@ export function MonthGridType1({
     }, 0);
   }, [cancelHoverClose, forceEditId]);
 
+  // When another component (e.g. a day-note button) claims the global hover
+  // lock, close any open session edit panel so the new panel can take over.
+  useEffect(() => {
+    if (foreignLock) {
+      setForceEditId(null);
+      setLockedId(null);
+      setHoverId(null);
+      setHoverRect(null);
+    }
+  }, [foreignLock]);
+
+
   // ───────────────────────── Popover (add/edit) ─────────────────────────
 
   const [popover, setPopover] = useState<{
