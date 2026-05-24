@@ -694,9 +694,13 @@ export function MonthGridType1({
         const slotTop = start.diarySlotTop;
         const slotH = start.diarySlotHeight;
         if (slotTop != null && slotH != null && slotH > 0) {
-          const rel = e.clientY - slotTop;
-          // Round to nearest slot boundary so the ghost snaps between rows
-          // exactly like dnd-kit's verticalListSortingStrategy in the week view.
+          // Use the dragged tile's visual midpoint rather than the raw cursor
+          // position. This matches week-view sortable feel no matter where
+          // inside the tile the user grabbed it, so neighbors do not switch
+          // places too early when the pointer is near the tile's top edge.
+          const dragTop = e.clientY - start.offsetY;
+          const dragMid = dragTop + start.chipHeight / 2;
+          const rel = dragMid - slotTop;
           insertIndex = Math.max(0, Math.min(count, Math.round(rel / slotH)));
         } else {
           insertIndex = count;
@@ -955,9 +959,20 @@ export function MonthGridType1({
               const legacyItems = parseItems(data[id]?.text);
               // Events whose start day is this calendar cell.
               const dayEvents = events.filter((e) => sameDay(fromISOLocal(e.startISO), d.date));
+              const pendingOrderIndex = pendingOrder && pendingOrder.length === dayEvents.length
+                ? new Map(pendingOrder.map((eventId, index) => [eventId, index]))
+                : null;
+              const shouldUsePendingOrder = !!pendingOrderIndex && dayEvents.every((event) => pendingOrderIndex.has(event.id));
               const sortedDayEvents = dayEvents
                 .slice()
-                .sort((a, b) => Date.parse(a.startISO) - Date.parse(b.startISO));
+                .sort((a, b) => {
+                  if (shouldUsePendingOrder) {
+                    return pendingOrderIndex!.get(a.id)! - pendingOrderIndex!.get(b.id)!;
+                  }
+                  const ka = a.sortIndex ?? Date.parse(a.startISO);
+                  const kb = b.sortIndex ?? Date.parse(b.startISO);
+                  return ka - kb;
+                });
 
               type UnifiedItem =
                 | { kind: "legacy"; idx: number; raw: string }
