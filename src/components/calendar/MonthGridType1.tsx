@@ -579,6 +579,7 @@ export function MonthGridType1({
   useEffect(() => {
     dragSessionRef.current = dragSession;
   }, [dragSession]);
+  const suppressClickAfterDragRef = useRef(false);
   // Tracks the event id currently pressed (pointer down) before drag threshold.
   // Used so the chip keeps its "active" styling from mousedown through drag,
   // without a flash back to the idle color.
@@ -666,6 +667,7 @@ export function MonthGridType1({
       const dy = e.clientY - start.y;
       const active = dragSessionRef.current;
       if (!active && Math.hypot(dx, dy) < 4) return;
+      suppressClickAfterDragRef.current = true;
 
       let targetDate: Date | null = null;
       let dayKey: string | null = null;
@@ -1226,6 +1228,7 @@ export function MonthGridType1({
                               if (viewerRole !== "owner") return;
                               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                               // Start tracking a potential drag.
+                              suppressClickAfterDragRef.current = false;
                               dragStartRef.current = {
                                 x: e.clientX,
                                 y: e.clientY,
@@ -1252,6 +1255,10 @@ export function MonthGridType1({
                             draggable={false}
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (suppressClickAfterDragRef.current) {
+                                suppressClickAfterDragRef.current = false;
+                                return;
+                              }
                               if (dragSessionRef.current) return;
                               if (it.kind === "event" && it.event.id.startsWith("__ghost__:")) {
                                 return;
