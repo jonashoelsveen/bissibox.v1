@@ -92,20 +92,40 @@ function HomePage() {
         style={{ backgroundColor: "#fafafa", fontFamily: HELVETICA }}
       >
         <div
-          className="mx-auto grid h-full max-w-[1600px] grid-cols-2 grid-rows-2 gap-6 px-6 py-6"
+          className="mx-auto flex max-w-[1600px] flex-col px-6 py-6"
           style={{ minHeight: "calc(100vh - 80px)" }}
         >
-          {[0, 1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-full w-full bg-white"
+          <div className="grid grid-cols-2 grid-rows-2 gap-6">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="aspect-[4/5] w-full bg-white"
+                style={{
+                  borderRadius: 24,
+                  boxShadow:
+                    "0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.05)",
+                }}
+              />
+            ))}
+          </div>
+          <div className="flex w-full justify-center pb-12 pt-16">
+            <button
+              type="button"
+              onClick={() => setCreateEntityOpen(true)}
+              className="text-white transition active:scale-[0.98]"
               style={{
-                borderRadius: 24,
-                boxShadow:
-                  "0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.05)",
+                backgroundColor: "#1d1d1f",
+                borderRadius: 14,
+                padding: "14px 36px",
+                fontFamily: HELVETICA,
+                fontSize: 17,
+                fontWeight: 500,
+                letterSpacing: "-0.01em",
               }}
-            />
-          ))}
+            >
+              Register your organization
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -117,6 +137,7 @@ function HomePage() {
       style={{ backgroundColor: "#fafafa", fontFamily: HELVETICA }}
     >
       <div className="mx-auto flex max-w-6xl flex-col items-center px-6">
+
         <div
           className="flex w-full flex-col items-center text-center"
           style={{ paddingTop: "clamp(120px, 22vh, 240px)" }}
