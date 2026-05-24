@@ -1862,6 +1862,7 @@ export function MonthGridType1({
             isEdit={popover.editIdx >= 0 || !!popover.eventId}
             anchor={popover.rect}
             enableDuration={!!onUpsertEvent}
+            readOnly={viewerRole !== "owner"}
             initialTime={(() => {
               if (popover.eventId) {
                 const ev = events.find((e) => e.id === popover.eventId);
