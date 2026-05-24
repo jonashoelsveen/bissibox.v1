@@ -566,38 +566,72 @@ export function MonthGridType1({
       const active = dragSessionRef.current;
       if (!active && Math.hypot(dx, dy) < 4) return;
 
-      // Hit-test the cell under the pointer.
-      const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-      const cell = node?.closest<HTMLElement>("[data-cell-pos]");
-      const dayKey = cell?.getAttribute("data-day-key") ?? null;
-      const posStr = cell?.getAttribute("data-cell-pos") ?? null;
       let targetDate: Date | null = null;
+      let dayKey: string | null = null;
       let insertIndex = 0;
-      if (cell && posStr && dayKey) {
-        const [rowS, colS] = posStr.split("-");
-        const cellIdx = Number(rowS) * 7 + Number(colS);
-        const d = days[cellIdx];
-        if (d) {
-          targetDate = d.date;
-          // Compute insertion index strictly by session start time,
-          // ignoring the moved event. Earlier start = earlier slot.
-          const movedKey = Date.parse(start.originalStartISO);
-          const sorted = eventsRef
-            .filter((ev) => ev.id !== start.eventId && sameDay(fromISOLocal(ev.startISO), d.date))
-            .slice()
-            .sort((a, b) => Date.parse(a.startISO) - Date.parse(b.startISO));
-          insertIndex = sorted.length;
-          for (let i = 0; i < sorted.length; i++) {
-            const ka = Date.parse(sorted[i].startISO);
-            if (movedKey < ka) {
-              insertIndex = i;
-              break;
-            }
+
+      if (appKind === "diary") {
+        // Diary: lock the target to the source day cell. Movement is vertical
+        // only — no cross-day drops. Insertion index is computed against the
+        // source day's chips, hit-testing by pointer Y.
+        const fk = start.fromKey;
+        const sourceDate = new Date(fk.year, fk.month, fk.day);
+        targetDate = sourceDate;
+        dayKey = makeCellId(calId, { ...fk, session: 0 });
+        const sourceCell = document.querySelector<HTMLElement>(
+          `[data-day-key="${dayKey.replace(/"/g, '\\"')}"]`,
+        );
+        const chips = sourceCell
+          ? Array.from(
+              sourceCell.querySelectorAll<HTMLElement>(
+                '[data-real-event="1"][data-event-id]',
+              ),
+            ).filter((el) => el.getAttribute("data-event-id") !== start.eventId)
+          : [];
+        insertIndex = chips.length;
+        for (let i = 0; i < chips.length; i++) {
+          const r = chips[i].getBoundingClientRect();
+          if (e.clientY < r.top + r.height / 2) {
+            insertIndex = i;
+            break;
           }
-        } else {
-          targetDate = null;
+        }
+      } else {
+        // Hit-test the cell under the pointer.
+        const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+        const cell = node?.closest<HTMLElement>("[data-cell-pos]");
+        dayKey = cell?.getAttribute("data-day-key") ?? null;
+        const posStr = cell?.getAttribute("data-cell-pos") ?? null;
+        if (cell && posStr && dayKey) {
+          const [rowS, colS] = posStr.split("-");
+          const cellIdx = Number(rowS) * 7 + Number(colS);
+          const d = days[cellIdx];
+          if (d) {
+            targetDate = d.date;
+            // Compute insertion index strictly by session start time,
+            // ignoring the moved event. Earlier start = earlier slot.
+            const movedKey = Date.parse(start.originalStartISO);
+            const sorted = eventsRef
+              .filter((ev) => ev.id !== start.eventId && sameDay(fromISOLocal(ev.startISO), d.date))
+              .slice()
+              .sort((a, b) => Date.parse(a.startISO) - Date.parse(b.startISO));
+            insertIndex = sorted.length;
+            for (let i = 0; i < sorted.length; i++) {
+              const ka = Date.parse(sorted[i].startISO);
+              if (movedKey < ka) {
+                insertIndex = i;
+                break;
+              }
+            }
+          } else {
+            targetDate = null;
+          }
         }
       }
+
+      // For diary, keep the ghost chip strictly vertical by pinning X to the
+      // initial pointer X.
+      const ghostX = appKind === "diary" ? start.x : e.clientX;
 
       if (!active) {
         setDragSession({
@@ -609,7 +643,7 @@ export function MonthGridType1({
           targetDayKey: targetDate ? dayKey : null,
           targetDate,
           insertIndex,
-          pointerX: e.clientX,
+          pointerX: ghostX,
           pointerY: e.clientY,
           offsetX: start.offsetX,
           offsetY: start.offsetY,
@@ -624,11 +658,12 @@ export function MonthGridType1({
                 targetDayKey: targetDate ? dayKey : null,
                 targetDate,
                 insertIndex,
-                pointerX: e.clientX,
+                pointerX: ghostX,
                 pointerY: e.clientY,
               }
             : prev,
         );
+
       }
     };
 
