@@ -695,6 +695,7 @@ export function MonthGridType1({
       let targetDate: Date | null = null;
       let dayKey: string | null = null;
       let insertIndex = 0;
+      let diaryGhostTop: number | null = null;
 
       if (appKind === "diary") {
         // Diary: lock the target to the source day cell. Movement is vertical
@@ -724,10 +725,10 @@ export function MonthGridType1({
           // makes the switch trigger ~1px past the slot edge which felt
           // far too eager compared to the week-view dnd-kit behavior.
           insertIndex = Math.max(0, Math.min(count, Math.floor(rel / slotH)));
+          diaryGhostTop = clampedTop;
         } else {
           insertIndex = count;
         }
-        e = new PointerEvent(e.type, { ...e, clientX: start.x, clientY: clampedTop + start.offsetY });
       } else {
         // Hit-test the cell under the pointer.
         const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
@@ -764,7 +765,9 @@ export function MonthGridType1({
       // For diary, keep the ghost chip strictly vertical by pinning X to the
       // initial pointer X.
       const ghostX = appKind === "diary" ? start.x : e.clientX;
-      const ghostY = appKind === "diary" ? e.clientY : e.clientY;
+      const ghostY = appKind === "diary"
+        ? (diaryGhostTop != null ? diaryGhostTop + start.offsetY : e.clientY)
+        : e.clientY;
 
       if (!active) {
         setDragSession({
