@@ -34,11 +34,18 @@ function HomePage() {
   const [signInOpen, setSignInOpen] = useState(false);
   const [signInContext, setSignInContext] = useState<SignInContext>("cloud");
   const [createEntityOpen, setCreateEntityOpen] = useState(false);
+  // When set, opening the entity modal is pending until the user signs in.
+  const [pendingEntityAfterSignIn, setPendingEntityAfterSignIn] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     const wasOpen = signInOpen;
     setSignInOpen(false);
+    if (pendingEntityAfterSignIn) {
+      setPendingEntityAfterSignIn(false);
+      setCreateEntityOpen(true);
+      return;
+    }
     if (!wasOpen) return;
     const target =
       signInContext === "calendar"
@@ -50,6 +57,7 @@ function HomePage() {
             : null;
     if (target) void navigate({ to: target, replace: true });
   }, [user]);
+
 
   // Open the modal automatically when arriving with ?signin=<ctx>.
   useEffect(() => {
