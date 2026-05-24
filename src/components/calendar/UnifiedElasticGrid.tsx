@@ -2210,6 +2210,7 @@ function WeekEventsOverlay({
                   background: bg,
                   color: fg,
                   opacity: isDragging ? 0.85 : 1,
+                  zIndex: isDragging ? 9999 : undefined,
                   pointerEvents: "auto",
                 }}
                 title={ev.title}
