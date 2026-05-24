@@ -315,7 +315,7 @@ export function GetRoleModal({
                     opacity: agreed ? 1 : 0.5,
                   }}
                 >
-                  Become a {ROLE_LABEL[role]}-role
+                  Access {ROLE_LABEL[role]}-role
                 </button>
               </div>
             </motion.form>
