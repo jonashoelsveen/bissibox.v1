@@ -2205,7 +2205,6 @@ function WeekEventsOverlay({
                   background: bg,
                   color: fg,
                   opacity: isDragging ? 0.85 : 1,
-                  filter: isActive ? "brightness(0.82) saturate(1.2)" : undefined,
                   pointerEvents: "auto",
                 }}
                 title={ev.title}
