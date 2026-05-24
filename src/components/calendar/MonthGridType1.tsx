@@ -42,6 +42,24 @@ import { DayNoteButton } from "./DayNoteButton";
 import { useUserCategories } from "@/hooks/useUserCategories";
 import { useMonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
+import { CSS } from "@dnd-kit/utilities";
 
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 import { SessionHoverMenu } from "./SessionHoverMenu";
@@ -284,6 +302,199 @@ function DiaryMonthReorderTile({
     </div>
   );
 }
+
+/**
+ * SortableDiaryMonthChip — single diary event chip inside a month-view day
+ * cell. Wraps DiaryMonthReorderTile with dnd-kit `useSortable` so neighbors
+ * smoothly slide during drag (matches week-view SortableSimpleTile feel).
+ */
+function SortableDiaryMonthChip({
+  ev,
+  tileDesign,
+  unit,
+  height,
+  disabled,
+  isActive,
+  hoverLocked,
+  lockedActiveId,
+  cancelHoverClose,
+  scheduleHoverClose,
+  setHoverId,
+  setHoverRect,
+  setForceEditId,
+}: {
+  ev: CalendarEvent;
+  tileDesign: string;
+  unit: ReturnType<typeof useDistanceUnit>[0];
+  height: number;
+  disabled: boolean;
+  isActive: boolean;
+  hoverLocked: boolean;
+  lockedActiveId: string | null;
+  cancelHoverClose: () => void;
+  scheduleHoverClose: () => void;
+  setHoverId: (id: string | null) => void;
+  setHoverRect: (r: { left: number; top: number; width: number; height: number } | null) => void;
+  setForceEditId: (id: string | null) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: ev.id,
+    disabled,
+  });
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0 : 1,
+  };
+  void isActive;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      data-role="item"
+      data-real-event="1"
+      data-event-id={ev.id}
+      onMouseEnter={(e) => {
+        if (hoverLocked && ev.id !== lockedActiveId) return;
+        cancelHoverClose();
+        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setHoverId(ev.id);
+        setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+      }}
+      onMouseLeave={(e) => {
+        const related = e.relatedTarget as Node | null;
+        const goingIntoMenu = related instanceof HTMLElement && related.closest('[data-session-hover-menu="1"]');
+        if (goingIntoMenu) return;
+        scheduleHoverClose();
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (isDragging) return;
+        cancelHoverClose();
+        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setHoverId(ev.id);
+        setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+        setForceEditId(ev.id);
+      }}
+      className="cursor-pointer"
+    >
+      <DiaryMonthReorderTile ev={ev} tileDesign={tileDesign} unit={unit} height={height} />
+    </div>
+  );
+}
+
+/**
+ * DiaryMonthDndCell — wraps a diary day cell's chip list in a per-cell
+ * `<DndContext>` + `<SortableContext>` so same-day reorder uses dnd-kit
+ * (same setup as week-view's SimpleColumn). `<DragOverlay>` provides the
+ * smooth snap-in on release. A "creating" placeholder added during session
+ * logging gets the same flex+sortable slide animation as week-view.
+ */
+function DiaryMonthDndCell({
+  sortedEvents,
+  ghostEvents,
+  creating,
+  tall,
+  monthTileDesign,
+  distanceUnit,
+  viewerRole,
+  lockedActiveId,
+  hoverLocked,
+  cancelHoverClose,
+  scheduleHoverClose,
+  setHoverId,
+  setHoverRect,
+  setForceEditId,
+  onReorder,
+}: {
+  sortedEvents: CalendarEvent[];
+  ghostEvents: CalendarEvent[];
+  creating: boolean;
+  tall: boolean;
+  monthTileDesign: string;
+  distanceUnit: ReturnType<typeof useDistanceUnit>[0];
+  viewerRole: import("@/hooks/useViewerRole").ViewerRole;
+  lockedActiveId: string | null;
+  hoverLocked: boolean;
+  cancelHoverClose: () => void;
+  scheduleHoverClose: () => void;
+  setHoverId: (id: string | null) => void;
+  setHoverRect: (r: { left: number; top: number; width: number; height: number } | null) => void;
+  setForceEditId: (id: string | null) => void;
+  onReorder: (newIds: string[]) => void;
+}) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const realIds = sortedEvents.map((e) => e.id);
+  const canReorder = viewerRole === "owner" && sortedEvents.length >= 2;
+  const height = tall ? 44 : 22;
+
+  const handleDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id));
+  const handleDragEnd = (e: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldI = realIds.indexOf(String(active.id));
+    const newI = realIds.indexOf(String(over.id));
+    if (oldI < 0 || newI < 0) return;
+    onReorder(arrayMove(realIds, oldI, newI));
+  };
+  const activeEv = activeId ? sortedEvents.find((e) => e.id === activeId) ?? null : null;
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveId(null)}
+    >
+      <SortableContext items={realIds} strategy={verticalListSortingStrategy}>
+        <div className="flex flex-col" style={{ gap: 2 }}>
+          {sortedEvents.map((ev) => (
+            <SortableDiaryMonthChip
+              key={ev.id}
+              ev={ev}
+              tileDesign={monthTileDesign}
+              unit={distanceUnit}
+              height={height}
+              disabled={!canReorder}
+              isActive={lockedActiveId === ev.id}
+              hoverLocked={hoverLocked}
+              lockedActiveId={lockedActiveId}
+              cancelHoverClose={cancelHoverClose}
+              scheduleHoverClose={scheduleHoverClose}
+              setHoverId={setHoverId}
+              setHoverRect={setHoverRect}
+              setForceEditId={setForceEditId}
+            />
+          ))}
+          {ghostEvents.map((ev) => (
+            <div key={ev.id} data-role="item" data-ghost-event="1">
+              <DiaryMonthReorderTile ev={ev} tileDesign={monthTileDesign} unit={distanceUnit} height={height} />
+            </div>
+          ))}
+          {creating && (
+            <div
+              aria-hidden
+              className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
+              style={{ height }}
+            />
+          )}
+        </div>
+      </SortableContext>
+      <DragOverlay dropAnimation={{ duration: 160, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
+        {activeEv ? (
+          <DiaryMonthReorderTile ev={activeEv} tileDesign={monthTileDesign} unit={distanceUnit} height={height} dragging />
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
 
 interface CellPos {
   row: number;
@@ -617,15 +828,40 @@ export function MonthGridType1({
   // Diary reorder confirmation state.
   const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
   const [stravaBlocked, setStravaBlocked] = useState(false);
-  // Delays the confirm/strava dialog by ~300ms after pointerup so the
-  // landing snap-in animation can finish first.
+  // Delays the confirm/strava dialog ~300ms after drop so the dnd-kit
+  // dropAnimation snap-in finishes first; the modal then slides up on top
+  // of the already-reordered list (matches week-view UX).
   const [modalReady, setModalReady] = useState(false);
   const modalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const landingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
-    if (landingTimerRef.current) clearTimeout(landingTimerRef.current);
   }, []);
+  const scheduleModalOpen = useCallback(() => {
+    if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+    modalTimerRef.current = setTimeout(() => setModalReady(true), 300);
+  }, []);
+
+  // Diary-only: triggered by dnd-kit onDragEnd inside DiaryMonthDndCell.
+  // Mirrors the week-view (SimpleColumn) flow: arrayMove → check Strava →
+  // set pendingOrder + schedule modal.
+  const handleDiaryReorder = useCallback(
+    (dayEvents: CalendarEvent[], newIds: string[]) => {
+      const oldIds = dayEvents.map((e) => e.id);
+      const unchanged = newIds.length === oldIds.length && newIds.every((id, i) => id === oldIds[i]);
+      if (unchanged) return;
+      const movedStrava = newIds.some(
+        (id, i) => id !== oldIds[i] && dayEvents.find((e) => e.id === id)?.stravaActivityId != null,
+      );
+      if (movedStrava) {
+        setStravaBlocked(true);
+      } else {
+        setPendingOrder(newIds);
+      }
+      scheduleModalOpen();
+    },
+    [scheduleModalOpen],
+  );
+
 
 
 
@@ -695,92 +931,46 @@ export function MonthGridType1({
       let targetDate: Date | null = null;
       let dayKey: string | null = null;
       let insertIndex = 0;
-      let diaryGhostTop: number | null = null;
 
+      // Diary mode uses dnd-kit per-cell SortableContext for same-day reorder;
+      // this pointer flow handles only cross-day calendar drag.
       if (appKind === "diary") {
-        // Diary: lock the target to the source day cell. Movement is vertical
-        // only — no cross-day drops. Insertion index is computed arithmetically
-        // from the pointer Y against geometry frozen at drag start, so the
-        // layout animation that slides chips into the gap cannot feed back
-        // into the index calculation (which is what caused the "jump").
-        const fk = start.fromKey;
-        const sourceDate = new Date(fk.year, fk.month, fk.day);
-        targetDate = sourceDate;
-        dayKey = makeCellId(calId, { ...fk, session: 0 });
-        const count = start.diaryOtherCount ?? 0;
-        const slotTop = start.diarySlotTop;
-        const slotH = start.diarySlotHeight;
-        const maxTop = start.diaryMaxTop;
-        let clampedTop = e.clientY - start.offsetY;
-        if (slotTop != null && slotH != null && slotH > 0) {
-          // Use the dragged tile's visual midpoint rather than the raw cursor
-          // position. This matches week-view sortable feel no matter where
-          // inside the tile the user grabbed it, so neighbors do not switch
-          // places too early when the pointer is near the tile's top edge.
-          clampedTop = Math.min(Math.max(clampedTop, slotTop), maxTop ?? slotTop);
-          const dragMid = clampedTop + start.chipHeight / 2;
-          const rel = dragMid - slotTop;
-          // Port of week-view (dnd-kit closestCenter + verticalListSorting)
-          // threshold logic. Treat the dragged chip as still occupying its
-          // original full-array slot — the chip with original slot index
-          // `fullSlot` is centered at slotTop + (fullSlot + 0.5) * slotH.
-          // The "closest slot center" to the dragged midpoint is
-          //   fullSlot = round(rel / slotH - 0.5)
-          // and that value is also the correct insertion index into the
-          // others array (others.length === N - 1). This avoids the
-          // off-by-one that `Math.round(rel / slotH)` produced (which made
-          // neighbors swap at drag-start before the cursor moved past any
-          // midpoint), and it avoids the "swap-too-late on first drag,
-          // too-early afterwards" asymmetry of `Math.floor(rel / slotH)`.
-          // Net effect: swap fires exactly when the dragged center crosses
-          // the boundary halfway between two slots — the week-view feel.
-          insertIndex = Math.max(
-            0,
-            Math.min(count, Math.round(rel / slotH - 0.5)),
-          );
-          diaryGhostTop = clampedTop;
-        } else {
-          insertIndex = count;
-        }
-      } else {
-        // Hit-test the cell under the pointer.
-        const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-        const cell = node?.closest<HTMLElement>("[data-cell-pos]");
-        dayKey = cell?.getAttribute("data-day-key") ?? null;
-        const posStr = cell?.getAttribute("data-cell-pos") ?? null;
-        if (cell && posStr && dayKey) {
-          const [rowS, colS] = posStr.split("-");
-          const cellIdx = Number(rowS) * 7 + Number(colS);
-          const d = days[cellIdx];
-          if (d) {
-            targetDate = d.date;
-            // Compute insertion index strictly by session start time,
-            // ignoring the moved event. Earlier start = earlier slot.
-            const movedKey = Date.parse(start.originalStartISO);
-            const sorted = eventsRef
-              .filter((ev) => ev.id !== start.eventId && sameDay(fromISOLocal(ev.startISO), d.date))
-              .slice()
-              .sort((a, b) => Date.parse(a.startISO) - Date.parse(b.startISO));
-            insertIndex = sorted.length;
-            for (let i = 0; i < sorted.length; i++) {
-              const ka = Date.parse(sorted[i].startISO);
-              if (movedKey < ka) {
-                insertIndex = i;
-                break;
-              }
+        return;
+      }
+
+      // Hit-test the cell under the pointer.
+      const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const cell = node?.closest<HTMLElement>("[data-cell-pos]");
+      dayKey = cell?.getAttribute("data-day-key") ?? null;
+      const posStr = cell?.getAttribute("data-cell-pos") ?? null;
+      if (cell && posStr && dayKey) {
+        const [rowS, colS] = posStr.split("-");
+        const cellIdx = Number(rowS) * 7 + Number(colS);
+        const d = days[cellIdx];
+        if (d) {
+          targetDate = d.date;
+          // Compute insertion index strictly by session start time,
+          // ignoring the moved event. Earlier start = earlier slot.
+          const movedKey = Date.parse(start.originalStartISO);
+          const sorted = eventsRef
+            .filter((ev) => ev.id !== start.eventId && sameDay(fromISOLocal(ev.startISO), d.date))
+            .slice()
+            .sort((a, b) => Date.parse(a.startISO) - Date.parse(b.startISO));
+          insertIndex = sorted.length;
+          for (let i = 0; i < sorted.length; i++) {
+            const ka = Date.parse(sorted[i].startISO);
+            if (movedKey < ka) {
+              insertIndex = i;
+              break;
             }
-          } else {
-            targetDate = null;
           }
+        } else {
+          targetDate = null;
         }
       }
 
-      // For diary, keep the ghost chip strictly vertical by pinning X to the
-      // initial pointer X.
-      const ghostX = appKind === "diary" ? start.x : e.clientX;
-      const ghostY = appKind === "diary"
-        ? (diaryGhostTop != null ? diaryGhostTop + start.offsetY : e.clientY)
-        : e.clientY;
+      const ghostX = e.clientX;
+      const ghostY = e.clientY;
 
       if (!active) {
         setDragSession({
@@ -812,7 +1002,6 @@ export function MonthGridType1({
               }
             : prev,
         );
-
       }
     };
 
@@ -830,79 +1019,7 @@ export function MonthGridType1({
         drag.fromKey.month === td.getMonth() &&
         drag.fromKey.day === td.getDate();
 
-      // ── Diary: same-day reorder only. Cross-day drops are blocked. ──
-      if (appKind === "diary") {
-        if (!td || !sameDayDrop) {
-          setDragSession(null);
-          setPressedEventId(null);
-          return;
-        }
-        // Build the new ordered id list for that day.
-        const dayEvents = events
-          .filter((ev) => sameDay(fromISOLocal(ev.startISO), td))
-          .slice()
-          .sort((a, b) => {
-            const ka = a.sortIndex ?? Date.parse(a.startISO);
-            const kb = b.sortIndex ?? Date.parse(b.startISO);
-            return ka - kb;
-          });
-        const oldIds = dayEvents.map((e) => e.id);
-        const without = oldIds.filter((id) => id !== drag.eventId);
-        const insertAt = Math.max(0, Math.min(without.length, drag.insertIndex));
-        const newIds = [...without.slice(0, insertAt), drag.eventId, ...without.slice(insertAt)];
-        // No-op: order unchanged → just unmount the clone, no dialog.
-        const unchanged = newIds.length === oldIds.length && newIds.every((id, i) => id === oldIds[i]);
-        if (unchanged) {
-          setDragSession(null);
-          setPressedEventId(null);
-          return;
-        }
 
-        // Compute landing pixel for the floating clone. We snap the clone
-        // to the final slot using frozen geometry, so when dragSession
-        // clears the real chip is already at the exact same spot — no
-        // perceived jump on release.
-        const landingNode = document.querySelector<HTMLElement>(
-          `[data-event-id="${drag.eventId.replace(/"/g, '\\"')}"]`,
-        );
-        const landingRect = landingNode?.getBoundingClientRect() ?? null;
-        const slotTop = start?.diarySlotTop;
-        const slotH = start?.diarySlotHeight;
-        const chipLeft = start?.diaryChipLeft;
-        const landing = landingRect
-          ? { left: landingRect.left, top: landingRect.top }
-          : (slotTop != null && slotH != null && chipLeft != null)
-              ? { left: chipLeft, top: slotTop + insertAt * slotH }
-              : null;
-
-        // Block reorder when any moved session is Strava-synced.
-        const movedStrava = newIds.some(
-          (id, i) => id !== oldIds[i] && dayEvents.find((e) => e.id === id)?.stravaActivityId != null,
-        );
-
-        // Begin the snap-in animation. Keep dragSession alive briefly so
-        // the floating clone CSS-transitions to the landing slot. When
-        // landing is set, the source chip is re-included in baseVisible
-        // (sorted by pendingOrder for non-strava case, or unchanged for
-        // strava), so the real chip mounts at the exact landing pixel.
-        if (!movedStrava) {
-          setPendingOrder(newIds);
-        }
-        setDragSession((prev) => (prev ? { ...prev, landing } : prev));
-        setPressedEventId(null);
-
-        if (landingTimerRef.current) clearTimeout(landingTimerRef.current);
-        landingTimerRef.current = setTimeout(() => {
-          setDragSession(null);
-        }, landingRect ? 180 : 200);
-
-        if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
-        modalTimerRef.current = setTimeout(() => {
-          if (movedStrava) setStravaBlocked(true);
-          setModalReady(true);
-        }, 300);
-        return;
-      }
 
       // Cross-day (calendar mode): unmount clone immediately.
       setDragSession(null);
@@ -1156,7 +1273,41 @@ export function MonthGridType1({
 
                   {/* Items list */}
                   <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
-                    {(() => {
+                    {(appKind as string) === "diary" ? (() => {
+                      const isCreatingHere =
+                        !!popover &&
+                        !popover.eventId &&
+                        popover.editIdx < 0 &&
+                        popover.pos.row === pos.row &&
+                        popover.pos.col === pos.col;
+                      const realEvents = sortedDayEvents.filter((ev) => !ev.id.startsWith("__ghost__:"));
+                      const ghostsList = sortedDayEvents.filter((ev) => ev.id.startsWith("__ghost__:"));
+                      const tall = monthTileDesign === "split" || monthTileDesign === "stacked";
+                      const maxEvents = Math.max(0, MAX_VISIBLE - (isCreatingHere ? 1 : 0));
+                      const visibleReal = realEvents.slice(0, maxEvents);
+                      const remaining = Math.max(0, maxEvents - visibleReal.length);
+                      const visibleGhosts = ghostsList.slice(0, remaining);
+                      return (
+                        <DiaryMonthDndCell
+                          sortedEvents={visibleReal}
+                          ghostEvents={visibleGhosts}
+                          creating={isCreatingHere}
+                          tall={tall}
+                          monthTileDesign={monthTileDesign}
+                          distanceUnit={distanceUnit}
+                          viewerRole={viewerRole}
+                          lockedActiveId={lockedId ?? forceEditId}
+                          hoverLocked={hoverLocked}
+                          cancelHoverClose={cancelHoverClose}
+                          scheduleHoverClose={scheduleHoverClose}
+                          setHoverId={setHoverId}
+                          setHoverRect={setHoverRect}
+                          setForceEditId={setForceEditId}
+                          onReorder={(newIds) => handleDiaryReorder(realEvents, newIds)}
+                        />
+                      );
+                    })() : (() => {
+
                       // Decide whether to splice a ghost preview chip into
                       // this day's list during a drag.
                       const isSourceDay =
