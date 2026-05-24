@@ -2116,7 +2116,7 @@ function WeekEventsOverlay({
             gridRowEnd: 19,
             position: "relative",
             pointerEvents: "none",
-            zIndex: 8,
+            zIndex: drag?.moved && drag.originColIdx === colIdx ? 9998 : 8,
           }}
         >
           {list.map(({ ev, startMin, endMin }) => {
