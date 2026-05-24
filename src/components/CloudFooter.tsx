@@ -56,7 +56,6 @@ export function CloudFooter() {
     border: "none",
     padding: 0,
     cursor: "pointer",
-    textDecoration: "none",
   };
 
   return (
