@@ -220,11 +220,8 @@ export function CreateEntityModal({
                 />
 
                 <div>
-                  <FieldLabel>
-                    Role <span style={{ color: "#86868b", fontWeight: 400 }}>(required)</span>
-                  </FieldLabel>
+                  <FieldLabel>Role</FieldLabel>
                   <RawSelect value={role} onChange={setRole} required>
-                    <option value="" disabled>Select role</option>
                     <option value="admin">Admin</option>
                   </RawSelect>
                   <p
