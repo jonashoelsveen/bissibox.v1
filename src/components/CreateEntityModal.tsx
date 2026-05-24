@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { COUNTRIES, COUNTRY_CALLING_CODES } from "@/lib/countries";
-import { TIMEZONES, COUNTRY_TO_TIMEZONE, LANGUAGES } from "@/lib/timezones";
+import { TIMEZONES, COUNTRY_TO_TIMEZONE, COUNTRY_TO_LANGUAGE, LANGUAGES } from "@/lib/timezones";
 
 const HELVETICA =
   '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -33,18 +33,20 @@ export function CreateEntityModal({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [workEmail, setWorkEmail] = useState("");
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState("admin");
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [fieldsReady, setFieldsReady] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Default timezone from country selection.
+  // Default timezone + language from country selection.
   useEffect(() => {
     if (!country) return;
     const tz = COUNTRY_TO_TIMEZONE[country];
     if (tz) setTimezone(tz);
+    const lang = COUNTRY_TO_LANGUAGE[country];
+    if (lang) setLanguage(lang);
   }, [country]);
 
   useEffect(() => {
@@ -218,11 +220,8 @@ export function CreateEntityModal({
                 />
 
                 <div>
-                  <FieldLabel>
-                    Role <span style={{ color: "#86868b", fontWeight: 400 }}>(required)</span>
-                  </FieldLabel>
+                  <FieldLabel>Role</FieldLabel>
                   <RawSelect value={role} onChange={setRole} required>
-                    <option value="" disabled>Select role</option>
                     <option value="admin">Admin</option>
                   </RawSelect>
                   <p
