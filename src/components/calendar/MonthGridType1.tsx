@@ -654,11 +654,13 @@ export function MonthGridType1({
     /** When set, this popover is editing a unified CalendarEvent. */
     eventId?: string;
   } | null>(null);
+  const [createPreviewTime, setCreatePreviewTime] = useState<{ startMin: number; endMin: number } | null>(null);
 
   const openPopoverAt = useCallback(
     (pos: CellPos, anchor: HTMLElement) => {
       const cell = days.find((d) => d.row === pos.row && d.col === pos.col);
       if (!cell || !cell.inMonth) return;
+      setCreatePreviewTime({ startMin: 9 * 60, endMin: 10 * 60 });
       setPopover({
         pos,
         rect: anchor.getBoundingClientRect(),
@@ -681,6 +683,7 @@ export function MonthGridType1({
   const openItemEditor = useCallback(
     (pos: CellPos, idx: number, raw: string, anchor: HTMLElement) => {
       const { color, text } = splitColor(raw);
+      setCreatePreviewTime(null);
       setPopover({
         pos,
         rect: cellAnchorRect(anchor),
@@ -694,6 +697,7 @@ export function MonthGridType1({
 
   const openEventEditor = useCallback(
     (pos: CellPos, ev: CalendarEvent, anchor: HTMLElement) => {
+      setCreatePreviewTime(null);
       setPopover({
         pos,
         rect: cellAnchorRect(anchor),
@@ -706,7 +710,10 @@ export function MonthGridType1({
     [cellAnchorRect],
   );
 
-  const closePopover = useCallback(() => setPopover(null), []);
+  const closePopover = useCallback(() => {
+    setCreatePreviewTime(null);
+    setPopover(null);
+  }, []);
 
   // ───────────────────────── Keyboard ─────────────────────────
 
@@ -1403,18 +1410,8 @@ export function MonthGridType1({
                         | { kind: "creating" }
                         | UnifiedItem;
                       const renderList: RenderItem[] = [...baseVisible];
-                      // Only diary mode uses the in-flow ghost-slot preview
-                      // during drag. For non-diary calendar, the floating
-                      // clone alone provides drag feedback — inserting an
-                      // in-flow placeholder caused a visible "jump" when it
-                      // was removed after drop (real chip shifts up to its
-                      // true index). Same reasoning for the create
-                      // placeholder: appending a slot at the end that the
-                      // committed chip then jumps out of when sorted.
                       if (isTargetDay && dragSession && !dragSession.landing) {
-                        const insertAt = appKind === "diary"
-                          ? Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex))
-                          : 0;
+                        const insertAt = Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex));
                         renderList.splice(insertAt, 0, { kind: "ghost" });
                       }
                       const isCreatingHere =
@@ -1423,8 +1420,26 @@ export function MonthGridType1({
                         popover.editIdx < 0 &&
                         popover.pos.row === pos.row &&
                         popover.pos.col === pos.col;
-                      if (isCreatingHere && appKind === "diary") {
-                        renderList.push({ kind: "creating" });
+                      if (isCreatingHere) {
+                        const createStart = createPreviewTime
+                          ? new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), Math.floor(createPreviewTime.startMin / 60), createPreviewTime.startMin % 60)
+                          : new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), 9, 0);
+                        const createKey = Date.parse(toISOLocal(createStart));
+                        const realVisibleCount = baseVisible.filter((it) => it.kind === "event").length;
+                        const createSortedIndex = sortedDayEvents.findIndex((ev) => {
+                          const evKey = ev.sortIndex ?? Date.parse(ev.startISO);
+                          return createKey < evKey;
+                        });
+                        const createInsertAt = appKind === "diary"
+                          ? renderList.length
+                          : Math.max(
+                              0,
+                              Math.min(
+                                renderList.length,
+                                createSortedIndex >= 0 ? createSortedIndex : realVisibleCount,
+                              ),
+                            );
+                        renderList.splice(createInsertAt, 0, { kind: "creating" });
                       }
                       const renderVisible = renderList.slice(0, MAX_VISIBLE);
 
@@ -1860,6 +1875,11 @@ export function MonthGridType1({
               return null;
             })()}
             onClose={closePopover}
+            onTimeChange={(time) => {
+              if (!popover.eventId && popover.editIdx < 0) {
+                setCreatePreviewTime(time ?? { startMin: 9 * 60, endMin: 10 * 60 });
+              }
+            }}
             onCommit={(text, color, time) => {
               const cell = days.find(
                 (d) => d.row === popover.pos.row && d.col === popover.pos.col,
