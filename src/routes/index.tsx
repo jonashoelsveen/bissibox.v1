@@ -95,11 +95,11 @@ function HomePage() {
           className="mx-auto flex max-w-[1600px] flex-col px-6 py-6"
           style={{ minHeight: "calc(100vh - 80px)" }}
         >
-          <div className="grid grid-cols-2 grid-rows-2 gap-6">
+          <div className="grid flex-1 grid-cols-2 grid-rows-2 gap-6">
             {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="aspect-[4/5] w-full bg-white"
+                className="h-full w-full bg-white"
                 style={{
                   borderRadius: 24,
                   boxShadow:
