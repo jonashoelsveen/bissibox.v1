@@ -1207,6 +1207,7 @@ export function MonthGridType1({
       {/* Weekday strip — mirrors the Week view: 28px week-number gutter + 7
           weekday columns. Today's column gets the dark-grey highlight. */}
       <div
+        ref={monthHeaderRef}
         data-grid-header="1"
         className="grid flex-none border-b border-hairline bg-card"
         style={{ gridTemplateColumns: GRID_TEMPLATE }}
@@ -1231,7 +1232,10 @@ export function MonthGridType1({
       </div>
 
       {/* The grid */}
-      <div className="relative flex-1 min-h-0 overflow-y-auto">
+      <div
+        ref={monthScrollerRef}
+        className="mini-dur-scroll relative flex-1 min-h-0 overflow-y-auto"
+      >
         <LayoutGroup>
           <div
             className="grid w-full"
