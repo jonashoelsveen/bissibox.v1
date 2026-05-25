@@ -12,11 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 type Entity = { id: string; name: string; entity_type: "team" | "company" | "cooperation" };
 
-const ENTITY_LABEL: Record<Entity["entity_type"], string> = {
-  team: "Team",
-  company: "Company",
-  cooperation: "Cooperation",
-};
+// (entity-type label map removed along with the change-profile submenu)
 
 export function ProfileMenuButton({
   hideChangeProfile = false,
