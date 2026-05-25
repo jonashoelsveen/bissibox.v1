@@ -810,7 +810,7 @@ export function UnifiedElasticGrid({
   // ─── Week view ↔ time helpers ────────────────────────────────────────
   // Cell layout: row 1 (day=1) starts at 06:00 and each (day, session)
   // pair is one 30-min slot. cellIndex = (day - 1) * 2 + session.
-  const WEEK_START_HOUR = 6;
+  const WEEK_START_HOUR = WEEK_START_HOUR_CFG;
   const rankToMinutes = (rank: number) => WEEK_START_HOUR * 60 + rank * 30;
   const cellKeyToDate = useCallback(
     (k: CellKey): Date | null => {
