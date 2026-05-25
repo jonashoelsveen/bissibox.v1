@@ -135,6 +135,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<Tab>("account");
   const [createOpen, setCreateOpen] = useState(false);
+  const [sidePanelOpen, setSidePanelOpen] = useState(true);
   const [profileEntities, setProfileEntities] = useState<
     { id: string; name: string; entity_type: string; roles: string[] }[]
   >([]);
