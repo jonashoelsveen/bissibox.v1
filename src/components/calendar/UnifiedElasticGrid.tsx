@@ -848,22 +848,10 @@ export function UnifiedElasticGrid({
     setHeaderH(headerRef.current.offsetHeight);
   }, [viewMode]);
 
-  // Reserve scrollbar gutter on the header row so its column dividers line
-  // up exactly with the body grid's dividers when a vertical scrollbar is
-  // present in the week view.
-  useLayoutEffect(() => {
-    const scroller = weekScrollerRef.current;
-    const header = headerRowRef.current;
-    if (!scroller || !header) return;
-    const apply = () => {
-      const w = scroller.offsetWidth - scroller.clientWidth;
-      header.style.paddingRight = `${Math.max(0, w)}px`;
-    };
-    apply();
-    const ro = new ResizeObserver(apply);
-    ro.observe(scroller);
-    return () => ro.disconnect();
-  }, [viewMode, mode.kind]);
+  // (Removed scrollbar-gutter compensation: header is now rendered INSIDE the
+  // scroller alongside the body grid so both share the exact same content
+  // width. Column dividers therefore line up by construction.)
+
 
   // Minutes elapsed since the week-view start (06:00). Includes seconds for
   // sub-minute precision so the indicator advances smoothly between ticks.
