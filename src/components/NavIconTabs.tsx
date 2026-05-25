@@ -45,7 +45,7 @@ function useNavItems(): NavItem[] {
     items.push({ key: "auth", to: "/auth", label: "Sign in", icon: LogIn });
     return items;
   }
-  if (isOrganizer && isGroupLeader) {
+  if (isGroupLeader) {
     items.push({ key: "group-members", to: "/team/group-members", label: "Group members", icon: UsersRound });
   }
   items.push({ key: "library", to: "/media", label: "Library", icon: Library });
@@ -415,6 +415,7 @@ export function useActiveNavKey(): NavKey {
   const router = useRouterState();
   const path = router.location.pathname;
   if (path.startsWith("/team/group-members")) return "group-members";
+  if (path.startsWith("/clients")) return "group-members";
   if (path.startsWith("/media")) return "library";
   if (path.startsWith("/calendar")) return "calendar";
   if (path.startsWith("/diary")) return "diary";

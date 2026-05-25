@@ -17,10 +17,12 @@ import {
   Home,
   UserRound,
   Settings as SettingsIcon,
+  UsersRound,
 } from "lucide-react";
 import { OrganizationIcon } from "@/components/OrganizationIcon";
 // removed:
 import { useAuth } from "@/lib/auth";
+import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
 import { ProfileTab } from "@/components/ProfileTab";
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
@@ -30,7 +32,7 @@ import { useAuthTransition, useSignInModalOpen } from "@/lib/auth-transition";
 
 /** Routes whose top tab-bar is stripped down to: Me/We + (conditional)
  *  Group Members. Calendar / Diary / Photos icons move into the apps menu. */
-const STRIPPED_SURFACE_PREFIXES = ["/calendar", "/diary", "/media", "/photos"];
+const STRIPPED_SURFACE_PREFIXES = ["/calendar", "/diary", "/media", "/photos", "/clients"];
 
 function useIsStrippedSurface(): boolean {
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -53,6 +55,7 @@ type CreateKind =
  */
 export function GlobalTopTabBar() {
   const { user, mode, authReady } = useAuth();
+  const isGroupLeader = useIsGroupLeader();
   const activeKey = useActiveNavKey();
   const stripped = useIsStrippedSurface();
   const navigate = useNavigate();
@@ -130,12 +133,16 @@ export function GlobalTopTabBar() {
     }
   };
 
-  const handleAppNavigate = (to: "/calendar" | "/diary" | "/photos") => {
+  const handleAppNavigate = (to: "/calendar" | "/diary" | "/photos" | "/clients") => {
     setAppsOpen(false);
     setPlusOpen(false);
     setMapHover(false);
     if (!user) {
-      const ctx = to === "/calendar" ? "calendar" : to === "/diary" ? "diary" : "photos";
+      const ctx =
+        to === "/calendar" ? "calendar"
+        : to === "/diary" ? "diary"
+        : to === "/clients" ? "clients"
+        : "photos";
       void navigate({ to: "/", search: { signin: ctx } });
       return;
     }
@@ -487,18 +494,21 @@ export function GlobalTopTabBar() {
                 <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
                 <div className="grid grid-cols-2 gap-2">
                   {([
-                    { key: "calendar", label: "Calendar", to: "/calendar", icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
-                    { key: "diary", label: "Diary", to: "/diary", icon: <BookOpen strokeWidth={1.75} />, disabled: false },
-                    { key: "photos", label: "Photos", to: "/photos", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
+                    { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
+                    { key: "diary", label: "Diary", to: "/diary" as const, icon: <BookOpen strokeWidth={1.75} />, disabled: false },
+                    { key: "photos", label: "Photos", to: "/photos" as const, icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
                     { key: "organization", label: "Organization", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: true },
-                  ] as const).map((app) => (
+                    ...(isGroupLeader
+                      ? [{ key: "clients", label: "Clients", to: "/clients" as const, icon: <UsersRound strokeWidth={1.75} />, disabled: false }]
+                      : []),
+                  ] as Array<{ key: string; label: string; to: "/calendar" | "/diary" | "/photos" | "/clients" | null; icon: React.ReactNode; disabled: boolean }>).map((app) => (
                     <button
                       key={app.key}
                       type="button"
                       aria-label={app.label}
                       aria-disabled={app.disabled || undefined}
                       disabled={app.disabled}
-                      onClick={app.disabled || !app.to ? undefined : () => handleAppNavigate(app.to)}
+                      onClick={app.disabled || !app.to ? undefined : () => handleAppNavigate(app.to!)}
                       className={
                         "flex aspect-square flex-col items-center justify-center gap-1 rounded-xl p-2 " +
                         (app.disabled
