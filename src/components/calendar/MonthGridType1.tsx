@@ -2445,6 +2445,7 @@ export function PopoverEditor({
   onTimeChange,
   onColorChange,
   readOnly = false,
+  placeholder = "f.eks. Intervaller 5×4min",
 }: PopoverEditorProps) {
   const [value, setValue] = useState(initialText);
   // Resolve initial color according to seat
