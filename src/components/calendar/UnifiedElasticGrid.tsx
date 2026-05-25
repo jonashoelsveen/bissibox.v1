@@ -295,7 +295,7 @@ export function UnifiedElasticGrid({
 
   // User-configurable week-view day timeframe. Drives the time gutter,
   // overlay row count and event vertical placement in the week view.
-  const [{ startHour: WEEK_START_HOUR_CFG, endHour: WEEK_END_HOUR_CFG }] = useWeekViewHours();
+  const [{ startHour: WEEK_START_HOUR_CFG, endHour: WEEK_END_HOUR_CFG }] = useWeekViewHours(appKind);
   const WEEK_SPAN_HOURS = Math.max(1, WEEK_END_HOUR_CFG - WEEK_START_HOUR_CFG);
   const WEEK_SLOT_ROWS = WEEK_SPAN_HOURS * 2;
 

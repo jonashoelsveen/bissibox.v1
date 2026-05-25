@@ -583,10 +583,9 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       )}
 
       {tab === "calendar" && !isTeamMode && (
-        <Card>
-          <h3 className="text-sm font-semibold text-ink">Calendar</h3>
-          <p className="mt-2 text-xs text-muted-foreground">Calendar settings will appear here.</p>
-        </Card>
+        <div className="space-y-3">
+          <WeekViewCard app="calendar" />
+        </div>
       )}
 
       {tab === "diary" && !isTeamMode && (
@@ -1680,7 +1679,7 @@ function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
         items={["Units", "Activitytypes"]}
       />
       <DiaryCategoryCard title="Notes" items={[]} />
-      <WeekViewCard />
+      <WeekViewCard app="diary" />
       <SessionTileDesignCard />
       <MonthSessionTileDesignCard />
       <DiarySessionDetailsCard />
@@ -1688,9 +1687,9 @@ function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
   );
 }
 
-function WeekViewCard() {
+function WeekViewCard({ app }: { app: "calendar" | "diary" }) {
   const [open, setOpen] = useState(false);
-  const [hours, setHours] = useWeekViewHours();
+  const [hours, setHours] = useWeekViewHours(app);
   const [fromStr, setFromStr] = useState<string>(() => String(hours.startHour).padStart(2, "0") + ":00");
   const [toStr, setToStr] = useState<string>(() => String(hours.endHour).padStart(2, "0") + ":00");
 
