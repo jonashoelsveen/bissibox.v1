@@ -583,10 +583,9 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       )}
 
       {tab === "calendar" && !isTeamMode && (
-        <Card>
-          <h3 className="text-sm font-semibold text-ink">Calendar</h3>
-          <p className="mt-2 text-xs text-muted-foreground">Calendar settings will appear here.</p>
-        </Card>
+        <div className="space-y-3">
+          <WeekViewCard app="calendar" />
+        </div>
       )}
 
       {tab === "diary" && !isTeamMode && (
