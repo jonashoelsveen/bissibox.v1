@@ -2165,6 +2165,12 @@ export interface PopoverEditorProps {
    */
   onTimeChange?: (time: { startMin: number; endMin: number } | null) => void;
   /**
+   * Fires the moment the user picks a different category/color in the
+   * dropdown. Lets the parent push the new color to the bound CalendarEvent
+   * so the session tile reflects the selection in real time.
+   */
+  onColorChange?: (color: string | null) => void;
+  /**
    * When true, the popover renders as a view-only panel: the title input is
    * not focusable/editable, the category dropdown and time wheel are
    * non-interactive, and the bottom action bar is hidden. Used when a
@@ -2435,6 +2441,7 @@ export function PopoverEditor({
   onClose,
   onCommit,
   onTimeChange,
+  onColorChange,
   readOnly = false,
 }: PopoverEditorProps) {
   const [value, setValue] = useState(initialText);
@@ -2447,7 +2454,14 @@ export function PopoverEditor({
         ? initialColor
         : CAT_MEETING
       : initialColor ?? CAT_TRAINING_COLOR;
-  const [color, setColor] = useState<string | null>(resolvedInitial);
+  const [color, setColorState] = useState<string | null>(resolvedInitial);
+  const setColor = useCallback(
+    (c: string | null) => {
+      setColorState(c);
+      onColorChange?.(c);
+    },
+    [onColorChange],
+  );
   const [time, setTime] = useState<{ startMin: number; endMin: number } | null>(initialTime);
   // Sync the wheel when the parent pushes a new initialTime (e.g. while the
   // user is dragging a tile's top/bottom edge to resize it in the week-view).

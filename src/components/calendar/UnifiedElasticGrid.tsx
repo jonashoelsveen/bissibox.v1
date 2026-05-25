@@ -512,9 +512,13 @@ export function UnifiedElasticGrid({
     return () => window.removeEventListener("mouseup", onUp);
   }, []);
 
-  // When a mark range is released, automatically open the new-session
-  // popover anchored to the first marked cell so the modal's top aligns
-  // with the top of the selection.
+  // When a mark range is released:
+  //  - Calendar week view: immediately materialize a real session tile
+  //    ("Session" by default) covering the marked area, then anchor the
+  //    edit popover to it. The tile's top/bottom edge handles become
+  //    available right away, just like editing an existing session.
+  //  - Other views (diary week, day): fall back to the legacy popover
+  //    flow with the marked-range overlay.
   useEffect(() => {
     if (!markReleased || !markRange) return;
     if (markRange.hi <= markRange.lo) return;
@@ -522,8 +526,44 @@ export function UnifiedElasticGrid({
     const session = (markRange.lo % 2) as Session;
     const sel = `[data-cell-key="${markRange.month}:${day}:${session}"]`;
     const el = document.querySelector(sel) as HTMLElement | null;
-    if (el) openPopover({ year, month: markRange.month, day, session }, el);
-  }, [markReleased, markRange, openPopover, year]);
+    if (!el) return;
+
+    if (mode.kind === "year" && appKind !== "diary") {
+      const start = startOfWeekMon(currentDate);
+      const date = new Date(start);
+      date.setDate(start.getDate() + markRange.month);
+      if (!date) return;
+      const startMin = WEEK_START_HOUR * 60 + (markRange.lo - 2) * 30;
+      const endMin = WEEK_START_HOUR * 60 + (markRange.hi - 2 + 1) * 30;
+      const startISO = toISOLocal(
+        setHM(date, Math.floor(startMin / 60), startMin % 60),
+      );
+      const endISO = toISOLocal(
+        setHM(date, Math.floor(endMin / 60), endMin % 60),
+      );
+      const created = onUpsertEvent({
+        title: "Session",
+        startISO,
+        endISO,
+        allDay: false,
+      });
+      // Clear the mark overlay — the real tile takes over from here.
+      setMarkRange(null);
+      setMarkReleased(false);
+      setPopover({
+        key: { year, month: markRange.month, day, session },
+        rect: el.getBoundingClientRect(),
+        initialText: created.title,
+        initialColor: created.color ?? null,
+        isEdit: true,
+        eventId: created.id,
+      });
+      return;
+    }
+
+    openPopover({ year, month: markRange.month, day, session }, el);
+  }, [markReleased, markRange, openPopover, year, mode, appKind, currentDate, onUpsertEvent]);
+
 
 
   const inDragRange = useCallback(
@@ -1304,8 +1344,32 @@ export function UnifiedElasticGrid({
             return { startMin, endMin: startMin + 30 };
           })()}
           onClose={closePopover}
+          onColorChange={(c) => {
+            // Real-time tile recolor while the popover is open and bound
+            // to an existing event.
+            if (popover.eventId && c) {
+              onUpsertEvent({ id: popover.eventId, color: c });
+            }
+          }}
           onTimeChange={(t) => {
             if (mode.kind !== "year" || !t) return;
+            // If bound to a real event, push the new time straight to the
+            // event so the session tile resizes live.
+            if (popover.eventId) {
+              const ev = events.find((e) => e.id === popover.eventId);
+              if (ev) {
+                const date = fromISOLocal(ev.startISO);
+                const startISO = toISOLocal(
+                  setHM(date, Math.floor(t.startMin / 60), t.startMin % 60),
+                );
+                const endISO = toISOLocal(
+                  setHM(date, Math.floor(t.endMin / 60), t.endMin % 60),
+                );
+                onMoveEvent(ev.id, { startISO, endISO, allDay: false });
+              }
+              setPopover((p) => (p ? { ...p, pendingTime: t } : p));
+              return;
+            }
             const monthCol = markRange?.month ?? popover.key.month;
             const newLo = Math.max(2, Math.round((t.startMin - WEEK_START_HOUR * 60) / 30) + 2);
             const newHi = Math.max(newLo, Math.round((t.endMin - WEEK_START_HOUR * 60) / 30) + 1);
