@@ -639,6 +639,13 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       {tab === "entity-library" && isTeamMode && team && (
         <LibrarySettingsPanel scopeKey={`entity:${team.id}`} />
       )}
+
+      {tab === "entity-clients" && isTeamMode && (
+        <Card>
+          <h3 className="text-sm font-semibold text-ink">Clients</h3>
+          <p className="mt-2 text-xs text-muted-foreground">Coach client management will appear here.</p>
+        </Card>
+      )}
     </div>
   );
 
