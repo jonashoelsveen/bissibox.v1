@@ -1234,6 +1234,13 @@ export function MonthGridType1({
               const sortedDayEvents = dayEvents
                 .slice()
                 .sort((a, b) => {
+                  // Calendar mode: always order strictly by session start
+                  // time so the chips read top→bottom in chronological
+                  // order. Only diary mode honors manual reorder via
+                  // pendingOrder / sortIndex.
+                  if (appKind !== "diary") {
+                    return Date.parse(a.startISO) - Date.parse(b.startISO);
+                  }
                   if (shouldUsePendingOrder) {
                     return pendingOrderIndex!.get(a.id)! - pendingOrderIndex!.get(b.id)!;
                   }
