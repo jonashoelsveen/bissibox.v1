@@ -2554,6 +2554,7 @@ export function PopoverEditor({
               color={color}
               adminCategory={adminCategory}
               onSetColor={setColor}
+              readOnly={readOnly}
             />
           </div>
 
