@@ -620,65 +620,171 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
     </div>
   );
 
-  const createModalEl = createOpen && user && (
-    <CreateEntityModal
-      ownerId={user.id}
-      onClose={() => setCreateOpen(false)}
-      onCreated={onEntityCreated}
-    />
+  // Active tab label shown in the sticky top frozen bar of the content area.
+  const activeTabLabel = tabLabel(tab);
+
+  const sideNavEl = (
+    <nav className="flex h-full min-h-0 flex-col gap-1 overflow-y-auto pb-4 pt-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
+      {/* Account (top-level) */}
+      <button
+        type="button"
+        onClick={() => selectMeTab("account")}
+        className={sideRowClass(isMeActive("account"))}
+      >
+        <span className="min-w-0 flex-1 truncate">Account</span>
+      </button>
+
+      <div className="my-1.5 h-px w-full bg-hairline" />
+
+      {/* Me group */}
+      <SettingsGroup id="me" title="Me" defaultOpen>
+        {meTabs.map((t) => (
+          <button
+            key={`me:${t}`}
+            type="button"
+            onClick={() => selectMeTab(t)}
+            className={sideRowClass(isMeActive(t))}
+          >
+            <span className="min-w-0 flex-1 truncate">{meTabLabel(t)}</span>
+          </button>
+        ))}
+      </SettingsGroup>
+
+      {/* Other-profile groups */}
+      {profileEntities.map((e) => {
+        const tabs = entityTabsFor(e);
+        return (
+          <SettingsGroup key={`ent:${e.id}`} id={`ent:${e.id}`} title={e.name}>
+            {tabs.map((t) => (
+              <button
+                key={`${e.id}:${t}`}
+                type="button"
+                onClick={() => selectEntityTab(e.id, t)}
+                className={sideRowClass(isEntityActive(e.id, t))}
+              >
+                <span className="min-w-0 flex-1 truncate">{tabLabel(t)}</span>
+              </button>
+            ))}
+          </SettingsGroup>
+        );
+      })}
+
+      <div className="my-1.5 h-px w-full bg-hairline" />
+
+      <button
+        type="button"
+        onClick={async () => {
+          await signOut();
+          void navigate({ to: "/" });
+        }}
+        className={sideRowClass(false) + " hover:text-destructive"}
+      >
+        <span className="min-w-0 flex-1 truncate">Sign out</span>
+      </button>
+    </nav>
   );
 
-  if (onClose) {
-    return (
-      <div
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6"
-        onClick={onClose}
-      >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="relative grid h-[85vh] w-[min(1100px,95vw)] grid-cols-[220px_1fr] overflow-hidden rounded-xl bg-background shadow-2xl"
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close settings"
-            className="absolute right-3 top-3 z-10 rounded-md p-1.5 text-muted-foreground transition hover:bg-secondary hover:text-ink"
-          >
-            <X className="h-4 w-4" />
-          </button>
-          <aside className="overflow-y-auto border-r border-hairline bg-secondary/60 px-3 py-5">
-            <div className="px-2 pb-3 text-sm font-semibold text-ink">Settings</div>
-            {navEl}
-          </aside>
-          <section className="overflow-y-auto bg-background">
-            <div className="sticky top-0 z-[1] flex items-center justify-end gap-2 border-b border-hairline bg-background px-6 py-3 pr-14">
-              {headerActions}
-            </div>
-            <div className="px-6 pb-10 pt-6">{contentEl}</div>
-          </section>
-        </div>
-        {createModalEl}
-      </div>
-    );
-  }
-
+  const panelOpen = sidePanelOpen;
   return (
-    <div className="px-4 md:px-6">
-      <div>
-        <div className="flex items-center justify-between gap-2 pt-4 pr-14">
-          <div className="flex items-baseline gap-2">
-            <span className="text-base font-semibold text-ink">Settings</span>
+    <div className="h-full overflow-hidden bg-white">
+      <div
+        className="relative grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
+        style={{ gridTemplateColumns: panelOpen ? "256px 1fr" : "0px 1fr" }}
+      >
+        <aside className="relative md:h-full overflow-hidden">
+          <div
+            className="relative h-full pl-2 pr-2 py-2 transition-transform duration-300 ease-out"
+            style={{
+              width: 256,
+              transform: panelOpen ? "translateX(0)" : "translateX(-100%)",
+            }}
+          >
+            <div className="mac-panel relative h-full overflow-hidden rounded-lg border border-hairline shadow-sm">
+              <div className="h-full overflow-hidden px-1.5 pt-[48px]">
+                {sideNavEl}
+              </div>
+              <div className="mac-panel-fade pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg" />
+            </div>
           </div>
-          {headerActions}
-        </div>
+        </aside>
 
-        <div className="mt-8 grid gap-10 md:grid-cols-[180px_1fr]">
-          {navEl}
-          {contentEl}
-        </div>
+        <button
+          type="button"
+          onClick={() => setSidePanelOpen(!panelOpen)}
+          aria-label={panelOpen ? "Hide panel" : "Show panel"}
+          title={panelOpen ? "Hide panel" : "Show panel"}
+          className="absolute left-3 top-[12px] z-40 grid h-7 w-7 place-items-center rounded-md bg-white/0 text-muted-foreground hover:bg-secondary/60 hover:text-ink"
+        >
+          <PanelLeft className="h-4 w-4" />
+        </button>
+
+        <section
+          className={`relative min-w-0 md:h-full md:overflow-hidden transition-[padding-left] duration-300 ease-out ${
+            panelOpen ? "pl-0" : "pl-2"
+          }`}
+        >
+          {/* Frozen top bar showing the active tab name */}
+          <div className="sticky top-0 z-[1] flex h-[48px] items-center gap-2 bg-white px-6">
+            <span className="text-base font-semibold text-ink">{activeTabLabel}</span>
+          </div>
+
+          <div className="h-[calc(100%-48px)] overflow-y-auto px-6 pb-10 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
+            {contentEl}
+          </div>
+        </section>
       </div>
+    </div>
+  );
+}
 
-      {createModalEl}
+/** Collapsible nav group used in the settings left panel — same chevron
+ *  style as the calendar category sections. */
+function SettingsGroup({
+  id,
+  title,
+  defaultOpen = false,
+  children,
+}: {
+  id: string;
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const storageKey = `settings:sidenav:groupOpen:${id}`;
+  const [open, setOpen] = useState<boolean>(() => {
+    if (typeof window === "undefined") return defaultOpen;
+    try {
+      const v = window.localStorage.getItem(storageKey);
+      if (v === "1") return true;
+      if (v === "0") return false;
+    } catch {
+      /* ignore */
+    }
+    return defaultOpen;
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(storageKey, open ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [open, storageKey]);
+  return (
+    <div className="flex flex-col">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="group flex w-full items-center gap-1.5 rounded-md px-3 py-2 text-sm text-ink transition hover:bg-secondary/60"
+      >
+        <ChevronRight
+          className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${
+            open ? "rotate-90" : ""
+          }`}
+        />
+        <span className="min-w-0 flex-1 truncate text-left font-medium">{title}</span>
+      </button>
+      {open && <div className="ml-3 flex flex-col border-l border-hairline pl-1">{children}</div>}
     </div>
   );
 }
