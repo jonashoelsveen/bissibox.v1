@@ -384,7 +384,8 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       case "entity-calendar": return "Calendar";
       case "entity-map": return "Map";
       case "entity-events": return "Events";
-      case "entity-library": return "Library";
+      case "entity-library": return "Photos";
+      case "entity-clients": return "Clients";
     }
   };
 
