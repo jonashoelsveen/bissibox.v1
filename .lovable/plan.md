@@ -1,72 +1,116 @@
-## Week-view snap-in: where the smoothness comes from
 
-In `UnifiedElasticGrid.tsx` (week-view "SimpleColumn"):
+# Aponna Cloud Settings — page conversion
 
-- Wraps each day's session tiles in `<DndContext>` + `<SortableContext strategy={verticalListSortingStrategy}>`.
-- Each tile uses `useSortable({ id })`, which provides `transform` + `transition` — that is the smooth slide as neighbors swap during a drag.
-- On drop, a `<DragOverlay dropAnimation={{ duration: 160, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>` smoothly tweens the floating clone from cursor position to the final slot. This is the snap-in.
-- "Logging" a new session renders a simple bordered placeholder tile inside the same flex list:
-  ```tsx
-  {creating && (
-    <div className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
-         style={{ height: SIMPLE_TILE_H }} />
-  )}
-  ```
-  Because the list is flex and existing tiles have `useSortable` transitions, the new placeholder pushes neighbors smoothly. On commit, the real tile replaces the placeholder in-place — no visible jump.
+## 1. Top tab bar
 
-## Goal
+`src/components/GlobalTopTabBar.tsx`
+- Add a new entry in the Apps menu between `aponnacloud.com` and `account.aponna.com` rows:
+  - Label: **Aponna Cloud settings**
+  - Icon: `Settings` (lucide) in the same muted style as the other two entries
+  - Click → `navigate({ to: "/settings" })` and close the menu
+- Render the apps menu in both the logged-out home variant and the dark logged-in variant (currently only the home variant renders it; the dark bar's apps menu is in `NavIconTabs`). I will add the new row to wherever the existing aponnacloud.com / account.aponna.com rows live (verified at edit time).
 
-Apply both behaviors to month-view diary cells:
-1. Same-day session reorder uses dnd-kit (no more custom pointer-drag + frozen-geometry math).
-2. Snap-in on drop uses `DragOverlay.dropAnimation`.
-3. New-session creation animation uses the same flex + sortable trick — placeholder inserted into the list, neighbors slide via dnd-kit transitions, real tile replaces placeholder on commit.
+`src/components/ProfileMenuButton.tsx`
+- Remove the **Settings** and **Change profile** entries from the dropdown.
+- Keep only: profile name (top, opens profile modal) and **Log out**.
+- Remove the `open-settings` dispatch and related handler.
 
-## Changes to `src/components/calendar/MonthGridType1.tsx`
+`src/components/SettingsModal.tsx`
+- Delete (no longer used). Remove its mount from `__root.tsx` / wherever it is rendered.
 
-### 1. Add a new internal component `DiaryMonthDayDnd`
+## 2. New `/settings` page
 
-Renders the diary event tiles of one day cell inside a `<DndContext>`/`<SortableContext>` (per cell, mirroring week-view's per-column setup).
+`src/routes/settings.tsx` — full rewrite of the page shell, reusing the existing tab content components from the current `SettingsView`.
 
-```tsx
-<DndContext sensors={...} collisionDetection={closestCenter}
-  modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-  onDragStart={...} onDragEnd={...} onDragCancel={...}>
-  <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-    <div className="flex flex-col" style={{ gap: 2 }}>
-      {visibleEvents.map(ev => <SortableMonthTile ... />)}
-      {creating && <CreatingPlaceholder />}
-    </div>
-  </SortableContext>
-  <DragOverlay dropAnimation={{ duration: 160, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
-    {activeEv ? <DiaryMonthReorderTile ev={activeEv} ... dragging /> : null}
-  </DragOverlay>
-</DndContext>
+### Layout
+- Same global top tab bar (unchanged).
+- Below it: a left side panel matching `CalendarSideNav` / `DiarySideNav` / photos side nav exactly — same width, same collapse/expand chevron at top, tabs starting one level under it.
+- Main content area on the right with a **sticky top frozen bar** (white, matching photos page) showing the active tab's name on the left. No back arrow — that pattern is reserved for sub-views like the Strava "Read more".
+- Content area uses the same scrollbar style as calendar/diary/photos.
+- Remove the global **Save** button and **Create entity** button entirely. Each panel keeps its own inline save behavior where it already exists (e.g. CoachesPanel); otherwise edits autosave or are saved per-field as today.
+
+### Left panel structure
+
+```
+[collapse/expand chevron]
+
+Account
+
+────────────────
+
+▾ Me                          (collapsible header, calendar-category style)
+   Calendar                   (only if user has the app/role)
+   Diary
+   Photos
+   Profile
+   Coaches
+   Connectors
+   System
+   Appearance
+
+▾ {Other profile name}        (one collapsible group per other entity the user owns/belongs to)
+   — if admin role:
+     About
+     Profile
+     Calendar
+     Organization
+   — if coach role:
+     Clients
+   — if photographer role:
+     Photos
+   System
+   Appearance
+
+────────────────
+
+Sign out
 ```
 
-- `onDragEnd` runs `arrayMove`, checks Strava sessions, then `setPendingOrder` + `scheduleModalOpen` (existing 300ms delay code stays so the confirm dialog appears after snap-in).
-- The "Strava-blocked" check is moved out of the pointerup handler into this `onDragEnd`.
+- Each "Me" / other-profile group is a collapsible header with the same drop-down arrow style as calendar categories.
+- Tab text uses the calendar tab font/size/black color; active tab gets the same active-state styling as calendar tabs.
+- Selecting a tab under an "other profile" group implicitly switches `activeEntityId` (via `useAuth().setActiveEntity`) so the existing entity-scoped panels render correctly.
 
-### 2. Per-day rendering branch
+### Tab → existing-component mapping
 
-In the cell's item list (`renderVisible.map(...)`), for diary mode replace the manual `motion.div` event tiles + ghost-slot splicing with the new `DiaryMonthDayDnd` for the event portion. Legacy items and the "+N more" button stay where they are (legacy items always render below events; this matches current ordering).
+Reuse the JSX blocks currently in `SettingsView` for each tab:
 
-The custom-drag "ghost" rendering (`renderGhost`, `hideSource`, ghost-slot insertion at `insertIndex`) is removed for diary — dnd-kit handles all of that.
+| New tab | Existing tab key |
+|---|---|
+| Account | `account` |
+| Me → Calendar | `calendar` |
+| Me → Diary | `diary` |
+| Me → Photos | `library` (current photos/library tab) |
+| Me → Profile | personal profile block from `profiles` tab |
+| Me → Coaches | `coaches` |
+| Me → Connectors | `connectors` |
+| Me → System | `system` |
+| Me → Appearance | `appearance` |
+| Other → About | `entity-general` |
+| Other → Profile | `entity-profile` |
+| Other → Calendar | `entity-calendar` |
+| Other → Organization | `entity-organization` |
+| Other → Clients | (reuse coaches/clients UI from entity context; if not present, render a placeholder header "Clients" with the existing members list from `entity-organization`) |
+| Other → Photos | `entity-library` |
+| Other → System | new — same controls as personal `system`, scoped to entity preferences |
+| Other → Appearance | new — same controls as personal `appearance`, scoped to entity preferences |
 
-### 3. Pointer-drag handler
+Note: "System" and "Appearance" already exist for the personal profile. The spec says every profile gets its own System/Appearance; for entity-scoped versions I will render the same control set, persisting under the entity's settings key. If existing per-entity persistence isn't wired, I'll fall back to the existing global keys and add a TODO note in code.
 
-Restrict the existing `useEffect` pointer-drag logic to `appKind !== "diary"` so cross-day calendar drag remains. Remove the diary-specific branches (frozen geometry, `diarySlotTop`, `landing`, etc.).
+### Sub-view back arrows
+- Only sub-views like Strava "Read more" inside Connectors keep their back arrow. Top-level tabs do not show one.
 
-### 4. Creating placeholder
+## 3. Files touched
 
-When `popover` is open in create mode (no `eventId`) for a diary cell, append a `<CreatingPlaceholder />` inside the dnd list. On commit/`Enter`, `onUpsertEvent` adds the real event → it re-renders in the sorted list. The flex + sortable transitions absorb the swap without a jump (same trick as week-view).
+- `src/components/GlobalTopTabBar.tsx` — add menu row (both variants)
+- `src/components/ProfileMenuButton.tsx` — strip to profile name + log out
+- `src/components/SettingsModal.tsx` — delete
+- `src/routes/__root.tsx` — remove `<SettingsModal />` mount
+- `src/routes/settings.tsx` — rewrite shell, keep panel content components
+- (possibly) extract the long per-tab JSX from current `SettingsView` into smaller `Panel*` components in `src/components/settings/` so the new shell stays readable
 
-### 5. Cleanup
+## 4. Open questions
 
-- Remove now-unused state: diary geometry fields on `dragStartRef`, `landing` field on `dragSession`, `landingTimerRef`.
-- Keep `pendingOrder`, `stravaBlocked`, `modalReady`, `scheduleModalOpen` exactly as-is.
-
-## Out of scope
-
-- Calendar (non-diary) month cross-day drag — unchanged.
-- Week-view — unchanged.
-- DiaryPopoverEditor commit flow — unchanged (only the placeholder visual is new).
+These I will resolve while implementing unless you object:
+1. **Role detection** for which sub-tabs to show under each "other profile" group — I will use the existing `entity_type` plus `useViewerRole` / `roles` already loaded for `profileEntities` in the current settings code. If a user is admin of a team, that team's group shows About/Profile/Calendar/Organization; coach → Clients; photographer → Photos.
+2. **Entity-scoped System/Appearance persistence** — see note above; will reuse global keys with a TODO if entity-scoped keys aren't already present.
+3. **"Me → Photos" visibility** — shown whenever the user has the photographer/photos app enabled, else hidden. If unclear, shown by default.
