@@ -1688,9 +1688,9 @@ function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
   );
 }
 
-function WeekViewCard() {
+function WeekViewCard({ app }: { app: "calendar" | "diary" }) {
   const [open, setOpen] = useState(false);
-  const [hours, setHours] = useWeekViewHours();
+  const [hours, setHours] = useWeekViewHours(app);
   const [fromStr, setFromStr] = useState<string>(() => String(hours.startHour).padStart(2, "0") + ":00");
   const [toStr, setToStr] = useState<string>(() => String(hours.endHour).padStart(2, "0") + ":00");
 
