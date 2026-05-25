@@ -1122,8 +1122,8 @@ export function UnifiedElasticGrid({
                 display: "grid",
                 gridTemplateColumns,
                 gridTemplateRows: isSimple
-                  ? `${rowHeight * 18}px`
-                  : `repeat(18, ${rowHeight * 2}px)`,
+                  ? `${rowHeight * WEEK_SPAN_HOURS}px`
+                  : `repeat(${WEEK_SPAN_HOURS}, ${rowHeight * 2}px)`,
               }}
             >
               {!isSimple && (
@@ -1131,6 +1131,7 @@ export function UnifiedElasticGrid({
                   events={weekEvents}
                   weekDates={weekDates}
                   startHour={WEEK_START_HOUR}
+                  spanHours={WEEK_SPAN_HOURS}
                   appKind={appKind}
                   activeEventId={popover?.eventId ?? null}
                   onEventClick={(ev, anchor) => {
