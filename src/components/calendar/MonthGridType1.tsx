@@ -364,7 +364,6 @@ function SortableDiaryMonthChip({
     opacity: isDragging ? 0 : 1,
     cursor: "default",
   };
-  void isActive;
   return (
     <div
       ref={setNodeRef}
