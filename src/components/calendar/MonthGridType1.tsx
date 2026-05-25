@@ -396,7 +396,7 @@ function SortableDiaryMonthChip({
         setForceEditId(ev.id);
       }}
     >
-      <DiaryMonthReorderTile ev={ev} tileDesign={tileDesign} unit={unit} height={height} />
+      <DiaryMonthReorderTile ev={ev} tileDesign={tileDesign} unit={unit} height={height} isActive={isActive} />
     </div>
   );
 }
