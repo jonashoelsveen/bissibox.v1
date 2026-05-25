@@ -1180,6 +1180,12 @@ export function UnifiedElasticGrid({
                   appKind={appKind}
                   activeEventId={popover?.eventId ?? null}
                   onEventClick={(ev, anchor) => {
+                    // If the previous popover was on a freshly-created tile
+                    // with no title, discard it so clicking another tile
+                    // behaves like clicking outside.
+                    if (popover?.eventId && popover.eventId !== ev.id) {
+                      discardEmptyPopoverEvent();
+                    }
                     setPopover({
                       key: { year, month: 0, day: 1, session: 0 },
                       rect: anchor.getBoundingClientRect(),
@@ -1190,10 +1196,15 @@ export function UnifiedElasticGrid({
                       placeholder: ev.title ? undefined : "New session",
                     });
                   }}
-                  onEventDragStart={() => {
+                  onEventDragStart={(id) => {
                     // Hide the edit popover the instant the user starts
                     // dragging a tile; WeekEventsOverlay re-opens it via
-                    // onEventDrop after the drop completes.
+                    // onEventDrop after the drop completes. If the user
+                    // grabs a DIFFERENT tile while a fresh untitled tile's
+                    // popover is open, discard the orphan.
+                    if (popover?.eventId && popover.eventId !== id) {
+                      discardEmptyPopoverEvent();
+                    }
                     closePopover();
                   }}
                   onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
