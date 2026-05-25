@@ -2455,14 +2455,11 @@ export function PopoverEditor({
 }: PopoverEditorProps) {
   const [value, setValue] = useState(initialText);
   // Resolve initial color according to seat
+  // Use whichever color the parent provided (existing event's color, or the
+  // active list's top-category default for new sessions). Fall back to the
+  // hardcoded seat default only when no color is supplied at all.
   const resolvedInitial =
-    seat === "admin"
-      ? initialColor && [CAT_MEETING, CAT_EVENT, CAT_RACE]
-          .map((c) => c.toLowerCase())
-          .includes(initialColor.toLowerCase())
-        ? initialColor
-        : CAT_MEETING
-      : initialColor ?? CAT_TRAINING_COLOR;
+    initialColor ?? (seat === "admin" ? CAT_MEETING : CAT_TRAINING_COLOR);
   const [color, setColorState] = useState<string | null>(resolvedInitial);
   const setColor = useCallback(
     (c: string | null) => {
