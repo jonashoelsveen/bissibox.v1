@@ -37,8 +37,10 @@ export function clampWeekViewHours(h: Partial<WeekViewHours>): WeekViewHours {
   return { startHour: s, endHour: e };
 }
 
-export function useWeekViewHours(): [WeekViewHours, (v: WeekViewHours) => void] {
-  const [val, set] = useLibrarySetting<WeekViewHours>(KEY, DEFAULT_HOURS);
+export function useWeekViewHours(
+  app: WeekViewApp = "diary",
+): [WeekViewHours, (v: WeekViewHours) => void] {
+  const [val, set] = useLibrarySetting<WeekViewHours>(keyFor(app), DEFAULT_HOURS);
   const safe = clampWeekViewHours(val ?? DEFAULT_HOURS);
   return [safe, (v: WeekViewHours) => set(clampWeekViewHours(v))];
 }
