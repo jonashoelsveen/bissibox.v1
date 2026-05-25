@@ -42,6 +42,7 @@ import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoW
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSessionTileDesign, useDiarySimpleView } from "@/lib/session-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
+import { useWeekViewHours } from "@/lib/week-view-hours";
 import {
   DndContext,
   PointerSensor,
