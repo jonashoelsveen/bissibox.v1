@@ -555,8 +555,14 @@ export function UnifiedElasticGrid({
       // same React batch the new tile mounts in — no perceptible lag.
       setMarkRange(null);
       setMarkReleased(false);
+      // In entity (admin) mode, default to the first admin category color
+      // (Meeting / red) so the freshly-created tile is immediately a valid
+      // admin category — matching the popover's default selection and
+      // ensuring it renders consistently in the admin sidenav filters.
+      const defaultColor = seat === "admin" ? "#E63337" : null;
       const created = onUpsertEvent({
         title: "New session",
+        color: defaultColor,
         startISO,
         endISO,
         allDay: false,
