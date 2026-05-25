@@ -2435,6 +2435,17 @@ export function PopoverEditor({
     const onDown = (e: MouseEvent) => {
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
+        // In read-only mode, ignore mousedowns originating on the active
+        // session tile itself (e.g. a coach trying to drag a client's
+        // session). Otherwise the popover would close mid-interaction and
+        // the tile would briefly lose its "clicked" highlight.
+        if (
+          readOnly &&
+          e.target instanceof Element &&
+          e.target.closest('[data-session-active="1"]')
+        ) {
+          return;
+        }
         if (readOnly) {
           onClose();
         } else {
