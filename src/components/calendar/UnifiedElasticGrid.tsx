@@ -2567,10 +2567,7 @@ function WeekEventsOverlay({
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
-            onActiveChange={(active) => {
-              setLockedId((cur) => (active ? ev.id : cur === ev.id ? null : cur));
-              if (!active) setForceEditId((cur) => (cur === ev.id ? null : cur));
-            }}
+            onActiveChange={(active) => setLockedId(active ? ev.id : null)}
             onOpenDetails={() => {
               cancelClose();
               setDetailsEvId(ev.id);
@@ -2820,10 +2817,7 @@ function DiarySimpleStack({
             viewerRole={viewerRole}
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
-            onActiveChange={(active) => {
-              setLockedId((cur) => (active ? ev.id : cur === ev.id ? null : cur));
-              if (!active) setForceEditId((cur) => (cur === ev.id ? null : cur));
-            }}
+            onActiveChange={(active) => setLockedId(active ? ev.id : null)}
             onOpenDetails={() => {
               cancelClose();
               setDetailsEvId(ev.id);
