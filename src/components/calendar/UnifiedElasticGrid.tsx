@@ -1186,9 +1186,6 @@ export function UnifiedElasticGrid({
                   onMarkDragBegin={beginMarkDrag}
                   onMarkSingleCell={markSingleCell}
                   isDraggingMark={isDraggingMark}
-                  allowMark={mode.kind === "year"}
-                  markReleased={markReleased}
-                  isDraggingMark={isDraggingMark}
                   onOpenPopover={openPopover}
                   allowMark={mode.kind === "year"}
                   markReleased={markReleased}
