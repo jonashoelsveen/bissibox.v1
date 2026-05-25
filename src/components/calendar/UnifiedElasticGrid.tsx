@@ -1389,6 +1389,7 @@ export function UnifiedElasticGrid({
 
       {popover && !(appKind === "diary" && mode.kind === "year") && (
         <PopoverEditor
+          key={popover.eventId ?? `${popover.key.month}:${popover.key.day}:${popover.key.session}`}
           seat={seat}
           initialText={popover.initialText}
           initialColor={popover.initialColor}
