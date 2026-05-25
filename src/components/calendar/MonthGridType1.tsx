@@ -2189,6 +2189,8 @@ export interface PopoverEditorProps {
   readOnly?: boolean;
   /** Optional override for the title input's placeholder. */
   placeholder?: string;
+  /** Active team id (admin seat only). Scopes the category dropdown list. */
+  teamId?: string | null;
 }
 
 // Category defaults — color is the source of truth.
