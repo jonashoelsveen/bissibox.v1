@@ -2108,6 +2108,84 @@ function WeekEventsOverlay({
     };
   }, [drag, startHour, weekDates, onEventDrop]);
 
+  // ── Edge-resize (top/bottom drag handles on the clicked tile) ─────────
+  // Lets the owner shrink/grow a session by dragging its top or bottom edge
+  // when the tile is in clicked/active state. Snaps to 5-min increments.
+  const [resize, setResize] = useState<{
+    id: string;
+    edge: "top" | "bottom";
+    pointerStartY: number;
+    originStartMin: number;
+    originEndMin: number;
+    date: Date;
+    currentStartMin: number;
+    currentEndMin: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!resize) return;
+    const PX_PER_MIN = ROW_HEIGHT / 30;
+    const SNAP = 5; // minutes
+    const minStart = startHour * 60;
+    const maxEnd = startHour * 60 + 18 * 60;
+    const minDur = 15;
+    const onMove = (e: PointerEvent) => {
+      const dy = e.clientY - resize.pointerStartY;
+      const deltaMin = Math.round(dy / PX_PER_MIN / SNAP) * SNAP;
+      let startMin = resize.originStartMin;
+      let endMin = resize.originEndMin;
+      if (resize.edge === "top") {
+        startMin = Math.max(
+          minStart,
+          Math.min(resize.originEndMin - minDur, resize.originStartMin + deltaMin),
+        );
+      } else {
+        endMin = Math.min(
+          maxEnd,
+          Math.max(resize.originStartMin + minDur, resize.originEndMin + deltaMin),
+        );
+      }
+      if (
+        startMin === resize.currentStartMin &&
+        endMin === resize.currentEndMin
+      ) {
+        return;
+      }
+      setResize({ ...resize, currentStartMin: startMin, currentEndMin: endMin });
+      onLiveResize?.(resize.id, { startMin, endMin });
+    };
+    const onUp = () => {
+      const changed =
+        resize.currentStartMin !== resize.originStartMin ||
+        resize.currentEndMin !== resize.originEndMin;
+      if (changed && onUpsertSession) {
+        const startISO = toISOLocal(
+          setHM(
+            resize.date,
+            Math.floor(resize.currentStartMin / 60),
+            resize.currentStartMin % 60,
+          ),
+        );
+        const endISO = toISOLocal(
+          setHM(
+            resize.date,
+            Math.floor(resize.currentEndMin / 60),
+            resize.currentEndMin % 60,
+          ),
+        );
+        onUpsertSession({ id: resize.id, startISO, endISO });
+      }
+      setResize(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [resize, startHour, onUpsertSession, onLiveResize]);
+
+
   // Group events by day column (clamped to the visible 06:00–24:00 window).
   const byCol = useMemo(() => {
     const arr: Array<Array<{ ev: CalendarEvent; startMin: number; endMin: number }>> = Array.from(
