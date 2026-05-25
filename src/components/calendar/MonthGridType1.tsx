@@ -2577,7 +2577,7 @@ export function PopoverEditor({
             autoFocus={!readOnly}
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="f.eks. Intervaller 5×4min"
+            placeholder={placeholder}
             readOnly={readOnly}
             tabIndex={readOnly ? -1 : 0}
             onMouseDown={readOnly ? (e) => e.preventDefault() : undefined}
