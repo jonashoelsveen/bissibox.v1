@@ -1348,9 +1348,9 @@ export function MonthGridType1({
                     <span className="invisible text-[11px]">·</span>
                     <span
                       className={[
-                        "grid h-5 min-w-[20px] place-items-center rounded-full px-1 text-[11px] font-medium",
+                        "grid h-5 min-w-[20px] place-items-center rounded-sm px-1 text-[11px] font-medium",
                         todayCell
-                          ? "bg-primary text-primary-foreground"
+                          ? "ring-1 ring-ink text-ink"
                           : d.inMonth
                             ? "text-ink/70"
                             : "text-muted-foreground/50",
