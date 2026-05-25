@@ -2681,22 +2681,28 @@ function CategoryDropdownRow({
         className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
         style={{ background: sideColor }}
       />
-      <select
-        value={selectedId}
-        onChange={(e) => {
-          const id = e.target.value;
-          setSelectedId(id);
-          const cat = categories.find((c) => c.id === id);
-          if (cat) onSetColor(cat.color);
-        }}
-        className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
-      >
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
+      {readOnly ? (
+        <div className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink">
+          {selectedCat?.name ?? ""}
+        </div>
+      ) : (
+        <select
+          value={selectedId}
+          onChange={(e) => {
+            const id = e.target.value;
+            setSelectedId(id);
+            const cat = categories.find((c) => c.id === id);
+            if (cat) onSetColor(cat.color);
+          }}
+          className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
+        >
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }
