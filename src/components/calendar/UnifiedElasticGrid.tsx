@@ -1998,6 +1998,20 @@ function WeekEventsOverlay({
   const [forceEditId, setForceEditId] = useState<string | null>(null);
   const [lockedId, setLockedId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
+  // For non-owner viewers: track which tile is currently being pressed
+  // (drag attempt) so it can show the "clicked" highlight while held,
+  // without replacing the previously-opened edit panel.
+  const [readOnlyPressedId, setReadOnlyPressedId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!readOnlyPressedId) return;
+    const clear = () => setReadOnlyPressedId(null);
+    window.addEventListener("pointerup", clear);
+    window.addEventListener("pointercancel", clear);
+    return () => {
+      window.removeEventListener("pointerup", clear);
+      window.removeEventListener("pointercancel", clear);
+    };
+  }, [readOnlyPressedId]);
   // A session is "locked" when it has an open edit panel, note panel, or is
   // being created. While locked, hovering other tiles must not open menus.
   const globalLock = useHoverLock();
@@ -2130,7 +2144,7 @@ function WeekEventsOverlay({
             const dragDy = isDragging ? drag.delta.dy : 0;
             const accent = ev.color ?? "hsl(var(--primary))";
             const isGhost = ev.id.startsWith("__ghost__:");
-            const isPressed = drag?.id === ev.id;
+            const isPressed = drag?.id === ev.id || readOnlyPressedId === ev.id;
             const isActive = !isGhost && ((lockedId ?? forceEditId) === ev.id || activeEventId === ev.id || isDragging || isPressed);
 
             const bg = isActive
@@ -2175,6 +2189,7 @@ function WeekEventsOverlay({
                     // tile. Mirrors month-view behavior.
                     e.stopPropagation();
                     e.preventDefault();
+                    setReadOnlyPressedId(ev.id);
                     return;
                   }
                   e.stopPropagation();
