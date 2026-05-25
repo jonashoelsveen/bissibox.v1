@@ -95,22 +95,8 @@ export function HeaderDropdown<T extends string>({
   const current = options.find((o) => o.value === value);
   return (
     <div className="pointer-events-auto relative">
-          <div
-            ref={headerRowRef}
-            data-grid-header="1"
-            className="grid flex-none"
-            style={{
-              gridTemplateColumns,
-              transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
-              willChange: "grid-template-columns",
-            }}
-          >
-            {/* duplicate of header start replaced below */}
-          </div>
-          {/* legacy header marker */}
-          <div style={{ display: "none" }}>
-            <button
-              type="button"
+      <button
+        type="button"
         aria-label={ariaLabel}
         onClick={(e) => {
           e.stopPropagation();
