@@ -1680,7 +1680,7 @@ function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
         items={["Units", "Activitytypes"]}
       />
       <DiaryCategoryCard title="Notes" items={[]} />
-      <WeekViewCard />
+      <WeekViewCard app="diary" />
       <SessionTileDesignCard />
       <MonthSessionTileDesignCard />
       <DiarySessionDetailsCard />
