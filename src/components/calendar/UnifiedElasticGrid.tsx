@@ -672,8 +672,23 @@ export function UnifiedElasticGrid({
     if (k.month !== markStartRef.current.month) return;
     const r = k.day * 2 + k.session;
     const a = markStartRef.current.rank;
-    if (r === a) return; // single cell — don't show mark yet
+    // Always update the range, including the single-cell case (r === a) so
+    // the user can drag from A → B → back to A and shrink the selection
+    // back down to one cell. Previously this early-returned, locking the
+    // mark at the minimum 2-cell size once expanded.
     setMarkRange({ month: k.month, lo: Math.min(a, r), hi: Math.max(a, r) });
+  }, []);
+
+  // Double-click on a single week-view cell: synthesize a single-cell mark
+  // range and immediately release it. This reuses the existing release-flow
+  // effect that materializes a real session tile, so a double-click feels
+  // identical to dragging out a one-slot selection.
+  const markSingleCell = useCallback((k: CellKey) => {
+    const r = k.day * 2 + k.session;
+    markStartRef.current = { month: k.month, rank: r };
+    markActiveRef.current = true;
+    setMarkRange({ month: k.month, lo: r, hi: r });
+    setMarkReleased(true);
   }, []);
 
   const beginMarkDrag = useCallback((k: CellKey) => {
@@ -1169,6 +1184,7 @@ export function UnifiedElasticGrid({
                   markInfo={markInfo}
                   onMarkBegin={beginMark}
                   onMarkDragBegin={beginMarkDrag}
+                  onMarkSingleCell={markSingleCell}
                   isDraggingMark={isDraggingMark}
                   onOpenPopover={openPopover}
                   allowMark={mode.kind === "year"}
@@ -1606,6 +1622,7 @@ interface DayRowProps {
   markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number };
   onMarkBegin: (k: CellKey) => void;
   onMarkDragBegin: (k: CellKey) => void;
+  onMarkSingleCell: (k: CellKey) => void;
   isDraggingMark: boolean;
   onOpenPopover: (k: CellKey, anchor: HTMLElement) => void;
   allowMark: boolean;
@@ -1618,7 +1635,7 @@ function DayRow(props: DayRowProps) {
     selected, selectedId, editingId, editValue, setEditValue,
     onSelect, onBeginEdit, onCommitEdit, onCommitDuration, onMoveAfterCommit,
     inDragRange, onCellMouseEnter, onHandleDown, isMonthFocused, isMonthPeriph,
-    markInfo, onMarkBegin, onMarkDragBegin, isDraggingMark, onOpenPopover, allowMark, markReleased,
+    markInfo, onMarkBegin, onMarkDragBegin, onMarkSingleCell, isDraggingMark, onOpenPopover, allowMark, markReleased,
   } = props;
 
   return (
@@ -1696,6 +1713,7 @@ function DayRow(props: DayRowProps) {
               markInfo={markInfo}
               onMarkBegin={onMarkBegin}
               onMarkDragBegin={onMarkDragBegin}
+              onMarkSingleCell={onMarkSingleCell}
               isDraggingMark={isDraggingMark}
               onOpenPopover={onOpenPopover}
               allowMark={allowMark}
@@ -1735,6 +1753,7 @@ interface DayCellPairProps {
   markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number };
   onMarkBegin: (k: CellKey) => void;
   onMarkDragBegin: (k: CellKey) => void;
+  onMarkSingleCell: (k: CellKey) => void;
   isDraggingMark: boolean;
   onOpenPopover: (k: CellKey, anchor: HTMLElement) => void;
   allowMark: boolean;
@@ -1748,7 +1767,7 @@ function DayCellPair(props: DayCellPairProps) {
     editingId, editValue, setEditValue,
     onSelect, onBeginEdit, onCommitEdit, onCommitDuration, onMoveAfterCommit,
     inDragRange, onCellMouseEnter, onHandleDown,
-    markInfo, onMarkBegin, onMarkDragBegin, isDraggingMark, onOpenPopover, allowMark, markReleased,
+    markInfo, onMarkBegin, onMarkDragBegin, onMarkSingleCell, isDraggingMark, onOpenPopover, allowMark, markReleased,
   } = props;
 
   const sessions: Session[] = [0, 1];
@@ -1814,7 +1833,10 @@ function DayCellPair(props: DayCellPairProps) {
             onDoubleClick={(e) => {
               e.stopPropagation();
               if (allowMark) {
-                onOpenPopover(k, e.currentTarget as HTMLElement);
+                // Week-view: synthesize a single-cell mark + release so the
+                // existing release-flow effect materializes a real session
+                // tile, matching the behaviour of dragging out a 1-slot mark.
+                onMarkSingleCell(k);
               } else {
                 onBeginEdit(k);
               }
