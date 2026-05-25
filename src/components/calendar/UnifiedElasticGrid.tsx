@@ -1998,6 +1998,20 @@ function WeekEventsOverlay({
   const [forceEditId, setForceEditId] = useState<string | null>(null);
   const [lockedId, setLockedId] = useState<string | null>(null);
   const [detailsEvId, setDetailsEvId] = useState<string | null>(null);
+  // For non-owner viewers: track which tile is currently being pressed
+  // (drag attempt) so it can show the "clicked" highlight while held,
+  // without replacing the previously-opened edit panel.
+  const [readOnlyPressedId, setReadOnlyPressedId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!readOnlyPressedId) return;
+    const clear = () => setReadOnlyPressedId(null);
+    window.addEventListener("pointerup", clear);
+    window.addEventListener("pointercancel", clear);
+    return () => {
+      window.removeEventListener("pointerup", clear);
+      window.removeEventListener("pointercancel", clear);
+    };
+  }, [readOnlyPressedId]);
   // A session is "locked" when it has an open edit panel, note panel, or is
   // being created. While locked, hovering other tiles must not open menus.
   const globalLock = useHoverLock();
