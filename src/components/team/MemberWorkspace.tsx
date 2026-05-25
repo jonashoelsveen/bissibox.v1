@@ -67,8 +67,8 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
           }}
         >
           <div className="mac-panel relative h-full overflow-hidden rounded-lg border border-hairline shadow-sm">
-            <div className="h-full overflow-y-auto px-3 pb-6 pt-[48px]">
-              <nav className="flex max-h-[calc(100vh-8rem)] flex-col gap-3 overflow-y-auto pr-1 [scrollbar-width:thin]">
+            <nav className="flex h-full flex-col gap-3 overflow-hidden px-3 pb-6 pt-[48px]">
+              <div className="shrink-0">
                 <div className="flex items-center gap-1">
                   <IconTab
                     active={subTab === "calendar"}
@@ -85,8 +85,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
                     <BookOpen className="h-[18px] w-[18px]" strokeWidth={2.25} />
                   </IconTab>
                 </div>
-
-                <div>
+                <div className="mt-3">
                   <MiniCalendar
                     selectedRange={currentRange ?? { start: currentDate, end: currentDate }}
                     onSelectRange={(r) => {
@@ -96,24 +95,23 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
                     viewMode={viewMode}
                   />
                 </div>
+              </div>
 
-                {subTab === "diary" && (
-                  <div className="flex flex-col gap-1 pb-4">
-                    <DiaryActivitiesSection
-                      title="Activities"
-                      canEdit={false}
-                      kind="diary_activity"
-                    />
-                    <DiaryActivitiesSection
-                      title="Strava activities"
-                      canEdit={false}
-                      kind="diary_strava"
-                    />
-                  </div>
-                )}
-              </nav>
-
-            </div>
+              {subTab === "diary" && (
+                <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
+                  <DiaryActivitiesSection
+                    title="Activities"
+                    canEdit={false}
+                    kind="diary_activity"
+                  />
+                  <DiaryActivitiesSection
+                    title="Strava activities"
+                    canEdit={false}
+                    kind="diary_strava"
+                  />
+                </div>
+              )}
+            </nav>
             <div className="mac-panel-fade pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg" />
           </div>
         </div>
