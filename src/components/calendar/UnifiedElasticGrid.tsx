@@ -1073,6 +1073,7 @@ export function UnifiedElasticGrid({
           <div
             ref={weekScrollerRef}
             className="mini-dur-scroll relative flex flex-1 min-h-0 flex-col overflow-y-auto"
+            style={{ scrollbarGutter: "stable" }}
           >
           <div
             className="grid"
