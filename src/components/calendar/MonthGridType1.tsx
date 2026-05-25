@@ -2178,6 +2178,8 @@ export interface PopoverEditorProps {
    * details but cannot change them.
    */
   readOnly?: boolean;
+  /** Optional override for the title input's placeholder. */
+  placeholder?: string;
 }
 
 // Category defaults — color is the source of truth.
