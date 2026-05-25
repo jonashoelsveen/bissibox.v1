@@ -412,6 +412,8 @@ export function UnifiedElasticGrid({
     /** Pending unsaved drag — date/time to apply on Save. */
     pendingDate?: Date;
     pendingTime?: { startMin: number; endMin: number };
+    /** Override for the input placeholder (e.g. "New session" for fresh mark). */
+    placeholder?: string;
   } | null>(null);
 
   // Calendar drag-to-move: the time/location is applied immediately on
@@ -521,7 +523,7 @@ export function UnifiedElasticGrid({
   //    flow with the marked-range overlay.
   useEffect(() => {
     if (!markReleased || !markRange) return;
-    if (markRange.hi <= markRange.lo) return;
+    if (markRange.hi < markRange.lo) return;
     const day = Math.floor(markRange.lo / 2);
     const session = (markRange.lo % 2) as Session;
     const sel = `[data-cell-key="${markRange.month}:${day}:${session}"]`;
@@ -541,22 +543,25 @@ export function UnifiedElasticGrid({
       const endISO = toISOLocal(
         setHM(date, Math.floor(endMin / 60), endMin % 60),
       );
+      // Clear the mark overlay BEFORE creating the event so the gray
+      // selection (including the originating cell) disappears in the
+      // same React batch the new tile mounts in — no perceptible lag.
+      setMarkRange(null);
+      setMarkReleased(false);
       const created = onUpsertEvent({
-        title: "Session",
+        title: "New session",
         startISO,
         endISO,
         allDay: false,
       });
-      // Clear the mark overlay — the real tile takes over from here.
-      setMarkRange(null);
-      setMarkReleased(false);
       setPopover({
         key: { year, month: markRange.month, day, session },
         rect: el.getBoundingClientRect(),
-        initialText: created.title,
+        initialText: "",
         initialColor: created.color ?? null,
         isEdit: true,
         eventId: created.id,
+        placeholder: "New session",
       });
       return;
     }
@@ -1319,6 +1324,7 @@ export function UnifiedElasticGrid({
           anchor={popover.rect}
           enableDuration={mode.kind === "year"}
           readOnly={viewerRole !== "owner"}
+          placeholder={popover.placeholder}
           initialTime={(() => {
             if (mode.kind !== "year") return null;
             if (popover.pendingTime) return popover.pendingTime;

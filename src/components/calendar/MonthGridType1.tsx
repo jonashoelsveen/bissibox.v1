@@ -2178,6 +2178,8 @@ export interface PopoverEditorProps {
    * details but cannot change them.
    */
   readOnly?: boolean;
+  /** Optional override for the title input's placeholder. */
+  placeholder?: string;
 }
 
 // Category defaults — color is the source of truth.
@@ -2443,6 +2445,7 @@ export function PopoverEditor({
   onTimeChange,
   onColorChange,
   readOnly = false,
+  placeholder = "f.eks. Intervaller 5×4min",
 }: PopoverEditorProps) {
   const [value, setValue] = useState(initialText);
   // Resolve initial color according to seat
@@ -2574,7 +2577,7 @@ export function PopoverEditor({
             autoFocus={!readOnly}
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="f.eks. Intervaller 5×4min"
+            placeholder={placeholder}
             readOnly={readOnly}
             tabIndex={readOnly ? -1 : 0}
             onMouseDown={readOnly ? (e) => e.preventDefault() : undefined}
