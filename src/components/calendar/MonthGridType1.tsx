@@ -1887,6 +1887,7 @@ export function MonthGridType1({
 
         {popover && appKind !== "diary" && (
           <PopoverEditor
+            key={popover.eventId ?? `${popover.cellKey.year}:${popover.cellKey.month}:${popover.cellKey.day}:${popover.cellKey.session}:${popover.editIdx ?? -1}`}
             seat={seat}
             initialText={popover.initialText}
             initialColor={popover.initialColor}
