@@ -421,6 +421,8 @@ export function UnifiedElasticGrid({
     pendingTime?: { startMin: number; endMin: number };
     /** Override for the input placeholder (e.g. "New session" for fresh mark). */
     placeholder?: string;
+    /** Tile was just created by a mark-release — empty commit keeps it (no delete). */
+    freshlyCreated?: boolean;
   } | null>(null);
 
   // Calendar drag-to-move: the time/location is applied immediately on
