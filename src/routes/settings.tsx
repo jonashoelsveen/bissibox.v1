@@ -750,7 +750,7 @@ function SettingsGroup({
   id: string;
   title: string;
   defaultOpen?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const storageKey = `settings:sidenav:groupOpen:${id}`;
   const [open, setOpen] = useState<boolean>(() => {
