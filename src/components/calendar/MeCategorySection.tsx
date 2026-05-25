@@ -202,7 +202,9 @@ function SortableCategoryRow(props: {
       }}
       className={`group flex items-center gap-2 rounded-md px-2 py-1 text-xs transition-colors hover:bg-secondary/60 ${
         isDragging ? "cursor-grabbing" : "cursor-default"
-      } ${props.hidden ? "text-muted-foreground" : "text-ink"}`}
+      } ${props.hidden ? "text-muted-foreground" : "text-ink"} ${
+        props.renaming ? "ring-1 ring-inset ring-hairline" : ""
+      }`}
     >
       <span
         aria-hidden
