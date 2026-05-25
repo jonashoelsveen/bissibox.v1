@@ -103,7 +103,7 @@ function RootComponent() {
         </main>
         {!isEmbedded && <Toaster />}
         {!isEmbedded && <GlobalCreateOverlay />}
-        {!isEmbedded && <SettingsModal />}
+        {/* SettingsModal removed — settings live at /settings */}
         {!isEmbedded && <ProfileModal />}
       </TopBarSlotProvider>
     </AuthProvider>
