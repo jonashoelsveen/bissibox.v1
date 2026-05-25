@@ -2199,7 +2199,7 @@ function WeekEventsOverlay({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [drag, startHour, weekDates, onEventDrop]);
+  }, [drag, startHour, spanHours, weekDates, onEventDrop, onEventDragStart]);
 
   // ── Edge-resize (top/bottom drag handles on the clicked tile) ─────────
   // Lets the owner shrink/grow a session by dragging its top or bottom edge
