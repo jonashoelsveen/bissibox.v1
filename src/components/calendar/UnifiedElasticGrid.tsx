@@ -529,7 +529,9 @@ export function UnifiedElasticGrid({
     if (!el) return;
 
     if (mode.kind === "year" && appKind !== "diary") {
-      const date = weekDates[markRange.month];
+      const start = startOfWeekMon(currentDate);
+      const date = new Date(start);
+      date.setDate(start.getDate() + markRange.month);
       if (!date) return;
       const startMin = WEEK_START_HOUR * 60 + (markRange.lo - 2) * 30;
       const endMin = WEEK_START_HOUR * 60 + (markRange.hi - 2 + 1) * 30;
