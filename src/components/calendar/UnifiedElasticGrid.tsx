@@ -1117,6 +1117,11 @@ export function UnifiedElasticGrid({
                     });
 
                   }}
+                  onLiveResize={(id, t) => {
+                    // Push the in-progress duration into the open popover so the
+                    // From/To time wheels visibly tick along with the drag.
+                    setPopover((p) => (p && p.eventId === id ? { ...p, pendingTime: t } : p));
+                  }}
                   onDeleteEvent={onDeleteEvent}
                   onSaveSessionNote={(id, note) =>
                     onUpsertEvent({ id, sessionNote: note || undefined })
@@ -1125,6 +1130,7 @@ export function UnifiedElasticGrid({
                   memberId={memberId}
                   viewerRole={viewerRole}
                 />
+
               )}
               {isSimple && (
                 <DiarySimpleStack
