@@ -208,17 +208,25 @@ function DiaryMonthReorderTile({
   unit,
   height,
   dragging = false,
+  isActive = false,
 }: {
   ev: CalendarEvent;
   tileDesign: string;
   unit: ReturnType<typeof useDistanceUnit>[0];
   height: number | string;
   dragging?: boolean;
+  isActive?: boolean;
 }) {
   const accent = ev.color ?? "hsl(var(--primary))";
-  const bg = ev.color
-    ? `color-mix(in srgb, ${ev.color} 18%, white)`
-    : "hsl(var(--primary) / 0.15)";
+  // Match week-view clicked-state: when active, the whole tile bg becomes
+  // the accent color. The left half keeps `iconHalfBg` painted on top so it
+  // stays lighter; the right half inherits the dark accent and the
+  // distance/duration text flips to white.
+  const bg = isActive
+    ? accent
+    : ev.color
+      ? `color-mix(in srgb, ${ev.color} 18%, white)`
+      : "hsl(var(--primary) / 0.15)";
   const startDate = fromISOLocal(ev.startISO);
   const endDate = fromISOLocal(ev.endISO);
   const totalMin = Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / 60000));
@@ -243,10 +251,11 @@ function DiaryMonthReorderTile({
   return (
     <div
       className={[
-        "relative overflow-hidden rounded-[3px] text-[12px] text-ink shadow-sm ring-1 ring-black/5 transition-shadow",
+        "relative overflow-hidden rounded-[3px] text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow",
+        isActive ? "" : "text-ink",
         dragging ? "shadow-lg" : "hover:shadow-md",
       ].join(" ")}
-      style={{ height, background: bg }}
+      style={{ height, background: bg, color: isActive ? "#fff" : undefined }}
       title={ev.title}
     >
       <span className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: accent }} />
@@ -255,7 +264,10 @@ function DiaryMonthReorderTile({
           <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
             <ActIcon className="h-5 w-5 shrink-0" strokeWidth={2.25} style={{ color: accent }} />
           </div>
-          <div className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight">
+          <div
+            className="flex w-1/2 min-w-0 flex-col justify-center px-2 leading-tight"
+            style={{ color: isActive ? "#fff" : undefined }}
+          >
             <span className="truncate text-[12px] font-semibold">{ev.title}</span>
             <span className="mono truncate text-[10.5px] tabular-nums opacity-70">{durStr}</span>
             {!isStrength && (
@@ -271,7 +283,12 @@ function DiaryMonthReorderTile({
           <div
             className="flex w-1/2 items-center justify-center"
             title={distLabel}
-            style={{ fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 700, fontSize: 18 }}
+            style={{
+              fontFamily: "Helvetica, Arial, sans-serif",
+              fontWeight: 700,
+              fontSize: 18,
+              color: isActive ? "#fff" : undefined,
+            }}
           >
             {isStrength ? (
               <span className="flex items-baseline gap-1" style={{ lineHeight: 1 }}>
