@@ -1897,6 +1897,7 @@ export function MonthGridType1({
           <PopoverEditor
             key={popover.eventId ?? `${popover.pos.row}:${popover.pos.col}:${popover.editIdx ?? -1}`}
             seat={seat}
+            teamId={teamId}
             initialText={popover.initialText}
             initialColor={popover.initialColor ?? (popover.editIdx < 0 && !popover.eventId ? defaultNewColor : null)}
             isEdit={popover.editIdx >= 0 || !!popover.eventId}
