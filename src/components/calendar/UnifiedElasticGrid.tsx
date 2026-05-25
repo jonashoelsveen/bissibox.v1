@@ -2222,8 +2222,11 @@ function WeekEventsOverlay({
           }}
         >
           {list.map(({ ev, startMin, endMin }) => {
-            const since = startMin - startHour * 60;
-            const dur = Math.max(30, endMin - startMin);
+            const isResizing = resize?.id === ev.id;
+            const liveStart = isResizing ? resize!.currentStartMin : startMin;
+            const liveEnd = isResizing ? resize!.currentEndMin : endMin;
+            const since = liveStart - startHour * 60;
+            const dur = Math.max(15, liveEnd - liveStart);
             const top = (since / 30) * ROW_HEIGHT;
             const height = (dur / 30) * ROW_HEIGHT;
             const isDragging = drag?.id === ev.id && drag.moved;
@@ -2232,7 +2235,10 @@ function WeekEventsOverlay({
             const accent = ev.color ?? "hsl(var(--primary))";
             const isGhost = ev.id.startsWith("__ghost__:");
             const isPressed = drag?.id === ev.id || readOnlyPressedId === ev.id;
-            const isActive = !isGhost && ((lockedId ?? forceEditId) === ev.id || activeEventId === ev.id || isDragging || isPressed);
+            const isActive = !isGhost && ((lockedId ?? forceEditId) === ev.id || activeEventId === ev.id || isDragging || isPressed || isResizing);
+            const canResize =
+              !isGhost && appKind !== "diary" && viewerRole === "owner" && isActive;
+
 
             const bg = isActive
               ? accent
