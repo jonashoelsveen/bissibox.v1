@@ -109,7 +109,8 @@ type Tab =
   | "entity-calendar"
   | "entity-map"
   | "entity-events"
-  | "entity-library";
+  | "entity-library"
+  | "entity-clients";
 
 type DividerKey = `divider-${number}`;
 type NavItem = Tab | DividerKey;
