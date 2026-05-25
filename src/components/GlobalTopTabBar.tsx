@@ -17,10 +17,12 @@ import {
   Home,
   UserRound,
   Settings as SettingsIcon,
+  UsersRound,
 } from "lucide-react";
 import { OrganizationIcon } from "@/components/OrganizationIcon";
 // removed:
 import { useAuth } from "@/lib/auth";
+import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
 import { ProfileTab } from "@/components/ProfileTab";
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
