@@ -686,7 +686,11 @@ export function UnifiedElasticGrid({
   const markSingleCell = useCallback((k: CellKey) => {
     const r = k.day * 2 + k.session;
     markStartRef.current = { month: k.month, rank: r };
-    markActiveRef.current = true;
+    // Double-click synthesizes a release immediately — there is no ongoing
+    // drag gesture, so leave markActiveRef false. Otherwise subsequent
+    // mouse-enters on neighbour cells would extend the (already-released)
+    // selection because no mouseup follows the dblclick to clear it.
+    markActiveRef.current = false;
     setMarkRange({ month: k.month, lo: r, hi: r });
     setMarkReleased(true);
   }, []);
