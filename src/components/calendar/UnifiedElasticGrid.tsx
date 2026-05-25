@@ -1151,6 +1151,12 @@ export function UnifiedElasticGrid({
                       eventId: ev.id,
                     });
                   }}
+                  onEventDragStart={() => {
+                    // Hide the edit popover the instant the user starts
+                    // dragging a tile; WeekEventsOverlay re-opens it via
+                    // onEventDrop after the drop completes.
+                    closePopover();
+                  }}
                   onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
                     const ev = events.find((e) => e.id === id);
                     if (!ev) return;
