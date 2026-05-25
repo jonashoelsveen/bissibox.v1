@@ -561,8 +561,13 @@ export function UnifiedElasticGrid({
       // the popover's default selection in each seat. This mirrors the
       // smooth admin-mode path on individual mode too.
       const defaultColor = seat === "admin" ? "#E63337" : CAT_TRAINING_COLOR;
+      // Create the event with an EMPTY title so the popover input shows
+      // the "New session" placeholder (not the literal text) and a click-
+      // outside without typing commits "" → onDeleteEvent removes the tile.
+      // The tile itself renders "New session" as a display-only fallback
+      // when the title is empty (see WeekEventsOverlay below).
       const created = onUpsertEvent({
-        title: "New session",
+        title: "",
         color: defaultColor,
         startISO,
         endISO,
