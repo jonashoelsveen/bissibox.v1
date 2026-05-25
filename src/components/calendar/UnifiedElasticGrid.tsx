@@ -246,6 +246,9 @@ export interface UnifiedElasticGridProps {
   appKind?: "calendar" | "diary";
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
+  /** When in team/admin mode, the team id whose category list drives
+   *  newly-created session defaults. */
+  teamId?: string | null;
 }
 
 type Mode = { kind: "year" } | { kind: "month"; month: number };
@@ -274,6 +277,7 @@ export function UnifiedElasticGrid({
   appKind = "calendar",
   memberId,
   viewerRole = "owner",
+  teamId = null,
 }: UnifiedElasticGridProps) {
   // viewMode is the only user-facing toggle now. There are no "types".
   //   - "day"   → 7-column rich spreadsheet (one row per 30-min slot)
@@ -300,14 +304,14 @@ export function UnifiedElasticGrid({
   const WEEK_SPAN_HOURS = Math.max(1, WEEK_END_HOUR_CFG - WEEK_START_HOUR_CFG);
   const WEEK_SLOT_ROWS = WEEK_SPAN_HOURS * 2;
 
-  // Individual seat: preload the user's own categories so a freshly-created
-  // week-view tile can mount with the exact color the popover's category
-  // dropdown will resolve to. Without this, the tile briefly renders with
-  // CAT_TRAINING_COLOR (periwinkle), then the popover's auto-sync swaps it
-  // to the user's top category color — a visible flicker. Admin doesn't
-  // have this problem because its categories are static (#E63337 is always
-  // the first one).
+  // Preload the active category list so a freshly-created week-view tile
+  // mounts with the exact color the popover's category dropdown will
+  // resolve to. Individual mode uses the user's personal categories;
+  // admin mode uses the team's categories (under the entity header-tab).
+  // Without this, the tile briefly renders with a hardcoded fallback,
+  // then the popover's auto-sync swaps it — a visible flicker.
   const { categories: meCategories } = useUserCategories();
+  const { categories: teamCategories } = useUserCategories({ teamId: seat === "admin" ? teamId : null });
 
   const handleViewModeChange = (v: ViewMode) => {
     if (!isControlled) setViewModeInternal(v);
@@ -593,7 +597,8 @@ export function UnifiedElasticGrid({
       // resolve to — no re-color flicker after mount. Fall back to the
       // periwinkle Training default if categories haven't loaded yet.
       const meDefaultColor = meCategories[0]?.color ?? CAT_TRAINING_COLOR;
-      const defaultColor = seat === "admin" ? "#E63337" : meDefaultColor;
+      const adminDefaultColor = teamCategories[0]?.color ?? "#E63337";
+      const defaultColor = seat === "admin" ? adminDefaultColor : meDefaultColor;
       // Create the event with an EMPTY title so the popover input shows
       // the "New session" placeholder (not the literal text) and a click-
       // outside without typing commits "" → onDeleteEvent removes the tile.
@@ -619,7 +624,7 @@ export function UnifiedElasticGrid({
     }
 
     openPopover({ year, month: markRange.month, day, session }, el);
-  }, [markReleased, markRange, openPopover, year, mode, appKind, currentDate, onUpsertEvent, seat, meCategories]);
+  }, [markReleased, markRange, openPopover, year, mode, appKind, currentDate, onUpsertEvent, seat, meCategories, teamCategories]);
 
 
 
@@ -955,6 +960,7 @@ export function UnifiedElasticGrid({
           onReorderEvents={onReorderEvents}
           memberId={memberId}
           viewerRole={viewerRole}
+          defaultNewColor={seat === "admin" ? (teamCategories[0]?.color ?? null) : (meCategories[0]?.color ?? null)}
           onPrevMonth={() => {
             const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
             onCurrentDateChange(d, { start: d, end: d });
@@ -1389,6 +1395,7 @@ export function UnifiedElasticGrid({
 
       {popover && !(appKind === "diary" && mode.kind === "year") && (
         <PopoverEditor
+          key={popover.eventId ?? `${popover.key.month}:${popover.key.day}:${popover.key.session}`}
           seat={seat}
           initialText={popover.initialText}
           initialColor={popover.initialColor}

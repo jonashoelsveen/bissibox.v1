@@ -182,6 +182,10 @@ export interface MonthGridType1Props {
   onSelectDate?: (date: Date) => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
+  /** Default color for newly-created sessions (no initial color). Used so
+   *  admin month-view defaults to the team's top category color, mirroring
+   *  individual mode using the user's top "Me" category. */
+  defaultNewColor?: string | null;
 }
 
 interface DayItem {
@@ -537,6 +541,7 @@ export function MonthGridType1({
   onSelectDate,
   memberId,
   viewerRole = "owner",
+  defaultNewColor = null,
 }: MonthGridType1Props) {
   const dim = daysInMonth(year, month);
   const [monthTileDesign] = useMonthTileDesign();
@@ -1887,9 +1892,10 @@ export function MonthGridType1({
 
         {popover && appKind !== "diary" && (
           <PopoverEditor
+            key={popover.eventId ?? `${popover.pos.row}:${popover.pos.col}:${popover.editIdx ?? -1}`}
             seat={seat}
             initialText={popover.initialText}
-            initialColor={popover.initialColor}
+            initialColor={popover.initialColor ?? (popover.editIdx < 0 && !popover.eventId ? defaultNewColor : null)}
             isEdit={popover.editIdx >= 0 || !!popover.eventId}
             anchor={popover.rect}
             enableDuration={!!onUpsertEvent}
@@ -2449,14 +2455,11 @@ export function PopoverEditor({
 }: PopoverEditorProps) {
   const [value, setValue] = useState(initialText);
   // Resolve initial color according to seat
+  // Use whichever color the parent provided (existing event's color, or the
+  // active list's top-category default for new sessions). Fall back to the
+  // hardcoded seat default only when no color is supplied at all.
   const resolvedInitial =
-    seat === "admin"
-      ? initialColor && [CAT_MEETING, CAT_EVENT, CAT_RACE]
-          .map((c) => c.toLowerCase())
-          .includes(initialColor.toLowerCase())
-        ? initialColor
-        : CAT_MEETING
-      : initialColor ?? CAT_TRAINING_COLOR;
+    initialColor ?? (seat === "admin" ? CAT_MEETING : CAT_TRAINING_COLOR);
   const [color, setColorState] = useState<string | null>(resolvedInitial);
   const setColor = useCallback(
     (c: string | null) => {
