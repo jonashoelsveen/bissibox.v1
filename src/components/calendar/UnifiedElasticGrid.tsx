@@ -1398,7 +1398,14 @@ export function UnifiedElasticGrid({
           key={popover.eventId ?? `${popover.key.month}:${popover.key.day}:${popover.key.session}`}
           seat={seat}
           initialText={popover.initialText}
-          initialColor={popover.initialColor}
+          initialColor={
+            popover.initialColor ??
+            (!popover.eventId && !popover.isEdit
+              ? (seat === "admin"
+                  ? (teamCategories[0]?.color ?? null)
+                  : (meCategories[0]?.color ?? null))
+              : null)
+          }
           isEdit={popover.isEdit}
           anchor={popover.rect}
           enableDuration={mode.kind === "year"}
