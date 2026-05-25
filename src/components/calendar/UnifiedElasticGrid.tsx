@@ -246,6 +246,9 @@ export interface UnifiedElasticGridProps {
   appKind?: "calendar" | "diary";
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
+  /** When in team/admin mode, the team id whose category list drives
+   *  newly-created session defaults. */
+  teamId?: string | null;
 }
 
 type Mode = { kind: "year" } | { kind: "month"; month: number };
