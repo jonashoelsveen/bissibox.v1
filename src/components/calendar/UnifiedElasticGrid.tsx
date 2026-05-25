@@ -961,6 +961,7 @@ export function UnifiedElasticGrid({
           memberId={memberId}
           viewerRole={viewerRole}
           defaultNewColor={seat === "admin" ? (teamCategories[0]?.color ?? null) : (meCategories[0]?.color ?? null)}
+          teamId={seat === "admin" ? teamId : null}
           onPrevMonth={() => {
             const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
             onCurrentDateChange(d, { start: d, end: d });
@@ -1397,6 +1398,7 @@ export function UnifiedElasticGrid({
         <PopoverEditor
           key={popover.eventId ?? `${popover.key.month}:${popover.key.day}:${popover.key.session}`}
           seat={seat}
+          teamId={seat === "admin" ? teamId : null}
           initialText={popover.initialText}
           initialColor={
             popover.initialColor ??
