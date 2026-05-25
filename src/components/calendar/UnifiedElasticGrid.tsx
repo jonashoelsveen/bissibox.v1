@@ -412,6 +412,8 @@ export function UnifiedElasticGrid({
     /** Pending unsaved drag — date/time to apply on Save. */
     pendingDate?: Date;
     pendingTime?: { startMin: number; endMin: number };
+    /** Override for the input placeholder (e.g. "New session" for fresh mark). */
+    placeholder?: string;
   } | null>(null);
 
   // Calendar drag-to-move: the time/location is applied immediately on
