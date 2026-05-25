@@ -277,6 +277,7 @@ export function UnifiedElasticGrid({
   appKind = "calendar",
   memberId,
   viewerRole = "owner",
+  teamId = null,
 }: UnifiedElasticGridProps) {
   // viewMode is the only user-facing toggle now. There are no "types".
   //   - "day"   → 7-column rich spreadsheet (one row per 30-min slot)
