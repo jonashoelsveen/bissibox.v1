@@ -1989,10 +1989,12 @@ function DurationCell({ initial, onCommit }: DurationCellProps) {
 function NowLine({
   colIdx,
   nowMinutesSinceStart,
+  spanHours = 18,
 }: {
   colIdx: number;
   /** Minutes elapsed since the grid's start hour (e.g. 06:00). */
   nowMinutesSinceStart: number;
+  spanHours?: number;
 }) {
   const ROW_HEIGHT = 28;
   const top = (nowMinutesSinceStart / 30) * ROW_HEIGHT;
@@ -2004,7 +2006,7 @@ function NowLine({
         gridColumnStart: colIdx + 2,
         gridColumnEnd: colIdx + 3,
         gridRowStart: 1,
-        gridRowEnd: 19,
+        gridRowEnd: spanHours + 1,
         position: "relative",
         pointerEvents: "none",
         zIndex: 14,
