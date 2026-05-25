@@ -16,6 +16,7 @@ import { Route as MediaRouteImport } from './routes/media'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as DiaryRouteImport } from './routes/diary'
+import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AcceptLeaderInviteRouteImport } from './routes/accept-leader-invite'
@@ -64,6 +65,11 @@ const HomeRoute = HomeRouteImport.update({
 const DiaryRoute = DiaryRouteImport.update({
   id: '/diary',
   path: '/diary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientsRoute = ClientsRouteImport.update({
+  id: '/clients',
+  path: '/clients',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CalendarRoute = CalendarRouteImport.update({
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/accept-leader-invite': typeof AcceptLeaderInviteRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
+  '/clients': typeof ClientsRoute
   '/diary': typeof DiaryRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/accept-leader-invite': typeof AcceptLeaderInviteRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
+  '/clients': typeof ClientsRoute
   '/diary': typeof DiaryRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/accept-leader-invite': typeof AcceptLeaderInviteRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
+  '/clients': typeof ClientsRoute
   '/diary': typeof DiaryRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
@@ -215,6 +224,7 @@ export interface FileRouteTypes {
     | '/accept-leader-invite'
     | '/auth'
     | '/calendar'
+    | '/clients'
     | '/diary'
     | '/home'
     | '/login'
@@ -238,6 +248,7 @@ export interface FileRouteTypes {
     | '/accept-leader-invite'
     | '/auth'
     | '/calendar'
+    | '/clients'
     | '/diary'
     | '/home'
     | '/login'
@@ -261,6 +272,7 @@ export interface FileRouteTypes {
     | '/accept-leader-invite'
     | '/auth'
     | '/calendar'
+    | '/clients'
     | '/diary'
     | '/home'
     | '/login'
@@ -285,6 +297,7 @@ export interface RootRouteChildren {
   AcceptLeaderInviteRoute: typeof AcceptLeaderInviteRoute
   AuthRoute: typeof AuthRoute
   CalendarRoute: typeof CalendarRoute
+  ClientsRoute: typeof ClientsRoute
   DiaryRoute: typeof DiaryRoute
   HomeRoute: typeof HomeRoute
   LoginRoute: typeof LoginRoute
@@ -353,6 +366,13 @@ declare module '@tanstack/react-router' {
       path: '/diary'
       fullPath: '/diary'
       preLoaderRoute: typeof DiaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clients': {
+      id: '/clients'
+      path: '/clients'
+      fullPath: '/clients'
+      preLoaderRoute: typeof ClientsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/calendar': {
@@ -461,6 +481,7 @@ const rootRouteChildren: RootRouteChildren = {
   AcceptLeaderInviteRoute: AcceptLeaderInviteRoute,
   AuthRoute: AuthRoute,
   CalendarRoute: CalendarRoute,
+  ClientsRoute: ClientsRoute,
   DiaryRoute: DiaryRoute,
   HomeRoute: HomeRoute,
   LoginRoute: LoginRoute,
