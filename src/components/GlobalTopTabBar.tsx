@@ -233,6 +233,21 @@ export function GlobalTopTabBar() {
                   <span>aponnacloud.com</span>
                 </a>
                 <a
+                  href="/settings"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setAppsOpen(false);
+                    void navigate({ to: "/settings" });
+                  }}
+                  className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-sm text-ink"
+                  style={{ transition: "none" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
+                >
+                  <SettingsIcon className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
+                  <span>Aponna Cloud settings</span>
+                </a>
+                <a
                   href="#"
                   onClick={(e) => e.preventDefault()}
                   className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-sm text-ink"
