@@ -98,20 +98,6 @@ export function ProfileMenuButton({
     }
   };
 
-  const openSettings = () => {
-    setOpen(false);
-    setChangeHover(false);
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("open-settings"));
-    }
-  };
-
-  const switchTo = (id: string | null) => {
-    setOpen(false);
-    setChangeHover(false);
-    setActiveEntity(id);
-  };
-
   const doSignOut = async () => {
     setOpen(false);
     setChangeHover(false);
@@ -132,11 +118,6 @@ export function ProfileMenuButton({
     </span>
   );
 
-  const otherProfiles: { id: string | null; name: string; entity_type?: Entity["entity_type"] }[] = [];
-  if (activeEntityId) otherProfiles.push({ id: null, name: individualName || "Individual" });
-  for (const e of entities) {
-    if (e.id !== activeEntityId) otherProfiles.push({ id: e.id, name: e.name, entity_type: e.entity_type });
-  }
 
   return (
     <div className="relative mb-1" ref={ref}>
