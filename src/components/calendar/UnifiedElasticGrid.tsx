@@ -1214,6 +1214,7 @@ export function UnifiedElasticGrid({
                 <NowLine
                   colIdx={todayColIdx}
                   nowMinutesSinceStart={nowMinutesSinceStart}
+                  spanHours={WEEK_SPAN_HOURS}
                 />
               )}
             </div>
