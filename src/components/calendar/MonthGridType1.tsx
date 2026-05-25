@@ -2554,6 +2554,7 @@ export function PopoverEditor({
               color={color}
               adminCategory={adminCategory}
               onSetColor={setColor}
+              readOnly={readOnly}
             />
           </div>
 
@@ -2592,16 +2593,19 @@ function CategoryDropdownRow({
   color,
   adminCategory,
   onSetColor,
+  readOnly = false,
 }: {
   seat: CalendarSeat;
   color: string | null;
   adminCategory: AdminCategory;
   onSetColor: (c: string) => void;
+  readOnly?: boolean;
 }) {
   const { categories } = useUserCategories();
 
   if (seat === "admin") {
-    const sideColor = ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!.color;
+    const adminCat = ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!;
+    const sideColor = adminCat.color;
     return (
       <div className="relative border-t border-hairline">
         <span
@@ -2609,21 +2613,27 @@ function CategoryDropdownRow({
           className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
           style={{ background: sideColor }}
         />
-        <select
-          value={adminCategory}
-          onChange={(e) => {
-            const next = e.target.value as AdminCategory;
-            const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
-            onSetColor(cat.color);
-          }}
-          className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
-        >
-          {ADMIN_CATEGORIES.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
-        </select>
+        {readOnly ? (
+          <div className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink">
+            {adminCat.label}
+          </div>
+        ) : (
+          <select
+            value={adminCategory}
+            onChange={(e) => {
+              const next = e.target.value as AdminCategory;
+              const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
+              onSetColor(cat.color);
+            }}
+            className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
+          >
+            {ADMIN_CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
     );
   }
@@ -2671,22 +2681,28 @@ function CategoryDropdownRow({
         className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
         style={{ background: sideColor }}
       />
-      <select
-        value={selectedId}
-        onChange={(e) => {
-          const id = e.target.value;
-          setSelectedId(id);
-          const cat = categories.find((c) => c.id === id);
-          if (cat) onSetColor(cat.color);
-        }}
-        className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
-      >
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
+      {readOnly ? (
+        <div className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink">
+          {selectedCat?.name ?? ""}
+        </div>
+      ) : (
+        <select
+          value={selectedId}
+          onChange={(e) => {
+            const id = e.target.value;
+            setSelectedId(id);
+            const cat = categories.find((c) => c.id === id);
+            if (cat) onSetColor(cat.color);
+          }}
+          className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
+        >
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }
