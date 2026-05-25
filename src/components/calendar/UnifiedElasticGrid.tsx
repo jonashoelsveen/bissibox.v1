@@ -1117,6 +1117,11 @@ export function UnifiedElasticGrid({
                     });
 
                   }}
+                  onLiveResize={(id, t) => {
+                    // Push the in-progress duration into the open popover so the
+                    // From/To time wheels visibly tick along with the drag.
+                    setPopover((p) => (p && p.eventId === id ? { ...p, pendingTime: t } : p));
+                  }}
                   onDeleteEvent={onDeleteEvent}
                   onSaveSessionNote={(id, note) =>
                     onUpsertEvent({ id, sessionNote: note || undefined })
@@ -1125,6 +1130,7 @@ export function UnifiedElasticGrid({
                   memberId={memberId}
                   viewerRole={viewerRole}
                 />
+
               )}
               {isSimple && (
                 <DiarySimpleStack
@@ -1971,6 +1977,7 @@ function WeekEventsOverlay({
   activeEventId = null,
   onEventClick,
   onEventDrop,
+  onLiveResize,
   onDeleteEvent,
   onSaveSessionNote,
   onUpsertSession,
@@ -1984,6 +1991,8 @@ function WeekEventsOverlay({
   activeEventId?: string | null;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
+  /** Fires during a top/bottom edge resize so the open popover's time wheels can tick along. */
+  onLiveResize?: (id: string, t: { startMin: number; endMin: number }) => void;
   onDeleteEvent?: (id: string) => void;
   onSaveSessionNote?: (id: string, note: string) => void;
   onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
@@ -2099,6 +2108,84 @@ function WeekEventsOverlay({
     };
   }, [drag, startHour, weekDates, onEventDrop]);
 
+  // ── Edge-resize (top/bottom drag handles on the clicked tile) ─────────
+  // Lets the owner shrink/grow a session by dragging its top or bottom edge
+  // when the tile is in clicked/active state. Snaps to 5-min increments.
+  const [resize, setResize] = useState<{
+    id: string;
+    edge: "top" | "bottom";
+    pointerStartY: number;
+    originStartMin: number;
+    originEndMin: number;
+    date: Date;
+    currentStartMin: number;
+    currentEndMin: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!resize) return;
+    const PX_PER_MIN = ROW_HEIGHT / 30;
+    const SNAP = 5; // minutes
+    const minStart = startHour * 60;
+    const maxEnd = startHour * 60 + 18 * 60;
+    const minDur = 15;
+    const onMove = (e: PointerEvent) => {
+      const dy = e.clientY - resize.pointerStartY;
+      const deltaMin = Math.round(dy / PX_PER_MIN / SNAP) * SNAP;
+      let startMin = resize.originStartMin;
+      let endMin = resize.originEndMin;
+      if (resize.edge === "top") {
+        startMin = Math.max(
+          minStart,
+          Math.min(resize.originEndMin - minDur, resize.originStartMin + deltaMin),
+        );
+      } else {
+        endMin = Math.min(
+          maxEnd,
+          Math.max(resize.originStartMin + minDur, resize.originEndMin + deltaMin),
+        );
+      }
+      if (
+        startMin === resize.currentStartMin &&
+        endMin === resize.currentEndMin
+      ) {
+        return;
+      }
+      setResize({ ...resize, currentStartMin: startMin, currentEndMin: endMin });
+      onLiveResize?.(resize.id, { startMin, endMin });
+    };
+    const onUp = () => {
+      const changed =
+        resize.currentStartMin !== resize.originStartMin ||
+        resize.currentEndMin !== resize.originEndMin;
+      if (changed && onUpsertSession) {
+        const startISO = toISOLocal(
+          setHM(
+            resize.date,
+            Math.floor(resize.currentStartMin / 60),
+            resize.currentStartMin % 60,
+          ),
+        );
+        const endISO = toISOLocal(
+          setHM(
+            resize.date,
+            Math.floor(resize.currentEndMin / 60),
+            resize.currentEndMin % 60,
+          ),
+        );
+        onUpsertSession({ id: resize.id, startISO, endISO });
+      }
+      setResize(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [resize, startHour, onUpsertSession, onLiveResize]);
+
+
   // Group events by day column (clamped to the visible 06:00–24:00 window).
   const byCol = useMemo(() => {
     const arr: Array<Array<{ ev: CalendarEvent; startMin: number; endMin: number }>> = Array.from(
@@ -2135,8 +2222,11 @@ function WeekEventsOverlay({
           }}
         >
           {list.map(({ ev, startMin, endMin }) => {
-            const since = startMin - startHour * 60;
-            const dur = Math.max(30, endMin - startMin);
+            const isResizing = resize?.id === ev.id;
+            const liveStart = isResizing ? resize!.currentStartMin : startMin;
+            const liveEnd = isResizing ? resize!.currentEndMin : endMin;
+            const since = liveStart - startHour * 60;
+            const dur = Math.max(15, liveEnd - liveStart);
             const top = (since / 30) * ROW_HEIGHT;
             const height = (dur / 30) * ROW_HEIGHT;
             const isDragging = drag?.id === ev.id && drag.moved;
@@ -2145,7 +2235,10 @@ function WeekEventsOverlay({
             const accent = ev.color ?? "hsl(var(--primary))";
             const isGhost = ev.id.startsWith("__ghost__:");
             const isPressed = drag?.id === ev.id || readOnlyPressedId === ev.id;
-            const isActive = !isGhost && ((lockedId ?? forceEditId) === ev.id || activeEventId === ev.id || isDragging || isPressed);
+            const isActive = !isGhost && ((lockedId ?? forceEditId) === ev.id || activeEventId === ev.id || isDragging || isPressed || isResizing);
+            const canResize =
+              !isGhost && appKind !== "diary" && viewerRole === "owner" && isActive;
+
 
             const bg = isActive
               ? accent
@@ -2247,6 +2340,54 @@ function WeekEventsOverlay({
                   className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]"
                   style={{ background: accent }}
                 />
+                {canResize && (
+                  <>
+                    <div
+                      role="separator"
+                      aria-label="Juster starttid"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+                        setResize({
+                          id: ev.id,
+                          edge: "top",
+                          pointerStartY: e.clientY,
+                          originStartMin: startMin,
+                          originEndMin: endMin,
+                          date: weekDates[colIdx],
+                          currentStartMin: startMin,
+                          currentEndMin: endMin,
+                        });
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute left-0 right-0 top-0 h-1.5 cursor-ns-resize"
+                      style={{ zIndex: 2 }}
+                    />
+                    <div
+                      role="separator"
+                      aria-label="Juster sluttid"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+                        setResize({
+                          id: ev.id,
+                          edge: "bottom",
+                          pointerStartY: e.clientY,
+                          originStartMin: startMin,
+                          originEndMin: endMin,
+                          date: weekDates[colIdx],
+                          currentStartMin: startMin,
+                          currentEndMin: endMin,
+                        });
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute left-0 right-0 bottom-0 h-1.5 cursor-ns-resize"
+                      style={{ zIndex: 2 }}
+                    />
+                  </>
+                )}
                 {appKind === "diary" ? (
                   (() => {
                     const actKey = (ev.activity || ev.diarySub || "").toLowerCase();
