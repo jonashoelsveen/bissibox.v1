@@ -22,6 +22,7 @@ import { SESSION_TILE_DESIGNS, useSessionTileDesign, useDiarySimpleView, type Se
 import { Switch } from "@/components/ui/switch";
 import { MONTH_TILE_DESIGNS, useMonthTileDesign, type MonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, type DistanceUnit } from "@/lib/units";
+import { useWeekViewHours, clampWeekViewHours } from "@/lib/week-view-hours";
 import stravaLogo from "@/assets/strava-logo.png";
 import eqTimingLogo from "@/assets/eq-timing-logo.png";
 
