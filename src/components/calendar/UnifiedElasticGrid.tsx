@@ -43,6 +43,7 @@ import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSessionTileDesign, useDiarySimpleView } from "@/lib/session-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
 import { useWeekViewHours } from "@/lib/week-view-hours";
+import { useUserCategories } from "@/hooks/useUserCategories";
 import {
   DndContext,
   PointerSensor,
@@ -298,6 +299,15 @@ export function UnifiedElasticGrid({
   const [{ startHour: WEEK_START_HOUR_CFG, endHour: WEEK_END_HOUR_CFG }] = useWeekViewHours(appKind);
   const WEEK_SPAN_HOURS = Math.max(1, WEEK_END_HOUR_CFG - WEEK_START_HOUR_CFG);
   const WEEK_SLOT_ROWS = WEEK_SPAN_HOURS * 2;
+
+  // Individual seat: preload the user's own categories so a freshly-created
+  // week-view tile can mount with the exact color the popover's category
+  // dropdown will resolve to. Without this, the tile briefly renders with
+  // CAT_TRAINING_COLOR (periwinkle), then the popover's auto-sync swaps it
+  // to the user's top category color — a visible flicker. Admin doesn't
+  // have this problem because its categories are static (#E63337 is always
+  // the first one).
+  const { categories: meCategories } = useUserCategories();
 
   const handleViewModeChange = (v: ViewMode) => {
     if (!isControlled) setViewModeInternal(v);
@@ -561,7 +571,12 @@ export function UnifiedElasticGrid({
       // Meeting (red); individual gets Training (periwinkle), which matches
       // the popover's default selection in each seat. This mirrors the
       // smooth admin-mode path on individual mode too.
-      const defaultColor = seat === "admin" ? "#E63337" : CAT_TRAINING_COLOR;
+      // For individual seat, use the user's top "Me" category color so the
+      // tile mounts in the SAME color the popover's category dropdown will
+      // resolve to — no re-color flicker after mount. Fall back to the
+      // periwinkle Training default if categories haven't loaded yet.
+      const meDefaultColor = meCategories[0]?.color ?? CAT_TRAINING_COLOR;
+      const defaultColor = seat === "admin" ? "#E63337" : meDefaultColor;
       // Create the event with an EMPTY title so the popover input shows
       // the "New session" placeholder (not the literal text) and a click-
       // outside without typing commits "" → onDeleteEvent removes the tile.
@@ -587,7 +602,7 @@ export function UnifiedElasticGrid({
     }
 
     openPopover({ year, month: markRange.month, day, session }, el);
-  }, [markReleased, markRange, openPopover, year, mode, appKind, currentDate, onUpsertEvent, seat]);
+  }, [markReleased, markRange, openPopover, year, mode, appKind, currentDate, onUpsertEvent, seat, meCategories]);
 
 
 
