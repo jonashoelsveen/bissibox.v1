@@ -1753,6 +1753,7 @@ interface DayCellPairProps {
   markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number };
   onMarkBegin: (k: CellKey) => void;
   onMarkDragBegin: (k: CellKey) => void;
+  onMarkSingleCell: (k: CellKey) => void;
   isDraggingMark: boolean;
   onOpenPopover: (k: CellKey, anchor: HTMLElement) => void;
   allowMark: boolean;
@@ -1766,7 +1767,7 @@ function DayCellPair(props: DayCellPairProps) {
     editingId, editValue, setEditValue,
     onSelect, onBeginEdit, onCommitEdit, onCommitDuration, onMoveAfterCommit,
     inDragRange, onCellMouseEnter, onHandleDown,
-    markInfo, onMarkBegin, onMarkDragBegin, isDraggingMark, onOpenPopover, allowMark, markReleased,
+    markInfo, onMarkBegin, onMarkDragBegin, onMarkSingleCell, isDraggingMark, onOpenPopover, allowMark, markReleased,
   } = props;
 
   const sessions: Session[] = [0, 1];
