@@ -672,8 +672,23 @@ export function UnifiedElasticGrid({
     if (k.month !== markStartRef.current.month) return;
     const r = k.day * 2 + k.session;
     const a = markStartRef.current.rank;
-    if (r === a) return; // single cell — don't show mark yet
+    // Always update the range, including the single-cell case (r === a) so
+    // the user can drag from A → B → back to A and shrink the selection
+    // back down to one cell. Previously this early-returned, locking the
+    // mark at the minimum 2-cell size once expanded.
     setMarkRange({ month: k.month, lo: Math.min(a, r), hi: Math.max(a, r) });
+  }, []);
+
+  // Double-click on a single week-view cell: synthesize a single-cell mark
+  // range and immediately release it. This reuses the existing release-flow
+  // effect that materializes a real session tile, so a double-click feels
+  // identical to dragging out a one-slot selection.
+  const markSingleCell = useCallback((k: CellKey) => {
+    const r = k.day * 2 + k.session;
+    markStartRef.current = { month: k.month, rank: r };
+    markActiveRef.current = true;
+    setMarkRange({ month: k.month, lo: r, hi: r });
+    setMarkReleased(true);
   }, []);
 
   const beginMarkDrag = useCallback((k: CellKey) => {
