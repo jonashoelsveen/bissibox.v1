@@ -602,7 +602,7 @@ export function UnifiedElasticGrid({
     }
 
     openPopover({ year, month: markRange.month, day, session }, el);
-  }, [markReleased, markRange, openPopover, year, mode, appKind, currentDate, onUpsertEvent, seat]);
+  }, [markReleased, markRange, openPopover, year, mode, appKind, currentDate, onUpsertEvent, seat, meCategories]);
 
 
 
