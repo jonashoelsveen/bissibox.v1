@@ -1578,7 +1578,15 @@ export function MonthGridType1({
                               // or diary cannot move anything — but the
                               // pressed state above stays until pointerup
                               // (cleared by the window pointerup listener).
-                              if (viewerRole !== "owner") return;
+                              if (viewerRole !== "owner") {
+                                // Prevent cell-level range selection from
+                                // starting, which would otherwise re-render
+                                // and steal the active chip styling when the
+                                // coach drags the pointer out of the tile.
+                                e.stopPropagation();
+                                e.preventDefault();
+                                return;
+                              }
                               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                               // Start tracking a potential drag.
                               suppressClickAfterDragRef.current = false;
