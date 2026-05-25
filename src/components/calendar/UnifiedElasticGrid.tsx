@@ -571,7 +571,12 @@ export function UnifiedElasticGrid({
       // Meeting (red); individual gets Training (periwinkle), which matches
       // the popover's default selection in each seat. This mirrors the
       // smooth admin-mode path on individual mode too.
-      const defaultColor = seat === "admin" ? "#E63337" : CAT_TRAINING_COLOR;
+      // For individual seat, use the user's top "Me" category color so the
+      // tile mounts in the SAME color the popover's category dropdown will
+      // resolve to — no re-color flicker after mount. Fall back to the
+      // periwinkle Training default if categories haven't loaded yet.
+      const meDefaultColor = meCategories[0]?.color ?? CAT_TRAINING_COLOR;
+      const defaultColor = seat === "admin" ? "#E63337" : meDefaultColor;
       // Create the event with an EMPTY title so the popover input shows
       // the "New session" placeholder (not the literal text) and a click-
       // outside without typing commits "" → onDeleteEvent removes the tile.
