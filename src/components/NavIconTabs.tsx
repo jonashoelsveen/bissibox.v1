@@ -45,7 +45,7 @@ function useNavItems(): NavItem[] {
     items.push({ key: "auth", to: "/auth", label: "Sign in", icon: LogIn });
     return items;
   }
-  if (isOrganizer && isGroupLeader) {
+  if (isGroupLeader) {
     items.push({ key: "group-members", to: "/team/group-members", label: "Group members", icon: UsersRound });
   }
   items.push({ key: "library", to: "/media", label: "Library", icon: Library });
