@@ -565,12 +565,14 @@ export function ClientsPage() {
               key={activeTab.user_id}
               userId={activeTab.user_id}
               name={activeTab.name}
+              rightPanelOpen={panelOpen}
             />
           ) : selectedClient ? (
             <MemberWorkspace
               key={selectedClient.user_id}
               userId={selectedClient.user_id}
               name={memberDisplayName(selectedClient)}
+              rightPanelOpen={panelOpen}
             />
           ) : (
             <div className="px-6 py-12 text-sm text-muted-foreground">
