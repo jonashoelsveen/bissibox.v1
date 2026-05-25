@@ -129,7 +129,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
         <PanelLeft className="h-4 w-4" />
       </button>
 
-      <div className="min-w-0 md:h-full md:overflow-hidden">
+      <div className={`relative min-w-0 md:h-full md:overflow-hidden transition-[padding-left] duration-300 ease-out ${leftPanelOpen ? "pl-0" : "pl-2"}`}>
         <YearCalendarView
           calId={subTab === "diary" ? `diary:${userId}` : `user:${userId}`}
           defaultTitle={subTab === "diary" ? "Diary" : "Calendar"}
