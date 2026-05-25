@@ -1344,8 +1344,32 @@ export function UnifiedElasticGrid({
             return { startMin, endMin: startMin + 30 };
           })()}
           onClose={closePopover}
+          onColorChange={(c) => {
+            // Real-time tile recolor while the popover is open and bound
+            // to an existing event.
+            if (popover.eventId && c) {
+              onUpsertEvent({ id: popover.eventId, color: c });
+            }
+          }}
           onTimeChange={(t) => {
             if (mode.kind !== "year" || !t) return;
+            // If bound to a real event, push the new time straight to the
+            // event so the session tile resizes live.
+            if (popover.eventId) {
+              const ev = events.find((e) => e.id === popover.eventId);
+              if (ev) {
+                const date = fromISOLocal(ev.startISO);
+                const startISO = toISOLocal(
+                  setHM(date, Math.floor(t.startMin / 60), t.startMin % 60),
+                );
+                const endISO = toISOLocal(
+                  setHM(date, Math.floor(t.endMin / 60), t.endMin % 60),
+                );
+                onMoveEvent(ev.id, { startISO, endISO, allDay: false });
+              }
+              setPopover((p) => (p ? { ...p, pendingTime: t } : p));
+              return;
+            }
             const monthCol = markRange?.month ?? popover.key.month;
             const newLo = Math.max(2, Math.round((t.startMin - WEEK_START_HOUR * 60) / 30) + 2);
             const newHi = Math.max(newLo, Math.round((t.endMin - WEEK_START_HOUR * 60) / 30) + 1);
