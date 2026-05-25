@@ -300,6 +300,15 @@ export function UnifiedElasticGrid({
   const WEEK_SPAN_HOURS = Math.max(1, WEEK_END_HOUR_CFG - WEEK_START_HOUR_CFG);
   const WEEK_SLOT_ROWS = WEEK_SPAN_HOURS * 2;
 
+  // Individual seat: preload the user's own categories so a freshly-created
+  // week-view tile can mount with the exact color the popover's category
+  // dropdown will resolve to. Without this, the tile briefly renders with
+  // CAT_TRAINING_COLOR (periwinkle), then the popover's auto-sync swaps it
+  // to the user's top category color — a visible flicker. Admin doesn't
+  // have this problem because its categories are static (#E63337 is always
+  // the first one).
+  const { categories: meCategories } = useUserCategories();
+
   const handleViewModeChange = (v: ViewMode) => {
     if (!isControlled) setViewModeInternal(v);
     onViewModeChange?.(v);
