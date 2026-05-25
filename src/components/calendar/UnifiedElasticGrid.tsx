@@ -2340,6 +2340,54 @@ function WeekEventsOverlay({
                   className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]"
                   style={{ background: accent }}
                 />
+                {canResize && (
+                  <>
+                    <div
+                      role="separator"
+                      aria-label="Juster starttid"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+                        setResize({
+                          id: ev.id,
+                          edge: "top",
+                          pointerStartY: e.clientY,
+                          originStartMin: startMin,
+                          originEndMin: endMin,
+                          date: weekDates[colIdx],
+                          currentStartMin: startMin,
+                          currentEndMin: endMin,
+                        });
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute left-0 right-0 top-0 h-1.5 cursor-ns-resize"
+                      style={{ zIndex: 2 }}
+                    />
+                    <div
+                      role="separator"
+                      aria-label="Juster sluttid"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+                        setResize({
+                          id: ev.id,
+                          edge: "bottom",
+                          pointerStartY: e.clientY,
+                          originStartMin: startMin,
+                          originEndMin: endMin,
+                          date: weekDates[colIdx],
+                          currentStartMin: startMin,
+                          currentEndMin: endMin,
+                        });
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute left-0 right-0 bottom-0 h-1.5 cursor-ns-resize"
+                      style={{ zIndex: 2 }}
+                    />
+                  </>
+                )}
                 {appKind === "diary" ? (
                   (() => {
                     const actKey = (ev.activity || ev.diarySub || "").toLowerCase();
