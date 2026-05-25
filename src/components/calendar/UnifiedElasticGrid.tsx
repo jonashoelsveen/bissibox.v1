@@ -2568,8 +2568,8 @@ function WeekEventsOverlay({
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
             onActiveChange={(active) => {
-              setLockedId(active ? ev.id : null);
-              if (!active) setForceEditId(null);
+              setLockedId((cur) => (active ? ev.id : cur === ev.id ? null : cur));
+              if (!active) setForceEditId((cur) => (cur === ev.id ? null : cur));
             }}
             onOpenDetails={() => {
               cancelClose();
@@ -2821,8 +2821,8 @@ function DiarySimpleStack({
             onMenuEnter={cancelClose}
             onMenuLeave={scheduleClose}
             onActiveChange={(active) => {
-              setLockedId(active ? ev.id : null);
-              if (!active) setForceEditId(null);
+              setLockedId((cur) => (active ? ev.id : cur === ev.id ? null : cur));
+              if (!active) setForceEditId((cur) => (cur === ev.id ? null : cur));
             }}
             onOpenDetails={() => {
               cancelClose();
