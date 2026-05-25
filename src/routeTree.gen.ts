@@ -22,7 +22,6 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AcceptLeaderInviteRouteImport } from './routes/accept-leader-invite'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUserIdRouteImport } from './routes/u.$userId'
-import { Route as TeamGroupMembersRouteImport } from './routes/team.group-members'
 import { Route as TeamBoardRouteImport } from './routes/team.board'
 import { Route as TTeamIdRouteImport } from './routes/t.$teamId'
 import { Route as CCompanyIdRouteImport } from './routes/c.$companyId'
@@ -97,11 +96,6 @@ const UUserIdRoute = UUserIdRouteImport.update({
   path: '/u/$userId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TeamGroupMembersRoute = TeamGroupMembersRouteImport.update({
-  id: '/team/group-members',
-  path: '/team/group-members',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TeamBoardRoute = TeamBoardRouteImport.update({
   id: '/team/board',
   path: '/team/board',
@@ -160,7 +154,6 @@ export interface FileRoutesByFullPath {
   '/c/$companyId': typeof CCompanyIdRoute
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
-  '/team/group-members': typeof TeamGroupMembersRoute
   '/u/$userId': typeof UUserIdRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
@@ -184,7 +177,6 @@ export interface FileRoutesByTo {
   '/c/$companyId': typeof CCompanyIdRoute
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
-  '/team/group-members': typeof TeamGroupMembersRoute
   '/u/$userId': typeof UUserIdRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
@@ -209,7 +201,6 @@ export interface FileRoutesById {
   '/c/$companyId': typeof CCompanyIdRoute
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
-  '/team/group-members': typeof TeamGroupMembersRoute
   '/u/$userId': typeof UUserIdRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
@@ -235,7 +226,6 @@ export interface FileRouteTypes {
     | '/c/$companyId'
     | '/t/$teamId'
     | '/team/board'
-    | '/team/group-members'
     | '/u/$userId'
     | '/api/auth/login'
     | '/api/auth/logout'
@@ -259,7 +249,6 @@ export interface FileRouteTypes {
     | '/c/$companyId'
     | '/t/$teamId'
     | '/team/board'
-    | '/team/group-members'
     | '/u/$userId'
     | '/api/auth/login'
     | '/api/auth/logout'
@@ -283,7 +272,6 @@ export interface FileRouteTypes {
     | '/c/$companyId'
     | '/t/$teamId'
     | '/team/board'
-    | '/team/group-members'
     | '/u/$userId'
     | '/api/auth/login'
     | '/api/auth/logout'
@@ -308,7 +296,6 @@ export interface RootRouteChildren {
   CCompanyIdRoute: typeof CCompanyIdRoute
   TTeamIdRoute: typeof TTeamIdRoute
   TeamBoardRoute: typeof TeamBoardRoute
-  TeamGroupMembersRoute: typeof TeamGroupMembersRoute
   UUserIdRoute: typeof UUserIdRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
@@ -410,13 +397,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UUserIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/team/group-members': {
-      id: '/team/group-members'
-      path: '/team/group-members'
-      fullPath: '/team/group-members'
-      preLoaderRoute: typeof TeamGroupMembersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/team/board': {
       id: '/team/board'
       path: '/team/board'
@@ -492,7 +472,6 @@ const rootRouteChildren: RootRouteChildren = {
   CCompanyIdRoute: CCompanyIdRoute,
   TTeamIdRoute: TTeamIdRoute,
   TeamBoardRoute: TeamBoardRoute,
-  TeamGroupMembersRoute: TeamGroupMembersRoute,
   UUserIdRoute: UUserIdRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
@@ -503,3 +482,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
