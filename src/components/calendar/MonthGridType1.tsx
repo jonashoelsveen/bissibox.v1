@@ -186,6 +186,8 @@ export interface MonthGridType1Props {
    *  admin month-view defaults to the team's top category color, mirroring
    *  individual mode using the user's top "Me" category. */
   defaultNewColor?: string | null;
+  /** Active team id (admin seat only). Scopes the category dropdown list. */
+  teamId?: string | null;
 }
 
 interface DayItem {
