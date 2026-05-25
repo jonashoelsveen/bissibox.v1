@@ -2167,7 +2167,16 @@ function WeekEventsOverlay({
                   if (appKind === "diary") return;
                   // Only the owner can drag sessions in calendar week view.
                   // Coaches / group leaders viewing someone else cannot move.
-                  if (viewerRole !== "owner") return;
+                  if (viewerRole !== "owner") {
+                    // Stop the mousedown from bubbling to the window-level
+                    // outside-click listener of any open session edit panel,
+                    // so the previously-clicked session's panel stays open
+                    // when a coach pointer-presses or tries to drag another
+                    // tile. Mirrors month-view behavior.
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return;
+                  }
                   e.stopPropagation();
                   (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
                   setDrag({
@@ -2201,6 +2210,9 @@ function WeekEventsOverlay({
                   }
                   if (drag?.moved) return;
                   e.stopPropagation();
+                  // For non-owner viewers, keep the previously-opened edit
+                  // panel intact when interacting with other tiles.
+                  if (viewerRole !== "owner") return;
                   onEventClick(ev, e.currentTarget as HTMLElement);
                 }}
                 className={`absolute select-none overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
