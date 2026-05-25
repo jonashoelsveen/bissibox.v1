@@ -142,6 +142,8 @@ function YearCalendarViewInner({
   memberId,
   viewerRole = "owner",
   panelOpen = true,
+  rightPanelOpen = true,
+  disableImport = false,
   teamId = null,
 }: YearCalendarViewProps) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta } =
