@@ -597,7 +597,8 @@ export function UnifiedElasticGrid({
       // resolve to — no re-color flicker after mount. Fall back to the
       // periwinkle Training default if categories haven't loaded yet.
       const meDefaultColor = meCategories[0]?.color ?? CAT_TRAINING_COLOR;
-      const defaultColor = seat === "admin" ? "#E63337" : meDefaultColor;
+      const adminDefaultColor = teamCategories[0]?.color ?? "#E63337";
+      const defaultColor = seat === "admin" ? adminDefaultColor : meDefaultColor;
       // Create the event with an EMPTY title so the popover input shows
       // the "New session" placeholder (not the literal text) and a click-
       // outside without typing commits "" → onDeleteEvent removes the tile.
