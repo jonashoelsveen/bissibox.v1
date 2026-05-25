@@ -1154,6 +1154,7 @@ export function UnifiedElasticGrid({
                       initialColor: ev.color,
                       isEdit: true,
                       eventId: ev.id,
+                      placeholder: ev.title ? undefined : "New session",
                     });
                   }}
                   onEventDragStart={() => {
