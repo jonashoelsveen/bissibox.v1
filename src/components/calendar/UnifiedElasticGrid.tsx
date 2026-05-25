@@ -2614,7 +2614,8 @@ function WeekEventsOverlay({
                 ) : (
                   <div className="flex h-full flex-col justify-start pl-1 pt-0.5 leading-tight">
                     <div className="flex items-center gap-1">
-                      <span className="truncate text-[12px] font-semibold">{ev.title}</span>
+                      <span className="truncate text-[12px] font-semibold">{ev.title || "New session"}</span>
+
                     </div>
                     {liveEnd - liveStart > 45 && (
                       <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
