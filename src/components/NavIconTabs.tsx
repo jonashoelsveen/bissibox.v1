@@ -319,13 +319,6 @@ export function NavIconTabs({
                 e.preventDefault();
                 return;
               }
-              if (item.key === "settings") {
-                e.preventDefault();
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("open-settings"));
-                }
-                return;
-              }
               if (item.key === "group-members" && typeof window !== "undefined") {
                 window.dispatchEvent(new CustomEvent("group-members:show-list"));
               }
