@@ -112,6 +112,10 @@ export interface YearCalendarViewProps {
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
   /** When the surrounding left panel is closed, the header makes room for the panel toggle icon. */
   panelOpen?: boolean;
+  /** When the surrounding right panel is closed, the header right cluster makes room for the right panel toggle icon. */
+  rightPanelOpen?: boolean;
+  /** Hide the Import button (e.g. when viewing another user's calendar). */
+  disableImport?: boolean;
   /** Team scope for resolving the user's category list (defaults to personal). */
   teamId?: string | null;
 }
