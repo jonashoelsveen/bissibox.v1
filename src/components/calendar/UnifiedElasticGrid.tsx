@@ -848,22 +848,10 @@ export function UnifiedElasticGrid({
     setHeaderH(headerRef.current.offsetHeight);
   }, [viewMode]);
 
-  // Reserve scrollbar gutter on the header row so its column dividers line
-  // up exactly with the body grid's dividers when a vertical scrollbar is
-  // present in the week view.
-  useLayoutEffect(() => {
-    const scroller = weekScrollerRef.current;
-    const header = headerRowRef.current;
-    if (!scroller || !header) return;
-    const apply = () => {
-      const w = scroller.offsetWidth - scroller.clientWidth;
-      header.style.paddingRight = `${Math.max(0, w)}px`;
-    };
-    apply();
-    const ro = new ResizeObserver(apply);
-    ro.observe(scroller);
-    return () => ro.disconnect();
-  }, [viewMode, mode.kind]);
+  // (Removed scrollbar-gutter compensation: header is now rendered INSIDE the
+  // scroller alongside the body grid so both share the exact same content
+  // width. Column dividers therefore line up by construction.)
+
 
   // Minutes elapsed since the week-view start (06:00). Includes seconds for
   // sub-minute precision so the indicator advances smoothly between ticks.
@@ -1018,9 +1006,14 @@ export function UnifiedElasticGrid({
           tabIndex={0}
         >
           <div
+            ref={weekScrollerRef}
+            className="mini-dur-scroll relative flex flex-1 min-h-0 flex-col overflow-y-auto"
+            style={{ scrollbarGutter: "stable" }}
+          >
+          <div
             ref={headerRowRef}
             data-grid-header="1"
-            className="grid flex-none"
+            className="sticky top-0 z-30 grid flex-none bg-card"
             style={{
               gridTemplateColumns,
               transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
@@ -1034,7 +1027,7 @@ export function UnifiedElasticGrid({
                 type="button"
                 onClick={() => handleViewModeChange("month")}
                 title={`Uke ${isoWeekNumber(weekDates[0] ?? new Date())} — klikk for å zoome ut`}
-                className="sticky top-0 z-20 flex select-none items-center justify-center border-b border-r border-hairline bg-card px-1 text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+                className="flex select-none items-center justify-center border-b border-r border-hairline bg-card px-1 text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
                 style={{ height: 36 }}
                 ref={(el) => {
                   headerRef.current = el;
@@ -1051,7 +1044,7 @@ export function UnifiedElasticGrid({
                   key={`h-${m.idx}`}
                   data-month-col={m.idx}
                   data-day-anchor=""
-                  className={`group/daynote-anchor sticky top-0 z-20 flex select-none items-center justify-center border-b border-r border-hairline px-3 text-[12px] font-semibold uppercase tracking-wide ${
+                  className={`group/daynote-anchor flex select-none items-center justify-center border-b border-r border-hairline px-3 text-[12px] font-semibold uppercase tracking-wide ${
                     isToday ? "bg-secondary text-ink" : "bg-card text-muted-foreground"
                   } ${appKind === "diary" ? "relative" : ""}`}
                   style={{ height: 36 }}
@@ -1071,11 +1064,6 @@ export function UnifiedElasticGrid({
           </div>
 
           <div
-            ref={weekScrollerRef}
-            className="mini-dur-scroll relative flex flex-1 min-h-0 flex-col overflow-y-auto"
-            style={{ scrollbarGutter: "stable" }}
-          >
-          <div
             className="grid"
             style={{
               gridTemplateColumns,
@@ -1083,6 +1071,7 @@ export function UnifiedElasticGrid({
               willChange: "grid-template-columns",
             }}
           >
+
             {isSimple ? (
               <Fragment key="simple-body">
                 {/* Empty week-number gutter under the header */}
