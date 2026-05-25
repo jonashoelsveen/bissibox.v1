@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 import { RolesPanel } from "@/components/RolesPanel";
-import { ChevronDown, ChevronRight, ChevronLeft, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network, Settings as SettingsIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronLeft, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network, Settings as SettingsIcon, PanelLeft } from "lucide-react";
 
 import { TopBarColorPicker } from "@/components/appearance/TopBarColorPicker";
 import {
