@@ -68,7 +68,17 @@ export function SignInModal({
 
   useEffect(() => {
     setSignInModalOpen(open);
-    if (!open) return;
+    if (!open) {
+      // Modal was closed (either by the user, or by the parent once auth
+      // succeeded). Always snap the auth-transition phase back to "idle"
+      // so the global top tab-bar is guaranteed to render at full opacity
+      // on the destination route. Without this, the choreography can get
+      // stuck at "reveal-dark" / "hidden" (because t4 was cleared by the
+      // cleanup below) and the top bar disappears after navigating into
+      // an app from the Apps menu.
+      setAuthTransitionPhase("idle");
+      return;
+    }
     setFieldsReady(false);
     setExiting(false);
     setError(null);
@@ -87,6 +97,7 @@ export function SignInModal({
     () => () => {
       timers.current.forEach(clearTimeout);
       setSignInModalOpen(false);
+      setAuthTransitionPhase("idle");
     },
     [],
   );
