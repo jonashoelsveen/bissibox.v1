@@ -1436,7 +1436,16 @@ export function UnifiedElasticGrid({
                 const endISO = toISOLocal(setHM(date, Math.floor(endMin / 60), endMin % 60));
 
                 if (popover.eventId) {
-                  if (!t) {
+                  if (!t && popover.freshlyCreated) {
+                    // Freshly mark-created tile, user didn't type — keep the
+                    // default "New session" tile, only persist time/color edits.
+                    onUpsertEvent({
+                      id: popover.eventId,
+                      color,
+                      ...(markRange || time || popover.pendingDate || popover.pendingTime ? { startISO, endISO } : {}),
+                      allDay: false,
+                    });
+                  } else if (!t) {
                     onDeleteEvent(popover.eventId);
                   } else {
                     onUpsertEvent({
