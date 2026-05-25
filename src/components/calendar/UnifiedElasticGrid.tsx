@@ -1018,6 +1018,7 @@ export function UnifiedElasticGrid({
           tabIndex={0}
         >
           <div
+            ref={headerRowRef}
             data-grid-header="1"
             className="grid flex-none"
             style={{
