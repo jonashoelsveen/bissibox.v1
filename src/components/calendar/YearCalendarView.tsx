@@ -112,6 +112,10 @@ export interface YearCalendarViewProps {
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
   /** When the surrounding left panel is closed, the header makes room for the panel toggle icon. */
   panelOpen?: boolean;
+  /** When the surrounding right panel is closed, the header right cluster makes room for the right panel toggle icon. */
+  rightPanelOpen?: boolean;
+  /** Hide the Import button (e.g. when viewing another user's calendar). */
+  disableImport?: boolean;
   /** Team scope for resolving the user's category list (defaults to personal). */
   teamId?: string | null;
 }
@@ -138,6 +142,8 @@ function YearCalendarViewInner({
   memberId,
   viewerRole = "owner",
   panelOpen = true,
+  rightPanelOpen = true,
+  disableImport = false,
   teamId = null,
 }: YearCalendarViewProps) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta } =
@@ -278,7 +284,7 @@ function YearCalendarViewInner({
           />
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className={`flex items-center gap-1 transition-[padding-right] duration-300 ease-out ${rightPanelOpen ? "pr-0" : "pr-9"}`}>
           <button
             type="button"
             aria-label="Gå til i dag"
@@ -309,7 +315,7 @@ function YearCalendarViewInner({
                   ]
             }
           />
-          {appKind !== "diary" && (
+          {appKind !== "diary" && !disableImport && (
             <ImportButton seat={seat} onCommit={(patch) => upsertEvent(patch)} />
           )}
         </div>
