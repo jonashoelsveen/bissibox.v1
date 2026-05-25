@@ -30,7 +30,7 @@ import { ChevronDown, Footprints, Bike, Dumbbell, Snowflake, Waves } from "lucid
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, Session, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
-import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, contrastTextOn, categoryFromColor } from "./MonthGridType1";
+import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, contrastTextOn, categoryFromColor, CAT_TRAINING_COLOR } from "./MonthGridType1";
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 import { DayNoteButton } from "./DayNoteButton";
 import { SessionHoverMenu } from "./SessionHoverMenu";
@@ -555,11 +555,12 @@ export function UnifiedElasticGrid({
       // same React batch the new tile mounts in — no perceptible lag.
       setMarkRange(null);
       setMarkReleased(false);
-      // In entity (admin) mode, default to the first admin category color
-      // (Meeting / red) so the freshly-created tile is immediately a valid
-      // admin category — matching the popover's default selection and
-      // ensuring it renders consistently in the admin sidenav filters.
-      const defaultColor = seat === "admin" ? "#E63337" : null;
+      // Default the freshly-created tile to a concrete category color so it
+      // mounts with its final appearance — no null→color reflow. Admin gets
+      // Meeting (red); individual gets Training (periwinkle), which matches
+      // the popover's default selection in each seat. This mirrors the
+      // smooth admin-mode path on individual mode too.
+      const defaultColor = seat === "admin" ? "#E63337" : CAT_TRAINING_COLOR;
       const created = onUpsertEvent({
         title: "New session",
         color: defaultColor,
@@ -1149,6 +1150,12 @@ export function UnifiedElasticGrid({
                       isEdit: true,
                       eventId: ev.id,
                     });
+                  }}
+                  onEventDragStart={() => {
+                    // Hide the edit popover the instant the user starts
+                    // dragging a tile; WeekEventsOverlay re-opens it via
+                    // onEventDrop after the drop completes.
+                    closePopover();
                   }}
                   onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
                     const ev = events.find((e) => e.id === id);
@@ -2064,6 +2071,7 @@ function WeekEventsOverlay({
   activeEventId = null,
   onEventClick,
   onEventDrop,
+  onEventDragStart,
   onLiveResize,
   onDeleteEvent,
   onSaveSessionNote,
@@ -2079,6 +2087,8 @@ function WeekEventsOverlay({
   activeEventId?: string | null;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
+  /** Fires the moment a drag exceeds the 3px threshold — used to hide the open popover until drop. */
+  onEventDragStart?: (id: string) => void;
   /** Fires during a top/bottom edge resize so the open popover's time wheels can tick along. */
   onLiveResize?: (id: string, t: { startMin: number; endMin: number }) => void;
   onDeleteEvent?: (id: string) => void;
@@ -2170,6 +2180,7 @@ function WeekEventsOverlay({
       const dx = e.clientX - drag.pointerStart.x;
       const dy = e.clientY - drag.pointerStart.y;
       const moved = drag.moved || Math.abs(dx) > 3 || Math.abs(dy) > 3;
+      if (moved && !drag.moved) onEventDragStart?.(drag.id);
       setDrag({ ...drag, delta: { dx, dy }, moved });
     };
     const onUp = () => {
@@ -2194,7 +2205,7 @@ function WeekEventsOverlay({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [drag, startHour, weekDates, onEventDrop]);
+  }, [drag, startHour, spanHours, weekDates, onEventDrop, onEventDragStart]);
 
   // ── Edge-resize (top/bottom drag handles on the clicked tile) ─────────
   // Lets the owner shrink/grow a session by dragging its top or bottom edge
