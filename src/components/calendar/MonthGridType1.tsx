@@ -2493,12 +2493,12 @@ export function PopoverEditor({
     const onDown = (e: MouseEvent) => {
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
-        // In read-only mode, ignore mousedowns originating on the active
-        // session tile itself (e.g. a coach trying to drag a client's
-        // session). Otherwise the popover would close mid-interaction and
-        // the tile would briefly lose its "clicked" highlight.
+        // Ignore mousedowns originating on the active session tile itself
+        // so the user can drag/resize the tile (including a freshly mark-
+        // created one) without the popover committing/closing mid-gesture.
+        // After the drag drop, WeekEventsOverlay re-opens the popover
+        // anchored to the moved tile.
         if (
-          readOnly &&
           e.target instanceof Element &&
           e.target.closest('[data-session-active="1"]')
         ) {
