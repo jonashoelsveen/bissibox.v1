@@ -544,6 +544,7 @@ export function MonthGridType1({
   memberId,
   viewerRole = "owner",
   defaultNewColor = null,
+  teamId = null,
 }: MonthGridType1Props) {
   const dim = daysInMonth(year, month);
   const [monthTileDesign] = useMonthTileDesign();
