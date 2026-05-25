@@ -2670,56 +2670,26 @@ export function PopoverEditor({
 function CategoryDropdownRow({
   seat,
   color,
-  adminCategory,
   onSetColor,
   readOnly = false,
+  teamId = null,
 }: {
   seat: CalendarSeat;
   color: string | null;
-  adminCategory: AdminCategory;
+  /** Legacy admin enum kept for prop compatibility; no longer used. */
+  adminCategory?: AdminCategory;
   onSetColor: (c: string) => void;
   readOnly?: boolean;
+  teamId?: string | null;
 }) {
-  const { categories } = useUserCategories();
+  // Admin seat: scope to the team's categories (same list shown in the
+  // left side-panel under the entity name header). Individual seat:
+  // user-personal categories. Either way the dropdown reflects the
+  // tab-order in the side panel, and the top tab is the default.
+  const { categories } = useUserCategories(
+    seat === "admin" ? { teamId } : undefined,
+  );
 
-  if (seat === "admin") {
-    const adminCat = ADMIN_CATEGORIES.find((c) => c.value === adminCategory)!;
-    const sideColor = adminCat.color;
-    return (
-      <div className="relative border-t border-hairline">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-0 top-0 h-full w-[3px]"
-          style={{ background: sideColor }}
-        />
-        {readOnly ? (
-          <div className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink">
-            {adminCat.label}
-          </div>
-        ) : (
-          <select
-            value={adminCategory}
-            onChange={(e) => {
-              const next = e.target.value as AdminCategory;
-              const cat = ADMIN_CATEGORIES.find((c) => c.value === next)!;
-              onSetColor(cat.color);
-            }}
-            className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
-          >
-            {ADMIN_CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-    );
-  }
-
-  // Individual seat — list user's "Me" categories.
-  // Track selection by category id locally so identically-colored categories
-  // remain distinguishable after picking.
   const lcColor = (color ?? "").toLowerCase();
   const initialId = useMemo(
     () => categories.find((c) => c.color.toLowerCase() === lcColor)?.id ?? categories[0]?.id ?? "",
@@ -2728,9 +2698,8 @@ function CategoryDropdownRow({
   );
   const [selectedId, setSelectedId] = useState<string>(initialId);
 
-  // If the list loads after mount and selectedId is still empty, hydrate it.
-  // Also push the resolved category's color up so the autosave / Enter-commit
-  // writes the actual selected category color (not the hardcoded fallback).
+  // Hydrate selection once the list loads, preferring a color match so we
+  // don't surprise the user by reassigning their existing color.
   useEffect(() => {
     if (!selectedId && categories.length > 0) {
       const fromColor = categories.find((c) => c.color.toLowerCase() === lcColor)?.id;
@@ -2741,9 +2710,17 @@ function CategoryDropdownRow({
     }
   }, [categories, lcColor, selectedId, onSetColor]);
 
-  // Sync color whenever the resolved category color differs from the current
-  // popover color (e.g. initial render where initialColor was a default that
-  // doesn't match the top user category).
+  // If the popover's current color matches a different category than the
+  // currently-selected id (e.g. parent pushed a new default color), realign
+  // the selection so the dropdown label matches the visible tile color.
+  useEffect(() => {
+    if (!categories.length) return;
+    const matchByColor = categories.find((c) => c.color.toLowerCase() === lcColor);
+    if (matchByColor && matchByColor.id !== selectedId) {
+      setSelectedId(matchByColor.id);
+    }
+  }, [lcColor, categories, selectedId]);
+
   const selectedCat = categories.find((c) => c.id === selectedId);
   useEffect(() => {
     if (selectedCat && selectedCat.color.toLowerCase() !== lcColor) {
@@ -2783,6 +2760,7 @@ function CategoryDropdownRow({
         </select>
       )}
     </div>
+
   );
 }
 
