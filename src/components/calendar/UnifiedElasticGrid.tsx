@@ -1622,6 +1622,7 @@ interface DayRowProps {
   markInfo: (k: CellKey) => { in: boolean; isFirst: boolean; isLast: boolean; isPlus: boolean; size: number };
   onMarkBegin: (k: CellKey) => void;
   onMarkDragBegin: (k: CellKey) => void;
+  onMarkSingleCell: (k: CellKey) => void;
   isDraggingMark: boolean;
   onOpenPopover: (k: CellKey, anchor: HTMLElement) => void;
   allowMark: boolean;
