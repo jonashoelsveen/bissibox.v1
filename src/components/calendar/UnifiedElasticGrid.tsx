@@ -2050,6 +2050,7 @@ function WeekEventsOverlay({
   events,
   weekDates,
   startHour,
+  spanHours = 18,
   appKind = "calendar",
   activeEventId = null,
   onEventClick,
@@ -2064,6 +2065,7 @@ function WeekEventsOverlay({
   events: CalendarEvent[];
   weekDates: Date[];
   startHour: number;
+  spanHours?: number;
   appKind?: "calendar" | "diary";
   activeEventId?: string | null;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
