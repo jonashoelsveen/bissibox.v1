@@ -2622,7 +2622,7 @@ function WeekEventsOverlay({
               gridColumnStart: newCol + 2,
               gridColumnEnd: newCol + 3,
               gridRowStart: 1,
-              gridRowEnd: 19,
+              gridRowEnd: spanHours + 1,
               position: "relative",
               pointerEvents: "none",
               zIndex: 7,
