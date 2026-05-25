@@ -100,8 +100,20 @@ export function useUserCategories(opts?: { teamId?: string | null; kind?: Catego
         },
       )
       .subscribe();
+    const scopeKey = teamId ? `team:${teamId}` : `user:${user.id}`;
+    const onReorder = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        scopeKey: string;
+        kind: string;
+        categories: UserCategory[];
+      } | undefined;
+      if (!detail || detail.scopeKey !== scopeKey || detail.kind !== kind) return;
+      setCategories(detail.categories);
+    };
+    window.addEventListener("calendar-categories-reorder", onReorder);
     return () => {
       void supabase.removeChannel(ch);
+      window.removeEventListener("calendar-categories-reorder", onReorder);
     };
   }, [load, user, teamId, kind]);
 
