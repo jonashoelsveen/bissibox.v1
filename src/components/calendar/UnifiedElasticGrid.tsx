@@ -1977,6 +1977,7 @@ function WeekEventsOverlay({
   activeEventId = null,
   onEventClick,
   onEventDrop,
+  onLiveResize,
   onDeleteEvent,
   onSaveSessionNote,
   onUpsertSession,
@@ -1990,6 +1991,8 @@ function WeekEventsOverlay({
   activeEventId?: string | null;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
+  /** Fires during a top/bottom edge resize so the open popover's time wheels can tick along. */
+  onLiveResize?: (id: string, t: { startMin: number; endMin: number }) => void;
   onDeleteEvent?: (id: string) => void;
   onSaveSessionNote?: (id: string, note: string) => void;
   onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
