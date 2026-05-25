@@ -2440,7 +2440,7 @@ function WeekEventsOverlay({
                   zIndex: isDragging ? 9999 : undefined,
                   pointerEvents: "auto",
                 }}
-                title={ev.title}
+                title={ev.title || "New session"}
               >
                 <span
                   className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]"
