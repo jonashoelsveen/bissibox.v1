@@ -658,8 +658,8 @@ export function UnifiedElasticGrid({
       const hoverRank = newDay * 2 + newSession;
       let newLo = hoverRank - drag.offset;
       let newHi = newLo + drag.size - 1;
-      // Clamp to slot range. In week view rows = 18 days × 2 sessions = 36.
-      const maxRank = 18 * 2 - 1;
+      // Clamp to slot range. Week-view rows = WEEK_SPAN_HOURS × 2 slots.
+      const maxRank = WEEK_SLOT_ROWS - 1;
       if (newLo < 0) { newHi -= newLo; newLo = 0; }
       if (newHi > maxRank) { newLo -= (newHi - maxRank); newHi = maxRank; }
       setMarkRange({ month: newMonth, lo: newLo, hi: newHi });
