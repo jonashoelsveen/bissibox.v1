@@ -133,12 +133,16 @@ export function GlobalTopTabBar() {
     }
   };
 
-  const handleAppNavigate = (to: "/calendar" | "/diary" | "/photos") => {
+  const handleAppNavigate = (to: "/calendar" | "/diary" | "/photos" | "/clients") => {
     setAppsOpen(false);
     setPlusOpen(false);
     setMapHover(false);
     if (!user) {
-      const ctx = to === "/calendar" ? "calendar" : to === "/diary" ? "diary" : "photos";
+      const ctx =
+        to === "/calendar" ? "calendar"
+        : to === "/diary" ? "diary"
+        : to === "/clients" ? "clients"
+        : "photos";
       void navigate({ to: "/", search: { signin: ctx } });
       return;
     }
