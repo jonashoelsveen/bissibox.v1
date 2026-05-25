@@ -16,6 +16,7 @@ import {
   BookOpen,
   Home,
   UserRound,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { OrganizationIcon } from "@/components/OrganizationIcon";
 // removed:
