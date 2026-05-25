@@ -145,13 +145,28 @@ export function useUserCategories(opts?: { teamId?: string | null; kind?: Catego
   }, []);
 
   const reorder = useCallback(async (next: UserCategory[]) => {
-    setCategories(next);
+    const normalized = next.map((c, idx) => ({ ...c, sort_order: idx }));
+    setCategories(normalized);
+    // Broadcast to other hook instances in the same scope so dropdown
+    // defaults (e.g. calendar grid "top category") update immediately,
+    // without waiting for per-row realtime payloads to arrive.
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("calendar-categories-reorder", {
+          detail: {
+            scopeKey: teamId ? `team:${teamId}` : `user:${user?.id ?? ""}`,
+            kind,
+            categories: normalized,
+          },
+        }),
+      );
+    }
     await Promise.all(
-      next.map((c, idx) =>
-        supabase.from("calendar_categories").update({ sort_order: idx }).eq("id", c.id),
+      normalized.map((c) =>
+        supabase.from("calendar_categories").update({ sort_order: c.sort_order }).eq("id", c.id),
       ),
     );
-  }, []);
+  }, [teamId, kind, user]);
 
   return { categories, loaded, create, update, remove, reorder, refetch: load };
 }
