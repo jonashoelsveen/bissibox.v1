@@ -1012,7 +1012,7 @@ export function UnifiedElasticGrid({
                 {/* Empty week-number gutter under the header */}
                 <div
                   className="border-r border-hairline bg-card"
-                  style={{ height: rowHeight * 18 }}
+                  style={{ height: rowHeight * WEEK_SPAN_HOURS }}
                   aria-hidden
                 />
                 {months.map((m) => {
