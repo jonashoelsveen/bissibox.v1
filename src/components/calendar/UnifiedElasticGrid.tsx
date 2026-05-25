@@ -1713,6 +1713,7 @@ function DayRow(props: DayRowProps) {
               markInfo={markInfo}
               onMarkBegin={onMarkBegin}
               onMarkDragBegin={onMarkDragBegin}
+              onMarkSingleCell={onMarkSingleCell}
               isDraggingMark={isDraggingMark}
               onOpenPopover={onOpenPopover}
               allowMark={allowMark}
