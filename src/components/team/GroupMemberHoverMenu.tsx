@@ -46,7 +46,7 @@ export function GroupMemberHoverMenu({
         }),
       );
     }
-    void navigate({ to: "/team/group-members" });
+    void navigate({ to: "/clients" });
   };
 
   return (

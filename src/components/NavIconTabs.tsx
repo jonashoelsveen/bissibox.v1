@@ -46,7 +46,7 @@ function useNavItems(): NavItem[] {
     return items;
   }
   if (isGroupLeader) {
-    items.push({ key: "group-members", to: "/team/group-members", label: "Group members", icon: UsersRound });
+    items.push({ key: "group-members", to: "/clients", label: "Clients", icon: UsersRound });
   }
   items.push({ key: "library", to: "/media", label: "Library", icon: Library });
   items.push({ key: "calendar", to: "/calendar", label: "Calendar", icon: CalendarDays });
@@ -414,7 +414,6 @@ export function UniversalTopBar({
 export function useActiveNavKey(): NavKey {
   const router = useRouterState();
   const path = router.location.pathname;
-  if (path.startsWith("/team/group-members")) return "group-members";
   if (path.startsWith("/clients")) return "group-members";
   if (path.startsWith("/media")) return "library";
   if (path.startsWith("/calendar")) return "calendar";
