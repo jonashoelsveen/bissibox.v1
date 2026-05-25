@@ -1635,7 +1635,7 @@ function DayRow(props: DayRowProps) {
     selected, selectedId, editingId, editValue, setEditValue,
     onSelect, onBeginEdit, onCommitEdit, onCommitDuration, onMoveAfterCommit,
     inDragRange, onCellMouseEnter, onHandleDown, isMonthFocused, isMonthPeriph,
-    markInfo, onMarkBegin, onMarkDragBegin, isDraggingMark, onOpenPopover, allowMark, markReleased,
+    markInfo, onMarkBegin, onMarkDragBegin, onMarkSingleCell, isDraggingMark, onOpenPopover, allowMark, markReleased,
   } = props;
 
   return (
