@@ -1184,6 +1184,7 @@ export function UnifiedElasticGrid({
                         initialColor: ev.color,
                         isEdit: true,
                         eventId: id,
+                        placeholder: ev.title ? undefined : "New session",
                       });
                     });
 
