@@ -1751,12 +1751,15 @@ export function MonthGridType1({
                             {isDiaryEvent ? (() => {
                               const ev = it.kind === "event" ? it.event : null;
                               if (!ev) return null;
+                              const evId = ev.id;
+                              const tileActive = (lockedId ?? forceEditId) === evId || popover?.eventId === evId || pressedEventId === evId;
                               return (
                                 <DiaryMonthReorderTile
                                   ev={ev}
                                   tileDesign={monthTileDesign}
                                   unit={distanceUnit}
                                   height={tall ? 44 : 22}
+                                  isActive={tileActive}
                                 />
                               );
                             })() : (
