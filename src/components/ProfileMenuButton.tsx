@@ -173,7 +173,6 @@ export function ProfileMenuButton({
             type="button"
             role="menuitem"
             onClick={openProfileModal}
-            onMouseEnter={() => setChangeHover(false)}
             className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs outline-none hover:bg-black/[0.06]"
             style={{ transition: "none", color: "#1d1d1f" }}
           >
@@ -184,70 +183,7 @@ export function ProfileMenuButton({
           <button
             type="button"
             role="menuitem"
-            onClick={openSettings}
-            onMouseEnter={() => setChangeHover(false)}
-            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs outline-none hover:bg-black/[0.06]"
-            style={{ transition: "none", color: "#1d1d1f" }}
-          >
-            <SettingsIcon className="h-3.5 w-3.5" />
-            <span className="min-w-0 flex-1 truncate">Settings</span>
-          </button>
-
-          {!hideChangeProfile && (
-          <div
-            className="relative"
-            onMouseEnter={() => setChangeHover(true)}
-          >
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => setChangeHover((v) => !v)}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs outline-none hover:bg-black/[0.06]"
-              style={{ transition: "none", color: "#1d1d1f" }}
-            >
-              <UserIcon className="h-3.5 w-3.5" />
-              <span className="min-w-0 flex-1 truncate">Change profile</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-            {changeHover && (
-              <>
-                <div className="absolute right-full top-0 h-full w-2" />
-                <div
-                  role="menu"
-                  className="mac-menu absolute right-full top-0 z-[110] w-60 overflow-visible rounded-lg p-1"
-                  style={{ marginRight: 8, transition: "none" }}
-                >
-                  {otherProfiles.length === 0 && (
-                    <div className="px-2 py-1 text-[11px] text-muted-foreground">
-                      No other profiles.
-                    </div>
-                  )}
-                  {otherProfiles.map((p) => (
-                    <button
-                      key={p.id ?? "individual"}
-                      type="button"
-                      role="menuitem"
-                      onClick={() => switchTo(p.id)}
-                      className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs outline-none hover:bg-black/[0.06]"
-                      style={{ transition: "none", color: "#1d1d1f" }}
-                    >
-                      <span className="min-w-0 truncate">{p.name}</span>
-                      <span className="mono ml-2 shrink-0 text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
-                        {p.entity_type ? ENTITY_LABEL[p.entity_type] : "Personal"}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-          )}
-
-          <button
-            type="button"
-            role="menuitem"
             onClick={doSignOut}
-            onMouseEnter={() => setChangeHover(false)}
             className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs outline-none hover:bg-black/[0.06]"
             style={{ transition: "none", color: "#1d1d1f" }}
           >
