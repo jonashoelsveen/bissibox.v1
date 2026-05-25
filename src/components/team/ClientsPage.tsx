@@ -500,8 +500,17 @@ export function ClientsPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          setSelectedClientId(m.user_id);
-                          setActiveClientId(null);
+                          // If this client already has an open top-bar tab,
+                          // activate that tab so its active-tab pill matches.
+                          // Otherwise show them inline as the selected client.
+                          const hasTab = openTabs.some((t) => t.user_id === m.user_id);
+                          if (hasTab) {
+                            setActiveClientId(m.user_id);
+                            setSelectedClientId(null);
+                          } else {
+                            setSelectedClientId(m.user_id);
+                            setActiveClientId(null);
+                          }
                         }}
                         className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
                         title={name}
