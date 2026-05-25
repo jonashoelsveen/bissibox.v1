@@ -1047,15 +1047,14 @@ export function UnifiedElasticGrid({
             ) : (
             Array.from(
               // Week view (compact / kind:"year") renders hour-rows of a
-              // single weekday: 06:00 → 24:00 in 30-min slots = 36 rows
-              // = 18 "days" × 2 sessions. Day view keeps the original
-              // 31-day envelope.
-              { length: mode.kind === "year" ? 18 : 31 },
+              // single weekday across the user's configured timeframe in
+              // 30-min slots. Day view keeps the original 31-day envelope.
+              { length: mode.kind === "year" ? WEEK_SPAN_HOURS : 31 },
               (_, i) => i + 1,
             ).map((day) => (
               <Fragment key={day}>
                 {mode.kind === "year" && (() => {
-                  const hh = 5 + day;
+                  const hh = (WEEK_START_HOUR_CFG - 1) + day;
                   const label = `${String(hh).padStart(2, "0")}:00`;
                   return (
                     <div
