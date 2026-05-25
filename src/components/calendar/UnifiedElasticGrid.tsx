@@ -571,6 +571,7 @@ export function UnifiedElasticGrid({
         isEdit: true,
         eventId: created.id,
         placeholder: "New session",
+        freshlyCreated: true,
       });
       return;
     }
