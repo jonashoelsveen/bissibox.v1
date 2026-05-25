@@ -444,6 +444,7 @@ export function UnifiedElasticGrid({
             initialColor: ev.color,
             isEdit: true,
             eventId: ev.id,
+            placeholder: ev.title ? undefined : "New session",
           });
           return;
         }
@@ -561,8 +562,13 @@ export function UnifiedElasticGrid({
       // the popover's default selection in each seat. This mirrors the
       // smooth admin-mode path on individual mode too.
       const defaultColor = seat === "admin" ? "#E63337" : CAT_TRAINING_COLOR;
+      // Create the event with an EMPTY title so the popover input shows
+      // the "New session" placeholder (not the literal text) and a click-
+      // outside without typing commits "" → onDeleteEvent removes the tile.
+      // The tile itself renders "New session" as a display-only fallback
+      // when the title is empty (see WeekEventsOverlay below).
       const created = onUpsertEvent({
-        title: "New session",
+        title: "",
         color: defaultColor,
         startISO,
         endISO,
@@ -1149,6 +1155,7 @@ export function UnifiedElasticGrid({
                       initialColor: ev.color,
                       isEdit: true,
                       eventId: ev.id,
+                      placeholder: ev.title ? undefined : "New session",
                     });
                   }}
                   onEventDragStart={() => {
@@ -1178,6 +1185,7 @@ export function UnifiedElasticGrid({
                         initialColor: ev.color,
                         isEdit: true,
                         eventId: id,
+                        placeholder: ev.title ? undefined : "New session",
                       });
                     });
 
@@ -2433,7 +2441,7 @@ function WeekEventsOverlay({
                   zIndex: isDragging ? 9999 : undefined,
                   pointerEvents: "auto",
                 }}
-                title={ev.title}
+                title={ev.title || "New session"}
               >
                 <span
                   className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]"
@@ -2607,7 +2615,8 @@ function WeekEventsOverlay({
                 ) : (
                   <div className="flex h-full flex-col justify-start pl-1 pt-0.5 leading-tight">
                     <div className="flex items-center gap-1">
-                      <span className="truncate text-[12px] font-semibold">{ev.title}</span>
+                      <span className="truncate text-[12px] font-semibold">{ev.title || "New session"}</span>
+
                     </div>
                     {liveEnd - liveStart > 45 && (
                       <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
