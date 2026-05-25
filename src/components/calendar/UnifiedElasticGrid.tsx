@@ -2297,7 +2297,7 @@ function WeekEventsOverlay({
             gridColumnStart: colIdx + 2,
             gridColumnEnd: colIdx + 3,
             gridRowStart: 1,
-            gridRowEnd: 19,
+            gridRowEnd: spanHours + 1,
             position: "relative",
             pointerEvents: "none",
             zIndex: drag?.moved && drag.originColIdx === colIdx ? 9998 : 8,
