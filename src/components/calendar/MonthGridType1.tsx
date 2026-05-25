@@ -27,6 +27,7 @@ import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -742,6 +743,25 @@ export function MonthGridType1({
   // ───────────────────────── Keyboard ─────────────────────────
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const monthHeaderRef = useRef<HTMLDivElement | null>(null);
+  const monthScrollerRef = useRef<HTMLDivElement | null>(null);
+
+  // Reserve scrollbar gutter on the weekday header row so its column dividers
+  // line up exactly with the body grid's dividers when a vertical scrollbar
+  // is present.
+  useLayoutEffect(() => {
+    const scroller = monthScrollerRef.current;
+    const header = monthHeaderRef.current;
+    if (!scroller || !header) return;
+    const apply = () => {
+      const w = scroller.offsetWidth - scroller.clientWidth;
+      header.style.paddingRight = `${Math.max(0, w)}px`;
+    };
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(scroller);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1187,6 +1207,7 @@ export function MonthGridType1({
       {/* Weekday strip — mirrors the Week view: 28px week-number gutter + 7
           weekday columns. Today's column gets the dark-grey highlight. */}
       <div
+        ref={monthHeaderRef}
         data-grid-header="1"
         className="grid flex-none border-b border-hairline bg-card"
         style={{ gridTemplateColumns: GRID_TEMPLATE }}
@@ -1211,7 +1232,10 @@ export function MonthGridType1({
       </div>
 
       {/* The grid */}
-      <div className="relative flex-1 min-h-0 overflow-y-auto">
+      <div
+        ref={monthScrollerRef}
+        className="mini-dur-scroll relative flex-1 min-h-0 overflow-y-auto"
+      >
         <LayoutGroup>
           <div
             className="grid w-full"
