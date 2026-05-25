@@ -960,6 +960,7 @@ export function UnifiedElasticGrid({
           onReorderEvents={onReorderEvents}
           memberId={memberId}
           viewerRole={viewerRole}
+          defaultNewColor={seat === "admin" ? (teamCategories[0]?.color ?? null) : (meCategories[0]?.color ?? null)}
           onPrevMonth={() => {
             const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
             onCurrentDateChange(d, { start: d, end: d });
