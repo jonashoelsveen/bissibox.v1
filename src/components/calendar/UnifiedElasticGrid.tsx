@@ -2174,6 +2174,7 @@ function WeekEventsOverlay({
       const dx = e.clientX - drag.pointerStart.x;
       const dy = e.clientY - drag.pointerStart.y;
       const moved = drag.moved || Math.abs(dx) > 3 || Math.abs(dy) > 3;
+      if (moved && !drag.moved) onEventDragStart?.(drag.id);
       setDrag({ ...drag, delta: { dx, dy }, moved });
     };
     const onUp = () => {
