@@ -1235,6 +1235,7 @@ export function MonthGridType1({
       <div
         ref={monthScrollerRef}
         className="mini-dur-scroll relative flex-1 min-h-0 overflow-y-auto"
+        style={{ scrollbarGutter: "stable" }}
       >
         <LayoutGroup>
           <div
