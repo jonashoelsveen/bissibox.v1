@@ -414,7 +414,6 @@ export function UniversalTopBar({
 export function useActiveNavKey(): NavKey {
   const router = useRouterState();
   const path = router.location.pathname;
-  if (path.startsWith("/team/group-members")) return "group-members";
   if (path.startsWith("/clients")) return "group-members";
   if (path.startsWith("/media")) return "library";
   if (path.startsWith("/calendar")) return "calendar";
