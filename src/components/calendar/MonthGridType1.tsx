@@ -2633,6 +2633,7 @@ export function PopoverEditor({
               adminCategory={adminCategory}
               onSetColor={setColor}
               readOnly={readOnly}
+              teamId={teamId}
             />
           </div>
 
