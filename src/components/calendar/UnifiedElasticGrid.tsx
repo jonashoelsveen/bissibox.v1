@@ -1397,6 +1397,7 @@ export function UnifiedElasticGrid({
         <PopoverEditor
           key={popover.eventId ?? `${popover.key.month}:${popover.key.day}:${popover.key.session}`}
           seat={seat}
+          teamId={seat === "admin" ? teamId : null}
           initialText={popover.initialText}
           initialColor={
             popover.initialColor ??
