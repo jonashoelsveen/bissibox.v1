@@ -341,32 +341,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
     return <div className="mx-auto max-w-3xl px-6 py-20 text-muted-foreground">Loading…</div>;
   }
 
-  const navItems: NavItem[] = isTeamMode
-    ? [
-        "appearance",
-        "entity-general",
-        "divider-1",
-        "entity-profile",
-        "entity-organization",
-        "entity-calendar",
-        "entity-map",
-        "entity-events",
-        "entity-library",
-      ]
-    : [
-        "account",
-        "divider-1",
-        "profiles",
-        "calendar",
-        "diary",
-        "library",
-        "divider-2",
-        "coaches",
-        "connectors",
-        "system",
-        "appearance",
-      ];
-
   const tabLabel = (t: Tab): string => {
     switch (t) {
       case "account": return "Account";
@@ -379,7 +353,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       case "system": return "System";
       case "appearance": return "Appearance";
       case "entity-profile": return "Profile";
-      case "entity-general": return "General";
+      case "entity-general": return "About";
       case "entity-organization": return "Organization";
       case "entity-calendar": return "Calendar";
       case "entity-map": return "Map";
@@ -389,62 +363,59 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
     }
   };
 
-  const headerActions = (
-    <div className="flex items-center gap-2">
-      {!isTeamMode && (
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-md bg-ink px-4 py-2 text-xs font-medium text-background transition hover:opacity-90"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Create new entity
-        </button>
-      )}
-      <button
-        onClick={save}
-        disabled={saving || !isDirty}
-        className={`inline-flex items-center gap-1.5 rounded-md border px-4 py-2 text-xs font-medium transition ${
-          isDirty && !saving
-            ? "border-ink bg-ink text-background hover:opacity-90"
-            : "border-hairline bg-secondary text-muted-foreground cursor-not-allowed"
-        }`}
-      >
-        {saving ? "Saving…" : isDirty ? "Save" : "Saved"}
-      </button>
-    </div>
-  );
+  /** Switch to a "Me" (individual) sub-tab. Clears active entity. */
+  const selectMeTab = (t: Tab) => {
+    if (activeEntityId) setActiveEntity(null);
+    setTab(t);
+  };
+  /** Switch to a sub-tab of one of the user's other-profile entities. */
+  const selectEntityTab = (entityId: string, t: Tab) => {
+    if (activeEntityId !== entityId) setActiveEntity(entityId);
+    setTab(t);
+  };
 
-  const navEl = (
-    <nav className="-ml-2 flex flex-row gap-1 md:flex-col md:gap-0.5">
-      {navItems.map((item) =>
-        item.startsWith("divider-") ? (
-          <div key={item} className="my-1 hidden h-px w-full bg-hairline md:block" />
-        ) : (
-          <button
-            key={item}
-            onClick={() => setTab(item as Tab)}
-            className={`rounded-md px-3 py-2 text-left text-sm transition ${
-              tab === item
-                ? "bg-secondary font-medium text-ink"
-                : "text-muted-foreground hover:text-ink"
-            }`}
-          >
-            {tabLabel(item as Tab)}
-          </button>
-        ),
-      )}
-      <div className="my-1 hidden h-px w-full bg-hairline md:block" />
-      <button
-        onClick={async () => {
-          await signOut();
-          navigate({ to: "/" });
-        }}
-        className="rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition hover:text-destructive"
-      >
-        Sign out
-      </button>
-    </nav>
-  );
+  const meTabs: Tab[] = [
+    "calendar",
+    "diary",
+    "library",
+    "profiles",
+    "coaches",
+    "connectors",
+    "system",
+    "appearance",
+  ];
+  // Override label for the Me-Profile entry per spec.
+  const meTabLabel = (t: Tab) => (t === "profiles" ? "Profile" : tabLabel(t));
+
+  const entityTabsFor = (e: { entity_type: string; roles: string[] }): Tab[] => {
+    const roles = e.roles.map((r) => r.toLowerCase());
+    const out: Tab[] = [];
+    if (roles.includes("admin")) {
+      out.push("entity-general", "entity-profile", "entity-calendar", "entity-organization");
+    }
+    if (roles.some((r) => r.includes("coach"))) {
+      out.push("entity-clients");
+    }
+    if (roles.some((r) => r.includes("photographer"))) {
+      out.push("entity-library");
+    }
+    // Every profile gets its own System + Appearance per spec.
+    out.push("system", "appearance");
+    // De-dupe in case admin already added something.
+    return Array.from(new Set(out));
+  };
+
+  /** Active-state predicate for left-panel rows. */
+  const isMeActive = (t: Tab) => !activeEntityId && tab === t;
+  const isEntityActive = (eid: string, t: Tab) => activeEntityId === eid && tab === t;
+
+  const sideRowClass = (active: boolean) =>
+    `flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-xs transition ${
+      active
+        ? "bg-secondary font-medium text-ink"
+        : "text-ink/80 hover:bg-secondary/60 hover:text-ink"
+    }`;
+
 
   const contentEl = (
     <div>
