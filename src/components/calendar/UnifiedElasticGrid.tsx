@@ -2210,9 +2210,6 @@ function WeekEventsOverlay({
                   }
                   if (drag?.moved) return;
                   e.stopPropagation();
-                  // For non-owner viewers, keep the previously-opened edit
-                  // panel intact when interacting with other tiles.
-                  if (viewerRole !== "owner") return;
                   onEventClick(ev, e.currentTarget as HTMLElement);
                 }}
                 className={`absolute select-none overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}
