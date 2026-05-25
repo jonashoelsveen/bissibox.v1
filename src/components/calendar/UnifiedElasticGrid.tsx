@@ -2189,6 +2189,7 @@ function WeekEventsOverlay({
                     // tile. Mirrors month-view behavior.
                     e.stopPropagation();
                     e.preventDefault();
+                    setReadOnlyPressedId(ev.id);
                     return;
                   }
                   e.stopPropagation();
