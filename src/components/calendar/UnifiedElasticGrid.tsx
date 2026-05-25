@@ -2510,9 +2510,9 @@ function WeekEventsOverlay({
                     <div className="flex items-center gap-1">
                       <span className="truncate text-[12px] font-semibold">{ev.title}</span>
                     </div>
-                    {endMin - startMin > 45 && (
+                    {liveEnd - liveStart > 45 && (
                       <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
-                        {`${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`}
+                        {`${String(Math.floor(liveStart / 60)).padStart(2, "0")}:${String(liveStart % 60).padStart(2, "0")} – ${String(Math.floor(liveEnd / 60)).padStart(2, "0")}:${String(liveEnd % 60).padStart(2, "0")}`}
                       </span>
                     )}
                   </div>
