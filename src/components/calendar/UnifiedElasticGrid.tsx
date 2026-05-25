@@ -42,6 +42,7 @@ import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoW
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSessionTileDesign, useDiarySimpleView } from "@/lib/session-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
+import { useWeekViewHours } from "@/lib/week-view-hours";
 import {
   DndContext,
   PointerSensor,
@@ -291,6 +292,12 @@ export function UnifiedElasticGrid({
   const mode: Mode = viewMode === "day" ? { kind: "month", month: 0 } : { kind: "year" };
   const [simpleView] = useDiarySimpleView();
   const isSimple = mode.kind === "year" && appKind === "diary" && simpleView;
+
+  // User-configurable week-view day timeframe. Drives the time gutter,
+  // overlay row count and event vertical placement in the week view.
+  const [{ startHour: WEEK_START_HOUR_CFG, endHour: WEEK_END_HOUR_CFG }] = useWeekViewHours();
+  const WEEK_SPAN_HOURS = Math.max(1, WEEK_END_HOUR_CFG - WEEK_START_HOUR_CFG);
+  const WEEK_SLOT_ROWS = WEEK_SPAN_HOURS * 2;
 
   const handleViewModeChange = (v: ViewMode) => {
     if (!isControlled) setViewModeInternal(v);
@@ -651,8 +658,8 @@ export function UnifiedElasticGrid({
       const hoverRank = newDay * 2 + newSession;
       let newLo = hoverRank - drag.offset;
       let newHi = newLo + drag.size - 1;
-      // Clamp to slot range. In week view rows = 18 days × 2 sessions = 36.
-      const maxRank = 18 * 2 - 1;
+      // Clamp to slot range. Week-view rows = WEEK_SPAN_HOURS × 2 slots.
+      const maxRank = WEEK_SLOT_ROWS - 1;
       if (newLo < 0) { newHi -= newLo; newLo = 0; }
       if (newHi > maxRank) { newLo -= (newHi - maxRank); newHi = maxRank; }
       setMarkRange({ month: newMonth, lo: newLo, hi: newHi });
@@ -795,15 +802,15 @@ export function UnifiedElasticGrid({
     if (mode.kind !== "year") return null;
     const minutes =
       now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
-    const since6 = minutes - 6 * 60;
-    if (since6 < 0 || since6 > 18 * 60) return null;
+    const since6 = minutes - WEEK_START_HOUR_CFG * 60;
+    if (since6 < 0 || since6 > WEEK_SPAN_HOURS * 60) return null;
     return since6;
   }, [now, mode]);
 
   // ─── Week view ↔ time helpers ────────────────────────────────────────
   // Cell layout: row 1 (day=1) starts at 06:00 and each (day, session)
   // pair is one 30-min slot. cellIndex = (day - 1) * 2 + session.
-  const WEEK_START_HOUR = 6;
+  const WEEK_START_HOUR = WEEK_START_HOUR_CFG;
   const rankToMinutes = (rank: number) => WEEK_START_HOUR * 60 + rank * 30;
   const cellKeyToDate = useCallback(
     (k: CellKey): Date | null => {
@@ -1005,7 +1012,7 @@ export function UnifiedElasticGrid({
                 {/* Empty week-number gutter under the header */}
                 <div
                   className="border-r border-hairline bg-card"
-                  style={{ height: rowHeight * 18 }}
+                  style={{ height: rowHeight * WEEK_SPAN_HOURS }}
                   aria-hidden
                 />
                 {months.map((m) => {
@@ -1015,7 +1022,7 @@ export function UnifiedElasticGrid({
                       key={`simple-col-${m.idx}`}
                       data-simple-col={m.idx}
                       className="relative border-r border-hairline transition-colors hover:bg-secondary/60"
-                      style={{ height: rowHeight * 18 }}
+                      style={{ height: rowHeight * WEEK_SPAN_HOURS }}
                       onDoubleClick={(e) => {
                         if (!colDate) return;
                         const target = e.target as HTMLElement;
@@ -1040,15 +1047,14 @@ export function UnifiedElasticGrid({
             ) : (
             Array.from(
               // Week view (compact / kind:"year") renders hour-rows of a
-              // single weekday: 06:00 → 24:00 in 30-min slots = 36 rows
-              // = 18 "days" × 2 sessions. Day view keeps the original
-              // 31-day envelope.
-              { length: mode.kind === "year" ? 18 : 31 },
+              // single weekday across the user's configured timeframe in
+              // 30-min slots. Day view keeps the original 31-day envelope.
+              { length: mode.kind === "year" ? WEEK_SPAN_HOURS : 31 },
               (_, i) => i + 1,
             ).map((day) => (
               <Fragment key={day}>
                 {mode.kind === "year" && (() => {
-                  const hh = 5 + day;
+                  const hh = (WEEK_START_HOUR_CFG - 1) + day;
                   const label = `${String(hh).padStart(2, "0")}:00`;
                   return (
                     <div
@@ -1116,8 +1122,8 @@ export function UnifiedElasticGrid({
                 display: "grid",
                 gridTemplateColumns,
                 gridTemplateRows: isSimple
-                  ? `${rowHeight * 18}px`
-                  : `repeat(18, ${rowHeight * 2}px)`,
+                  ? `${rowHeight * WEEK_SPAN_HOURS}px`
+                  : `repeat(${WEEK_SPAN_HOURS}, ${rowHeight * 2}px)`,
               }}
             >
               {!isSimple && (
@@ -1125,6 +1131,7 @@ export function UnifiedElasticGrid({
                   events={weekEvents}
                   weekDates={weekDates}
                   startHour={WEEK_START_HOUR}
+                  spanHours={WEEK_SPAN_HOURS}
                   appKind={appKind}
                   activeEventId={popover?.eventId ?? null}
                   onEventClick={(ev, anchor) => {
@@ -1207,6 +1214,7 @@ export function UnifiedElasticGrid({
                 <NowLine
                   colIdx={todayColIdx}
                   nowMinutesSinceStart={nowMinutesSinceStart}
+                  spanHours={WEEK_SPAN_HOURS}
                 />
               )}
             </div>
@@ -1981,10 +1989,12 @@ function DurationCell({ initial, onCommit }: DurationCellProps) {
 function NowLine({
   colIdx,
   nowMinutesSinceStart,
+  spanHours = 18,
 }: {
   colIdx: number;
   /** Minutes elapsed since the grid's start hour (e.g. 06:00). */
   nowMinutesSinceStart: number;
+  spanHours?: number;
 }) {
   const ROW_HEIGHT = 28;
   const top = (nowMinutesSinceStart / 30) * ROW_HEIGHT;
@@ -1996,7 +2006,7 @@ function NowLine({
         gridColumnStart: colIdx + 2,
         gridColumnEnd: colIdx + 3,
         gridRowStart: 1,
-        gridRowEnd: 19,
+        gridRowEnd: spanHours + 1,
         position: "relative",
         pointerEvents: "none",
         zIndex: 14,
@@ -2043,6 +2053,7 @@ function WeekEventsOverlay({
   events,
   weekDates,
   startHour,
+  spanHours = 18,
   appKind = "calendar",
   activeEventId = null,
   onEventClick,
@@ -2057,6 +2068,7 @@ function WeekEventsOverlay({
   events: CalendarEvent[];
   weekDates: Date[];
   startHour: number;
+  spanHours?: number;
   appKind?: "calendar" | "diary";
   activeEventId?: string | null;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
@@ -2164,7 +2176,7 @@ function WeekEventsOverlay({
         const minShift = Math.round(drag.delta.dy / ROW_HEIGHT) * 30;
         let newStart = drag.originStartMin + minShift;
         const minStart = startHour * 60;
-        const maxStart = startHour * 60 + 18 * 60 - drag.durationMin;
+        const maxStart = startHour * 60 + spanHours * 60 - drag.durationMin;
         newStart = Math.max(minStart, Math.min(maxStart, newStart));
         onEventDrop(drag.id, weekDates[newCol], newStart, drag.durationMin, drag.anchor ?? undefined);
       }
@@ -2197,7 +2209,7 @@ function WeekEventsOverlay({
     const PX_PER_MIN = ROW_HEIGHT / 30;
     const SNAP = 5; // minutes
     const minStart = startHour * 60;
-    const maxEnd = startHour * 60 + 18 * 60;
+    const maxEnd = startHour * 60 + spanHours * 60;
     const minDur = 15;
     const onMove = (e: PointerEvent) => {
       const dy = e.clientY - resize.pointerStartY;
@@ -2270,7 +2282,7 @@ function WeekEventsOverlay({
       const startMin = start.getHours() * 60 + start.getMinutes();
       const endMin = end.getHours() * 60 + end.getMinutes();
       const since = startMin - startHour * 60;
-      if (since < 0 || since >= 18 * 60) continue;
+      if (since < 0 || since >= spanHours * 60) continue;
       arr[idx].push({ ev, startMin, endMin });
     }
     return arr;
@@ -2285,7 +2297,7 @@ function WeekEventsOverlay({
             gridColumnStart: colIdx + 2,
             gridColumnEnd: colIdx + 3,
             gridRowStart: 1,
-            gridRowEnd: 19,
+            gridRowEnd: spanHours + 1,
             position: "relative",
             pointerEvents: "none",
             zIndex: drag?.moved && drag.originColIdx === colIdx ? 9998 : 8,
@@ -2600,7 +2612,7 @@ function WeekEventsOverlay({
         const newCol = Math.max(0, Math.min(6, drag.originColIdx + colShift));
         const minShift = Math.round(drag.delta.dy / ROW_HEIGHT) * 30;
         const minStart = startHour * 60;
-        const maxStart = startHour * 60 + 18 * 60 - drag.durationMin;
+        const maxStart = startHour * 60 + spanHours * 60 - drag.durationMin;
         const newStart = Math.max(minStart, Math.min(maxStart, drag.originStartMin + minShift));
         const top = ((newStart - startHour * 60) / 30) * ROW_HEIGHT;
         const height = (drag.durationMin / 30) * ROW_HEIGHT;
@@ -2610,7 +2622,7 @@ function WeekEventsOverlay({
               gridColumnStart: newCol + 2,
               gridColumnEnd: newCol + 3,
               gridRowStart: 1,
-              gridRowEnd: 19,
+              gridRowEnd: spanHours + 1,
               position: "relative",
               pointerEvents: "none",
               zIndex: 7,

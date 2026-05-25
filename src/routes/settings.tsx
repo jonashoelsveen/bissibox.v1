@@ -22,6 +22,7 @@ import { SESSION_TILE_DESIGNS, useSessionTileDesign, useDiarySimpleView, type Se
 import { Switch } from "@/components/ui/switch";
 import { MONTH_TILE_DESIGNS, useMonthTileDesign, type MonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, type DistanceUnit } from "@/lib/units";
+import { useWeekViewHours, clampWeekViewHours } from "@/lib/week-view-hours";
 import stravaLogo from "@/assets/strava-logo.png";
 import eqTimingLogo from "@/assets/eq-timing-logo.png";
 
@@ -1679,10 +1680,111 @@ function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
         items={["Units", "Activitytypes"]}
       />
       <DiaryCategoryCard title="Notes" items={[]} />
+      <WeekViewCard />
       <SessionTileDesignCard />
       <MonthSessionTileDesignCard />
       <DiarySessionDetailsCard />
     </div>
+  );
+}
+
+function WeekViewCard() {
+  const [open, setOpen] = useState(false);
+  const [hours, setHours] = useWeekViewHours();
+  const [fromStr, setFromStr] = useState<string>(() => String(hours.startHour).padStart(2, "0") + ":00");
+  const [toStr, setToStr] = useState<string>(() => String(hours.endHour).padStart(2, "0") + ":00");
+
+  // Keep local inputs in sync if hours change elsewhere.
+  useEffect(() => {
+    setFromStr(String(hours.startHour).padStart(2, "0") + ":00");
+    setToStr(String(hours.endHour).padStart(2, "0") + ":00");
+  }, [hours.startHour, hours.endHour]);
+
+  const parseHour = (s: string): number | null => {
+    const m = s.trim().match(/^(\d{1,2})(?::(\d{2}))?$/);
+    if (!m) return null;
+    const h = Number(m[1]);
+    if (!Number.isFinite(h)) return null;
+    return h;
+  };
+
+  const commitFrom = () => {
+    const h = parseHour(fromStr);
+    if (h === null) {
+      setFromStr(String(hours.startHour).padStart(2, "0") + ":00");
+      return;
+    }
+    const next = clampWeekViewHours({ startHour: Math.max(0, Math.min(12, h)), endHour: hours.endHour });
+    setHours(next);
+  };
+  const commitTo = () => {
+    const h = parseHour(toStr);
+    if (h === null) {
+      setToStr(String(hours.endHour).padStart(2, "0") + ":00");
+      return;
+    }
+    const next = clampWeekViewHours({ startHour: hours.startHour, endHour: Math.max(13, Math.min(24, h)) });
+    setHours(next);
+  };
+
+  return (
+    <Card>
+      <div className="flex w-full items-center gap-3">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          <h3 className="text-sm font-semibold text-ink">Week-view</h3>
+        </button>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Collapse" : "Expand"}
+          className="text-muted-foreground hover:text-ink"
+        >
+          {open ? (
+            <ChevronDown className="h-4 w-4" strokeWidth={2.25} />
+          ) : (
+            <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+          )}
+        </button>
+      </div>
+      {open && (
+        <div className="mt-4 space-y-3">
+          <div className="rounded-xl border border-hairline p-3">
+            <div className="text-sm font-medium text-ink">Day timeframe</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Sets the start and end hour shown in the week view day columns. From: 00:00–12:00. To: 13:00–24:00.
+            </p>
+            <div className="mt-3 flex items-center gap-3">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="w-10">From</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={fromStr}
+                  onChange={(e) => setFromStr(e.target.value)}
+                  onBlur={commitFrom}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }}
+                  className="h-8 w-20 rounded-md border border-hairline bg-card px-2 text-center text-sm tabular-nums text-ink shadow-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="w-10">To</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={toStr}
+                  onChange={(e) => setToStr(e.target.value)}
+                  onBlur={commitTo}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur(); }}
+                  className="h-8 w-20 rounded-md border border-hairline bg-card px-2 text-center text-sm tabular-nums text-ink shadow-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+    </Card>
   );
 }
 
