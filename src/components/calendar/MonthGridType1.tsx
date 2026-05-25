@@ -1418,7 +1418,13 @@ export function MonthGridType1({
                         | UnifiedItem;
                       const renderList: RenderItem[] = [...baseVisible];
                       if (isTargetDay && dragSession && !dragSession.landing) {
-                        const insertAt = Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex));
+                        // Calendar mode: keep the drop-preview chip pinned
+                        // at the top of the target day while dragging.
+                        // It only snaps into its start-time-sorted slot
+                        // when the user releases (drop).
+                        const insertAt = appKind === "diary"
+                          ? Math.max(0, Math.min(baseVisible.length, dragSession.insertIndex))
+                          : 0;
                         renderList.splice(insertAt, 0, { kind: "ghost" });
                       }
                       const isCreatingHere =
