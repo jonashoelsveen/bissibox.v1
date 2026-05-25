@@ -15,10 +15,9 @@ type Entity = { id: string; name: string; entity_type: "team" | "company" | "coo
 // (entity-type label map removed along with the change-profile submenu)
 
 export function ProfileMenuButton({
-  hideChangeProfile = false,
   align = "right",
 }: { hideChangeProfile?: boolean; align?: "left" | "right" } = {}) {
-  const { user, activeEntityId, setActiveEntity, signOut } = useAuth();
+  const { user, activeEntityId, signOut } = useAuth();
   const navigate = useNavigate();
   const ref = useRef<HTMLDivElement | null>(null);
 
