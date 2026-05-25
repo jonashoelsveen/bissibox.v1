@@ -2441,6 +2441,7 @@ export function PopoverEditor({
   onClose,
   onCommit,
   onTimeChange,
+  onColorChange,
   readOnly = false,
 }: PopoverEditorProps) {
   const [value, setValue] = useState(initialText);
@@ -2453,7 +2454,14 @@ export function PopoverEditor({
         ? initialColor
         : CAT_MEETING
       : initialColor ?? CAT_TRAINING_COLOR;
-  const [color, setColor] = useState<string | null>(resolvedInitial);
+  const [color, setColorState] = useState<string | null>(resolvedInitial);
+  const setColor = useCallback(
+    (c: string | null) => {
+      setColorState(c);
+      onColorChange?.(c);
+    },
+    [onColorChange],
+  );
   const [time, setTime] = useState<{ startMin: number; endMin: number } | null>(initialTime);
   // Sync the wheel when the parent pushes a new initialTime (e.g. while the
   // user is dragging a tile's top/bottom edge to resize it in the week-view).
