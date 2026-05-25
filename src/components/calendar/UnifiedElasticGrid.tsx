@@ -802,8 +802,8 @@ export function UnifiedElasticGrid({
     if (mode.kind !== "year") return null;
     const minutes =
       now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
-    const since6 = minutes - 6 * 60;
-    if (since6 < 0 || since6 > 18 * 60) return null;
+    const since6 = minutes - WEEK_START_HOUR_CFG * 60;
+    if (since6 < 0 || since6 > WEEK_SPAN_HOURS * 60) return null;
     return since6;
   }, [now, mode]);
 
