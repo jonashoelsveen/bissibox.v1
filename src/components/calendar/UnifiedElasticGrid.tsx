@@ -2065,6 +2065,7 @@ function WeekEventsOverlay({
   activeEventId = null,
   onEventClick,
   onEventDrop,
+  onEventDragStart,
   onLiveResize,
   onDeleteEvent,
   onSaveSessionNote,
@@ -2080,6 +2081,8 @@ function WeekEventsOverlay({
   activeEventId?: string | null;
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onEventDrop: (id: string, newDate: Date, newStartMin: number, durationMin: number, anchor?: HTMLElement) => void;
+  /** Fires the moment a drag exceeds the 3px threshold — used to hide the open popover until drop. */
+  onEventDragStart?: (id: string) => void;
   /** Fires during a top/bottom edge resize so the open popover's time wheels can tick along. */
   onLiveResize?: (id: string, t: { startMin: number; endMin: number }) => void;
   onDeleteEvent?: (id: string) => void;
