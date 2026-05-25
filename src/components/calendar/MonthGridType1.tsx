@@ -743,6 +743,25 @@ export function MonthGridType1({
   // ───────────────────────── Keyboard ─────────────────────────
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const monthHeaderRef = useRef<HTMLDivElement | null>(null);
+  const monthScrollerRef = useRef<HTMLDivElement | null>(null);
+
+  // Reserve scrollbar gutter on the weekday header row so its column dividers
+  // line up exactly with the body grid's dividers when a vertical scrollbar
+  // is present.
+  useLayoutEffect(() => {
+    const scroller = monthScrollerRef.current;
+    const header = monthHeaderRef.current;
+    if (!scroller || !header) return;
+    const apply = () => {
+      const w = scroller.offsetWidth - scroller.clientWidth;
+      header.style.paddingRight = `${Math.max(0, w)}px`;
+    };
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(scroller);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
