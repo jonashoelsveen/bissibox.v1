@@ -421,6 +421,8 @@ export function UnifiedElasticGrid({
     pendingTime?: { startMin: number; endMin: number };
     /** Override for the input placeholder (e.g. "New session" for fresh mark). */
     placeholder?: string;
+    /** Tile was just created by a mark-release — empty commit keeps it (no delete). */
+    freshlyCreated?: boolean;
   } | null>(null);
 
   // Calendar drag-to-move: the time/location is applied immediately on
@@ -569,6 +571,7 @@ export function UnifiedElasticGrid({
         isEdit: true,
         eventId: created.id,
         placeholder: "New session",
+        freshlyCreated: true,
       });
       return;
     }
@@ -1433,7 +1436,16 @@ export function UnifiedElasticGrid({
                 const endISO = toISOLocal(setHM(date, Math.floor(endMin / 60), endMin % 60));
 
                 if (popover.eventId) {
-                  if (!t) {
+                  if (!t && popover.freshlyCreated) {
+                    // Freshly mark-created tile, user didn't type — keep the
+                    // default "New session" tile, only persist time/color edits.
+                    onUpsertEvent({
+                      id: popover.eventId,
+                      color,
+                      ...(markRange || time || popover.pendingDate || popover.pendingTime ? { startISO, endISO } : {}),
+                      allDay: false,
+                    });
+                  } else if (!t) {
                     onDeleteEvent(popover.eventId);
                   } else {
                     onUpsertEvent({
