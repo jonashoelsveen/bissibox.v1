@@ -359,6 +359,7 @@ function YearCalendarViewInner({
           appKind={appKind}
           memberId={memberId}
           viewerRole={viewerRole}
+          teamId={teamId}
         />
       </div>
     </div>
