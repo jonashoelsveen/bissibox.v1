@@ -1022,7 +1022,7 @@ export function UnifiedElasticGrid({
                       key={`simple-col-${m.idx}`}
                       data-simple-col={m.idx}
                       className="relative border-r border-hairline transition-colors hover:bg-secondary/60"
-                      style={{ height: rowHeight * 18 }}
+                      style={{ height: rowHeight * WEEK_SPAN_HOURS }}
                       onDoubleClick={(e) => {
                         if (!colDate) return;
                         const target = e.target as HTMLElement;
