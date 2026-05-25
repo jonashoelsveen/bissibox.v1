@@ -2176,7 +2176,7 @@ function WeekEventsOverlay({
         const minShift = Math.round(drag.delta.dy / ROW_HEIGHT) * 30;
         let newStart = drag.originStartMin + minShift;
         const minStart = startHour * 60;
-        const maxStart = startHour * 60 + 18 * 60 - drag.durationMin;
+        const maxStart = startHour * 60 + spanHours * 60 - drag.durationMin;
         newStart = Math.max(minStart, Math.min(maxStart, newStart));
         onEventDrop(drag.id, weekDates[newCol], newStart, drag.durationMin, drag.anchor ?? undefined);
       }
@@ -2209,7 +2209,7 @@ function WeekEventsOverlay({
     const PX_PER_MIN = ROW_HEIGHT / 30;
     const SNAP = 5; // minutes
     const minStart = startHour * 60;
-    const maxEnd = startHour * 60 + 18 * 60;
+    const maxEnd = startHour * 60 + spanHours * 60;
     const minDur = 15;
     const onMove = (e: PointerEvent) => {
       const dy = e.clientY - resize.pointerStartY;
@@ -2282,7 +2282,7 @@ function WeekEventsOverlay({
       const startMin = start.getHours() * 60 + start.getMinutes();
       const endMin = end.getHours() * 60 + end.getMinutes();
       const since = startMin - startHour * 60;
-      if (since < 0 || since >= 18 * 60) continue;
+      if (since < 0 || since >= spanHours * 60) continue;
       arr[idx].push({ ev, startMin, endMin });
     }
     return arr;
@@ -2612,7 +2612,7 @@ function WeekEventsOverlay({
         const newCol = Math.max(0, Math.min(6, drag.originColIdx + colShift));
         const minShift = Math.round(drag.delta.dy / ROW_HEIGHT) * 30;
         const minStart = startHour * 60;
-        const maxStart = startHour * 60 + 18 * 60 - drag.durationMin;
+        const maxStart = startHour * 60 + spanHours * 60 - drag.durationMin;
         const newStart = Math.max(minStart, Math.min(maxStart, drag.originStartMin + minShift));
         const top = ((newStart - startHour * 60) / 30) * ROW_HEIGHT;
         const height = (drag.durationMin / 30) * ROW_HEIGHT;
