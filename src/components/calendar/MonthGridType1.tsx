@@ -182,6 +182,10 @@ export interface MonthGridType1Props {
   onSelectDate?: (date: Date) => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
+  /** Default color for newly-created sessions (no initial color). Used so
+   *  admin month-view defaults to the team's top category color, mirroring
+   *  individual mode using the user's top "Me" category. */
+  defaultNewColor?: string | null;
 }
 
 interface DayItem {
