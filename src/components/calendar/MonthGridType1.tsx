@@ -1350,7 +1350,7 @@ export function MonthGridType1({
                       className={[
                         "grid h-5 min-w-[20px] place-items-center rounded-sm px-1 text-[11px] font-medium",
                         todayCell
-                          ? "ring-1 ring-ink text-ink"
+                          ? "bg-ink text-background"
                           : d.inMonth
                             ? "text-ink/70"
                             : "text-muted-foreground/50",
