@@ -1833,7 +1833,10 @@ function DayCellPair(props: DayCellPairProps) {
             onDoubleClick={(e) => {
               e.stopPropagation();
               if (allowMark) {
-                onOpenPopover(k, e.currentTarget as HTMLElement);
+                // Week-view: synthesize a single-cell mark + release so the
+                // existing release-flow effect materializes a real session
+                // tile, matching the behaviour of dragging out a 1-slot mark.
+                onMarkSingleCell(k);
               } else {
                 onBeginEdit(k);
               }
