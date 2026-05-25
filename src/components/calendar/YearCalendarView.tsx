@@ -284,7 +284,7 @@ function YearCalendarViewInner({
           />
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className={`flex items-center gap-1 transition-[padding-right] duration-300 ease-out ${rightPanelOpen ? "pr-0" : "pr-9"}`}>
           <button
             type="button"
             aria-label="Gå til i dag"
@@ -315,7 +315,7 @@ function YearCalendarViewInner({
                   ]
             }
           />
-          {appKind !== "diary" && (
+          {appKind !== "diary" && !disableImport && (
             <ImportButton seat={seat} onCommit={(patch) => upsertEvent(patch)} />
           )}
         </div>
