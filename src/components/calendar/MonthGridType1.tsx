@@ -1421,24 +1421,15 @@ export function MonthGridType1({
                         popover.pos.row === pos.row &&
                         popover.pos.col === pos.col;
                       if (isCreatingHere) {
-                        const createStart = createPreviewTime
-                          ? new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), Math.floor(createPreviewTime.startMin / 60), createPreviewTime.startMin % 60)
-                          : new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate(), 9, 0);
-                        const createKey = Date.parse(toISOLocal(createStart));
-                        const realVisibleCount = baseVisible.filter((it) => it.kind === "event").length;
-                        const createSortedIndex = sortedDayEvents.findIndex((ev) => {
-                          const evKey = ev.sortIndex ?? Date.parse(ev.startISO);
-                          return createKey < evKey;
-                        });
+                        // Keep the placeholder pinned at the top of the cell
+                        // while the user is filling out the popover — don't
+                        // reshuffle existing sessions as the time wheel
+                        // changes. The new session will snap into its
+                        // correctly sorted slot once the user commits
+                        // (clicks "add" / hits Enter).
                         const createInsertAt = appKind === "diary"
                           ? renderList.length
-                          : Math.max(
-                              0,
-                              Math.min(
-                                renderList.length,
-                                createSortedIndex >= 0 ? createSortedIndex : realVisibleCount,
-                              ),
-                            );
+                          : 0;
                         renderList.splice(createInsertAt, 0, { kind: "creating" });
                       }
                       const renderVisible = renderList.slice(0, MAX_VISIBLE);
