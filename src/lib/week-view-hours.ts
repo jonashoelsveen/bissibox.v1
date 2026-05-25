@@ -21,7 +21,10 @@ export interface WeekViewHours {
 }
 
 const DEFAULT_HOURS: WeekViewHours = { startHour: 6, endHour: 24 };
-const KEY = "diary:week-view-hours:global";
+
+export type WeekViewApp = "calendar" | "diary";
+
+const keyFor = (app: WeekViewApp) => `${app}:week-view-hours:global`;
 
 export function clampWeekViewHours(h: Partial<WeekViewHours>): WeekViewHours {
   let s = Math.round(h.startHour ?? DEFAULT_HOURS.startHour);
