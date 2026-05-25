@@ -30,7 +30,7 @@ import { ChevronDown, Footprints, Bike, Dumbbell, Snowflake, Waves } from "lucid
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, Session, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
-import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, contrastTextOn, categoryFromColor } from "./MonthGridType1";
+import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, contrastTextOn, categoryFromColor, CAT_TRAINING_COLOR } from "./MonthGridType1";
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 import { DayNoteButton } from "./DayNoteButton";
 import { SessionHoverMenu } from "./SessionHoverMenu";
