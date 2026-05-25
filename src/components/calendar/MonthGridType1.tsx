@@ -2165,6 +2165,12 @@ export interface PopoverEditorProps {
    */
   onTimeChange?: (time: { startMin: number; endMin: number } | null) => void;
   /**
+   * Fires the moment the user picks a different category/color in the
+   * dropdown. Lets the parent push the new color to the bound CalendarEvent
+   * so the session tile reflects the selection in real time.
+   */
+  onColorChange?: (color: string | null) => void;
+  /**
    * When true, the popover renders as a view-only panel: the title input is
    * not focusable/editable, the category dropdown and time wheel are
    * non-interactive, and the bottom action bar is hidden. Used when a
