@@ -2430,6 +2430,16 @@ export function PopoverEditor({
       : initialColor ?? CAT_TRAINING_COLOR;
   const [color, setColor] = useState<string | null>(resolvedInitial);
   const [time, setTime] = useState<{ startMin: number; endMin: number } | null>(initialTime);
+  // Sync the wheel when the parent pushes a new initialTime (e.g. while the
+  // user is dragging a tile's top/bottom edge to resize it in the week-view).
+  useEffect(() => {
+    if (!initialTime) return;
+    setTime((cur) =>
+      cur && cur.startMin === initialTime.startMin && cur.endMin === initialTime.endMin
+        ? cur
+        : initialTime,
+    );
+  }, [initialTime?.startMin, initialTime?.endMin]);
   
   const ref = useRef<HTMLDivElement | null>(null);
 
