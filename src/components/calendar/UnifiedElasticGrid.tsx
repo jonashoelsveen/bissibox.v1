@@ -349,6 +349,17 @@ export function UnifiedElasticGrid({
   const { categories: teamCategories } = useUserCategories({
     teamId: seat === "admin" ? teamId : null,
   });
+  // When a coach is viewing a client's calendar, preload the client's own
+  // category list so a freshly-marked draft tile mounts with the same color
+  // the saved session will resolve to. Without this, the tile briefly flashes
+  // the coach's own top-category color before swapping to the client's.
+  const clientOwnerId = useMemo(
+    () => (calId.startsWith("client:") ? calId.slice(7) : null),
+    [calId],
+  );
+  const { categories: clientCategories } = useUserCategories({
+    ownerId: clientOwnerId,
+  });
 
   const handleViewModeChange = (v: ViewMode) => {
     if (!isControlled) setViewModeInternal(v);
