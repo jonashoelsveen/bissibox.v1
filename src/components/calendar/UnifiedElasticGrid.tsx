@@ -699,6 +699,7 @@ export function UnifiedElasticGrid({
         startISO,
         endISO,
         allDay: false,
+        coachPending: calId.startsWith("client:"),
       };
       setDraftEvent(created);
       setPopover({
