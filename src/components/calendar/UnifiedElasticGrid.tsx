@@ -231,6 +231,9 @@ export interface UnifiedElasticGridProps {
   ) => CalendarEvent;
   onMoveEvent: (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => void;
   onDeleteEvent: (id: string) => void;
+  /** Flip a coach-pending session into the accepted (owner) state. Only
+   *  wired when the current user owns this calendar. */
+  onAcceptCoachSession?: (id: string) => void;
   /** Reorder a sequence of event ids by writing sortIndex values. */
   onReorderEvents?: (ids: string[]) => void;
   /** Shared "what is the calendar showing?" anchor date. */
