@@ -1577,7 +1577,11 @@ export function UnifiedElasticGrid({
             // Real-time tile recolor while the popover is open and bound
             // to an existing event.
             if (popover.eventId && c) {
-              onUpsertEvent({ id: popover.eventId, color: c });
+              if (draftEventRef.current?.id === popover.eventId) {
+                setDraftEvent({ ...draftEventRef.current, color: c });
+              } else {
+                onUpsertEvent({ id: popover.eventId, color: c });
+              }
             }
           }}
           onCategoryChange={(selection: CategorySelection) => {
