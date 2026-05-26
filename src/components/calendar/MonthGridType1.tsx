@@ -2169,6 +2169,7 @@ export function MonthGridType1({
               onClose={() => setDetailsEvId(null)}
               onUpsert={(patch) => { onUpsertEvent?.(patch); }}
               onDelete={onDeleteEvent ? () => onDeleteEvent(ev.id) : undefined}
+              onAccept={onAcceptCoachSession ? () => onAcceptCoachSession(ev.id) : undefined}
             />
           );
         })()}
