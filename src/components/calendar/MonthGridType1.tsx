@@ -1969,7 +1969,7 @@ export function MonthGridType1({
                 setCreatePreviewTime(time ?? { startMin: 9 * 60, endMin: 10 * 60 });
               }
             }}
-            onCommit={(text, color, time) => {
+            onCommit={(text, color, time, accept) => {
               const cell = days.find(
                 (d) => d.row === popover.pos.row && d.col === popover.pos.col,
               );
@@ -1984,11 +1984,12 @@ export function MonthGridType1({
                 if (!t) {
                   onDeleteEvent?.(popover.eventId);
                 } else {
+                  const existingEv = events.find((e) => e.id === popover.eventId);
                   const patch: Parameters<NonNullable<typeof onUpsertEvent>>[0] = {
                     id: popover.eventId,
                     title: t,
                     color,
-                    categoryId: popover.categoryId ?? events.find((e) => e.id === popover.eventId)?.categoryId,
+                    categoryId: popover.categoryId ?? existingEv?.categoryId,
                   };
                   if (time) {
                     const start = setHM(
@@ -2007,7 +2008,18 @@ export function MonthGridType1({
                       allDay: false,
                     });
                   }
-                  onUpsertEvent?.(patch);
+                  // Match week/day-view: explicit Save (Enter / "Lagre" / click-
+                  // outside) on a coach-pending session implicitly accepts the
+                  // proposal. Fold coach_pending=false into the same write so
+                  // the stripe clears atomically, and notify the store so any
+                  // local accept-tracking state stays in sync.
+                  if (accept && existingEv?.coachPending) {
+                    (patch as Partial<CalendarEvent>).coachPending = false;
+                    onUpsertEvent?.(patch);
+                    onAcceptCoachSession?.(popover.eventId);
+                  } else {
+                    onUpsertEvent?.(patch);
+                  }
                 }
                 closePopover();
                 return;
