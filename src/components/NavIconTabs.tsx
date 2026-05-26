@@ -45,9 +45,8 @@ function useNavItems(): NavItem[] {
     items.push({ key: "auth", to: "/auth", label: "Sign in", icon: LogIn });
     return items;
   }
-  if (isGroupLeader) {
-    items.push({ key: "group-members", to: "/clients", label: "Clients", icon: UsersRound });
-  }
+  items.push({ key: "group-members", to: "/clients", label: "Clients", icon: UsersRound });
+
   items.push({ key: "library", to: "/media", label: "Library", icon: Library });
   items.push({ key: "calendar", to: "/calendar", label: "Calendar", icon: CalendarDays });
   if (isIndividual) {
