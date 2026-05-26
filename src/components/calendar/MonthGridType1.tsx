@@ -2743,7 +2743,10 @@ export function PopoverEditor({
                   type="button"
                   aria-label="Slett"
                   title="Slett"
-                  onClick={() => onCommit("", color, time)}
+                  onClick={() => {
+                    settledRef.current = true;
+                    onCommit("", color, time);
+                  }}
                   className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
