@@ -5,7 +5,7 @@
  * menu unmounts.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
 import { CAT_TRAINING_COLOR } from "./MonthGridType1";
 import { colorForActivity } from "@/lib/activity-colors";
@@ -41,6 +41,7 @@ export function SessionDetailsContainer({
   viewerRole = "owner",
 }: SessionDetailsContainerProps) {
   const [detailsValue, setDetailsValue] = useState<SessionDetailsValue | null>(null);
+  const lastPendingAutosaveRef = useRef<string>("");
 
   useEffect(() => {
     const start = fromISOLocal(ev.startISO);
@@ -86,6 +87,24 @@ export function SessionDetailsContainer({
       v.diaryGroup === "endurance" ? colorForActivity(v.diarySub) : CAT_TRAINING_COLOR;
     const color = v.diaryType === "training" ? trainingColor : "#9CA3AF";
     const hasSubs = !!DIARY_GROUPS.find((g) => g.id === v.diaryGroup)?.children?.length;
+    const primaryActivity = (() => {
+      const raw =
+        v.activities?.[0]?.type ??
+        (v.diaryType === "training" ? (hasSubs ? v.diarySub : v.diaryGroup) : undefined);
+      switch ((raw ?? "").toLowerCase()) {
+        case "running":
+        case "cycling":
+        case "swimming":
+        case "xcskiing":
+          return raw as CalendarEvent["activity"];
+        case "strength":
+        case "core":
+        case "max":
+          return "strength";
+        default:
+          return undefined;
+      }
+    })();
     return {
       id: ev.id,
       title: v.title.trim(),
@@ -93,6 +112,7 @@ export function SessionDetailsContainer({
       startISO,
       endISO,
       allDay: false,
+      activity: primaryActivity,
       diaryType: v.diaryType,
       diaryGroup: v.diaryType === "training" ? v.diaryGroup : undefined,
       diarySub: v.diaryType === "training" && hasSubs ? v.diarySub : undefined,
@@ -102,6 +122,25 @@ export function SessionDetailsContainer({
       activities: v.activities && v.activities.length ? v.activities : undefined,
     };
   };
+
+  useEffect(() => {
+    if (!detailsValue) {
+      lastPendingAutosaveRef.current = "";
+      return;
+    }
+    if (!(ev.coachPending && onAccept)) {
+      lastPendingAutosaveRef.current = "";
+      return;
+    }
+    const snapshot = JSON.stringify(buildPatch(detailsValue));
+    if (!lastPendingAutosaveRef.current) {
+      lastPendingAutosaveRef.current = snapshot;
+      return;
+    }
+    if (snapshot === lastPendingAutosaveRef.current) return;
+    lastPendingAutosaveRef.current = snapshot;
+    onUpsert(buildPatch(detailsValue));
+  }, [detailsValue, ev.coachPending, onAccept, onUpsert]);
 
   if (!detailsValue) return null;
 
@@ -126,6 +165,7 @@ export function SessionDetailsContainer({
       value={detailsValue}
       onChange={(v) => setDetailsValue(v)}
       onClose={onClose}
+      suppressUnsavedPrompt={!!(ev.coachPending && onAccept)}
       onSave={(v) => {
         onUpsert(buildPatch(v));
         onClose();
