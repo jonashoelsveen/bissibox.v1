@@ -2591,7 +2591,10 @@ export function PopoverEditor({
         (timeRef.current?.startMin ?? null) === (init.time?.startMin ?? null) &&
         (timeRef.current?.endMin ?? null) === (init.time?.endMin ?? null);
       if (sameTitle && sameColor && sameTime) return;
-      onCommitRef.current(v, colorRef.current, timeRef.current);
+      // Treat unmount-time autosave as implicit acceptance for coach-pending
+      // sessions — matches the click-outside UX so the stripe clears the
+      // moment the user moves on, and subsequent edits autosave normally.
+      onCommitRef.current(v, colorRef.current, timeRef.current, true);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -2616,7 +2619,10 @@ export function PopoverEditor({
           onClose();
         } else {
           settledRef.current = true;
-          onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
+          // Click-outside on a coach-pending session implicitly accepts the
+          // proposal (same end state as Enter / Save): the stripe clears and
+          // later edits behave like any other owner-created session.
+          onCommit(valueRef.current.trim(), colorRef.current, timeRef.current, true);
         }
       }
     };
