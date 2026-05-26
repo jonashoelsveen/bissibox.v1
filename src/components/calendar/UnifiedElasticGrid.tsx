@@ -2263,6 +2263,7 @@ function WeekEventsOverlay({
   onDeleteEvent?: (id: string) => void;
   onSaveSessionNote?: (id: string, note: string) => void;
   onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
+  onAcceptCoachSession?: (id: string) => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }) {
