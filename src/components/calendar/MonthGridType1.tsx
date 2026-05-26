@@ -1924,10 +1924,16 @@ export function MonthGridType1({
             teamId={teamId}
             initialText={popover.initialText}
             initialColor={popover.initialColor ?? (popover.editIdx < 0 && !popover.eventId ? defaultNewColor : null)}
+            initialCategoryId={popover.eventId ? (events.find((e) => e.id === popover.eventId)?.categoryId ?? null) : null}
             isEdit={popover.editIdx >= 0 || !!popover.eventId}
             anchor={popover.rect}
             enableDuration={!!onUpsertEvent}
             readOnly={viewerRole !== "owner"}
+            categoryOwnerId={seat === "individual" ? memberId ?? null : null}
+            onCategoryChange={(selection) => {
+              if (!popover?.eventId) return;
+              onUpsertEvent?.({ id: popover.eventId, categoryId: selection.id ?? undefined, color: selection.color });
+            }}
             initialTime={(() => {
               if (popover.eventId) {
                 const ev = events.find((e) => e.id === popover.eventId);
@@ -1970,6 +1976,7 @@ export function MonthGridType1({
                     id: popover.eventId,
                     title: t,
                     color,
+                    categoryId: events.find((e) => e.id === popover.eventId)?.categoryId,
                   };
                   if (time) {
                     const start = setHM(
@@ -2007,6 +2014,7 @@ export function MonthGridType1({
                   onUpsertEvent({
                     title: t,
                     color,
+                    categoryId: categories.find((c) => c.color.toLowerCase() === (color ?? "").toLowerCase())?.id,
                     startISO: toISOLocal(start),
                     endISO: toISOLocal(end),
                     // If the user explicitly set a time, treat as a timed
