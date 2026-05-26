@@ -2790,6 +2790,17 @@ function WeekEventsOverlay({
                   if (goingIntoMenu) return;
                   scheduleClose();
                 }}
+                onMouseDown={(e) => {
+                  // Prevent the mousedown from bubbling to the underlying
+                  // cell, which would fire beginMark and start a competing
+                  // mark gesture that wipes out the draft tile mid-drag.
+                  // pointerdown's stopPropagation doesn't cover the native
+                  // mousedown — both must be stopped for the drag (and the
+                  // popover's outside-click skip) to work on a draft tile.
+                  if (isGhost) return;
+                  if (appKind === "diary") return;
+                  e.stopPropagation();
+                }}
                 onPointerDown={(e) => {
                   if (isGhost) return;
                   if (appKind === "diary") return;
