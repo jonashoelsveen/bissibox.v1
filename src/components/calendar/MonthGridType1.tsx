@@ -2616,10 +2616,12 @@ export function PopoverEditor({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
+        settledRef.current = true;
         onClose();
       } else if (e.key === "Enter" && !e.shiftKey) {
         if (readOnly) {
           e.preventDefault();
+          settledRef.current = true;
           onClose();
           return;
         }
@@ -2633,6 +2635,7 @@ export function PopoverEditor({
         // Without this, timeRef holds the stale time and the chip order
         // doesn't update until the user clicks outside.
         setTimeout(() => {
+          settledRef.current = true;
           onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
         }, 0);
       }
