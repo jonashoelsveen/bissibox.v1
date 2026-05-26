@@ -18,6 +18,7 @@ import {
 } from "@/lib/library-settings";
 import { MapSettingsPanel } from "@/components/settings/MapSettingsPanel";
 import { CoachesPanel, type CoachesPanelHandle } from "@/components/settings/CoachesPanel";
+import { ClientsPanel } from "@/components/settings/ClientsPanel";
 import { Footprints, Check, Bike, Dumbbell } from "lucide-react";
 import { SESSION_TILE_DESIGNS, useSessionTileDesign, useDiarySimpleView, type SessionTileDesign, COMBINED_SESSION_TILE_DESIGNS, useCombinedSessionTileDesign, type CombinedSessionTileDesign } from "@/lib/session-tile-design";
 import { Switch } from "@/components/ui/switch";
@@ -101,6 +102,7 @@ type Tab =
   | "diary"
   | "library"
   | "coaches"
+  | "clients"
   | "connectors"
   | "system"
   | "appearance"
@@ -215,7 +217,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   }, [user, activeEntityId]);
 
   useEffect(() => {
-    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "diary" || tab === "library" || tab === "coaches" || tab === "connectors")) {
+    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "diary" || tab === "library" || tab === "coaches" || tab === "clients" || tab === "connectors")) {
       setTab("entity-profile");
     }
     if (
@@ -351,6 +353,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       case "diary": return "Diary";
       case "library": return "Photos";
       case "coaches": return "Coaches";
+      case "clients": return "Clients";
       case "connectors": return "Connectors";
       case "system": return "System";
       case "appearance": return "Appearance";
@@ -382,6 +385,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
     "library",
     "profiles",
     "coaches",
+    "clients",
     "connectors",
     "system",
     "appearance",
@@ -575,6 +579,8 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       {tab === "coaches" && !isTeamMode && (
         <CoachesPanel ref={coachesRef} onDirtyChange={setCoachesDirty} />
       )}
+
+      {tab === "clients" && !isTeamMode && <ClientsPanel />}
 
       {tab === "connectors" && <ConnectorsPanel />}
 
