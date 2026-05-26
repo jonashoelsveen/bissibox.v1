@@ -542,6 +542,7 @@ export function MonthGridType1({
   onUpsertEvent,
   onMoveEvent,
   onDeleteEvent,
+  onAcceptCoachSession,
   onReorderEvents,
   onWeekClick,
   selectedDate,
