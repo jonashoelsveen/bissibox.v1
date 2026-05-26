@@ -490,19 +490,6 @@ export function UnifiedElasticGrid({
     [calId, data, mode],
   );
 
-  const closePopover = useCallback(() => {
-    // If the popover was bound to a freshly-mark-created placeholder event
-    // that the user never titled, discard it so closing via Escape (or any
-    // path that doesn't go through onCommit's empty-title branch) doesn't
-    // leave an orphan untitled tile behind.
-    const p = popoverRef.current;
-    if (p?.eventId) {
-      const ev = eventsRef.current.find((e) => e.id === p.eventId);
-      if (ev && !ev.title.trim()) onDeleteEvent(p.eventId);
-    }
-    setPopover(null);
-  }, [onDeleteEvent]);
-
   // If the currently-open popover is bound to an event with an empty title
   // (i.e. a freshly mark-created tile the user never typed into), delete
   // that event. Used when transitioning to another tile (click or drag)
@@ -519,6 +506,15 @@ export function UnifiedElasticGrid({
       onDeleteEvent(p.eventId);
     }
   }, [onDeleteEvent]);
+
+  const closePopover = useCallback(() => {
+    // Safety net: if the popover was bound to a freshly-mark-created
+    // placeholder event that the user never titled, discard it so closing
+    // via Escape (or any path that doesn't go through onCommit's empty-
+    // title branch) doesn't leave an orphan untitled tile behind.
+    discardEmptyPopoverEvent();
+    setPopover(null);
+  }, [discardEmptyPopoverEvent]);
 
   // Clear the mark-range when mousing down anywhere that is not a marked
   // cell, not the plus button, and not the popover itself.
