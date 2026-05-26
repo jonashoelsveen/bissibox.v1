@@ -411,7 +411,8 @@ export function UnifiedElasticGrid({
   const moveSelection = useCallback(
     (dx: number, dy: number) => {
       if (!selected) return;
-      let { year: y, month, day, session } = selected;
+      const { year: y } = selected;
+      let { month, day, session } = selected;
       if (dy !== 0) {
         let rank = day * 2 + session + dy;
         const dim = daysInMonth(y, month);
@@ -2214,8 +2215,6 @@ function DayCellPair(props: DayCellPairProps) {
             )}
 
             {/* Selection outline removed — keep marking subtle (gray fill only) */}
-
-            {false && showCompact && null}
 
             {showRich && (
               <div
