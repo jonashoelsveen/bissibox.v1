@@ -72,16 +72,16 @@ function writeJSON<T>(key: string, value: T) {
 function hasCellPayload(cell: Partial<CellData>) {
   return Boolean(
     cell.text ||
-      cell.bold ||
-      cell.italic ||
-      cell.underline ||
-      cell.color ||
-      cell.duration ||
-      cell.description ||
-      cell.layer ||
-      cell.groupId ||
-      cell.locationId ||
-      cell.courseId,
+    cell.bold ||
+    cell.italic ||
+    cell.underline ||
+    cell.color ||
+    cell.duration ||
+    cell.description ||
+    cell.layer ||
+    cell.groupId ||
+    cell.locationId ||
+    cell.courseId,
   );
 }
 
@@ -118,8 +118,11 @@ function sanitizeLoadedCells(raw: Record<string, CellData> | unknown) {
           : undefined,
       groupId: typeof cell.groupId === "string" || cell.groupId === null ? cell.groupId : undefined,
       locationId:
-        typeof cell.locationId === "string" || cell.locationId === null ? cell.locationId : undefined,
-      courseId: typeof cell.courseId === "string" || cell.courseId === null ? cell.courseId : undefined,
+        typeof cell.locationId === "string" || cell.locationId === null
+          ? cell.locationId
+          : undefined,
+      courseId:
+        typeof cell.courseId === "string" || cell.courseId === null ? cell.courseId : undefined,
     };
 
     if (stripLegacySession || next.id !== cell.id) changed = true;
@@ -166,7 +169,10 @@ export function useYearStore(calId: string, defaultTitle: string) {
   }, [calId, defaultTitle]);
 
   const persist = useCallback(
-    (next: Record<string, CellData>, opts?: { history?: boolean; prev?: Record<string, CellData> }) => {
+    (
+      next: Record<string, CellData>,
+      opts?: { history?: boolean; prev?: Record<string, CellData> },
+    ) => {
       const prevSnapshot = opts?.prev ?? dataRef.current;
       if (opts?.history !== false) {
         pastRef.current.push(prevSnapshot);
@@ -294,7 +300,18 @@ export function useYearStore(calId: string, defaultTitle: string) {
     [calId, persist],
   );
 
-  return { data, meta, upsertCell, upsertCells, fillRange, setMeta: persistMeta, undo, redo, canUndo, canRedo };
+  return {
+    data,
+    meta,
+    upsertCell,
+    upsertCells,
+    fillRange,
+    setMeta: persistMeta,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  };
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -319,11 +336,11 @@ export type DiaryActivity = "running" | "cycling" | "swimming" | "strength" | "x
 
 export interface CalendarEvent {
   id: string;
-  startISO: string;       // local ISO, e.g. "2026-05-04T09:30:00"
-  endISO: string;         // local ISO
+  startISO: string; // local ISO, e.g. "2026-05-04T09:30:00"
+  endISO: string; // local ISO
   allDay: boolean;
   title: string;
-  color: string | null;   // hex
+  color: string | null; // hex
   category?: IndividualCategory;
   categoryId?: string | null;
   description?: string;
@@ -357,14 +374,23 @@ export interface CalendarEvent {
 //                    (user_id = uuid, entity_id IS NULL)
 // ──────────────────────────────────────────────────────────────────────
 
-interface ScopeUser    { kind: "user";   userId: string }
-interface ScopeTeam    { kind: "team";   entityId: string }
-interface ScopeClient  { kind: "client"; clientId: string }
+interface ScopeUser {
+  kind: "user";
+  userId: string;
+}
+interface ScopeTeam {
+  kind: "team";
+  entityId: string;
+}
+interface ScopeClient {
+  kind: "client";
+  clientId: string;
+}
 type Scope = ScopeUser | ScopeTeam | ScopeClient | null;
 
 function parseScope(calId: string): Scope {
-  if (calId.startsWith("user:"))   return { kind: "user",   userId:   calId.slice(5) };
-  if (calId.startsWith("team:"))   return { kind: "team",   entityId: calId.slice(5) };
+  if (calId.startsWith("user:")) return { kind: "user", userId: calId.slice(5) };
+  if (calId.startsWith("team:")) return { kind: "team", entityId: calId.slice(5) };
   if (calId.startsWith("client:")) return { kind: "client", clientId: calId.slice(7) };
   return null;
 }
@@ -446,11 +472,7 @@ function rowToEvent(r: Row): CalendarEvent {
   };
 }
 
-function eventToRow(
-  e: CalendarEvent,
-  scope: Scope,
-  coachUserId: string | null,
-): Partial<Row> {
+function eventToRow(e: CalendarEvent, scope: Scope, coachUserId: string | null): Partial<Row> {
   const base: Partial<Row> = {
     id: e.id,
     starts_at: isoToDb(e.startISO),
@@ -518,9 +540,7 @@ export function useEventStore(calId: string) {
       }
     }
 
-    return rows
-      .filter((row) => !tombstones.has(row.id))
-      .map(rowToEvent);
+    return rows.filter((row) => !tombstones.has(row.id)).map(rowToEvent);
   }, []);
 
   // Keep the current auth uid in sync so coach-created client sessions never
@@ -587,19 +607,16 @@ export function useEventStore(calId: string) {
     };
   }, [calId, materializeRows, scope]);
 
-  const applyLocal = useCallback(
-    (next: CalendarEvent[], opts?: { history?: boolean }) => {
-      if (opts?.history !== false) {
-        pastRef.current.push(eventsRef.current);
-        if (pastRef.current.length > 100) pastRef.current.shift();
-        futureRef.current = [];
-        bump();
-      }
-      eventsRef.current = next;
-      setEvents(next);
-    },
-    [],
-  );
+  const applyLocal = useCallback((next: CalendarEvent[], opts?: { history?: boolean }) => {
+    if (opts?.history !== false) {
+      pastRef.current.push(eventsRef.current);
+      if (pastRef.current.length > 100) pastRef.current.shift();
+      futureRef.current = [];
+      bump();
+    }
+    eventsRef.current = next;
+    setEvents(next);
+  }, []);
 
   const upsertEvent = useCallback(
     (
@@ -622,8 +639,7 @@ export function useEventStore(calId: string) {
       if (
         hasIdInPatch &&
         !existing &&
-        (!(patch as Partial<CalendarEvent>).startISO ||
-          !(patch as Partial<CalendarEvent>).endISO)
+        (!(patch as Partial<CalendarEvent>).startISO || !(patch as Partial<CalendarEvent>).endISO)
       ) {
         return null as unknown as CalendarEvent;
       }
@@ -639,9 +655,7 @@ export function useEventStore(calId: string) {
         id,
       };
       if (!existing && merged.sortIndex == null) merged.sortIndex = Date.now();
-      const next = existing
-        ? current.map((e) => (e.id === id ? merged : e))
-        : [...current, merged];
+      const next = existing ? current.map((e) => (e.id === id ? merged : e)) : [...current, merged];
       applyLocal(next);
 
       if (scope) {
@@ -660,21 +674,29 @@ export function useEventStore(calId: string) {
             .then(({ error }) => {
               if (error) console.error("[calendar_sessions upsert]", error);
               if (pendingDeleteIdsRef.current.has(merged.id)) {
-                return supabase.from("calendar_sessions").delete().eq("id", merged.id).then(({ error: deleteError }) => {
-                  if (deleteError) console.error("[calendar_sessions cleanup delete]", deleteError);
-                });
+                return supabase
+                  .from("calendar_sessions")
+                  .delete()
+                  .eq("id", merged.id)
+                  .then(({ error: deleteError }) => {
+                    if (deleteError)
+                      console.error("[calendar_sessions cleanup delete]", deleteError);
+                  });
               }
             }),
         );
-        void writePromise.then(() => {
-          if (pendingWriteByIdRef.current.get(merged.id) === writePromise) {
-            pendingWriteByIdRef.current.delete(merged.id);
-          }
-        }, () => {
+        void writePromise.then(
+          () => {
             if (pendingWriteByIdRef.current.get(merged.id) === writePromise) {
               pendingWriteByIdRef.current.delete(merged.id);
             }
-          });
+          },
+          () => {
+            if (pendingWriteByIdRef.current.get(merged.id) === writePromise) {
+              pendingWriteByIdRef.current.delete(merged.id);
+            }
+          },
+        );
         pendingWriteByIdRef.current.set(merged.id, writePromise);
       }
       return merged;
@@ -741,11 +763,14 @@ export function useEventStore(calId: string) {
       applyLocal(next);
       const pendingWrite = pendingWriteByIdRef.current.get(id);
       if (pendingWrite) {
-        void pendingWrite.then(() => {
-          void supabase.from("calendar_sessions").delete().eq("id", id);
-        }, () => {
-          void supabase.from("calendar_sessions").delete().eq("id", id);
-        });
+        void pendingWrite.then(
+          () => {
+            void supabase.from("calendar_sessions").delete().eq("id", id);
+          },
+          () => {
+            void supabase.from("calendar_sessions").delete().eq("id", id);
+          },
+        );
         return;
       }
       void supabase.from("calendar_sessions").delete().eq("id", id);
@@ -757,14 +782,9 @@ export function useEventStore(calId: string) {
   const acceptCoachSession = useCallback(
     (id: string) => {
       const current = eventsRef.current;
-      const next = current.map((e) =>
-        e.id === id ? { ...e, coachPending: false } : e,
-      );
+      const next = current.map((e) => (e.id === id ? { ...e, coachPending: false } : e));
       applyLocal(next);
-      void supabase
-        .from("calendar_sessions")
-        .update({ coach_pending: false })
-        .eq("id", id);
+      void supabase.from("calendar_sessions").update({ coach_pending: false }).eq("id", id);
     },
     [applyLocal],
   );
