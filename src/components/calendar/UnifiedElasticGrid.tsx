@@ -1331,12 +1331,21 @@ export function UnifiedElasticGrid({
                     closePopover();
                   }}
                   onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
-                    const ev = events.find((e) => e.id === id);
+                    const ev = getEventById(id);
                     if (!ev) return;
                     // Apply the new time/date immediately — no save step.
                     const newStart = setHM(newDate, Math.floor(newStartMin / 60), newStartMin % 60);
                     const newEnd = addMinutes(newStart, durationMin);
-                    onMoveEvent(id, { startISO: toISOLocal(newStart), endISO: toISOLocal(newEnd) });
+                    if (draftEventRef.current?.id === id) {
+                      setDraftEvent({
+                        ...ev,
+                        startISO: toISOLocal(newStart),
+                        endISO: toISOLocal(newEnd),
+                        allDay: false,
+                      });
+                    } else {
+                      onMoveEvent(id, { startISO: toISOLocal(newStart), endISO: toISOLocal(newEnd) });
+                    }
                     // Open the regular edit popover anchored next to the moved tile.
                     requestAnimationFrame(() => {
                       const el = document.querySelector<HTMLElement>(
@@ -1365,7 +1374,13 @@ export function UnifiedElasticGrid({
                   onSaveSessionNote={(id, note) =>
                     onUpsertEvent({ id, sessionNote: note || undefined })
                   }
-                  onUpsertSession={(patch) => onUpsertEvent(patch)}
+                  onUpsertSession={(patch) => {
+                    if (draftEventRef.current?.id === patch.id) {
+                      setDraftEvent({ ...draftEventRef.current, ...patch });
+                    } else {
+                      onUpsertEvent(patch);
+                    }
+                  }}
                   onAcceptCoachSession={onAcceptCoachSession}
                   memberId={memberId}
                   viewerRole={viewerRole}
