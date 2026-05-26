@@ -138,6 +138,19 @@ export function SessionDetailsContainer({
             }
           : undefined
       }
+      isCoachPending={!!ev.coachPending}
+      onAccept={
+        onAccept
+          ? (v) => {
+              // Persist any in-progress edits (title, activity, time, etc.)
+              // before flipping coach_pending off so the client's accepted
+              // copy reflects exactly what's in the panel right now.
+              onUpsert(buildPatch(v));
+              onAccept();
+              onClose();
+            }
+          : undefined
+      }
     />
   );
 }
