@@ -14,6 +14,7 @@ import {
   Pencil,
   Copy,
   Trash2,
+  Users,
 } from "lucide-react";
 
 export type ColorValue = string;
