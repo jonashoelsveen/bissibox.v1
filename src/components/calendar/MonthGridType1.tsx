@@ -268,6 +268,7 @@ function DiaryMonthReorderTile({
       ].join(" ")}
       style={{ height, background: bg, color: isActive ? "#fff" : undefined }}
       title={ev.title}
+      data-coach-pending={ev.coachPending ? "1" : undefined}
     >
       <span className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: accent }} />
       {tileDesign === "stacked" ? (
