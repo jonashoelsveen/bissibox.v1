@@ -24,15 +24,17 @@ export type CategoryKind = "calendar" | "diary_activity" | "diary_strava";
  * `kind` switches between calendar categories (default) and diary-specific
  * lists (diary_activity, diary_strava) stored in the same table.
  */
-export function useUserCategories(opts?: { teamId?: string | null; kind?: CategoryKind }) {
+export function useUserCategories(opts?: { teamId?: string | null; ownerId?: string | null; kind?: CategoryKind }) {
   const teamId = opts?.teamId ?? null;
+  const ownerId = opts?.ownerId ?? null;
   const kind: CategoryKind = opts?.kind ?? "calendar";
   const { user } = useAuth();
   const [categories, setCategories] = useState<UserCategory[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const scopeUserId = ownerId ?? user?.id ?? null;
 
   const load = useCallback(async () => {
-    if (!user) {
+    if (!user || (!teamId && !scopeUserId)) {
       setCategories([]);
       setLoaded(true);
       return;
@@ -42,22 +44,22 @@ export function useUserCategories(opts?: { teamId?: string | null; kind?: Catego
       .select("id,name,color,pinned,hidden,sort_order,is_default,default_key")
       .eq("kind", kind);
     if (teamId) q = q.eq("team_id", teamId);
-    else q = q.is("team_id", null).eq("user_id", user.id);
+    else q = q.is("team_id", null).eq("user_id", scopeUserId!);
     const { data } = await q
       .order("pinned", { ascending: false })
       .order("sort_order", { ascending: true });
     setCategories((data ?? []) as UserCategory[]);
     setLoaded(true);
-  }, [user, teamId, kind]);
+  }, [user, teamId, kind, scopeUserId]);
 
   useEffect(() => {
     void load();
-    if (!user) return;
-    const filter = teamId ? `team_id=eq.${teamId}` : `user_id=eq.${user.id}`;
+    if (!user || (!teamId && !scopeUserId)) return;
+    const filter = teamId ? `team_id=eq.${teamId}` : `user_id=eq.${scopeUserId}`;
     const matchesScope = (row: Partial<UserCategory> & { team_id?: string | null; user_id?: string; kind?: string }) => {
       if (row.kind && row.kind !== kind) return false;
       if (teamId) return row.team_id === teamId;
-      return row.team_id == null && row.user_id === user.id;
+      return row.team_id == null && row.user_id === scopeUserId;
     };
     const sortRows = (rows: UserCategory[]) =>
       [...rows].sort((a, b) => {
@@ -65,7 +67,7 @@ export function useUserCategories(opts?: { teamId?: string | null; kind?: Catego
         return a.sort_order - b.sort_order;
       });
     const ch = supabase
-      .channel(`calendar-categories-${kind}-${teamId ?? user.id}-${Math.random().toString(36).slice(2)}`)
+      .channel(`calendar-categories-${kind}-${teamId ?? scopeUserId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "calendar_categories", filter },
@@ -100,7 +102,7 @@ export function useUserCategories(opts?: { teamId?: string | null; kind?: Catego
         },
       )
       .subscribe();
-    const scopeKey = teamId ? `team:${teamId}` : `user:${user.id}`;
+    const scopeKey = teamId ? `team:${teamId}` : `user:${scopeUserId}`;
     const onReorder = (e: Event) => {
       const detail = (e as CustomEvent).detail as {
         scopeKey: string;
@@ -115,7 +117,7 @@ export function useUserCategories(opts?: { teamId?: string | null; kind?: Catego
       void supabase.removeChannel(ch);
       window.removeEventListener("calendar-categories-reorder", onReorder);
     };
-  }, [load, user, teamId, kind]);
+  }, [load, user, teamId, kind, scopeUserId]);
 
 
   const create = useCallback(

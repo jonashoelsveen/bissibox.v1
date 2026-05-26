@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@/lib/auth";
 
 export type Session = 0 | 1; // 0 = upper / "AM", 1 = lower / "PM"
 
@@ -495,6 +496,7 @@ function eventToRow(
 
 export function useEventStore(calId: string) {
   const scope = useMemo(() => parseScope(calId), [calId]);
+  const { user } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const eventsRef = useRef<CalendarEvent[]>([]);
   const pastRef = useRef<CalendarEvent[][]>([]);
@@ -503,14 +505,11 @@ export function useEventStore(calId: string) {
   const [, forceTick] = useState(0);
   const bump = () => forceTick((n) => n + 1);
 
-  // Track the current auth uid for coach-mode writes.
+  // Keep the current auth uid in sync so coach-created client sessions never
+  // race an async auth lookup and lose `created_by_coach_id` on insert.
   useEffect(() => {
-    let cancelled = false;
-    void supabase.auth.getUser().then(({ data }) => {
-      if (!cancelled) coachUserIdRef.current = data.user?.id ?? null;
-    });
-    return () => { cancelled = true; };
-  }, []);
+    coachUserIdRef.current = user?.id ?? null;
+  }, [user?.id]);
 
   // Initial load + realtime subscription.
   useEffect(() => {

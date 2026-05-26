@@ -41,6 +41,8 @@ import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, isoWeekNumber } f
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
 import { DayNoteButton } from "./DayNoteButton";
 import { useUserCategories } from "@/hooks/useUserCategories";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { useMonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
 import {
@@ -676,6 +678,7 @@ export function MonthGridType1({
     editIdx: number;
     initialText: string;
     initialColor: string | null;
+    categoryId?: string | null;
     /** When set, this popover is editing a unified CalendarEvent. */
     eventId?: string;
   } | null>(null);
@@ -692,6 +695,7 @@ export function MonthGridType1({
         editIdx: -1,
         initialText: "",
         initialColor: null,
+        categoryId: null,
       });
     },
     [days],
@@ -715,6 +719,7 @@ export function MonthGridType1({
         editIdx: idx,
         initialText: text,
         initialColor: color,
+        categoryId: null,
       });
     },
     [cellAnchorRect],
@@ -729,6 +734,7 @@ export function MonthGridType1({
         editIdx: -1,
         initialText: ev.title,
         initialColor: ev.color,
+        categoryId: ev.categoryId ?? null,
         eventId: ev.id,
       });
     },
@@ -1924,10 +1930,17 @@ export function MonthGridType1({
             teamId={teamId}
             initialText={popover.initialText}
             initialColor={popover.initialColor ?? (popover.editIdx < 0 && !popover.eventId ? defaultNewColor : null)}
+            initialCategoryId={popover.eventId ? (events.find((e) => e.id === popover.eventId)?.categoryId ?? null) : null}
             isEdit={popover.editIdx >= 0 || !!popover.eventId}
             anchor={popover.rect}
             enableDuration={!!onUpsertEvent}
             readOnly={viewerRole !== "owner"}
+            categoryOwnerId={seat === "individual" ? memberId ?? null : null}
+            onCategoryChange={(selection) => {
+              setPopover((prev) => (prev ? { ...prev, categoryId: selection.id ?? null, initialColor: selection.color } : prev));
+              if (!popover?.eventId) return;
+              onUpsertEvent?.({ id: popover.eventId, categoryId: selection.id ?? undefined, color: selection.color });
+            }}
             initialTime={(() => {
               if (popover.eventId) {
                 const ev = events.find((e) => e.id === popover.eventId);
@@ -1970,6 +1983,7 @@ export function MonthGridType1({
                     id: popover.eventId,
                     title: t,
                     color,
+                    categoryId: popover.categoryId ?? events.find((e) => e.id === popover.eventId)?.categoryId,
                   };
                   if (time) {
                     const start = setHM(
@@ -2007,6 +2021,7 @@ export function MonthGridType1({
                   onUpsertEvent({
                     title: t,
                     color,
+                    categoryId: popover.categoryId ?? undefined,
                     startISO: toISOLocal(start),
                     endISO: toISOLocal(end),
                     // If the user explicitly set a time, treat as a timed
@@ -2180,6 +2195,7 @@ export interface PopoverEditorProps {
   seat: CalendarSeat;
   initialText: string;
   initialColor: string | null;
+  initialCategoryId?: string | null;
   isEdit: boolean;
   anchor: DOMRect;
   /** Optional initial time range, in minutes from midnight. */
@@ -2204,6 +2220,7 @@ export interface PopoverEditorProps {
    * so the session tile reflects the selection in real time.
    */
   onColorChange?: (color: string | null) => void;
+  onCategoryChange?: (selection: CategorySelection) => void;
   /**
    * When true, the popover renders as a view-only panel: the title input is
    * not focusable/editable, the category dropdown and time wheel are
@@ -2216,6 +2233,8 @@ export interface PopoverEditorProps {
   placeholder?: string;
   /** Active team id (admin seat only). Scopes the category dropdown list. */
   teamId?: string | null;
+  /** Optional personal-category owner when viewing/editing another user's calendar. */
+  categoryOwnerId?: string | null;
 }
 
 // Category defaults — color is the source of truth.
@@ -2472,6 +2491,7 @@ export function PopoverEditor({
   seat,
   initialText,
   initialColor,
+  initialCategoryId = null,
   isEdit,
   anchor,
   initialTime = null,
@@ -2480,9 +2500,11 @@ export function PopoverEditor({
   onCommit,
   onTimeChange,
   onColorChange,
+  onCategoryChange,
   readOnly = false,
   placeholder = "f.eks. Intervaller 5×4min",
   teamId = null,
+  categoryOwnerId = null,
 }: PopoverEditorProps) {
   const [value, setValue] = useState(initialText);
   // Resolve initial color according to seat
@@ -2655,10 +2677,13 @@ export function PopoverEditor({
             <CategoryDropdownRow
               seat={seat}
               color={color}
+              initialCategoryId={initialCategoryId}
               adminCategory={adminCategory}
               onSetColor={setColor}
+              onSelectionChange={onCategoryChange}
               readOnly={readOnly}
               teamId={teamId}
+              ownerId={categoryOwnerId}
             />
           </div>
 
@@ -2692,32 +2717,71 @@ export function PopoverEditor({
   );
 }
 
+export type CategorySelection = {
+  id: string | null;
+  color: string | null;
+  name: string | null;
+};
+
 function CategoryDropdownRow({
   seat,
   color,
+  initialCategoryId = null,
   onSetColor,
+  onSelectionChange,
   readOnly = false,
   teamId = null,
+  ownerId = null,
 }: {
   seat: CalendarSeat;
   color: string | null;
+  initialCategoryId?: string | null;
   /** Legacy admin enum kept for prop compatibility; no longer used. */
   adminCategory?: AdminCategory;
   onSetColor: (c: string) => void;
+  onSelectionChange?: (selection: CategorySelection) => void;
   readOnly?: boolean;
   teamId?: string | null;
+  ownerId?: string | null;
 }) {
+  const { user } = useAuth();
   // Admin seat: scope to the team's categories (same list shown in the
   // left side-panel under the entity name header). Individual seat:
   // user-personal categories. Either way the dropdown reflects the
   // tab-order in the side panel, and the top tab is the default.
   const { categories } = useUserCategories(
-    seat === "admin" ? { teamId } : undefined,
+    seat === "admin" ? { teamId } : { ownerId },
   );
+  const [grantedIds, setGrantedIds] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    if (!ownerId || !user || ownerId === user.id) {
+      setGrantedIds(null);
+      return;
+    }
+    let cancelled = false;
+    void supabase
+      .from("calendar_category_coach_access")
+      .select("category_id")
+      .eq("owner_id", ownerId)
+      .eq("coach_user_id", user.id)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setGrantedIds(new Set((data ?? []).map((row) => row.category_id).filter(Boolean)));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerId, user]);
+
+  const availableCategories = useMemo(() => {
+    if (!ownerId || !user || ownerId === user.id || grantedIds === null) return categories;
+    return categories.filter((c) => grantedIds.has(c.id));
+  }, [categories, grantedIds, ownerId, user]);
 
   const lcColor = (color ?? "").toLowerCase();
   const initialId = useMemo(
-    () => categories.find((c) => c.color.toLowerCase() === lcColor)?.id ?? categories[0]?.id ?? "",
+    () => initialCategoryId ?? availableCategories.find((c) => c.color.toLowerCase() === lcColor)?.id ?? availableCategories[0]?.id ?? "",
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -2726,28 +2790,34 @@ function CategoryDropdownRow({
   // Hydrate selection once the list loads, preferring a color match so we
   // don't surprise the user by reassigning their existing color.
   useEffect(() => {
-    if (!selectedId && categories.length > 0) {
-      const fromColor = categories.find((c) => c.color.toLowerCase() === lcColor)?.id;
-      const id = fromColor ?? categories[0].id;
+    if (!selectedId && availableCategories.length > 0) {
+      const fromColor = initialCategoryId ?? availableCategories.find((c) => c.color.toLowerCase() === lcColor)?.id;
+      const id = fromColor ?? availableCategories[0].id;
       setSelectedId(id);
-      const cat = categories.find((c) => c.id === id);
-      if (cat && cat.color.toLowerCase() !== lcColor) onSetColor(cat.color);
+      const cat = availableCategories.find((c) => c.id === id);
+      if (cat) {
+        onSelectionChange?.({ id: cat.id, color: cat.color, name: cat.name });
+        if (cat.color.toLowerCase() !== lcColor) onSetColor(cat.color);
+      }
     }
-  }, [categories, lcColor, selectedId, onSetColor]);
+  }, [availableCategories, initialCategoryId, lcColor, selectedId, onSelectionChange, onSetColor]);
 
   // If the popover's current color matches a different category than the
   // currently-selected id (e.g. parent pushed a new default color), realign
   // the selection so the dropdown label matches the visible tile color.
   useEffect(() => {
-    if (!categories.length) return;
-    const matchByColor = categories.find((c) => c.color.toLowerCase() === lcColor);
+    if (!availableCategories.length) return;
+    const matchByColor = availableCategories.find((c) => c.color.toLowerCase() === lcColor);
     if (matchByColor && matchByColor.id !== selectedId) {
       setSelectedId(matchByColor.id);
     }
-  }, [lcColor, categories, selectedId]);
+  }, [lcColor, availableCategories, selectedId]);
 
-  const selectedCat = categories.find((c) => c.id === selectedId);
+  const selectedCat = availableCategories.find((c) => c.id === selectedId);
   useEffect(() => {
+    if (selectedCat) {
+      onSelectionChange?.({ id: selectedCat.id, color: selectedCat.color, name: selectedCat.name });
+    }
     if (selectedCat && selectedCat.color.toLowerCase() !== lcColor) {
       onSetColor(selectedCat.color);
     }
@@ -2772,12 +2842,15 @@ function CategoryDropdownRow({
           onChange={(e) => {
             const id = e.target.value;
             setSelectedId(id);
-            const cat = categories.find((c) => c.id === id);
-            if (cat) onSetColor(cat.color);
+            const cat = availableCategories.find((c) => c.id === id);
+            if (cat) {
+              onSetColor(cat.color);
+              onSelectionChange?.({ id: cat.id, color: cat.color, name: cat.name });
+            }
           }}
           className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
         >
-          {categories.map((c) => (
+          {availableCategories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>

@@ -31,6 +31,7 @@ import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, Session, CalendarEvent } from "./yearStore";
 import { makeCellId } from "./yearStore";
 import { MonthGridType1, PopoverEditor, splitColor, joinColor, iconForColor, contrastTextOn, categoryFromColor, CAT_TRAINING_COLOR } from "./MonthGridType1";
+import type { CategorySelection } from "./MonthGridType1";
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 import { DayNoteButton } from "./DayNoteButton";
 import { SessionHoverMenu } from "./SessionHoverMenu";
@@ -439,6 +440,8 @@ export function UnifiedElasticGrid({
     /** Pending unsaved drag — date/time to apply on Save. */
     pendingDate?: Date;
     pendingTime?: { startMin: number; endMin: number };
+    categoryId?: string | null;
+    categoryName?: string | null;
     /** Override for the input placeholder (e.g. "New session" for fresh mark). */
     placeholder?: string;
   } | null>(null);
@@ -1481,11 +1484,13 @@ export function UnifiedElasticGrid({
                   : (meCategories[0]?.color ?? null))
               : null)
           }
+          initialCategoryId={popover.categoryId ?? null}
           isEdit={popover.isEdit}
           anchor={popover.rect}
           enableDuration={mode.kind === "year"}
           readOnly={viewerRole !== "owner"}
           placeholder={popover.placeholder}
+          categoryOwnerId={seat === "individual" ? memberId ?? null : null}
           initialTime={(() => {
             if (mode.kind !== "year") return null;
             if (popover.pendingTime) return popover.pendingTime;
@@ -1517,6 +1522,18 @@ export function UnifiedElasticGrid({
             if (popover.eventId && c) {
               onUpsertEvent({ id: popover.eventId, color: c });
             }
+          }}
+          onCategoryChange={(selection: CategorySelection) => {
+            setPopover((p) =>
+              p
+                ? {
+                    ...p,
+                    categoryId: selection.id,
+                    categoryName: selection.name,
+                    initialColor: selection.color ?? p.initialColor,
+                  }
+                : p,
+            );
           }}
           onTimeChange={(t) => {
             if (mode.kind !== "year" || !t) return;
@@ -1593,6 +1610,8 @@ export function UnifiedElasticGrid({
                       id: popover.eventId,
                       title: t,
                       color,
+                      categoryId: popover.categoryId ?? undefined,
+                      category: categoryFromColor(color),
                       ...(markRange || time || popover.pendingDate || popover.pendingTime ? { startISO, endISO } : {}),
                       allDay: false,
                     });
@@ -1601,6 +1620,7 @@ export function UnifiedElasticGrid({
                   onUpsertEvent({
                     title: t,
                     color,
+                    categoryId: popover.categoryId ?? undefined,
                     startISO,
                     endISO,
                     allDay: false,
