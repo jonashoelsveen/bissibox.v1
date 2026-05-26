@@ -202,38 +202,12 @@ function YearCalendarViewInner({
     return s;
   }, [userCats]);
 
-  // Coach-on-client filter: when the viewer is NOT the member owner and a
-  // memberId is provided (Clients page), restrict visible personal ("me:*")
-  // categories to the colors the owner has explicitly granted this coach.
-  // Owner's own view is unchanged (null = no restriction).
+  // Coach viewing a client: no longer per-category gated — the coach
+  // sees every event in the client's personal calendar. Local hide toggles
+  // are applied via `hiddenColors` passed from the parent.
   const { user } = useAuth();
   const isCoachViewer =
     !!memberId && !!user && memberId !== user.id && appKind === "calendar";
-  const [grantedMeColors, setGrantedMeColors] = useState<Set<string> | null>(null);
-  useEffect(() => {
-    if (!isCoachViewer) {
-      setGrantedMeColors(null);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      const { data } = await supabase
-        .from("calendar_category_coach_access")
-        .select("calendar_categories!inner(color)")
-        .eq("coach_user_id", user!.id)
-        .eq("owner_id", memberId!);
-      if (cancelled) return;
-      const set = new Set<string>();
-      for (const row of (data ?? []) as Array<{ calendar_categories: { color: string } | null }>) {
-        const color = row.calendar_categories?.color;
-        if (color) set.add(`me:${color.toLowerCase()}`);
-      }
-      setGrantedMeColors(set);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isCoachViewer, user, memberId]);
 
   const mergedEvents = useMemo(() => {
     const stravaForDiary = appKind === "diary" ? stravaEvents : [];
@@ -254,30 +228,24 @@ function YearCalendarViewInner({
       ? [...localOnly, ...mergedStrava, ...ghostEvents]
       : [...localOnly, ...mergedStrava];
 
-    // Coach view: hide every personal ("me:*") event whose color is not in
-    // the granted set. While the grants are still loading (null), hide all
-    // me:* events to avoid flashing private data.
-    const passesCoachGate = (key: string) => {
-      if (!isCoachViewer) return true;
-      if (!key.startsWith("me:")) return true;
-      if (!grantedMeColors) return false;
-      return grantedMeColors.has(key);
+    const passesLocalHide = (e: CalendarEvent) => {
+      if (!hiddenColors || hiddenColors.size === 0) return true;
+      const c = (e.color ?? "").toLowerCase();
+      return !hiddenColors.has(c);
     };
 
     if (!visibleCategories) {
-      if (!isCoachViewer) return base;
-      return base.filter((e) => passesCoachGate(categoryKeyFromColor(e.color)));
+      if (!isCoachViewer) return base.filter(passesLocalHide);
+      return base.filter(passesLocalHide);
     }
     return base.filter((e) => {
+      if (!passesLocalHide(e)) return false;
       if (e.diaryType === "training") return visibleCategories.has("ind:training");
       const key = categoryKeyFromColor(e.color);
-      if (!passesCoachGate(key)) return false;
-      // For user ("me:*") categories, default to visible unless the user has
-      // explicitly hidden that color via the side panel.
       if (key.startsWith("me:")) return !hiddenMeColors.has(key);
       return visibleCategories.has(key);
     });
-  }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind, hiddenMeColors, isCoachViewer, grantedMeColors]);
+  }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind, hiddenMeColors, isCoachViewer, hiddenColors]);
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
