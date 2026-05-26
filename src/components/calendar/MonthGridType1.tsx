@@ -2643,7 +2643,7 @@ export function PopoverEditor({
         // doesn't update until the user clicks outside.
         setTimeout(() => {
           settledRef.current = true;
-          onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
+          onCommit(valueRef.current.trim(), colorRef.current, timeRef.current, true);
         }, 0);
       }
     };
