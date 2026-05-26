@@ -2180,6 +2180,7 @@ export interface PopoverEditorProps {
   seat: CalendarSeat;
   initialText: string;
   initialColor: string | null;
+  initialCategoryId?: string | null;
   isEdit: boolean;
   anchor: DOMRect;
   /** Optional initial time range, in minutes from midnight. */
@@ -2216,6 +2217,8 @@ export interface PopoverEditorProps {
   placeholder?: string;
   /** Active team id (admin seat only). Scopes the category dropdown list. */
   teamId?: string | null;
+  /** Optional personal-category owner when viewing/editing another user's calendar. */
+  categoryOwnerId?: string | null;
 }
 
 // Category defaults — color is the source of truth.
@@ -2472,6 +2475,7 @@ export function PopoverEditor({
   seat,
   initialText,
   initialColor,
+  initialCategoryId = null,
   isEdit,
   anchor,
   initialTime = null,
@@ -2483,6 +2487,7 @@ export function PopoverEditor({
   readOnly = false,
   placeholder = "f.eks. Intervaller 5×4min",
   teamId = null,
+  categoryOwnerId = null,
 }: PopoverEditorProps) {
   const [value, setValue] = useState(initialText);
   // Resolve initial color according to seat
@@ -2655,10 +2660,12 @@ export function PopoverEditor({
             <CategoryDropdownRow
               seat={seat}
               color={color}
+              initialCategoryId={initialCategoryId}
               adminCategory={adminCategory}
               onSetColor={setColor}
               readOnly={readOnly}
               teamId={teamId}
+              ownerId={categoryOwnerId}
             />
           </div>
 
