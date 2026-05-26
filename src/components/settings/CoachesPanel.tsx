@@ -151,17 +151,15 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
       return;
     }
     setAdding(true);
-    const { error } = await supabase.from("user_coaches").insert({
-      owner_id: user.id,
-      coach_email: email,
-      status: "pending",
+    const { data, error } = await supabase.functions.invoke("coach-invite", {
+      body: { coach_email: email },
     });
     setAdding(false);
-    if (error) {
-      toast.error(error.message);
+    if (error || !data?.ok) {
+      toast.error(error?.message || data?.error || "Could not send invitation.");
       return;
     }
-    toast.success("Invitation sent.");
+    toast.success(`Invitation sent to ${email}.`);
     setAddEmail("");
     setAddOpen(false);
     await load();

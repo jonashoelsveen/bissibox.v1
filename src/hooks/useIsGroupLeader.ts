@@ -34,12 +34,17 @@ export function useIsGroupLeader(): boolean {
       const orFilter = email
         ? `user_id.eq.${user.id},email.ilike.${email}`
         : `user_id.eq.${user.id}`;
-      const { data } = await supabase
-        .from("team_group_leaders")
-        .select("id")
-        .or(orFilter)
-        .limit(1);
-      if (!cancelled) setIsLeader((data ?? []).length > 0);
+      const [{ data: leaderRows }, { data: coachRows }] = await Promise.all([
+        supabase.from("team_group_leaders").select("id").or(orFilter).limit(1),
+        supabase
+          .from("user_coaches")
+          .select("id")
+          .eq("coach_user_id", user.id)
+          .eq("status", "accepted")
+          .limit(1),
+      ]);
+      const has = (leaderRows ?? []).length > 0 || (coachRows ?? []).length > 0;
+      if (!cancelled) setIsLeader(has);
     })();
     return () => {
       cancelled = true;
