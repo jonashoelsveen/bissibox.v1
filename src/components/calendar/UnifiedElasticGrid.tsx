@@ -1069,12 +1069,29 @@ export function UnifiedElasticGrid({
             {months.map((m) => {
               const colDate = weekDates[m.idx];
               const isToday = mode.kind === "year" && colDate && sameDay(colDate, now);
+              const dayLabel = isDayView && colDate
+                ? MONTH_LABELS_SHORT[(colDate.getDay() + 6) % 7]
+                : m.label;
+              const headerTitle = isDayView
+                ? "Klikk for å gå til ukevisning"
+                : "Klikk for å gå til dagvisning";
               return (
-                <div
+                <button
+                  type="button"
                   key={`h-${m.idx}`}
                   data-month-col={m.idx}
                   data-day-anchor=""
-                  className={`group/daynote-anchor flex select-none items-center justify-center border-b border-r border-hairline px-3 text-[12px] font-semibold uppercase tracking-wide ${
+                  onClick={() => {
+                    if (!colDate) return;
+                    if (isDayView) {
+                      handleViewModeChange("week");
+                    } else {
+                      onCurrentDateChange(colDate, { start: colDate, end: colDate });
+                      handleViewModeChange("day");
+                    }
+                  }}
+                  title={headerTitle}
+                  className={`group/daynote-anchor flex select-none items-center justify-center border-b border-r border-hairline px-3 text-[12px] font-semibold uppercase tracking-wide transition-colors hover:bg-secondary hover:text-ink ${
                     isToday ? "bg-secondary text-ink" : "bg-card text-muted-foreground"
                   } ${appKind === "diary" ? "relative" : ""}`}
                   style={{ height: 36 }}
@@ -1083,12 +1100,12 @@ export function UnifiedElasticGrid({
                     <DayNoteButton calId={calId} date={colDate} variant="week" memberId={memberId} viewerRole={viewerRole} />
                   )}
                   <span>
-                    {m.label}
+                    {dayLabel}
                     {mode.kind === "year" && colDate && (
                       <span className="ml-1.5 text-ink">{colDate.getDate()}</span>
                     )}
                   </span>
-                </div>
+                </button>
               );
             })}
           </div>
