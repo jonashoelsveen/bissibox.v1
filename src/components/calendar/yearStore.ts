@@ -499,11 +499,28 @@ export function useEventStore(calId: string) {
   const { user } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const eventsRef = useRef<CalendarEvent[]>([]);
+  const pendingDeleteIdsRef = useRef<Map<string, number>>(new Map());
   const pastRef = useRef<CalendarEvent[][]>([]);
   const futureRef = useRef<CalendarEvent[][]>([]);
   const coachUserIdRef = useRef<string | null>(null);
   const [, forceTick] = useState(0);
   const bump = () => forceTick((n) => n + 1);
+
+  const materializeRows = useCallback((rows: Row[]) => {
+    const now = Date.now();
+    const tombstones = pendingDeleteIdsRef.current;
+    const liveIds = new Set(rows.map((row) => row.id));
+
+    for (const [id, markedAt] of Array.from(tombstones.entries())) {
+      if (!liveIds.has(id) || now - markedAt > 30_000) {
+        tombstones.delete(id);
+      }
+    }
+
+    return rows
+      .filter((row) => !tombstones.has(row.id))
+      .map(rowToEvent);
+  }, []);
 
   // Keep the current auth uid in sync so coach-created client sessions never
   // race an async auth lookup and lose `created_by_coach_id` on insert.
@@ -531,7 +548,7 @@ export function useEventStore(calId: string) {
     void baseSelect().then(({ data }) => {
       if (cancelled) return;
       const rows = (data ?? []) as Row[];
-      const next = rows.map(rowToEvent);
+      const next = materializeRows(rows);
       eventsRef.current = next;
       setEvents(next);
     });
@@ -552,7 +569,7 @@ export function useEventStore(calId: string) {
           void baseSelect().then(({ data }) => {
             if (cancelled) return;
             const rows = (data ?? []) as Row[];
-            const next = rows.map(rowToEvent);
+            const next = materializeRows(rows);
             eventsRef.current = next;
             setEvents(next);
           });
@@ -564,7 +581,7 @@ export function useEventStore(calId: string) {
       cancelled = true;
       void supabase.removeChannel(ch);
     };
-  }, [calId, scope]);
+  }, [calId, materializeRows, scope]);
 
   const applyLocal = useCallback(
     (next: CalendarEvent[], opts?: { history?: boolean }) => {
