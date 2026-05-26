@@ -41,6 +41,8 @@ import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, isoWeekNumber } f
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
 import { DayNoteButton } from "./DayNoteButton";
 import { useUserCategories } from "@/hooks/useUserCategories";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { useMonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
 import {
@@ -2742,6 +2744,7 @@ function CategoryDropdownRow({
   teamId?: string | null;
   ownerId?: string | null;
 }) {
+  const { user } = useAuth();
   // Admin seat: scope to the team's categories (same list shown in the
   // left side-panel under the entity name header). Individual seat:
   // user-personal categories. Either way the dropdown reflects the
@@ -2749,10 +2752,36 @@ function CategoryDropdownRow({
   const { categories } = useUserCategories(
     seat === "admin" ? { teamId } : { ownerId },
   );
+  const [grantedIds, setGrantedIds] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    if (!ownerId || !user || ownerId === user.id) {
+      setGrantedIds(null);
+      return;
+    }
+    let cancelled = false;
+    void supabase
+      .from("calendar_category_coach_access")
+      .select("category_id")
+      .eq("owner_id", ownerId)
+      .eq("coach_user_id", user.id)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setGrantedIds(new Set((data ?? []).map((row) => row.category_id).filter(Boolean)));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerId, user]);
+
+  const availableCategories = useMemo(() => {
+    if (!ownerId || !user || ownerId === user.id || grantedIds === null) return categories;
+    return categories.filter((c) => grantedIds.has(c.id));
+  }, [categories, grantedIds, ownerId, user]);
 
   const lcColor = (color ?? "").toLowerCase();
   const initialId = useMemo(
-    () => initialCategoryId ?? categories.find((c) => c.color.toLowerCase() === lcColor)?.id ?? categories[0]?.id ?? "",
+    () => initialCategoryId ?? availableCategories.find((c) => c.color.toLowerCase() === lcColor)?.id ?? availableCategories[0]?.id ?? "",
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -2761,30 +2790,30 @@ function CategoryDropdownRow({
   // Hydrate selection once the list loads, preferring a color match so we
   // don't surprise the user by reassigning their existing color.
   useEffect(() => {
-    if (!selectedId && categories.length > 0) {
-      const fromColor = initialCategoryId ?? categories.find((c) => c.color.toLowerCase() === lcColor)?.id;
-      const id = fromColor ?? categories[0].id;
+    if (!selectedId && availableCategories.length > 0) {
+      const fromColor = initialCategoryId ?? availableCategories.find((c) => c.color.toLowerCase() === lcColor)?.id;
+      const id = fromColor ?? availableCategories[0].id;
       setSelectedId(id);
-      const cat = categories.find((c) => c.id === id);
+      const cat = availableCategories.find((c) => c.id === id);
       if (cat) {
         onSelectionChange?.({ id: cat.id, color: cat.color, name: cat.name });
         if (cat.color.toLowerCase() !== lcColor) onSetColor(cat.color);
       }
     }
-  }, [categories, initialCategoryId, lcColor, selectedId, onSelectionChange, onSetColor]);
+  }, [availableCategories, initialCategoryId, lcColor, selectedId, onSelectionChange, onSetColor]);
 
   // If the popover's current color matches a different category than the
   // currently-selected id (e.g. parent pushed a new default color), realign
   // the selection so the dropdown label matches the visible tile color.
   useEffect(() => {
-    if (!categories.length) return;
-    const matchByColor = categories.find((c) => c.color.toLowerCase() === lcColor);
+    if (!availableCategories.length) return;
+    const matchByColor = availableCategories.find((c) => c.color.toLowerCase() === lcColor);
     if (matchByColor && matchByColor.id !== selectedId) {
       setSelectedId(matchByColor.id);
     }
-  }, [lcColor, categories, selectedId]);
+  }, [lcColor, availableCategories, selectedId]);
 
-  const selectedCat = categories.find((c) => c.id === selectedId);
+  const selectedCat = availableCategories.find((c) => c.id === selectedId);
   useEffect(() => {
     if (selectedCat) {
       onSelectionChange?.({ id: selectedCat.id, color: selectedCat.color, name: selectedCat.name });
@@ -2813,7 +2842,7 @@ function CategoryDropdownRow({
           onChange={(e) => {
             const id = e.target.value;
             setSelectedId(id);
-            const cat = categories.find((c) => c.id === id);
+            const cat = availableCategories.find((c) => c.id === id);
             if (cat) {
               onSetColor(cat.color);
               onSelectionChange?.({ id: cat.id, color: cat.color, name: cat.name });
@@ -2821,7 +2850,7 @@ function CategoryDropdownRow({
           }}
           className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
         >
-          {categories.map((c) => (
+          {availableCategories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>
