@@ -20,6 +20,7 @@ import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AcceptLeaderInviteRouteImport } from './routes/accept-leader-invite'
+import { Route as AcceptCoachInviteRouteImport } from './routes/accept-coach-invite'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UUserIdRouteImport } from './routes/u.$userId'
 import { Route as TeamBoardRouteImport } from './routes/team.board'
@@ -86,6 +87,11 @@ const AcceptLeaderInviteRoute = AcceptLeaderInviteRouteImport.update({
   path: '/accept-leader-invite',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AcceptCoachInviteRoute = AcceptCoachInviteRouteImport.update({
+  id: '/accept-coach-invite',
+  path: '/accept-coach-invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -140,6 +146,7 @@ const LovableEmailQueueProcessRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/accept-coach-invite': typeof AcceptCoachInviteRoute
   '/accept-leader-invite': typeof AcceptLeaderInviteRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/accept-coach-invite': typeof AcceptCoachInviteRoute
   '/accept-leader-invite': typeof AcceptLeaderInviteRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
@@ -187,6 +195,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/accept-coach-invite': typeof AcceptCoachInviteRoute
   '/accept-leader-invite': typeof AcceptLeaderInviteRoute
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/accept-coach-invite'
     | '/accept-leader-invite'
     | '/auth'
     | '/calendar'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/accept-coach-invite'
     | '/accept-leader-invite'
     | '/auth'
     | '/calendar'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/accept-coach-invite'
     | '/accept-leader-invite'
     | '/auth'
     | '/calendar'
@@ -282,6 +294,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AcceptCoachInviteRoute: typeof AcceptCoachInviteRoute
   AcceptLeaderInviteRoute: typeof AcceptLeaderInviteRoute
   AuthRoute: typeof AuthRoute
   CalendarRoute: typeof CalendarRoute
@@ -383,6 +396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AcceptLeaderInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/accept-coach-invite': {
+      id: '/accept-coach-invite'
+      path: '/accept-coach-invite'
+      fullPath: '/accept-coach-invite'
+      preLoaderRoute: typeof AcceptCoachInviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -458,6 +478,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AcceptCoachInviteRoute: AcceptCoachInviteRoute,
   AcceptLeaderInviteRoute: AcceptLeaderInviteRoute,
   AuthRoute: AuthRoute,
   CalendarRoute: CalendarRoute,
