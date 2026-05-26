@@ -44,7 +44,7 @@ export function useUserCategories(opts?: { teamId?: string | null; ownerId?: str
       .select("id,name,color,pinned,hidden,sort_order,is_default,default_key")
       .eq("kind", kind);
     if (teamId) q = q.eq("team_id", teamId);
-    else q = q.is("team_id", null).eq("user_id", scopeUserId);
+    else q = q.is("team_id", null).eq("user_id", scopeUserId!);
     const { data } = await q
       .order("pinned", { ascending: false })
       .order("sort_order", { ascending: true });
