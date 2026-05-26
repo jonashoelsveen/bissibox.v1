@@ -596,6 +596,7 @@ export function useEventStore(calId: string) {
     void baseSelect().then(({ data }) => {
       if (cancelled) return;
       const rows = (data ?? []) as Row[];
+      cleanupUntitledRows(rows);
       const next = materializeRows(rows);
       eventsRef.current = next;
       setEvents(next);
@@ -617,6 +618,7 @@ export function useEventStore(calId: string) {
           void baseSelect().then(({ data }) => {
             if (cancelled) return;
             const rows = (data ?? []) as Row[];
+            cleanupUntitledRows(rows);
             const next = materializeRows(rows);
             eventsRef.current = next;
             setEvents(next);
@@ -629,7 +631,7 @@ export function useEventStore(calId: string) {
       cancelled = true;
       void supabase.removeChannel(ch);
     };
-  }, [calId, materializeRows, scope]);
+  }, [calId, cleanupUntitledRows, materializeRows, scope]);
 
   const applyLocal = useCallback((next: CalendarEvent[], opts?: { history?: boolean }) => {
     if (opts?.history !== false) {
@@ -678,6 +680,24 @@ export function useEventStore(calId: string) {
         ...patch,
         id,
       };
+      const nextTitle = merged.title.trim();
+      if (!nextTitle) {
+        if (existing) {
+          pendingDeleteIdsRef.current.set(id, Date.now());
+          const next = current.filter((e) => e.id !== id);
+          applyLocal(next);
+          const pendingWrite = pendingWriteByIdRef.current.get(id);
+          if (pendingWrite) {
+            void pendingWrite.finally(() => {
+              void supabase.from("calendar_sessions").delete().eq("id", id);
+            });
+          } else if (scope) {
+            void supabase.from("calendar_sessions").delete().eq("id", id);
+          }
+        }
+        return merged;
+      }
+      merged.title = nextTitle;
       if (!existing && merged.sortIndex == null) merged.sortIndex = Date.now();
       const next = existing ? current.map((e) => (e.id === id ? merged : e)) : [...current, merged];
       applyLocal(next);
