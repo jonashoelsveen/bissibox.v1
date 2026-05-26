@@ -175,6 +175,8 @@ export interface MonthGridType1Props {
   ) => CalendarEvent;
   onMoveEvent?: (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => void;
   onDeleteEvent?: (id: string) => void;
+  /** Flip a coach-pending session into the accepted (owner) state. */
+  onAcceptCoachSession?: (id: string) => void;
   /** Reorder a sequence of event ids within a day (writes sortIndex values). */
   onReorderEvents?: (ids: string[]) => void;
   /** When the user clicks a week-number cell, zoom into that week. */
@@ -540,6 +542,7 @@ export function MonthGridType1({
   onUpsertEvent,
   onMoveEvent,
   onDeleteEvent,
+  onAcceptCoachSession,
   onReorderEvents,
   onWeekClick,
   selectedDate,
@@ -2166,6 +2169,7 @@ export function MonthGridType1({
               onClose={() => setDetailsEvId(null)}
               onUpsert={(patch) => { onUpsertEvent?.(patch); }}
               onDelete={onDeleteEvent ? () => onDeleteEvent(ev.id) : undefined}
+              onAccept={onAcceptCoachSession ? () => onAcceptCoachSession(ev.id) : undefined}
             />
           );
         })()}

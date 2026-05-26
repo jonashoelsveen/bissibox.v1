@@ -159,6 +159,7 @@ function YearCalendarViewInner({
     reorderEvents,
     moveEvent,
     deleteEvent,
+    acceptCoachSession,
   } = useEventStore(calId);
 
   // Preview overlay (Import Calendar). When active, ghost events are merged
@@ -370,6 +371,13 @@ function YearCalendarViewInner({
           }}
           onMoveEvent={moveEvent}
           onDeleteEvent={deleteEvent}
+          onAcceptCoachSession={
+            // Only the actual owner of the calendar (scope kind "user")
+            // can accept a coach-pending session. For coaches viewing a
+            // client's calendar (scope "client:..."), this stays undefined
+            // so the modal renders Save/Edit instead of Accept.
+            calId.startsWith("user:") ? acceptCoachSession : undefined
+          }
           onReorderEvents={reorderEvents}
           currentDate={currentDate}
           currentRange={currentRange}

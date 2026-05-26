@@ -231,6 +231,9 @@ export interface UnifiedElasticGridProps {
   ) => CalendarEvent;
   onMoveEvent: (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => void;
   onDeleteEvent: (id: string) => void;
+  /** Flip a coach-pending session into the accepted (owner) state. Only
+   *  wired when the current user owns this calendar. */
+  onAcceptCoachSession?: (id: string) => void;
   /** Reorder a sequence of event ids by writing sortIndex values. */
   onReorderEvents?: (ids: string[]) => void;
   /** Shared "what is the calendar showing?" anchor date. */
@@ -269,6 +272,7 @@ export function UnifiedElasticGrid({
   onUpsertEvent,
   onMoveEvent,
   onDeleteEvent,
+  onAcceptCoachSession,
   onReorderEvents,
   currentDate,
   currentRange,
@@ -1006,6 +1010,7 @@ export function UnifiedElasticGrid({
           onUpsertEvent={onUpsertEvent}
           onMoveEvent={onMoveEvent}
           onDeleteEvent={onDeleteEvent}
+          onAcceptCoachSession={onAcceptCoachSession}
           onReorderEvents={onReorderEvents}
           memberId={memberId}
           viewerRole={viewerRole}
@@ -1326,6 +1331,7 @@ export function UnifiedElasticGrid({
                     onUpsertEvent({ id, sessionNote: note || undefined })
                   }
                   onUpsertSession={(patch) => onUpsertEvent(patch)}
+                  onAcceptCoachSession={onAcceptCoachSession}
                   memberId={memberId}
                   viewerRole={viewerRole}
                 />
@@ -1352,6 +1358,7 @@ export function UnifiedElasticGrid({
                   }}
                   onDeleteEvent={onDeleteEvent}
                   onUpsertSession={(patch) => onUpsertEvent(patch)}
+                  onAcceptCoachSession={onAcceptCoachSession}
                   onReorderEvents={onReorderEvents}
                   memberId={memberId}
                   viewerRole={viewerRole}
@@ -2239,6 +2246,7 @@ function WeekEventsOverlay({
   onDeleteEvent,
   onSaveSessionNote,
   onUpsertSession,
+  onAcceptCoachSession,
   memberId,
   viewerRole = "owner",
 }: {
@@ -2257,6 +2265,7 @@ function WeekEventsOverlay({
   onDeleteEvent?: (id: string) => void;
   onSaveSessionNote?: (id: string, note: string) => void;
   onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
+  onAcceptCoachSession?: (id: string) => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
 }) {
@@ -2874,6 +2883,7 @@ function WeekEventsOverlay({
             onClose={() => setDetailsEvId(null)}
             onUpsert={(patch) => onUpsertSession?.(patch)}
             onDelete={onDeleteEvent ? () => onDeleteEvent(ev.id) : undefined}
+            onAccept={onAcceptCoachSession ? () => onAcceptCoachSession(ev.id) : undefined}
           />
         );
       })()}
@@ -2895,6 +2905,7 @@ function DiarySimpleStack({
   onEventClick,
   onDeleteEvent,
   onUpsertSession,
+  onAcceptCoachSession,
   onReorderEvents,
   memberId,
   viewerRole = "owner",
@@ -2905,6 +2916,7 @@ function DiarySimpleStack({
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onDeleteEvent?: (id: string) => void;
   onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
+  onAcceptCoachSession?: (id: string) => void;
   onReorderEvents?: (ids: string[]) => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
@@ -3124,6 +3136,7 @@ function DiarySimpleStack({
             onClose={() => setDetailsEvId(null)}
             onUpsert={(patch) => onUpsertSession?.(patch)}
             onDelete={onDeleteEvent ? () => onDeleteEvent(ev.id) : undefined}
+            onAccept={onAcceptCoachSession ? () => onAcceptCoachSession(ev.id) : undefined}
           />
         );
       })()}

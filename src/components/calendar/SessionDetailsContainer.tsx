@@ -20,6 +20,13 @@ export interface SessionDetailsContainerProps {
   onClose: () => void;
   onUpsert: (patch: Partial<CalendarEvent> & { id: string }) => void;
   onDelete?: () => void;
+  /**
+   * Provided only when the current user owns this calendar AND the event is
+   * coach-pending. Triggers the "accept the coach's proposal" flow: any in-
+   * progress edits are persisted first, then `coach_pending` is flipped off
+   * so the tile renders as a normal accepted session.
+   */
+  onAccept?: () => void;
   memberId?: string;
   viewerRole?: ViewerRole;
 }
@@ -29,6 +36,7 @@ export function SessionDetailsContainer({
   onClose,
   onUpsert,
   onDelete,
+  onAccept,
   memberId,
   viewerRole = "owner",
 }: SessionDetailsContainerProps) {
@@ -126,6 +134,19 @@ export function SessionDetailsContainer({
         onDelete
           ? () => {
               onDelete();
+              onClose();
+            }
+          : undefined
+      }
+      isCoachPending={!!ev.coachPending}
+      onAccept={
+        onAccept
+          ? (v: SessionDetailsValue) => {
+              // Persist any in-progress edits (title, activity, time, etc.)
+              // before flipping coach_pending off so the client's accepted
+              // copy reflects exactly what's in the panel right now.
+              onUpsert(buildPatch(v));
+              onAccept();
               onClose();
             }
           : undefined
