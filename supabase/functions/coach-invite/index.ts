@@ -124,8 +124,9 @@ Deno.serve(async (req) => {
         "X-Connection-Api-Key": resendKey,
       },
       body: JSON.stringify({
-        from: "Aponna <onboarding@resend.dev>",
+        from: "Aponna <noreply@aponna.com>",
         to: [email],
+        reply_to: inviterProfile?.email || userData.user.email || undefined,
         subject: `${inviterName} invited you to coach them on Aponna`,
         html,
       }),
