@@ -2425,7 +2425,7 @@ function WeekEventsOverlay({
   // Group events by day column (clamped to the visible 06:00–24:00 window).
   const byCol = useMemo(() => {
     const arr: Array<Array<{ ev: CalendarEvent; startMin: number; endMin: number }>> = Array.from(
-      { length: 7 },
+      { length: weekDates.length },
       () => [],
     );
     for (const ev of events) {
