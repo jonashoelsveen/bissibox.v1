@@ -644,6 +644,24 @@ export function useEventStore(calId: string) {
     setEvents(next);
   }, []);
 
+  const enqueueWrite = useCallback((id: string, task: () => Promise<void>) => {
+    const previous = pendingWriteByIdRef.current.get(id) ?? Promise.resolve();
+    const next = previous.catch(() => undefined).then(task);
+    const tracked = next.then(
+      () => undefined,
+      (error) => {
+        console.error("[calendar_sessions write queue]", error);
+      },
+    );
+    pendingWriteByIdRef.current.set(id, tracked);
+    void tracked.finally(() => {
+      if (pendingWriteByIdRef.current.get(id) === tracked) {
+        pendingWriteByIdRef.current.delete(id);
+      }
+    });
+    return next;
+  }, []);
+
   const canMutateEvent = useCallback(
     (event: CalendarEvent | undefined | null) => {
       if (!event) return false;
@@ -699,13 +717,11 @@ export function useEventStore(calId: string) {
           pendingDeleteIdsRef.current.set(id, Date.now());
           const next = current.filter((e) => e.id !== id);
           applyLocal(next);
-          const pendingWrite = pendingWriteByIdRef.current.get(id);
-          if (pendingWrite) {
-            void pendingWrite.finally(() => {
-              void supabase.from("calendar_sessions").delete().eq("id", id);
+          if (scope) {
+            void enqueueWrite(id, async () => {
+              const { error } = await supabase.from("calendar_sessions").delete().eq("id", id);
+              if (error) console.error("[calendar_sessions delete]", error);
             });
-          } else if (scope) {
-            void supabase.from("calendar_sessions").delete().eq("id", id);
           }
         }
         return merged;
@@ -724,41 +740,26 @@ export function useEventStore(calId: string) {
           return merged;
         }
         const row = eventToRow(merged, scope, coachUserIdRef.current);
-        const writePromise = Promise.resolve(
-          supabase
+        void enqueueWrite(merged.id, async () => {
+          const { error } = await supabase
             .from("calendar_sessions")
-            .upsert(row as never, { onConflict: "id" })
-            .then(({ error }) => {
-              if (error) console.error("[calendar_sessions upsert]", error);
-              if (pendingDeleteIdsRef.current.has(merged.id)) {
-                return supabase
-                  .from("calendar_sessions")
-                  .delete()
-                  .eq("id", merged.id)
-                  .then(({ error: deleteError }) => {
-                    if (deleteError)
-                      console.error("[calendar_sessions cleanup delete]", deleteError);
-                  });
-              }
-            }),
-        );
-        void writePromise.then(
-          () => {
-            if (pendingWriteByIdRef.current.get(merged.id) === writePromise) {
-              pendingWriteByIdRef.current.delete(merged.id);
-            }
-          },
-          () => {
-            if (pendingWriteByIdRef.current.get(merged.id) === writePromise) {
-              pendingWriteByIdRef.current.delete(merged.id);
-            }
-          },
-        );
-        pendingWriteByIdRef.current.set(merged.id, writePromise);
+            .upsert(row as never, { onConflict: "id" });
+          if (error) {
+            console.error("[calendar_sessions upsert]", error);
+            return;
+          }
+          if (pendingDeleteIdsRef.current.has(merged.id)) {
+            const { error: deleteError } = await supabase
+              .from("calendar_sessions")
+              .delete()
+              .eq("id", merged.id);
+            if (deleteError) console.error("[calendar_sessions cleanup delete]", deleteError);
+          }
+        });
       }
       return merged;
     },
-    [applyLocal, canMutateEvent, scope],
+    [applyLocal, canMutateEvent, enqueueWrite, scope],
   );
 
   const reorderEvents = useCallback(
@@ -807,10 +808,13 @@ export function useEventStore(calId: string) {
       if (patch.endISO != null) dbPatch.ends_at = isoToDb(patch.endISO);
       if (patch.allDay != null) dbPatch.all_day = patch.allDay;
       if (Object.keys(dbPatch).length > 0) {
-        void supabase.from("calendar_sessions").update(dbPatch).eq("id", id);
+        void enqueueWrite(id, async () => {
+          const { error } = await supabase.from("calendar_sessions").update(dbPatch).eq("id", id);
+          if (error) console.error("[calendar_sessions move]", error);
+        });
       }
     },
-    [applyLocal, canMutateEvent],
+    [applyLocal, canMutateEvent, enqueueWrite],
   );
 
   const deleteEvent = useCallback(
@@ -822,21 +826,12 @@ export function useEventStore(calId: string) {
       if (next.length === current.length) return;
       pendingDeleteIdsRef.current.set(id, Date.now());
       applyLocal(next);
-      const pendingWrite = pendingWriteByIdRef.current.get(id);
-      if (pendingWrite) {
-        void pendingWrite.then(
-          () => {
-            void supabase.from("calendar_sessions").delete().eq("id", id);
-          },
-          () => {
-            void supabase.from("calendar_sessions").delete().eq("id", id);
-          },
-        );
-        return;
-      }
-      void supabase.from("calendar_sessions").delete().eq("id", id);
+      void enqueueWrite(id, async () => {
+        const { error } = await supabase.from("calendar_sessions").delete().eq("id", id);
+        if (error) console.error("[calendar_sessions delete]", error);
+      });
     },
-    [applyLocal, canMutateEvent],
+    [applyLocal, canMutateEvent, enqueueWrite],
   );
 
   /** Flip a coach-pending session into the accepted (owner) state. */
@@ -845,9 +840,15 @@ export function useEventStore(calId: string) {
       const current = eventsRef.current;
       const next = current.map((e) => (e.id === id ? { ...e, coachPending: false } : e));
       applyLocal(next);
-      void supabase.from("calendar_sessions").update({ coach_pending: false }).eq("id", id);
+      void enqueueWrite(id, async () => {
+        const { error } = await supabase
+          .from("calendar_sessions")
+          .update({ coach_pending: false })
+          .eq("id", id);
+        if (error) console.error("[calendar_sessions accept coach session]", error);
+      });
     },
-    [applyLocal],
+    [applyLocal, enqueueWrite],
   );
 
   const undoEvents = useCallback(() => {
