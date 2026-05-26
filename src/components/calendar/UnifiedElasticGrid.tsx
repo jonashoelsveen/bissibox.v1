@@ -2936,7 +2936,7 @@ function DiarySimpleStack({
     modalTimerRef.current = setTimeout(() => setModalReady(true), 300);
   };
   const byCol = useMemo(() => {
-    const arr: CalendarEvent[][] = Array.from({ length: 7 }, () => []);
+    const arr: CalendarEvent[][] = Array.from({ length: weekDates.length }, () => []);
     for (const ev of events) {
       const start = fromISOLocal(ev.startISO);
       const idx = weekDates.findIndex((d) => sameDay(d, start));
