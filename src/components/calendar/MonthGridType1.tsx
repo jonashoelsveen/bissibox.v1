@@ -2549,6 +2549,46 @@ export function PopoverEditor({
     timeRef.current = time;
   }, [value, color, time]);
 
+  // Marked true once commit/close fires explicitly, so the unmount autosave
+  // below doesn't double-write or resurrect a discarded event.
+  const settledRef = useRef(false);
+  const onCommitRef = useRef(onCommit);
+  useEffect(() => {
+    onCommitRef.current = onCommit;
+  }, [onCommit]);
+  // Snapshot the values the popover opened with so we can decide on unmount
+  // whether anything actually changed.
+  const initialSnapshotRef = useRef({
+    text: initialText,
+    color: resolvedInitial,
+    time: initialTime,
+  });
+
+  // Unmount-time autosave. If the popover is torn down without an explicit
+  // commit (parent closed it because a drag started on the bound tile, or
+  // any other path that bypasses onCommit), persist whatever the user typed
+  // so the edit isn't lost. Skipped on read-only, when nothing changed, or
+  // when the title is empty (empty would mean delete — only explicit paths
+  // should trigger that).
+  useEffect(() => {
+    return () => {
+      if (settledRef.current) return;
+      if (readOnly) return;
+      const v = (valueRef.current ?? "").trim();
+      if (!v) return;
+      const init = initialSnapshotRef.current;
+      const initT = (init.text ?? "").trim();
+      const sameTitle = v === initT;
+      const sameColor = colorRef.current === init.color;
+      const sameTime =
+        (timeRef.current?.startMin ?? null) === (init.time?.startMin ?? null) &&
+        (timeRef.current?.endMin ?? null) === (init.time?.endMin ?? null);
+      if (sameTitle && sameColor && sameTime) return;
+      onCommitRef.current(v, colorRef.current, timeRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (!ref.current) return;
