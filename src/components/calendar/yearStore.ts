@@ -644,6 +644,16 @@ export function useEventStore(calId: string) {
     setEvents(next);
   }, []);
 
+  const canMutateEvent = useCallback(
+    (event: CalendarEvent | undefined | null) => {
+      if (!event) return false;
+      if (scope?.kind !== "client") return true;
+      const coachId = coachUserIdRef.current;
+      return !!coachId && event.coachPending === true && event.createdByCoachId === coachId;
+    },
+    [scope],
+  );
+
   const upsertEvent = useCallback(
     (
       patch:
@@ -654,6 +664,9 @@ export function useEventStore(calId: string) {
       const hasIdInPatch = (patch as { id?: string }).id != null;
       const id = (patch as { id?: string }).id ?? makeEventId();
       const existing = current.find((e) => e.id === id);
+      if (existing && !canMutateEvent(existing)) {
+        return existing;
+      }
       const deletedAt = pendingDeleteIdsRef.current.get(id);
       if (deletedAt && Date.now() - deletedAt < 30_000) {
         return null as unknown as CalendarEvent;
@@ -745,7 +758,7 @@ export function useEventStore(calId: string) {
       }
       return merged;
     },
-    [applyLocal, scope],
+    [applyLocal, canMutateEvent, scope],
   );
 
   const reorderEvents = useCallback(
@@ -781,6 +794,8 @@ export function useEventStore(calId: string) {
   const moveEvent = useCallback(
     (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => {
       const current = eventsRef.current;
+      const existing = current.find((e) => e.id === id);
+      if (!existing || !canMutateEvent(existing)) return;
       const next = current.map((e) => (e.id === id ? { ...e, ...patch } : e));
       applyLocal(next);
       const dbPatch: {
@@ -795,12 +810,14 @@ export function useEventStore(calId: string) {
         void supabase.from("calendar_sessions").update(dbPatch).eq("id", id);
       }
     },
-    [applyLocal],
+    [applyLocal, canMutateEvent],
   );
 
   const deleteEvent = useCallback(
     (id: string) => {
       const current = eventsRef.current;
+      const existing = current.find((e) => e.id === id);
+      if (!existing || !canMutateEvent(existing)) return;
       const next = current.filter((e) => e.id !== id);
       if (next.length === current.length) return;
       pendingDeleteIdsRef.current.set(id, Date.now());
@@ -819,7 +836,7 @@ export function useEventStore(calId: string) {
       }
       void supabase.from("calendar_sessions").delete().eq("id", id);
     },
-    [applyLocal],
+    [applyLocal, canMutateEvent],
   );
 
   /** Flip a coach-pending session into the accepted (owner) state. */
