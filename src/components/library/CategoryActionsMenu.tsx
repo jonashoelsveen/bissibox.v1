@@ -214,6 +214,22 @@ export function CategoryActionsMenu({
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         )}
+        {accessPanel && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary">
+              <Users className="h-3.5 w-3.5" />
+              <span className="flex-1">Access</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent
+              sideOffset={SUB_OFFSET}
+              collisionPadding={8}
+              className="p-2"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {accessPanel}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
         {(bottomExtras.length > 0 || onDelete) && <DropdownMenuSeparator />}
         {bottomExtras.map((it, i) => (
           <Item
