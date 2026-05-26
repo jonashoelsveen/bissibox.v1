@@ -3247,6 +3247,7 @@ function SortableSimpleTile({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0 : 1,
+    position: "relative",
   };
   return (
     <div
@@ -3255,6 +3256,7 @@ function SortableSimpleTile({
       {...attributes}
       {...listeners}
       data-real-event="1"
+      data-coach-pending={ev.coachPending ? "1" : undefined}
       onMouseEnter={(e) => {
         const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
         onHoverChange(ev.id, { left: r.left, top: r.top, width: r.width, height: r.height });
