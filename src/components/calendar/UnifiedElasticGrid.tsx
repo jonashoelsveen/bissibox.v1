@@ -655,18 +655,18 @@ export function UnifiedElasticGrid({
       const meDefaultColor = meCategories[0]?.color ?? CAT_TRAINING_COLOR;
       const adminDefaultColor = teamCategories[0]?.color ?? "#E63337";
       const defaultColor = seat === "admin" ? adminDefaultColor : meDefaultColor;
-      // Create the event with an EMPTY title so the popover input shows
-      // the "New session" placeholder (not the literal text) and a click-
-      // outside without typing commits "" → onDeleteEvent removes the tile.
-      // The tile itself renders "New session" as a display-only fallback
-      // when the title is empty (see WeekEventsOverlay below).
-      const created = onUpsertEvent({
+      // Keep a brand-new untitled session in memory only until the user
+      // actually saves a title. This prevents cancelled drafts from ever
+      // reaching the backend, reloading, or resurfacing on view changes.
+      const created: CalendarEvent = {
+        id: makeEventId(),
         title: "",
         color: defaultColor,
         startISO,
         endISO,
         allDay: false,
-      });
+      };
+      setDraftEvent(created);
       setPopover({
         key: { year, month: markRange.month, day, session },
         rect: el.getBoundingClientRect(),
@@ -1537,7 +1537,7 @@ export function UnifiedElasticGrid({
             if (mode.kind !== "year") return null;
             if (popover.pendingTime) return popover.pendingTime;
             if (popover.eventId) {
-              const ev = events.find((e) => e.id === popover.eventId);
+              const ev = getEventById(popover.eventId);
               if (ev && !ev.allDay) {
                 const s = fromISOLocal(ev.startISO);
                 const e = fromISOLocal(ev.endISO);
@@ -1582,7 +1582,7 @@ export function UnifiedElasticGrid({
             // If bound to a real event, push the new time straight to the
             // event so the session tile resizes live.
             if (popover.eventId) {
-              const ev = events.find((e) => e.id === popover.eventId);
+              const ev = getEventById(popover.eventId);
               if (ev) {
                 const date = fromISOLocal(ev.startISO);
                 const startISO = toISOLocal(
@@ -1591,7 +1591,11 @@ export function UnifiedElasticGrid({
                 const endISO = toISOLocal(
                   setHM(date, Math.floor(t.endMin / 60), t.endMin % 60),
                 );
-                onMoveEvent(ev.id, { startISO, endISO, allDay: false });
+                if (draftEventRef.current?.id === ev.id) {
+                  setDraftEvent({ ...ev, startISO, endISO, allDay: false });
+                } else {
+                  onMoveEvent(ev.id, { startISO, endISO, allDay: false });
+                }
               }
               setPopover((p) => (p ? { ...p, pendingTime: t } : p));
               return;
@@ -1628,7 +1632,7 @@ export function UnifiedElasticGrid({
               } else if (markRange) {
                 date = weekDates[markRange.month];
               } else if (popover.eventId) {
-                const ev = events.find((e) => e.id === popover.eventId);
+                const ev = getEventById(popover.eventId);
                 date = ev ? fromISOLocal(ev.startISO) : undefined;
               } else {
                 date = weekDates[popover.key.month];
@@ -1646,9 +1650,10 @@ export function UnifiedElasticGrid({
 
                 if (popover.eventId) {
                   if (!t) {
-                    onDeleteEvent(popover.eventId);
+                    if (draftEventRef.current?.id === popover.eventId) clearDraftEvent(popover.eventId);
+                    else onDeleteEvent(popover.eventId);
                   } else {
-                    onUpsertEvent({
+                    const patch = {
                       id: popover.eventId,
                       title: t,
                       color,
@@ -1656,7 +1661,18 @@ export function UnifiedElasticGrid({
                       category: categoryFromColor(color),
                       ...(markRange || time || popover.pendingDate || popover.pendingTime ? { startISO, endISO } : {}),
                       allDay: false,
-                    });
+                    };
+                    if (draftEventRef.current?.id === popover.eventId) {
+                      onUpsertEvent({
+                        ...draftEventRef.current,
+                        ...patch,
+                        startISO,
+                        endISO,
+                      });
+                      clearDraftEvent(popover.eventId);
+                    } else {
+                      onUpsertEvent(patch);
+                    }
                   }
                 } else if (t) {
                   onUpsertEvent({
