@@ -1811,6 +1811,13 @@ export function UnifiedElasticGrid({
                     } else {
                       onUpsertEvent(patch);
                     }
+                    // Explicit Save (Enter / Lagre button) on a coach-pending
+                    // session accepts the coach's proposal: clear the stripe
+                    // so the tile renders as a normal accepted session.
+                    if (accept && onAcceptCoachSession) {
+                      const existing = getEventById(popover.eventId);
+                      if (existing?.coachPending) onAcceptCoachSession(popover.eventId);
+                    }
                   }
                 } else if (t) {
                   onUpsertEvent({
