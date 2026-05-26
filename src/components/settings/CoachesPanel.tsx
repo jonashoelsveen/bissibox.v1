@@ -46,7 +46,9 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
     setLoading(true);
     const { data, error } = await supabase
       .from("user_coaches")
-      .select("id, coach_email, coach_user_id, status, calendar_access, diary_access, photos_access")
+      .select(
+        "id, coach_email, coach_user_id, status, calendar_access, diary_access, photos_access",
+      )
       .eq("owner_id", user.id)
       .order("created_at", { ascending: true });
     if (error) {
@@ -128,10 +130,7 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
   const serialize = (r: CoachRow) =>
     `${r.id}:${r.calendar_access}:${r.diary_access}:${r.photos_access}`;
 
-  const currentDirtyKey = useMemo(
-    () => JSON.stringify(rows.map(serialize)),
-    [rows],
-  );
+  const currentDirtyKey = useMemo(() => JSON.stringify(rows.map(serialize)), [rows]);
   const isDirty = currentDirtyKey !== baseline;
 
   useEffect(() => {
@@ -325,7 +324,8 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
           page, without editing. "Edit" means the coach can add sessions to your{" "}
           <strong className="font-semibold text-ink">Calendar</strong>, add day-comments to and
           session-comments to <strong className="font-semibold text-ink">Diary</strong>. They are
-          not able to edit any content in <strong className="font-semibold text-ink">Photos</strong>.
+          not able to edit any content in <strong className="font-semibold text-ink">Photos</strong>
+          .
         </p>
       </div>
 
@@ -392,9 +392,7 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
             {!loading &&
               rows.map((r) => {
                 const isPending = r.status === "pending";
-                const displayName = isPending
-                  ? r.coach_email
-                  : r.display_name || r.coach_email;
+                const displayName = isPending ? r.coach_email : r.display_name || r.coach_email;
                 return (
                   <tr key={r.id} className="border-t border-hairline">
                     <td className="sticky left-0 z-10 border-r border-hairline bg-background px-4 py-3">
@@ -408,9 +406,7 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
                         </button>
                         <span
                           className={
-                            isPending
-                              ? "text-sm text-muted-foreground"
-                              : "text-sm text-ink"
+                            isPending ? "text-sm text-muted-foreground" : "text-sm text-ink"
                           }
                         >
                           {displayName}
