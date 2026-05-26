@@ -81,6 +81,42 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // Auto-refresh when the coach accepts elsewhere:
+  // 1) realtime updates to this owner's user_coaches rows
+  // 2) window focus / tab visible (covers offline acceptance)
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`user_coaches:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_coaches",
+          filter: `owner_id=eq.${user.id}`,
+        },
+        () => {
+          load();
+        },
+      )
+      .subscribe();
+
+    const onFocus = () => load();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   const serialize = (r: CoachRow) =>
     `${r.id}:${r.calendar_access}:${r.diary_access}:${r.photos_access}`;
 
