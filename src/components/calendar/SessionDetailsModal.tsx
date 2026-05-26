@@ -157,6 +157,11 @@ export function SessionDetailsModal({
     if (!saveDisabled) onSave(value);
   };
 
+  const startStr = value.time ? fmtClock(value.time.startMin) : "";
+  const durationMin = value.time ? Math.max(0, value.time.endMin - value.time.startMin) : 0;
+
+  const saveDisabled = !isDirty || readOnly;
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -180,11 +185,6 @@ export function SessionDetailsModal({
   const headerTitle = isNote
     ? `Note ${date ? `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}` : ""}`.trim()
     : "Session details";
-
-  const startStr = value.time ? fmtClock(value.time.startMin) : "";
-  const durationMin = value.time ? Math.max(0, value.time.endMin - value.time.startMin) : 0;
-
-  const saveDisabled = !isDirty || readOnly;
 
   return createPortal(
     <AnimatePresence>
