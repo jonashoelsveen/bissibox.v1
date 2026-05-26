@@ -746,11 +746,12 @@ export function useEventStore(calId: string) {
         }
         const row = eventToRow(merged, scope, coachUserIdRef.current);
         void enqueueWrite(merged.id, async () => {
-          const { error } = await supabase
-            .from("calendar_sessions")
-            .upsert(row as never, { onConflict: "id" });
+          const write = existing
+            ? supabase.from("calendar_sessions").update(row as never).eq("id", merged.id)
+            : supabase.from("calendar_sessions").insert(row as never);
+          const { error } = await write;
           if (error) {
-            console.error("[calendar_sessions upsert]", error);
+            console.error(existing ? "[calendar_sessions update]" : "[calendar_sessions insert]", error);
             return;
           }
           if (pendingDeleteIdsRef.current.has(merged.id)) {
