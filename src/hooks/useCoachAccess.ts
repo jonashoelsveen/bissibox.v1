@@ -91,7 +91,6 @@ export function useCoachAccess(ownerId: string | null | undefined): CoachAccess 
       document.removeEventListener("visibilitychange", onVisible);
       window.clearInterval(poll);
     };
-
   }, [user, ownerId]);
 
   return access;

@@ -39,13 +39,16 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
   const [addEmail, setAddEmail] = useState("");
   const [adding, setAdding] = useState(false);
   const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null);
+  const mutationVersionRef = useRef<Record<string, number>>({});
 
   const load = async () => {
     if (!user) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("user_coaches")
-      .select("id, coach_email, coach_user_id, status, calendar_access, diary_access, photos_access")
+      .select(
+        "id, coach_email, coach_user_id, status, calendar_access, diary_access, photos_access",
+      )
       .eq("owner_id", user.id)
       .order("created_at", { ascending: true });
     if (error) {
@@ -117,13 +120,34 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!rows.length) return;
+    setSelectedCoachId((current) =>
+      current && rows.some((row) => row.id === current) ? current : null,
+    );
+  }, [rows]);
+
   const serialize = (r: CoachRow) =>
     `${r.id}:${r.calendar_access}:${r.diary_access}:${r.photos_access}`;
 
-  const currentDirtyKey = useMemo(
-    () => JSON.stringify(rows.map(serialize)),
-    [rows],
-  );
+  const updateBaselineAccess = (
+    rowId: string,
+    key: "calendar_access" | "diary_access" | "photos_access",
+    value: Access,
+  ) => {
+    setBaseline((previous) => {
+      const parsed: string[] = JSON.parse(previous);
+      return JSON.stringify(
+        parsed.map((entry) => {
+          const [id, c, d, p] = entry.split(":");
+          if (id !== rowId) return entry;
+          return `${id}:${key === "calendar_access" ? value : c}:${key === "diary_access" ? value : d}:${key === "photos_access" ? value : p}`;
+        }),
+      );
+    });
+  };
+
+  const currentDirtyKey = useMemo(() => JSON.stringify(rows.map(serialize)), [rows]);
   const isDirty = currentDirtyKey !== baseline;
 
   useEffect(() => {
@@ -161,22 +185,68 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
         }
       }
       setBaseline(JSON.stringify(rows.map(serialize)));
-      toast.success("Coach access saved.");
       return true;
     },
   }));
 
-  const setAccess = (rowId: string, col: "calendar" | "diary" | "photos", value: Access) => {
-    setRows((prev) =>
-      prev.map((r) =>
-        r.id === rowId
-          ? {
-              ...r,
-              [`${col}_access`]: value,
-            }
-          : r,
-      ),
+  const setAccess = async (rowId: string, col: "calendar" | "diary" | "photos", value: Access) => {
+    if (!user) return;
+
+    const previousRows = rows;
+    const currentRow = previousRows.find((r) => r.id === rowId);
+    if (!currentRow) return;
+
+    const key = `${col}_access` as "calendar_access" | "diary_access" | "photos_access";
+    if (currentRow[key] === value) return;
+    const previousValue = currentRow[key];
+
+    const nextRows = previousRows.map((r) =>
+      r.id === rowId
+        ? {
+            ...r,
+            [key]: value,
+          }
+        : r,
     );
+
+    setRows(nextRows);
+
+    const mutationKey = `${rowId}:${key}`;
+    const mutationVersion = (mutationVersionRef.current[mutationKey] ?? 0) + 1;
+    mutationVersionRef.current[mutationKey] = mutationVersion;
+
+    const updates =
+      key === "calendar_access"
+        ? { calendar_access: value }
+        : key === "diary_access"
+          ? { diary_access: value }
+          : { photos_access: value };
+
+    const { error } = await supabase
+      .from("user_coaches")
+      .update(updates)
+      .eq("id", rowId)
+      .eq("owner_id", user.id);
+
+    if (error) {
+      if (mutationVersionRef.current[mutationKey] !== mutationVersion) return;
+      setRows((currentRows) =>
+        currentRows.map((row) =>
+          row.id === rowId && row[key] === value
+            ? {
+                ...row,
+                [key]: previousValue,
+              }
+            : row,
+        ),
+      );
+      toast.error(error.message);
+      return;
+    }
+
+    if (mutationVersionRef.current[mutationKey] === mutationVersion) {
+      updateBaselineAccess(rowId, key, value);
+    }
   };
 
   const sendInvitation = async () => {
@@ -285,7 +355,8 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
           page, without editing. "Edit" means the coach can add sessions to your{" "}
           <strong className="font-semibold text-ink">Calendar</strong>, add day-comments to and
           session-comments to <strong className="font-semibold text-ink">Diary</strong>. They are
-          not able to edit any content in <strong className="font-semibold text-ink">Photos</strong>.
+          not able to edit any content in <strong className="font-semibold text-ink">Photos</strong>
+          .
         </p>
       </div>
 
@@ -352,9 +423,7 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
             {!loading &&
               rows.map((r) => {
                 const isPending = r.status === "pending";
-                const displayName = isPending
-                  ? r.coach_email
-                  : r.display_name || r.coach_email;
+                const displayName = isPending ? r.coach_email : r.display_name || r.coach_email;
                 return (
                   <tr key={r.id} className="border-t border-hairline">
                     <td className="sticky left-0 z-10 border-r border-hairline bg-background px-4 py-3">
@@ -368,9 +437,7 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
                         </button>
                         <span
                           className={
-                            isPending
-                              ? "text-sm text-muted-foreground"
-                              : "text-sm text-ink"
+                            isPending ? "text-sm text-muted-foreground" : "text-sm text-ink"
                           }
                         >
                           {displayName}

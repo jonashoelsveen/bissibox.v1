@@ -114,8 +114,7 @@ export function ClientsPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-
-  const selected = selectedId ? rows.find((r) => r.id === selectedId) ?? null : null;
+  const selected = selectedId ? (rows.find((r) => r.id === selectedId) ?? null) : null;
 
   return (
     <div className="space-y-6">
@@ -141,13 +140,22 @@ export function ClientsPanel() {
               >
                 Client
               </th>
-              <th colSpan={2} className="border-b border-r border-hairline px-4 py-2 text-center text-xs font-medium text-ink">
+              <th
+                colSpan={2}
+                className="border-b border-r border-hairline px-4 py-2 text-center text-xs font-medium text-ink"
+              >
                 Calendar
               </th>
-              <th colSpan={2} className="border-b border-r border-hairline px-4 py-2 text-center text-xs font-medium text-ink">
+              <th
+                colSpan={2}
+                className="border-b border-r border-hairline px-4 py-2 text-center text-xs font-medium text-ink"
+              >
                 Diary
               </th>
-              <th colSpan={2} className="border-b border-hairline px-4 py-2 text-center text-xs font-medium text-ink">
+              <th
+                colSpan={2}
+                className="border-b border-hairline px-4 py-2 text-center text-xs font-medium text-ink"
+              >
                 Photos
               </th>
             </tr>
