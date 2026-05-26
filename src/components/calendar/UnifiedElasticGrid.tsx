@@ -794,8 +794,9 @@ export function UnifiedElasticGrid({
     // last focused month when zooming out to Year View.
     let targetMonth: number | null = null;
     if (mode.kind === "month") {
-      targetMonth = mode.month;
-      lastFocusedMonthRef.current = mode.month;
+      const mm = (mode as { kind: "month"; month: number }).month;
+      targetMonth = mm;
+      lastFocusedMonthRef.current = mm;
     } else if (lastFocusedMonthRef.current !== null) {
       targetMonth = lastFocusedMonthRef.current;
     }
