@@ -1753,7 +1753,7 @@ export function UnifiedElasticGrid({
               target?.scrollIntoView({ block: "nearest", behavior: "smooth" });
             });
           }}
-          onCommit={(text, color, time) => {
+          onCommit={(text, color, time, accept) => {
             const t = text.trim();
 
             // ── Week view: write/edit a CalendarEvent (real datetime). ──
@@ -1810,6 +1810,13 @@ export function UnifiedElasticGrid({
                       clearDraftEvent(popover.eventId);
                     } else {
                       onUpsertEvent(patch);
+                    }
+                    // Explicit Save (Enter / Lagre button) on a coach-pending
+                    // session accepts the coach's proposal: clear the stripe
+                    // so the tile renders as a normal accepted session.
+                    if (accept && onAcceptCoachSession) {
+                      const existing = getEventById(popover.eventId);
+                      if (existing?.coachPending) onAcceptCoachSession(popover.eventId);
                     }
                   }
                 } else if (t) {

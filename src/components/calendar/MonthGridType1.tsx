@@ -2211,6 +2211,13 @@ export interface PopoverEditorProps {
     text: string,
     color: string | null,
     time?: { startMin: number; endMin: number } | null,
+    /**
+     * True when the commit came from an explicit save gesture (Enter key or
+     * the "Lagre" button). False/undefined for outside-click autosave and
+     * unmount-time autosave. The owner of a coach-pending session uses this
+     * to know when to flip `coach_pending` off (accepting the proposal).
+     */
+    accept?: boolean,
   ) => void;
   /**
    * Fires the moment the user commits the inline duration picker (clock icon),
@@ -2549,6 +2556,46 @@ export function PopoverEditor({
     timeRef.current = time;
   }, [value, color, time]);
 
+  // Marked true once commit/close fires explicitly, so the unmount autosave
+  // below doesn't double-write or resurrect a discarded event.
+  const settledRef = useRef(false);
+  const onCommitRef = useRef(onCommit);
+  useEffect(() => {
+    onCommitRef.current = onCommit;
+  }, [onCommit]);
+  // Snapshot the values the popover opened with so we can decide on unmount
+  // whether anything actually changed.
+  const initialSnapshotRef = useRef({
+    text: initialText,
+    color: resolvedInitial,
+    time: initialTime,
+  });
+
+  // Unmount-time autosave. If the popover is torn down without an explicit
+  // commit (parent closed it because a drag started on the bound tile, or
+  // any other path that bypasses onCommit), persist whatever the user typed
+  // so the edit isn't lost. Skipped on read-only, when nothing changed, or
+  // when the title is empty (empty would mean delete — only explicit paths
+  // should trigger that).
+  useEffect(() => {
+    return () => {
+      if (settledRef.current) return;
+      if (readOnly) return;
+      const v = (valueRef.current ?? "").trim();
+      if (!v) return;
+      const init = initialSnapshotRef.current;
+      const initT = (init.text ?? "").trim();
+      const sameTitle = v === initT;
+      const sameColor = colorRef.current === init.color;
+      const sameTime =
+        (timeRef.current?.startMin ?? null) === (init.time?.startMin ?? null) &&
+        (timeRef.current?.endMin ?? null) === (init.time?.endMin ?? null);
+      if (sameTitle && sameColor && sameTime) return;
+      onCommitRef.current(v, colorRef.current, timeRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (!ref.current) return;
@@ -2565,8 +2612,10 @@ export function PopoverEditor({
           return;
         }
         if (readOnly) {
+          settledRef.current = true;
           onClose();
         } else {
+          settledRef.current = true;
           onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
         }
       }
@@ -2574,10 +2623,12 @@ export function PopoverEditor({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
+        settledRef.current = true;
         onClose();
       } else if (e.key === "Enter" && !e.shiftKey) {
         if (readOnly) {
           e.preventDefault();
+          settledRef.current = true;
           onClose();
           return;
         }
@@ -2591,7 +2642,8 @@ export function PopoverEditor({
         // Without this, timeRef holds the stale time and the chip order
         // doesn't update until the user clicks outside.
         setTimeout(() => {
-          onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
+          settledRef.current = true;
+          onCommit(valueRef.current.trim(), colorRef.current, timeRef.current, true);
         }, 0);
       }
     };
@@ -2698,7 +2750,10 @@ export function PopoverEditor({
                   type="button"
                   aria-label="Slett"
                   title="Slett"
-                  onClick={() => onCommit("", color, time)}
+                  onClick={() => {
+                    settledRef.current = true;
+                    onCommit("", color, time);
+                  }}
                   className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -2708,7 +2763,10 @@ export function PopoverEditor({
               )}
               <button
                 type="button"
-                onClick={() => onCommit(value.trim(), color, time)}
+                onClick={() => {
+                  settledRef.current = true;
+                  onCommit(value.trim(), color, time, true);
+                }}
                 className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
               >
                 {isEdit ? "Lagre" : "Legg til"}
