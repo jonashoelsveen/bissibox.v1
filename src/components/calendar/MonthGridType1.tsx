@@ -2756,7 +2756,10 @@ export function PopoverEditor({
               )}
               <button
                 type="button"
-                onClick={() => onCommit(value.trim(), color, time)}
+                onClick={() => {
+                  settledRef.current = true;
+                  onCommit(value.trim(), color, time);
+                }}
                 className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
               >
                 {isEdit ? "Lagre" : "Legg til"}
