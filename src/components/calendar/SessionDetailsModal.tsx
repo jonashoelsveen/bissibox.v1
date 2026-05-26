@@ -224,7 +224,16 @@ export function SessionDetailsModal({
               >
                 Cancel
               </button>
-              {!readOnly && (
+              {!readOnly && onAccept && isCoachPending && (
+                <button
+                  type="button"
+                  onClick={() => onAccept(value)}
+                  className="whitespace-nowrap rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+                >
+                  Accept
+                </button>
+              )}
+              {!readOnly && !(onAccept && isCoachPending) && (
                 <button
                   type="button"
                   onClick={() => onSave(value)}
