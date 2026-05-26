@@ -576,9 +576,17 @@ export function UnifiedElasticGrid({
     if (!el) return;
 
     if (mode.kind === "year" && appKind !== "diary") {
-      const start = startOfWeekMon(currentDate);
-      const date = new Date(start);
-      date.setDate(start.getDate() + markRange.month);
+      // Column→date map. In day-view there's only column 0 = currentDate;
+      // in week-view, column N = Monday + N days.
+      const isDay = viewMode === "day";
+      const date = isDay
+        ? new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate())
+        : (() => {
+            const s = startOfWeekMon(currentDate);
+            const d = new Date(s);
+            d.setDate(s.getDate() + markRange.month);
+            return d;
+          })();
       if (!date) return;
       const startMin = WEEK_START_HOUR * 60 + (markRange.lo - 2) * 30;
       const endMin = WEEK_START_HOUR * 60 + (markRange.hi - 2 + 1) * 30;
@@ -630,7 +638,7 @@ export function UnifiedElasticGrid({
     }
 
     openPopover({ year, month: markRange.month, day, session }, el);
-  }, [markReleased, markRange, openPopover, year, mode, appKind, currentDate, onUpsertEvent, seat, meCategories, teamCategories]);
+  }, [markReleased, markRange, openPopover, year, mode, appKind, currentDate, viewMode, onUpsertEvent, seat, meCategories, teamCategories]);
 
 
 
