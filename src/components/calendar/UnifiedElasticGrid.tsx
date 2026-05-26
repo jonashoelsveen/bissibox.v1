@@ -2498,6 +2498,7 @@ function WeekEventsOverlay({
                 data-event-id={ev.id}
                 data-real-event={isGhost ? undefined : "1"}
                 data-ghost-event={isGhost ? "1" : undefined}
+                data-coach-pending={ev.coachPending ? "1" : undefined}
                 onMouseEnter={(e) => {
                   if (isGhost || appKind !== "diary") return;
                   if (hoverLocked && (lockedId ?? forceEditId) !== ev.id) return;

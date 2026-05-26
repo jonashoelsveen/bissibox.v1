@@ -249,3 +249,23 @@
     box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25), 0 4px 14px -6px rgba(34, 197, 94, 0.55);
   }
 }
+
+@layer utilities {
+  /* Coach-pending sessions: diagonal stripes overlay until the client accepts.
+     Applied to any session tile/chip carrying `data-coach-pending="1"`. */
+  [data-coach-pending="1"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background-image: repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.35) 0,
+      rgba(255, 255, 255, 0.35) 4px,
+      transparent 4px,
+      transparent 9px
+    );
+    mix-blend-mode: overlay;
+  }
+}
