@@ -500,6 +500,7 @@ export function useEventStore(calId: string) {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const eventsRef = useRef<CalendarEvent[]>([]);
   const pendingDeleteIdsRef = useRef<Map<string, number>>(new Map());
+  const pendingWriteByIdRef = useRef<Map<string, Promise<void>>>(new Map());
   const pastRef = useRef<CalendarEvent[][]>([]);
   const futureRef = useRef<CalendarEvent[][]>([]);
   const coachUserIdRef = useRef<string | null>(null);
@@ -532,10 +533,13 @@ export function useEventStore(calId: string) {
   useEffect(() => {
     if (!scope) {
       eventsRef.current = [];
+      pendingDeleteIdsRef.current.clear();
+      pendingWriteByIdRef.current.clear();
       setEvents([]);
       return;
     }
     let cancelled = false;
+    pendingDeleteIdsRef.current.clear();
 
     const baseSelect = () => {
       let q = supabase.from("calendar_sessions").select("*");
