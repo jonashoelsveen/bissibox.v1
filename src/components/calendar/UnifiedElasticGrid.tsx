@@ -295,7 +295,7 @@ export function UnifiedElasticGrid({
   // views). Both day and week use the compact hourly-label layout
   // (kind: "year"); day-view simply renders a single column.
   const isDayView = viewMode === "day";
-  const mode: Mode = { kind: "year" };
+  const mode: Mode = { kind: "year" } as Mode;
   const [simpleView] = useDiarySimpleView();
   const isSimple = mode.kind === "year" && appKind === "diary" && simpleView && !isDayView;
 
