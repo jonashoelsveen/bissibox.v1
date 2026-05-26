@@ -177,6 +177,116 @@ export type Database = {
           },
         ]
       }
+      calendar_sessions: {
+        Row: {
+          activities: Json | null
+          activity: string | null
+          all_day: boolean
+          average_heartrate: number | null
+          category: string | null
+          category_id: string | null
+          coach_pending: boolean
+          color: string | null
+          created_at: string
+          created_by_coach_id: string | null
+          description: string | null
+          diary_group: string | null
+          diary_sub: string | null
+          diary_type: string | null
+          distance_km: number | null
+          ends_at: string
+          entity_id: string | null
+          id: string
+          pace_sec_per_km: number | null
+          session_note: string | null
+          session_note_updated_at: string | null
+          sort_index: number | null
+          sport_type: string | null
+          starts_at: string
+          strava_activity_id: number | null
+          sub_type: string | null
+          summary_polyline: string | null
+          title: string
+          total_elevation_gain_m: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activities?: Json | null
+          activity?: string | null
+          all_day?: boolean
+          average_heartrate?: number | null
+          category?: string | null
+          category_id?: string | null
+          coach_pending?: boolean
+          color?: string | null
+          created_at?: string
+          created_by_coach_id?: string | null
+          description?: string | null
+          diary_group?: string | null
+          diary_sub?: string | null
+          diary_type?: string | null
+          distance_km?: number | null
+          ends_at: string
+          entity_id?: string | null
+          id?: string
+          pace_sec_per_km?: number | null
+          session_note?: string | null
+          session_note_updated_at?: string | null
+          sort_index?: number | null
+          sport_type?: string | null
+          starts_at: string
+          strava_activity_id?: number | null
+          sub_type?: string | null
+          summary_polyline?: string | null
+          title?: string
+          total_elevation_gain_m?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activities?: Json | null
+          activity?: string | null
+          all_day?: boolean
+          average_heartrate?: number | null
+          category?: string | null
+          category_id?: string | null
+          coach_pending?: boolean
+          color?: string | null
+          created_at?: string
+          created_by_coach_id?: string | null
+          description?: string | null
+          diary_group?: string | null
+          diary_sub?: string | null
+          diary_type?: string | null
+          distance_km?: number | null
+          ends_at?: string
+          entity_id?: string | null
+          id?: string
+          pace_sec_per_km?: number | null
+          session_note?: string | null
+          session_note_updated_at?: string | null
+          sort_index?: number | null
+          sport_type?: string | null
+          starts_at?: string
+          strava_activity_id?: number | null
+          sub_type?: string | null
+          summary_polyline?: string | null
+          title?: string
+          total_elevation_gain_m?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_sessions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           cover_media_id: string | null
@@ -2557,6 +2667,10 @@ export type Database = {
       calc_word_count: { Args: { _body: string }; Returns: number }
       can_annotate_member: { Args: { _member: string }; Returns: boolean }
       can_view_member: { Args: { _member: string }; Returns: boolean }
+      coach_can_edit_owner_category: {
+        Args: { _category_id: string; _owner: string }
+        Returns: boolean
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
