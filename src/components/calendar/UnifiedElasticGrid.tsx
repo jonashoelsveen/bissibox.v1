@@ -1753,7 +1753,7 @@ export function UnifiedElasticGrid({
               target?.scrollIntoView({ block: "nearest", behavior: "smooth" });
             });
           }}
-          onCommit={(text, color, time) => {
+          onCommit={(text, color, time, accept) => {
             const t = text.trim();
 
             // ── Week view: write/edit a CalendarEvent (real datetime). ──
