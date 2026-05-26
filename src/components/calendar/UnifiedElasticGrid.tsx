@@ -1611,7 +1611,7 @@ export function UnifiedElasticGrid({
                       title: t,
                       color,
                       categoryId: popover.categoryId ?? undefined,
-                      category: popover.categoryName ?? categoryFromColor(color),
+                      category: categoryFromColor(color),
                       ...(markRange || time || popover.pendingDate || popover.pendingTime ? { startISO, endISO } : {}),
                       allDay: false,
                     });
@@ -1624,7 +1624,7 @@ export function UnifiedElasticGrid({
                     startISO,
                     endISO,
                     allDay: false,
-                    category: popover.categoryName ?? categoryFromColor(color),
+                    category: categoryFromColor(color),
                   });
                 }
               }
