@@ -90,6 +90,7 @@ export function SessionDetailsModal({
   onDelete,
   onAccept,
   isCoachPending = false,
+  suppressUnsavedPrompt = false,
   strava,
   date,
   readOnly = false,
@@ -111,6 +112,7 @@ export function SessionDetailsModal({
    */
   onAccept?: (v: SessionDetailsValue) => void;
   isCoachPending?: boolean;
+  suppressUnsavedPrompt?: boolean;
   strava?: {
     polyline?: string | null;
     elevationGainM?: number | null;
@@ -142,21 +144,35 @@ export function SessionDetailsModal({
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const requestClose = () => {
-    if (isDirty && !readOnly) setConfirmCancel(true);
+    if (isDirty && !readOnly && !suppressUnsavedPrompt) setConfirmCancel(true);
     else onClose();
+  };
+
+  const submitPrimaryAction = () => {
+    if (readOnly) return;
+    if (onAccept && isCoachPending) {
+      onAccept(value);
+      return;
+    }
+    if (!saveDisabled) onSave(value);
   };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.tagName === "TEXTAREA") return;
       if (e.key === "Escape") {
         e.preventDefault();
         requestClose();
+      } else if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        submitPrimaryAction();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDirty, readOnly]);
+  }, [isDirty, readOnly, saveDisabled, onAccept, isCoachPending, value]);
 
   const set = <K extends keyof SessionDetailsValue>(k: K, v: SessionDetailsValue[K]) =>
     onChange({ ...value, [k]: v });
@@ -227,7 +243,7 @@ export function SessionDetailsModal({
               {!readOnly && onAccept && isCoachPending && (
                 <button
                   type="button"
-                  onClick={() => onAccept(value)}
+                  onClick={submitPrimaryAction}
                   className="whitespace-nowrap rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
                 >
                   Accept
@@ -236,7 +252,7 @@ export function SessionDetailsModal({
               {!readOnly && !(onAccept && isCoachPending) && (
                 <button
                   type="button"
-                  onClick={() => onSave(value)}
+                  onClick={submitPrimaryAction}
                   disabled={saveDisabled}
                   className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium ${
                     saveDisabled
