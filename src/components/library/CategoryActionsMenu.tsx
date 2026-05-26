@@ -41,6 +41,8 @@ export type CategoryActionsMenuProps = {
   allowCustomColor?: boolean;
   /** Optional override for the swatch palette (defaults to STANDARD_COLORS). */
   colorSwatches?: ColorValue[];
+  /** Optional render slot for an "Access" submenu (shown under Color). */
+  accessPanel?: React.ReactNode;
 };
 
 // 9 standard colors (3x3 grid)
