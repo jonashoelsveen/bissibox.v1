@@ -1871,15 +1871,13 @@ function DayCellPair(props: DayCellPairProps) {
               if (t.dataset.role === "mark-plus") return;
               if (t.dataset.role === "mark-drag") return;
               onSelect(k);
-              if (allowMark) onMarkBegin(k);
+              if (allowMark && viewerRole === "owner") onMarkBegin(k);
             }}
             onMouseEnter={() => onCellMouseEnter(k)}
             onDoubleClick={(e) => {
               e.stopPropagation();
+              if (viewerRole !== "owner") return;
               if (allowMark) {
-                // Week-view: synthesize a single-cell mark + release so the
-                // existing release-flow effect materializes a real session
-                // tile, matching the behaviour of dragging out a 1-slot mark.
                 onMarkSingleCell(k);
               } else {
                 onBeginEdit(k);
