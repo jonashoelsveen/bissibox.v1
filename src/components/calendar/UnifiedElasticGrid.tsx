@@ -568,6 +568,7 @@ export function UnifiedElasticGrid({
   //    flow with the marked-range overlay.
   useEffect(() => {
     if (!markReleased || !markRange) return;
+    if (viewerRole !== "owner") return;
     if (markRange.hi < markRange.lo) return;
     const day = Math.floor(markRange.lo / 2);
     const session = (markRange.lo % 2) as Session;
