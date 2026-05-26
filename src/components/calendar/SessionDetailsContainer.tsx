@@ -164,7 +164,18 @@ export function SessionDetailsContainer({
       }
       value={detailsValue}
       onChange={(v) => setDetailsValue(v)}
-      onClose={onClose}
+      onClose={() => {
+        // When the viewer is the owner of a coach-pending session, treat
+        // closing the modal (click outside, Esc, X button) as implicit
+        // acceptance — same end state as Save/Enter. This matches how
+        // other autosaved edits behave: leaving the panel persists the
+        // changes and clears the pending stripe.
+        if (ev.coachPending && onAccept) {
+          onUpsert({ ...buildPatch(detailsValue), coachPending: false });
+          onAccept();
+        }
+        onClose();
+      }}
       suppressUnsavedPrompt={!!(ev.coachPending && onAccept)}
       onSave={(v) => {
         onUpsert(buildPatch(v));
