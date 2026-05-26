@@ -118,6 +118,13 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!rows.length) return;
+    setSelectedCoachId((current) =>
+      current && rows.some((row) => row.id === current) ? current : null,
+    );
+  }, [rows]);
+
   const serialize = (r: CoachRow) =>
     `${r.id}:${r.calendar_access}:${r.diary_access}:${r.photos_access}`;
 
@@ -162,7 +169,6 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
         }
       }
       setBaseline(JSON.stringify(rows.map(serialize)));
-      toast.success("Coach access saved.");
       return true;
     },
   }));
