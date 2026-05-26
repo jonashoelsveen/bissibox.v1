@@ -134,7 +134,7 @@ export function useGroupMembers(): { members: GroupMemberRow[]; loading: boolean
       }
     })();
     return () => { cancelled = true; };
-  }, [user, isLeader]);
+  }, [user]);
 
   return { members, loading };
 }
