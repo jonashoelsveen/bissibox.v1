@@ -2591,7 +2591,10 @@ export function PopoverEditor({
         (timeRef.current?.startMin ?? null) === (init.time?.startMin ?? null) &&
         (timeRef.current?.endMin ?? null) === (init.time?.endMin ?? null);
       if (sameTitle && sameColor && sameTime) return;
-      onCommitRef.current(v, colorRef.current, timeRef.current);
+      // Treat unmount-time autosave as implicit acceptance for coach-pending
+      // sessions — matches the click-outside UX so the stripe clears the
+      // moment the user moves on, and subsequent edits autosave normally.
+      onCommitRef.current(v, colorRef.current, timeRef.current, true);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
