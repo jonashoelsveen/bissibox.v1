@@ -499,11 +499,29 @@ export function useEventStore(calId: string) {
   const { user } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const eventsRef = useRef<CalendarEvent[]>([]);
+  const pendingDeleteIdsRef = useRef<Map<string, number>>(new Map());
+  const pendingWriteByIdRef = useRef<Map<string, Promise<void>>>(new Map());
   const pastRef = useRef<CalendarEvent[][]>([]);
   const futureRef = useRef<CalendarEvent[][]>([]);
   const coachUserIdRef = useRef<string | null>(null);
   const [, forceTick] = useState(0);
   const bump = () => forceTick((n) => n + 1);
+
+  const materializeRows = useCallback((rows: Row[]) => {
+    const now = Date.now();
+    const tombstones = pendingDeleteIdsRef.current;
+    const liveIds = new Set(rows.map((row) => row.id));
+
+    for (const [id, markedAt] of Array.from(tombstones.entries())) {
+      if (!liveIds.has(id) || now - markedAt > 30_000) {
+        tombstones.delete(id);
+      }
+    }
+
+    return rows
+      .filter((row) => !tombstones.has(row.id))
+      .map(rowToEvent);
+  }, []);
 
   // Keep the current auth uid in sync so coach-created client sessions never
   // race an async auth lookup and lose `created_by_coach_id` on insert.
@@ -515,10 +533,13 @@ export function useEventStore(calId: string) {
   useEffect(() => {
     if (!scope) {
       eventsRef.current = [];
+      pendingDeleteIdsRef.current.clear();
+      pendingWriteByIdRef.current.clear();
       setEvents([]);
       return;
     }
     let cancelled = false;
+    pendingDeleteIdsRef.current.clear();
 
     const baseSelect = () => {
       let q = supabase.from("calendar_sessions").select("*");
@@ -531,7 +552,7 @@ export function useEventStore(calId: string) {
     void baseSelect().then(({ data }) => {
       if (cancelled) return;
       const rows = (data ?? []) as Row[];
-      const next = rows.map(rowToEvent);
+      const next = materializeRows(rows);
       eventsRef.current = next;
       setEvents(next);
     });
@@ -552,7 +573,7 @@ export function useEventStore(calId: string) {
           void baseSelect().then(({ data }) => {
             if (cancelled) return;
             const rows = (data ?? []) as Row[];
-            const next = rows.map(rowToEvent);
+            const next = materializeRows(rows);
             eventsRef.current = next;
             setEvents(next);
           });
@@ -564,7 +585,7 @@ export function useEventStore(calId: string) {
       cancelled = true;
       void supabase.removeChannel(ch);
     };
-  }, [calId, scope]);
+  }, [calId, materializeRows, scope]);
 
   const applyLocal = useCallback(
     (next: CalendarEvent[], opts?: { history?: boolean }) => {
@@ -590,6 +611,10 @@ export function useEventStore(calId: string) {
       const hasIdInPatch = (patch as { id?: string }).id != null;
       const id = (patch as { id?: string }).id ?? makeEventId();
       const existing = current.find((e) => e.id === id);
+      const deletedAt = pendingDeleteIdsRef.current.get(id);
+      if (deletedAt && Date.now() - deletedAt < 30_000) {
+        return null as unknown as CalendarEvent;
+      }
       // Guard: a patch that references an id we no longer have locally AND
       // doesn't bring its own timestamps would resurrect a ghost tile (empty
       // title, empty start/end) — happens when a late callback fires for an
@@ -602,6 +627,7 @@ export function useEventStore(calId: string) {
       ) {
         return null as unknown as CalendarEvent;
       }
+      pendingDeleteIdsRef.current.delete(id);
       const merged: CalendarEvent = {
         allDay: false,
         color: null,
@@ -627,12 +653,29 @@ export function useEventStore(calId: string) {
           return merged;
         }
         const row = eventToRow(merged, scope, coachUserIdRef.current);
-        void supabase
-          .from("calendar_sessions")
-          .upsert(row as never, { onConflict: "id" })
-          .then(({ error }) => {
-            if (error) console.error("[calendar_sessions upsert]", error);
+        const writePromise = Promise.resolve(
+          supabase
+            .from("calendar_sessions")
+            .upsert(row as never, { onConflict: "id" })
+            .then(({ error }) => {
+              if (error) console.error("[calendar_sessions upsert]", error);
+              if (pendingDeleteIdsRef.current.has(merged.id)) {
+                return supabase.from("calendar_sessions").delete().eq("id", merged.id).then(({ error: deleteError }) => {
+                  if (deleteError) console.error("[calendar_sessions cleanup delete]", deleteError);
+                });
+              }
+            }),
+        );
+        void writePromise.then(() => {
+          if (pendingWriteByIdRef.current.get(merged.id) === writePromise) {
+            pendingWriteByIdRef.current.delete(merged.id);
+          }
+        }, () => {
+            if (pendingWriteByIdRef.current.get(merged.id) === writePromise) {
+              pendingWriteByIdRef.current.delete(merged.id);
+            }
           });
+        pendingWriteByIdRef.current.set(merged.id, writePromise);
       }
       return merged;
     },
@@ -694,7 +737,17 @@ export function useEventStore(calId: string) {
       const current = eventsRef.current;
       const next = current.filter((e) => e.id !== id);
       if (next.length === current.length) return;
+      pendingDeleteIdsRef.current.set(id, Date.now());
       applyLocal(next);
+      const pendingWrite = pendingWriteByIdRef.current.get(id);
+      if (pendingWrite) {
+        void pendingWrite.then(() => {
+          void supabase.from("calendar_sessions").delete().eq("id", id);
+        }, () => {
+          void supabase.from("calendar_sessions").delete().eq("id", id);
+        });
+        return;
+      }
       void supabase.from("calendar_sessions").delete().eq("id", id);
     },
     [applyLocal],
