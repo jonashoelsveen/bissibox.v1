@@ -587,8 +587,21 @@ export function useEventStore(calId: string) {
         | (Partial<CalendarEvent> & { id: string }),
     ) => {
       const current = eventsRef.current;
+      const hasIdInPatch = (patch as { id?: string }).id != null;
       const id = (patch as { id?: string }).id ?? makeEventId();
       const existing = current.find((e) => e.id === id);
+      // Guard: a patch that references an id we no longer have locally AND
+      // doesn't bring its own timestamps would resurrect a ghost tile (empty
+      // title, empty start/end) — happens when a late callback fires for an
+      // event that was just deleted via the popover. Drop it silently.
+      if (
+        hasIdInPatch &&
+        !existing &&
+        (!(patch as Partial<CalendarEvent>).startISO ||
+          !(patch as Partial<CalendarEvent>).endISO)
+      ) {
+        return null as unknown as CalendarEvent;
+      }
       const merged: CalendarEvent = {
         allDay: false,
         color: null,
