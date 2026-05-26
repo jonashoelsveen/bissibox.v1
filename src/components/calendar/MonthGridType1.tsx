@@ -2165,7 +2165,21 @@ export function MonthGridType1({
                   sessionNoteUpdatedAt: new Date().toISOString(),
                 })
               }
-              onUpsert={(patch) => { onUpsertEvent?.(patch); }}
+              onUpsert={(patch) => {
+                // Match week/day-view: any explicit edit (title, duration,
+                // activity, color) committed via the inline editor on a
+                // coach-pending session implicitly accepts the proposal.
+                // commitEdit / TitleInput / "Lagre" / Enter all flow through
+                // here, so folding the accept into the same patch guarantees
+                // a single write with coach_pending=false instead of relying
+                // on the outside-click path.
+                if (ev.coachPending && onAcceptCoachSession) {
+                  onUpsertEvent?.({ ...patch, coachPending: false });
+                  onAcceptCoachSession(ev.id);
+                } else {
+                  onUpsertEvent?.(patch);
+                }
+              }}
             />
           );
         })()}
