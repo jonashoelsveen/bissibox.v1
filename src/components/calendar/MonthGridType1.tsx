@@ -2786,6 +2786,9 @@ function CategoryDropdownRow({
 
   const selectedCat = categories.find((c) => c.id === selectedId);
   useEffect(() => {
+    if (selectedCat) {
+      onSelectionChange?.({ id: selectedCat.id, color: selectedCat.color, name: selectedCat.name });
+    }
     if (selectedCat && selectedCat.color.toLowerCase() !== lcColor) {
       onSetColor(selectedCat.color);
     }
