@@ -408,6 +408,10 @@ function dbToIso(s: string): string {
   return s.replace(/(Z|[+-]\d{2}:?\d{2})$/i, "").slice(0, 19);
 }
 
+function hasRenderableTitle(title: string | null | undefined): boolean {
+  return typeof title === "string" && title.trim().length > 0;
+}
+
 interface Row {
   id: string;
   user_id: string;
@@ -540,7 +544,27 @@ export function useEventStore(calId: string) {
       }
     }
 
-    return rows.filter((row) => !tombstones.has(row.id)).map(rowToEvent);
+    return rows
+      .filter((row) => hasRenderableTitle(row.title))
+      .filter((row) => !tombstones.has(row.id))
+      .map(rowToEvent);
+  }, []);
+
+  const cleanupUntitledRows = useCallback((rows: Row[]) => {
+    const invalidIds = rows
+      .filter((row) => !hasRenderableTitle(row.title))
+      .map((row) => row.id);
+    if (invalidIds.length === 0) return;
+    for (const id of invalidIds) {
+      pendingDeleteIdsRef.current.set(id, Date.now());
+    }
+    void supabase
+      .from("calendar_sessions")
+      .delete()
+      .in("id", invalidIds)
+      .then(({ error }) => {
+        if (error) console.error("[calendar_sessions cleanup untitled]", error);
+      });
   }, []);
 
   // Keep the current auth uid in sync so coach-created client sessions never
@@ -572,6 +596,7 @@ export function useEventStore(calId: string) {
     void baseSelect().then(({ data }) => {
       if (cancelled) return;
       const rows = (data ?? []) as Row[];
+      cleanupUntitledRows(rows);
       const next = materializeRows(rows);
       eventsRef.current = next;
       setEvents(next);
@@ -593,6 +618,7 @@ export function useEventStore(calId: string) {
           void baseSelect().then(({ data }) => {
             if (cancelled) return;
             const rows = (data ?? []) as Row[];
+            cleanupUntitledRows(rows);
             const next = materializeRows(rows);
             eventsRef.current = next;
             setEvents(next);
@@ -605,7 +631,7 @@ export function useEventStore(calId: string) {
       cancelled = true;
       void supabase.removeChannel(ch);
     };
-  }, [calId, materializeRows, scope]);
+  }, [calId, cleanupUntitledRows, materializeRows, scope]);
 
   const applyLocal = useCallback((next: CalendarEvent[], opts?: { history?: boolean }) => {
     if (opts?.history !== false) {
@@ -654,6 +680,24 @@ export function useEventStore(calId: string) {
         ...patch,
         id,
       };
+      const nextTitle = merged.title.trim();
+      if (!nextTitle) {
+        if (existing) {
+          pendingDeleteIdsRef.current.set(id, Date.now());
+          const next = current.filter((e) => e.id !== id);
+          applyLocal(next);
+          const pendingWrite = pendingWriteByIdRef.current.get(id);
+          if (pendingWrite) {
+            void pendingWrite.finally(() => {
+              void supabase.from("calendar_sessions").delete().eq("id", id);
+            });
+          } else if (scope) {
+            void supabase.from("calendar_sessions").delete().eq("id", id);
+          }
+        }
+        return merged;
+      }
+      merged.title = nextTitle;
       if (!existing && merged.sortIndex == null) merged.sortIndex = Date.now();
       const next = existing ? current.map((e) => (e.id === id ? merged : e)) : [...current, merged];
       applyLocal(next);
