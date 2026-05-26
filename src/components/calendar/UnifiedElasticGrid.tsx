@@ -349,6 +349,17 @@ export function UnifiedElasticGrid({
   const { categories: teamCategories } = useUserCategories({
     teamId: seat === "admin" ? teamId : null,
   });
+  // When a coach is viewing a client's calendar, preload the client's own
+  // category list so a freshly-marked draft tile mounts with the same color
+  // the saved session will resolve to. Without this, the tile briefly flashes
+  // the coach's own top-category color before swapping to the client's.
+  const clientOwnerId = useMemo(
+    () => (calId.startsWith("client:") ? calId.slice(7) : null),
+    [calId],
+  );
+  const { categories: clientCategories } = useUserCategories({
+    ownerId: clientOwnerId,
+  });
 
   const handleViewModeChange = (v: ViewMode) => {
     if (!isControlled) setViewModeInternal(v);
@@ -688,7 +699,13 @@ export function UnifiedElasticGrid({
       // periwinkle Training default if categories haven't loaded yet.
       const meDefaultColor = meCategories[0]?.color ?? CAT_TRAINING_COLOR;
       const adminDefaultColor = teamCategories[0]?.color ?? "#E63337";
-      const defaultColor = seat === "admin" ? adminDefaultColor : meDefaultColor;
+      const clientDefaultColor = clientCategories[0]?.color ?? CAT_TRAINING_COLOR;
+      const isCoachOnClient = calId.startsWith("client:");
+      const defaultColor = isCoachOnClient
+        ? clientDefaultColor
+        : seat === "admin"
+          ? adminDefaultColor
+          : meDefaultColor;
       // Keep a brand-new untitled session in memory only until the user
       // actually saves a title. This prevents cancelled drafts from ever
       // reaching the backend, reloading, or resurfacing on view changes.
@@ -728,6 +745,8 @@ export function UnifiedElasticGrid({
     seat,
     meCategories,
     teamCategories,
+    clientCategories,
+    calId,
     viewerRole,
   ]);
 
