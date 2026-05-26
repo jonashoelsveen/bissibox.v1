@@ -2699,6 +2699,12 @@ export function PopoverEditor({
   );
 }
 
+export type CategorySelection = {
+  id: string | null;
+  color: string | null;
+  name: string | null;
+};
+
 function CategoryDropdownRow({
   seat,
   color,
