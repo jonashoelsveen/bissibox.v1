@@ -639,7 +639,7 @@ export function UnifiedElasticGrid({
     }
 
     openPopover({ year, month: markRange.month, day, session }, el);
-  }, [markReleased, markRange, openPopover, year, mode, appKind, currentDate, viewMode, onUpsertEvent, seat, meCategories, teamCategories]);
+  }, [markReleased, markRange, openPopover, year, mode, appKind, currentDate, viewMode, onUpsertEvent, seat, meCategories, teamCategories, viewerRole]);
 
 
 
