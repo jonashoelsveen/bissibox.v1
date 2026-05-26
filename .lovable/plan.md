@@ -1,60 +1,68 @@
-## Goal
+# Coach calendar editing for clients
 
-On the individual Calendar page left panel, change each personal category tab's three-dot menu and let the user grant per-category access to specific coaches. When a coach opens that user's Calendar from the Clients page, only the categories the owner has granted access to are shown — both the category tabs (in the left panel, when present) and the events of those categories in the calendar grid.
+This is a large, cross-cutting change touching the calendar grid, side nav, sessions schema, and the clients page. Below is the scoped plan before I start.
 
-Scope: individual Calendar only. Diary, admin/team calendar, and the Coaches settings table are unchanged.
+## 1. Database (migration)
 
-## 1. Three-dot menu changes (`CategoryActionsMenu` used by `MeCategorySection`)
+**Add coach pending state to sessions** (the existing event/session table — I'll confirm exact name on first read; likely `calendar_events` or similar):
+- `created_by_coach_id uuid null` — the coach who created it (null = self-created)
+- `coach_pending boolean default false` — true until client accepts
+- Index on `(user_id, coach_pending)`
 
-- Remove the `Pin to top` / `Unpin` extra item that `MeCategorySection` passes in for personal categories on the individual Calendar (we'll stop passing it there; the menu component keeps `extraItems` support so Diary etc. are untouched).
-- Reorder so `Rename` is the top item and `Color` sits right under it (already the case once Pin is removed).
-- Add a new `Access` submenu entry, styled like `Color`, that opens a side panel on hover:
-  - Empty state: "No coaches".
-  - Otherwise: a list of the owner's accepted coaches (display name from `profiles`, falling back to email), each with a checkbox to the left. Toggling the checkbox grants/revokes access for that coach to this category.
-  - Coach list is fetched once when the menu opens (lightweight, scoped to current user).
+**RLS updates on sessions:**
+- Coach with `is_coach_of_member(owner)` AND `has access to that category` (via `calendar_category_coach_access`) can `INSERT` rows where `created_by_coach_id = auth.uid()` and `coach_pending = true`.
+- Coach can `SELECT/UPDATE/DELETE` only their own pending rows on the client's calendar.
+- Client can `UPDATE` to flip `coach_pending → false` (accept) on rows targeting them, and `DELETE` any.
 
-## 2. Database
+**Coach access level** (view vs edit): use existing column on `user_coaches` (`access_level` text: `'view' | 'edit'`). If missing, add it with default `'view'`. The existing CoachesPanel UI already exposes view/edit toggle.
 
-New join table mapping a personal calendar category to a coach who has been granted access.
+**Remove obsolete code:** any older "coach can edit" hacks tied to follower/leader paths get removed in favour of the new `created_by_coach_id` + `coach_pending` flow.
 
-```text
-calendar_category_coach_access
-  id            uuid pk
-  owner_id     uuid  -- the category owner (auth.uid())
-  category_id   uuid -> calendar_categories(id) on delete cascade
-  coach_user_id uuid -- references the accepted coach's user id
-  created_at    timestamptz
-  unique(category_id, coach_user_id)
-```
+## 2. Side nav — coach viewing a client
 
-RLS:
-- Owner (`owner_id = auth.uid()`) can SELECT/INSERT/DELETE their own rows.
-- A coach can SELECT rows where `coach_user_id = auth.uid()` (needed so the coach's client can filter categories/events client-side).
+`CalendarSideNav` already shows `MeCategorySectionAdapter` for individuals. When a coach opens a client's calendar (new prop `clientUserId` + `coachAccessLevel`):
+- Header label = client's name (instead of "Me").
+- Category list = the client's `calendar_categories` filtered to those present in `calendar_category_coach_access` for `(owner=client, coach=me)`.
+- `useUserCategories` extended to accept `ownerUserId` override and apply coach-access filter.
 
-No changes to `user_coaches` or `calendar_categories`.
+## 3. Calendar grid — coach edit mode
 
-## 3. Coach-side filtering on Clients page
+Add `coachMode?: { clientUserId: string; accessLevel: 'view' | 'edit'; allowedCategoryIds: Set<string> }` prop threaded through `CalendarPage → UnifiedElasticGrid`.
 
-Only the Calendar sub-tab in `MemberWorkspace` is affected.
+In the grid:
+- If `accessLevel === 'view'`: double-click is a no-op; drag-select marks the area but on mouseup the marquee just clears (no session created, no editor opens).
+- If `accessLevel === 'edit'`: same creation flow as self, but new sessions are inserted with `user_id = clientUserId`, `created_by_coach_id = me`, `coach_pending = true`. Activity dropdown is restricted to `allowedCategoryIds`.
+- Render: sessions with `coach_pending=true` get a diagonal-stripe overlay (light gray stripes over the category color) using a CSS `repeating-linear-gradient`. Applies to both sides — coach sees them pending too until accepted.
 
-- Add a hook `useGrantedCategoryIds(ownerId)` that, when the viewer is not the owner, returns the set of `category_id`s the viewer has been granted access to (queries `calendar_category_coach_access` where `coach_user_id = auth.uid()` and joins on `owner_id = ownerId`).
-- In `YearCalendarView`, when `memberId !== auth.uid()` (coach-on-client), filter the personal `me:` categories down to the granted set before rendering both:
-  - the side-nav personal category list (if/when rendered for the clients view), and
-  - the events shown in the grid (filter by category id / color mapping).
-- Owner's own view is unchanged: they continue to see all of their own categories.
-- Admin / `ind:` (built-in individual) / diary categories are unaffected by this filter — only user-defined `me:` categories are gated.
+## 4. Hover menu — pending coach session (client view)
 
-## Files
+When the client hovers a session where `coach_pending=true` AND `created_by_coach_id` is set:
+- Replace the normal hover menu with a compact 2-button panel: ✓ **Accept** (left) | 🗑 **Delete** (right).
+- Accept → `UPDATE sessions SET coach_pending=false WHERE id=...`.
+- Delete → `DELETE` (RLS allows owner).
 
-- `src/components/library/CategoryActionsMenu.tsx` — add an `accessPanel` prop (optional render slot) so we can mount an Access sub-menu in the same component.
-- `src/components/calendar/MeCategorySection.tsx` — drop the `Pin to top` extra item, pass an `accessPanel` that lists coaches and toggles access; only enable this on the individual Calendar (not Diary or team scope).
-- `src/hooks/useCoachAccessForCategory.ts` (new) — reads/writes the join rows for a given category.
-- `src/hooks/useGrantedCategoryIds.ts` (new) — reads granted categories for the viewing coach.
-- `src/components/team/MemberWorkspace.tsx` and/or `src/components/calendar/YearCalendarView.tsx` — apply the granted-category filter to events and (where applicable) the category list when the viewer is a coach.
-- New Supabase migration creating `calendar_category_coach_access` with the RLS policies above.
+Coach hovering their own pending session sees a simple Delete action (cannot accept on client's behalf).
 
-## Out of scope
+## 5. Clients page wiring
 
-- Diary categories, Strava categories, admin/team categories.
-- Reordering or visual restyle of the menu beyond removing Pin and adding Access.
-- Surfacing access state in the Coaches settings page.
+`ClientsPage` / `MemberWorkspace` already opens a client workspace. Mount the existing `CalendarPage` inside the client tab with the new `coachMode` prop and the resolved `accessLevel` from `user_coaches`.
+
+## 6. Realtime
+
+`calendar_events` (or equivalent) is already in `supabase_realtime` for the user — extend the coach's grid to also subscribe to `user_id=eq.${clientUserId}` so accept/delete events from the client flip the stripe live.
+
+---
+
+## Technical notes
+
+- Stripe overlay: single utility CSS class `.session-pending` with `background-image: repeating-linear-gradient(135deg, transparent 0 6px, rgba(255,255,255,0.35) 6px 8px)` layered over the existing color.
+- Category dropdown filtering: pass `allowedCategoryIds` to `SessionPopoverEditor` / `SessionDetailsModal` and filter at render.
+- Drag-select swallow in view mode: early-return in the mouseup handler of `UnifiedElasticGrid` before the "create draft session" branch.
+
+## Out of scope (per your message — saved for later)
+
+- Notifications/email when coach adds session.
+- Bulk accept.
+- Coach-side edit of an accepted (no-longer-pending) session.
+
+Shall I proceed with this plan?
