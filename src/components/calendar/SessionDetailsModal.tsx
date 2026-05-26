@@ -88,6 +88,8 @@ export function SessionDetailsModal({
   onClose,
   onSave,
   onDelete,
+  onAccept,
+  isCoachPending = false,
   strava,
   date,
   readOnly = false,
@@ -101,6 +103,14 @@ export function SessionDetailsModal({
   onClose: () => void;
   onSave: (v: SessionDetailsValue) => void;
   onDelete?: () => void;
+  /**
+   * When set, render an "Accept" button (in place of Save) for coach-pending
+   * sessions on the owner's own calendar. The handler receives the current
+   * draft value so any in-progress edits can be persisted alongside the
+   * accept action.
+   */
+  onAccept?: (v: SessionDetailsValue) => void;
+  isCoachPending?: boolean;
   strava?: {
     polyline?: string | null;
     elevationGainM?: number | null;
