@@ -576,9 +576,17 @@ export function UnifiedElasticGrid({
     if (!el) return;
 
     if (mode.kind === "year" && appKind !== "diary") {
-      // weekDates is the authoritative column→date map. In week-view it's
-      // the 7 days anchored to Monday; in day-view it's just [currentDate].
-      const date = weekDates[markRange.month];
+      // Column→date map. In day-view there's only column 0 = currentDate;
+      // in week-view, column N = Monday + N days.
+      const isDay = viewMode === "day";
+      const date = isDay
+        ? new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate())
+        : (() => {
+            const s = startOfWeekMon(currentDate);
+            const d = new Date(s);
+            d.setDate(s.getDate() + markRange.month);
+            return d;
+          })();
       if (!date) return;
       const startMin = WEEK_START_HOUR * 60 + (markRange.lo - 2) * 30;
       const endMin = WEEK_START_HOUR * 60 + (markRange.hi - 2 + 1) * 30;
