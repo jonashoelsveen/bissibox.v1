@@ -676,6 +676,7 @@ export function MonthGridType1({
     editIdx: number;
     initialText: string;
     initialColor: string | null;
+    categoryId?: string | null;
     /** When set, this popover is editing a unified CalendarEvent. */
     eventId?: string;
   } | null>(null);
@@ -692,6 +693,7 @@ export function MonthGridType1({
         editIdx: -1,
         initialText: "",
         initialColor: null,
+        categoryId: null,
       });
     },
     [days],
@@ -715,6 +717,7 @@ export function MonthGridType1({
         editIdx: idx,
         initialText: text,
         initialColor: color,
+        categoryId: null,
       });
     },
     [cellAnchorRect],
@@ -729,6 +732,7 @@ export function MonthGridType1({
         editIdx: -1,
         initialText: ev.title,
         initialColor: ev.color,
+        categoryId: ev.categoryId ?? null,
         eventId: ev.id,
       });
     },
