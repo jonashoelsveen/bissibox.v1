@@ -489,8 +489,8 @@ export function ClientsPage() {
                 )}
                 {filtered.map((m) => {
                   const name = memberDisplayName(m);
-                  const isSelected =
-                    selectedClientId === m.user_id || activeClientId === m.user_id;
+                  const shownClientId = activeClientId ?? selectedClientId;
+                  const isSelected = shownClientId === m.user_id;
                   return (
                     <div
                       key={`${m.group_id}-${m.user_id}`}
