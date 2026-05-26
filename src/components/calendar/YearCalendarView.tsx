@@ -199,15 +199,41 @@ function YearCalendarViewInner({
     return s;
   }, [userCats]);
 
+  // Coach-on-client filter: when the viewer is NOT the member owner and a
+  // memberId is provided (Clients page), restrict visible personal ("me:*")
+  // categories to the colors the owner has explicitly granted this coach.
+  // Owner's own view is unchanged (null = no restriction).
+  const { user } = useAuth();
+  const isCoachViewer =
+    !!memberId && !!user && memberId !== user.id && appKind === "calendar";
+  const [grantedMeColors, setGrantedMeColors] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    if (!isCoachViewer) {
+      setGrantedMeColors(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("calendar_category_coach_access")
+        .select("calendar_categories!inner(color)")
+        .eq("coach_user_id", user!.id)
+        .eq("owner_id", memberId!);
+      if (cancelled) return;
+      const set = new Set<string>();
+      for (const row of (data ?? []) as Array<{ calendar_categories: { color: string } | null }>) {
+        const color = row.calendar_categories?.color;
+        if (color) set.add(`me:${color.toLowerCase()}`);
+      }
+      setGrantedMeColors(set);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isCoachViewer, user, memberId]);
+
   const mergedEvents = useMemo(() => {
     const stravaForDiary = appKind === "diary" ? stravaEvents : [];
-    // Merge strategy: the Strava activity is the source-of-truth for time,
-    // polyline, distance, etc. A local edit with the same id (`strava:<id>`)
-    // holds per-user overrides (title, note, group/sub, sortIndex, …).
-    // We layer the local overrides ON TOP of the Strava base, so partial
-    // patches like `{ id, title }` coming from the hover menu can never
-    // wipe out `startISO`/`endISO` or other Strava-only fields — otherwise
-    // the tile disappears from the calendar because its date becomes empty.
     const localById = new Map(events.map((e) => [e.id, e]));
     const stravaIds = new Set(stravaForDiary.map((e) => e.id));
     const mergedStrava = stravaForDiary.map((s) => {
@@ -224,16 +250,31 @@ function YearCalendarViewInner({
     const base = previewActive
       ? [...localOnly, ...mergedStrava, ...ghostEvents]
       : [...localOnly, ...mergedStrava];
-    if (!visibleCategories) return base;
+
+    // Coach view: hide every personal ("me:*") event whose color is not in
+    // the granted set. While the grants are still loading (null), hide all
+    // me:* events to avoid flashing private data.
+    const passesCoachGate = (key: string) => {
+      if (!isCoachViewer) return true;
+      if (!key.startsWith("me:")) return true;
+      if (!grantedMeColors) return false;
+      return grantedMeColors.has(key);
+    };
+
+    if (!visibleCategories) {
+      if (!isCoachViewer) return base;
+      return base.filter((e) => passesCoachGate(categoryKeyFromColor(e.color)));
+    }
     return base.filter((e) => {
       if (e.diaryType === "training") return visibleCategories.has("ind:training");
       const key = categoryKeyFromColor(e.color);
+      if (!passesCoachGate(key)) return false;
       // For user ("me:*") categories, default to visible unless the user has
       // explicitly hidden that color via the side panel.
       if (key.startsWith("me:")) return !hiddenMeColors.has(key);
       return visibleCategories.has(key);
     });
-  }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind, hiddenMeColors]);
+  }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind, hiddenMeColors, isCoachViewer, grantedMeColors]);
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
