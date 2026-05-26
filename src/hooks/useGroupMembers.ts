@@ -67,7 +67,7 @@ export function useGroupMembers(): { members: GroupMemberRow[]; loading: boolean
           .select("user_id, group_id")
           .in("group_id", groupIds);
         const userIds = Array.from(new Set((memberRows ?? []).map((r) => r.user_id as string)));
-        let profileById = new Map<string, { first_name?: string; last_name?: string; avatar_url?: string; email?: string }>();
+        let profileById = new Map<string, { first_name: string | null; last_name: string | null; avatar_url: string | null; email: string | null }>();
         if (userIds.length > 0) {
           const { data: profiles } = await supabase
             .from("profiles")
