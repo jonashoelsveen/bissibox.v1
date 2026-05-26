@@ -141,7 +141,7 @@ export function SessionDetailsContainer({
       isCoachPending={!!ev.coachPending}
       onAccept={
         onAccept
-          ? (v) => {
+          ? (v: SessionDetailsValue) => {
               // Persist any in-progress edits (title, activity, time, etc.)
               // before flipping coach_pending off so the client's accepted
               // copy reflects exactly what's in the panel right now.
