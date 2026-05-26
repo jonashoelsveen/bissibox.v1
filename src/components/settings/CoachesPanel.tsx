@@ -150,13 +150,33 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
       toast.error("Please enter a valid email.");
       return;
     }
+    if (email === (user.email || "").toLowerCase()) {
+      toast.error("You cannot invite yourself as a coach.");
+      return;
+    }
     setAdding(true);
     const { data, error } = await supabase.functions.invoke("coach-invite", {
       body: { coach_email: email },
     });
     setAdding(false);
-    if (error || !data?.ok) {
-      toast.error(error?.message || data?.error || "Could not send invitation.");
+    let errMsg: string | null = null;
+    if (error) {
+      // FunctionsHttpError exposes a Response on `context`
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === "function") {
+        try {
+          const body = await ctx.clone().json();
+          errMsg = body?.error || body?.message || null;
+        } catch {
+          /* ignore */
+        }
+      }
+      errMsg = errMsg || error.message;
+    } else if (!data?.ok) {
+      errMsg = data?.error || "Could not send invitation.";
+    }
+    if (errMsg) {
+      toast.error(errMsg);
       return;
     }
     toast.success(`Invitation sent to ${email}.`);
