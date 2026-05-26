@@ -655,7 +655,11 @@ export function useEventStore(calId: string) {
       const current = eventsRef.current;
       const next = current.map((e) => (e.id === id ? { ...e, ...patch } : e));
       applyLocal(next);
-      const dbPatch: Record<string, unknown> = {};
+      const dbPatch: {
+        starts_at?: string;
+        ends_at?: string;
+        all_day?: boolean;
+      } = {};
       if (patch.startISO != null) dbPatch.starts_at = isoToDb(patch.startISO);
       if (patch.endISO != null) dbPatch.ends_at = isoToDb(patch.endISO);
       if (patch.allDay != null) dbPatch.all_day = patch.allDay;
