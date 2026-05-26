@@ -2713,6 +2713,7 @@ function CategoryDropdownRow({
   color,
   initialCategoryId = null,
   onSetColor,
+  onSelectionChange,
   readOnly = false,
   teamId = null,
   ownerId = null,
@@ -2723,6 +2724,7 @@ function CategoryDropdownRow({
   /** Legacy admin enum kept for prop compatibility; no longer used. */
   adminCategory?: AdminCategory;
   onSetColor: (c: string) => void;
+  onSelectionChange?: (selection: CategorySelection) => void;
   readOnly?: boolean;
   teamId?: string | null;
   ownerId?: string | null;
@@ -2751,9 +2753,12 @@ function CategoryDropdownRow({
       const id = fromColor ?? categories[0].id;
       setSelectedId(id);
       const cat = categories.find((c) => c.id === id);
-      if (cat && cat.color.toLowerCase() !== lcColor) onSetColor(cat.color);
+      if (cat) {
+        onSelectionChange?.({ id: cat.id, color: cat.color, name: cat.name });
+        if (cat.color.toLowerCase() !== lcColor) onSetColor(cat.color);
+      }
     }
-  }, [categories, initialCategoryId, lcColor, selectedId, onSetColor]);
+  }, [categories, initialCategoryId, lcColor, selectedId, onSelectionChange, onSetColor]);
 
   // If the popover's current color matches a different category than the
   // currently-selected id (e.g. parent pushed a new default color), realign
@@ -2793,7 +2798,10 @@ function CategoryDropdownRow({
             const id = e.target.value;
             setSelectedId(id);
             const cat = categories.find((c) => c.id === id);
-            if (cat) onSetColor(cat.color);
+            if (cat) {
+              onSetColor(cat.color);
+              onSelectionChange?.({ id: cat.id, color: cat.color, name: cat.name });
+            }
           }}
           className="block w-full bg-transparent py-2 pl-4 pr-3 text-[12px] text-ink outline-none"
         >
