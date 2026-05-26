@@ -1023,6 +1023,7 @@ export function UnifiedElasticGrid({
     if (mode.kind !== "year") return [];
     const source = draftEvent ? [...events, draftEvent] : events;
     return source.filter((e) => {
+      if (!e.title.trim()) return draftEvent?.id === e.id;
       const d = fromISOLocal(e.startISO);
       return weekDates.some((wd) => sameDay(wd, d));
     });
