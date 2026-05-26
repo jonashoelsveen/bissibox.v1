@@ -67,6 +67,7 @@ export function ClientsPage() {
         return [...prev, m];
       });
       setActiveClientId(m.user_id);
+      setSelectedClientId(null);
     },
     [],
   );
