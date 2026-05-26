@@ -408,6 +408,10 @@ function dbToIso(s: string): string {
   return s.replace(/(Z|[+-]\d{2}:?\d{2})$/i, "").slice(0, 19);
 }
 
+function hasRenderableTitle(title: string | null | undefined): boolean {
+  return typeof title === "string" && title.trim().length > 0;
+}
+
 interface Row {
   id: string;
   user_id: string;
@@ -540,7 +544,27 @@ export function useEventStore(calId: string) {
       }
     }
 
-    return rows.filter((row) => !tombstones.has(row.id)).map(rowToEvent);
+    return rows
+      .filter((row) => hasRenderableTitle(row.title))
+      .filter((row) => !tombstones.has(row.id))
+      .map(rowToEvent);
+  }, []);
+
+  const cleanupUntitledRows = useCallback((rows: Row[]) => {
+    const invalidIds = rows
+      .filter((row) => !hasRenderableTitle(row.title))
+      .map((row) => row.id);
+    if (invalidIds.length === 0) return;
+    for (const id of invalidIds) {
+      pendingDeleteIdsRef.current.set(id, Date.now());
+    }
+    void supabase
+      .from("calendar_sessions")
+      .delete()
+      .in("id", invalidIds)
+      .then(({ error }) => {
+        if (error) console.error("[calendar_sessions cleanup untitled]", error);
+      });
   }, []);
 
   // Keep the current auth uid in sync so coach-created client sessions never
