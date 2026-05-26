@@ -1352,8 +1352,7 @@ export function MonthGridType1({
                   }}
                   onDoubleClick={(e) => {
                     if (!d.inMonth) return;
-                    // Ignore dblclicks that originate inside an existing item
-                    // (target may be a child span/icon without data-role).
+                    if (viewerRole !== "owner") return;
                     if ((e.target as HTMLElement).closest('[data-role="item"]')) return;
                     openPopoverAt(pos, e.currentTarget);
                   }}
