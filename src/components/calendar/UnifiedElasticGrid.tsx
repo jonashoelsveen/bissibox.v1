@@ -292,11 +292,12 @@ export function UnifiedElasticGrid({
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // Internal grid mode for the elastic spreadsheet (shared by Day & Week
-  // views). Day view uses the "rich" per-row layout (kind: "month"); Week
-  // view uses the "compact" hourly-label layout (kind: "year").
-  const mode: Mode = viewMode === "day" ? { kind: "month", month: 0 } : { kind: "year" };
+  // views). Both day and week use the compact hourly-label layout
+  // (kind: "year"); day-view simply renders a single column.
+  const isDayView = viewMode === "day";
+  const mode: Mode = { kind: "year" };
   const [simpleView] = useDiarySimpleView();
-  const isSimple = mode.kind === "year" && appKind === "diary" && simpleView;
+  const isSimple = mode.kind === "year" && appKind === "diary" && simpleView && !isDayView;
 
   // User-configurable week-view day timeframe. Drives the time gutter,
   // overlay row count and event vertical placement in the week view.
