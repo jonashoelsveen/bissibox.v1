@@ -514,8 +514,13 @@ function eventToRow(e: CalendarEvent, scope: Scope, coachUserId: string | null):
   } else if (scope?.kind === "user") {
     base.user_id = scope.userId;
     base.entity_id = null;
-    base.created_by_coach_id = null;
-    base.coach_pending = false;
+    // Preserve the existing pending state: when an individual user edits a
+    // coach-created session (drag, time edit, title edit, color change), the
+    // pending stripe must remain until they explicitly accept it via Save /
+    // Enter (handled by acceptCoachSession). Forcing false here would strip
+    // the pending state on every auto-save side-effect.
+    base.created_by_coach_id = e.createdByCoachId ?? null;
+    base.coach_pending = e.coachPending === true;
   }
   return base;
 }
