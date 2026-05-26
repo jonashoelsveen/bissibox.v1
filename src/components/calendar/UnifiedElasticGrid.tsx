@@ -3134,6 +3134,7 @@ function DiarySimpleStack({
             onClose={() => setDetailsEvId(null)}
             onUpsert={(patch) => onUpsertSession?.(patch)}
             onDelete={onDeleteEvent ? () => onDeleteEvent(ev.id) : undefined}
+            onAccept={onAcceptCoachSession ? () => onAcceptCoachSession(ev.id) : undefined}
           />
         );
       })()}
