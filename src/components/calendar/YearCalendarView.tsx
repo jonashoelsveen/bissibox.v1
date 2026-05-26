@@ -9,7 +9,9 @@
  * calendar in the grid header and the main view stay in lockstep.
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 
 import { useYearStore, useEventStore, type CellKey, type CalendarEvent } from "./yearStore";
