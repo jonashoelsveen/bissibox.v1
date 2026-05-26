@@ -606,6 +606,13 @@ export function useEventStore(calId: string) {
       applyLocal(next);
 
       if (scope) {
+        // Guard against writing an empty timestamp to a timestamptz column —
+        // happens if a patch (e.g. `{id, color}`) arrives for an event that
+        // was just removed locally and `existing` is no longer in the ref.
+        if (!merged.startISO || !merged.endISO) {
+          console.warn("[calendar_sessions upsert] skipped: missing timestamps", merged.id);
+          return merged;
+        }
         const row = eventToRow(merged, scope, coachUserIdRef.current);
         void supabase
           .from("calendar_sessions")
