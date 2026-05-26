@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
+
 
 export interface GroupMemberRow {
   user_id: string;
@@ -27,15 +27,15 @@ export function memberDisplayName(m: GroupMemberRow): string {
 
 export function useGroupMembers(): { members: GroupMemberRow[]; loading: boolean } {
   const { user } = useAuth();
-  const isLeader = useIsGroupLeader();
   const [members, setMembers] = useState<GroupMemberRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!user || !isLeader) {
+    if (!user) {
       setMembers([]);
       return;
     }
+
     let cancelled = false;
     void (async () => {
       setLoading(true);
@@ -134,7 +134,7 @@ export function useGroupMembers(): { members: GroupMemberRow[]; loading: boolean
       }
     })();
     return () => { cancelled = true; };
-  }, [user, isLeader]);
+  }, [user]);
 
   return { members, loading };
 }

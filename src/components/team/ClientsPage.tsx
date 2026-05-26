@@ -241,13 +241,7 @@ export function ClientsPage() {
   };
 
   if (!user) return null;
-  if (!isGroupLeader) {
-    return (
-      <div className="px-6 py-16 text-center text-sm text-muted-foreground">
-        Clients are available to coaches only.
-      </div>
-    );
-  }
+
 
   const activeTab = activeClientId
     ? openTabs.find((t) => t.user_id === activeClientId) ?? null

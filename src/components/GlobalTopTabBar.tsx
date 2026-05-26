@@ -498,9 +498,7 @@ export function GlobalTopTabBar() {
                     { key: "diary", label: "Diary", to: "/diary" as const, icon: <BookOpen strokeWidth={1.75} />, disabled: false },
                     { key: "photos", label: "Photos", to: "/photos" as const, icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
                     { key: "organization", label: "Organization", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: true },
-                    ...(isGroupLeader
-                      ? [{ key: "clients", label: "Clients", to: "/clients" as const, icon: <UsersRound strokeWidth={1.75} />, disabled: false }]
-                      : []),
+                    { key: "clients", label: "Clients", to: "/clients" as const, icon: <UsersRound strokeWidth={1.75} />, disabled: false },
                   ] as Array<{ key: string; label: string; to: "/calendar" | "/diary" | "/photos" | "/clients" | null; icon: React.ReactNode; disabled: boolean }>).map((app) => (
                     <button
                       key={app.key}
