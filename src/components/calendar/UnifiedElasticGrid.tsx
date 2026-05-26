@@ -699,7 +699,13 @@ export function UnifiedElasticGrid({
       // periwinkle Training default if categories haven't loaded yet.
       const meDefaultColor = meCategories[0]?.color ?? CAT_TRAINING_COLOR;
       const adminDefaultColor = teamCategories[0]?.color ?? "#E63337";
-      const defaultColor = seat === "admin" ? adminDefaultColor : meDefaultColor;
+      const clientDefaultColor = clientCategories[0]?.color ?? CAT_TRAINING_COLOR;
+      const isCoachOnClient = calId.startsWith("client:");
+      const defaultColor = isCoachOnClient
+        ? clientDefaultColor
+        : seat === "admin"
+          ? adminDefaultColor
+          : meDefaultColor;
       // Keep a brand-new untitled session in memory only until the user
       // actually saves a title. This prevents cancelled drafts from ever
       // reaching the backend, reloading, or resurfacing on view changes.
