@@ -39,7 +39,7 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
   const [addEmail, setAddEmail] = useState("");
   const [adding, setAdding] = useState(false);
   const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null);
-  const saveVersionRef = useRef(0);
+  const mutationVersionRef = useRef<Record<string, number>>({});
 
   const load = async () => {
     if (!user) return;
@@ -130,6 +130,23 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
   const serialize = (r: CoachRow) =>
     `${r.id}:${r.calendar_access}:${r.diary_access}:${r.photos_access}`;
 
+  const updateBaselineAccess = (
+    rowId: string,
+    key: "calendar_access" | "diary_access" | "photos_access",
+    value: Access,
+  ) => {
+    setBaseline((previous) => {
+      const parsed: string[] = JSON.parse(previous);
+      return JSON.stringify(
+        parsed.map((entry) => {
+          const [id, c, d, p] = entry.split(":");
+          if (id !== rowId) return entry;
+          return `${id}:${key === "calendar_access" ? value : c}:${key === "diary_access" ? value : d}:${key === "photos_access" ? value : p}`;
+        }),
+      );
+    });
+  };
+
   const currentDirtyKey = useMemo(() => JSON.stringify(rows.map(serialize)), [rows]);
   const isDirty = currentDirtyKey !== baseline;
 
@@ -181,6 +198,7 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
 
     const key = `${col}_access` as "calendar_access" | "diary_access" | "photos_access";
     if (currentRow[key] === value) return;
+    const previousValue = currentRow[key];
 
     const nextRows = previousRows.map((r) =>
       r.id === rowId
@@ -193,7 +211,10 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
 
     setRows(nextRows);
 
-    const saveVersion = ++saveVersionRef.current;
+    const mutationKey = `${rowId}:${key}`;
+    const mutationVersion = (mutationVersionRef.current[mutationKey] ?? 0) + 1;
+    mutationVersionRef.current[mutationKey] = mutationVersion;
+
     const updates =
       key === "calendar_access"
         ? { calendar_access: value }
@@ -208,13 +229,23 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
       .eq("owner_id", user.id);
 
     if (error) {
-      setRows(previousRows);
+      if (mutationVersionRef.current[mutationKey] !== mutationVersion) return;
+      setRows((currentRows) =>
+        currentRows.map((row) =>
+          row.id === rowId && row[key] === value
+            ? {
+                ...row,
+                [key]: previousValue,
+              }
+            : row,
+        ),
+      );
       toast.error(error.message);
       return;
     }
 
-    if (saveVersionRef.current === saveVersion) {
-      setBaseline(JSON.stringify(nextRows.map(serialize)));
+    if (mutationVersionRef.current[mutationKey] === mutationVersion) {
+      updateBaselineAccess(rowId, key, value);
     }
   };
 
