@@ -27,15 +27,15 @@ export function memberDisplayName(m: GroupMemberRow): string {
 
 export function useGroupMembers(): { members: GroupMemberRow[]; loading: boolean } {
   const { user } = useAuth();
-  const isLeader = useIsGroupLeader();
   const [members, setMembers] = useState<GroupMemberRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!user || !isLeader) {
+    if (!user) {
       setMembers([]);
       return;
     }
+
     let cancelled = false;
     void (async () => {
       setLoading(true);
