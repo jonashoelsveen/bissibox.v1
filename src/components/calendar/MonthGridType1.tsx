@@ -2702,29 +2702,33 @@ export function PopoverEditor({
 function CategoryDropdownRow({
   seat,
   color,
+  initialCategoryId = null,
   onSetColor,
   readOnly = false,
   teamId = null,
+  ownerId = null,
 }: {
   seat: CalendarSeat;
   color: string | null;
+  initialCategoryId?: string | null;
   /** Legacy admin enum kept for prop compatibility; no longer used. */
   adminCategory?: AdminCategory;
   onSetColor: (c: string) => void;
   readOnly?: boolean;
   teamId?: string | null;
+  ownerId?: string | null;
 }) {
   // Admin seat: scope to the team's categories (same list shown in the
   // left side-panel under the entity name header). Individual seat:
   // user-personal categories. Either way the dropdown reflects the
   // tab-order in the side panel, and the top tab is the default.
   const { categories } = useUserCategories(
-    seat === "admin" ? { teamId } : undefined,
+    seat === "admin" ? { teamId } : { ownerId },
   );
 
   const lcColor = (color ?? "").toLowerCase();
   const initialId = useMemo(
-    () => categories.find((c) => c.color.toLowerCase() === lcColor)?.id ?? categories[0]?.id ?? "",
+    () => initialCategoryId ?? categories.find((c) => c.color.toLowerCase() === lcColor)?.id ?? categories[0]?.id ?? "",
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -2734,13 +2738,13 @@ function CategoryDropdownRow({
   // don't surprise the user by reassigning their existing color.
   useEffect(() => {
     if (!selectedId && categories.length > 0) {
-      const fromColor = categories.find((c) => c.color.toLowerCase() === lcColor)?.id;
+      const fromColor = initialCategoryId ?? categories.find((c) => c.color.toLowerCase() === lcColor)?.id;
       const id = fromColor ?? categories[0].id;
       setSelectedId(id);
       const cat = categories.find((c) => c.id === id);
       if (cat && cat.color.toLowerCase() !== lcColor) onSetColor(cat.color);
     }
-  }, [categories, lcColor, selectedId, onSetColor]);
+  }, [categories, initialCategoryId, lcColor, selectedId, onSetColor]);
 
   // If the popover's current color matches a different category than the
   // currently-selected id (e.g. parent pushed a new default color), realign
