@@ -2139,6 +2139,13 @@ export function MonthGridType1({
               }}
               onForceClose={() => {
                 cancelHoverClose();
+                // Match week/day-view accept-on-outside-click UX: closing
+                // the inline editor (click outside, Esc, X) on a coach-
+                // pending session implicitly accepts the proposal so the
+                // stripe clears and subsequent edits autosave normally.
+                if (ev.coachPending && onAcceptCoachSession) {
+                  onAcceptCoachSession(ev.id);
+                }
                 setHoverId(null);
                 setHoverRect(null);
                 setForceEditId(null);
