@@ -2244,6 +2244,7 @@ function WeekEventsOverlay({
   onDeleteEvent,
   onSaveSessionNote,
   onUpsertSession,
+  onAcceptCoachSession,
   memberId,
   viewerRole = "owner",
 }: {
