@@ -327,17 +327,22 @@ export function UnifiedElasticGrid({
   const ROW_YEAR = 28;
   const ROW_MONTH = 36;
 
+  const DAY_COL_PX = 600;
   const gridTemplateColumns = useMemo(() => {
+    if (isDayView) {
+      // Day view: single weekday column, sized to roughly 3× a week column,
+      // centered horizontally by the wrapper.
+      return `48px ${DAY_COL_PX}px`;
+    }
     if (mode.kind === "year") {
       // Week view: 28px week-number gutter + 7 weekday columns. Mirrors the
       // Month view exactly so a zoom animation between the two doesn't
       // shift column widths.
       return `48px repeat(7, minmax(0, 1fr))`;
     }
-    // Day view: render the focused day at full FOCUS_COL width across the
-    // 7-column envelope so the active column is centered horizontally.
+    // Legacy day-of-month spreadsheet (unused now that day-view is a single column).
     return `repeat(7, ${FOCUS_COL}px)`;
-  }, [mode]);
+  }, [mode, isDayView]);
 
   const rowHeight = mode.kind === "year" ? ROW_YEAR : ROW_MONTH;
 
