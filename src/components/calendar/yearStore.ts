@@ -653,7 +653,7 @@ export function useEventStore(calId: string) {
           return merged;
         }
         const row = eventToRow(merged, scope, coachUserIdRef.current);
-        const writePromise = supabase
+        const writePromise: Promise<void> = supabase
           .from("calendar_sessions")
           .upsert(row as never, { onConflict: "id" })
           .then(({ error }) => {
@@ -663,8 +663,12 @@ export function useEventStore(calId: string) {
                 if (deleteError) console.error("[calendar_sessions cleanup delete]", deleteError);
               });
             }
-          })
-          .finally(() => {
+          });
+        void writePromise.then(() => {
+          if (pendingWriteByIdRef.current.get(merged.id) === writePromise) {
+            pendingWriteByIdRef.current.delete(merged.id);
+          }
+        }, () => {
             if (pendingWriteByIdRef.current.get(merged.id) === writePromise) {
               pendingWriteByIdRef.current.delete(merged.id);
             }
@@ -735,7 +739,9 @@ export function useEventStore(calId: string) {
       applyLocal(next);
       const pendingWrite = pendingWriteByIdRef.current.get(id);
       if (pendingWrite) {
-        void pendingWrite.finally(() => {
+        void pendingWrite.then(() => {
+          void supabase.from("calendar_sessions").delete().eq("id", id);
+        }, () => {
           void supabase.from("calendar_sessions").delete().eq("id", id);
         });
         return;
