@@ -2205,6 +2205,7 @@ export interface PopoverEditorProps {
    * so the session tile reflects the selection in real time.
    */
   onColorChange?: (color: string | null) => void;
+  onCategoryChange?: (selection: CategorySelection) => void;
   /**
    * When true, the popover renders as a view-only panel: the title input is
    * not focusable/editable, the category dropdown and time wheel are
@@ -2484,6 +2485,7 @@ export function PopoverEditor({
   onCommit,
   onTimeChange,
   onColorChange,
+  onCategoryChange,
   readOnly = false,
   placeholder = "f.eks. Intervaller 5×4min",
   teamId = null,
@@ -2663,6 +2665,7 @@ export function PopoverEditor({
               initialCategoryId={initialCategoryId}
               adminCategory={adminCategory}
               onSetColor={setColor}
+              onSelectionChange={onCategoryChange}
               readOnly={readOnly}
               teamId={teamId}
               ownerId={categoryOwnerId}
