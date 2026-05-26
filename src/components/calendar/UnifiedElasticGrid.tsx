@@ -1010,6 +1010,7 @@ export function UnifiedElasticGrid({
           onUpsertEvent={onUpsertEvent}
           onMoveEvent={onMoveEvent}
           onDeleteEvent={onDeleteEvent}
+          onAcceptCoachSession={onAcceptCoachSession}
           onReorderEvents={onReorderEvents}
           memberId={memberId}
           viewerRole={viewerRole}
