@@ -120,6 +120,8 @@ export interface YearCalendarViewProps {
   disableImport?: boolean;
   /** Team scope for resolving the user's category list (defaults to personal). */
   teamId?: string | null;
+  /** Lowercase hex colors the viewer has toggled off locally (coach view). */
+  hiddenColors?: Set<string>;
 }
 
 export function YearCalendarView(props: YearCalendarViewProps) {
