@@ -39,7 +39,7 @@ import { useHoverLock } from "./hoverLock";
 import { SessionDetailsContainer } from "./SessionDetailsContainer";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
-import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoWeekNumber } from "./dateUtils";
+import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, diffMinutes, isoWeekNumber, makeEventId } from "./dateUtils";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useSessionTileDesign, useDiarySimpleView } from "@/lib/session-tile-design";
 import { useDistanceUnit, kmToUnit, unitLabel } from "@/lib/units";
@@ -449,6 +449,23 @@ export function UnifiedElasticGrid({
     /** Override for the input placeholder (e.g. "New session" for fresh mark). */
     placeholder?: string;
   } | null>(null);
+  const [draftEvent, setDraftEvent] = useState<CalendarEvent | null>(null);
+  const draftEventRef = useRef<CalendarEvent | null>(null);
+  useEffect(() => {
+    draftEventRef.current = draftEvent;
+  }, [draftEvent]);
+  const clearDraftEvent = useCallback((id?: string | null) => {
+    setDraftEvent((current) => {
+      if (!current) return current;
+      if (id && current.id !== id) return current;
+      return null;
+    });
+  }, []);
+  const getEventById = useCallback((id?: string | null) => {
+    if (!id) return null;
+    if (draftEventRef.current?.id === id) return draftEventRef.current;
+    return eventsRef.current.find((e) => e.id === id) ?? null;
+  }, []);
 
   // Calendar drag-to-move: the time/location is applied immediately on
   // release; no extra confirmation step is required.
@@ -501,20 +518,30 @@ export function UnifiedElasticGrid({
   const discardEmptyPopoverEvent = useCallback(() => {
     const p = popoverRef.current;
     if (!p?.eventId) return;
-    const ev = eventsRef.current.find((e) => e.id === p.eventId);
+    const ev = getEventById(p.eventId);
     if (ev && !ev.title.trim()) {
-      onDeleteEvent(p.eventId);
+      if (draftEventRef.current?.id === p.eventId) clearDraftEvent(p.eventId);
+      else onDeleteEvent(p.eventId);
     }
-  }, [onDeleteEvent]);
+  }, [clearDraftEvent, getEventById, onDeleteEvent]);
 
-  const closePopover = useCallback(() => {
+  const closePopover = useCallback((opts?: { discardEmpty?: boolean }) => {
     // Safety net: if the popover was bound to a freshly-mark-created
     // placeholder event that the user never titled, discard it so closing
     // via Escape (or any path that doesn't go through onCommit's empty-
     // title branch) doesn't leave an orphan untitled tile behind.
-    discardEmptyPopoverEvent();
+    if (opts?.discardEmpty !== false) discardEmptyPopoverEvent();
     setPopover(null);
   }, [discardEmptyPopoverEvent]);
+
+  useEffect(() => {
+    const draftId = draftEventRef.current?.id;
+    if (!draftId) return;
+    clearDraftEvent(draftId);
+    setPopover((current) => (current?.eventId === draftId ? null : current));
+    setMarkRange(null);
+    setMarkReleased(false);
+  }, [calId, viewMode, clearDraftEvent]);
 
   // Clear the mark-range when mousing down anywhere that is not a marked
   // cell, not the plus button, and not the popover itself.
@@ -937,11 +964,12 @@ export function UnifiedElasticGrid({
   // Events visible in the current week (week view) or month (month view).
   const weekEvents = useMemo(() => {
     if (mode.kind !== "year") return [];
-    return events.filter((e) => {
+    const source = draftEvent ? [...events, draftEvent] : events;
+    return source.filter((e) => {
       const d = fromISOLocal(e.startISO);
       return weekDates.some((wd) => sameDay(wd, d));
     });
-  }, [events, weekDates, mode]);
+  }, [draftEvent, events, weekDates, mode]);
 
   // Find an event under a cell click in week view, if any (for editing).
   const eventAtCell = useCallback(
