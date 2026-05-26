@@ -1331,6 +1331,7 @@ export function UnifiedElasticGrid({
                     onUpsertEvent({ id, sessionNote: note || undefined })
                   }
                   onUpsertSession={(patch) => onUpsertEvent(patch)}
+                  onAcceptCoachSession={onAcceptCoachSession}
                   memberId={memberId}
                   viewerRole={viewerRole}
                 />
