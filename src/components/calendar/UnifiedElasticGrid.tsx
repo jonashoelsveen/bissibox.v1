@@ -1485,7 +1485,13 @@ export function UnifiedElasticGrid({
                             });
                           }}
                           onDeleteEvent={onDeleteEvent}
-                          onUpsertSession={(patch) => onUpsertEvent(patch)}
+                          onUpsertSession={(patch) => {
+                            if (draftEventRef.current?.id === patch.id) {
+                              setDraftEvent({ ...draftEventRef.current, ...patch });
+                            } else {
+                              onUpsertEvent(patch);
+                            }
+                          }}
                           onAcceptCoachSession={onAcceptCoachSession}
                           onReorderEvents={onReorderEvents}
                           memberId={memberId}
