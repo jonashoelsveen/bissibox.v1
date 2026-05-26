@@ -159,6 +159,7 @@ function YearCalendarViewInner({
     reorderEvents,
     moveEvent,
     deleteEvent,
+    acceptCoachSession,
   } = useEventStore(calId);
 
   // Preview overlay (Import Calendar). When active, ghost events are merged
