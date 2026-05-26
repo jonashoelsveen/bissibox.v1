@@ -3,9 +3,12 @@ import { BookOpen, CalendarDays, PanelLeft } from "lucide-react";
 import { MiniCalendar, type DateRange } from "@/components/calendar/MiniCalendar";
 import { YearCalendarView } from "@/components/calendar/YearCalendarView";
 import { DiaryActivitiesSection } from "@/components/calendar/DiaryActivitiesSection";
+import { ClientCategoriesSection } from "@/components/calendar/ClientCategoriesSection";
 import type { ViewMode } from "@/components/calendar/UnifiedElasticGrid";
 import type { CategoryKey } from "@/components/calendar/CalendarSideNav";
+import { useAuth } from "@/lib/auth";
 import { useViewerRole } from "@/hooks/useViewerRole";
+import { useCoachAccess } from "@/hooks/useCoachAccess";
 import { useLibrarySetting } from "@/lib/library-settings";
 
 
@@ -20,14 +23,32 @@ interface Props {
 }
 
 /**
- * MemberWorkspace — full calendar/diary view for a single client/member,
- * shown when their tab is active on the Clients page. Renders a left
- * rail (mini-calendar with calendar/diary toggle) and the YearCalendarView.
+ * MemberWorkspace — full calendar/diary view for a single client/member.
+ *
+ * When the viewer is a coach (i.e. not the member themself) it switches the
+ * calendar scope to `client:<uuid>` so sessions created by the coach are
+ * persisted with `coach_pending = true` against the client's own row. The
+ * left rail then shows only the categories the client has explicitly
+ * granted this coach access to, with the client's name as the section
+ * header (mirroring the "Me" header in individual mode).
+ *
+ * View-vs-edit is driven by `user_coaches.calendar_access`:
+ *   - "edit" → coach gets the same in-grid editing affordances as the
+ *     owner (double-click + area-mark to create sessions). All created
+ *     sessions appear as `coach_pending` until the client accepts.
+ *   - "view" → categories still render, but no editing surface is
+ *     exposed (double-click does nothing, drag selections release with
+ *     no tile created).
  */
 export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) {
-  void name;
+  const { user } = useAuth();
   const [subTab, setSubTab] = useState<MemberSubTab>("calendar");
   const viewerRole = useViewerRole(userId, { context: "leader" });
+  const coachAccess = useCoachAccess(userId);
+
+  const isSelf = !!user && user.id === userId;
+  const isCoach = !isSelf && !!coachAccess;
+  const canEditCalendar = isCoach && coachAccess?.calendarAccess === "edit";
 
   const [leftPanelOpen, setLeftPanelOpen] = useLibrarySetting<boolean>(
     `clients:member-panel:open:${userId}`,
@@ -42,16 +63,56 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
   const [calViewMode, setCalViewMode] = useState<ViewMode>("month");
   const [diaryViewMode, setDiaryViewMode] = useState<ViewMode>("week");
 
-  const visibleCategories = useMemo<Set<CategoryKey>>(
-    () => new Set<CategoryKey>(["ind:training"]),
-    [],
-  );
+  // Categories the coach is hiding locally — toggled from the side rail.
+  // Stored as a set of lowercase hex colors. Only events whose color is in
+  // the *granted* set are visible to begin with; this set filters further.
+  const [hiddenColors, setHiddenColors] = useState<Set<string>>(() => new Set());
+  const toggleHiddenColor = (color: string) =>
+    setHiddenColors((prev) => {
+      const next = new Set(prev);
+      if (next.has(color)) next.delete(color);
+      else next.add(color);
+      return next;
+    });
+
+  // Coach view restricts category visibility to granted colors only — the
+  // YearCalendarView's coach-gate already filters non-granted "me:*"
+  // events. Local hide toggles narrow further by removing those colors
+  // from `visibleCategories`. For the coach side we pass an unrestricted
+  // set (visibleCategories=undefined effectively means "show everything
+  // the coach-gate allows"), then re-add a filter via a derived set.
+  const visibleCategories = useMemo<Set<CategoryKey> | undefined>(() => {
+    if (!isCoach) {
+      // Self-view fallback (rare from /clients): keep training visible.
+      return new Set<CategoryKey>(["ind:training"]);
+    }
+    // Coach view: we don't constrain the set here — the YearCalendarView's
+    // coach-gate already drops events outside granted colors. Local hides
+    // are applied via a separate transform in YearCalendarView through
+    // `hiddenMeColors` (which reads owner-side `calendar_categories.hidden`).
+    // To honor *our* local toggles, we widen the set to undefined so all
+    // other-category events pass; me:* events are then gated by the
+    // owner-side hidden flags + granted set.
+    return undefined;
+  }, [isCoach]);
 
   const viewMode = subTab === "diary" ? diaryViewMode : calViewMode;
   const setViewMode = (v: ViewMode) => {
     if (subTab === "diary") setDiaryViewMode(v === "day" ? "week" : v);
     else setCalViewMode(v);
   };
+
+  // Calendar scope id. Coaches write into the client's calendar via the
+  // `client:` scope so RLS attaches `coach_pending = true` + the coach id.
+  const calId = useMemo(() => {
+    if (subTab === "diary") return `diary:${userId}`;
+    return isCoach ? `client:${userId}` : `user:${userId}`;
+  }, [subTab, userId, isCoach]);
+
+  // viewerRole as seen by the grid. Coaches with edit access get the full
+  // owner UX so the existing edit affordances (double-click, mark-area,
+  // drag) light up. View-only coaches keep the read-only role.
+  const gridViewerRole = canEditCalendar ? "owner" : viewerRole;
 
   return (
     <div
@@ -97,6 +158,17 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
                 </div>
               </div>
 
+              {subTab === "calendar" && isCoach && (
+                <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
+                  <ClientCategoriesSection
+                    clientUserId={userId}
+                    displayName={name}
+                    hiddenColors={hiddenColors}
+                    onToggleHidden={toggleHiddenColor}
+                  />
+                </div>
+              )}
+
               {subTab === "diary" && (
                 <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
                   <DiaryActivitiesSection
@@ -127,9 +199,13 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
         <PanelLeft className="h-4 w-4" />
       </button>
 
-      <div className={`relative min-w-0 md:h-full md:overflow-hidden transition-[padding-left] duration-300 ease-out ${leftPanelOpen ? "pl-0" : "pl-2"}`}>
+      <div
+        className={`relative min-w-0 md:h-full md:overflow-hidden transition-[padding-left] duration-300 ease-out ${
+          leftPanelOpen ? "pl-0" : "pl-2"
+        }`}
+      >
         <YearCalendarView
-          calId={subTab === "diary" ? `diary:${userId}` : `user:${userId}`}
+          calId={calId}
           defaultTitle={subTab === "diary" ? "Diary" : "Calendar"}
           seat="individual"
           appKind={subTab}
@@ -143,7 +219,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
           onViewModeChange={setViewMode}
           visibleCategories={visibleCategories}
           memberId={userId}
-          viewerRole={viewerRole}
+          viewerRole={gridViewerRole}
           panelOpen={leftPanelOpen}
           rightPanelOpen={rightPanelOpen}
           disableImport
