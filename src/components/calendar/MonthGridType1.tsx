@@ -1607,11 +1607,6 @@ export function MonthGridType1({
                             data-real-event={isRealEvent ? "1" : undefined}
                             data-ghost-event={it.kind === "event" && it.event.id.startsWith("__ghost__:") ? "1" : undefined}
                             data-event-id={isRealEvent ? it.event.id : undefined}
-                            data-coach-pending={
-                              it.kind === "event" && isRealEvent && (it.event as CalendarEvent).coachPending
-                                ? "1"
-                                : undefined
-                            }
                             onMouseEnter={(e) => {
                               if (appKind !== "diary" || !isRealEvent) return;
                               const evId = it.kind === "event" ? it.event.id : null;
