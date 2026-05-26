@@ -1401,7 +1401,10 @@ export function UnifiedElasticGrid({
                             if (popover?.eventId && popover.eventId !== id) {
                               discardEmptyPopoverEvent();
                             }
-                            closePopover();
+                            // Do NOT discard the dragged tile itself even if it's
+                            // an untitled draft — the user is moving it, not
+                            // abandoning it. onEventDrop reopens the popover.
+                            closePopover({ discardEmpty: false });
                           }}
                           onEventDrop={(id, newDate, newStartMin, durationMin, anchor) => {
                             const ev = getEventById(id);
