@@ -2326,7 +2326,7 @@ function WeekEventsOverlay({
         const sample = document.querySelector<HTMLElement>('[data-month-col="0"]');
         const colW = sample?.offsetWidth ?? 1;
         const colShift = Math.round(drag.delta.dx / colW);
-        const newCol = Math.max(0, Math.min(6, drag.originColIdx + colShift));
+        const newCol = Math.max(0, Math.min(weekDates.length - 1, drag.originColIdx + colShift));
         const minShift = Math.round(drag.delta.dy / ROW_HEIGHT) * 30;
         let newStart = drag.originStartMin + minShift;
         const minStart = startHour * 60;
