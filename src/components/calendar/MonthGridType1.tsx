@@ -2619,7 +2619,10 @@ export function PopoverEditor({
           onClose();
         } else {
           settledRef.current = true;
-          onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
+          // Click-outside on a coach-pending session implicitly accepts the
+          // proposal (same end state as Enter / Save): the stripe clears and
+          // later edits behave like any other owner-created session.
+          onCommit(valueRef.current.trim(), colorRef.current, timeRef.current, true);
         }
       }
     };
