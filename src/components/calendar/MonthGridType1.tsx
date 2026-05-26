@@ -1935,6 +1935,7 @@ export function MonthGridType1({
             readOnly={viewerRole !== "owner"}
             categoryOwnerId={seat === "individual" ? memberId ?? null : null}
             onCategoryChange={(selection) => {
+              setPopover((prev) => (prev ? { ...prev, categoryId: selection.id ?? null, initialColor: selection.color } : prev));
               if (!popover?.eventId) return;
               onUpsertEvent?.({ id: popover.eventId, categoryId: selection.id ?? undefined, color: selection.color });
             }}
@@ -1980,7 +1981,7 @@ export function MonthGridType1({
                     id: popover.eventId,
                     title: t,
                     color,
-                    categoryId: events.find((e) => e.id === popover.eventId)?.categoryId,
+                    categoryId: popover.categoryId ?? events.find((e) => e.id === popover.eventId)?.categoryId,
                   };
                   if (time) {
                     const start = setHM(
@@ -2018,7 +2019,7 @@ export function MonthGridType1({
                   onUpsertEvent({
                     title: t,
                     color,
-                    categoryId: categories.find((c) => c.color.toLowerCase() === (color ?? "").toLowerCase())?.id,
+                    categoryId: popover.categoryId ?? undefined,
                     startISO: toISOLocal(start),
                     endISO: toISOLocal(end),
                     // If the user explicitly set a time, treat as a timed
