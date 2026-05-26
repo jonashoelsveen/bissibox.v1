@@ -822,22 +822,23 @@ export function UnifiedElasticGrid({
     return () => cancelAnimationFrame(raf);
   }, [mode]);
 
+  const colCount = isDayView ? 1 : 7;
+
   const months = useMemo(
     () =>
       // Type 2 spreadsheet renders 7 weekday columns (Mon–Sun) instead of
-      // the full 12-month axis. The underlying data model still keys on
-      // month index 0–6, but only 7 of the 12 slots are rendered.
-      Array.from({ length: 7 }, (_, idx) => ({
+      // the full 12-month axis. Day-view collapses this to a single column.
+      Array.from({ length: colCount }, (_, idx) => ({
         idx,
         label: MONTH_LABELS_SHORT[idx],
         full: MONTH_LABELS_FULL[idx],
         dim: daysInMonth(year, idx),
       })),
-    [year],
+    [year, colCount],
   );
 
-  const isMonthFocused = (m: number) => mode.kind === "month" && mode.month === m;
-  const isMonthPeriph = (m: number) => mode.kind === "month" && mode.month !== m;
+  const isMonthFocused = (m: number) => mode.kind === "month" && (mode as { kind: "month"; month: number }).month === m;
+  const isMonthPeriph = (m: number) => mode.kind === "month" && (mode as { kind: "month"; month: number }).month !== m;
 
   // Live clock — updated every 15s so the "now" line stays accurate.
   const [now, setNow] = useState<Date>(() => new Date());
@@ -846,20 +847,23 @@ export function UnifiedElasticGrid({
     return () => clearInterval(id);
   }, []);
 
-  // Date for each of the 7 visible weekday columns, anchored to the week
-  // containing currentDate (Monday-first).
+  // Date for each visible weekday column. Week-view = 7 days anchored to
+  // the Monday of currentDate. Day-view = a single column for currentDate.
   const weekDates = useMemo(() => {
+    if (isDayView) {
+      return [new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate())];
+    }
     const start = startOfWeekMon(currentDate);
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       return d;
     });
-  }, [currentDate]);
+  }, [currentDate, isDayView]);
 
   // Index of today inside the visible week, -1 if not in view.
   const todayColIdx = useMemo(() => {
-    for (let i = 0; i < 7; i++) if (sameDay(weekDates[i], now)) return i;
+    for (let i = 0; i < weekDates.length; i++) if (sameDay(weekDates[i], now)) return i;
     return -1;
   }, [weekDates, now]);
 
