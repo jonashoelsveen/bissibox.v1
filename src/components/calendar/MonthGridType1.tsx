@@ -2605,8 +2605,10 @@ export function PopoverEditor({
           return;
         }
         if (readOnly) {
+          settledRef.current = true;
           onClose();
         } else {
+          settledRef.current = true;
           onCommit(valueRef.current.trim(), colorRef.current, timeRef.current);
         }
       }
