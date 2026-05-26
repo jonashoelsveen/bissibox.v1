@@ -2903,6 +2903,7 @@ function DiarySimpleStack({
   onEventClick,
   onDeleteEvent,
   onUpsertSession,
+  onAcceptCoachSession,
   onReorderEvents,
   memberId,
   viewerRole = "owner",
@@ -2913,6 +2914,7 @@ function DiarySimpleStack({
   onEventClick: (ev: CalendarEvent, anchor: HTMLElement) => void;
   onDeleteEvent?: (id: string) => void;
   onUpsertSession?: (patch: Partial<CalendarEvent> & { id: string }) => void;
+  onAcceptCoachSession?: (id: string) => void;
   onReorderEvents?: (ids: string[]) => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
