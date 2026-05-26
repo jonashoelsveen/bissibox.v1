@@ -194,7 +194,7 @@ function MeCategorySectionAdapter() {
     if (!c) return;
     void update(c.id, { hidden: !c.hidden });
   };
-  return <MeCategorySection hidden={hidden} onToggleHidden={handleToggleHidden} />;
+  return <MeCategorySection hidden={hidden} onToggleHidden={handleToggleHidden} showCoachAccess />;
 }
 
 /* ---------- Pieces ---------- */

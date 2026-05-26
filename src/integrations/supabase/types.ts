@@ -145,6 +145,38 @@ export type Database = {
           },
         ]
       }
+      calendar_category_coach_access: {
+        Row: {
+          category_id: string
+          coach_user_id: string
+          created_at: string
+          id: string
+          owner_id: string
+        }
+        Insert: {
+          category_id: string
+          coach_user_id: string
+          created_at?: string
+          id?: string
+          owner_id: string
+        }
+        Update: {
+          category_id?: string
+          coach_user_id?: string
+          created_at?: string
+          id?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_category_coach_access_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           cover_media_id: string | null
