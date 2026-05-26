@@ -169,6 +169,7 @@ export function ClientsPage() {
     const target = e.target as HTMLElement;
     if (target.closest("[data-tab-close]")) return;
     setActiveClientId(id);
+    setSelectedClientId(null);
     const strip = tabStripRef.current;
     if (!strip) return;
     const arr = openTabs;
