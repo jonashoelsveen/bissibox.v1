@@ -1608,6 +1608,7 @@ export function MonthGridType1({
                             data-real-event={isRealEvent ? "1" : undefined}
                             data-ghost-event={it.kind === "event" && it.event.id.startsWith("__ghost__:") ? "1" : undefined}
                             data-event-id={isRealEvent ? it.event.id : undefined}
+                            data-coach-pending={!isDiaryEvent && it.kind === "event" && it.event.coachPending ? "1" : undefined}
                             onMouseEnter={(e) => {
                               if (appKind !== "diary" || !isRealEvent) return;
                               const evId = it.kind === "event" ? it.event.id : null;
@@ -1747,7 +1748,7 @@ export function MonthGridType1({
                                     itemColor ? "" : "bg-secondary/70",
                                   ].join(" ")
                                 : [
-                                    "flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink",
+                                    "relative flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink",
                                     "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                                     itemColor ? "" : "bg-secondary/70",
                                     itemColor ? "" : "hover:bg-secondary",
