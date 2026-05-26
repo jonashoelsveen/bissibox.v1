@@ -174,7 +174,7 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
     const currentRow = previousRows.find((r) => r.id === rowId);
     if (!currentRow) return;
 
-    const key = `${col}_access` as const;
+    const key = `${col}_access` as "calendar_access" | "diary_access" | "photos_access";
     if (currentRow[key] === value) return;
 
     const nextRows = previousRows.map((r) =>
@@ -189,9 +189,16 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
     setRows(nextRows);
 
     const saveVersion = ++saveVersionRef.current;
+    const updates =
+      key === "calendar_access"
+        ? { calendar_access: value }
+        : key === "diary_access"
+          ? { diary_access: value }
+          : { photos_access: value };
+
     const { error } = await supabase
       .from("user_coaches")
-      .update({ [key]: value })
+      .update(updates)
       .eq("id", rowId)
       .eq("owner_id", user.id);
 
