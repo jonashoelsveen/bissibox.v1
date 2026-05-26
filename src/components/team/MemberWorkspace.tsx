@@ -218,6 +218,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           visibleCategories={visibleCategories}
+          hiddenColors={hiddenColors}
           memberId={userId}
           viewerRole={gridViewerRole}
           panelOpen={leftPanelOpen}

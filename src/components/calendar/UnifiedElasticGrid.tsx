@@ -568,6 +568,7 @@ export function UnifiedElasticGrid({
   //    flow with the marked-range overlay.
   useEffect(() => {
     if (!markReleased || !markRange) return;
+    if (viewerRole !== "owner") return;
     if (markRange.hi < markRange.lo) return;
     const day = Math.floor(markRange.lo / 2);
     const session = (markRange.lo % 2) as Session;
@@ -638,7 +639,7 @@ export function UnifiedElasticGrid({
     }
 
     openPopover({ year, month: markRange.month, day, session }, el);
-  }, [markReleased, markRange, openPopover, year, mode, appKind, currentDate, viewMode, onUpsertEvent, seat, meCategories, teamCategories]);
+  }, [markReleased, markRange, openPopover, year, mode, appKind, currentDate, viewMode, onUpsertEvent, seat, meCategories, teamCategories, viewerRole]);
 
 
 
@@ -1876,9 +1877,6 @@ function DayCellPair(props: DayCellPairProps) {
             onDoubleClick={(e) => {
               e.stopPropagation();
               if (allowMark) {
-                // Week-view: synthesize a single-cell mark + release so the
-                // existing release-flow effect materializes a real session
-                // tile, matching the behaviour of dragging out a 1-slot mark.
                 onMarkSingleCell(k);
               } else {
                 onBeginEdit(k);
