@@ -1871,12 +1871,11 @@ function DayCellPair(props: DayCellPairProps) {
               if (t.dataset.role === "mark-plus") return;
               if (t.dataset.role === "mark-drag") return;
               onSelect(k);
-              if (allowMark && viewerRole === "owner") onMarkBegin(k);
+              if (allowMark) onMarkBegin(k);
             }}
             onMouseEnter={() => onCellMouseEnter(k)}
             onDoubleClick={(e) => {
               e.stopPropagation();
-              if (viewerRole !== "owner") return;
               if (allowMark) {
                 onMarkSingleCell(k);
               } else {
