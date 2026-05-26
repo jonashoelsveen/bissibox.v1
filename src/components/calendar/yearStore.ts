@@ -310,6 +310,7 @@ export function useYearStore(calId: string, defaultTitle: string) {
 // ──────────────────────────────────────────────────────────────────────
 
 import { makeEventId } from "./dateUtils";
+import { supabase } from "@/integrations/supabase/client";
 
 export type IndividualCategory = "training" | "school" | "work" | "else";
 
@@ -323,78 +324,250 @@ export interface CalendarEvent {
   title: string;
   color: string | null;   // hex
   category?: IndividualCategory;
+  categoryId?: string | null;
   description?: string;
-  /** Diary-only metadata (logged training sessions). */
   activity?: DiaryActivity;
   distanceKm?: number;
   paceSecPerKm?: number;
-  /** Diary type: training | note */
   diaryType?: "training" | "note";
-  /** Diary group: endurance | strength | stretch */
   diaryGroup?: string;
-  /** Diary sub-group: running | cycling | other | core | max */
   diarySub?: string;
-  /** Session note (rich text body for diary). */
   sessionNote?: string;
-  /** ISO timestamp for the last update of the owner's session note. */
   sessionNoteUpdatedAt?: string;
-  /** Multiple activity entries inside one session. */
   activities?: { type: string; durationMin?: number; distanceKm?: number }[];
-  /** Strava integration metadata. */
   stravaActivityId?: number;
   summaryPolyline?: string;
   totalElevationGainM?: number;
   averageHeartrate?: number;
   sportType?: string;
   subType?: string;
-  /**
-   * Manual sort order within a day column (Diary month + simple-week views).
-   * When set, takes precedence over startISO for ordering. New sessions get
-   * `Date.now()` on create so they always render after older ones.
-   */
   sortIndex?: number;
+  /** Coach workflow: set when a coach created this session in the client's calendar. */
+  createdByCoachId?: string | null;
+  /** True while a coach-created session is awaiting client acceptance. */
+  coachPending?: boolean;
 }
 
-const eventsKey = (calId: string) => `calendar:events:${calId}`;
+// ──────────────────────────────────────────────────────────────────────
+// calId convention:
+//   "user:<uuid>"  → personal calendar (user_id = uuid, entity_id IS NULL)
+//   "team:<uuid>"  → team / entity calendar (entity_id = uuid)
+//   "client:<uuid>" → coach viewing a client's personal calendar
+//                    (user_id = uuid, entity_id IS NULL)
+// ──────────────────────────────────────────────────────────────────────
+
+interface ScopeUser    { kind: "user";   userId: string }
+interface ScopeTeam    { kind: "team";   entityId: string }
+interface ScopeClient  { kind: "client"; clientId: string }
+type Scope = ScopeUser | ScopeTeam | ScopeClient | null;
+
+function parseScope(calId: string): Scope {
+  if (calId.startsWith("user:"))   return { kind: "user",   userId:   calId.slice(5) };
+  if (calId.startsWith("team:"))   return { kind: "team",   entityId: calId.slice(5) };
+  if (calId.startsWith("client:")) return { kind: "client", clientId: calId.slice(7) };
+  return null;
+}
+
+/** Local-ISO (no timezone) ↔ timestamptz round-trip that preserves the
+ * wall-clock string. We tag the local string with `Z` on write so Postgres
+ * stores those exact digits in UTC, then strip the offset on read. */
+function isoToDb(s: string): string {
+  if (!s) return s;
+  if (/[Zz]$/.test(s) || /[+-]\d{2}:?\d{2}$/.test(s)) return s;
+  return s + "Z";
+}
+function dbToIso(s: string): string {
+  if (!s) return s;
+  return s.replace(/(Z|[+-]\d{2}:?\d{2})$/i, "").slice(0, 19);
+}
+
+interface Row {
+  id: string;
+  user_id: string;
+  entity_id: string | null;
+  starts_at: string;
+  ends_at: string;
+  all_day: boolean;
+  title: string;
+  color: string | null;
+  category: string | null;
+  category_id: string | null;
+  description: string | null;
+  activity: string | null;
+  distance_km: number | null;
+  pace_sec_per_km: number | null;
+  diary_type: string | null;
+  diary_group: string | null;
+  diary_sub: string | null;
+  session_note: string | null;
+  session_note_updated_at: string | null;
+  activities: CalendarEvent["activities"] | null;
+  strava_activity_id: number | null;
+  summary_polyline: string | null;
+  total_elevation_gain_m: number | null;
+  average_heartrate: number | null;
+  sport_type: string | null;
+  sub_type: string | null;
+  sort_index: number | null;
+  created_by_coach_id: string | null;
+  coach_pending: boolean;
+}
+
+function rowToEvent(r: Row): CalendarEvent {
+  return {
+    id: r.id,
+    startISO: dbToIso(r.starts_at),
+    endISO: dbToIso(r.ends_at),
+    allDay: r.all_day,
+    title: r.title ?? "",
+    color: r.color,
+    category: (r.category ?? undefined) as IndividualCategory | undefined,
+    categoryId: r.category_id,
+    description: r.description ?? undefined,
+    activity: (r.activity ?? undefined) as DiaryActivity | undefined,
+    distanceKm: r.distance_km ?? undefined,
+    paceSecPerKm: r.pace_sec_per_km ?? undefined,
+    diaryType: (r.diary_type ?? undefined) as "training" | "note" | undefined,
+    diaryGroup: r.diary_group ?? undefined,
+    diarySub: r.diary_sub ?? undefined,
+    sessionNote: r.session_note ?? undefined,
+    sessionNoteUpdatedAt: r.session_note_updated_at ?? undefined,
+    activities: r.activities ?? undefined,
+    stravaActivityId: r.strava_activity_id ?? undefined,
+    summaryPolyline: r.summary_polyline ?? undefined,
+    totalElevationGainM: r.total_elevation_gain_m ?? undefined,
+    averageHeartrate: r.average_heartrate ?? undefined,
+    sportType: r.sport_type ?? undefined,
+    subType: r.sub_type ?? undefined,
+    sortIndex: r.sort_index ?? undefined,
+    createdByCoachId: r.created_by_coach_id,
+    coachPending: r.coach_pending,
+  };
+}
+
+function eventToRow(
+  e: CalendarEvent,
+  scope: Scope,
+  coachUserId: string | null,
+): Partial<Row> {
+  const base: Partial<Row> = {
+    id: e.id,
+    starts_at: isoToDb(e.startISO),
+    ends_at: isoToDb(e.endISO),
+    all_day: e.allDay,
+    title: e.title ?? "",
+    color: e.color ?? null,
+    category: e.category ?? null,
+    category_id: e.categoryId ?? null,
+    description: e.description ?? null,
+    activity: e.activity ?? null,
+    distance_km: e.distanceKm ?? null,
+    pace_sec_per_km: e.paceSecPerKm ?? null,
+    diary_type: e.diaryType ?? null,
+    diary_group: e.diaryGroup ?? null,
+    diary_sub: e.diarySub ?? null,
+    session_note: e.sessionNote ?? null,
+    session_note_updated_at: e.sessionNoteUpdatedAt ?? null,
+    activities: e.activities ?? null,
+    strava_activity_id: e.stravaActivityId ?? null,
+    summary_polyline: e.summaryPolyline ?? null,
+    total_elevation_gain_m: e.totalElevationGainM ?? null,
+    average_heartrate: e.averageHeartrate ?? null,
+    sport_type: e.sportType ?? null,
+    sub_type: e.subType ?? null,
+    sort_index: e.sortIndex ?? null,
+  };
+  if (scope?.kind === "team") {
+    base.entity_id = scope.entityId;
+  } else if (scope?.kind === "client" && coachUserId) {
+    base.user_id = scope.clientId;
+    base.entity_id = null;
+    base.created_by_coach_id = coachUserId;
+    base.coach_pending = true;
+  } else if (scope?.kind === "user") {
+    base.user_id = scope.userId;
+    base.entity_id = null;
+    base.created_by_coach_id = null;
+    base.coach_pending = false;
+  }
+  return base;
+}
 
 export function useEventStore(calId: string) {
+  const scope = useMemo(() => parseScope(calId), [calId]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const eventsRef = useRef<CalendarEvent[]>([]);
   const pastRef = useRef<CalendarEvent[][]>([]);
   const futureRef = useRef<CalendarEvent[][]>([]);
+  const coachUserIdRef = useRef<string | null>(null);
   const [, forceTick] = useState(0);
   const bump = () => forceTick((n) => n + 1);
 
-  // Load on calendar switch. Sanitize legacy/corrupt entries that pre-date
-  // the current CalendarEvent shape so they don't linger forever in the UI
-  // (they used to be undeletable because the new editor couldn't open them).
+  // Track the current auth uid for coach-mode writes.
   useEffect(() => {
-    const loaded = readJSON<CalendarEvent[]>(eventsKey(calId), []);
-    const isValidISO = (s: unknown): s is string => {
-      if (typeof s !== "string" || s.length < 10) return false;
-      const t = Date.parse(s);
-      return Number.isFinite(t);
-    };
-    const cleaned = (Array.isArray(loaded) ? loaded : []).filter((e) => {
-      if (!e || typeof e !== "object") return false;
-      if (typeof e.id !== "string" || !e.id) return false;
-      if (typeof e.title !== "string") return false;
-      if (!isValidISO(e.startISO) || !isValidISO(e.endISO)) return false;
-      if (Date.parse(e.endISO) <= Date.parse(e.startISO)) return false;
-      return true;
+    let cancelled = false;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!cancelled) coachUserIdRef.current = data.user?.id ?? null;
     });
-    eventsRef.current = cleaned;
-    setEvents(cleaned);
-    if (cleaned.length !== (Array.isArray(loaded) ? loaded.length : 0)) {
-      // Persist the cleanup so the prune is permanent.
-      writeJSON(eventsKey(calId), cleaned);
-    }
-    pastRef.current = [];
-    futureRef.current = [];
-    bump();
-  }, [calId]);
+    return () => { cancelled = true; };
+  }, []);
 
-  const persist = useCallback(
+  // Initial load + realtime subscription.
+  useEffect(() => {
+    if (!scope) {
+      eventsRef.current = [];
+      setEvents([]);
+      return;
+    }
+    let cancelled = false;
+
+    const baseSelect = () => {
+      let q = supabase.from("calendar_sessions").select("*");
+      if (scope.kind === "team") q = q.eq("entity_id", scope.entityId);
+      else if (scope.kind === "user") q = q.eq("user_id", scope.userId).is("entity_id", null);
+      else q = q.eq("user_id", scope.clientId).is("entity_id", null);
+      return q;
+    };
+
+    void baseSelect().then(({ data }) => {
+      if (cancelled) return;
+      const rows = (data ?? []) as Row[];
+      const next = rows.map(rowToEvent);
+      eventsRef.current = next;
+      setEvents(next);
+    });
+
+    const filter =
+      scope.kind === "team"
+        ? `entity_id=eq.${scope.entityId}`
+        : scope.kind === "user"
+          ? `user_id=eq.${scope.userId}`
+          : `user_id=eq.${scope.clientId}`;
+
+    const ch = supabase
+      .channel(`calendar_sessions:${calId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "calendar_sessions", filter },
+        () => {
+          void baseSelect().then(({ data }) => {
+            if (cancelled) return;
+            const rows = (data ?? []) as Row[];
+            const next = rows.map(rowToEvent);
+            eventsRef.current = next;
+            setEvents(next);
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(ch);
+    };
+  }, [calId, scope]);
+
+  const applyLocal = useCallback(
     (next: CalendarEvent[], opts?: { history?: boolean }) => {
       if (opts?.history !== false) {
         pastRef.current.push(eventsRef.current);
@@ -404,9 +577,8 @@ export function useEventStore(calId: string) {
       }
       eventsRef.current = next;
       setEvents(next);
-      writeJSON(eventsKey(calId), next);
     },
-    [calId],
+    [],
   );
 
   const upsertEvent = useCallback(
@@ -428,25 +600,26 @@ export function useEventStore(calId: string) {
         ...patch,
         id,
       };
-      // New events get a sortIndex so they always render after existing ones
-      // in views that respect manual ordering (month + simple week).
-      if (!existing && merged.sortIndex == null) {
-        merged.sortIndex = Date.now();
-      }
+      if (!existing && merged.sortIndex == null) merged.sortIndex = Date.now();
       const next = existing
         ? current.map((e) => (e.id === id ? merged : e))
         : [...current, merged];
-      persist(next);
+      applyLocal(next);
+
+      if (scope) {
+        const row = eventToRow(merged, scope, coachUserIdRef.current);
+        void supabase
+          .from("calendar_sessions")
+          .upsert(row as never, { onConflict: "id" })
+          .then(({ error }) => {
+            if (error) console.error("[calendar_sessions upsert]", error);
+          });
+      }
       return merged;
     },
-    [persist],
+    [applyLocal, scope],
   );
 
-  /**
-   * Reorder a set of events by writing monotonically increasing sortIndex
-   * values to them in the given order. Other events are left untouched.
-   * Used by drag-to-reorder in month + simple-week views.
-   */
   const reorderEvents = useCallback(
     (ids: string[]) => {
       if (ids.length === 0) return;
@@ -462,27 +635,62 @@ export function useEventStore(calId: string) {
         changed = true;
         return { ...e, sortIndex: si };
       });
-      if (changed) persist(next);
+      if (!changed) return;
+      applyLocal(next);
+      const updates = next
+        .filter((e) => indexById.has(e.id))
+        .map((e) =>
+          supabase
+            .from("calendar_sessions")
+            .update({ sort_index: e.sortIndex ?? null })
+            .eq("id", e.id),
+        );
+      void Promise.all(updates);
     },
-    [persist],
+    [applyLocal],
   );
 
   const moveEvent = useCallback(
     (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => {
       const current = eventsRef.current;
       const next = current.map((e) => (e.id === id ? { ...e, ...patch } : e));
-      persist(next);
+      applyLocal(next);
+      const dbPatch: Record<string, unknown> = {};
+      if (patch.startISO != null) dbPatch.starts_at = isoToDb(patch.startISO);
+      if (patch.endISO != null) dbPatch.ends_at = isoToDb(patch.endISO);
+      if (patch.allDay != null) dbPatch.all_day = patch.allDay;
+      if (Object.keys(dbPatch).length > 0) {
+        void supabase.from("calendar_sessions").update(dbPatch).eq("id", id);
+      }
     },
-    [persist],
+    [applyLocal],
   );
 
   const deleteEvent = useCallback(
     (id: string) => {
       const current = eventsRef.current;
       const next = current.filter((e) => e.id !== id);
-      if (next.length !== current.length) persist(next);
+      if (next.length === current.length) return;
+      applyLocal(next);
+      void supabase.from("calendar_sessions").delete().eq("id", id);
     },
-    [persist],
+    [applyLocal],
+  );
+
+  /** Flip a coach-pending session into the accepted (owner) state. */
+  const acceptCoachSession = useCallback(
+    (id: string) => {
+      const current = eventsRef.current;
+      const next = current.map((e) =>
+        e.id === id ? { ...e, coachPending: false } : e,
+      );
+      applyLocal(next);
+      void supabase
+        .from("calendar_sessions")
+        .update({ coach_pending: false })
+        .eq("id", id);
+    },
+    [applyLocal],
   );
 
   const undoEvents = useCallback(() => {
@@ -491,9 +699,11 @@ export function useEventStore(calId: string) {
     futureRef.current.push(eventsRef.current);
     eventsRef.current = prev;
     setEvents(prev);
-    writeJSON(eventsKey(calId), prev);
     bump();
-  }, [calId]);
+    // Note: undo/redo currently only replays in memory; DB state will
+    // resync from the next realtime tick if a write fails. Full DB undo
+    // can be layered on later if needed.
+  }, []);
 
   const redoEvents = useCallback(() => {
     const next = futureRef.current.pop();
@@ -501,9 +711,8 @@ export function useEventStore(calId: string) {
     pastRef.current.push(eventsRef.current);
     eventsRef.current = next;
     setEvents(next);
-    writeJSON(eventsKey(calId), next);
     bump();
-  }, [calId]);
+  }, []);
 
   return {
     events,
@@ -511,6 +720,7 @@ export function useEventStore(calId: string) {
     reorderEvents,
     moveEvent,
     deleteEvent,
+    acceptCoachSession,
     undoEvents,
     redoEvents,
     canUndoEvents: pastRef.current.length > 0,
