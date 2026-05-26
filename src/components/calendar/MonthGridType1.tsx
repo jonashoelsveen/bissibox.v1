@@ -2211,6 +2211,13 @@ export interface PopoverEditorProps {
     text: string,
     color: string | null,
     time?: { startMin: number; endMin: number } | null,
+    /**
+     * True when the commit came from an explicit save gesture (Enter key or
+     * the "Lagre" button). False/undefined for outside-click autosave and
+     * unmount-time autosave. The owner of a coach-pending session uses this
+     * to know when to flip `coach_pending` off (accepting the proposal).
+     */
+    accept?: boolean,
   ) => void;
   /**
    * Fires the moment the user commits the inline duration picker (clock icon),
