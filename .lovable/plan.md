@@ -1,116 +1,68 @@
+# Day-view rebuild
 
-# Aponna Cloud Settings — page conversion
+Replace the current placeholder day-view (which renders a month) with a real single-day timeline that reuses all week-view mechanics: 30-min rows, marking, edge-drag resize with 5-min snapping, double-click placeholder creation, and live integration with month/week-view sessions.
 
-## 1. Top tab bar
+## Scope
 
-`src/components/GlobalTopTabBar.tsx`
-- Add a new entry in the Apps menu between `aponnacloud.com` and `account.aponna.com` rows:
-  - Label: **Aponna Cloud settings**
-  - Icon: `Settings` (lucide) in the same muted style as the other two entries
-  - Click → `navigate({ to: "/settings" })` and close the menu
-- Render the apps menu in both the logged-out home variant and the dark logged-in variant (currently only the home variant renders it; the dark bar's apps menu is in `NavIconTabs`). I will add the new row to wherever the existing aponnacloud.com / account.aponna.com rows live (verified at edit time).
+- Calendar page (individual and admin/entity)
+- Clients page → MemberWorkspace calendar (read-only for coaches, same rules as month/week today)
+- Diary page: out of scope (not requested)
 
-`src/components/ProfileMenuButton.tsx`
-- Remove the **Settings** and **Change profile** entries from the dropdown.
-- Keep only: profile name (top, opens profile modal) and **Log out**.
-- Remove the `open-settings` dispatch and related handler.
+## Behavior
 
-`src/components/SettingsModal.tsx`
-- Delete (no longer used). Remove its mount from `__root.tsx` / wherever it is rendered.
+1. **View-mode dropdown** — "Dag / Uke / Måned" already exists; "Dag" will now render the new day-view.
+2. **Week-view column header click** — Each weekday header (Mon, Tue, …) becomes a button with the same hover treatment as the week-number gutter in month-view (`hover:bg-secondary hover:text-ink`). Clicking sets the anchor date to that day and switches to `"day"` mode.
+3. **Day-view column header click** — The single day header acts as a "zoom out" button (same hover style) that switches back to `"week"` view, mirroring how the week-number header zooms month→week today.
+4. **Day-view layout**:
+   - Single centered column whose width equals 3 × current week column width.
+   - Left time gutter (same width and styling as week-view's hour gutter) showing the hour labels.
+   - Empty space on either side uses the same `bg-card`/page background as week-view.
+   - 30-min row lines, identical row height and visual styling to week-view.
+5. **Interaction parity with week-view** (single column):
+   - Click-drag marking, double-click single-cell marking, mouseup auto-creates a placeholder session tile.
+   - Existing edge-drag resize logic (5-min snap) works unchanged.
+   - Session tiles render using existing session components; data flows through the same `events` / `onUpsertEvent` / `onMoveEvent` pipeline so sessions are visible in month + week views.
+6. **Navigation arrows** — `MonthNavControl` already accepts `unit={viewMode}`; verify/extend it so `unit="day"` moves ±1 day.
+7. **Coaches on Clients page** — `viewerRole` already gates edits in week-view; the new day-view reads the same prop and applies identical gating.
 
-## 2. New `/settings` page
+## Implementation approach
 
-`src/routes/settings.tsx` — full rewrite of the page shell, reusing the existing tab content components from the current `SettingsView`.
+The week-view code in `UnifiedElasticGrid.tsx` already implements every cell mechanic we need: the grid is a parametrized N-column layout (currently 7 for week / 1 for "year" pseudo-day-of-month). The cleanest path is to **make `viewMode === "day"` render the same week-view body with `months` reduced to a single entry for `currentDate`**, plus a centered wrapper.
 
-### Layout
-- Same global top tab bar (unchanged).
-- Below it: a left side panel matching `CalendarSideNav` / `DiarySideNav` / photos side nav exactly — same width, same collapse/expand chevron at top, tabs starting one level under it.
-- Main content area on the right with a **sticky top frozen bar** (white, matching photos page) showing the active tab's name on the left. No back arrow — that pattern is reserved for sub-views like the Strava "Read more".
-- Content area uses the same scrollbar style as calendar/diary/photos.
-- Remove the global **Save** button and **Create entity** button entirely. Each panel keeps its own inline save behavior where it already exists (e.g. CoachesPanel); otherwise edits autosave or are saved per-field as today.
+### Files to change
 
-### Left panel structure
+- **`src/components/calendar/UnifiedElasticGrid.tsx`** (primary)
+  - Introduce a `isDayView = viewMode === "day"` branch in the `weekDates` / `months` derivation so only the anchor day is rendered.
+  - When `isDayView`, wrap the existing week scroller in a centered flex container (`mx-auto`) with width = `gutter + 3 × weekColWidth`; surrounding space stays `bg-card`.
+  - Convert the weekday column header `<div>` into a `<button>` with hover styling matching the existing week-number button; `onClick` calls `onCurrentDateChange(colDate, …)` then `handleViewModeChange("day")` in week mode, or `handleViewModeChange("week")` in day mode.
+  - Reuse all marking/drag/double-click handlers as-is — they key off `month.idx` which becomes `0` in day-view.
+  - Remove the stale `mode: Mode = viewMode === "day" ? { kind: "month", month: 0 } : { kind: "year" }` line so day-view doesn't accidentally render a month grid; replace with `kind: "year"` always for week/day and keep `kind: "month"` only for month-view.
 
-```
-[collapse/expand chevron]
+- **`src/components/calendar/MonthNavControl.tsx`** — confirm `unit="day"` shifts by ±1 day; add the case if missing.
 
-Account
+- **`src/components/calendar/YearCalendarView.tsx`** — no change expected (it already forwards `viewMode` and date handlers).
 
-────────────────
+- **Clients page / `MemberWorkspace`** — no change expected; it already renders the same `YearCalendarView` and passes `viewerRole`.
 
-▾ Me                          (collapsible header, calendar-category style)
-   Calendar                   (only if user has the app/role)
-   Diary
-   Photos
-   Profile
-   Coaches
-   Connectors
-   System
-   Appearance
+### Data flow (unchanged)
 
-▾ {Other profile name}        (one collapsible group per other entity the user owns/belongs to)
-   — if admin role:
-     About
-     Profile
-     Calendar
-     Organization
-   — if coach role:
-     Clients
-   — if photographer role:
-     Photos
-   System
-   Appearance
-
-────────────────
-
-Sign out
+```text
+Day-view marking ─▶ same handlers as week-view
+                 ─▶ onUpsertEvent(event)
+                 ─▶ events state (single source of truth)
+                 ─▶ visible in Day / Week / Month views
 ```
 
-- Each "Me" / other-profile group is a collapsible header with the same drop-down arrow style as calendar categories.
-- Tab text uses the calendar tab font/size/black color; active tab gets the same active-state styling as calendar tabs.
-- Selecting a tab under an "other profile" group implicitly switches `activeEntityId` (via `useAuth().setActiveEntity`) so the existing entity-scoped panels render correctly.
+### Out of scope
 
-### Tab → existing-component mapping
+- Diary day-view (not requested)
+- New schema or server changes (none needed)
+- Visual redesign of session tiles (reused as-is)
 
-Reuse the JSX blocks currently in `SettingsView` for each tab:
+## Verification
 
-| New tab | Existing tab key |
-|---|---|
-| Account | `account` |
-| Me → Calendar | `calendar` |
-| Me → Diary | `diary` |
-| Me → Photos | `library` (current photos/library tab) |
-| Me → Profile | personal profile block from `profiles` tab |
-| Me → Coaches | `coaches` |
-| Me → Connectors | `connectors` |
-| Me → System | `system` |
-| Me → Appearance | `appearance` |
-| Other → About | `entity-general` |
-| Other → Profile | `entity-profile` |
-| Other → Calendar | `entity-calendar` |
-| Other → Organization | `entity-organization` |
-| Other → Clients | (reuse coaches/clients UI from entity context; if not present, render a placeholder header "Clients" with the existing members list from `entity-organization`) |
-| Other → Photos | `entity-library` |
-| Other → System | new — same controls as personal `system`, scoped to entity preferences |
-| Other → Appearance | new — same controls as personal `appearance`, scoped to entity preferences |
-
-Note: "System" and "Appearance" already exist for the personal profile. The spec says every profile gets its own System/Appearance; for entity-scoped versions I will render the same control set, persisting under the entity's settings key. If existing per-entity persistence isn't wired, I'll fall back to the existing global keys and add a TODO note in code.
-
-### Sub-view back arrows
-- Only sub-views like Strava "Read more" inside Connectors keep their back arrow. Top-level tabs do not show one.
-
-## 3. Files touched
-
-- `src/components/GlobalTopTabBar.tsx` — add menu row (both variants)
-- `src/components/ProfileMenuButton.tsx` — strip to profile name + log out
-- `src/components/SettingsModal.tsx` — delete
-- `src/routes/__root.tsx` — remove `<SettingsModal />` mount
-- `src/routes/settings.tsx` — rewrite shell, keep panel content components
-- (possibly) extract the long per-tab JSX from current `SettingsView` into smaller `Panel*` components in `src/components/settings/` so the new shell stays readable
-
-## 4. Open questions
-
-These I will resolve while implementing unless you object:
-1. **Role detection** for which sub-tabs to show under each "other profile" group — I will use the existing `entity_type` plus `useViewerRole` / `roles` already loaded for `profileEntities` in the current settings code. If a user is admin of a team, that team's group shows About/Profile/Calendar/Organization; coach → Clients; photographer → Photos.
-2. **Entity-scoped System/Appearance persistence** — see note above; will reuse global keys with a TODO if entity-scoped keys aren't already present.
-3. **"Me → Photos" visibility** — shown whenever the user has the photographer/photos app enabled, else hidden. If unclear, shown by default.
+- Switch Calendar to "Dag" and confirm: single centered column, time gutter on left, 30-min lines, hover header, arrows move ±1 day.
+- Drag-mark and double-click create a placeholder tile; the tile appears in Week view on the same day and in Month view on the same date.
+- Drag tile edges resize in 5-min increments.
+- Week-view weekday headers now have the same hover effect as the week-number gutter and navigate to Day-view on click.
+- On Clients page, coach role cannot edit (no mark/drag), can only view.

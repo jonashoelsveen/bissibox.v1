@@ -292,11 +292,12 @@ export function UnifiedElasticGrid({
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // Internal grid mode for the elastic spreadsheet (shared by Day & Week
-  // views). Day view uses the "rich" per-row layout (kind: "month"); Week
-  // view uses the "compact" hourly-label layout (kind: "year").
-  const mode: Mode = viewMode === "day" ? { kind: "month", month: 0 } : { kind: "year" };
+  // views). Both day and week use the compact hourly-label layout
+  // (kind: "year"); day-view simply renders a single column.
+  const isDayView = viewMode === "day";
+  const mode: Mode = { kind: "year" } as Mode;
   const [simpleView] = useDiarySimpleView();
-  const isSimple = mode.kind === "year" && appKind === "diary" && simpleView;
+  const isSimple = mode.kind === "year" && appKind === "diary" && simpleView && !isDayView;
 
   // User-configurable week-view day timeframe. Drives the time gutter,
   // overlay row count and event vertical placement in the week view.
@@ -326,17 +327,22 @@ export function UnifiedElasticGrid({
   const ROW_YEAR = 28;
   const ROW_MONTH = 36;
 
+  const DAY_COL_PX = 600;
   const gridTemplateColumns = useMemo(() => {
+    if (isDayView) {
+      // Day view: single weekday column, sized to roughly 3× a week column,
+      // centered horizontally by the wrapper.
+      return `48px ${DAY_COL_PX}px`;
+    }
     if (mode.kind === "year") {
       // Week view: 28px week-number gutter + 7 weekday columns. Mirrors the
       // Month view exactly so a zoom animation between the two doesn't
       // shift column widths.
       return `48px repeat(7, minmax(0, 1fr))`;
     }
-    // Day view: render the focused day at full FOCUS_COL width across the
-    // 7-column envelope so the active column is centered horizontally.
+    // Legacy day-of-month spreadsheet (unused now that day-view is a single column).
     return `repeat(7, ${FOCUS_COL}px)`;
-  }, [mode]);
+  }, [mode, isDayView]);
 
   const rowHeight = mode.kind === "year" ? ROW_YEAR : ROW_MONTH;
 
@@ -788,8 +794,9 @@ export function UnifiedElasticGrid({
     // last focused month when zooming out to Year View.
     let targetMonth: number | null = null;
     if (mode.kind === "month") {
-      targetMonth = mode.month;
-      lastFocusedMonthRef.current = mode.month;
+      const mm = (mode as { kind: "month"; month: number }).month;
+      targetMonth = mm;
+      lastFocusedMonthRef.current = mm;
     } else if (lastFocusedMonthRef.current !== null) {
       targetMonth = lastFocusedMonthRef.current;
     }
@@ -816,22 +823,23 @@ export function UnifiedElasticGrid({
     return () => cancelAnimationFrame(raf);
   }, [mode]);
 
+  const colCount = isDayView ? 1 : 7;
+
   const months = useMemo(
     () =>
       // Type 2 spreadsheet renders 7 weekday columns (Mon–Sun) instead of
-      // the full 12-month axis. The underlying data model still keys on
-      // month index 0–6, but only 7 of the 12 slots are rendered.
-      Array.from({ length: 7 }, (_, idx) => ({
+      // the full 12-month axis. Day-view collapses this to a single column.
+      Array.from({ length: colCount }, (_, idx) => ({
         idx,
         label: MONTH_LABELS_SHORT[idx],
         full: MONTH_LABELS_FULL[idx],
         dim: daysInMonth(year, idx),
       })),
-    [year],
+    [year, colCount],
   );
 
-  const isMonthFocused = (m: number) => mode.kind === "month" && mode.month === m;
-  const isMonthPeriph = (m: number) => mode.kind === "month" && mode.month !== m;
+  const isMonthFocused = (m: number) => mode.kind === "month" && (mode as { kind: "month"; month: number }).month === m;
+  const isMonthPeriph = (m: number) => mode.kind === "month" && (mode as { kind: "month"; month: number }).month !== m;
 
   // Live clock — updated every 15s so the "now" line stays accurate.
   const [now, setNow] = useState<Date>(() => new Date());
@@ -840,20 +848,23 @@ export function UnifiedElasticGrid({
     return () => clearInterval(id);
   }, []);
 
-  // Date for each of the 7 visible weekday columns, anchored to the week
-  // containing currentDate (Monday-first).
+  // Date for each visible weekday column. Week-view = 7 days anchored to
+  // the Monday of currentDate. Day-view = a single column for currentDate.
   const weekDates = useMemo(() => {
+    if (isDayView) {
+      return [new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate())];
+    }
     const start = startOfWeekMon(currentDate);
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       return d;
     });
-  }, [currentDate]);
+  }, [currentDate, isDayView]);
 
   // Index of today inside the visible week, -1 if not in view.
   const todayColIdx = useMemo(() => {
-    for (let i = 0; i < 7; i++) if (sameDay(weekDates[i], now)) return i;
+    for (let i = 0; i < weekDates.length; i++) if (sameDay(weekDates[i], now)) return i;
     return -1;
   }, [weekDates, now]);
 
@@ -1037,6 +1048,7 @@ export function UnifiedElasticGrid({
               gridTemplateColumns,
               transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
               willChange: "grid-template-columns",
+              ...(isDayView ? { width: "fit-content", marginInline: "auto" } : null),
             }}
           >
             {/* Week-number gutter header (clickable to zoom OUT to month). */}
@@ -1058,12 +1070,29 @@ export function UnifiedElasticGrid({
             {months.map((m) => {
               const colDate = weekDates[m.idx];
               const isToday = mode.kind === "year" && colDate && sameDay(colDate, now);
+              const dayLabel = isDayView && colDate
+                ? MONTH_LABELS_SHORT[(colDate.getDay() + 6) % 7]
+                : m.label;
+              const headerTitle = isDayView
+                ? "Klikk for å gå til ukevisning"
+                : "Klikk for å gå til dagvisning";
               return (
-                <div
+                <button
+                  type="button"
                   key={`h-${m.idx}`}
                   data-month-col={m.idx}
                   data-day-anchor=""
-                  className={`group/daynote-anchor flex select-none items-center justify-center border-b border-r border-hairline px-3 text-[12px] font-semibold uppercase tracking-wide ${
+                  onClick={() => {
+                    if (!colDate) return;
+                    if (isDayView) {
+                      handleViewModeChange("week");
+                    } else {
+                      onCurrentDateChange(colDate, { start: colDate, end: colDate });
+                      handleViewModeChange("day");
+                    }
+                  }}
+                  title={headerTitle}
+                  className={`group/daynote-anchor flex select-none items-center justify-center border-b border-r border-hairline px-3 text-[12px] font-semibold uppercase tracking-wide transition-colors hover:bg-secondary hover:text-ink ${
                     isToday ? "bg-secondary text-ink" : "bg-card text-muted-foreground"
                   } ${appKind === "diary" ? "relative" : ""}`}
                   style={{ height: 36 }}
@@ -1072,12 +1101,12 @@ export function UnifiedElasticGrid({
                     <DayNoteButton calId={calId} date={colDate} variant="week" memberId={memberId} viewerRole={viewerRole} />
                   )}
                   <span>
-                    {m.label}
+                    {dayLabel}
                     {mode.kind === "year" && colDate && (
                       <span className="ml-1.5 text-ink">{colDate.getDate()}</span>
                     )}
                   </span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -1088,6 +1117,7 @@ export function UnifiedElasticGrid({
               gridTemplateColumns,
               transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
               willChange: "grid-template-columns",
+              ...(isDayView ? { width: "fit-content", marginInline: "auto" } : null),
             }}
           >
 
@@ -1201,7 +1231,7 @@ export function UnifiedElasticGrid({
               does not block auto-flow of cells in the main grid above. */}
           {mode.kind === "year" && (
             <div
-              className="pointer-events-none absolute inset-x-0"
+              className={`pointer-events-none absolute ${isDayView ? "left-0 right-0" : "inset-x-0"}`}
               style={{
                 top: 36,
                 display: "grid",
@@ -1209,6 +1239,7 @@ export function UnifiedElasticGrid({
                 gridTemplateRows: isSimple
                   ? `${rowHeight * WEEK_SPAN_HOURS}px`
                   : `repeat(${WEEK_SPAN_HOURS}, ${rowHeight * 2}px)`,
+                ...(isDayView ? { width: 48 + DAY_COL_PX, marginInline: "auto" } : null),
               }}
             >
               {!isSimple && (
@@ -2295,7 +2326,7 @@ function WeekEventsOverlay({
         const sample = document.querySelector<HTMLElement>('[data-month-col="0"]');
         const colW = sample?.offsetWidth ?? 1;
         const colShift = Math.round(drag.delta.dx / colW);
-        const newCol = Math.max(0, Math.min(6, drag.originColIdx + colShift));
+        const newCol = Math.max(0, Math.min(weekDates.length - 1, drag.originColIdx + colShift));
         const minShift = Math.round(drag.delta.dy / ROW_HEIGHT) * 30;
         let newStart = drag.originStartMin + minShift;
         const minStart = startHour * 60;
@@ -2394,7 +2425,7 @@ function WeekEventsOverlay({
   // Group events by day column (clamped to the visible 06:00–24:00 window).
   const byCol = useMemo(() => {
     const arr: Array<Array<{ ev: CalendarEvent; startMin: number; endMin: number }>> = Array.from(
-      { length: 7 },
+      { length: weekDates.length },
       () => [],
     );
     for (const ev of events) {
@@ -2905,7 +2936,7 @@ function DiarySimpleStack({
     modalTimerRef.current = setTimeout(() => setModalReady(true), 300);
   };
   const byCol = useMemo(() => {
-    const arr: CalendarEvent[][] = Array.from({ length: 7 }, () => []);
+    const arr: CalendarEvent[][] = Array.from({ length: weekDates.length }, () => []);
     for (const ev of events) {
       const start = fromISOLocal(ev.startISO);
       const idx = weekDates.findIndex((d) => sameDay(d, start));
