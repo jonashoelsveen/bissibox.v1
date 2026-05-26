@@ -2765,7 +2765,7 @@ export function PopoverEditor({
                 type="button"
                 onClick={() => {
                   settledRef.current = true;
-                  onCommit(value.trim(), color, time);
+                  onCommit(value.trim(), color, time, true);
                 }}
                 className="rounded-md bg-primary px-2.5 py-1 text-[11.5px] font-medium text-primary-foreground hover:opacity-90"
               >
