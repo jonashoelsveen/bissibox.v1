@@ -123,12 +123,24 @@ export function SessionDetailsContainer({
     };
   };
 
+  // Autosave applies in two cases for the owner:
+  //   1. The session is still coach-pending (preserves the existing UX where
+  //      typing into the modal persists immediately, before acceptance).
+  //   2. The session was originally created by a coach and has since been
+  //      accepted (createdByCoachId set, coachPending false). Once accepted,
+  //      it must behave like any other owner-created session: title /
+  //      activity / time edits autosave without requiring an explicit Save.
+  //      Without this, edits typed into the modal after acceptance silently
+  //      revert to the coach's last values on close.
+  const isOwnerCoachOriginated =
+    viewerRole === "owner" && (!!ev.coachPending || !!ev.createdByCoachId);
+
   useEffect(() => {
     if (!detailsValue) {
       lastPendingAutosaveRef.current = "";
       return;
     }
-    if (!(ev.coachPending && onAccept)) {
+    if (!isOwnerCoachOriginated) {
       lastPendingAutosaveRef.current = "";
       return;
     }
@@ -140,7 +152,7 @@ export function SessionDetailsContainer({
     if (snapshot === lastPendingAutosaveRef.current) return;
     lastPendingAutosaveRef.current = snapshot;
     onUpsert(buildPatch(detailsValue));
-  }, [detailsValue, ev.coachPending, onAccept, onUpsert]);
+  }, [detailsValue, isOwnerCoachOriginated, onUpsert]);
 
   if (!detailsValue) return null;
 
@@ -165,18 +177,20 @@ export function SessionDetailsContainer({
       value={detailsValue}
       onChange={(v) => setDetailsValue(v)}
       onClose={() => {
-        // When the viewer is the owner of a coach-pending session, treat
-        // closing the modal (click outside, Esc, X button) as implicit
-        // acceptance — same end state as Save/Enter. This matches how
-        // other autosaved edits behave: leaving the panel persists the
-        // changes and clears the pending stripe.
+        // Coach-pending → implicit accept (persist edits + clear stripe).
+        // Already-accepted coach-originated → persist final edited state so
+        // the autosave's last in-flight snapshot isn't lost on a fast close.
+        // Plain owner-created session → just close (the modal handles
+        // dirty-state confirmation via requestClose).
         if (ev.coachPending && onAccept) {
           onUpsert({ ...buildPatch(detailsValue), coachPending: false });
           onAccept();
+        } else if (isOwnerCoachOriginated) {
+          onUpsert(buildPatch(detailsValue));
         }
         onClose();
       }}
-      suppressUnsavedPrompt={!!(ev.coachPending && onAccept)}
+      suppressUnsavedPrompt={isOwnerCoachOriginated}
       onSave={(v) => {
         onUpsert(buildPatch(v));
         onClose();
