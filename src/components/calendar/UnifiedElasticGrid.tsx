@@ -272,6 +272,7 @@ export function UnifiedElasticGrid({
   onUpsertEvent,
   onMoveEvent,
   onDeleteEvent,
+  onAcceptCoachSession,
   onReorderEvents,
   currentDate,
   currentRange,
