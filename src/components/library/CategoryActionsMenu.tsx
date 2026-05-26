@@ -119,6 +119,7 @@ export function CategoryActionsMenu({
   allowColor = true,
   allowCustomColor = true,
   colorSwatches,
+  accessPanel,
 }: CategoryActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const skipCloseAutoFocusRef = useRef(false);
