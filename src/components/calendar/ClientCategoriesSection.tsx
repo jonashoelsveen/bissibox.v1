@@ -2,12 +2,12 @@
  * ClientCategoriesSection — left-rail section shown to a coach when they
  * are viewing a client's calendar on /clients.
  *
- * Lists the client's personal calendar categories so the coach always sees
- * the full set, regardless of the access level (view or edit) the client
- * has granted. The section header shows the client's display name (same
- * slot the "Me" header occupies in the individual calendar's side-nav).
- * Toggling a row hides/shows that category's events in the grid by
- * updating the local `hiddenColors` set exposed by the parent.
+ * Lists only the client's personal calendar categories that this coach has
+ * explicitly been granted via `calendar_category_coach_access`. The section
+ * header shows the client's display name (same slot the "Me" header occupies
+ * in the individual calendar's side-nav). Toggling a row hides/shows that
+ * category's events in the grid by updating the local `hiddenColors` set
+ * exposed by the parent.
  */
 
 import { useEffect, useState } from "react";
@@ -42,12 +42,29 @@ export function ClientCategoriesSection({
     let cancelled = false;
 
     const load = async () => {
+      const { data: accessRows } = await supabase
+        .from("calendar_category_coach_access")
+        .select("category_id")
+        .eq("owner_id", clientUserId)
+        .eq("coach_user_id", user.id);
+
+      const categoryIds = (accessRows ?? [])
+        .map((row) => row.category_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0);
+
+      if (cancelled) return;
+      if (categoryIds.length === 0) {
+        setCats([]);
+        return;
+      }
+
       const { data: rows } = await supabase
         .from("calendar_categories")
         .select("id, name, color, sort_order, pinned")
         .eq("user_id", clientUserId)
         .is("team_id", null)
         .eq("kind", "calendar")
+        .in("id", categoryIds)
         .order("pinned", { ascending: false })
         .order("sort_order", { ascending: true });
       if (cancelled) return;
@@ -62,7 +79,7 @@ export function ClientCategoriesSection({
 
     void load();
 
-    const ch = supabase
+      const ch = supabase
       .channel(`client-cats:${clientUserId}:${user.id}`)
       .on(
         "postgres_changes",
@@ -71,6 +88,16 @@ export function ClientCategoriesSection({
           schema: "public",
           table: "calendar_categories",
           filter: `user_id=eq.${clientUserId}`,
+        },
+        () => void load(),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "calendar_category_coach_access",
+          filter: `owner_id=eq.${clientUserId}`,
         },
         () => void load(),
       )
