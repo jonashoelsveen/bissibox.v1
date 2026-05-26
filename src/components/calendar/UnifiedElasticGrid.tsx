@@ -1484,13 +1484,13 @@ export function UnifiedElasticGrid({
                   : (meCategories[0]?.color ?? null))
               : null)
           }
-            initialCategoryId={popover.categoryId ?? null}
+          initialCategoryId={popover.categoryId ?? null}
           isEdit={popover.isEdit}
           anchor={popover.rect}
           enableDuration={mode.kind === "year"}
           readOnly={viewerRole !== "owner"}
           placeholder={popover.placeholder}
-            categoryOwnerId={seat === "individual" ? memberId ?? null : null}
+          categoryOwnerId={seat === "individual" ? memberId ?? null : null}
           initialTime={(() => {
             if (mode.kind !== "year") return null;
             if (popover.pendingTime) return popover.pendingTime;
@@ -1523,18 +1523,18 @@ export function UnifiedElasticGrid({
               onUpsertEvent({ id: popover.eventId, color: c });
             }
           }}
-            onCategoryChange={(selection: CategorySelection) => {
-              setPopover((p) =>
-                p
-                  ? {
-                      ...p,
-                      categoryId: selection.id,
-                      categoryName: selection.name,
-                      initialColor: selection.color ?? p.initialColor,
-                    }
-                  : p,
-              );
-            }}
+          onCategoryChange={(selection: CategorySelection) => {
+            setPopover((p) =>
+              p
+                ? {
+                    ...p,
+                    categoryId: selection.id,
+                    categoryName: selection.name,
+                    initialColor: selection.color ?? p.initialColor,
+                  }
+                : p,
+            );
+          }}
           onTimeChange={(t) => {
             if (mode.kind !== "year" || !t) return;
             // If bound to a real event, push the new time straight to the
