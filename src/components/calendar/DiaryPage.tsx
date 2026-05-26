@@ -28,13 +28,6 @@ export function DiaryPage() {
     [user],
   );
 
-  // Gate the entire diary on a resolved auth state. Without this, the page
-  // briefly mounts with no user during auth bootstrap and any writes would
-  // land in a shared bucket that the next signed-in user would inherit.
-  if (loading || !user) {
-    return <div className="h-full w-full bg-white" />;
-  }
-
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [currentRange, setCurrentRange] = useState<DateRange>(() => {
     const t = new Date();
@@ -58,6 +51,16 @@ export function DiaryPage() {
     `diary:panel:open:${panelScopeKey}`,
     true,
   );
+
+  // Gate the entire diary on a resolved auth state. Without this, the page
+  // briefly mounts with no user during auth bootstrap and any writes would
+  // land in a shared bucket that the next signed-in user would inherit.
+  // NOTE: This early-return MUST come AFTER every hook above, otherwise the
+  // hook count changes between renders and React crashes the component to a
+  // blank screen ("Rendered more hooks than during the previous render.").
+  if (loading || !user) {
+    return <div className="h-full w-full bg-white" />;
+  }
 
   return (
     <div className="h-full overflow-hidden bg-white">
