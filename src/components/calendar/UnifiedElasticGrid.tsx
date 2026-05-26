@@ -1048,6 +1048,7 @@ export function UnifiedElasticGrid({
               gridTemplateColumns,
               transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
               willChange: "grid-template-columns",
+              ...(isDayView ? { width: "fit-content", marginInline: "auto" } : null),
             }}
           >
             {/* Week-number gutter header (clickable to zoom OUT to month). */}
