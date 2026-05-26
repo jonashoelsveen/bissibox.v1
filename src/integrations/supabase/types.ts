@@ -2399,36 +2399,45 @@ export type Database = {
       }
       user_coaches: {
         Row: {
+          accepted_at: string | null
           calendar_access: string
           coach_email: string
           coach_user_id: string | null
           created_at: string
           diary_access: string
           id: string
+          invite_token: string | null
+          invited_at: string | null
           owner_id: string
           photos_access: string
           status: string
           updated_at: string
         }
         Insert: {
+          accepted_at?: string | null
           calendar_access?: string
           coach_email: string
           coach_user_id?: string | null
           created_at?: string
           diary_access?: string
           id?: string
+          invite_token?: string | null
+          invited_at?: string | null
           owner_id: string
           photos_access?: string
           status?: string
           updated_at?: string
         }
         Update: {
+          accepted_at?: string | null
           calendar_access?: string
           coach_email?: string
           coach_user_id?: string | null
           created_at?: string
           diary_access?: string
           id?: string
+          invite_token?: string | null
+          invited_at?: string | null
           owner_id?: string
           photos_access?: string
           status?: string
@@ -2572,6 +2581,7 @@ export type Database = {
         Args: { _member: string }
         Returns: boolean
       }
+      is_coach_of_member: { Args: { _member: string }; Returns: boolean }
       is_follower_of_member: { Args: { _member: string }; Returns: boolean }
       is_group_leader_of_member: { Args: { _member: string }; Returns: boolean }
       is_media_in_team_profile_album: {
