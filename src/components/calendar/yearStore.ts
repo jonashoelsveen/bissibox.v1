@@ -653,17 +653,19 @@ export function useEventStore(calId: string) {
           return merged;
         }
         const row = eventToRow(merged, scope, coachUserIdRef.current);
-        const writePromise: Promise<void> = supabase
-          .from("calendar_sessions")
-          .upsert(row as never, { onConflict: "id" })
-          .then(({ error }) => {
-            if (error) console.error("[calendar_sessions upsert]", error);
-            if (pendingDeleteIdsRef.current.has(merged.id)) {
-              return supabase.from("calendar_sessions").delete().eq("id", merged.id).then(({ error: deleteError }) => {
-                if (deleteError) console.error("[calendar_sessions cleanup delete]", deleteError);
-              });
-            }
-          });
+        const writePromise = Promise.resolve(
+          supabase
+            .from("calendar_sessions")
+            .upsert(row as never, { onConflict: "id" })
+            .then(({ error }) => {
+              if (error) console.error("[calendar_sessions upsert]", error);
+              if (pendingDeleteIdsRef.current.has(merged.id)) {
+                return supabase.from("calendar_sessions").delete().eq("id", merged.id).then(({ error: deleteError }) => {
+                  if (deleteError) console.error("[calendar_sessions cleanup delete]", deleteError);
+                });
+              }
+            }),
+        );
         void writePromise.then(() => {
           if (pendingWriteByIdRef.current.get(merged.id) === writePromise) {
             pendingWriteByIdRef.current.delete(merged.id);
