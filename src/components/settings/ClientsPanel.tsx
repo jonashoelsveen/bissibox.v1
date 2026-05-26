@@ -82,9 +82,19 @@ export function ClientsPanel() {
           event: "*",
           schema: "public",
           table: "user_coaches",
-          filter: `coach_user_id=eq.${user.id}`,
         },
-        () => load(),
+        (payload) => {
+          // React to any row touching this coach (insert/update/delete).
+          // We don't use a server-side filter because Supabase realtime
+          // filters are limited and can miss UPDATEs when the unchanged
+          // columns aren't replicated; instead we re-load whenever any
+          // row that affects this coach changes.
+          const newRow = (payload.new ?? {}) as { coach_user_id?: string };
+          const oldRow = (payload.old ?? {}) as { coach_user_id?: string };
+          if (newRow.coach_user_id === user.id || oldRow.coach_user_id === user.id) {
+            load();
+          }
+        },
       )
       .subscribe();
     const onFocus = () => load();
@@ -93,13 +103,17 @@ export function ClientsPanel() {
     };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisible);
+    // Lightweight polling fallback in case the realtime channel is dropped.
+    const poll = window.setInterval(() => load(), 15000);
     return () => {
       supabase.removeChannel(channel);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(poll);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
 
   const selected = selectedId ? rows.find((r) => r.id === selectedId) ?? null : null;
 

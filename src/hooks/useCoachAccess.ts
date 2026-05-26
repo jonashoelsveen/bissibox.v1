@@ -58,16 +58,40 @@ export function useCoachAccess(ownerId: string | null | undefined): CoachAccess 
           event: "*",
           schema: "public",
           table: "user_coaches",
-          filter: `owner_id=eq.${ownerId}`,
         },
-        () => void load(),
+        (payload) => {
+          const newRow = (payload.new ?? {}) as {
+            owner_id?: string;
+            coach_user_id?: string;
+          };
+          const oldRow = (payload.old ?? {}) as {
+            owner_id?: string;
+            coach_user_id?: string;
+          };
+          const matches =
+            (newRow.owner_id === ownerId && newRow.coach_user_id === user.id) ||
+            (oldRow.owner_id === ownerId && oldRow.coach_user_id === user.id);
+          if (matches) void load();
+        },
       )
       .subscribe();
+
+    const onFocus = () => void load();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    const poll = window.setInterval(() => void load(), 15000);
 
     return () => {
       cancelled = true;
       void supabase.removeChannel(ch);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(poll);
     };
+
   }, [user, ownerId]);
 
   return access;
