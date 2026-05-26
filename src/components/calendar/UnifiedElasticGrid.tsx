@@ -1231,7 +1231,7 @@ export function UnifiedElasticGrid({
               does not block auto-flow of cells in the main grid above. */}
           {mode.kind === "year" && (
             <div
-              className="pointer-events-none absolute inset-x-0"
+              className={`pointer-events-none absolute ${isDayView ? "left-0 right-0" : "inset-x-0"}`}
               style={{
                 top: 36,
                 display: "grid",
@@ -1239,6 +1239,7 @@ export function UnifiedElasticGrid({
                 gridTemplateRows: isSimple
                   ? `${rowHeight * WEEK_SPAN_HOURS}px`
                   : `repeat(${WEEK_SPAN_HOURS}, ${rowHeight * 2}px)`,
+                ...(isDayView ? { width: 48 + DAY_COL_PX, marginInline: "auto" } : null),
               }}
             >
               {!isSimple && (
