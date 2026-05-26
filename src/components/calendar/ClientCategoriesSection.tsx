@@ -2,12 +2,12 @@
  * ClientCategoriesSection — left-rail section shown to a coach when they
  * are viewing a client's calendar on /clients.
  *
- * Lists only the personal categories the client has granted this coach
- * access to via `calendar_category_coach_access`. The section header shows
- * the client's display name (same slot the "Me" header occupies in the
- * individual calendar's side-nav). Toggling a row hides/shows that
- * category's events in the grid by updating the local `hiddenColors` set
- * exposed by the parent.
+ * Lists the client's personal calendar categories so the coach always sees
+ * the full set, regardless of the access level (view or edit) the client
+ * has granted. The section header shows the client's display name (same
+ * slot the "Me" header occupies in the individual calendar's side-nav).
+ * Toggling a row hides/shows that category's events in the grid by
+ * updating the local `hiddenColors` set exposed by the parent.
  */
 
 import { useEffect, useState } from "react";
@@ -16,7 +16,7 @@ import { ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
-interface GrantedCategory {
+interface ClientCategory {
   id: string;
   name: string;
   color: string;
@@ -34,7 +34,7 @@ export function ClientCategoriesSection({
   onToggleHidden: (color: string) => void;
 }) {
   const { user } = useAuth();
-  const [cats, setCats] = useState<GrantedCategory[]>([]);
+  const [cats, setCats] = useState<ClientCategory[]>([]);
   const [open, setOpen] = useState(true);
 
   useEffect(() => {
@@ -42,21 +42,12 @@ export function ClientCategoriesSection({
     let cancelled = false;
 
     const load = async () => {
-      // Fetch granted category access rows, then resolve the categories.
-      const { data: access } = await supabase
-        .from("calendar_category_coach_access")
-        .select("category_id")
-        .eq("coach_user_id", user.id)
-        .eq("owner_id", clientUserId);
-      const ids = (access ?? []).map((a) => a.category_id);
-      if (ids.length === 0) {
-        if (!cancelled) setCats([]);
-        return;
-      }
       const { data: rows } = await supabase
         .from("calendar_categories")
         .select("id, name, color, sort_order, pinned")
-        .in("id", ids)
+        .eq("user_id", clientUserId)
+        .is("team_id", null)
+        .eq("kind", "calendar")
         .order("pinned", { ascending: false })
         .order("sort_order", { ascending: true });
       if (cancelled) return;
@@ -73,16 +64,6 @@ export function ClientCategoriesSection({
 
     const ch = supabase
       .channel(`client-cats:${clientUserId}:${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "calendar_category_coach_access",
-          filter: `coach_user_id=eq.${user.id}`,
-        },
-        () => void load(),
-      )
       .on(
         "postgres_changes",
         {
@@ -132,7 +113,7 @@ export function ClientCategoriesSection({
         <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-hairline pl-2">
           {cats.length === 0 ? (
             <div className="px-2 py-1 text-[11px] text-muted-foreground">
-              No categories shared.
+              No categories yet.
             </div>
           ) : (
             cats.map((c) => {
