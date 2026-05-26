@@ -143,9 +143,11 @@ export function SessionDetailsContainer({
         onAccept
           ? (v: SessionDetailsValue) => {
               // Persist any in-progress edits (title, activity, time, etc.)
-              // before flipping coach_pending off so the client's accepted
-              // copy reflects exactly what's in the panel right now.
-              onUpsert(buildPatch(v));
+              // AND flip coach_pending off in the same upsert. Doing the flip
+              // in the patch (instead of a follow-up update) avoids a window
+              // where a realtime echo of the still-pending row clobbers the
+              // local accepted state and leaves the stripe stuck on.
+              onUpsert({ ...buildPatch(v), coachPending: false });
               onAccept();
               onClose();
             }
