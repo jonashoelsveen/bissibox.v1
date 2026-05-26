@@ -607,6 +607,10 @@ export function useEventStore(calId: string) {
       const hasIdInPatch = (patch as { id?: string }).id != null;
       const id = (patch as { id?: string }).id ?? makeEventId();
       const existing = current.find((e) => e.id === id);
+      const deletedAt = pendingDeleteIdsRef.current.get(id);
+      if (deletedAt && Date.now() - deletedAt < 30_000) {
+        return null as unknown as CalendarEvent;
+      }
       // Guard: a patch that references an id we no longer have locally AND
       // doesn't bring its own timestamps would resurrect a ghost tile (empty
       // title, empty start/end) — happens when a late callback fires for an
@@ -619,6 +623,7 @@ export function useEventStore(calId: string) {
       ) {
         return null as unknown as CalendarEvent;
       }
+      pendingDeleteIdsRef.current.delete(id);
       const merged: CalendarEvent = {
         allDay: false,
         color: null,
@@ -711,6 +716,7 @@ export function useEventStore(calId: string) {
       const current = eventsRef.current;
       const next = current.filter((e) => e.id !== id);
       if (next.length === current.length) return;
+      pendingDeleteIdsRef.current.set(id, Date.now());
       applyLocal(next);
       void supabase.from("calendar_sessions").delete().eq("id", id);
     },
