@@ -39,6 +39,7 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
   const [addEmail, setAddEmail] = useState("");
   const [adding, setAdding] = useState(false);
   const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null);
+  const saveVersionRef = useRef(0);
 
   const load = async () => {
     if (!user) return;
@@ -166,17 +167,43 @@ export const CoachesPanel = forwardRef<CoachesPanelHandle, Props>(function Coach
     },
   }));
 
-  const setAccess = (rowId: string, col: "calendar" | "diary" | "photos", value: Access) => {
-    setRows((prev) =>
-      prev.map((r) =>
-        r.id === rowId
-          ? {
-              ...r,
-              [`${col}_access`]: value,
-            }
-          : r,
-      ),
+  const setAccess = async (rowId: string, col: "calendar" | "diary" | "photos", value: Access) => {
+    if (!user) return;
+
+    const previousRows = rows;
+    const currentRow = previousRows.find((r) => r.id === rowId);
+    if (!currentRow) return;
+
+    const key = `${col}_access` as const;
+    if (currentRow[key] === value) return;
+
+    const nextRows = previousRows.map((r) =>
+      r.id === rowId
+        ? {
+            ...r,
+            [key]: value,
+          }
+        : r,
     );
+
+    setRows(nextRows);
+
+    const saveVersion = ++saveVersionRef.current;
+    const { error } = await supabase
+      .from("user_coaches")
+      .update({ [key]: value })
+      .eq("id", rowId)
+      .eq("owner_id", user.id);
+
+    if (error) {
+      setRows(previousRows);
+      toast.error(error.message);
+      return;
+    }
+
+    if (saveVersionRef.current === saveVersion) {
+      setBaseline(JSON.stringify(nextRows.map(serialize)));
+    }
   };
 
   const sendInvitation = async () => {
