@@ -175,6 +175,8 @@ export interface MonthGridType1Props {
   ) => CalendarEvent;
   onMoveEvent?: (id: string, patch: Partial<Pick<CalendarEvent, "startISO" | "endISO" | "allDay">>) => void;
   onDeleteEvent?: (id: string) => void;
+  /** Flip a coach-pending session into the accepted (owner) state. */
+  onAcceptCoachSession?: (id: string) => void;
   /** Reorder a sequence of event ids within a day (writes sortIndex values). */
   onReorderEvents?: (ids: string[]) => void;
   /** When the user clicks a week-number cell, zoom into that week. */
