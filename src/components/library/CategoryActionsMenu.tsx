@@ -156,19 +156,12 @@ export function CategoryActionsMenu({
         className="w-44 p-1"
         onPointerDown={(e) => e.stopPropagation()}
         onPointerMove={(e) => {
-          // If pointer moves onto a DIFFERENT actionable menu item (not the
-          // Color row), close the sub immediately. Bypasses Radix's
-          // safe-triangle delay for snappy up/down movement, but ignores
-          // movement over padding/gaps so the user can reach the swatch
-          // panel diagonally without it closing.
+          // If pointer is in the main menu but NOT on the Color row, close the
+          // sub immediately. Bypasses Radix's safe-triangle delay so moving
+          // fast up/down feels snappy.
           if (!colorSubOpen) return;
           const target = e.target as HTMLElement | null;
-          if (!target) return;
-          if (target.closest("[data-color-trigger]")) return;
-          const item = target.closest(
-            "[role='menuitem'], [role='menuitemcheckbox'], [role='menuitemradio'], button",
-          );
-          if (item) {
+          if (!target?.closest("[data-color-trigger]")) {
             cancelColorClose();
             setColorSubOpen(false);
           }
