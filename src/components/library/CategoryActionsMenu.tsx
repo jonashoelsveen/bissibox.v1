@@ -162,17 +162,25 @@ export function CategoryActionsMenu({
         className="w-44 p-1"
         onPointerDown={(e) => e.stopPropagation()}
         onPointerMove={(e) => {
-          // If pointer is in the main menu but NOT on the Color row, close the
-          // sub immediately when hovering another real row. This keeps fast
-          // up/down movement snappy without breaking the gap-crossing grace.
-          if (!colorSubOpen) return;
           const target = e.target as HTMLElement | null;
-          if (
-            target?.closest("[data-instant-sub-close]") &&
-            !target.closest("[data-color-trigger]")
-          ) {
-            cancelColorClose();
-            setColorSubOpen(false);
+          // Close Color sub instantly when hovering any non-color row.
+          if (colorSubOpen) {
+            if (
+              target?.closest("[data-instant-sub-close]") &&
+              !target.closest("[data-color-trigger]")
+            ) {
+              cancelColorClose();
+              setColorSubOpen(false);
+            }
+          }
+          // Close Access sub instantly when hovering any non-access row.
+          if (accessSubOpen) {
+            if (
+              target?.closest("[data-instant-sub-close]") &&
+              !target.closest("[data-access-trigger]")
+            ) {
+              setAccessSubOpen(false);
+            }
           }
         }}
         onCloseAutoFocus={(e) => {
