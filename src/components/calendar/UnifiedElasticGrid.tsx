@@ -708,10 +708,18 @@ export function UnifiedElasticGrid({
       // tile mounts in the SAME color the popover's category dropdown will
       // resolve to — no re-color flicker after mount. Fall back to the
       // periwinkle Training default if categories haven't loaded yet.
-      const meDefaultColor = meCategories[0]?.color ?? CAT_TRAINING_COLOR;
-      const adminDefaultColor = teamCategories[0]?.color ?? "#E63337";
-      const clientDefaultColor = clientCategories[0]?.color ?? CAT_TRAINING_COLOR;
+      const meDefaultCategory = meCategories[0] ?? null;
+      const adminDefaultCategory = teamCategories[0] ?? null;
+      const clientDefaultCategory = clientCategories[0] ?? null;
+      const meDefaultColor = meDefaultCategory?.color ?? CAT_TRAINING_COLOR;
+      const adminDefaultColor = adminDefaultCategory?.color ?? "#E63337";
+      const clientDefaultColor = clientDefaultCategory?.color ?? CAT_TRAINING_COLOR;
       const isCoachOnClient = calId.startsWith("client:");
+      const defaultCategoryId = isCoachOnClient
+        ? (clientDefaultCategory?.id ?? null)
+        : seat === "admin"
+          ? (adminDefaultCategory?.id ?? null)
+          : (meDefaultCategory?.id ?? null);
       const defaultColor = isCoachOnClient
         ? clientDefaultColor
         : seat === "admin"
@@ -724,6 +732,7 @@ export function UnifiedElasticGrid({
         id: makeEventId(),
         title: "",
         color: defaultColor,
+        categoryId: defaultCategoryId,
         startISO,
         endISO,
         allDay: false,
@@ -735,6 +744,7 @@ export function UnifiedElasticGrid({
         rect: el.getBoundingClientRect(),
         initialText: "",
         initialColor: created.color ?? null,
+        categoryId: created.categoryId ?? null,
         isEdit: true,
         eventId: created.id,
         placeholder: "New session",
@@ -1681,7 +1691,11 @@ export function UnifiedElasticGrid({
           enableDuration={mode.kind === "year"}
           readOnly={viewerRole !== "owner"}
           placeholder={popover.placeholder}
-          categoryOwnerId={seat === "individual" ? (memberId ?? null) : null}
+          categoryOwnerId={
+            seat === "individual"
+              ? (calId.startsWith("client:") ? clientOwnerId : (memberId ?? null))
+              : null
+          }
           initialTime={(() => {
             if (mode.kind !== "year") return null;
             if (popover.pendingTime) return popover.pendingTime;
