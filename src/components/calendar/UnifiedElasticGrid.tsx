@@ -3656,7 +3656,7 @@ function SortableSimpleTile({
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0 : 1,
+    opacity: isDragging ? 0.35 : 1,
     position: "relative",
   };
   return (
