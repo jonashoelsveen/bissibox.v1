@@ -24,7 +24,7 @@
  *   - Crisp 1px borders, desaturation of peripheral columns in Month View.
  */
 
-import type React from "react";
+import React from "react";
 import {
   Fragment,
   useCallback,
