@@ -774,7 +774,6 @@ export function UnifiedElasticGrid({
     teamCategories,
     clientCategories,
     clientCategoriesLoaded,
-    clientGrantedCategoryIds,
     visibleClientCategories,
     calId,
     viewerRole,
