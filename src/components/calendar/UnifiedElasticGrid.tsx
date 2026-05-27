@@ -735,7 +735,7 @@ export function UnifiedElasticGrid({
     }
 
     openPopover({ year, month: markRange.month, day, session }, el);
-  }, [
+    onSelect(null);
     markReleased,
     markRange,
     openPopover,
