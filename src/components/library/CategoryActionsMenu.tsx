@@ -99,6 +99,7 @@ export function CategoryActionsMenu({
 }: CategoryActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const [colorSubOpen, setColorSubOpen] = useState(false);
+  const [accessSubOpen, setAccessSubOpen] = useState(false);
   const colorCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipCloseAutoFocusRef = useRef(false);
   const menuId = useId();
