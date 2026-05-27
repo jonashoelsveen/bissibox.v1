@@ -125,6 +125,7 @@ export function CategoryActionsMenu({
       setOpenMenuId(menuId);
     } else {
       setColorSubOpen(false);
+      setAccessSubOpen(false);
       if (openMenuId === menuId) setOpenMenuId(null);
     }
   };
