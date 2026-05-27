@@ -132,12 +132,14 @@ export function CategoryActionsMenu({
       colorCloseTimerRef.current = null;
     }
   };
-  // Close immediately on pointer-out so (a) the panel feels snappy, and
-  // (b) the main menu can close on the very next outside click instead of
-  // requiring a second click to dismiss a lingering sub.
+  // Small grace window so cursor can cross the gap between the Color row
+  // and the swatch panel without the sub flickering closed.
   const scheduleColorClose = () => {
     cancelColorClose();
-    setColorSubOpen(false);
+    colorCloseTimerRef.current = setTimeout(() => {
+      setColorSubOpen(false);
+      colorCloseTimerRef.current = null;
+    }, 80);
   };
 
   useEffect(() => () => cancelColorClose(), []);
@@ -153,6 +155,17 @@ export function CategoryActionsMenu({
         collisionPadding={8}
         className="w-44 p-1"
         onPointerDown={(e) => e.stopPropagation()}
+        onPointerMove={(e) => {
+          // If pointer is in the main menu but NOT on the Color row, close the
+          // sub immediately. Bypasses Radix's safe-triangle delay so moving
+          // fast up/down feels snappy.
+          if (!colorSubOpen) return;
+          const target = e.target as HTMLElement | null;
+          if (!target?.closest("[data-color-trigger]")) {
+            cancelColorClose();
+            setColorSubOpen(false);
+          }
+        }}
         onCloseAutoFocus={(e) => {
           if (!skipCloseAutoFocusRef.current) return;
           e.preventDefault();
@@ -195,6 +208,7 @@ export function CategoryActionsMenu({
         {allowColor && (
           <DropdownMenuSub open={colorSubOpen} onOpenChange={setColorSubOpen}>
             <DropdownMenuSubTrigger
+              data-color-trigger=""
               onClick={(e) => {
                 // Hover-only: clicking the Color row must not toggle/close the sub.
                 e.preventDefault();
