@@ -52,6 +52,17 @@ export function useUserCategories(opts?: { teamId?: string | null; ownerId?: str
     setLoaded(true);
   }, [user, teamId, kind, scopeUserId]);
 
+  // Reset `loaded`/`categories` synchronously when the scope changes so
+  // consumers don't briefly see stale rows from a previous owner/team while
+  // the new fetch is in flight. Critical for coach-viewing-client paths where
+  // a freshly-marked tile reads `categories[0].color` and would otherwise
+  // flash the previous scope's top color before the new list arrives.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setLoaded(false);
+    setCategories([]);
+  }, [teamId, scopeUserId, kind]);
+
   useEffect(() => {
     void load();
     if (!user || (!teamId && !scopeUserId)) return;
