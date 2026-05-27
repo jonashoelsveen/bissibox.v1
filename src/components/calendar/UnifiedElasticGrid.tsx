@@ -354,8 +354,9 @@ export function UnifiedElasticGrid({
   });
   // When a coach is viewing a client's calendar, preload the client's own
   // category list so a freshly-marked draft tile mounts with the same color
-  // the saved session will resolve to. Without this, the tile briefly flashes
-  // the coach's own top-category color before swapping to the client's.
+  // the saved session will resolve to. The coach sees the full client
+  // category list — identical to what the client sees in their own calendar
+  // — so the two views match 1:1.
   const clientOwnerId = useMemo(
     () => (calId.startsWith("client:") ? calId.slice(7) : null),
     [calId],
@@ -363,36 +364,7 @@ export function UnifiedElasticGrid({
   const { categories: clientCategories, loaded: clientCategoriesLoaded } = useUserCategories({
     ownerId: clientOwnerId,
   });
-  const [clientGrantedCategoryIds, setClientGrantedCategoryIds] = useState<Set<string> | null>(null);
-
-  useEffect(() => {
-    if (!clientOwnerId || !user || clientOwnerId === user.id) {
-      setClientGrantedCategoryIds(null);
-      return;
-    }
-    let cancelled = false;
-    void supabase
-      .from("calendar_category_coach_access")
-      .select("category_id")
-      .eq("owner_id", clientOwnerId)
-      .eq("coach_user_id", user.id)
-      .then(({ data }) => {
-        if (cancelled) return;
-        setClientGrantedCategoryIds(
-          new Set((data ?? []).map((row) => row.category_id).filter(Boolean)),
-        );
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [clientOwnerId, user]);
-
-  const visibleClientCategories = useMemo(() => {
-    if (!clientOwnerId || !user || clientOwnerId === user.id || clientGrantedCategoryIds === null) {
-      return clientCategories;
-    }
-    return clientCategories.filter((category) => clientGrantedCategoryIds.has(category.id));
-  }, [clientCategories, clientGrantedCategoryIds, clientOwnerId, user]);
+  const visibleClientCategories = clientCategories;
 
   const handleViewModeChange = (v: ViewMode) => {
     if (!isControlled) setViewModeInternal(v);
@@ -700,7 +672,7 @@ export function UnifiedElasticGrid({
     // top "Me" category for many users, producing a visible "coach color"
     // flash before the popover's category dropdown swaps in the client's
     // real default. The effect re-runs once `clientCategoriesLoaded` flips.
-    if (calId.startsWith("client:") && (!clientCategoriesLoaded || clientGrantedCategoryIds === null)) return;
+    if (calId.startsWith("client:") && !clientCategoriesLoaded) return;
     const day = Math.floor(markRange.lo / 2);
     const session = (markRange.lo % 2) as Session;
     const sel = `[data-cell-key="${markRange.month}:${day}:${session}"]`;
@@ -802,7 +774,6 @@ export function UnifiedElasticGrid({
     teamCategories,
     clientCategories,
     clientCategoriesLoaded,
-    clientGrantedCategoryIds,
     visibleClientCategories,
     calId,
     viewerRole,

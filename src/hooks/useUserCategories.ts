@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
@@ -52,13 +52,17 @@ export function useUserCategories(opts?: { teamId?: string | null; ownerId?: str
     setLoaded(true);
   }, [user, teamId, kind, scopeUserId]);
 
-  // Reset `loaded`/`categories` synchronously when the scope changes so
-  // consumers don't briefly see stale rows from a previous owner/team while
-  // the new fetch is in flight. Critical for coach-viewing-client paths where
-  // a freshly-marked tile reads `categories[0].color` and would otherwise
-  // flash the previous scope's top color before the new list arrives.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Reset `loaded`/`categories` synchronously when the scope ACTUALLY
+  // changes (not on first mount) so consumers don't briefly see stale rows
+  // from a previous owner/team while the new fetch is in flight. Skipping
+  // the first mount avoids wiping a just-rendered initial state and
+  // re-triggering downstream effects unnecessarily.
+  const prevScopeRef = useRef<{ teamId: string | null; scopeUserId: string | null; kind: CategoryKind } | null>(null);
   useEffect(() => {
+    const prev = prevScopeRef.current;
+    prevScopeRef.current = { teamId, scopeUserId, kind };
+    if (!prev) return;
+    if (prev.teamId === teamId && prev.scopeUserId === scopeUserId && prev.kind === kind) return;
     setLoaded(false);
     setCategories([]);
   }, [teamId, scopeUserId, kind]);
