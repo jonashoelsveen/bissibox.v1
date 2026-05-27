@@ -688,6 +688,9 @@ export function UnifiedElasticGrid({
       // same React batch the new tile mounts in — no perceptible lag.
       setMarkRange(null);
       setMarkReleased(false);
+      // Drop the "clicked" cell highlight — a mark/dblclick gesture
+      // should not leave the originating cell dark under the new tile.
+      onSelect(null);
       // Default the freshly-created tile to a concrete category color so it
       // mounts with its final appearance — no null→color reflow. Admin gets
       // Meeting (red); individual gets Training (periwinkle), which matches
@@ -732,6 +735,7 @@ export function UnifiedElasticGrid({
     }
 
     openPopover({ year, month: markRange.month, day, session }, el);
+    onSelect(null);
   }, [
     markReleased,
     markRange,
@@ -748,6 +752,7 @@ export function UnifiedElasticGrid({
     clientCategories,
     calId,
     viewerRole,
+    onSelect,
   ]);
 
   const inDragRange = useCallback(
