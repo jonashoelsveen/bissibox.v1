@@ -225,7 +225,9 @@ export function CategoryActionsMenu({
         {allowColor && (
           <DropdownMenuSub open={colorSubOpen} onOpenChange={setColorSubOpen}>
             <DropdownMenuSubTrigger
+              ref={(el) => { colorTriggerRef.current = el; }}
               data-color-trigger=""
+              data-instant-sub-close
               onClick={(e) => {
                 // Hover-only: clicking the Color row must not toggle/close the sub.
                 e.preventDefault();
@@ -234,7 +236,6 @@ export function CategoryActionsMenu({
                 cancelColorClose();
                 setColorSubOpen(true);
               }}
-              onPointerLeave={scheduleColorClose}
               className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary"
             >
               <span
@@ -259,15 +260,22 @@ export function CategoryActionsMenu({
                   // Persistent panel — keep open after click so user sees the
                   // check move and can pick again. Closes naturally on hover-out.
                   onColorChange(hex);
+                  // Move focus back to the Color trigger so the main menu's
+                  // outside-click detection works on the very next click.
+                  requestAnimationFrame(() => {
+                    colorTriggerRef.current?.focus({ preventScroll: true });
+                  });
                 }}
               />
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         )}
         {accessPanel && (
-          <DropdownMenuSub>
+          <DropdownMenuSub open={accessSubOpen} onOpenChange={setAccessSubOpen}>
             <DropdownMenuSubTrigger
+              data-access-trigger=""
               data-instant-sub-close
+              onPointerEnter={() => setAccessSubOpen(true)}
               className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary"
             >
               <Users className="h-3.5 w-3.5" />
