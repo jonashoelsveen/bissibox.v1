@@ -289,7 +289,10 @@ export function GlobalTopTabBar() {
     );
   }
 
-  const revealing = transition === "reveal-dark";
+  // Only honor the reveal-dark phase on the landing page where the
+  // choreography actually plays. On every other route, render the bar
+  // normally regardless of any stale module-level phase.
+  const revealing = path === "/" && transition === "reveal-dark";
   return (
     <div
       className="global-topbar-dark fixed left-0 right-0 top-0 z-[90]"
