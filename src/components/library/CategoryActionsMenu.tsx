@@ -255,6 +255,7 @@ export function CategoryActionsMenu({
         {accessPanel && (
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary">
+              <span data-instant-sub-close className="hidden" aria-hidden />
               <Users className="h-3.5 w-3.5" />
               <span className="flex-1">Access</span>
             </DropdownMenuSubTrigger>
@@ -312,6 +313,7 @@ function Item({
     <button
       type="button"
       onClick={onClick}
+      data-instant-sub-close
       className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs transition ${
         destructive
           ? "text-destructive hover:bg-destructive/10"
