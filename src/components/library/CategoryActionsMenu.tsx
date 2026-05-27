@@ -96,15 +96,52 @@ export function CategoryActionsMenu({
   accessPanel,
 }: CategoryActionsMenuProps) {
   const [open, setOpen] = useState(false);
+  const [colorSubOpen, setColorSubOpen] = useState(false);
+  const colorCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipCloseAutoFocusRef = useRef(false);
+  const menuId = useId();
   const topExtras = extraItems.filter((i) => i.top);
   const bottomExtras = extraItems.filter((i) => !i.top);
 
   const close = () => setOpen(false);
 
+  // Only one CategoryActionsMenu open at a time across the app.
+  useEffect(() => {
+    const cb = (id: string | null) => {
+      if (id !== menuId && open) setOpen(false);
+    };
+    openMenuListeners.add(cb);
+    return () => {
+      openMenuListeners.delete(cb);
+    };
+  }, [menuId, open]);
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next) {
+      setOpenMenuId(menuId);
+    } else {
+      setColorSubOpen(false);
+      if (openMenuId === menuId) setOpenMenuId(null);
+    }
+  };
+
+  const cancelColorClose = () => {
+    if (colorCloseTimerRef.current) {
+      clearTimeout(colorCloseTimerRef.current);
+      colorCloseTimerRef.current = null;
+    }
+  };
+  const scheduleColorClose = () => {
+    cancelColorClose();
+    colorCloseTimerRef.current = setTimeout(() => setColorSubOpen(false), 120);
+  };
+
+  useEffect(() => () => cancelColorClose(), []);
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
+
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
