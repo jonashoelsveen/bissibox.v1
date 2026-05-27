@@ -107,7 +107,7 @@ function hex2hue(hex: string): number {
   return h;
 }
 
-const isValidHex = (v: string) => /^#[0-9a-f]{6}$/i.test(v.trim());
+
 
 // Gap between adjacent popovers — matches the diary owner/leader note spacing (gap-2 = 8px)
 const SUB_OFFSET = 8;
