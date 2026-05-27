@@ -134,7 +134,7 @@ export function CategoryActionsMenu({
   };
   const scheduleColorClose = () => {
     cancelColorClose();
-    colorCloseTimerRef.current = setTimeout(() => setColorSubOpen(false), 120);
+    colorCloseTimerRef.current = setTimeout(() => setColorSubOpen(false), 40);
   };
 
   useEffect(() => () => cancelColorClose(), []);
