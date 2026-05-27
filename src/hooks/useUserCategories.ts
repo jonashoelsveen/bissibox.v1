@@ -160,8 +160,26 @@ export function useUserCategories(opts?: { teamId?: string | null; ownerId?: str
     async (id: string, patch: Partial<Pick<UserCategory, "name" | "color" | "pinned" | "hidden">>) => {
       setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
       await supabase.from("calendar_categories").update(patch).eq("id", id);
+      // When the category color changes, cascade the new color to every
+      // session currently tagged with this category so the calendar stays
+      // visually consistent — same activity type, same color — without
+      // requiring users to recolor each session manually. Scope writes to
+      // the category's owning user (or team) so RLS only allows the owner /
+      // admin (the only roles that can edit categories in the UI) to apply
+      // the update. The realtime subscription on calendar_sessions then
+      // propagates the new color to every viewer (including coaches).
+      if (typeof patch.color === "string" && patch.color) {
+        let q = supabase
+          .from("calendar_sessions")
+          .update({ color: patch.color })
+          .eq("category_id", id);
+        if (teamId) q = q.eq("entity_id", teamId);
+        else if (scopeUserId) q = q.eq("user_id", scopeUserId).is("entity_id", null);
+        const { error } = await q;
+        if (error) console.error("[calendar_categories cascade color]", error);
+      }
     },
-    [],
+    [teamId, scopeUserId],
   );
 
   const remove = useCallback(async (id: string) => {
