@@ -208,6 +208,7 @@ export function CategoryActionsMenu({
         {allowColor && (
           <DropdownMenuSub open={colorSubOpen} onOpenChange={setColorSubOpen}>
             <DropdownMenuSubTrigger
+              data-color-trigger=""
               onClick={(e) => {
                 // Hover-only: clicking the Color row must not toggle/close the sub.
                 e.preventDefault();
