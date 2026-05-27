@@ -1714,7 +1714,7 @@ export function UnifiedElasticGrid({
             popover.initialColor ??
             (!popover.eventId && !popover.isEdit
               ? calId.startsWith("client:")
-                ? (clientCategories[0]?.color ?? null)
+                ? (visibleClientCategories[0]?.color ?? null)
                 : seat === "admin"
                   ? (teamCategories[0]?.color ?? null)
                   : (meCategories[0]?.color ?? null)
