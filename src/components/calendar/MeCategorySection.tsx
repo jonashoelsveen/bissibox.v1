@@ -53,7 +53,6 @@ export function MeCategorySection({
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   const startRename = (c: UserCategory) => {
-    if (c.is_default) return;
     // Defer to the next macrotask so the actions menu (Radix dropdown) can
     // finish closing and restore focus to its trigger BEFORE we mount the
     // rename input. Otherwise Radix's focus-restore lands after our input
