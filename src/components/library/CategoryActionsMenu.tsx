@@ -132,12 +132,14 @@ export function CategoryActionsMenu({
       colorCloseTimerRef.current = null;
     }
   };
-  // Close immediately on pointer-out so (a) the panel feels snappy, and
-  // (b) the main menu can close on the very next outside click instead of
-  // requiring a second click to dismiss a lingering sub.
+  // Small grace window so cursor can cross the gap between the Color row
+  // and the swatch panel without the sub flickering closed.
   const scheduleColorClose = () => {
     cancelColorClose();
-    setColorSubOpen(false);
+    colorCloseTimerRef.current = setTimeout(() => {
+      setColorSubOpen(false);
+      colorCloseTimerRef.current = null;
+    }, 80);
   };
 
   useEffect(() => () => cancelColorClose(), []);
