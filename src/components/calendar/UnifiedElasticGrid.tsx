@@ -3142,6 +3142,7 @@ function WeekEventsOverlay({
                   </div>
                 )}
               </div>
+              </React.Fragment>
             );
           })}
         </div>
