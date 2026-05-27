@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -15,6 +15,15 @@ import {
   Users,
   Check,
 } from "lucide-react";
+
+// ---- Singleton coordinator: only one CategoryActionsMenu open at a time ----
+let openMenuId: string | null = null;
+const openMenuListeners = new Set<(id: string | null) => void>();
+function setOpenMenuId(id: string | null) {
+  if (openMenuId === id) return;
+  openMenuId = id;
+  openMenuListeners.forEach((l) => l(id));
+}
 
 export type ColorValue = string;
 
