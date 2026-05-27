@@ -1668,9 +1668,11 @@ export function UnifiedElasticGrid({
           initialColor={
             popover.initialColor ??
             (!popover.eventId && !popover.isEdit
-              ? seat === "admin"
-                ? (teamCategories[0]?.color ?? null)
-                : (meCategories[0]?.color ?? null)
+              ? calId.startsWith("client:")
+                ? (clientCategories[0]?.color ?? null)
+                : seat === "admin"
+                  ? (teamCategories[0]?.color ?? null)
+                  : (meCategories[0]?.color ?? null)
               : null)
           }
           initialCategoryId={popover.categoryId ?? null}
