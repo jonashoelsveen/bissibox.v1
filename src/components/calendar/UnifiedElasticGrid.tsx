@@ -357,7 +357,7 @@ export function UnifiedElasticGrid({
     () => (calId.startsWith("client:") ? calId.slice(7) : null),
     [calId],
   );
-  const { categories: clientCategories } = useUserCategories({
+  const { categories: clientCategories, loaded: clientCategoriesLoaded } = useUserCategories({
     ownerId: clientOwnerId,
   });
 
@@ -660,6 +660,14 @@ export function UnifiedElasticGrid({
     if (!markReleased || !markRange) return;
     if (viewerRole !== "owner") return;
     if (markRange.hi < markRange.lo) return;
+    // Coach viewing a client's calendar: hold the materialization for a tick
+    // until the client's categories have actually loaded. Otherwise the
+    // `CAT_TRAINING_COLOR` fallback below would briefly paint the tile in the
+    // periwinkle/Training default — which happens to match the coach's own
+    // top "Me" category for many users, producing a visible "coach color"
+    // flash before the popover's category dropdown swaps in the client's
+    // real default. The effect re-runs once `clientCategoriesLoaded` flips.
+    if (calId.startsWith("client:") && !clientCategoriesLoaded) return;
     const day = Math.floor(markRange.lo / 2);
     const session = (markRange.lo % 2) as Session;
     const sel = `[data-cell-key="${markRange.month}:${day}:${session}"]`;
@@ -750,6 +758,7 @@ export function UnifiedElasticGrid({
     meCategories,
     teamCategories,
     clientCategories,
+    clientCategoriesLoaded,
     calId,
     viewerRole,
     onSelect,
@@ -1659,9 +1668,11 @@ export function UnifiedElasticGrid({
           initialColor={
             popover.initialColor ??
             (!popover.eventId && !popover.isEdit
-              ? seat === "admin"
-                ? (teamCategories[0]?.color ?? null)
-                : (meCategories[0]?.color ?? null)
+              ? calId.startsWith("client:")
+                ? (clientCategories[0]?.color ?? null)
+                : seat === "admin"
+                  ? (teamCategories[0]?.color ?? null)
+                  : (meCategories[0]?.color ?? null)
               : null)
           }
           initialCategoryId={popover.categoryId ?? null}
