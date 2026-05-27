@@ -563,6 +563,7 @@ export function UnifiedElasticGrid({
             initialColor: ev.color,
             isEdit: true,
             eventId: ev.id,
+            categoryId: ev.categoryId ?? null,
             placeholder: ev.title ? undefined : "New session",
           });
           return;
