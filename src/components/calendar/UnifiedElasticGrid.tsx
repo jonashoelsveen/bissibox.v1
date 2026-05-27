@@ -736,6 +736,7 @@ export function UnifiedElasticGrid({
 
     openPopover({ year, month: markRange.month, day, session }, el);
     onSelect(null);
+  }, [
     markReleased,
     markRange,
     openPopover,
@@ -751,6 +752,7 @@ export function UnifiedElasticGrid({
     clientCategories,
     calId,
     viewerRole,
+    onSelect,
   ]);
 
   const inDragRange = useCallback(
