@@ -1598,7 +1598,7 @@ export function MonthGridType1({
                                 !dragSession.landing &&
                                 it.kind === "event" &&
                                 dragSession.eventId === it.event.id
-                                  ? 0
+                                  ? 0.35
                                   : 1,
                             }}
                             exit={{ opacity: 0 }}
