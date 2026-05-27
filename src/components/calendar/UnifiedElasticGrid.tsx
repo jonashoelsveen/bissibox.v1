@@ -672,7 +672,7 @@ export function UnifiedElasticGrid({
     // top "Me" category for many users, producing a visible "coach color"
     // flash before the popover's category dropdown swaps in the client's
     // real default. The effect re-runs once `clientCategoriesLoaded` flips.
-    if (calId.startsWith("client:") && (!clientCategoriesLoaded || clientGrantedCategoryIds === null)) return;
+    if (calId.startsWith("client:") && !clientCategoriesLoaded) return;
     const day = Math.floor(markRange.lo / 2);
     const session = (markRange.lo % 2) as Session;
     const sel = `[data-cell-key="${markRange.month}:${day}:${session}"]`;
