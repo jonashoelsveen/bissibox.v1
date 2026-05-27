@@ -357,7 +357,7 @@ export function UnifiedElasticGrid({
     () => (calId.startsWith("client:") ? calId.slice(7) : null),
     [calId],
   );
-  const { categories: clientCategories } = useUserCategories({
+  const { categories: clientCategories, loaded: clientCategoriesLoaded } = useUserCategories({
     ownerId: clientOwnerId,
   });
 
