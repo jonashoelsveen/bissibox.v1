@@ -197,7 +197,6 @@ function SortableCategoryRow(props: {
   }, [props.renaming]);
 
   const { cat } = props;
-  const canEdit = !cat.is_default;
 
   const extraItems = props.showCoachAccess
     ? []
