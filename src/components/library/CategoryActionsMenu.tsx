@@ -254,8 +254,10 @@ export function CategoryActionsMenu({
         )}
         {accessPanel && (
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary">
-              <span data-instant-sub-close className="hidden" aria-hidden />
+            <DropdownMenuSubTrigger
+              data-instant-sub-close
+              className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary"
+            >
               <Users className="h-3.5 w-3.5" />
               <span className="flex-1">Access</span>
             </DropdownMenuSubTrigger>
