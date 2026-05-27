@@ -42,12 +42,29 @@ export function ClientCategoriesSection({
     let cancelled = false;
 
     const load = async () => {
+      const { data: accessRows } = await supabase
+        .from("calendar_category_coach_access")
+        .select("category_id")
+        .eq("owner_id", clientUserId)
+        .eq("coach_user_id", user.id);
+
+      const categoryIds = (accessRows ?? [])
+        .map((row) => row.category_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0);
+
+      if (cancelled) return;
+      if (categoryIds.length === 0) {
+        setCats([]);
+        return;
+      }
+
       const { data: rows } = await supabase
         .from("calendar_categories")
         .select("id, name, color, sort_order, pinned")
         .eq("user_id", clientUserId)
         .is("team_id", null)
         .eq("kind", "calendar")
+        .in("id", categoryIds)
         .order("pinned", { ascending: false })
         .order("sort_order", { ascending: true });
       if (cancelled) return;
