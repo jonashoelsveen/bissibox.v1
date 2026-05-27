@@ -641,17 +641,13 @@ export function UnifiedElasticGrid({
     const onUp = () => {
       if (markActiveRef.current) {
         setMarkReleased(true);
-        // A drag-to-mark (or dblclick-driven single-cell mark) just ended:
-        // the originating cell should not stay in the "clicked" highlight.
-        // Only a plain single click (no mark gesture) leaves a cell selected.
-        onSelect(null);
       }
       markActiveRef.current = false;
       markStartRef.current = null;
     };
     window.addEventListener("mouseup", onUp);
     return () => window.removeEventListener("mouseup", onUp);
-  }, [onSelect]);
+  }, []);
 
   // When a mark range is released:
   //  - Calendar week view: immediately materialize a real session tile
