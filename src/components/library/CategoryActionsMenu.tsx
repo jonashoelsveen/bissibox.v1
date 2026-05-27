@@ -101,6 +101,7 @@ export function CategoryActionsMenu({
   const [colorSubOpen, setColorSubOpen] = useState(false);
   const [accessSubOpen, setAccessSubOpen] = useState(false);
   const colorCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const colorTriggerRef = useRef<HTMLDivElement | null>(null);
   const skipCloseAutoFocusRef = useRef(false);
   const menuId = useId();
   const topExtras = extraItems.filter((i) => i.top);
