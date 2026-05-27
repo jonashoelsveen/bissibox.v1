@@ -25,6 +25,8 @@ function setOpenMenuId(id: string | null) {
   openMenuListeners.forEach((l) => l(id));
 }
 
+const COLOR_CLOSE_DELAY_MS = 120;
+
 export type ColorValue = string;
 
 export type CategoryExtraItem = {
@@ -139,7 +141,7 @@ export function CategoryActionsMenu({
     colorCloseTimerRef.current = setTimeout(() => {
       setColorSubOpen(false);
       colorCloseTimerRef.current = null;
-    }, 80);
+    }, COLOR_CLOSE_DELAY_MS);
   };
 
   useEffect(() => () => cancelColorClose(), []);
@@ -157,11 +159,14 @@ export function CategoryActionsMenu({
         onPointerDown={(e) => e.stopPropagation()}
         onPointerMove={(e) => {
           // If pointer is in the main menu but NOT on the Color row, close the
-          // sub immediately. Bypasses Radix's safe-triangle delay so moving
-          // fast up/down feels snappy.
+          // sub immediately when hovering another real row. This keeps fast
+          // up/down movement snappy without breaking the gap-crossing grace.
           if (!colorSubOpen) return;
           const target = e.target as HTMLElement | null;
-          if (!target?.closest("[data-color-trigger]")) {
+          if (
+            target?.closest("[data-instant-sub-close]") &&
+            !target.closest("[data-color-trigger]")
+          ) {
             cancelColorClose();
             setColorSubOpen(false);
           }
