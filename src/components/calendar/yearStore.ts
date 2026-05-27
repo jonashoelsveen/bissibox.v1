@@ -590,6 +590,33 @@ export function useEventStore(calId: string) {
     let cancelled = false;
     pendingDeleteIdsRef.current.clear();
 
+    // For coaches viewing a client's calendar, the only sessions we may
+    // surface are those whose `category_id` has been explicitly granted via
+    // `calendar_category_coach_access`. Default = no access. We resolve the
+    // allowed-category set once per (client, coach) pair and re-filter on
+    // every reload (initial + realtime). If the coach is also the client
+    // (viewing own calendar through a client URL), we skip the filter.
+    let allowedCategoryIds: Set<string> | null = null;
+    const isCoachViewingClient =
+      scope.kind === "client" && !!user?.id && user.id !== (scope as ScopeClient).clientId;
+
+    const refreshAllowedCategoryIds = async () => {
+      if (!isCoachViewingClient) {
+        allowedCategoryIds = null;
+        return;
+      }
+      const { data } = await supabase
+        .from("calendar_category_coach_access")
+        .select("category_id")
+        .eq("owner_id", (scope as ScopeClient).clientId)
+        .eq("coach_user_id", user!.id);
+      allowedCategoryIds = new Set(
+        (data ?? [])
+          .map((r) => r.category_id as string | null)
+          .filter((id): id is string => !!id),
+      );
+    };
+
     const baseSelect = () => {
       let q = supabase.from("calendar_sessions").select("*");
       if (scope.kind === "team") q = q.eq("entity_id", scope.entityId);
@@ -598,14 +625,31 @@ export function useEventStore(calId: string) {
       return q;
     };
 
-    void baseSelect().then(({ data }) => {
+    const filterRows = (rows: Row[]): Row[] => {
+      if (!isCoachViewingClient || !allowedCategoryIds) return rows;
+      const allowed = allowedCategoryIds;
+      return rows.filter((r) => {
+        const cid = (r as { category_id?: string | null }).category_id;
+        return !!cid && allowed.has(cid);
+      });
+    };
+
+    const reload = async () => {
+      const { data } = await baseSelect();
       if (cancelled) return;
       const rows = (data ?? []) as Row[];
       cleanupUntitledRows(rows);
-      const next = materializeRows(rows);
+      const visible = filterRows(rows);
+      const next = materializeRows(visible);
       eventsRef.current = next;
       setEvents(next);
-    });
+    };
+
+    void (async () => {
+      await refreshAllowedCategoryIds();
+      if (cancelled) return;
+      await reload();
+    })();
 
     const filter =
       scope.kind === "team"
@@ -620,23 +664,42 @@ export function useEventStore(calId: string) {
         "postgres_changes",
         { event: "*", schema: "public", table: "calendar_sessions", filter },
         () => {
-          void baseSelect().then(({ data }) => {
-            if (cancelled) return;
-            const rows = (data ?? []) as Row[];
-            cleanupUntitledRows(rows);
-            const next = materializeRows(rows);
-            eventsRef.current = next;
-            setEvents(next);
-          });
+          void reload();
         },
       )
       .subscribe();
 
+    // When the client grants/revokes category access for this coach, refresh
+    // the allowed set and re-filter the in-memory rows immediately.
+    let accessCh: ReturnType<typeof supabase.channel> | null = null;
+    if (isCoachViewingClient) {
+      accessCh = supabase
+        .channel(`ccca:${(scope as ScopeClient).clientId}:${user!.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "calendar_category_coach_access",
+            filter: `owner_id=eq.${(scope as ScopeClient).clientId}`,
+          },
+          () => {
+            void (async () => {
+              await refreshAllowedCategoryIds();
+              if (cancelled) return;
+              await reload();
+            })();
+          },
+        )
+        .subscribe();
+    }
+
     return () => {
       cancelled = true;
       void supabase.removeChannel(ch);
+      if (accessCh) void supabase.removeChannel(accessCh);
     };
-  }, [calId, cleanupUntitledRows, materializeRows, scope]);
+  }, [calId, cleanupUntitledRows, materializeRows, scope, user?.id]);
 
   const applyLocal = useCallback((next: CalendarEvent[], opts?: { history?: boolean }) => {
     if (opts?.history !== false) {
