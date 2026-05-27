@@ -700,7 +700,7 @@ export function UnifiedElasticGrid({
     // top "Me" category for many users, producing a visible "coach color"
     // flash before the popover's category dropdown swaps in the client's
     // real default. The effect re-runs once `clientCategoriesLoaded` flips.
-    if (calId.startsWith("client:") && !clientCategoriesLoaded) return;
+    if (calId.startsWith("client:") && (!clientCategoriesLoaded || clientGrantedCategoryIds === null)) return;
     const day = Math.floor(markRange.lo / 2);
     const session = (markRange.lo % 2) as Session;
     const sel = `[data-cell-key="${markRange.month}:${day}:${session}"]`;
@@ -743,7 +743,7 @@ export function UnifiedElasticGrid({
       // periwinkle Training default if categories haven't loaded yet.
       const meDefaultCategory = meCategories[0] ?? null;
       const adminDefaultCategory = teamCategories[0] ?? null;
-      const clientDefaultCategory = clientCategories[0] ?? null;
+      const clientDefaultCategory = visibleClientCategories[0] ?? null;
       const meDefaultColor = meDefaultCategory?.color ?? CAT_TRAINING_COLOR;
       const adminDefaultColor = adminDefaultCategory?.color ?? "#E63337";
       const clientDefaultColor = clientDefaultCategory?.color ?? CAT_TRAINING_COLOR;
@@ -802,6 +802,8 @@ export function UnifiedElasticGrid({
     teamCategories,
     clientCategories,
     clientCategoriesLoaded,
+    clientGrantedCategoryIds,
+    visibleClientCategories,
     calId,
     viewerRole,
     onSelect,
