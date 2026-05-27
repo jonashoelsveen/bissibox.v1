@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -15,6 +15,15 @@ import {
   Users,
   Check,
 } from "lucide-react";
+
+// ---- Singleton coordinator: only one CategoryActionsMenu open at a time ----
+let openMenuId: string | null = null;
+const openMenuListeners = new Set<(id: string | null) => void>();
+function setOpenMenuId(id: string | null) {
+  if (openMenuId === id) return;
+  openMenuId = id;
+  openMenuListeners.forEach((l) => l(id));
+}
 
 export type ColorValue = string;
 
@@ -87,15 +96,52 @@ export function CategoryActionsMenu({
   accessPanel,
 }: CategoryActionsMenuProps) {
   const [open, setOpen] = useState(false);
+  const [colorSubOpen, setColorSubOpen] = useState(false);
+  const colorCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipCloseAutoFocusRef = useRef(false);
+  const menuId = useId();
   const topExtras = extraItems.filter((i) => i.top);
   const bottomExtras = extraItems.filter((i) => !i.top);
 
   const close = () => setOpen(false);
 
+  // Only one CategoryActionsMenu open at a time across the app.
+  useEffect(() => {
+    const cb = (id: string | null) => {
+      if (id !== menuId && open) setOpen(false);
+    };
+    openMenuListeners.add(cb);
+    return () => {
+      openMenuListeners.delete(cb);
+    };
+  }, [menuId, open]);
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next) {
+      setOpenMenuId(menuId);
+    } else {
+      setColorSubOpen(false);
+      if (openMenuId === menuId) setOpenMenuId(null);
+    }
+  };
+
+  const cancelColorClose = () => {
+    if (colorCloseTimerRef.current) {
+      clearTimeout(colorCloseTimerRef.current);
+      colorCloseTimerRef.current = null;
+    }
+  };
+  const scheduleColorClose = () => {
+    cancelColorClose();
+    colorCloseTimerRef.current = setTimeout(() => setColorSubOpen(false), 120);
+  };
+
+  useEffect(() => () => cancelColorClose(), []);
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
+
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
@@ -144,12 +190,17 @@ export function CategoryActionsMenu({
           />
         )}
         {allowColor && (
-          <DropdownMenuSub>
+          <DropdownMenuSub open={colorSubOpen} onOpenChange={setColorSubOpen}>
             <DropdownMenuSubTrigger
               onClick={(e) => {
                 // Hover-only: clicking the Color row must not toggle/close the sub.
                 e.preventDefault();
               }}
+              onPointerEnter={() => {
+                cancelColorClose();
+                setColorSubOpen(true);
+              }}
+              onPointerLeave={scheduleColorClose}
               className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary"
             >
               <span
@@ -164,13 +215,15 @@ export function CategoryActionsMenu({
               collisionPadding={8}
               className="p-1"
               onPointerDown={(e) => e.stopPropagation()}
+              onPointerEnter={cancelColorClose}
+              onPointerLeave={scheduleColorClose}
             >
               <ColorsPanel
                 currentColor={currentColor}
                 swatches={colorSwatches}
                 onPick={(hex) => {
-                  // Persistent panel — keep menu open so the user sees the
-                  // check move and can pick again.
+                  // Persistent panel — keep open after click so user sees the
+                  // check move and can pick again. Closes naturally on hover-out.
                   onColorChange(hex);
                 }}
               />
