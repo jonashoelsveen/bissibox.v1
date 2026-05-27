@@ -2794,7 +2794,44 @@ function WeekEventsOverlay({
                 : "hsl(var(--primary) / 0.15)";
             const fg = isActive ? "#fff" : "hsl(var(--ink, 220 13% 13%))";
             const Icon = iconForColor(ev.color);
+            const placeholderBg = ev.color
+              ? `color-mix(in srgb, ${ev.color} 18%, white)`
+              : "hsl(var(--primary) / 0.15)";
+            const placeholderTimeStr = `${String(Math.floor(startMin / 60)).padStart(2, "0")}:${String(startMin % 60).padStart(2, "0")} – ${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(endMin % 60).padStart(2, "0")}`;
             return (
+              <React.Fragment key={ev.id}>
+              {isDragging && (
+                <div
+                  aria-hidden
+                  className="absolute select-none overflow-hidden rounded-[3px] pl-2 pr-1.5 py-0.5 text-[12px] ring-1 ring-black/5"
+                  style={{
+                    left: 2,
+                    right: 2,
+                    top,
+                    height,
+                    background: placeholderBg,
+                    color: "hsl(var(--ink, 220 13% 13%))",
+                    opacity: 0.4,
+                    pointerEvents: "none",
+                    zIndex: 1,
+                  }}
+                >
+                  <span
+                    className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]"
+                    style={{ background: accent }}
+                  />
+                  <div className="flex h-full flex-col justify-start pl-1 pt-0.5 leading-tight">
+                    <span className="truncate text-[12px] font-semibold">
+                      {ev.title || "New session"}
+                    </span>
+                    {dur > 45 && (
+                      <span className="mono truncate text-[10.5px] tabular-nums opacity-70">
+                        {placeholderTimeStr}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
               <div
                 key={ev.id}
                 data-mark-cell="1"
