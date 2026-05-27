@@ -186,37 +186,35 @@ export function CategoryActionsMenu({
         )}
         {allowColor && (
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary">
-              <Palette className="h-3.5 w-3.5" />
+            <DropdownMenuSubTrigger
+              onClick={(e) => {
+                // Hover-only: clicking the Color row must not toggle/close the sub.
+                e.preventDefault();
+              }}
+              className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary"
+            >
+              <span
+                aria-hidden
+                className="inline-block h-3.5 w-3.5 shrink-0 rounded-[3px] border border-black/15"
+                style={{ background: currentColor || "transparent" }}
+              />
               <span className="flex-1">Color</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent
               sideOffset={SUB_OFFSET}
               collisionPadding={8}
-              className="p-2"
+              className="p-1"
               onPointerDown={(e) => e.stopPropagation()}
             >
               <ColorsPanel
                 currentColor={currentColor}
-                swatches={colorSwatches ?? STANDARD_COLORS}
+                swatches={colorSwatches}
                 onPick={(hex) => {
+                  // Persistent panel — keep menu open so the user sees the
+                  // check move and can pick again.
                   onColorChange(hex);
-                  close();
                 }}
-                customPanel={
-                  allowCustomColor ? (
-                    <CustomPanel
-                      initial={currentColor}
-                      onPreview={(hex) => onColorChange(hex)}
-                      onSave={(hex) => {
-                        onColorChange(hex);
-                        close();
-                      }}
-                    />
-                  ) : null
-                }
               />
-
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         )}
