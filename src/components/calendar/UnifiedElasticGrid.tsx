@@ -90,6 +90,8 @@ import {
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 
 export type ViewMode = "day" | "week" | "month";
 
@@ -319,6 +321,7 @@ export function UnifiedElasticGrid({
   const [viewModeInternal, setViewModeInternal] = useState<ViewMode>("month");
   const viewMode = viewModeProp ?? viewModeInternal;
   const isControlled = viewModeProp !== undefined;
+  const { user } = useAuth();
   const [editingKey, setEditingKey] = useState<CellKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -360,6 +363,36 @@ export function UnifiedElasticGrid({
   const { categories: clientCategories, loaded: clientCategoriesLoaded } = useUserCategories({
     ownerId: clientOwnerId,
   });
+  const [clientGrantedCategoryIds, setClientGrantedCategoryIds] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    if (!clientOwnerId || !user || clientOwnerId === user.id) {
+      setClientGrantedCategoryIds(null);
+      return;
+    }
+    let cancelled = false;
+    void supabase
+      .from("calendar_category_coach_access")
+      .select("category_id")
+      .eq("owner_id", clientOwnerId)
+      .eq("coach_user_id", user.id)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setClientGrantedCategoryIds(
+          new Set((data ?? []).map((row) => row.category_id).filter(Boolean)),
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [clientOwnerId, user]);
+
+  const visibleClientCategories = useMemo(() => {
+    if (!clientOwnerId || !user || clientOwnerId === user.id || clientGrantedCategoryIds === null) {
+      return clientCategories;
+    }
+    return clientCategories.filter((category) => clientGrantedCategoryIds.has(category.id));
+  }, [clientCategories, clientGrantedCategoryIds, clientOwnerId, user]);
 
   const handleViewModeChange = (v: ViewMode) => {
     if (!isControlled) setViewModeInternal(v);
@@ -667,7 +700,7 @@ export function UnifiedElasticGrid({
     // top "Me" category for many users, producing a visible "coach color"
     // flash before the popover's category dropdown swaps in the client's
     // real default. The effect re-runs once `clientCategoriesLoaded` flips.
-    if (calId.startsWith("client:") && !clientCategoriesLoaded) return;
+    if (calId.startsWith("client:") && (!clientCategoriesLoaded || clientGrantedCategoryIds === null)) return;
     const day = Math.floor(markRange.lo / 2);
     const session = (markRange.lo % 2) as Session;
     const sel = `[data-cell-key="${markRange.month}:${day}:${session}"]`;
@@ -710,7 +743,7 @@ export function UnifiedElasticGrid({
       // periwinkle Training default if categories haven't loaded yet.
       const meDefaultCategory = meCategories[0] ?? null;
       const adminDefaultCategory = teamCategories[0] ?? null;
-      const clientDefaultCategory = clientCategories[0] ?? null;
+      const clientDefaultCategory = visibleClientCategories[0] ?? null;
       const meDefaultColor = meDefaultCategory?.color ?? CAT_TRAINING_COLOR;
       const adminDefaultColor = adminDefaultCategory?.color ?? "#E63337";
       const clientDefaultColor = clientDefaultCategory?.color ?? CAT_TRAINING_COLOR;
@@ -769,6 +802,8 @@ export function UnifiedElasticGrid({
     teamCategories,
     clientCategories,
     clientCategoriesLoaded,
+    clientGrantedCategoryIds,
+    visibleClientCategories,
     calId,
     viewerRole,
     onSelect,
@@ -1679,7 +1714,7 @@ export function UnifiedElasticGrid({
             popover.initialColor ??
             (!popover.eventId && !popover.isEdit
               ? calId.startsWith("client:")
-                ? (clientCategories[0]?.color ?? null)
+                ? (visibleClientCategories[0]?.color ?? null)
                 : seat === "admin"
                   ? (teamCategories[0]?.color ?? null)
                   : (meCategories[0]?.color ?? null)
