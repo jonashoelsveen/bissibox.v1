@@ -147,7 +147,9 @@ export function CategoryActionsMenu({
   useEffect(() => () => cancelColorClose(), []);
 
   return (
-    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
+    <DropdownMenu open={open} onOpenChange={handleOpenChange} modal={false}>
+
+
 
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent
