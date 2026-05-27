@@ -214,9 +214,16 @@ export function CategoryActionsMenu({
               sideOffset={SUB_OFFSET}
               collisionPadding={8}
               className="p-1"
-              onPointerDown={(e) => e.stopPropagation()}
               onPointerEnter={cancelColorClose}
               onPointerLeave={scheduleColorClose}
+              onInteractOutside={() => {
+                setColorSubOpen(false);
+                setOpen(false);
+              }}
+              onEscapeKeyDown={() => {
+                setColorSubOpen(false);
+                setOpen(false);
+              }}
             >
               <ColorsPanel
                 currentColor={currentColor}
