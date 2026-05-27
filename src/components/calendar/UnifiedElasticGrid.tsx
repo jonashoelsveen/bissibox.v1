@@ -90,6 +90,8 @@ import {
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 
 export type ViewMode = "day" | "week" | "month";
 
@@ -319,6 +321,7 @@ export function UnifiedElasticGrid({
   const [viewModeInternal, setViewModeInternal] = useState<ViewMode>("month");
   const viewMode = viewModeProp ?? viewModeInternal;
   const isControlled = viewModeProp !== undefined;
+  const { user } = useAuth();
   const [editingKey, setEditingKey] = useState<CellKey | null>(null);
   const [editValue, setEditValue] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -360,6 +363,36 @@ export function UnifiedElasticGrid({
   const { categories: clientCategories, loaded: clientCategoriesLoaded } = useUserCategories({
     ownerId: clientOwnerId,
   });
+  const [clientGrantedCategoryIds, setClientGrantedCategoryIds] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    if (!clientOwnerId || !user || clientOwnerId === user.id) {
+      setClientGrantedCategoryIds(null);
+      return;
+    }
+    let cancelled = false;
+    void supabase
+      .from("calendar_category_coach_access")
+      .select("category_id")
+      .eq("owner_id", clientOwnerId)
+      .eq("coach_user_id", user.id)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setClientGrantedCategoryIds(
+          new Set((data ?? []).map((row) => row.category_id).filter(Boolean)),
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [clientOwnerId, user]);
+
+  const visibleClientCategories = useMemo(() => {
+    if (!clientOwnerId || !user || clientOwnerId === user.id || clientGrantedCategoryIds === null) {
+      return clientCategories;
+    }
+    return clientCategories.filter((category) => clientGrantedCategoryIds.has(category.id));
+  }, [clientCategories, clientGrantedCategoryIds, clientOwnerId, user]);
 
   const handleViewModeChange = (v: ViewMode) => {
     if (!isControlled) setViewModeInternal(v);
