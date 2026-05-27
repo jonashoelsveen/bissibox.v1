@@ -15,6 +15,7 @@ import {
   Copy,
   Trash2,
   Users,
+  Check,
 } from "lucide-react";
 
 export type ColorValue = string;
@@ -45,20 +46,25 @@ export type CategoryActionsMenuProps = {
   accessPanel?: React.ReactNode;
 };
 
-// 9 standard colors (3x3 grid)
-export const STANDARD_COLORS: ColorValue[] = [
-  "#ef4444",
-  "#f97316",
-  "#eab308",
-  "#22c55e",
-  "#06b6d4",
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#64748b",
+/**
+ * 9 named standard colors — Tailwind 500/600 family for a consistent RGB
+ * system. Red on top, brown at the bottom (replaces the old neutral gray).
+ */
+export const STANDARD_COLORS_NAMED: { hex: ColorValue; name: string }[] = [
+  { hex: "#ef4444", name: "Red" },
+  { hex: "#f97316", name: "Orange" },
+  { hex: "#eab308", name: "Yellow" },
+  { hex: "#22c55e", name: "Green" },
+  { hex: "#06b6d4", name: "Cyan" },
+  { hex: "#3b82f6", name: "Blue" },
+  { hex: "#8b5cf6", name: "Purple" },
+  { hex: "#ec4899", name: "Pink" },
+  { hex: "#a16207", name: "Brown" },
 ];
 
-/** 8-swatch palette (no neutral gray) used by diary activity tabs. */
+export const STANDARD_COLORS: ColorValue[] = STANDARD_COLORS_NAMED.map((c) => c.hex);
+
+/** 8-swatch palette (no brown) used by diary activity tabs. */
 export const STANDARD_COLORS_8: ColorValue[] = STANDARD_COLORS.slice(0, 8);
 
 
