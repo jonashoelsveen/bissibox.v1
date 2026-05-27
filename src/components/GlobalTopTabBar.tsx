@@ -62,13 +62,29 @@ export function GlobalTopTabBar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const transition = useAuthTransition();
   const signInOpen = useSignInModalOpen();
+
+  // Safety net: the sign-in exit choreography mutates module-level state
+  // through a chain of setTimeouts. If the tab is backgrounded for a long
+  // time, browsers throttle/coalesce timers and the chain can leave the
+  // phase stuck on "hidden" or "reveal-dark" after the modal has already
+  // unmounted. That used to cause the entire top tab-bar to vanish on the
+  // destination page (Calendar, Diary, Photos, Clients, …) after logging
+  // back in. Whenever we're no longer on the landing page, force the
+  // phase back to idle so the dark bar always renders.
+  useEffect(() => {
+    if (path !== "/" && transition !== "idle") {
+      setAuthTransitionPhase("idle");
+    }
+  }, [path, transition]);
+
   // White minimal bar on landing "/" (logged-out). Keep showing it during
   // the sign-in exit fade so it can animate away in sync with the modal.
   const isHome =
     path === "/" && (!user || transition === "fading-out");
   // During the gap between the modal vanishing and the dark bar revealing,
-  // render nothing.
-  if (transition === "hidden") return null;
+  // render nothing — but only on the landing page where the choreography
+  // is actually playing.
+  if (path === "/" && transition === "hidden") return null;
 
 
   const isEntity = mode === "team" || mode === "organizer";
