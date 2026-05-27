@@ -155,6 +155,17 @@ export function CategoryActionsMenu({
         collisionPadding={8}
         className="w-44 p-1"
         onPointerDown={(e) => e.stopPropagation()}
+        onPointerMove={(e) => {
+          // If pointer is in the main menu but NOT on the Color row, close the
+          // sub immediately. Bypasses Radix's safe-triangle delay so moving
+          // fast up/down feels snappy.
+          if (!colorSubOpen) return;
+          const target = e.target as HTMLElement | null;
+          if (!target?.closest("[data-color-trigger]")) {
+            cancelColorClose();
+            setColorSubOpen(false);
+          }
+        }}
         onCloseAutoFocus={(e) => {
           if (!skipCloseAutoFocusRef.current) return;
           e.preventDefault();
