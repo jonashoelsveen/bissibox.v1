@@ -190,12 +190,17 @@ export function CategoryActionsMenu({
           />
         )}
         {allowColor && (
-          <DropdownMenuSub>
+          <DropdownMenuSub open={colorSubOpen} onOpenChange={setColorSubOpen}>
             <DropdownMenuSubTrigger
               onClick={(e) => {
                 // Hover-only: clicking the Color row must not toggle/close the sub.
                 e.preventDefault();
               }}
+              onPointerEnter={() => {
+                cancelColorClose();
+                setColorSubOpen(true);
+              }}
+              onPointerLeave={scheduleColorClose}
               className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary"
             >
               <span
@@ -210,13 +215,15 @@ export function CategoryActionsMenu({
               collisionPadding={8}
               className="p-1"
               onPointerDown={(e) => e.stopPropagation()}
+              onPointerEnter={cancelColorClose}
+              onPointerLeave={scheduleColorClose}
             >
               <ColorsPanel
                 currentColor={currentColor}
                 swatches={colorSwatches}
                 onPick={(hex) => {
-                  // Persistent panel — keep menu open so the user sees the
-                  // check move and can pick again.
+                  // Persistent panel — keep open after click so user sees the
+                  // check move and can pick again. Closes naturally on hover-out.
                   onColorChange(hex);
                 }}
               />
