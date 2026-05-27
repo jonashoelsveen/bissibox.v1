@@ -1691,7 +1691,11 @@ export function UnifiedElasticGrid({
           enableDuration={mode.kind === "year"}
           readOnly={viewerRole !== "owner"}
           placeholder={popover.placeholder}
-          categoryOwnerId={seat === "individual" ? (memberId ?? null) : null}
+          categoryOwnerId={
+            seat === "individual"
+              ? (calId.startsWith("client:") ? clientOwnerId : (memberId ?? null))
+              : null
+          }
           initialTime={(() => {
             if (mode.kind !== "year") return null;
             if (popover.pendingTime) return popover.pendingTime;
