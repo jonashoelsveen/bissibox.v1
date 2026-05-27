@@ -2854,32 +2854,10 @@ function CategoryDropdownRow({
   const { categories } = useUserCategories(
     seat === "admin" ? { teamId } : { ownerId },
   );
-  const [grantedIds, setGrantedIds] = useState<Set<string> | null>(null);
-
-  useEffect(() => {
-    if (!ownerId || !user || ownerId === user.id) {
-      setGrantedIds(null);
-      return;
-    }
-    let cancelled = false;
-    void supabase
-      .from("calendar_category_coach_access")
-      .select("category_id")
-      .eq("owner_id", ownerId)
-      .eq("coach_user_id", user.id)
-      .then(({ data }) => {
-        if (cancelled) return;
-        setGrantedIds(new Set((data ?? []).map((row) => row.category_id).filter(Boolean)));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [ownerId, user]);
-
-  const availableCategories = useMemo(() => {
-    if (!ownerId || !user || ownerId === user.id || grantedIds === null) return categories;
-    return categories.filter((c) => grantedIds.has(c.id));
-  }, [categories, grantedIds, ownerId, user]);
+  // Coach viewing a client's calendar sees the full client category list —
+  // identical to what the client sees themselves — so the two views match.
+  void user;
+  const availableCategories = categories;
 
   const lcColor = (color ?? "").toLowerCase();
   const initialId = useMemo(
