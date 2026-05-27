@@ -9,8 +9,6 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  ChevronRight,
-  Palette,
   Pencil,
   Copy,
   Trash2,
