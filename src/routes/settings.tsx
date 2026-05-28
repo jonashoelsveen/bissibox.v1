@@ -138,8 +138,119 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   const [tab, setTab] = useState<Tab>("account");
   const [createOpen, setCreateOpen] = useState(false);
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
-  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  type DeleteStep = "request" | "code" | "confirm";
+  const [deleteStep, setDeleteStep] = useState<DeleteStep>("request");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteSending, setDeleteSending] = useState(false);
+  const [deleteAttemptId, setDeleteAttemptId] = useState<string | null>(null);
+  const [deleteMasked, setDeleteMasked] = useState("");
+  const [deleteDigits, setDeleteDigits] = useState<string[]>(["", "", "", "", "", ""]);
+  const [deleteResendIn, setDeleteResendIn] = useState(0);
+  const [deleteVerifying, setDeleteVerifying] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const deleteInputsRef = useRef<Array<HTMLInputElement | null>>([]);
+
+  useEffect(() => {
+    if (deleteResendIn <= 0) return;
+    const t = setTimeout(() => setDeleteResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [deleteResendIn]);
+
+  const openDeleteFlow = () => {
+    setDeleteStep("request");
+    setDeleteAttemptId(null);
+    setDeleteDigits(["", "", "", "", "", ""]);
+    setDeleteError(null);
+    setDeleteResendIn(0);
+    setDeleteOpen(true);
+  };
+  const closeDeleteFlow = () => setDeleteOpen(false);
+
+  const sendDeleteCode = async () => {
+    if (!user) return;
+    setDeleteSending(true);
+    setDeleteError(null);
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke("send-verification-otp", {
+        body: {
+          channel: "email",
+          destination: user.email!,
+          target_kind: "account_signup",
+          target_id: user.id,
+          target_meta: {},
+        },
+      });
+      if (fnErr) throw fnErr;
+      const payload = data as { error?: string; attempt_id?: string; masked?: string };
+      if (payload?.error) throw new Error(payload.error);
+      if (!payload?.attempt_id) throw new Error("Failed to send code");
+      setDeleteAttemptId(payload.attempt_id);
+      setDeleteMasked(payload.masked ?? user.email ?? "");
+      setDeleteResendIn(60);
+      setDeleteStep("code");
+      setTimeout(() => deleteInputsRef.current[0]?.focus(), 80);
+    } catch (e) {
+      setDeleteError((e as Error).message || "Failed to send code");
+    } finally {
+      setDeleteSending(false);
+    }
+  };
+
+  const verifyDeleteCode = async (codeStr?: string) => {
+    const code = codeStr ?? deleteDigits.join("");
+    if (code.length !== 6 || !deleteAttemptId) return;
+    setDeleteVerifying(true);
+    setDeleteError(null);
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke("verify-otp", {
+        body: { attempt_id: deleteAttemptId, code },
+      });
+      if (fnErr) throw fnErr;
+      const payload = data as { error?: string; ok?: boolean };
+      if (payload?.error) throw new Error(payload.error);
+      setDeleteStep("confirm");
+      setDeleteError(null);
+    } catch (e) {
+      setDeleteError((e as Error).message || "Verification failed");
+      setDeleteDigits(["", "", "", "", "", ""]);
+      deleteInputsRef.current[0]?.focus();
+    } finally {
+      setDeleteVerifying(false);
+    }
+  };
+
+  const handleDeleteDigitChange = (idx: number, val: string) => {
+    const clean = val.replace(/\D/g, "");
+    if (clean.length > 1) {
+      // paste
+      const chars = clean.slice(0, 6).split("");
+      const next = ["", "", "", "", "", ""];
+      chars.forEach((c, i) => (next[i] = c));
+      setDeleteDigits(next);
+      const lastIdx = Math.min(chars.length, 6) - 1;
+      if (chars.length >= 6) {
+        deleteInputsRef.current[5]?.blur();
+        void verifyDeleteCode(next.join(""));
+      } else {
+        deleteInputsRef.current[lastIdx + 1]?.focus();
+      }
+      return;
+    }
+    const next = [...deleteDigits];
+    next[idx] = clean;
+    setDeleteDigits(next);
+    if (clean && idx < 5) deleteInputsRef.current[idx + 1]?.focus();
+    if (clean && idx === 5 && next.every((d) => d)) {
+      void verifyDeleteCode(next.join(""));
+    }
+  };
+
+  const handleDeleteDigitKey = (idx: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !deleteDigits[idx] && idx > 0) {
+      deleteInputsRef.current[idx - 1]?.focus();
+    }
+  };
   const [profileEntities, setProfileEntities] = useState<
     { id: string; name: string; entity_type: string; roles: string[] }[]
   >([]);
