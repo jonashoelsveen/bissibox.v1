@@ -1749,6 +1749,11 @@ export function UnifiedElasticGrid({
               isEdit={popover.isEdit}
               anchor={popover.rect}
               initialTime={initialTime}
+              defaultColor={
+                existingEv?.color ??
+                diaryActivityCategories[0]?.color ??
+                null
+              }
               date={
                 existingEv
                   ? fromISOLocal(existingEv.startISO)
