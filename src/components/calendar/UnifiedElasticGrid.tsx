@@ -1750,9 +1750,8 @@ export function UnifiedElasticGrid({
               anchor={popover.rect}
               initialTime={initialTime}
               defaultColor={
-                existingEv?.color ??
-                diaryActivityCategories[0]?.color ??
-                null
+                popover.initialColor ??
+                (popover.isEdit ? null : diaryActivityCategories[0]?.color ?? null)
               }
               date={
                 existingEv
