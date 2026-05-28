@@ -233,6 +233,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         if (!res.ok) return { error: body.error ?? "Sign-up failed" };
         if (body.needsEmailConfirmation) return { needsEmailConfirmation: true };
+        if (body.needsOtpVerification && body.user && body.access_token && body.refresh_token) {
+          // Do NOT set session yet — the user must pass OTP first. The
+          // modal holds the tokens in memory and calls activateSession()
+          // after verification succeeds.
+          return {
+            needsOtpVerification: true,
+            userId: body.user.id,
+            email: args.email,
+            _pendingAccessToken: body.access_token,
+            _pendingRefreshToken: body.refresh_token,
+          };
+        }
         if (body.user && body.access_token && body.refresh_token) {
           const { data } = await supabase.auth.setSession({
             access_token: body.access_token,
@@ -240,13 +252,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
           setSession(data.session ?? null);
           setUser(data.user ?? body.user);
-          if (body.needsOtpVerification) {
-            return {
-              needsOtpVerification: true,
-              userId: body.user.id,
-              email: args.email,
-            };
-          }
         }
         return {};
       } catch (e) {
@@ -255,6 +260,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+
+  const activateSession = useCallback(async (accessToken: string, refreshToken: string) => {
+    const { data } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    setSession(data.session ?? null);
+    setUser(data.user ?? null);
+  }, []);
 
 
   const signOut = useCallback(async () => {
