@@ -57,8 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // boot and whenever the tab regains focus after long idle (otherwise the
   // in-memory access token can be silently expired, making queries fail and
   // pages render in a logged-out state).
-  const rehydrate = useCallback(async (opts?: { onBoot?: boolean }) => {
-    if (rehydratingRef.current) return;
+  const rehydrate = useCallback(async (opts?: { onBoot?: boolean }): Promise<boolean> => {
+    if (rehydratingRef.current) return false;
     rehydratingRef.current = true;
     try {
       const data = await fetchSession();
@@ -68,7 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           refresh_token: data.refresh_token,
         });
         setUser(data.user);
-      } else if (opts?.onBoot) {
+        return true;
+      }
+      if (opts?.onBoot) {
         // Cookie missing/invalid on first load → clear any stale local state.
         try {
           await supabase.auth.signOut({ scope: "local" });
@@ -80,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       // On a focus-driven rehydrate we deliberately do NOT sign the user
       // out on a transient /api/auth/session failure (network blip, etc).
+      return false;
     } finally {
       rehydratingRef.current = false;
     }
