@@ -1077,13 +1077,35 @@ export function UnifiedElasticGrid({
     if (!el) return;
     const measure = () => {
       const gutter = el.offsetWidth - el.clientWidth;
-      setScrollbarGutterW(gutter > 0 ? gutter : 0);
+      setScrollbarGutterW((prev) => {
+        const next = gutter > 0 ? gutter : 0;
+        return prev === next ? prev : next;
+      });
     };
     measure();
+    // Re-measure on next frames — content (and thus overflow / scrollbar
+    // presence) typically settles after the first paint, and ResizeObserver
+    // on the scroller alone does NOT fire when only clientWidth changes
+    // (i.e. when a scrollbar appears without offsetWidth changing).
+    const r1 = requestAnimationFrame(() => {
+      measure();
+      const r2 = requestAnimationFrame(measure);
+      (measure as unknown as { _r2?: number })._r2 = r2;
+    });
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    return () => ro.disconnect();
-  }, [viewMode, mode.kind]);
+    // Also observe the inner content so that when rows render (calendar
+    // week-view fills WEEK_SPAN_HOURS of rows asynchronously), the gutter
+    // gets re-measured and the header padding tracks the body scrollbar.
+    const inner = el.firstElementChild as HTMLElement | null;
+    if (inner) ro.observe(inner);
+    return () => {
+      cancelAnimationFrame(r1);
+      const r2 = (measure as unknown as { _r2?: number })._r2;
+      if (r2) cancelAnimationFrame(r2);
+      ro.disconnect();
+    };
+  }, [viewMode, mode.kind, isDayView, isSimple]);
 
 
   // Minutes elapsed since the week-view start (06:00). Includes seconds for
