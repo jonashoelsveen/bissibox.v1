@@ -169,13 +169,16 @@ export function useUserCategories(opts?: { teamId?: string | null; ownerId?: str
       // the update. The realtime subscription on calendar_sessions then
       // propagates the new color to every viewer (including coaches).
       if (typeof patch.color === "string" && patch.color) {
-        let q = supabase
+        // Cascade by category_id only. RLS already restricts writes to
+        // sessions the caller owns (personal) or co-owns (team), so we
+        // don't need to re-narrow by user_id / entity_id here — that
+        // extra filter was silently dropping legitimate sessions for
+        // some users (e.g. sessions whose entity_id was non-null on a
+        // personal category, or scope snapshots that didn't match).
+        const { error } = await supabase
           .from("calendar_sessions")
           .update({ color: patch.color })
           .eq("category_id", id);
-        if (teamId) q = q.eq("entity_id", teamId);
-        else if (scopeUserId) q = q.eq("user_id", scopeUserId).is("entity_id", null);
-        const { error } = await q;
         if (error) console.error("[calendar_categories cascade color]", error);
       }
     },
