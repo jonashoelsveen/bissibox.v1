@@ -76,6 +76,13 @@ export function SignInModal({
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
   const otpInputsRef = useRef<Array<HTMLInputElement | null>>([]);
+  // Pending session tokens — held in memory between signup response and
+  // successful OTP verification. The Supabase client session is NOT set
+  // until verifySignupOtp() succeeds, so the user cannot reach
+  // authenticated UI by refreshing or navigating away.
+  const [pendingAccessToken, setPendingAccessToken] = useState<string | null>(null);
+  const [pendingRefreshToken, setPendingRefreshToken] = useState<string | null>(null);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     setSignInModalOpen(open);
