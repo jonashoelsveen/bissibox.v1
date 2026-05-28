@@ -352,7 +352,7 @@ export function SignInModal({
                     onCreate={() => switchMode("signup")}
                   />
                 </div>
-              ) : (
+              ) : mode === "signup" ? (
                 <SignUpForm
                   onSubmit={onSubmit}
                   firstName={firstName}
@@ -384,6 +384,26 @@ export function SignInModal({
                   error={error}
                   submitting={submitting}
                   onCancel={() => switchMode("signin")}
+                />
+              ) : (
+                <OtpStep
+                  email={otpEmail}
+                  digits={otpDigits}
+                  setDigits={setOtpDigits}
+                  inputsRef={otpInputsRef}
+                  onVerify={verifySignupOtp}
+                  onResend={() => {
+                    // userId not directly known here; use current authenticated session user id.
+                    void (async () => {
+                      const { data } = await supabase.auth.getUser();
+                      const uid = data.user?.id;
+                      if (uid) await sendSignupOtp(otpEmail, uid);
+                    })();
+                  }}
+                  resendIn={otpResendIn}
+                  sending={otpSending}
+                  verifying={otpVerifying}
+                  error={otpError}
                 />
               )}
             </motion.div>
