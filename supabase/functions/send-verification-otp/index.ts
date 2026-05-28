@@ -22,7 +22,7 @@ const FROM_EMAIL = `Aponna <noreply@${SENDER_DOMAIN}>`;
 interface Body {
   channel: "email" | "sms";
   destination: string; // email or phone
-  target_kind: "event_registration" | "team_membership";
+  target_kind: "event_registration" | "team_membership" | "account_signup";
   target_id: string;
   target_meta?: Record<string, unknown>;
 }

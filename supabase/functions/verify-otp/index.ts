@@ -313,6 +313,12 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (attempt.target_kind === "account_signup") {
+      return new Response(JSON.stringify({ ok: true, kind: "account_signup" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Unknown target" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("verify-otp error", e);

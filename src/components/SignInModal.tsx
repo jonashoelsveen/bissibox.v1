@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   setAuthTransitionPhase,
   setSignInModalOpen,
@@ -12,7 +13,7 @@ const HELVETICA =
 
 export type SignInContext = "cloud" | "calendar" | "diary" | "photos" | "entity" | "role";
 
-type Mode = "signin" | "signup";
+type Mode = "signin" | "signup" | "otp";
 
 function headerFor(ctx: SignInContext) {
   switch (ctx) {
@@ -66,6 +67,16 @@ export function SignInModal({
   const [exiting, setExiting] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  // OTP signup step
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpAttemptId, setOtpAttemptId] = useState<string | null>(null);
+  const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", "", "", ""]);
+  const [otpResendIn, setOtpResendIn] = useState(0);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const otpInputsRef = useRef<Array<HTMLInputElement | null>>([]);
+
   useEffect(() => {
     setSignInModalOpen(open);
     if (!open) {
@@ -113,6 +124,85 @@ export function SignInModal({
     timers.current.push(t);
   };
 
+  const choreographExit = () => {
+    const t1 = setTimeout(() => {
+      setExiting(true);
+      setAuthTransitionPhase("fading-out");
+    }, 200);
+    const t2 = setTimeout(() => {
+      setAuthTransitionPhase("hidden");
+    }, 1200);
+    const t3 = setTimeout(() => {
+      setAuthTransitionPhase("reveal-dark");
+      onClose();
+    }, 2100);
+    const t4 = setTimeout(() => {
+      setAuthTransitionPhase("idle");
+    }, 2600);
+    timers.current.push(t1, t2, t3, t4);
+  };
+
+  const sendSignupOtp = async (destEmail: string, userId: string) => {
+    setOtpSending(true);
+    setOtpError(null);
+    try {
+      const { data, error: err } = await supabase.functions.invoke(
+        "send-verification-otp",
+        {
+          body: {
+            channel: "email",
+            destination: destEmail,
+            target_kind: "account_signup",
+            target_id: userId,
+            target_meta: {},
+          },
+        },
+      );
+      if (err) throw err;
+      const payload = data as { error?: string; attempt_id?: string };
+      if (payload?.error) throw new Error(payload.error);
+      if (!payload?.attempt_id) throw new Error("Failed to send code");
+      setOtpAttemptId(payload.attempt_id);
+      setOtpResendIn(60);
+      setTimeout(() => otpInputsRef.current[0]?.focus(), 50);
+    } catch (e) {
+      setOtpError((e as Error).message || "Failed to send code");
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const verifySignupOtp = async (codeStr?: string) => {
+    const code = codeStr ?? otpDigits.join("");
+    if (code.length !== 6 || !otpAttemptId) return;
+    setOtpVerifying(true);
+    setOtpError(null);
+    try {
+      const { data, error: err } = await supabase.functions.invoke("verify-otp", {
+        body: { attempt_id: otpAttemptId, code },
+      });
+      if (err) throw err;
+      const payload = data as { error?: string; ok?: boolean };
+      if (payload?.error) throw new Error(payload.error);
+      // Verified — user already has a session; exit modal.
+      choreographExit();
+    } catch (e) {
+      setOtpError((e as Error).message || "Verification failed");
+      setOtpDigits(["", "", "", "", "", ""]);
+      otpInputsRef.current[0]?.focus();
+      setOtpVerifying(false);
+      return;
+    }
+    setOtpVerifying(false);
+  };
+
+  // Resend cooldown countdown
+  useEffect(() => {
+    if (otpResendIn <= 0) return;
+    const t = setTimeout(() => setOtpResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [otpResendIn]);
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
@@ -134,42 +224,44 @@ export function SignInModal({
         setSubmitting(false);
         return;
       }
-    } else {
-      const { error: err, needsEmailConfirmation } = await signUp({
-        email: email.trim(),
+      choreographExit();
+      return;
+    }
+
+    // signup
+    const trimmedEmail = email.trim();
+    const { error: err, needsEmailConfirmation, needsOtpVerification, userId } =
+      await signUp({
+        email: trimmedEmail,
         password,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
       });
-      if (err) {
-        setError(err);
-        setSubmitting(false);
-        return;
-      }
-      if (needsEmailConfirmation) {
-        setError("Check your email to confirm your account.");
-        setSubmitting(false);
-        return;
-      }
+    if (err) {
+      setError(err);
+      setSubmitting(false);
+      return;
     }
-
-    // Success — choreograph exit.
-    const t1 = setTimeout(() => {
-      setExiting(true);
-      setAuthTransitionPhase("fading-out");
-    }, 200);
-    const t2 = setTimeout(() => {
-      setAuthTransitionPhase("hidden");
-    }, 1200);
-    const t3 = setTimeout(() => {
-      setAuthTransitionPhase("reveal-dark");
-      onClose();
-    }, 2100);
-    const t4 = setTimeout(() => {
-      setAuthTransitionPhase("idle");
-    }, 2600);
-    timers.current.push(t1, t2, t3, t4);
+    if (needsEmailConfirmation) {
+      setError("Check your email to confirm your account.");
+      setSubmitting(false);
+      return;
+    }
+    if (needsOtpVerification && userId) {
+      // Move to OTP step inline; user is already authenticated.
+      setOtpEmail(trimmedEmail);
+      setOtpAttemptId(null);
+      setOtpDigits(["", "", "", "", "", ""]);
+      setOtpError(null);
+      setMode("otp");
+      setSubmitting(false);
+      void sendSignupOtp(trimmedEmail, userId);
+      return;
+    }
+    // Fallback: no OTP requested (shouldn't happen with new register flow).
+    choreographExit();
   };
+
 
   const title = headerFor(context);
 
@@ -260,7 +352,7 @@ export function SignInModal({
                     onCreate={() => switchMode("signup")}
                   />
                 </div>
-              ) : (
+              ) : mode === "signup" ? (
                 <SignUpForm
                   onSubmit={onSubmit}
                   firstName={firstName}
@@ -292,6 +384,26 @@ export function SignInModal({
                   error={error}
                   submitting={submitting}
                   onCancel={() => switchMode("signin")}
+                />
+              ) : (
+                <OtpStep
+                  email={otpEmail}
+                  digits={otpDigits}
+                  setDigits={setOtpDigits}
+                  inputsRef={otpInputsRef}
+                  onVerify={verifySignupOtp}
+                  onResend={() => {
+                    // userId not directly known here; use current authenticated session user id.
+                    void (async () => {
+                      const { data } = await supabase.auth.getUser();
+                      const uid = data.user?.id;
+                      if (uid) await sendSignupOtp(otpEmail, uid);
+                    })();
+                  }}
+                  resendIn={otpResendIn}
+                  sending={otpSending}
+                  verifying={otpVerifying}
+                  error={otpError}
                 />
               )}
             </motion.div>
@@ -781,3 +893,170 @@ function RadioRow({
     </label>
   );
 }
+
+function OtpStep({
+  email,
+  digits,
+  setDigits,
+  inputsRef,
+  onVerify,
+  onResend,
+  resendIn,
+  sending,
+  verifying,
+  error,
+}: {
+  email: string;
+  digits: string[];
+  setDigits: (d: string[]) => void;
+  inputsRef: React.MutableRefObject<Array<HTMLInputElement | null>>;
+  onVerify: (code?: string) => void;
+  onResend: () => void;
+  resendIn: number;
+  sending: boolean;
+  verifying: boolean;
+  error: string | null;
+}) {
+  const handleDigit = (i: number, v: string) => {
+    const clean = v.replace(/\D/g, "");
+    if (!clean) {
+      const next = [...digits];
+      next[i] = "";
+      setDigits(next);
+      return;
+    }
+    if (clean.length > 1) {
+      const chars = clean.slice(0, 6).split("");
+      const next = ["", "", "", "", "", ""];
+      chars.forEach((c, idx) => (next[idx] = c));
+      setDigits(next);
+      const lastIdx = Math.min(chars.length, 6) - 1;
+      inputsRef.current[lastIdx]?.focus();
+      if (chars.length === 6) onVerify(next.join(""));
+      return;
+    }
+    const next = [...digits];
+    next[i] = clean[0];
+    setDigits(next);
+    if (i < 5) inputsRef.current[i + 1]?.focus();
+    if (i === 5 && next.every((d) => d)) onVerify(next.join(""));
+  };
+
+  const handleKey = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !digits[i] && i > 0) {
+      inputsRef.current[i - 1]?.focus();
+    }
+  };
+
+  const complete = digits.every((d) => d);
+
+  return (
+    <div style={{ padding: "44px 40px 32px" }}>
+      <ModalHeader
+        title="Verify your email"
+        subtitle={`We've sent a 6-digit code to ${email}. Enter it below.`}
+        subtitleSize={13}
+      />
+
+      <div className="flex justify-between gap-2" style={{ marginTop: 8 }}>
+        {digits.map((d, i) => (
+          <input
+            key={i}
+            ref={(el) => {
+              inputsRef.current[i] = el;
+            }}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={d}
+            onChange={(e) => handleDigit(i, e.target.value)}
+            onKeyDown={(e) => handleKey(i, e)}
+            disabled={verifying}
+            style={{
+              fontFamily: HELVETICA,
+              width: 48,
+              height: 56,
+              borderRadius: 10,
+              border: "1px solid #1d1d1f",
+              background: "#ffffff",
+              color: "#1d1d1f",
+              fontSize: 22,
+              textAlign: "center",
+              outline: "none",
+              transition: "box-shadow 120ms ease-out",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,29,31,0.08)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.boxShadow = "none";
+            }}
+          />
+        ))}
+      </div>
+
+      {error && (
+        <div style={{ marginTop: 14 }}>
+          <ErrorLine error={error} />
+        </div>
+      )}
+
+      <div
+        className="flex items-center justify-between"
+        style={{
+          marginTop: 18,
+          fontFamily: HELVETICA,
+          fontSize: 12,
+          color: "#86868b",
+        }}
+      >
+        <button
+          type="button"
+          disabled={resendIn > 0 || sending}
+          onClick={onResend}
+          style={{
+            background: "transparent",
+            border: "none",
+            padding: 0,
+            cursor: resendIn > 0 || sending ? "default" : "pointer",
+            color: resendIn > 0 || sending ? "#86868b" : "#1d1d1f",
+            fontFamily: HELVETICA,
+            fontSize: 12,
+            textDecoration: resendIn > 0 || sending ? "none" : "underline",
+          }}
+        >
+          {sending
+            ? "Sending…"
+            : resendIn > 0
+              ? `Resend in ${resendIn}s`
+              : "Resend code"}
+        </button>
+        <span>Check your spam folder if you don't see the email.</span>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onVerify()}
+        disabled={verifying || !complete}
+        className="w-full transition active:scale-[0.99]"
+        style={{
+          marginTop: 18,
+          background: "#1d1d1f",
+          color: "#ffffff",
+          borderRadius: 12,
+          padding: "12px 18px",
+          fontFamily: HELVETICA,
+          fontSize: 15,
+          fontWeight: 500,
+          letterSpacing: "-0.005em",
+          border: "none",
+          cursor: verifying || !complete ? "default" : "pointer",
+          opacity: verifying || !complete ? 0.7 : 1,
+        }}
+      >
+        {verifying ? "Verifying…" : "Verify"}
+      </button>
+    </div>
+  );
+}
+
