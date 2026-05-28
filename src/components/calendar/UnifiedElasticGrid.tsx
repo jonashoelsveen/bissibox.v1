@@ -1116,10 +1116,13 @@ export function UnifiedElasticGrid({
     };
   }, [viewMode, mode.kind, isDayView, isSimple, appKind]);
 
-  const headerScrollbarGutterW = isDayView ? liveScrollbarGutterW : reservedScrollbarGutterW;
-  const manualWeekBodyGutterW = !isDayView
-    ? Math.max(0, reservedScrollbarGutterW - liveScrollbarGutterW)
-    : 0;
+  // Week view: no reserved gutter. The thin scrollbar overlays Sunday's right
+  // edge so column dividers align perfectly with the header dividers.
+  // Day view: keep dynamic live padding so the centered day stays aligned.
+  const headerScrollbarGutterW = isDayView ? liveScrollbarGutterW : 0;
+  const manualWeekBodyGutterW = 0;
+  void reservedScrollbarGutterW;
+  void MIN_STABLE_SCROLLBAR_GUTTER_W;
 
 
   // Minutes elapsed since the week-view start (06:00). Includes seconds for
@@ -1380,10 +1383,7 @@ export function UnifiedElasticGrid({
                   ref={weekScrollerRef}
                   className="mini-dur-scroll relative flex flex-1 min-h-0 flex-col overflow-y-auto"
                   style={{
-                    scrollbarGutter: "stable",
-                    ...(manualWeekBodyGutterW > 0
-                      ? { paddingRight: manualWeekBodyGutterW }
-                      : null),
+                    scrollbarGutter: "auto",
                   }}
                 >
                   <div
