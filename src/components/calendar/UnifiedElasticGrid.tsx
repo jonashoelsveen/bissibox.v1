@@ -1067,19 +1067,14 @@ export function UnifiedElasticGrid({
     setHeaderH(headerRef.current.offsetHeight);
   }, [viewMode]);
 
-  // Measure the actual scrollbar gutter width so the header can render an
-  // explicit blank gutter cell above it. This makes the Sunday header stop
-  // to the LEFT of the scrollbar, matching the diary week view exactly.
-  //
-  // We measure two ways and use the MAX:
-  //   (a) live: weekScroller.offsetWidth - clientWidth (only > 0 when an
-  //       actual scrollbar takes space, e.g. classic scrollbars or
-  //       scrollbar-gutter:stable honored by the UA).
-  //   (b) probe: a hidden div with the same .mini-dur-scroll class and
-  //       scrollbar-gutter:stable. Returns the reserved width even on
-  //       browsers where (a) returns 0 because the live scroller's
-  //       content doesn't overflow at that exact moment.
-  const [scrollbarGutterW, setScrollbarGutterW] = useState(0);
+  // Measure the week-view scrollbar gutter so header and body reserve the
+  // SAME lane on the right. Diary's correct behavior is a stable gutter even
+  // when the scrollbar itself is not currently visible, so we track:
+  //   (a) live width the browser already reserved on the real scroller
+  //   (b) desired stable width for the layout, using a probe + hard floor
+  const MIN_STABLE_SCROLLBAR_GUTTER_W = 14;
+  const [liveScrollbarGutterW, setLiveScrollbarGutterW] = useState(0);
+  const [reservedScrollbarGutterW, setReservedScrollbarGutterW] = useState(0);
   useLayoutEffect(() => {
     const el = weekScrollerRef.current;
     if (!el) return;
@@ -1095,10 +1090,11 @@ export function UnifiedElasticGrid({
       return w > 0 ? w : 0;
     };
     const measure = () => {
-      const live = el.offsetWidth - el.clientWidth;
+      const live = Math.max(0, el.offsetWidth - el.clientWidth);
       const probe = measureProbe();
-      const next = Math.max(live > 0 ? live : 0, probe);
-      setScrollbarGutterW((prev) => (prev === next ? prev : next));
+      const reserved = Math.max(live, probe, MIN_STABLE_SCROLLBAR_GUTTER_W);
+      setLiveScrollbarGutterW((prev) => (prev === live ? prev : live));
+      setReservedScrollbarGutterW((prev) => (prev === reserved ? prev : reserved));
     };
     measure();
     const r1 = requestAnimationFrame(() => {
@@ -1119,6 +1115,11 @@ export function UnifiedElasticGrid({
       window.removeEventListener("resize", measure);
     };
   }, [viewMode, mode.kind, isDayView, isSimple, appKind]);
+
+  const headerScrollbarGutterW = isDayView ? liveScrollbarGutterW : reservedScrollbarGutterW;
+  const manualWeekBodyGutterW = !isDayView
+    ? Math.max(0, reservedScrollbarGutterW - liveScrollbarGutterW)
+    : 0;
 
 
   // Minutes elapsed since the week-view start (06:00). Includes seconds for
@@ -1278,7 +1279,7 @@ export function UnifiedElasticGrid({
               >
                 <div
                   className="flex-none"
-                  style={isDayView ? { paddingRight: scrollbarGutterW } : undefined}
+                  style={isDayView ? { paddingRight: headerScrollbarGutterW } : undefined}
                 >
                   <div className={!isDayView ? "flex w-full" : undefined}>
 
@@ -1363,11 +1364,11 @@ export function UnifiedElasticGrid({
                       );
                     })}
                     </div>
-                    {!isDayView && scrollbarGutterW > 0 && (
+                    {!isDayView && headerScrollbarGutterW > 0 && (
                       <div
                         aria-hidden
                         className="flex-none border-b border-hairline bg-card"
-                        style={{ width: scrollbarGutterW, height: 36 }}
+                        style={{ width: headerScrollbarGutterW, height: 36 }}
                       />
                     )}
                   </div>
@@ -1378,7 +1379,12 @@ export function UnifiedElasticGrid({
                 <div
                   ref={weekScrollerRef}
                   className="mini-dur-scroll relative flex flex-1 min-h-0 flex-col overflow-y-auto"
-                  style={{ scrollbarGutter: "stable" }}
+                  style={{
+                    scrollbarGutter: "stable",
+                    ...(manualWeekBodyGutterW > 0
+                      ? { paddingRight: manualWeekBodyGutterW }
+                      : null),
+                  }}
                 >
                   <div
 
@@ -1510,6 +1516,7 @@ export function UnifiedElasticGrid({
                       className={`pointer-events-none absolute ${isDayView ? "left-0 right-0" : "inset-x-0"}`}
                       style={{
                         top: 0,
+                        ...(manualWeekBodyGutterW > 0 ? { right: manualWeekBodyGutterW } : null),
                         display: "grid",
                         gridTemplateColumns,
                         gridTemplateRows: isSimple
