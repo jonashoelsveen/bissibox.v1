@@ -138,8 +138,119 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   const [tab, setTab] = useState<Tab>("account");
   const [createOpen, setCreateOpen] = useState(false);
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
-  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  type DeleteStep = "request" | "code" | "confirm";
+  const [deleteStep, setDeleteStep] = useState<DeleteStep>("request");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteSending, setDeleteSending] = useState(false);
+  const [deleteAttemptId, setDeleteAttemptId] = useState<string | null>(null);
+  const [deleteMasked, setDeleteMasked] = useState("");
+  const [deleteDigits, setDeleteDigits] = useState<string[]>(["", "", "", "", "", ""]);
+  const [deleteResendIn, setDeleteResendIn] = useState(0);
+  const [deleteVerifying, setDeleteVerifying] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const deleteInputsRef = useRef<Array<HTMLInputElement | null>>([]);
+
+  useEffect(() => {
+    if (deleteResendIn <= 0) return;
+    const t = setTimeout(() => setDeleteResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [deleteResendIn]);
+
+  const openDeleteFlow = () => {
+    setDeleteStep("request");
+    setDeleteAttemptId(null);
+    setDeleteDigits(["", "", "", "", "", ""]);
+    setDeleteError(null);
+    setDeleteResendIn(0);
+    setDeleteOpen(true);
+  };
+  const closeDeleteFlow = () => setDeleteOpen(false);
+
+  const sendDeleteCode = async () => {
+    if (!user) return;
+    setDeleteSending(true);
+    setDeleteError(null);
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke("send-verification-otp", {
+        body: {
+          channel: "email",
+          destination: user.email!,
+          target_kind: "account_signup",
+          target_id: user.id,
+          target_meta: {},
+        },
+      });
+      if (fnErr) throw fnErr;
+      const payload = data as { error?: string; attempt_id?: string; masked?: string };
+      if (payload?.error) throw new Error(payload.error);
+      if (!payload?.attempt_id) throw new Error("Failed to send code");
+      setDeleteAttemptId(payload.attempt_id);
+      setDeleteMasked(payload.masked ?? user.email ?? "");
+      setDeleteResendIn(60);
+      setDeleteStep("code");
+      setTimeout(() => deleteInputsRef.current[0]?.focus(), 80);
+    } catch (e) {
+      setDeleteError((e as Error).message || "Failed to send code");
+    } finally {
+      setDeleteSending(false);
+    }
+  };
+
+  const verifyDeleteCode = async (codeStr?: string) => {
+    const code = codeStr ?? deleteDigits.join("");
+    if (code.length !== 6 || !deleteAttemptId) return;
+    setDeleteVerifying(true);
+    setDeleteError(null);
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke("verify-otp", {
+        body: { attempt_id: deleteAttemptId, code },
+      });
+      if (fnErr) throw fnErr;
+      const payload = data as { error?: string; ok?: boolean };
+      if (payload?.error) throw new Error(payload.error);
+      setDeleteStep("confirm");
+      setDeleteError(null);
+    } catch (e) {
+      setDeleteError((e as Error).message || "Verification failed");
+      setDeleteDigits(["", "", "", "", "", ""]);
+      deleteInputsRef.current[0]?.focus();
+    } finally {
+      setDeleteVerifying(false);
+    }
+  };
+
+  const handleDeleteDigitChange = (idx: number, val: string) => {
+    const clean = val.replace(/\D/g, "");
+    if (clean.length > 1) {
+      // paste
+      const chars = clean.slice(0, 6).split("");
+      const next = ["", "", "", "", "", ""];
+      chars.forEach((c, i) => (next[i] = c));
+      setDeleteDigits(next);
+      const lastIdx = Math.min(chars.length, 6) - 1;
+      if (chars.length >= 6) {
+        deleteInputsRef.current[5]?.blur();
+        void verifyDeleteCode(next.join(""));
+      } else {
+        deleteInputsRef.current[lastIdx + 1]?.focus();
+      }
+      return;
+    }
+    const next = [...deleteDigits];
+    next[idx] = clean;
+    setDeleteDigits(next);
+    if (clean && idx < 5) deleteInputsRef.current[idx + 1]?.focus();
+    if (clean && idx === 5 && next.every((d) => d)) {
+      void verifyDeleteCode(next.join(""));
+    }
+  };
+
+  const handleDeleteDigitKey = (idx: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !deleteDigits[idx] && idx > 0) {
+      deleteInputsRef.current[idx - 1]?.focus();
+    }
+  };
   const [profileEntities, setProfileEntities] = useState<
     { id: string; name: string; entity_type: string; roles: string[] }[]
   >([]);
@@ -501,7 +612,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
           <div className="flex justify-center pt-2">
             <button
               type="button"
-              onClick={() => setDeleteAccountOpen(true)}
+              onClick={openDeleteFlow}
               className="text-xs font-medium text-destructive hover:underline"
             >
               Delete account
@@ -754,67 +865,192 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
           </div>
         </section>
       </div>
-      {deleteAccountOpen && (
+      {deleteOpen && (
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4"
           onClick={() => {
-            if (!deletingAccount) setDeleteAccountOpen(false);
+            if (deleteStep === "code") return;
+            if (deleteSending || deleteVerifying || deletingAccount) return;
+            closeDeleteFlow();
           }}
         >
           <div
             className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-base font-semibold text-ink">Delete account?</h2>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Are you sure you want to delete your account? This will permanently
-              remove all data related to this account, including your profile,
-              calendar, diary, photos, and any entities you own. This action
-              cannot be undone.
-            </p>
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                type="button"
-                disabled={deletingAccount}
-                onClick={() => setDeleteAccountOpen(false)}
-                className="rounded-md border border-hairline px-4 py-2 text-sm text-ink hover:bg-secondary/60 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={deletingAccount}
-                onClick={async () => {
-                  setDeletingAccount(true);
-                  try {
-                    const res = await fetch("/api/auth/delete-account", {
-                      method: "POST",
-                      credentials: "include",
-                    });
-                    const body = (await res.json().catch(() => ({}))) as {
-                      error?: string;
-                    };
-                    if (!res.ok) {
-                      toast.error(body.error ?? "Failed to delete account");
-                      setDeletingAccount(false);
-                      return;
-                    }
-                    await signOut();
-                    setDeleteAccountOpen(false);
-                    toast.success("Your account has been deleted.");
-                    navigate({ to: "/" });
-                  } catch (e) {
-                    toast.error(
-                      e instanceof Error ? e.message : "Network error",
-                    );
-                    setDeletingAccount(false);
-                  }
-                }}
-                className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-50"
-              >
-                {deletingAccount ? "Deleting…" : "Delete"}
-              </button>
-            </div>
+            {deleteStep === "request" && (
+              <>
+                <h2 className="text-base font-semibold text-ink">
+                  Request to delete your account
+                </h2>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Before we proceed, please understand what will be permanently removed:
+                </p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                  <li>Your profile and personal information</li>
+                  <li>All calendar and diary entries</li>
+                  <li>Your photos and media</li>
+                  <li>Event registrations and history</li>
+                  <li>Team memberships and roles</li>
+                  <li>Any entities you own</li>
+                </ul>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  To confirm your identity, we'll send a 6‑digit verification code to{" "}
+                  <strong className="text-ink">{user?.email}</strong>.
+                </p>
+                {deleteError && (
+                  <p className="mt-3 text-sm text-destructive">{deleteError}</p>
+                )}
+                <div className="mt-6 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={deleteSending}
+                    onClick={closeDeleteFlow}
+                    className="rounded-md border border-hairline px-4 py-2 text-sm text-ink hover:bg-secondary/60 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deleteSending}
+                    onClick={sendDeleteCode}
+                    className="rounded-md bg-ink px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    {deleteSending ? "Sending…" : "Send verification code"}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {deleteStep === "code" && (
+              <>
+                <h2 className="text-base font-semibold text-ink">Enter verification code</h2>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  We sent a 6‑digit code to <strong className="text-ink">{deleteMasked}</strong>.
+                  Enter it below to verify your identity.
+                </p>
+                <div className="mt-5 flex justify-center gap-2">
+                  {deleteDigits.map((d, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => {
+                        deleteInputsRef.current[i] = el;
+                      }}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      value={d}
+                      disabled={deleteVerifying}
+                      onChange={(e) => handleDeleteDigitChange(i, e.target.value)}
+                      onKeyDown={(e) => handleDeleteDigitKey(i, e)}
+                      className="h-12 w-11 rounded-xl border border-hairline bg-background text-center text-xl text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                  ))}
+                </div>
+                {deleteError && (
+                  <p className="mt-3 text-center text-sm text-destructive">{deleteError}</p>
+                )}
+                <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+                  <button
+                    type="button"
+                    disabled={deleteResendIn > 0 || deleteSending}
+                    onClick={sendDeleteCode}
+                    className="text-ink hover:underline disabled:text-muted-foreground disabled:no-underline"
+                  >
+                    {deleteResendIn > 0 ? `Resend code in ${deleteResendIn}s` : "Resend code"}
+                  </button>
+                  <span>Check your spam folder if you don't see it.</span>
+                </div>
+                <div className="mt-6 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={deleteVerifying}
+                    onClick={closeDeleteFlow}
+                    className="rounded-md border border-hairline px-4 py-2 text-sm text-ink hover:bg-secondary/60 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deleteVerifying || deleteDigits.some((c) => !c)}
+                    onClick={() => verifyDeleteCode()}
+                    className="rounded-md bg-ink px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    {deleteVerifying ? "Verifying…" : "Verify"}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {deleteStep === "confirm" && (
+              <>
+                <h2 className="text-base font-semibold text-ink">
+                  Delete your Aponna account
+                </h2>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Your identity has been verified. Review what will be permanently deleted:
+                </p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                  <li>Your profile and personal information</li>
+                  <li>All calendar and diary entries</li>
+                  <li>Your photos and media</li>
+                  <li>Event registrations and history</li>
+                  <li>Team memberships and roles</li>
+                  <li>Any entities you own</li>
+                </ul>
+                <p className="mt-3 text-sm font-medium text-ink">
+                  This action is permanent and cannot be undone.
+                </p>
+                {deleteError && (
+                  <p className="mt-3 text-sm text-destructive">{deleteError}</p>
+                )}
+                <div className="mt-6 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={deletingAccount}
+                    onClick={closeDeleteFlow}
+                    className="rounded-md border border-hairline px-4 py-2 text-sm text-ink hover:bg-secondary/60 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deletingAccount}
+                    onClick={async () => {
+                      setDeletingAccount(true);
+                      setDeleteError(null);
+                      try {
+                        const res = await fetch("/api/auth/delete-account", {
+                          method: "POST",
+                          credentials: "include",
+                        });
+                        const body = (await res.json().catch(() => ({}))) as {
+                          error?: string;
+                        };
+                        if (!res.ok) {
+                          setDeleteError(body.error ?? "Failed to delete account");
+                          setDeletingAccount(false);
+                          return;
+                        }
+                        await signOut();
+                        closeDeleteFlow();
+                        toast.success("Your account has been deleted.");
+                        navigate({ to: "/" });
+                      } catch (e) {
+                        setDeleteError(
+                          e instanceof Error ? e.message : "Network error",
+                        );
+                        setDeletingAccount(false);
+                      }
+                    }}
+                    className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-50"
+                  >
+                    {deletingAccount ? "Deleting…" : "Delete account"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
