@@ -1070,16 +1070,35 @@ export function UnifiedElasticGrid({
   // Measure the actual scrollbar gutter width so the header can render an
   // explicit blank gutter cell above it. This makes the Sunday header stop
   // to the LEFT of the scrollbar, matching the diary week view exactly.
+  //
+  // We measure two ways and use the MAX:
+  //   (a) live: weekScroller.offsetWidth - clientWidth (only > 0 when an
+  //       actual scrollbar takes space, e.g. classic scrollbars or
+  //       scrollbar-gutter:stable honored by the UA).
+  //   (b) probe: a hidden div with the same .mini-dur-scroll class and
+  //       scrollbar-gutter:stable. Returns the reserved width even on
+  //       browsers where (a) returns 0 because the live scroller's
+  //       content doesn't overflow at that exact moment.
   const [scrollbarGutterW, setScrollbarGutterW] = useState(0);
   useLayoutEffect(() => {
     const el = weekScrollerRef.current;
     if (!el) return;
+    const measureProbe = (): number => {
+      if (typeof document === "undefined") return 0;
+      const probe = document.createElement("div");
+      probe.className = "mini-dur-scroll";
+      probe.style.cssText =
+        "position:absolute;top:-9999px;left:-9999px;width:100px;height:100px;overflow-y:scroll;scrollbar-gutter:stable;visibility:hidden;pointer-events:none";
+      document.body.appendChild(probe);
+      const w = probe.offsetWidth - probe.clientWidth;
+      document.body.removeChild(probe);
+      return w > 0 ? w : 0;
+    };
     const measure = () => {
-      const gutter = el.offsetWidth - el.clientWidth;
-      setScrollbarGutterW((prev) => {
-        const next = gutter > 0 ? gutter : 0;
-        return prev === next ? prev : next;
-      });
+      const live = el.offsetWidth - el.clientWidth;
+      const probe = measureProbe();
+      const next = Math.max(live > 0 ? live : 0, probe);
+      setScrollbarGutterW((prev) => (prev === next ? prev : next));
     };
     measure();
     const r1 = requestAnimationFrame(() => {
