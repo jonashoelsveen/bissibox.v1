@@ -57,8 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // boot and whenever the tab regains focus after long idle (otherwise the
   // in-memory access token can be silently expired, making queries fail and
   // pages render in a logged-out state).
-  const rehydrate = useCallback(async (opts?: { onBoot?: boolean }) => {
-    if (rehydratingRef.current) return;
+  const rehydrate = useCallback(async (opts?: { onBoot?: boolean }): Promise<boolean> => {
+    if (rehydratingRef.current) return false;
     rehydratingRef.current = true;
     try {
       const data = await fetchSession();
@@ -68,7 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           refresh_token: data.refresh_token,
         });
         setUser(data.user);
-      } else if (opts?.onBoot) {
+        return true;
+      }
+      if (opts?.onBoot) {
         // Cookie missing/invalid on first load → clear any stale local state.
         try {
           await supabase.auth.signOut({ scope: "local" });
@@ -80,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       // On a focus-driven rehydrate we deliberately do NOT sign the user
       // out on a transient /api/auth/session failure (network blip, etc).
+      return false;
     } finally {
       rehydratingRef.current = false;
     }
@@ -91,9 +94,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     bootedRef.current = true;
 
     // Listener for in-tab auth changes (token refresh, sign-out).
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
-      setSession(sess);
-      setUser(sess?.user ?? null);
+    // CRITICAL: Supabase fires SIGNED_OUT whenever its in-memory /
+    // localStorage refresh attempt fails (which happens silently after
+    // long idle even when our HTTP-only cookie session is still valid).
+    // If we naively clear the user here, the very next click into an app
+    // navigates to the signed-out landing because GlobalTopTabBar treats
+    // `!user` as logged out. Instead, on SIGNED_OUT / null-session we
+    // re-check our cookie-backed session and only flip the user to null
+    // when that cookie is ALSO gone or expired.
+    const { data: sub } = supabase.auth.onAuthStateChange((event, sess) => {
+      if (sess?.user) {
+        setSession(sess);
+        setUser(sess.user);
+        return;
+      }
+      // Recover from cookie before flipping to logged-out.
+      void (async () => {
+        const ok = await rehydrate();
+        if (!ok && event === "SIGNED_OUT") {
+          setSession(null);
+          setUser(null);
+        }
+      })();
     });
 
     (async () => {
@@ -112,12 +134,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, [rehydrate]);
 
-  // Refresh the session whenever the tab regains visibility/focus. After
-  // several hours idle the in-memory Supabase access token has expired and
-  // Supabase's own auto-refresh may have failed silently, causing queries
-  // to return empty and the top tab-bar to render in a logged-out state.
-  // Re-asking our cookie-backed /api/auth/session endpoint rotates the
-  // refresh token and restores a valid bearer in one round-trip.
+  // Keep the in-memory access token fresh: on every visibility/focus and
+  // proactively every ~45 min (Supabase access tokens live ~60 min). This
+  // matches the "stay signed in for ~30 days" model Apple uses for iCloud
+  // web sessions — users only re-authenticate when the long-lived refresh
+  // token in the HTTP-only cookie actually expires.
   useEffect(() => {
     if (typeof document === "undefined") return;
     const onVisible = () => {
@@ -126,9 +147,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const onFocus = () => void rehydrate();
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onFocus);
+    const interval = window.setInterval(() => { void rehydrate(); }, 45 * 60 * 1000);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onFocus);
+      window.clearInterval(interval);
     };
   }, [rehydrate]);
 
