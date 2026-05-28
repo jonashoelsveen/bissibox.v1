@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
-import { supabase } from "@/integrations/supabase/client";
+
 import {
   setAuthTransitionPhase,
   setSignInModalOpen,
@@ -41,7 +41,7 @@ export function SignInModal({
   onClose: () => void;
   context?: SignInContext;
 }) {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, activateSession } = useAuth();
   const [mode, setMode] = useState<Mode>("signin");
   const [fieldsReady, setFieldsReady] = useState(false);
   const [switchingMode, setSwitchingMode] = useState(false);
@@ -76,6 +76,13 @@ export function SignInModal({
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
   const otpInputsRef = useRef<Array<HTMLInputElement | null>>([]);
+  // Pending session tokens — held in memory between signup response and
+  // successful OTP verification. The Supabase client session is NOT set
+  // until verifySignupOtp() succeeds, so the user cannot reach
+  // authenticated UI by refreshing or navigating away.
+  const [pendingAccessToken, setPendingAccessToken] = useState<string | null>(null);
+  const [pendingRefreshToken, setPendingRefreshToken] = useState<string | null>(null);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     setSignInModalOpen(open);
@@ -142,24 +149,28 @@ export function SignInModal({
     timers.current.push(t1, t2, t3, t4);
   };
 
-  const sendSignupOtp = async (destEmail: string, userId: string) => {
+  const sendSignupOtp = async (destEmail: string, userId: string, accessToken: string) => {
     setOtpSending(true);
     setOtpError(null);
     try {
-      const { data, error: err } = await supabase.functions.invoke(
-        "send-verification-otp",
-        {
-          body: {
-            channel: "email",
-            destination: destEmail,
-            target_kind: "account_signup",
-            target_id: userId,
-            target_meta: {},
-          },
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      const res = await fetch(`${supabaseUrl}/functions/v1/send-verification-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+          "apikey": supabaseAnonKey,
         },
-      );
-      if (err) throw err;
-      const payload = data as { error?: string; attempt_id?: string };
+        body: JSON.stringify({
+          channel: "email",
+          destination: destEmail,
+          target_kind: "account_signup",
+          target_id: userId,
+          target_meta: {},
+        }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as { error?: string; attempt_id?: string };
       if (payload?.error) throw new Error(payload.error);
       if (!payload?.attempt_id) throw new Error("Failed to send code");
       setOtpAttemptId(payload.attempt_id);
@@ -174,17 +185,28 @@ export function SignInModal({
 
   const verifySignupOtp = async (codeStr?: string) => {
     const code = codeStr ?? otpDigits.join("");
-    if (code.length !== 6 || !otpAttemptId) return;
+    if (code.length !== 6 || !otpAttemptId || !pendingAccessToken) return;
     setOtpVerifying(true);
     setOtpError(null);
     try {
-      const { data, error: err } = await supabase.functions.invoke("verify-otp", {
-        body: { attempt_id: otpAttemptId, code },
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      const res = await fetch(`${supabaseUrl}/functions/v1/verify-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${pendingAccessToken}`,
+          "apikey": supabaseAnonKey,
+        },
+        body: JSON.stringify({ attempt_id: otpAttemptId, code }),
       });
-      if (err) throw err;
-      const payload = data as { error?: string; ok?: boolean };
+      const payload = (await res.json().catch(() => ({}))) as { error?: string; ok?: boolean };
       if (payload?.error) throw new Error(payload.error);
-      // Verified — user already has a session; exit modal.
+      // OTP verified — NOW activate the Supabase client session so the
+      // user becomes "logged in" in the UI and lands on home.
+      if (pendingRefreshToken) {
+        await activateSession(pendingAccessToken, pendingRefreshToken);
+      }
       choreographExit();
     } catch (e) {
       setOtpError((e as Error).message || "Verification failed");
@@ -230,13 +252,13 @@ export function SignInModal({
 
     // signup
     const trimmedEmail = email.trim();
-    const { error: err, needsEmailConfirmation, needsOtpVerification, userId } =
-      await signUp({
-        email: trimmedEmail,
-        password,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-      });
+    const result = await signUp({
+      email: trimmedEmail,
+      password,
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+    });
+    const { error: err, needsEmailConfirmation, needsOtpVerification, userId } = result;
     if (err) {
       setError(err);
       setSubmitting(false);
@@ -248,14 +270,18 @@ export function SignInModal({
       return;
     }
     if (needsOtpVerification && userId) {
-      // Move to OTP step inline; user is already authenticated.
+      const accessToken = result._pendingAccessToken ?? "";
+      const refreshToken = result._pendingRefreshToken ?? "";
+      setPendingAccessToken(accessToken || null);
+      setPendingRefreshToken(refreshToken || null);
+      setPendingUserId(userId);
       setOtpEmail(trimmedEmail);
       setOtpAttemptId(null);
       setOtpDigits(["", "", "", "", "", ""]);
       setOtpError(null);
       setMode("otp");
       setSubmitting(false);
-      void sendSignupOtp(trimmedEmail, userId);
+      void sendSignupOtp(trimmedEmail, userId, accessToken);
       return;
     }
     // Fallback: no OTP requested (shouldn't happen with new register flow).
@@ -393,12 +419,9 @@ export function SignInModal({
                   inputsRef={otpInputsRef}
                   onVerify={verifySignupOtp}
                   onResend={() => {
-                    // userId not directly known here; use current authenticated session user id.
-                    void (async () => {
-                      const { data } = await supabase.auth.getUser();
-                      const uid = data.user?.id;
-                      if (uid) await sendSignupOtp(otpEmail, uid);
-                    })();
+                    if (pendingAccessToken && pendingUserId) {
+                      void sendSignupOtp(otpEmail, pendingUserId, pendingAccessToken);
+                    }
                   }}
                   resendIn={otpResendIn}
                   sending={otpSending}
