@@ -1242,19 +1242,23 @@ export function UnifiedElasticGrid({
                 tabIndex={0}
               >
                 <div
+                  className="flex-none"
+                  style={{ paddingRight: scrollbarGutterW }}
+                >
+                <div
                   ref={headerRowRef}
                   data-grid-header="1"
-                  className="relative z-30 grid flex-none bg-card"
+                  className="relative z-30 grid bg-card"
                   style={{
                     gridTemplateColumns,
                     transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
                     willChange: "grid-template-columns",
                     ...(isDayView
                       ? { width: "fit-content", marginInline: "auto" }
-                      : { paddingRight: scrollbarGutterW }),
-
+                      : null),
                   }}
                 >
+
 
                     {/* Week-number gutter header (clickable to zoom OUT to month). */}
                     {mode.kind === "year" && (
@@ -1322,6 +1326,9 @@ export function UnifiedElasticGrid({
                       );
                     })}
                 </div>
+                </div>
+
+
 
                 <div
                   ref={weekScrollerRef}
