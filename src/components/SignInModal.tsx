@@ -67,6 +67,16 @@ export function SignInModal({
   const [exiting, setExiting] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  // OTP signup step
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpAttemptId, setOtpAttemptId] = useState<string | null>(null);
+  const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", "", "", ""]);
+  const [otpResendIn, setOtpResendIn] = useState(0);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const otpInputsRef = useRef<Array<HTMLInputElement | null>>([]);
+
   useEffect(() => {
     setSignInModalOpen(open);
     if (!open) {
