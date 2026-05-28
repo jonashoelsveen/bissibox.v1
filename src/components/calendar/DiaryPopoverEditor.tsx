@@ -62,6 +62,9 @@ export interface DiaryPopoverEditorProps {
    *  initial paint. Used to match the tile's actual saved color (existing
    *  sessions) or the top diary-activity tab color (new sessions). */
   defaultColor?: string | null;
+  /** The user's diary_activity category list — used to resolve the correct
+   *  color for the selected activity type when saving. */
+  diaryActivityCategories?: { id: string; name: string; color: string }[];
 }
 
 export function DiaryPopoverEditor({
@@ -73,6 +76,7 @@ export function DiaryPopoverEditor({
   onClose,
   onCommit,
   defaultColor,
+  diaryActivityCategories = [],
 }: DiaryPopoverEditorProps) {
   const [title, setTitle] = useState(initialEvent?.title ?? "");
 
