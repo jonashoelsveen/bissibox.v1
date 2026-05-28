@@ -138,6 +138,8 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   const [tab, setTab] = useState<Tab>("account");
   const [createOpen, setCreateOpen] = useState(false);
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [profileEntities, setProfileEntities] = useState<
     { id: string; name: string; entity_type: string; roles: string[] }[]
   >([]);
