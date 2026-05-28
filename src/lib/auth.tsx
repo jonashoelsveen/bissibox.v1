@@ -15,7 +15,7 @@ interface AuthContextValue {
   activeEntityId: string | null;
   setActiveEntity: (id: string | null) => void;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (args: { email: string; password: string; first_name?: string; last_name?: string }) => Promise<{ error?: string; needsEmailConfirmation?: boolean }>;
+  signUp: (args: { email: string; password: string; first_name?: string; last_name?: string }) => Promise<{ error?: string; needsEmailConfirmation?: boolean; needsOtpVerification?: boolean; userId?: string; email?: string }>;
   signOut: () => Promise<void>;
 }
 
