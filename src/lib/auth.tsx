@@ -52,24 +52,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [activeEntityId, setActiveEntityIdState] = useState<string | null>(null);
   const bootedRef = useRef(false);
   const rehydratingRef = useRef(false);
+  const signingOutRef = useRef(false);
+
+  const recoverFromLocalSession = useCallback(async (): Promise<boolean> => {
+    try {
+      const [{ data: sessionData }, { data: userData, error }] = await Promise.all([
+        supabase.auth.getSession(),
+        supabase.auth.getUser(),
+      ]);
+      const localSession = sessionData.session ?? null;
+      const localUser = userData.user ?? localSession?.user ?? null;
+      if (error || !localUser) return false;
+      setSession(localSession);
+      setUser(localUser);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
   // Re-hydrate the Supabase client from the HTTP-only cookie. Used both on
   // boot and whenever the tab regains focus after long idle (otherwise the
   // in-memory access token can be silently expired, making queries fail and
   // pages render in a logged-out state).
   const rehydrate = useCallback(async (opts?: { onBoot?: boolean }): Promise<boolean> => {
-    if (rehydratingRef.current) return false;
+    if (rehydratingRef.current) {
+      return recoverFromLocalSession();
+    }
     rehydratingRef.current = true;
     try {
       const data = await fetchSession();
       if (data && data.user && data.access_token && data.refresh_token) {
-        await supabase.auth.setSession({
+        const { data: nextSession } = await supabase.auth.setSession({
           access_token: data.access_token,
           refresh_token: data.refresh_token,
         });
-        setUser(data.user);
+        setSession(nextSession.session ?? null);
+        setUser(nextSession.user ?? data.user);
         return true;
       }
+      const localOk = await recoverFromLocalSession();
+      if (localOk) return true;
       if (opts?.onBoot) {
         // Cookie missing/invalid on first load → clear any stale local state.
         try {
@@ -86,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       rehydratingRef.current = false;
     }
-  }, []);
+  }, [recoverFromLocalSession]);
 
   // Boot: hydrate from the HTTP-only cookie via /api/auth/session.
   useEffect(() => {
