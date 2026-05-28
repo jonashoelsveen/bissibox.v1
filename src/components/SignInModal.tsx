@@ -124,6 +124,85 @@ export function SignInModal({
     timers.current.push(t);
   };
 
+  const choreographExit = () => {
+    const t1 = setTimeout(() => {
+      setExiting(true);
+      setAuthTransitionPhase("fading-out");
+    }, 200);
+    const t2 = setTimeout(() => {
+      setAuthTransitionPhase("hidden");
+    }, 1200);
+    const t3 = setTimeout(() => {
+      setAuthTransitionPhase("reveal-dark");
+      onClose();
+    }, 2100);
+    const t4 = setTimeout(() => {
+      setAuthTransitionPhase("idle");
+    }, 2600);
+    timers.current.push(t1, t2, t3, t4);
+  };
+
+  const sendSignupOtp = async (destEmail: string, userId: string) => {
+    setOtpSending(true);
+    setOtpError(null);
+    try {
+      const { data, error: err } = await supabase.functions.invoke(
+        "send-verification-otp",
+        {
+          body: {
+            channel: "email",
+            destination: destEmail,
+            target_kind: "account_signup",
+            target_id: userId,
+            target_meta: {},
+          },
+        },
+      );
+      if (err) throw err;
+      const payload = data as { error?: string; attempt_id?: string };
+      if (payload?.error) throw new Error(payload.error);
+      if (!payload?.attempt_id) throw new Error("Failed to send code");
+      setOtpAttemptId(payload.attempt_id);
+      setOtpResendIn(60);
+      setTimeout(() => otpInputsRef.current[0]?.focus(), 50);
+    } catch (e) {
+      setOtpError((e as Error).message || "Failed to send code");
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const verifySignupOtp = async (codeStr?: string) => {
+    const code = codeStr ?? otpDigits.join("");
+    if (code.length !== 6 || !otpAttemptId) return;
+    setOtpVerifying(true);
+    setOtpError(null);
+    try {
+      const { data, error: err } = await supabase.functions.invoke("verify-otp", {
+        body: { attempt_id: otpAttemptId, code },
+      });
+      if (err) throw err;
+      const payload = data as { error?: string; ok?: boolean };
+      if (payload?.error) throw new Error(payload.error);
+      // Verified — user already has a session; exit modal.
+      choreographExit();
+    } catch (e) {
+      setOtpError((e as Error).message || "Verification failed");
+      setOtpDigits(["", "", "", "", "", ""]);
+      otpInputsRef.current[0]?.focus();
+      setOtpVerifying(false);
+      return;
+    }
+    setOtpVerifying(false);
+  };
+
+  // Resend cooldown countdown
+  useEffect(() => {
+    if (otpResendIn <= 0) return;
+    const t = setTimeout(() => setOtpResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [otpResendIn]);
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
@@ -145,42 +224,44 @@ export function SignInModal({
         setSubmitting(false);
         return;
       }
-    } else {
-      const { error: err, needsEmailConfirmation } = await signUp({
-        email: email.trim(),
+      choreographExit();
+      return;
+    }
+
+    // signup
+    const trimmedEmail = email.trim();
+    const { error: err, needsEmailConfirmation, needsOtpVerification, userId } =
+      await signUp({
+        email: trimmedEmail,
         password,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
       });
-      if (err) {
-        setError(err);
-        setSubmitting(false);
-        return;
-      }
-      if (needsEmailConfirmation) {
-        setError("Check your email to confirm your account.");
-        setSubmitting(false);
-        return;
-      }
+    if (err) {
+      setError(err);
+      setSubmitting(false);
+      return;
     }
-
-    // Success — choreograph exit.
-    const t1 = setTimeout(() => {
-      setExiting(true);
-      setAuthTransitionPhase("fading-out");
-    }, 200);
-    const t2 = setTimeout(() => {
-      setAuthTransitionPhase("hidden");
-    }, 1200);
-    const t3 = setTimeout(() => {
-      setAuthTransitionPhase("reveal-dark");
-      onClose();
-    }, 2100);
-    const t4 = setTimeout(() => {
-      setAuthTransitionPhase("idle");
-    }, 2600);
-    timers.current.push(t1, t2, t3, t4);
+    if (needsEmailConfirmation) {
+      setError("Check your email to confirm your account.");
+      setSubmitting(false);
+      return;
+    }
+    if (needsOtpVerification && userId) {
+      // Move to OTP step inline; user is already authenticated.
+      setOtpEmail(trimmedEmail);
+      setOtpAttemptId(null);
+      setOtpDigits(["", "", "", "", "", ""]);
+      setOtpError(null);
+      setMode("otp");
+      setSubmitting(false);
+      void sendSignupOtp(trimmedEmail, userId);
+      return;
+    }
+    // Fallback: no OTP requested (shouldn't happen with new register flow).
+    choreographExit();
   };
+
 
   const title = headerFor(context);
 
