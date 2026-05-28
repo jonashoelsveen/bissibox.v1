@@ -252,13 +252,13 @@ export function SignInModal({
 
     // signup
     const trimmedEmail = email.trim();
-    const { error: err, needsEmailConfirmation, needsOtpVerification, userId } =
-      await signUp({
-        email: trimmedEmail,
-        password,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-      });
+    const result = await signUp({
+      email: trimmedEmail,
+      password,
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+    });
+    const { error: err, needsEmailConfirmation, needsOtpVerification, userId } = result;
     if (err) {
       setError(err);
       setSubmitting(false);
@@ -270,14 +270,18 @@ export function SignInModal({
       return;
     }
     if (needsOtpVerification && userId) {
-      // Move to OTP step inline; user is already authenticated.
+      const accessToken = result._pendingAccessToken ?? "";
+      const refreshToken = result._pendingRefreshToken ?? "";
+      setPendingAccessToken(accessToken || null);
+      setPendingRefreshToken(refreshToken || null);
+      setPendingUserId(userId);
       setOtpEmail(trimmedEmail);
       setOtpAttemptId(null);
       setOtpDigits(["", "", "", "", "", ""]);
       setOtpError(null);
       setMode("otp");
       setSubmitting(false);
-      void sendSignupOtp(trimmedEmail, userId);
+      void sendSignupOtp(trimmedEmail, userId, accessToken);
       return;
     }
     // Fallback: no OTP requested (shouldn't happen with new register flow).
