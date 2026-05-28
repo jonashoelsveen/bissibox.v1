@@ -53,23 +53,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const bootedRef = useRef(false);
   const rehydratingRef = useRef(false);
 
+  const recoverFromLocalSession = useCallback(async (): Promise<boolean> => {
+    try {
+      const [{ data: sessionData }, { data: userData, error }] = await Promise.all([
+        supabase.auth.getSession(),
+        supabase.auth.getUser(),
+      ]);
+      const localSession = sessionData.session ?? null;
+      const localUser = userData.user ?? localSession?.user ?? null;
+      if (error || !localUser) return false;
+      setSession(localSession);
+      setUser(localUser);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   // Re-hydrate the Supabase client from the HTTP-only cookie. Used both on
   // boot and whenever the tab regains focus after long idle (otherwise the
   // in-memory access token can be silently expired, making queries fail and
   // pages render in a logged-out state).
   const rehydrate = useCallback(async (opts?: { onBoot?: boolean }): Promise<boolean> => {
-    if (rehydratingRef.current) return false;
+    if (rehydratingRef.current) {
+      return recoverFromLocalSession();
+    }
     rehydratingRef.current = true;
     try {
       const data = await fetchSession();
       if (data && data.user && data.access_token && data.refresh_token) {
-        await supabase.auth.setSession({
+        const { data: nextSession } = await supabase.auth.setSession({
           access_token: data.access_token,
           refresh_token: data.refresh_token,
         });
-        setUser(data.user);
+        setSession(nextSession.session ?? null);
+        setUser(nextSession.user ?? data.user);
         return true;
       }
+      const localOk = await recoverFromLocalSession();
+      if (localOk) return true;
       if (opts?.onBoot) {
         // Cookie missing/invalid on first load → clear any stale local state.
         try {
@@ -86,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       rehydratingRef.current = false;
     }
-  }, []);
+  }, [recoverFromLocalSession]);
 
   // Boot: hydrate from the HTTP-only cookie via /api/auth/session.
   useEffect(() => {
@@ -183,11 +205,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!res.ok || !body.user || !body.access_token || !body.refresh_token) {
         return { error: body.error ?? "Sign-in failed" };
       }
-      await supabase.auth.setSession({
+      const { data } = await supabase.auth.setSession({
         access_token: body.access_token,
         refresh_token: body.refresh_token,
       });
-      setUser(body.user);
+      setSession(data.session ?? null);
+      setUser(data.user ?? body.user);
       return {};
     } catch (e) {
       return { error: e instanceof Error ? e.message : "Network error" };
@@ -207,11 +230,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!res.ok) return { error: body.error ?? "Sign-up failed" };
         if (body.needsEmailConfirmation) return { needsEmailConfirmation: true };
         if (body.user && body.access_token && body.refresh_token) {
-          await supabase.auth.setSession({
+          const { data } = await supabase.auth.setSession({
             access_token: body.access_token,
             refresh_token: body.refresh_token,
           });
-          setUser(body.user);
+          setSession(data.session ?? null);
+          setUser(data.user ?? body.user);
         }
         return {};
       } catch (e) {
