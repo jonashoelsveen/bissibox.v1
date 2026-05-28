@@ -23,41 +23,54 @@ export const Route = createFileRoute("/api/auth/register")({
             headers: { "Content-Type": "application/json" },
           });
         }
-        const { data, error } = await supabaseAdmin.auth.signUp({
-          email: parsed.email,
-          password: parsed.password,
-          options: {
-            data: {
+
+        // Create user already email-confirmed so Supabase does NOT send
+        // its own confirmation email (which links to lovable.app). The
+        // Aponna in-app OTP step is the sole email verification gate.
+        const { data: created, error: createErr } =
+          await supabaseAdmin.auth.admin.createUser({
+            email: parsed.email,
+            password: parsed.password,
+            email_confirm: true,
+            user_metadata: {
               first_name: parsed.first_name ?? "",
               last_name: parsed.last_name ?? "",
             },
-          },
-        });
-        if (error || !data.user) {
-          return new Response(JSON.stringify({ error: error?.message ?? "Sign-up failed" }), {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
           });
-        }
-        if (!data.session) {
-          // Email confirmation required — no session yet.
+        if (createErr || !created.user) {
           return new Response(
-            JSON.stringify({ user: data.user, needsEmailConfirmation: true }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
+            JSON.stringify({ error: createErr?.message ?? "Sign-up failed" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
           );
         }
+
+        // Immediately sign the user in so the client has a session and the
+        // OTP edge function's auth check passes.
+        const { data: signInData, error: signInErr } =
+          await supabaseAdmin.auth.signInWithPassword({
+            email: parsed.email,
+            password: parsed.password,
+          });
+        if (signInErr || !signInData.session || !signInData.user) {
+          return new Response(
+            JSON.stringify({ error: signInErr?.message ?? "Sign-in after sign-up failed" }),
+            { status: 500, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
         const cookie = sealSession({
-          refresh_token: data.session.refresh_token,
-          user_id: data.user.id,
+          refresh_token: signInData.session.refresh_token,
+          user_id: signInData.user.id,
           issued_at: Date.now(),
         });
         const requestHost = new URL(request.url).host;
         return new Response(
           JSON.stringify({
-            user: data.user,
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-            expires_at: data.session.expires_at,
+            user: signInData.user,
+            access_token: signInData.session.access_token,
+            refresh_token: signInData.session.refresh_token,
+            expires_at: signInData.session.expires_at,
+            needsOtpVerification: true,
           }),
           {
             status: 200,
