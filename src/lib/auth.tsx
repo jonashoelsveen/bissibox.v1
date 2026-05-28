@@ -205,11 +205,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!res.ok || !body.user || !body.access_token || !body.refresh_token) {
         return { error: body.error ?? "Sign-in failed" };
       }
-      await supabase.auth.setSession({
+      const { data } = await supabase.auth.setSession({
         access_token: body.access_token,
         refresh_token: body.refresh_token,
       });
-      setUser(body.user);
+      setSession(data.session ?? null);
+      setUser(data.user ?? body.user);
       return {};
     } catch (e) {
       return { error: e instanceof Error ? e.message : "Network error" };
@@ -229,11 +230,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!res.ok) return { error: body.error ?? "Sign-up failed" };
         if (body.needsEmailConfirmation) return { needsEmailConfirmation: true };
         if (body.user && body.access_token && body.refresh_token) {
-          await supabase.auth.setSession({
+          const { data } = await supabase.auth.setSession({
             access_token: body.access_token,
             refresh_token: body.refresh_token,
           });
-          setUser(body.user);
+          setSession(data.session ?? null);
+          setUser(data.user ?? body.user);
         }
         return {};
       } catch (e) {
