@@ -1067,19 +1067,17 @@ export function UnifiedElasticGrid({
     setHeaderH(headerRef.current.offsetHeight);
   }, [viewMode]);
 
-  // Mirror the actual scroll viewport width onto the sibling header row.
-  // This is more robust than inferring a scrollbar gutter width, because the
-  // body grid always lays out inside `clientWidth` (i.e. to the LEFT of the
-  // scrollbar / reserved gutter). By giving the header that exact width, the
-  // Sunday column ends at the same x-position as the body columns below.
-  const [weekViewportW, setWeekViewportW] = useState<number | null>(null);
+  // Measure the actual scrollbar gutter width so the header can render an
+  // explicit blank gutter cell above it. This makes the Sunday header stop
+  // to the LEFT of the scrollbar, matching the diary week view exactly.
+  const [scrollbarGutterW, setScrollbarGutterW] = useState(0);
   useLayoutEffect(() => {
     const el = weekScrollerRef.current;
     if (!el) return;
     const measure = () => {
-      const viewportW = el.clientWidth;
-      setWeekViewportW((prev) => {
-        const next = viewportW > 0 ? viewportW : null;
+      const gutter = el.offsetWidth - el.clientWidth;
+      setScrollbarGutterW((prev) => {
+        const next = gutter > 0 ? gutter : 0;
         return prev === next ? prev : next;
       });
     };
@@ -1266,21 +1264,21 @@ export function UnifiedElasticGrid({
               >
                 <div
                   className="flex-none"
-                  style={!isDayView && weekViewportW ? { width: weekViewportW } : undefined}
                 >
-                <div
-                  ref={headerRowRef}
-                  data-grid-header="1"
-                  className="relative z-30 grid bg-card"
-                  style={{
-                    gridTemplateColumns,
-                    transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
-                    willChange: "grid-template-columns",
-                    ...(isDayView
-                      ? { width: "fit-content", marginInline: "auto" }
-                      : null),
-                  }}
-                >
+                  <div className={!isDayView ? "flex w-full" : undefined}>
+                    <div
+                      ref={headerRowRef}
+                      data-grid-header="1"
+                      className={`relative z-30 grid bg-card ${!isDayView ? "min-w-0 flex-1" : ""}`}
+                      style={{
+                        gridTemplateColumns,
+                        transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
+                        willChange: "grid-template-columns",
+                        ...(isDayView
+                          ? { width: "fit-content", marginInline: "auto" }
+                          : null),
+                      }}
+                    >
 
 
                     {/* Week-number gutter header (clickable to zoom OUT to month). */}
@@ -1348,7 +1346,15 @@ export function UnifiedElasticGrid({
                         </button>
                       );
                     })}
-                </div>
+                    </div>
+                    {!isDayView && scrollbarGutterW > 0 && (
+                      <div
+                        aria-hidden
+                        className="flex-none border-b border-hairline bg-card"
+                        style={{ width: scrollbarGutterW, height: 36 }}
+                      />
+                    )}
+                  </div>
                 </div>
 
 
