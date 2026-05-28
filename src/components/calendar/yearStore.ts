@@ -866,32 +866,17 @@ export function useEventStore(calId: string) {
       const current = eventsRef.current;
       const existing = current.find((e) => e.id === id);
       if (!existing || !canMutateEvent(existing)) return;
-      // When the owner (client) drag-and-drops a coach-created pending
-      // session, treat the drag as an implicit accept: clear coach_pending
-      // so the tile returns to its normal color. The coach themselves keeps
-      // the pending stripe until the client explicitly accepts.
-      const viewerIsOwner =
-        !!user?.id &&
-        existing.createdByCoachId != null &&
-        existing.createdByCoachId !== user.id;
-      const shouldAccept = existing.coachPending === true && viewerIsOwner;
-      const merged: CalendarEvent = {
-        ...existing,
-        ...patch,
-        ...(shouldAccept ? { coachPending: false } : {}),
-      };
+      const merged: CalendarEvent = { ...existing, ...patch };
       const next = current.map((e) => (e.id === id ? merged : e));
       applyLocal(next);
       const dbPatch: {
         starts_at?: string;
         ends_at?: string;
         all_day?: boolean;
-        coach_pending?: boolean;
       } = {};
       if (patch.startISO != null) dbPatch.starts_at = isoToDb(patch.startISO);
       if (patch.endISO != null) dbPatch.ends_at = isoToDb(patch.endISO);
       if (patch.allDay != null) dbPatch.all_day = patch.allDay;
-      if (shouldAccept) dbPatch.coach_pending = false;
       if (Object.keys(dbPatch).length > 0) {
         void enqueueWrite(id, async () => {
           const { error } = await supabase.from("calendar_sessions").update(dbPatch).eq("id", id);
@@ -899,8 +884,9 @@ export function useEventStore(calId: string) {
         });
       }
     },
-    [applyLocal, canMutateEvent, enqueueWrite, user?.id],
+    [applyLocal, canMutateEvent, enqueueWrite],
   );
+
 
   const deleteEvent = useCallback(
     (id: string) => {
