@@ -62,6 +62,9 @@ export interface DiaryPopoverEditorProps {
    *  initial paint. Used to match the tile's actual saved color (existing
    *  sessions) or the top diary-activity tab color (new sessions). */
   defaultColor?: string | null;
+  /** The user's diary_activity category list — used to resolve the correct
+   *  color for the selected activity type when saving. */
+  diaryActivityCategories?: { id: string; name: string; color: string }[];
 }
 
 export function DiaryPopoverEditor({
@@ -73,6 +76,7 @@ export function DiaryPopoverEditor({
   onClose,
   onCommit,
   defaultColor,
+  diaryActivityCategories = [],
 }: DiaryPopoverEditorProps) {
   const [title, setTitle] = useState(initialEvent?.title ?? "");
 
@@ -130,8 +134,14 @@ export function DiaryPopoverEditor({
   const groupDef = DIARY_GROUPS.find((g) => g.id === diaryGroup);
   const hasSubs = !!groupDef?.children?.length;
 
-  // Prefer: explicit defaultColor prop → initialEvent's saved color → colorForActivity fallback
+  // Resolve the stripe color from the left-panel diary_activity category
+  // so it always matches the dot in the Activities section.
+  const activityKeyForAccent = (diaryGroup === "endurance" ? diarySub : diaryGroup) || "";
+  const matchedCategoryForAccent = diaryActivityCategories.find(
+    (c) => c.name.toLowerCase() === activityKeyForAccent.toLowerCase(),
+  );
   const accent =
+    matchedCategoryForAccent?.color ??
     defaultColor ??
     initialEvent?.color ??
     (diaryGroup === "endurance" ? colorForActivity(diarySub) : CAT_TRAINING_COLOR);
@@ -144,8 +154,13 @@ export function DiaryPopoverEditor({
 
   const buildValue = (): DiaryPopoverValue => {
     const s = stateRef.current;
+    const activityKey = (s.diaryGroup === "endurance" ? s.diarySub : s.diaryGroup) || "";
+    const matchedCategory = diaryActivityCategories.find(
+      (c) => c.name.toLowerCase() === activityKey.toLowerCase(),
+    );
     const trainingColor =
-      s.diaryGroup === "endurance" ? colorForActivity(s.diarySub) : CAT_TRAINING_COLOR;
+      matchedCategory?.color ??
+      (s.diaryGroup === "endurance" ? colorForActivity(s.diarySub) : CAT_TRAINING_COLOR);
     // Reconstruct the time range from the original start + current duration.
     const startMin = initialStartMin ?? 9 * 60;
     const time = s.durationMin > 0
