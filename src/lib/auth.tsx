@@ -51,6 +51,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<Mode>("participant");
   const [activeEntityId, setActiveEntityIdState] = useState<string | null>(null);
   const bootedRef = useRef(false);
+  const rehydratingRef = useRef(false);
+
+  // Re-hydrate the Supabase client from the HTTP-only cookie. Used both on
+  // boot and whenever the tab regains focus after long idle (otherwise the
+  // in-memory access token can be silently expired, making queries fail and
+  // pages render in a logged-out state).
+  const rehydrate = useCallback(async (opts?: { onBoot?: boolean }) => {
+    if (rehydratingRef.current) return;
+    rehydratingRef.current = true;
+    try {
+      const data = await fetchSession();
+      if (data && data.user && data.access_token && data.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        });
+        setUser(data.user);
+      } else if (opts?.onBoot) {
+        // Cookie missing/invalid on first load → clear any stale local state.
+        try {
+          await supabase.auth.signOut({ scope: "local" });
+        } catch {
+          /* ignore */
+        }
+        setUser(null);
+        setSession(null);
+      }
+      // On a focus-driven rehydrate we deliberately do NOT sign the user
+      // out on a transient /api/auth/session failure (network blip, etc).
+    } finally {
+      rehydratingRef.current = false;
+    }
+  }, []);
 
   // Boot: hydrate from the HTTP-only cookie via /api/auth/session.
   useEffect(() => {
@@ -64,25 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     (async () => {
-      const data = await fetchSession();
-      if (data && data.user && data.access_token && data.refresh_token) {
-        // Hydrate the in-memory Supabase client so existing .from() calls and
-        // the attachSupabaseAuth middleware have a valid bearer token.
-        await supabase.auth.setSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
-        });
-        setUser(data.user);
-      } else {
-        // Cookie missing/invalid → make sure no stale localStorage session lingers.
-        try {
-          await supabase.auth.signOut({ scope: "local" });
-        } catch {
-          /* ignore */
-        }
-        setUser(null);
-        setSession(null);
-      }
+      await rehydrate({ onBoot: true });
       setLoading(false);
       setAuthReady(true);
     })();
@@ -95,7 +110,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     return () => sub.subscription.unsubscribe();
-  }, []);
+  }, [rehydrate]);
+
+  // Refresh the session whenever the tab regains visibility/focus. After
+  // several hours idle the in-memory Supabase access token has expired and
+  // Supabase's own auto-refresh may have failed silently, causing queries
+  // to return empty and the top tab-bar to render in a logged-out state.
+  // Re-asking our cookie-backed /api/auth/session endpoint rotates the
+  // refresh token and restores a valid bearer in one round-trip.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void rehydrate();
+    };
+    const onFocus = () => void rehydrate();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [rehydrate]);
 
   const setMode = (m: Mode) => {
     setModeState(m);
