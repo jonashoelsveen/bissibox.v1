@@ -495,8 +495,19 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
               )}
             </div>
           </Card>
+
+          <div className="flex justify-center pt-2">
+            <button
+              type="button"
+              onClick={() => setDeleteAccountOpen(true)}
+              className="text-xs font-medium text-destructive hover:underline"
+            >
+              Delete account
+            </button>
+          </div>
         </div>
       )}
+
 
       {tab === "entity-profile" && isTeamMode && team && (
         <div className="space-y-6">

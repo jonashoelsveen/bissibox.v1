@@ -30,6 +30,7 @@ import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
 import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
+import { Route as ApiAuthDeleteAccountRouteImport } from './routes/api/auth/delete-account'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 
 const SettingsRoute = SettingsRouteImport.update({
@@ -137,6 +138,11 @@ const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
   path: '/api/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthDeleteAccountRoute = ApiAuthDeleteAccountRouteImport.update({
+  id: '/api/auth/delete-account',
+  path: '/api/auth/delete-account',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
     id: '/lovable/email/queue/process',
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
   '/u/$userId': typeof UUserIdRoute
+  '/api/auth/delete-account': typeof ApiAuthDeleteAccountRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
   '/u/$userId': typeof UUserIdRoute
+  '/api/auth/delete-account': typeof ApiAuthDeleteAccountRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
@@ -211,6 +219,7 @@ export interface FileRoutesById {
   '/t/$teamId': typeof TTeamIdRoute
   '/team/board': typeof TeamBoardRoute
   '/u/$userId': typeof UUserIdRoute
+  '/api/auth/delete-account': typeof ApiAuthDeleteAccountRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/register': typeof ApiAuthRegisterRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/t/$teamId'
     | '/team/board'
     | '/u/$userId'
+    | '/api/auth/delete-account'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/register'
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/t/$teamId'
     | '/team/board'
     | '/u/$userId'
+    | '/api/auth/delete-account'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/register'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/t/$teamId'
     | '/team/board'
     | '/u/$userId'
+    | '/api/auth/delete-account'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/register'
@@ -310,6 +322,7 @@ export interface RootRouteChildren {
   TTeamIdRoute: typeof TTeamIdRoute
   TeamBoardRoute: typeof TeamBoardRoute
   UUserIdRoute: typeof UUserIdRoute
+  ApiAuthDeleteAccountRoute: typeof ApiAuthDeleteAccountRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthRegisterRoute: typeof ApiAuthRegisterRoute
@@ -466,6 +479,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/delete-account': {
+      id: '/api/auth/delete-account'
+      path: '/api/auth/delete-account'
+      fullPath: '/api/auth/delete-account'
+      preLoaderRoute: typeof ApiAuthDeleteAccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
       path: '/lovable/email/queue/process'
@@ -494,6 +514,7 @@ const rootRouteChildren: RootRouteChildren = {
   TTeamIdRoute: TTeamIdRoute,
   TeamBoardRoute: TeamBoardRoute,
   UUserIdRoute: UUserIdRoute,
+  ApiAuthDeleteAccountRoute: ApiAuthDeleteAccountRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthRegisterRoute: ApiAuthRegisterRoute,
