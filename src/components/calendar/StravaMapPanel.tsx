@@ -151,7 +151,11 @@ export function StravaMapPanel({
 
   return (
     <div className="space-y-3">
-      <div ref={ref} className="h-[320px] w-full overflow-hidden rounded-lg border border-hairline" />
+      <div
+        ref={ref}
+        className="h-[320px] w-full overflow-hidden rounded-lg border border-hairline"
+        onWheel={(e) => e.stopPropagation()}
+      />
       {elevationLoading && (
         <div className="flex h-[140px] w-full items-center justify-center rounded-lg border border-hairline bg-card text-[11px] text-muted-foreground">
           Loading elevation…
