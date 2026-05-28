@@ -149,24 +149,28 @@ export function SignInModal({
     timers.current.push(t1, t2, t3, t4);
   };
 
-  const sendSignupOtp = async (destEmail: string, userId: string) => {
+  const sendSignupOtp = async (destEmail: string, userId: string, accessToken: string) => {
     setOtpSending(true);
     setOtpError(null);
     try {
-      const { data, error: err } = await supabase.functions.invoke(
-        "send-verification-otp",
-        {
-          body: {
-            channel: "email",
-            destination: destEmail,
-            target_kind: "account_signup",
-            target_id: userId,
-            target_meta: {},
-          },
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      const res = await fetch(`${supabaseUrl}/functions/v1/send-verification-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+          "apikey": supabaseAnonKey,
         },
-      );
-      if (err) throw err;
-      const payload = data as { error?: string; attempt_id?: string };
+        body: JSON.stringify({
+          channel: "email",
+          destination: destEmail,
+          target_kind: "account_signup",
+          target_id: userId,
+          target_meta: {},
+        }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as { error?: string; attempt_id?: string };
       if (payload?.error) throw new Error(payload.error);
       if (!payload?.attempt_id) throw new Error("Failed to send code");
       setOtpAttemptId(payload.attempt_id);
@@ -181,17 +185,28 @@ export function SignInModal({
 
   const verifySignupOtp = async (codeStr?: string) => {
     const code = codeStr ?? otpDigits.join("");
-    if (code.length !== 6 || !otpAttemptId) return;
+    if (code.length !== 6 || !otpAttemptId || !pendingAccessToken) return;
     setOtpVerifying(true);
     setOtpError(null);
     try {
-      const { data, error: err } = await supabase.functions.invoke("verify-otp", {
-        body: { attempt_id: otpAttemptId, code },
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      const res = await fetch(`${supabaseUrl}/functions/v1/verify-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${pendingAccessToken}`,
+          "apikey": supabaseAnonKey,
+        },
+        body: JSON.stringify({ attempt_id: otpAttemptId, code }),
       });
-      if (err) throw err;
-      const payload = data as { error?: string; ok?: boolean };
+      const payload = (await res.json().catch(() => ({}))) as { error?: string; ok?: boolean };
       if (payload?.error) throw new Error(payload.error);
-      // Verified — user already has a session; exit modal.
+      // OTP verified — NOW activate the Supabase client session so the
+      // user becomes "logged in" in the UI and lands on home.
+      if (pendingRefreshToken) {
+        await activateSession(pendingAccessToken, pendingRefreshToken);
+      }
       choreographExit();
     } catch (e) {
       setOtpError((e as Error).message || "Verification failed");
