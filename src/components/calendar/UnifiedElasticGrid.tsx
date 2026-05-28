@@ -1259,8 +1259,10 @@ export function UnifiedElasticGrid({
               >
                 <div
                   className="flex-none"
+                  style={isDayView ? { paddingRight: scrollbarGutterW } : undefined}
                 >
                   <div className={!isDayView ? "flex w-full" : undefined}>
+
                     <div
                       ref={headerRowRef}
                       data-grid-header="1"
