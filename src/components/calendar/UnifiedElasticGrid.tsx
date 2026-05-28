@@ -1387,11 +1387,26 @@ export function UnifiedElasticGrid({
 
 
 
+                <div className="relative flex flex-1 min-h-0 flex-col">
                 <div
                   ref={weekScrollerRef}
-                  className="mini-dur-scroll relative flex flex-1 min-h-0 flex-col overflow-y-auto"
+                  className="mini-dur-scroll relative flex flex-1 min-h-0 flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden"
                   style={{
-                    scrollbarGutter: "auto",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                  } as React.CSSProperties}
+                  onScroll={(e) => {
+                    if (isDayView) return;
+                    const el = e.currentTarget;
+                    if (el.scrollHeight <= 0) return;
+                    const ratio = el.clientHeight / el.scrollHeight;
+                    setScrollbarThumb({
+                      top: (el.scrollTop / el.scrollHeight) * el.clientHeight,
+                      height: Math.max(32, ratio * el.clientHeight),
+                    });
+                    setIsScrollingWeek(true);
+                    if (scrollHideTimerRef.current) window.clearTimeout(scrollHideTimerRef.current);
+                    scrollHideTimerRef.current = window.setTimeout(() => setIsScrollingWeek(false), 2000);
                   }}
                 >
                   <div
