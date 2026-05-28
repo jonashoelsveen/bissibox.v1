@@ -419,12 +419,9 @@ export function SignInModal({
                   inputsRef={otpInputsRef}
                   onVerify={verifySignupOtp}
                   onResend={() => {
-                    // userId not directly known here; use current authenticated session user id.
-                    void (async () => {
-                      const { data } = await supabase.auth.getUser();
-                      const uid = data.user?.id;
-                      if (uid) await sendSignupOtp(otpEmail, uid);
-                    })();
+                    if (pendingAccessToken && pendingUserId) {
+                      void sendSignupOtp(otpEmail, pendingUserId, pendingAccessToken);
+                    }
                   }}
                   resendIn={otpResendIn}
                   sending={otpSending}
