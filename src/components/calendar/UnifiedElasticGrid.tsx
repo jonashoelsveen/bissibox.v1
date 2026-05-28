@@ -1061,6 +1061,7 @@ export function UnifiedElasticGrid({
   const headerRef = useRef<HTMLElement | null>(null);
   const headerRowRef = useRef<HTMLDivElement | null>(null);
   const weekScrollerRef = useRef<HTMLDivElement | null>(null);
+  const weekGridRef = useRef<HTMLDivElement | null>(null);
   const [headerH, setHeaderH] = useState(0);
   useLayoutEffect(() => {
     if (!headerRef.current) return;
@@ -1096,8 +1097,13 @@ export function UnifiedElasticGrid({
     };
     const measure = () => {
       const live = el.offsetWidth - el.clientWidth;
+      const scrollerRect = el.getBoundingClientRect();
+      const gridRect = weekGridRef.current?.getBoundingClientRect() ?? null;
+      const renderedGap = gridRect
+        ? Math.max(0, Math.round(scrollerRect.right - gridRect.right))
+        : 0;
       const probe = measureProbe();
-      const next = Math.max(live > 0 ? live : 0, probe);
+      const next = Math.max(live > 0 ? live : 0, renderedGap, probe);
       setScrollbarGutterW((prev) => (prev === next ? prev : next));
     };
     measure();
@@ -1381,6 +1387,7 @@ export function UnifiedElasticGrid({
                   style={{ scrollbarGutter: "stable" }}
                 >
                   <div
+                    ref={weekGridRef}
 
                     className="grid"
                     style={{
