@@ -1227,21 +1227,19 @@ export function UnifiedElasticGrid({
                 tabIndex={0}
               >
                 <div
-                  ref={weekScrollerRef}
-                  className="mini-dur-scroll relative flex flex-1 min-h-0 flex-col overflow-y-auto"
-                  style={{ scrollbarGutter: "stable" }}
+                  ref={headerRowRef}
+                  data-grid-header="1"
+                  className="relative z-30 grid flex-none bg-card"
+                  style={{
+                    gridTemplateColumns,
+                    transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
+                    willChange: "grid-template-columns",
+                    ...(isDayView
+                      ? { width: "fit-content", marginInline: "auto" }
+                      : { paddingRight: 4 }),
+                  }}
                 >
-                  <div
-                    ref={headerRowRef}
-                    data-grid-header="1"
-                    className="sticky top-0 z-30 grid flex-none bg-card"
-                    style={{
-                      gridTemplateColumns,
-                      transition: `grid-template-columns ${DUR_MS}ms ${EASE}`,
-                      willChange: "grid-template-columns",
-                      ...(isDayView ? { width: "fit-content", marginInline: "auto" } : null),
-                    }}
-                  >
+
                     {/* Week-number gutter header (clickable to zoom OUT to month). */}
                     {mode.kind === "year" && (
                       <button
