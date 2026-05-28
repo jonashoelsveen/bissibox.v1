@@ -1695,6 +1695,23 @@ export function UnifiedElasticGrid({
                     </div>
                   )}
                 </div>
+                {!isDayView && (
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute right-0 top-0 bottom-0 z-50 w-[6px]"
+                  >
+                    <div
+                      className="absolute right-[1px] w-[4px] rounded-full bg-muted-foreground/35"
+                      style={{
+                        opacity: isScrollingWeek ? 1 : 0,
+                        top: scrollbarThumb.top,
+                        height: scrollbarThumb.height,
+                        transition: "opacity 300ms ease, top 80ms linear, height 80ms linear",
+                      }}
+                    />
+                  </div>
+                )}
+                </div>
               </div>
             </motion.div>
           )}
