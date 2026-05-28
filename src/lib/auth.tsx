@@ -52,7 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [activeEntityId, setActiveEntityIdState] = useState<string | null>(null);
   const bootedRef = useRef(false);
   const rehydratingRef = useRef(false);
-  const signingOutRef = useRef(false);
 
   const recoverFromLocalSession = useCallback(async (): Promise<boolean> => {
     try {
