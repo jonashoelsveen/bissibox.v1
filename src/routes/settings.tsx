@@ -612,7 +612,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
           <div className="flex justify-center pt-2">
             <button
               type="button"
-              onClick={() => setDeleteAccountOpen(true)}
+              onClick={openDeleteFlow}
               className="text-xs font-medium text-destructive hover:underline"
             >
               Delete account
