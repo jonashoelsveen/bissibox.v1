@@ -1067,9 +1067,24 @@ export function UnifiedElasticGrid({
     setHeaderH(headerRef.current.offsetHeight);
   }, [viewMode]);
 
-  // (Removed scrollbar-gutter compensation: header is now rendered INSIDE the
-  // scroller alongside the body grid so both share the exact same content
-  // width. Column dividers therefore line up by construction.)
+  // Measure the actual scrollbar gutter width of the week/day body scroller
+  // and mirror it as right padding on the (sibling) header row so the column
+  // dividers in the header line up perfectly with the column dividers in the
+  // body, regardless of platform scrollbar width.
+  const [scrollbarGutterW, setScrollbarGutterW] = useState(0);
+  useLayoutEffect(() => {
+    const el = weekScrollerRef.current;
+    if (!el) return;
+    const measure = () => {
+      const gutter = el.offsetWidth - el.clientWidth;
+      setScrollbarGutterW(gutter > 0 ? gutter : 0);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [viewMode, mode.kind]);
+
 
   // Minutes elapsed since the week-view start (06:00). Includes seconds for
   // sub-minute precision so the indicator advances smoothly between ticks.
@@ -1236,7 +1251,8 @@ export function UnifiedElasticGrid({
                     willChange: "grid-template-columns",
                     ...(isDayView
                       ? { width: "fit-content", marginInline: "auto" }
-                      : { paddingRight: 4 }),
+                      : { paddingRight: scrollbarGutterW }),
+
                   }}
                 >
 
