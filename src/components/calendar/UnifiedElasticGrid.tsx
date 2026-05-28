@@ -1062,6 +1062,14 @@ export function UnifiedElasticGrid({
   const headerRowRef = useRef<HTMLDivElement | null>(null);
   const weekScrollerRef = useRef<HTMLDivElement | null>(null);
   const [headerH, setHeaderH] = useState(0);
+  const [scrollbarThumb, setScrollbarThumb] = useState({ top: 0, height: 40 });
+  const [isScrollingWeek, setIsScrollingWeek] = useState(false);
+  const scrollHideTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (scrollHideTimerRef.current) window.clearTimeout(scrollHideTimerRef.current);
+    };
+  }, []);
   useLayoutEffect(() => {
     if (!headerRef.current) return;
     setHeaderH(headerRef.current.offsetHeight);
