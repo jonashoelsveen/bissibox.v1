@@ -143,6 +143,16 @@ export function SessionDetailsModal({
 
   const [confirmCancel, setConfirmCancel] = useState(false);
 
+  const tabScrollRef = useRef<HTMLDivElement | null>(null);
+  const [tabScrolling, setTabScrolling] = useState(false);
+  const [tabScrollThumb, setTabScrollThumb] = useState({ top: 0, height: 40 });
+  const tabScrollTimer = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (tabScrollTimer.current) window.clearTimeout(tabScrollTimer.current);
+    };
+  }, []);
+
   const requestClose = () => {
     if (isDirty && !readOnly && !suppressUnsavedPrompt) setConfirmCancel(true);
     else onClose();
@@ -388,7 +398,24 @@ export function SessionDetailsModal({
               </div>
 
               {/* Tab body */}
-              <div className="h-[520px] flex-none overflow-y-auto px-4 py-4">
+              <div className="relative flex-none" style={{ height: "min(520px, calc(88vh - 220px))" }}>
+                <div
+                  ref={tabScrollRef}
+                  className="h-full overflow-y-auto px-4 py-4 [&::-webkit-scrollbar]:hidden"
+                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+                  onScroll={(e) => {
+                    const el = e.currentTarget;
+                    if (el.scrollHeight <= el.clientHeight) return;
+                    const ratio = el.clientHeight / el.scrollHeight;
+                    setTabScrollThumb({
+                      top: (el.scrollTop / el.scrollHeight) * el.clientHeight,
+                      height: Math.max(32, ratio * el.clientHeight),
+                    });
+                    setTabScrolling(true);
+                    if (tabScrollTimer.current) window.clearTimeout(tabScrollTimer.current);
+                    tabScrollTimer.current = window.setTimeout(() => setTabScrolling(false), 2000);
+                  }}
+                >
                 {tab === "about" && (
                   <AboutTab
                     activities={value.activities}
@@ -446,6 +473,21 @@ export function SessionDetailsModal({
                     />
                   )
                 )}
+                </div>
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute right-0 top-0 bottom-0 w-[6px]"
+                >
+                  <div
+                    className="absolute right-[1px] w-[4px] rounded-full bg-muted-foreground/35"
+                    style={{
+                      opacity: tabScrolling ? 1 : 0,
+                      top: tabScrollThumb.top,
+                      height: tabScrollThumb.height,
+                      transition: "opacity 300ms ease, top 80ms linear, height 80ms linear",
+                    }}
+                  />
+                </div>
               </div>
             </>
           )}
