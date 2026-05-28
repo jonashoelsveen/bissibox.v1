@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   setAuthTransitionPhase,
   setSignInModalOpen,
@@ -12,7 +13,7 @@ const HELVETICA =
 
 export type SignInContext = "cloud" | "calendar" | "diary" | "photos" | "entity" | "role";
 
-type Mode = "signin" | "signup";
+type Mode = "signin" | "signup" | "otp";
 
 function headerFor(ctx: SignInContext) {
   switch (ctx) {
