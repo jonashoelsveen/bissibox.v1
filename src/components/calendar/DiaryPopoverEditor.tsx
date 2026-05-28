@@ -58,6 +58,10 @@ export interface DiaryPopoverEditorProps {
   date?: Date;
   onClose: () => void;
   onCommit: (value: DiaryPopoverValue, opts?: { delete?: boolean }) => void;
+  /** When provided, overrides the computed colorForActivity accent for the
+   *  initial paint. Used to match the tile's actual saved color (existing
+   *  sessions) or the top diary-activity tab color (new sessions). */
+  defaultColor?: string | null;
 }
 
 export function DiaryPopoverEditor({
@@ -68,6 +72,7 @@ export function DiaryPopoverEditor({
   date,
   onClose,
   onCommit,
+  defaultColor,
 }: DiaryPopoverEditorProps) {
   const [title, setTitle] = useState(initialEvent?.title ?? "");
 
