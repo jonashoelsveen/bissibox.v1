@@ -1251,7 +1251,8 @@ export function UnifiedElasticGrid({
                     willChange: "grid-template-columns",
                     ...(isDayView
                       ? { width: "fit-content", marginInline: "auto" }
-                      : { paddingRight: 4 }),
+                      : { paddingRight: scrollbarGutterW }),
+
                   }}
                 >
 
