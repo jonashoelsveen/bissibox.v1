@@ -1067,18 +1067,19 @@ export function UnifiedElasticGrid({
     setHeaderH(headerRef.current.offsetHeight);
   }, [viewMode]);
 
-  // Measure the actual scrollbar gutter width of the week/day body scroller
-  // and mirror it as right padding on the (sibling) header row so the column
-  // dividers in the header line up perfectly with the column dividers in the
-  // body, regardless of platform scrollbar width.
-  const [scrollbarGutterW, setScrollbarGutterW] = useState(0);
+  // Mirror the actual scroll viewport width onto the sibling header row.
+  // This is more robust than inferring a scrollbar gutter width, because the
+  // body grid always lays out inside `clientWidth` (i.e. to the LEFT of the
+  // scrollbar / reserved gutter). By giving the header that exact width, the
+  // Sunday column ends at the same x-position as the body columns below.
+  const [weekViewportW, setWeekViewportW] = useState<number | null>(null);
   useLayoutEffect(() => {
     const el = weekScrollerRef.current;
     if (!el) return;
     const measure = () => {
-      const gutter = el.offsetWidth - el.clientWidth;
-      setScrollbarGutterW((prev) => {
-        const next = gutter > 0 ? gutter : 0;
+      const viewportW = el.clientWidth;
+      setWeekViewportW((prev) => {
+        const next = viewportW > 0 ? viewportW : null;
         return prev === next ? prev : next;
       });
     };
@@ -1265,7 +1266,7 @@ export function UnifiedElasticGrid({
               >
                 <div
                   className="flex-none"
-                  style={{ paddingRight: scrollbarGutterW }}
+                  style={!isDayView && weekViewportW ? { width: weekViewportW } : undefined}
                 >
                 <div
                   ref={headerRowRef}
