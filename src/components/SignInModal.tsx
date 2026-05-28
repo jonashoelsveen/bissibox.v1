@@ -893,3 +893,170 @@ function RadioRow({
     </label>
   );
 }
+
+function OtpStep({
+  email,
+  digits,
+  setDigits,
+  inputsRef,
+  onVerify,
+  onResend,
+  resendIn,
+  sending,
+  verifying,
+  error,
+}: {
+  email: string;
+  digits: string[];
+  setDigits: (d: string[]) => void;
+  inputsRef: React.MutableRefObject<Array<HTMLInputElement | null>>;
+  onVerify: (code?: string) => void;
+  onResend: () => void;
+  resendIn: number;
+  sending: boolean;
+  verifying: boolean;
+  error: string | null;
+}) {
+  const handleDigit = (i: number, v: string) => {
+    const clean = v.replace(/\D/g, "");
+    if (!clean) {
+      const next = [...digits];
+      next[i] = "";
+      setDigits(next);
+      return;
+    }
+    if (clean.length > 1) {
+      const chars = clean.slice(0, 6).split("");
+      const next = ["", "", "", "", "", ""];
+      chars.forEach((c, idx) => (next[idx] = c));
+      setDigits(next);
+      const lastIdx = Math.min(chars.length, 6) - 1;
+      inputsRef.current[lastIdx]?.focus();
+      if (chars.length === 6) onVerify(next.join(""));
+      return;
+    }
+    const next = [...digits];
+    next[i] = clean[0];
+    setDigits(next);
+    if (i < 5) inputsRef.current[i + 1]?.focus();
+    if (i === 5 && next.every((d) => d)) onVerify(next.join(""));
+  };
+
+  const handleKey = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !digits[i] && i > 0) {
+      inputsRef.current[i - 1]?.focus();
+    }
+  };
+
+  const complete = digits.every((d) => d);
+
+  return (
+    <div style={{ padding: "44px 40px 32px" }}>
+      <ModalHeader
+        title="Verify your email"
+        subtitle={`We've sent a 6-digit code to ${email}. Enter it below.`}
+        subtitleSize={13}
+      />
+
+      <div className="flex justify-between gap-2" style={{ marginTop: 8 }}>
+        {digits.map((d, i) => (
+          <input
+            key={i}
+            ref={(el) => {
+              inputsRef.current[i] = el;
+            }}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={d}
+            onChange={(e) => handleDigit(i, e.target.value)}
+            onKeyDown={(e) => handleKey(i, e)}
+            disabled={verifying}
+            style={{
+              fontFamily: HELVETICA,
+              width: 48,
+              height: 56,
+              borderRadius: 10,
+              border: "1px solid #1d1d1f",
+              background: "#ffffff",
+              color: "#1d1d1f",
+              fontSize: 22,
+              textAlign: "center",
+              outline: "none",
+              transition: "box-shadow 120ms ease-out",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,29,31,0.08)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.boxShadow = "none";
+            }}
+          />
+        ))}
+      </div>
+
+      {error && (
+        <div style={{ marginTop: 14 }}>
+          <ErrorLine error={error} />
+        </div>
+      )}
+
+      <div
+        className="flex items-center justify-between"
+        style={{
+          marginTop: 18,
+          fontFamily: HELVETICA,
+          fontSize: 12,
+          color: "#86868b",
+        }}
+      >
+        <button
+          type="button"
+          disabled={resendIn > 0 || sending}
+          onClick={onResend}
+          style={{
+            background: "transparent",
+            border: "none",
+            padding: 0,
+            cursor: resendIn > 0 || sending ? "default" : "pointer",
+            color: resendIn > 0 || sending ? "#86868b" : "#1d1d1f",
+            fontFamily: HELVETICA,
+            fontSize: 12,
+            textDecoration: resendIn > 0 || sending ? "none" : "underline",
+          }}
+        >
+          {sending
+            ? "Sending…"
+            : resendIn > 0
+              ? `Resend in ${resendIn}s`
+              : "Resend code"}
+        </button>
+        <span>Check your spam folder if you don't see the email.</span>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onVerify()}
+        disabled={verifying || !complete}
+        className="w-full transition active:scale-[0.99]"
+        style={{
+          marginTop: 18,
+          background: "#1d1d1f",
+          color: "#ffffff",
+          borderRadius: 12,
+          padding: "12px 18px",
+          fontFamily: HELVETICA,
+          fontSize: 15,
+          fontWeight: 500,
+          letterSpacing: "-0.005em",
+          border: "none",
+          cursor: verifying || !complete ? "default" : "pointer",
+          opacity: verifying || !complete ? 0.7 : 1,
+        }}
+      >
+        {verifying ? "Verifying…" : "Verify"}
+      </button>
+    </div>
+  );
+}
+
