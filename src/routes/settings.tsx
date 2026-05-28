@@ -1021,9 +1021,14 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
                       setDeletingAccount(true);
                       setDeleteError(null);
                       try {
+                        const { data: sessionData } = await supabase.auth.getSession();
+                        const accessToken = sessionData.session?.access_token ?? "";
                         const res = await fetch("/api/auth/delete-account", {
                           method: "POST",
                           credentials: "include",
+                          headers: {
+                            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+                          },
                         });
                         const body = (await res.json().catch(() => ({}))) as {
                           error?: string;
