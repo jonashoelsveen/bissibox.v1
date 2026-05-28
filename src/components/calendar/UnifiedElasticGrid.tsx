@@ -1062,6 +1062,14 @@ export function UnifiedElasticGrid({
   const headerRowRef = useRef<HTMLDivElement | null>(null);
   const weekScrollerRef = useRef<HTMLDivElement | null>(null);
   const [headerH, setHeaderH] = useState(0);
+  const [scrollbarThumb, setScrollbarThumb] = useState({ top: 0, height: 40 });
+  const [isScrollingWeek, setIsScrollingWeek] = useState(false);
+  const scrollHideTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (scrollHideTimerRef.current) window.clearTimeout(scrollHideTimerRef.current);
+    };
+  }, []);
   useLayoutEffect(() => {
     if (!headerRef.current) return;
     setHeaderH(headerRef.current.offsetHeight);
@@ -1379,11 +1387,26 @@ export function UnifiedElasticGrid({
 
 
 
+                <div className="relative flex flex-1 min-h-0 flex-col">
                 <div
                   ref={weekScrollerRef}
-                  className="mini-dur-scroll relative flex flex-1 min-h-0 flex-col overflow-y-auto"
+                  className="mini-dur-scroll relative flex flex-1 min-h-0 flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden"
                   style={{
-                    scrollbarGutter: "auto",
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                  } as React.CSSProperties}
+                  onScroll={(e) => {
+                    if (isDayView) return;
+                    const el = e.currentTarget;
+                    if (el.scrollHeight <= 0) return;
+                    const ratio = el.clientHeight / el.scrollHeight;
+                    setScrollbarThumb({
+                      top: (el.scrollTop / el.scrollHeight) * el.clientHeight,
+                      height: Math.max(32, ratio * el.clientHeight),
+                    });
+                    setIsScrollingWeek(true);
+                    if (scrollHideTimerRef.current) window.clearTimeout(scrollHideTimerRef.current);
+                    scrollHideTimerRef.current = window.setTimeout(() => setIsScrollingWeek(false), 2000);
                   }}
                 >
                   <div
@@ -1671,6 +1694,23 @@ export function UnifiedElasticGrid({
                       )}
                     </div>
                   )}
+                </div>
+                {!isDayView && (
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute right-0 top-0 bottom-0 z-50 w-[6px]"
+                  >
+                    <div
+                      className="absolute right-[1px] w-[4px] rounded-full bg-muted-foreground/35"
+                      style={{
+                        opacity: isScrollingWeek ? 1 : 0,
+                        top: scrollbarThumb.top,
+                        height: scrollbarThumb.height,
+                        transition: "opacity 300ms ease, top 80ms linear, height 80ms linear",
+                      }}
+                    />
+                  </div>
+                )}
                 </div>
               </div>
             </motion.div>
