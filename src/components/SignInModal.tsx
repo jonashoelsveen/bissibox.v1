@@ -41,7 +41,7 @@ export function SignInModal({
   onClose: () => void;
   context?: SignInContext;
 }) {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, activateSession } = useAuth();
   const [mode, setMode] = useState<Mode>("signin");
   const [fieldsReady, setFieldsReady] = useState(false);
   const [switchingMode, setSwitchingMode] = useState(false);
