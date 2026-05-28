@@ -2118,12 +2118,21 @@ export function MonthGridType1({
                 />
               ) : (
                 <div
-                  className="flex h-full w-full items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px]"
-                  style={{
-                    backgroundColor: ev.color ?? "hsl(var(--secondary))",
-                    boxShadow: ev.color ? `inset 2px 0 0 ${ev.color}` : undefined,
-                    color: "#fff",
-                  }}
+                  className="relative flex h-full w-full items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px]"
+                  style={
+                    ev.coachPending
+                      ? {
+                          backgroundColor: ev.color ? `${ev.color}1F` : "hsl(var(--secondary))",
+                          boxShadow: ev.color ? `inset 2px 0 0 ${ev.color}` : undefined,
+                          color: "hsl(var(--ink))",
+                        }
+                      : {
+                          backgroundColor: ev.color ?? "hsl(var(--secondary))",
+                          boxShadow: ev.color ? `inset 2px 0 0 ${ev.color}` : undefined,
+                          color: "#fff",
+                        }
+                  }
+                  data-coach-pending={ev.coachPending ? "1" : undefined}
                   title={ev.title}
                 >
                   <span className="truncate">{ev.title}</span>
