@@ -1755,7 +1755,12 @@ export function MonthGridType1({
                             style={(() => {
                               if (isDiaryEvent) return undefined;
                               const evId = it.kind === "event" ? it.event.id : null;
-                              const isActive = isRealEvent && evId !== null && ((lockedId ?? forceEditId) === evId || popover?.eventId === evId || pressedEventId === evId);
+                              const isCoachPending = it.kind === "event" && it.event.coachPending;
+                              // Coach-pending tiles keep the light striped look
+                              // even while pressed/dragging — never flip to the
+                              // solid active fill, so the pending state is
+                              // preserved consistently with week/day views.
+                              const isActive = !isCoachPending && isRealEvent && evId !== null && ((lockedId ?? forceEditId) === evId || popover?.eventId === evId || pressedEventId === evId);
                               if (isActive && itemColor) {
                                 return tall
                                   ? {
