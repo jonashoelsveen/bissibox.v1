@@ -1441,7 +1441,7 @@ export function UnifiedElasticGrid({
                     <div
                       className={`pointer-events-none absolute ${isDayView ? "left-0 right-0" : "inset-x-0"}`}
                       style={{
-                        top: 36,
+                        top: 0,
                         display: "grid",
                         gridTemplateColumns,
                         gridTemplateRows: isSimple
