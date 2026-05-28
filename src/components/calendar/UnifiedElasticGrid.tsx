@@ -1326,6 +1326,9 @@ export function UnifiedElasticGrid({
                       );
                     })}
                 </div>
+                </div>
+
+
 
                 <div
                   ref={weekScrollerRef}
