@@ -226,7 +226,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(args),
         });
-        const body = (await res.json().catch(() => ({}))) as SessionResponse & { needsEmailConfirmation?: boolean };
+        const body = (await res.json().catch(() => ({}))) as SessionResponse & {
+          needsEmailConfirmation?: boolean;
+          needsOtpVerification?: boolean;
+        };
         if (!res.ok) return { error: body.error ?? "Sign-up failed" };
         if (body.needsEmailConfirmation) return { needsEmailConfirmation: true };
         if (body.user && body.access_token && body.refresh_token) {
@@ -236,6 +239,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
           setSession(data.session ?? null);
           setUser(data.user ?? body.user);
+          if (body.needsOtpVerification) {
+            return {
+              needsOtpVerification: true,
+              userId: body.user.id,
+              email: args.email,
+            };
+          }
         }
         return {};
       } catch (e) {
@@ -244,6 +254,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+
 
   const signOut = useCallback(async () => {
     try {
