@@ -2905,15 +2905,28 @@ function CategoryDropdownRow({
   }, [availableCategories, initialCategoryId, lcColor, selectedId, onSelectionChange, onSetColor]);
 
   // If the popover's current color matches a different category than the
-  // currently-selected id (e.g. parent pushed a new default color), realign
-  // the selection so the dropdown label matches the visible tile color.
+  // currently-selected id (e.g. parent pushed a new default color via the
+  // color row), realign the selection so the dropdown label matches the
+  // visible tile color. CRITICAL: never override when the currently-selected
+  // id matches the session's explicit `initialCategoryId` and that category
+  // still exists in the available list — otherwise a coach viewing a
+  // client's calendar (or any user with duplicate-color categories) sees the
+  // dropdown jump from the saved activity to whichever other category
+  // happens to share the same color and sorts earlier.
   useEffect(() => {
     if (!availableCategories.length) return;
+    if (
+      initialCategoryId &&
+      selectedId === initialCategoryId &&
+      availableCategories.some((c) => c.id === initialCategoryId)
+    ) {
+      return;
+    }
     const matchByColor = availableCategories.find((c) => c.color.toLowerCase() === lcColor);
     if (matchByColor && matchByColor.id !== selectedId) {
       setSelectedId(matchByColor.id);
     }
-  }, [lcColor, availableCategories, selectedId]);
+  }, [lcColor, availableCategories, selectedId, initialCategoryId]);
 
   const selectedCat = availableCategories.find((c) => c.id === selectedId);
   useEffect(() => {
