@@ -143,6 +143,16 @@ export function SessionDetailsModal({
 
   const [confirmCancel, setConfirmCancel] = useState(false);
 
+  const tabScrollRef = useRef<HTMLDivElement | null>(null);
+  const [tabScrolling, setTabScrolling] = useState(false);
+  const [tabScrollThumb, setTabScrollThumb] = useState({ top: 0, height: 40 });
+  const tabScrollTimer = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (tabScrollTimer.current) window.clearTimeout(tabScrollTimer.current);
+    };
+  }, []);
+
   const requestClose = () => {
     if (isDirty && !readOnly && !suppressUnsavedPrompt) setConfirmCancel(true);
     else onClose();
