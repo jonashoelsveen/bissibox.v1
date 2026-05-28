@@ -1289,7 +1289,10 @@ export function UnifiedElasticGrid({
                   className="flex-none"
                   style={isDayView ? { paddingRight: scrollbarGutterW } : undefined}
                 >
-                  <div className={!isDayView ? "flex w-full" : undefined}>
+                  <div
+                    className={!isDayView ? "flex w-full" : undefined}
+                    style={!isDayView && weekGridW > 0 ? { minWidth: 0 } : undefined}
+                  >
 
                     <div
                       ref={headerRowRef}
@@ -1301,6 +1304,8 @@ export function UnifiedElasticGrid({
                         willChange: "grid-template-columns",
                         ...(isDayView
                           ? { width: "fit-content", marginInline: "auto" }
+                          : weekGridW > 0
+                            ? { width: weekGridW, flex: "0 0 auto" }
                           : null),
                       }}
                     >
@@ -1372,11 +1377,14 @@ export function UnifiedElasticGrid({
                       );
                     })}
                     </div>
-                    {!isDayView && scrollbarGutterW > 0 && (
+                    {!isDayView && (
                       <div
                         aria-hidden
-                        className="flex-none border-b border-hairline bg-card"
-                        style={{ width: scrollbarGutterW, height: 36 }}
+                        className="min-w-0 flex-1 border-b border-hairline bg-card"
+                        style={{
+                          height: 36,
+                          flexBasis: scrollbarGutterW > 0 ? scrollbarGutterW : undefined,
+                        }}
                       />
                     )}
                   </div>
