@@ -352,6 +352,7 @@ export function UnifiedElasticGrid({
   const { categories: teamCategories } = useUserCategories({
     teamId: seat === "admin" ? teamId : null,
   });
+  const { categories: diaryActivityCategories } = useUserCategories({ kind: "diary_activity" });
   // When a coach is viewing a client's calendar, preload the client's own
   // category list so a freshly-marked draft tile mounts with the same color
   // the saved session will resolve to. Without this, the tile briefly flashes
