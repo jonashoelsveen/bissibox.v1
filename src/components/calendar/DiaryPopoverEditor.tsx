@@ -58,6 +58,10 @@ export interface DiaryPopoverEditorProps {
   date?: Date;
   onClose: () => void;
   onCommit: (value: DiaryPopoverValue, opts?: { delete?: boolean }) => void;
+  /** When provided, overrides the computed colorForActivity accent for the
+   *  initial paint. Used to match the tile's actual saved color (existing
+   *  sessions) or the top diary-activity tab color (new sessions). */
+  defaultColor?: string | null;
 }
 
 export function DiaryPopoverEditor({
@@ -68,6 +72,7 @@ export function DiaryPopoverEditor({
   date,
   onClose,
   onCommit,
+  defaultColor,
 }: DiaryPopoverEditorProps) {
   const [title, setTitle] = useState(initialEvent?.title ?? "");
 
@@ -125,9 +130,11 @@ export function DiaryPopoverEditor({
   const groupDef = DIARY_GROUPS.find((g) => g.id === diaryGroup);
   const hasSubs = !!groupDef?.children?.length;
 
-  // Compute accent color for the side rail.
+  // Prefer: explicit defaultColor prop → initialEvent's saved color → colorForActivity fallback
   const accent =
-    diaryGroup === "endurance" ? colorForActivity(diarySub) : CAT_TRAINING_COLOR;
+    defaultColor ??
+    initialEvent?.color ??
+    (diaryGroup === "endurance" ? colorForActivity(diarySub) : CAT_TRAINING_COLOR);
 
   // Refs for unmount-safe autosave
   const stateRef = useRef({ title, diaryGroup, diarySub, durationMin, distanceKm, paceSecPerKm, sessionNote, activities });
