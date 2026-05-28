@@ -138,6 +138,8 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   const [tab, setTab] = useState<Tab>("account");
   const [createOpen, setCreateOpen] = useState(false);
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [profileEntities, setProfileEntities] = useState<
     { id: string; name: string; entity_type: string; roles: string[] }[]
   >([]);
@@ -495,8 +497,19 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
               )}
             </div>
           </Card>
+
+          <div className="flex justify-center pt-2">
+            <button
+              type="button"
+              onClick={() => setDeleteAccountOpen(true)}
+              className="text-xs font-medium text-destructive hover:underline"
+            >
+              Delete account
+            </button>
+          </div>
         </div>
       )}
+
 
       {tab === "entity-profile" && isTeamMode && team && (
         <div className="space-y-6">
@@ -741,9 +754,74 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
           </div>
         </section>
       </div>
+      {deleteAccountOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4"
+          onClick={() => {
+            if (!deletingAccount) setDeleteAccountOpen(false);
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-semibold text-ink">Delete account?</h2>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Are you sure you want to delete your account? This will permanently
+              remove all data related to this account, including your profile,
+              calendar, diary, photos, and any entities you own. This action
+              cannot be undone.
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={deletingAccount}
+                onClick={() => setDeleteAccountOpen(false)}
+                className="rounded-md border border-hairline px-4 py-2 text-sm text-ink hover:bg-secondary/60 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingAccount}
+                onClick={async () => {
+                  setDeletingAccount(true);
+                  try {
+                    const res = await fetch("/api/auth/delete-account", {
+                      method: "POST",
+                      credentials: "include",
+                    });
+                    const body = (await res.json().catch(() => ({}))) as {
+                      error?: string;
+                    };
+                    if (!res.ok) {
+                      toast.error(body.error ?? "Failed to delete account");
+                      setDeletingAccount(false);
+                      return;
+                    }
+                    await signOut();
+                    setDeleteAccountOpen(false);
+                    toast.success("Your account has been deleted.");
+                    navigate({ to: "/" });
+                  } catch (e) {
+                    toast.error(
+                      e instanceof Error ? e.message : "Network error",
+                    );
+                    setDeletingAccount(false);
+                  }
+                }}
+                className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {deletingAccount ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 /** Collapsible nav group used in the settings left panel — same chevron
  *  style as the calendar category sections. */
