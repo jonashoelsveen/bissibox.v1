@@ -103,26 +103,26 @@ export function useGroupMembers(): { members: GroupMemberRow[]; loading: boolean
         );
 
         if (ids.length > 0) {
-        const { data: profs } = await supabase
-          .from("profiles")
-          .select("id, first_name, last_name, avatar_url, email")
-          .in("id", ids);
-        const profById = new Map(
-          (profs ?? []).map((p) => [p.id as string, p]),
-        );
-        rows = ids.map((id) => {
-          const p = profById.get(id);
-          return {
-            user_id: id,
-            group_id: "clients",
-            group_name: "Clients",
-            first_name: (p?.first_name as string) ?? null,
-            last_name: (p?.last_name as string) ?? null,
-            avatar_url: (p?.avatar_url as string) ?? null,
-            email: (p?.email as string) ?? null,
-          };
-        });
-      }
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id, first_name, last_name, avatar_url, email")
+            .in("id", ids);
+          const profById = new Map(
+            (profs ?? []).map((p) => [p.id as string, p]),
+          );
+          rows = ids.map((id) => {
+            const p = profById.get(id);
+            return {
+              user_id: id,
+              group_id: "clients",
+              group_name: "Clients",
+              first_name: (p?.first_name as string) ?? null,
+              last_name: (p?.last_name as string) ?? null,
+              avatar_url: (p?.avatar_url as string) ?? null,
+              email: (p?.email as string) ?? null,
+            };
+          });
+        }
       }
 
       if (!cancelled) {

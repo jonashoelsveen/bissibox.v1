@@ -33,7 +33,7 @@ const MAX_TABS = 10;
 
 export function ClientsPage() {
   const { user, loading: authLoading, activeEntityId } = useAuth();
-  const isGroupLeader = useIsGroupLeader();
+  useIsGroupLeader();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const { members, loading } = useGroupMembers();
