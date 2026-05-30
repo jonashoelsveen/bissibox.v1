@@ -301,8 +301,44 @@ export function ClientsPage() {
 
                 const next = openTabs[idx + 1];
                 const nextIsActive = next ? activeClientId === next.user_id : false;
+                const isClosing = closingIds.has(t.user_id);
                 const showDivider =
-                  idx < openTabs.length - 1 && !isActive && !nextIsActive;
+                  idx < openTabs.length - 1 && !isActive && !nextIsActive && !isClosing;
+
+                const baseStyle: React.CSSProperties = isClosing
+                  ? {
+                      flex: "0 0 0px",
+                      minWidth: 0,
+                      maxWidth: 0,
+                      height: 38,
+                      marginRight: 0,
+                      padding: 0,
+                      marginBottom: -1,
+                      paddingBottom: 1,
+                      overflow: "hidden",
+                      opacity: 0,
+                      pointerEvents: "none",
+                      transition:
+                        "flex-basis 180ms cubic-bezier(0.2,0.8,0.2,1), min-width 180ms cubic-bezier(0.2,0.8,0.2,1), max-width 180ms cubic-bezier(0.2,0.8,0.2,1), margin 180ms cubic-bezier(0.2,0.8,0.2,1), padding 180ms cubic-bezier(0.2,0.8,0.2,1), opacity 140ms ease-out",
+                    }
+                  : {
+                      flex: "1 1 200px",
+                      minWidth: 140,
+                      maxWidth: 220,
+                      height: 38,
+                      marginRight: 4,
+                      background: "transparent",
+                      padding: "0 28px 0 12px",
+                      marginBottom: -1,
+                      paddingBottom: 1,
+                      touchAction: "pan-y",
+                      ...dragStyle,
+                      transition: isDragging
+                        ? "none"
+                        : dragId
+                          ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms"
+                          : "flex-basis 180ms cubic-bezier(0.2,0.8,0.2,1), max-width 180ms cubic-bezier(0.2,0.8,0.2,1), color 150ms",
+                    };
 
                 return (
                   <Fragment key={t.user_id}>
@@ -314,24 +350,7 @@ export function ClientsPage() {
                         else tabRefs.current.delete(t.user_id);
                       }}
                       onPointerDown={(e) => onTabPointerDown(e, t.user_id)}
-                      style={{
-                        flex: "1 1 200px",
-                        minWidth: 140,
-                        maxWidth: 220,
-                        height: 38,
-                        marginRight: 4,
-                        background: "transparent",
-                        padding: "0 28px 0 12px",
-                        marginBottom: -1,
-                        paddingBottom: 1,
-                        touchAction: "pan-y",
-                        ...dragStyle,
-                        transition: isDragging
-                          ? "none"
-                          : dragId
-                            ? "transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 150ms"
-                            : "color 150ms",
-                      }}
+                      style={baseStyle}
                       className={`group relative inline-flex shrink-0 select-none items-center gap-1.5 text-sm ${
                         isActive ? "" : "rounded-t-[10px]"
                       }`}
