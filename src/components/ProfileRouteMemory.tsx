@@ -29,35 +29,37 @@ export function ProfileRouteMemory() {
   const { user, activeEntityId, authReady } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const prevProfileRef = useRef<string | null>(null);
+  // The profile key that the current URL "belongs to" — i.e. the profile
+  // that was active the last time we either persisted or navigated. Used
+  // to detect a profile switch and to avoid mis-attributing the previous
+  // profile's path to the newly-activated one.
+  const currentProfileRef = useRef<string | null>(null);
 
-  // Persist current path under the active profile's key.
-  useEffect(() => {
-    if (!authReady || !user) return;
-    const path = location.pathname + location.searchStr;
-    if (!isRememberablePath(location.pathname)) return;
-    try {
-      localStorage.setItem(profileKey(user.id, activeEntityId), path);
-    } catch {
-      /* ignore */
-    }
-  }, [user, activeEntityId, authReady, location.pathname, location.searchStr]);
-
-  // When the active profile changes, navigate to that profile's last page.
+  // Handle profile switches: navigate to the new profile's last page (or
+  // /home) BEFORE persisting anything. Runs first so persistence sees the
+  // post-navigation path.
   useEffect(() => {
     if (!authReady || !user) {
-      prevProfileRef.current = null;
+      currentProfileRef.current = null;
       return;
     }
     const key = profileKey(user.id, activeEntityId);
-    if (prevProfileRef.current === null) {
-      // First run after auth ready — just record current profile, don't
-      // override the URL the user landed on (e.g. via a deep link).
-      prevProfileRef.current = key;
+
+    // First run after auth ready — record current profile but don't
+    // override the URL the user landed on (e.g. via a deep link).
+    if (currentProfileRef.current === null) {
+      currentProfileRef.current = key;
+      // Seed storage with the landed path so a switch-and-return restores it.
+      const path = location.pathname + location.searchStr;
+      if (isRememberablePath(location.pathname)) {
+        try { localStorage.setItem(key, path); } catch { /* ignore */ }
+      }
       return;
     }
-    if (prevProfileRef.current === key) return;
-    prevProfileRef.current = key;
+
+    if (currentProfileRef.current === key) return;
+    // Profile changed → resolve target for the new profile.
+    currentProfileRef.current = key;
 
     let target = DEFAULT_PATH;
     try {
@@ -65,13 +67,28 @@ export function ProfileRouteMemory() {
       if (stored && isRememberablePath(stored.split("?")[0] ?? stored)) {
         target = stored;
       }
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
+
     const current = location.pathname + location.searchStr;
-    if (target === current) return;
-    void navigate({ to: target, replace: true });
+    if (target !== current) {
+      void navigate({ to: target, replace: true });
+    }
   }, [user, activeEntityId, authReady, navigate, location.pathname, location.searchStr]);
+
+  // Persist current path under the active profile's key — but only when
+  // the URL change happened WITHIN a profile (not as a side-effect of the
+  // switch itself, which would overwrite the new profile's memory with
+  // the previous profile's last page).
+  useEffect(() => {
+    if (!authReady || !user) return;
+    const key = profileKey(user.id, activeEntityId);
+    if (currentProfileRef.current !== key) return; // mid-switch, skip
+    if (!isRememberablePath(location.pathname)) return;
+    const path = location.pathname + location.searchStr;
+    try {
+      localStorage.setItem(key, path);
+    } catch { /* ignore */ }
+  }, [user, activeEntityId, authReady, location.pathname, location.searchStr]);
 
   return null;
 }
