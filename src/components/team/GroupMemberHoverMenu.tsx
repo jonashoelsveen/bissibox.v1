@@ -4,7 +4,7 @@
  * members; clicking an entry opens that member as a tab on the
  * /team/group-members page.
  */
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "@tanstack/react-router";
 import { useGroupMembers, memberDisplayName, type GroupMemberRow } from "@/hooks/useGroupMembers";
@@ -18,9 +18,12 @@ export function GroupMemberHoverMenu({
 }) {
   const { members, loading } = useGroupMembers();
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const navigate = useNavigate();
   const closeTimer = useRef<number | null>(null);
   const triggerRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const prevFocusRef = useRef<HTMLElement | null>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
 
   useLayoutEffect(() => {
@@ -38,6 +41,28 @@ export function GroupMemberHoverMenu({
     };
   }, [open]);
 
+  // Auto-focus the search field on open; restore previous focus on close.
+  useEffect(() => {
+    if (open) {
+      const active = document.activeElement as HTMLElement | null;
+      if (active && active !== inputRef.current) {
+        prevFocusRef.current = active;
+      }
+      // wait for portal mount
+      const id = window.requestAnimationFrame(() => {
+        inputRef.current?.focus({ preventScroll: true });
+      });
+      return () => window.cancelAnimationFrame(id);
+    } else {
+      setQuery("");
+      const prev = prevFocusRef.current;
+      prevFocusRef.current = null;
+      if (prev && document.body.contains(prev)) {
+        try { prev.focus({ preventScroll: true }); } catch { /* noop */ }
+      }
+    }
+  }, [open]);
+
   const cancelClose = () => {
     if (closeTimer.current !== null) {
       window.clearTimeout(closeTimer.current);
@@ -49,6 +74,12 @@ export function GroupMemberHoverMenu({
     closeTimer.current = window.setTimeout(() => setOpen(false), CLOSE_DELAY_MS);
   };
   useEffect(() => () => cancelClose(), []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((m) => memberDisplayName(m).toLowerCase().includes(q));
+  }, [members, query]);
 
   const openMember = (m: GroupMemberRow) => {
     setOpen(false);
@@ -80,20 +111,42 @@ export function GroupMemberHoverMenu({
           role="menu"
           onMouseEnter={cancelClose}
           onMouseLeave={scheduleClose}
-          className="mac-menu fixed z-[100] w-60 overflow-hidden rounded-lg p-1"
+          className="mac-menu fixed z-[100] w-64 overflow-hidden rounded-lg p-1"
           style={{ transition: "none", left: pos.left, top: pos.top }}
         >
+          <div className="px-1 pb-1 pt-0.5">
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setOpen(false);
+                } else if (e.key === "Enter" && filtered.length > 0) {
+                  e.preventDefault();
+                  openMember(filtered[0]);
+                }
+              }}
+              placeholder="Search client"
+              spellCheck={false}
+              autoComplete="off"
+              className="w-full rounded-md border border-black/10 bg-white px-2 py-1 text-xs outline-none focus:border-black/20 focus:ring-0"
+              style={{ color: "#1d1d1f", caretColor: "#1d1d1f" }}
+            />
+          </div>
           {loading && (
             <div className="px-2 py-1 text-[11px] text-muted-foreground">
               Loading…
             </div>
           )}
-          {!loading && members.length === 0 && (
+          {!loading && filtered.length === 0 && (
             <div className="px-2 py-1 text-[11px] text-muted-foreground">
-              No members yet.
+              {members.length === 0 ? "No members yet." : "No matches."}
             </div>
           )}
-          {members.map((m) => {
+          {filtered.map((m) => {
             const name = memberDisplayName(m);
             return (
               <button
