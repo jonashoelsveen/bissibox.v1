@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowUp, PanelRight, Search, User as UserIcon } from "lucide-react";
+import { ArrowUp, PanelRight, Plus, Search, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
 import { useLibrarySetting } from "@/lib/library-settings";
@@ -444,6 +444,16 @@ export function ClientsPage() {
             </div>
           </div>
         )}
+        <button
+          type="button"
+          data-plus-tab
+          onClick={() => setPanelOpen(true)}
+          aria-label="Add client tab"
+          title="Add client tab"
+          className="relative flex h-[38px] w-[28px] shrink-0 items-center justify-center bg-transparent"
+        >
+          <Plus className="relative z-[1] h-3.5 w-3.5" strokeWidth={2} />
+        </button>
       </nav>
     </TopBarSlot>
   );
