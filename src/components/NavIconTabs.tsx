@@ -39,14 +39,17 @@ function useNavItems(): NavItem[] {
   const isGroupLeader = useIsGroupLeader();
   const isOrganizer = (mode === "organizer" || mode === "team") && !!user;
   const isIndividual = !isOrganizer;
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const isClientsPage = path.startsWith("/clients");
 
   const items: NavItem[] = [];
   if (!user) {
     items.push({ key: "auth", to: "/auth", label: "Sign in", icon: LogIn });
     return items;
   }
-  items.push({ key: "group-members", to: "/clients", label: "Clients", icon: UsersRound });
-
+  if (isClientsPage) {
+    items.push({ key: "group-members", to: "/clients", label: "Clients", icon: Plus });
+  }
   items.push({ key: "library", to: "/media", label: "Library", icon: Library });
   items.push({ key: "calendar", to: "/calendar", label: "Calendar", icon: CalendarDays });
   if (isIndividual) {
@@ -54,6 +57,7 @@ function useNavItems(): NavItem[] {
   }
   return items;
 }
+
 
 function useOrderKey() {
   const { user, mode, activeEntityId } = useAuth();
