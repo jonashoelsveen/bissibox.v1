@@ -324,10 +324,11 @@ export function ClientsPage() {
                 const next = openTabs[idx + 1];
                 const nextIsActive = next ? activeClientId === next.user_id : false;
                 const isClosing = closingIds.has(t.user_id);
+                const isOpening = openingIds.has(t.user_id);
                 const showDivider =
-                  idx < openTabs.length - 1 && !isActive && !nextIsActive && !isClosing;
+                  idx < openTabs.length - 1 && !isActive && !nextIsActive && !isClosing && !isOpening;
 
-                const baseStyle: React.CSSProperties = isClosing
+                const baseStyle: React.CSSProperties = (isClosing || isOpening)
                   ? {
                       flex: "0 0 0px",
                       minWidth: 0,
