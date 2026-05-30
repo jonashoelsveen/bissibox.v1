@@ -59,6 +59,13 @@ export function ProfileSwitcherBar() {
   const [overflow, setOverflow] = useState(false);
   const [individualName, setIndividualName] = useState("");
   const [entities, setEntities] = useState<Entity[]>([]);
+  const navigate = useNavigate();
+  const path = useRouterState({ select: (s) => s.location.pathname });
+
+  useEffect(() => {
+    if (!user) return;
+    saveLastRoute(user.id, activeEntityId, path);
+  }, [path, user?.id, activeEntityId]);
 
   useEffect(() => {
     if (!user) return;
