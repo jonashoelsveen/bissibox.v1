@@ -91,6 +91,7 @@ function RootComponent() {
   return (
     <AuthProvider>
       <TopBarSlotProvider>
+        {!isEmbedded && <ProfileRouteMemory />}
         {!isEmbedded && <TopBar />}
         {!isEmbedded && <GlobalTopTabBar />}
         <main
