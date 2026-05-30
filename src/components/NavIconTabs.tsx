@@ -330,8 +330,10 @@ export function NavIconTabs({
                 onActiveClick();
               }
             }}
-            className={`flex h-9 w-9 select-none items-center justify-center ${
-              isActive ? "text-ink" : "text-muted-foreground hover:text-ink"
+            className={`flex h-9 w-9 select-none items-center justify-center rounded-md ${
+              item.key === "group-members"
+                ? "text-muted-foreground/70 hover:text-muted-foreground"
+                : isActive ? "text-ink" : "text-muted-foreground hover:text-ink"
             }`}
           >
             <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
