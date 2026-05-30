@@ -60,18 +60,40 @@ export function ClientsPage() {
     });
   }, [members, query]);
 
+  const [openingIds, setOpeningIds] = useState<Set<string>>(() => new Set());
+
   const openClientTab = useCallback(
     (m: { user_id: string; group_id: string; name: string; avatar_url: string | null }) => {
+      let didAdd = false;
       setOpenTabs((prev) => {
         if (prev.some((t) => t.user_id === m.user_id)) return prev;
         if (prev.length >= MAX_TABS) return prev;
+        didAdd = true;
         return [...prev, m];
       });
       setActiveClientId(m.user_id);
       setSelectedClientId(null);
+      if (didAdd) {
+        setOpeningIds((prev) => {
+          const next = new Set(prev);
+          next.add(m.user_id);
+          return next;
+        });
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setOpeningIds((prev) => {
+              if (!prev.has(m.user_id)) return prev;
+              const next = new Set(prev);
+              next.delete(m.user_id);
+              return next;
+            });
+          });
+        });
+      }
     },
     [],
   );
+
 
   /* Reuse the same hover-menu open event so the group-members icon's
    * hover menu can also pin a client to the top tab-bar. */
