@@ -37,8 +37,8 @@ function useIsStrippedSurface(): boolean {
  * Search + Plus menu.
  */
 export function GlobalTopTabBar() {
-  const { user, mode, authReady } = useAuth();
-  const isGroupLeader = useIsGroupLeader();
+  const { user, authReady } = useAuth();
+
   const activeKey = useActiveNavKey();
   const stripped = useIsStrippedSurface();
   const navigate = useNavigate();
