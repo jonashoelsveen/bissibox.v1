@@ -474,9 +474,30 @@ export function ClientsPage() {
                   </Fragment>
                 );
               })}
+              <GroupMemberHoverMenu>
+                <a
+                  href="/clients"
+                  aria-label="New client tab"
+                  title="Clients"
+                  data-no-divider=""
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(new CustomEvent("group-members:show-list"));
+                    }
+                  }}
+                  style={{
+                    marginLeft: openTabs.length > 0 ? 2 : 0,
+                    marginBottom: 1,
+                    transition: "margin-left 180ms cubic-bezier(0.2,0.8,0.2,1)",
+                  }}
+                  className="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-md text-muted-foreground/70 hover:text-muted-foreground"
+                >
+                  <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
+                </a>
+              </GroupMemberHoverMenu>
             </div>
           </div>
-        )}
       </nav>
     </TopBarSlot>
   );
