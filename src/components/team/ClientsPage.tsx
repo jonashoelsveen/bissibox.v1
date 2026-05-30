@@ -32,7 +32,7 @@ interface OpenClientTab {
 const MAX_TABS = 10;
 
 export function ClientsPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, activeEntityId } = useAuth();
   const isGroupLeader = useIsGroupLeader();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -41,7 +41,8 @@ export function ClientsPage() {
   const [activeClientId, setActiveClientId] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
-  const panelScopeKey = user?.id ?? "anon";
+  const profileScopeKey = `${user?.id ?? "anon"}:${activeEntityId ?? "individual"}`;
+  const panelScopeKey = `clients:${profileScopeKey}`;
   const [panelOpen, setPanelOpen] = useLibrarySetting<boolean>(
     `clients:panel:open:${panelScopeKey}`,
     true,
@@ -127,6 +128,15 @@ export function ClientsPage() {
     });
 
   const [closingIds, setClosingIds] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    setQuery("");
+    setOpenTabs([]);
+    setActiveClientId(null);
+    setSelectedClientId(null);
+    setOpeningIds(new Set());
+    setClosingIds(new Set());
+  }, [profileScopeKey]);
+
   const closeClientTab = (id: string) => {
     if (closingIds.has(id)) return;
     setClosingIds((prev) => {
@@ -626,14 +636,14 @@ export function ClientsPage() {
         <div className="relative min-w-0 md:h-full md:overflow-y-auto">
           {activeTab ? (
             <MemberWorkspace
-              key={activeTab.user_id}
+              key={`${profileScopeKey}:${activeTab.user_id}`}
               userId={activeTab.user_id}
               name={activeTab.name}
               rightPanelOpen={panelOpen}
             />
           ) : selectedClient ? (
             <MemberWorkspace
-              key={selectedClient.user_id}
+              key={`${profileScopeKey}:${selectedClient.user_id}`}
               userId={selectedClient.user_id}
               name={memberDisplayName(selectedClient)}
               rightPanelOpen={panelOpen}
