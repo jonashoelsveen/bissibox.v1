@@ -14,7 +14,7 @@ import { OrganizationIcon } from "@/components/OrganizationIcon";
 // removed:
 import { useAuth } from "@/lib/auth";
 
-import { ProfileTab } from "@/components/ProfileTab";
+
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
 import { ProfileSwitcherBar } from "@/components/ProfileSwitcherBar";
