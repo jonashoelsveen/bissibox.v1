@@ -323,7 +323,7 @@ export function ClientsPage() {
                         "flex-basis 180ms cubic-bezier(0.2,0.8,0.2,1), min-width 180ms cubic-bezier(0.2,0.8,0.2,1), max-width 180ms cubic-bezier(0.2,0.8,0.2,1), margin 180ms cubic-bezier(0.2,0.8,0.2,1), padding 180ms cubic-bezier(0.2,0.8,0.2,1), opacity 140ms ease-out",
                     }
                   : {
-                      flex: "1 1 200px",
+                      flex: "0 1 200px",
                       minWidth: 140,
                       maxWidth: 220,
                       height: 38,
