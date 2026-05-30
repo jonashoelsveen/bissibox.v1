@@ -3,7 +3,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Library,
   LogIn,
-  UsersRound,
+  Plus,
   CalendarDays,
   BookOpen,
 } from "lucide-react";
