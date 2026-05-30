@@ -4,7 +4,8 @@
  * members; clicking an entry opens that member as a tab on the
  * /team/group-members page.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "@tanstack/react-router";
 import { useGroupMembers, memberDisplayName, type GroupMemberRow } from "@/hooks/useGroupMembers";
 
@@ -19,6 +20,23 @@ export function GroupMemberHoverMenu({
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const closeTimer = useRef<number | null>(null);
+  const triggerRef = useRef<HTMLDivElement | null>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const update = () => {
+      const r = triggerRef.current!.getBoundingClientRect();
+      setPos({ left: r.left, top: r.bottom + 6 });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [open]);
 
   const cancelClose = () => {
     if (closeTimer.current !== null) {
@@ -51,18 +69,19 @@ export function GroupMemberHoverMenu({
 
   return (
     <div
+      ref={triggerRef}
       className="relative"
       onMouseEnter={() => { cancelClose(); setOpen(true); }}
       onMouseLeave={scheduleClose}
     >
       {children}
-      {open && (
+      {open && pos && typeof document !== "undefined" && createPortal(
         <div
           role="menu"
           onMouseEnter={cancelClose}
           onMouseLeave={scheduleClose}
-          className="mac-menu absolute left-0 top-full z-[100] mt-1.5 w-60 overflow-hidden rounded-lg p-1"
-          style={{ transition: "none" }}
+          className="mac-menu fixed z-[100] w-60 overflow-hidden rounded-lg p-1"
+          style={{ transition: "none", left: pos.left, top: pos.top }}
         >
           {loading && (
             <div className="px-2 py-1 text-[11px] text-muted-foreground">
@@ -101,7 +120,8 @@ export function GroupMemberHoverMenu({
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
