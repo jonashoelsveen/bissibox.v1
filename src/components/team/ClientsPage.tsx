@@ -20,6 +20,7 @@ import {
   type GroupMemberRow,
 } from "@/hooks/useGroupMembers";
 import { MemberWorkspace } from "./MemberWorkspace";
+import { GroupMemberHoverMenu } from "@/components/team/GroupMemberHoverMenu";
 
 interface OpenClientTab {
   user_id: string;
@@ -473,17 +474,19 @@ export function ClientsPage() {
                   </Fragment>
                 );
               })}
-            <button
-              type="button"
-              data-plus-tab
-              onClick={() => setPanelOpen(true)}
-              aria-label="Add client tab"
-              title="Add client tab"
-              className="relative ml-1 flex h-[38px] w-[28px] shrink-0 items-center justify-center bg-transparent"
-              style={{ marginBottom: -1, paddingBottom: 1 }}
-            >
-              <Plus className="relative z-[1] h-3.5 w-3.5" strokeWidth={2} />
-            </button>
+            <GroupMemberHoverMenu>
+              <button
+                type="button"
+                data-plus-tab
+                onClick={() => setPanelOpen(true)}
+                aria-label="Add client tab"
+                title="Add client tab"
+                className="relative ml-1 flex h-[38px] w-[28px] shrink-0 items-center justify-center bg-transparent"
+                style={{ marginBottom: -1, paddingBottom: 1 }}
+              >
+                <Plus className="relative z-[1] h-3.5 w-3.5" strokeWidth={2} />
+              </button>
+            </GroupMemberHoverMenu>
           </div>
         </div>
       </nav>
