@@ -350,7 +350,7 @@ export function GlobalTopTabBar() {
         {/* Page-provided slot — open notes/event tabs etc. — plus the
             clients "+" icon rendered AFTER the open tabs (Chrome style). */}
         <div className="flex min-w-0 flex-1 items-end pl-2">
-          <TopBarSlotMount className="flex min-w-0 items-end" />
+          <TopBarSlotMount className="flex min-w-0 flex-1 items-end" />
           {user && path.startsWith("/clients") && (
             <GroupMemberHoverMenu>
               <a
@@ -359,6 +359,7 @@ export function GlobalTopTabBar() {
                 title="Clients"
                 data-nav-icon=""
                 data-nav-key="group-members"
+                data-no-divider=""
                 onClick={(e) => {
                   e.preventDefault();
                   if (typeof window !== "undefined") {
@@ -366,7 +367,8 @@ export function GlobalTopTabBar() {
                   }
                   void navigate({ to: "/clients" });
                 }}
-                className="ml-0.5 flex h-9 w-9 select-none items-center justify-center rounded-md text-muted-foreground/70 hover:text-muted-foreground"
+                className="ml-1 mb-1 flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-md border-0 text-muted-foreground/70 hover:text-muted-foreground"
+                style={{ borderLeft: "none", boxShadow: "none" }}
               >
                 <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
               </a>
