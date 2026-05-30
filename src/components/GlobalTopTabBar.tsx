@@ -72,34 +72,8 @@ export function GlobalTopTabBar() {
 
   const isEntity = mode === "team" || mode === "organizer";
 
-  const [plusOpen, setPlusOpen] = useState(false);
-  const [mapHover, setMapHover] = useState(false);
   const [appsOpen, setAppsOpen] = useState(false);
-  const plusRef = useRef<HTMLDivElement | null>(null);
   const appsRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!plusOpen) return;
-    const onDoc = (e: MouseEvent) => {
-      if (!plusRef.current) return;
-      if (!plusRef.current.contains(e.target as Node)) {
-        setPlusOpen(false);
-        setMapHover(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setPlusOpen(false);
-        setMapHover(false);
-      }
-    };
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [plusOpen]);
 
   useEffect(() => {
     if (!appsOpen) return;
@@ -118,24 +92,8 @@ export function GlobalTopTabBar() {
     };
   }, [appsOpen]);
 
-  
-
-  const close = () => {
-    setPlusOpen(false);
-    setMapHover(false);
-  };
-
-  const trigger = (kind: CreateKind) => {
-    close();
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("global-create", { detail: { kind } }));
-    }
-  };
-
   const handleAppNavigate = (to: "/calendar" | "/diary" | "/photos" | "/clients") => {
     setAppsOpen(false);
-    setPlusOpen(false);
-    setMapHover(false);
     if (!user) {
       const ctx =
         to === "/calendar" ? "calendar"
@@ -147,6 +105,7 @@ export function GlobalTopTabBar() {
     }
     void navigate({ to, resetScroll: false });
   };
+
 
   if (isHome) {
     const fading = transition === "fading-out";
