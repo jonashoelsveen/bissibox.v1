@@ -36,19 +36,14 @@ const FIXED_TAB_KEYS = new Set<NavKey>(["calendar", "diary"]);
 
 function useNavItems(): NavItem[] {
   const { user, mode } = useAuth();
-  const isGroupLeader = useIsGroupLeader();
+  useIsGroupLeader();
   const isOrganizer = (mode === "organizer" || mode === "team") && !!user;
   const isIndividual = !isOrganizer;
-  const path = useRouterState({ select: (s) => s.location.pathname });
-  const isClientsPage = path.startsWith("/clients");
 
   const items: NavItem[] = [];
   if (!user) {
     items.push({ key: "auth", to: "/auth", label: "Sign in", icon: LogIn });
     return items;
-  }
-  if (isClientsPage) {
-    items.push({ key: "group-members", to: "/clients", label: "Clients", icon: Plus });
   }
   items.push({ key: "library", to: "/media", label: "Library", icon: Library });
   items.push({ key: "calendar", to: "/calendar", label: "Calendar", icon: CalendarDays });

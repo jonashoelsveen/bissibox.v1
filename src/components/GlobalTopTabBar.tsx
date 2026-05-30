@@ -9,7 +9,9 @@ import {
   UserRound,
   Settings as SettingsIcon,
   UsersRound,
+  Plus,
 } from "lucide-react";
+import { GroupMemberHoverMenu } from "@/components/team/GroupMemberHoverMenu";
 import { OrganizationIcon } from "@/components/OrganizationIcon";
 // removed:
 import { useAuth } from "@/lib/auth";
@@ -345,8 +347,32 @@ export function GlobalTopTabBar() {
         {user && <ProfileSwitcherBar />}
         
         {user && <NavIconTabs activeKey={activeKey} stripped={stripped} />}
-        {/* Page-provided slot — open notes/event tabs etc. */}
-        <TopBarSlotMount className="flex min-w-0 flex-1 items-end pl-2" />
+        {/* Page-provided slot — open notes/event tabs etc. — plus the
+            clients "+" icon rendered AFTER the open tabs (Chrome style). */}
+        <div className="flex min-w-0 flex-1 items-end pl-2">
+          <TopBarSlotMount className="flex min-w-0 items-end" />
+          {user && path.startsWith("/clients") && (
+            <GroupMemberHoverMenu>
+              <a
+                href="/clients"
+                aria-label="Clients"
+                title="Clients"
+                data-nav-icon=""
+                data-nav-key="group-members"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("group-members:show-list"));
+                  }
+                  void navigate({ to: "/clients" });
+                }}
+                className="ml-0.5 flex h-9 w-9 select-none items-center justify-center rounded-md text-muted-foreground/70 hover:text-muted-foreground"
+              >
+                <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
+              </a>
+            </GroupMemberHoverMenu>
+          )}
+        </div>
         {user && (
         <div className="relative mb-1" ref={appsRef}>
           <button
