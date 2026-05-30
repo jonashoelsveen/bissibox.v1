@@ -69,18 +69,19 @@ export function GroupMemberHoverMenu({
 
   return (
     <div
+      ref={triggerRef}
       className="relative"
       onMouseEnter={() => { cancelClose(); setOpen(true); }}
       onMouseLeave={scheduleClose}
     >
       {children}
-      {open && (
+      {open && pos && typeof document !== "undefined" && createPortal(
         <div
           role="menu"
           onMouseEnter={cancelClose}
           onMouseLeave={scheduleClose}
-          className="mac-menu absolute left-0 top-full z-[100] mt-1.5 w-60 overflow-hidden rounded-lg p-1"
-          style={{ transition: "none" }}
+          className="mac-menu fixed z-[100] w-60 overflow-hidden rounded-lg p-1"
+          style={{ transition: "none", left: pos.left, top: pos.top }}
         >
           {loading && (
             <div className="px-2 py-1 text-[11px] text-muted-foreground">
@@ -119,7 +120,8 @@ export function GroupMemberHoverMenu({
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
