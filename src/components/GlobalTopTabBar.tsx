@@ -348,97 +348,10 @@ export function GlobalTopTabBar() {
         {/* Page-provided slot — open notes/event tabs etc. */}
         <TopBarSlotMount className="flex min-w-0 flex-1 items-end pl-2" />
         {user && (
-        <div className="relative mb-1" ref={plusRef}>
-          <button
-            onClick={() => { setAppsOpen(false); setPlusOpen((v) => !v); }}
-            aria-label="Create new"
-            aria-haspopup="menu"
-            aria-expanded={plusOpen}
-            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
-          >
-            <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
-          </button>
-          {plusOpen && (
-            <div
-              role="menu"
-              className="absolute right-0 top-full z-50 mt-2 w-52 origin-top-right overflow-visible rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
-            >
-              {isEntity && (
-                <Item
-                  icon={<Briefcase className="h-3.5 w-3.5" />}
-                  label="Meeting"
-                  onClick={() => trigger("meeting")}
-                />
-              )}
-              <Item
-                icon={<StickyNote className="h-3.5 w-3.5" />}
-                label="Note"
-                onClick={() => trigger("note")}
-              />
-              <Item
-                icon={<FolderClosed className="h-3.5 w-3.5" />}
-                label="File"
-                onClick={() => trigger("file")}
-              />
-              <Item
-                icon={<ImageIcon className="h-3.5 w-3.5" />}
-                label="Media"
-                onClick={() => trigger("media")}
-              />
-              {/* Map with submenu */}
-              <div
-                className="relative"
-                onMouseEnter={() => setMapHover(true)}
-                onMouseLeave={() => setMapHover(false)}
-              >
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
-                >
-                  <span className="text-muted-foreground">
-                    <MapIcon className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="flex-1">Map</span>
-                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                </button>
-                {mapHover && (
-                  <>
-                    <div className="absolute right-full top-0 h-full w-2" />
-                    <div
-                      role="menu"
-                      className="absolute right-full top-0 z-50 w-44 overflow-hidden rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-right-1 duration-150"
-                      style={{ marginRight: 8 }}
-                    >
-                      <Item
-                        icon={<MapPin className="h-3.5 w-3.5" />}
-                        label="Location"
-                        onClick={() => trigger("map-location")}
-                      />
-                      <Item
-                        icon={<RouteIcon className="h-3.5 w-3.5" />}
-                        label="Course"
-                        onClick={() => trigger("map-course")}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-              {isEntity && (
-                <Item
-                  icon={<Tent className="h-3.5 w-3.5" />}
-                  label="Event"
-                  onClick={() => trigger("event")}
-                />
-              )}
-            </div>
-          )}
-        </div>
-        )}
-        {user && (
         <div className="relative mb-1" ref={appsRef}>
           <button
-            onClick={() => { setPlusOpen(false); setMapHover(false); setAppsOpen((v) => !v); }}
+            onClick={() => { setAppsOpen((v) => !v); }}
+
             aria-label="Apps"
             aria-haspopup="menu"
             aria-expanded={appsOpen}
