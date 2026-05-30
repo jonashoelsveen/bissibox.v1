@@ -408,7 +408,7 @@ export function UniversalTopBar({
 }) {
   return (
     <div className="sticky top-14 z-20 -mx-4 flex items-end gap-1 border-b border-hairline bg-background pl-4 pr-4 md:-mx-6 md:pl-6 md:pr-6">
-      <ProfileTab />
+      
       <NavIconTabs activeKey={activeKey} />
       <div className="flex-1" />
       {rightSlot}
