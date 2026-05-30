@@ -103,16 +103,30 @@ export function ClientsPage() {
       avatar_url: m.avatar_url,
     });
 
+  const [closingIds, setClosingIds] = useState<Set<string>>(() => new Set());
   const closeClientTab = (id: string) => {
-    setOpenTabs((prev) => {
-      const idx = prev.findIndex((t) => t.user_id === id);
-      const next = prev.filter((t) => t.user_id !== id);
-      if (activeClientId === id) {
-        if (next.length === 0) setActiveClientId(null);
-        else setActiveClientId(next[Math.max(0, idx - 1)].user_id);
-      }
+    if (closingIds.has(id)) return;
+    setClosingIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
       return next;
     });
+    window.setTimeout(() => {
+      setOpenTabs((prev) => {
+        const idx = prev.findIndex((t) => t.user_id === id);
+        const next = prev.filter((t) => t.user_id !== id);
+        if (activeClientId === id) {
+          if (next.length === 0) setActiveClientId(null);
+          else setActiveClientId(next[Math.max(0, idx - 1)].user_id);
+        }
+        return next;
+      });
+      setClosingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 180);
   };
 
   /* ----- tab DnD (matches GroupMembersPage) ----- */
