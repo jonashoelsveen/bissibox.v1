@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowUp, PanelRight, Search, User as UserIcon } from "lucide-react";
+import { ArrowUp, PanelRight, Plus, Search, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
 import { useLibrarySetting } from "@/lib/library-settings";
