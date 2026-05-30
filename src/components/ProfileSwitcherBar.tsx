@@ -8,6 +8,32 @@
  * The name truncates with a fade before the chevron when overflowing.
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
+
+const SKIP_PERSIST_ROUTES = new Set(["/", "/auth", "/login"]);
+
+function defaultRouteForProfile(entityId: string | null): string {
+  return entityId ? "/clients" : "/calendar";
+}
+
+function lastRouteKey(userId: string, entityId: string | null): string {
+  return `aponna:last-route:${userId}:${entityId ?? "individual"}`;
+}
+
+function saveLastRoute(userId: string, entityId: string | null, path: string): void {
+  if (SKIP_PERSIST_ROUTES.has(path)) return;
+  try {
+    localStorage.setItem(lastRouteKey(userId, entityId), path);
+  } catch { /* storage full */ }
+}
+
+function loadLastRoute(userId: string, entityId: string | null): string {
+  try {
+    return localStorage.getItem(lastRouteKey(userId, entityId)) ?? defaultRouteForProfile(entityId);
+  } catch {
+    return defaultRouteForProfile(entityId);
+  }
+}
 import { ChevronDown } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
