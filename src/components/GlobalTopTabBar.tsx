@@ -9,9 +9,7 @@ import {
   UserRound,
   Settings as SettingsIcon,
   UsersRound,
-  Plus,
 } from "lucide-react";
-import { GroupMemberHoverMenu } from "@/components/team/GroupMemberHoverMenu";
 import { OrganizationIcon } from "@/components/OrganizationIcon";
 // removed:
 import { useAuth } from "@/lib/auth";
