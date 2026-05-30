@@ -2,16 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 
 import {
-  Plus,
-  Briefcase,
-  StickyNote,
-  FolderClosed,
   Image as ImageIcon,
-  Map as MapIcon,
-  Tent,
-  ChevronRight,
-  MapPin,
-  Route as RouteIcon,
   CalendarDays,
   BookOpen,
   Home,
@@ -22,7 +13,7 @@ import {
 import { OrganizationIcon } from "@/components/OrganizationIcon";
 // removed:
 import { useAuth } from "@/lib/auth";
-import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
+
 import { ProfileTab } from "@/components/ProfileTab";
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
@@ -39,14 +30,6 @@ function useIsStrippedSurface(): boolean {
   return STRIPPED_SURFACE_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
 }
 
-type CreateKind =
-  | "meeting"
-  | "note"
-  | "file"
-  | "media"
-  | "map-location"
-  | "map-course"
-  | "event";
 
 /**
  * Universal top tab bar fixed under the colored TopBar. Shown on every page.
@@ -54,8 +37,8 @@ type CreateKind =
  * Search + Plus menu.
  */
 export function GlobalTopTabBar() {
-  const { user, mode, authReady } = useAuth();
-  const isGroupLeader = useIsGroupLeader();
+  const { user, authReady } = useAuth();
+
   const activeKey = useActiveNavKey();
   const stripped = useIsStrippedSurface();
   const navigate = useNavigate();
@@ -87,36 +70,10 @@ export function GlobalTopTabBar() {
   if (path === "/" && transition === "hidden") return null;
 
 
-  const isEntity = mode === "team" || mode === "organizer";
 
-  const [plusOpen, setPlusOpen] = useState(false);
-  const [mapHover, setMapHover] = useState(false);
+
   const [appsOpen, setAppsOpen] = useState(false);
-  const plusRef = useRef<HTMLDivElement | null>(null);
   const appsRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!plusOpen) return;
-    const onDoc = (e: MouseEvent) => {
-      if (!plusRef.current) return;
-      if (!plusRef.current.contains(e.target as Node)) {
-        setPlusOpen(false);
-        setMapHover(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setPlusOpen(false);
-        setMapHover(false);
-      }
-    };
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [plusOpen]);
 
   useEffect(() => {
     if (!appsOpen) return;
@@ -135,24 +92,8 @@ export function GlobalTopTabBar() {
     };
   }, [appsOpen]);
 
-  
-
-  const close = () => {
-    setPlusOpen(false);
-    setMapHover(false);
-  };
-
-  const trigger = (kind: CreateKind) => {
-    close();
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("global-create", { detail: { kind } }));
-    }
-  };
-
   const handleAppNavigate = (to: "/calendar" | "/diary" | "/photos" | "/clients") => {
     setAppsOpen(false);
-    setPlusOpen(false);
-    setMapHover(false);
     if (!user) {
       const ctx =
         to === "/calendar" ? "calendar"
@@ -164,6 +105,7 @@ export function GlobalTopTabBar() {
     }
     void navigate({ to, resetScroll: false });
   };
+
 
   if (isHome) {
     const fading = transition === "fading-out";
@@ -406,97 +348,10 @@ export function GlobalTopTabBar() {
         {/* Page-provided slot — open notes/event tabs etc. */}
         <TopBarSlotMount className="flex min-w-0 flex-1 items-end pl-2" />
         {user && (
-        <div className="relative mb-1" ref={plusRef}>
-          <button
-            onClick={() => { setAppsOpen(false); setPlusOpen((v) => !v); }}
-            aria-label="Create new"
-            aria-haspopup="menu"
-            aria-expanded={plusOpen}
-            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
-          >
-            <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
-          </button>
-          {plusOpen && (
-            <div
-              role="menu"
-              className="absolute right-0 top-full z-50 mt-2 w-52 origin-top-right overflow-visible rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
-            >
-              {isEntity && (
-                <Item
-                  icon={<Briefcase className="h-3.5 w-3.5" />}
-                  label="Meeting"
-                  onClick={() => trigger("meeting")}
-                />
-              )}
-              <Item
-                icon={<StickyNote className="h-3.5 w-3.5" />}
-                label="Note"
-                onClick={() => trigger("note")}
-              />
-              <Item
-                icon={<FolderClosed className="h-3.5 w-3.5" />}
-                label="File"
-                onClick={() => trigger("file")}
-              />
-              <Item
-                icon={<ImageIcon className="h-3.5 w-3.5" />}
-                label="Media"
-                onClick={() => trigger("media")}
-              />
-              {/* Map with submenu */}
-              <div
-                className="relative"
-                onMouseEnter={() => setMapHover(true)}
-                onMouseLeave={() => setMapHover(false)}
-              >
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
-                >
-                  <span className="text-muted-foreground">
-                    <MapIcon className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="flex-1">Map</span>
-                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                </button>
-                {mapHover && (
-                  <>
-                    <div className="absolute right-full top-0 h-full w-2" />
-                    <div
-                      role="menu"
-                      className="absolute right-full top-0 z-50 w-44 overflow-hidden rounded-xl border border-hairline bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-right-1 duration-150"
-                      style={{ marginRight: 8 }}
-                    >
-                      <Item
-                        icon={<MapPin className="h-3.5 w-3.5" />}
-                        label="Location"
-                        onClick={() => trigger("map-location")}
-                      />
-                      <Item
-                        icon={<RouteIcon className="h-3.5 w-3.5" />}
-                        label="Course"
-                        onClick={() => trigger("map-course")}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-              {isEntity && (
-                <Item
-                  icon={<Tent className="h-3.5 w-3.5" />}
-                  label="Event"
-                  onClick={() => trigger("event")}
-                />
-              )}
-            </div>
-          )}
-        </div>
-        )}
-        {user && (
         <div className="relative mb-1" ref={appsRef}>
           <button
-            onClick={() => { setPlusOpen(false); setMapHover(false); setAppsOpen((v) => !v); }}
+            onClick={() => { setAppsOpen((v) => !v); }}
+
             aria-label="Apps"
             aria-haspopup="menu"
             aria-expanded={appsOpen}
@@ -607,24 +462,3 @@ function AppsIcon({ className }: { className?: string }) {
   );
 }
 
-function Item({
-  icon,
-  label,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink transition hover:bg-secondary"
-    >
-      <span className="text-muted-foreground">{icon}</span>
-      <span className="flex-1">{label}</span>
-    </button>
-  );
-}

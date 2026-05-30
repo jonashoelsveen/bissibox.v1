@@ -3,7 +3,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Library,
   LogIn,
-  UsersRound,
+  Plus,
   CalendarDays,
   BookOpen,
 } from "lucide-react";
@@ -39,14 +39,17 @@ function useNavItems(): NavItem[] {
   const isGroupLeader = useIsGroupLeader();
   const isOrganizer = (mode === "organizer" || mode === "team") && !!user;
   const isIndividual = !isOrganizer;
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const isClientsPage = path.startsWith("/clients");
 
   const items: NavItem[] = [];
   if (!user) {
     items.push({ key: "auth", to: "/auth", label: "Sign in", icon: LogIn });
     return items;
   }
-  items.push({ key: "group-members", to: "/clients", label: "Clients", icon: UsersRound });
-
+  if (isClientsPage) {
+    items.push({ key: "group-members", to: "/clients", label: "Clients", icon: Plus });
+  }
   items.push({ key: "library", to: "/media", label: "Library", icon: Library });
   items.push({ key: "calendar", to: "/calendar", label: "Calendar", icon: CalendarDays });
   if (isIndividual) {
@@ -54,6 +57,7 @@ function useNavItems(): NavItem[] {
   }
   return items;
 }
+
 
 function useOrderKey() {
   const { user, mode, activeEntityId } = useAuth();
@@ -326,8 +330,10 @@ export function NavIconTabs({
                 onActiveClick();
               }
             }}
-            className={`flex h-9 w-9 select-none items-center justify-center ${
-              isActive ? "text-ink" : "text-muted-foreground hover:text-ink"
+            className={`flex h-9 w-9 select-none items-center justify-center rounded-md ${
+              item.key === "group-members"
+                ? "text-muted-foreground/70 hover:text-muted-foreground"
+                : isActive ? "text-ink" : "text-muted-foreground hover:text-ink"
             }`}
           >
             <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
