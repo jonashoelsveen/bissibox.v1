@@ -267,22 +267,21 @@ export function ClientsPage() {
   /* ===== Top-tab strip — same visual family as other surfaces. ===== */
   const tabStrip = (
     <TopBarSlot>
-      <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
-        {openTabs.length > 0 && (
-          <div className="relative min-w-0 flex-1">
-            {edgeFade.left && (
-              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent" />
-            )}
-            {edgeFade.right && (
-              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent" />
-            )}
-            <div
-              ref={tabStripRef}
-              onScroll={updateEdgeFade}
-              className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              style={{ scrollBehavior: "smooth" }}
-            >
-              {openTabs.map((t, idx) => {
+      <nav className="flex min-w-0 flex-1 items-end overflow-visible">
+        <div className="relative min-w-0 flex-1">
+          {openTabs.length > 0 && edgeFade.left && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent" />
+          )}
+          {openTabs.length > 0 && edgeFade.right && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-gradient-to-l from-background to-transparent" />
+          )}
+          <div
+            ref={tabStripRef}
+            onScroll={updateEdgeFade}
+            className="flex min-w-0 items-end overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            style={{ scrollBehavior: "smooth" }}
+          >
+            {openTabs.map((t, idx) => {
                 const isActive = activeClientId === t.user_id;
                 const isDragging = dragId === t.user_id;
                 let translateX = 0;
@@ -474,9 +473,19 @@ export function ClientsPage() {
                   </Fragment>
                 );
               })}
-            </div>
+            <button
+              type="button"
+              data-plus-tab
+              onClick={() => setPanelOpen(true)}
+              aria-label="Add client tab"
+              title="Add client tab"
+              className="relative ml-1 flex h-[38px] w-[28px] shrink-0 items-center justify-center bg-transparent"
+              style={{ marginBottom: -1, paddingBottom: 1 }}
+            >
+              <Plus className="relative z-[1] h-3.5 w-3.5" strokeWidth={2} />
+            </button>
           </div>
-        )}
+        </div>
       </nav>
     </TopBarSlot>
   );
