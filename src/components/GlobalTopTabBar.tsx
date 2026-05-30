@@ -2,16 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 
 import {
-  Plus,
-  Briefcase,
-  StickyNote,
-  FolderClosed,
   Image as ImageIcon,
-  Map as MapIcon,
-  Tent,
-  ChevronRight,
-  MapPin,
-  Route as RouteIcon,
   CalendarDays,
   BookOpen,
   Home,
