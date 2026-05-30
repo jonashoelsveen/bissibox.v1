@@ -20,6 +20,23 @@ export function GroupMemberHoverMenu({
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const closeTimer = useRef<number | null>(null);
+  const triggerRef = useRef<HTMLDivElement | null>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const update = () => {
+      const r = triggerRef.current!.getBoundingClientRect();
+      setPos({ left: r.left, top: r.bottom + 6 });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [open]);
 
   const cancelClose = () => {
     if (closeTimer.current !== null) {
