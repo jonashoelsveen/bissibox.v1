@@ -1,9 +1,9 @@
 /**
  * ProfileRouteMemory — remembers the last visited app page per profile
  * (individual vs each team/entity) and navigates to that page when the
- * active profile changes. Without this, switching profile leaves the user
- * on the previous profile's page showing stale content until they pick a
- * new app from the nav.
+ * active profile changes. Without this, switching profile leaves the
+ * user on the previous profile's page showing stale content until they
+ * pick a new app from the nav.
  */
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
@@ -12,9 +12,13 @@ import { useAuth } from "@/lib/auth";
 const STORAGE_PREFIX = "rl_last_path:";
 const DEFAULT_PATH = "/home";
 
-// Routes that should not be remembered as a profile's "last page" — these
-// are auth flows, the bare root, or transient redirects.
-const NON_APP_PREFIXES = ["/auth", "/login", "/accept-coach-invite", "/accept-leader-invite"];
+// Paths that should not be remembered as a profile's "last page".
+const NON_APP_PREFIXES = [
+  "/auth",
+  "/login",
+  "/accept-coach-invite",
+  "/accept-leader-invite",
+];
 
 function profileKey(userId: string, activeEntityId: string | null): string {
   return `${STORAGE_PREFIX}${userId}:${activeEntityId ?? "__individual__"}`;
@@ -29,66 +33,99 @@ export function ProfileRouteMemory() {
   const { user, activeEntityId, authReady } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  // The profile key that the current URL "belongs to" — i.e. the profile
-  // that was active the last time we either persisted or navigated. Used
-  // to detect a profile switch and to avoid mis-attributing the previous
-  // profile's path to the newly-activated one.
-  const currentProfileRef = useRef<string | null>(null);
 
-  // Handle profile switches: navigate to the new profile's last page (or
-  // /home) BEFORE persisting anything. Runs first so persistence sees the
-  // post-navigation path.
+  // The profile key whose URL is currently displayed. Used to detect
+  // profile switches and to gate persistence so we never overwrite the
+  // new profile's saved path with the previous profile's stale path.
+  const activeProfileRef = useRef<string | null>(null);
+
+  // Profile-switch handler: when activeEntityId changes, jump to that
+  // profile's saved page (or /home if it has none).
   useEffect(() => {
     if (!authReady || !user) {
-      currentProfileRef.current = null;
+      activeProfileRef.current = null;
       return;
     }
     const key = profileKey(user.id, activeEntityId);
 
-    // First run after auth ready — record current profile but don't
-    // override the URL the user landed on (e.g. via a deep link).
-    if (currentProfileRef.current === null) {
-      currentProfileRef.current = key;
-      // Seed storage with the landed path so a switch-and-return restores it.
-      const path = location.pathname + location.searchStr;
+    // First run: don't override the URL the user landed on (e.g. deep link).
+    if (activeProfileRef.current === null) {
+      activeProfileRef.current = key;
       if (isRememberablePath(location.pathname)) {
-        try { localStorage.setItem(key, path); } catch { /* ignore */ }
+        try {
+          localStorage.setItem(key, location.pathname + location.searchStr);
+        } catch {
+          /* ignore */
+        }
       }
       return;
     }
 
-    if (currentProfileRef.current === key) return;
-    // Profile changed → resolve target for the new profile.
-    currentProfileRef.current = key;
+    if (activeProfileRef.current === key) return;
 
+    // Resolve the target for the new profile BEFORE flipping the ref —
+    // that way the persist effect (which runs after this one in the same
+    // render) sees the old key and skips, instead of writing the previous
+    // profile's path under the new profile's key.
     let target = DEFAULT_PATH;
     try {
       const stored = localStorage.getItem(key);
       if (stored && isRememberablePath(stored.split("?")[0] ?? stored)) {
         target = stored;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     const current = location.pathname + location.searchStr;
-    if (target !== current) {
-      void navigate({ to: target, replace: true });
+    if (target === current) {
+      // Already where we want to be — safe to claim the URL for the new
+      // profile right away.
+      activeProfileRef.current = key;
+      return;
     }
-  }, [user, activeEntityId, authReady, navigate, location.pathname, location.searchStr]);
 
-  // Persist current path under the active profile's key — but only when
-  // the URL change happened WITHIN a profile (not as a side-effect of the
-  // switch itself, which would overwrite the new profile's memory with
-  // the previous profile's last page).
+    // Trigger navigation. We DON'T flip activeProfileRef yet — it stays
+    // pointing at the old profile until the location actually changes,
+    // so the persist effect skips this render. The location-change
+    // re-run (after navigate) will flip it.
+    void navigate({ to: target, replace: true });
+  }, [
+    user,
+    activeEntityId,
+    authReady,
+    navigate,
+    location.pathname,
+    location.searchStr,
+  ]);
+
+  // Persist the current path under the active profile — but only when
+  // the displayed URL truly belongs to that profile. If a switch is
+  // in-flight (activeProfileRef still points at the previous profile),
+  // we skip and just adopt the new key, so the next intra-profile
+  // navigation persists correctly.
   useEffect(() => {
     if (!authReady || !user) return;
     const key = profileKey(user.id, activeEntityId);
-    if (currentProfileRef.current !== key) return; // mid-switch, skip
+    if (activeProfileRef.current !== key) {
+      // Profile just changed — adopt the new key without writing the
+      // stale path that's still on screen.
+      activeProfileRef.current = key;
+      return;
+    }
     if (!isRememberablePath(location.pathname)) return;
-    const path = location.pathname + location.searchStr;
     try {
-      localStorage.setItem(key, path);
-    } catch { /* ignore */ }
-  }, [user, activeEntityId, authReady, location.pathname, location.searchStr]);
+      localStorage.setItem(key, location.pathname + location.searchStr);
+    } catch {
+      /* ignore */
+    }
+  }, [
+    user,
+    activeEntityId,
+    authReady,
+    location.pathname,
+    location.searchStr,
+  ]);
 
   return null;
 }
