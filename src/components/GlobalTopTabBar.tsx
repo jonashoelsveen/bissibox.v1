@@ -311,25 +311,6 @@ export function GlobalTopTabBar() {
         .global-topbar-dark .topbar-row [data-tab]:not([data-active-tab]):hover::before {
           opacity: 1;
         }
-        .global-topbar-dark .topbar-row [data-plus-tab]:hover {
-          background-color: transparent !important;
-        }
-        .global-topbar-dark .topbar-row [data-plus-tab]::before {
-          content: "";
-          position: absolute;
-          top: 4px;
-          bottom: 5px;
-          left: 2px;
-          right: 2px;
-          border-radius: 8px;
-          background-color: rgba(255, 255, 255, 0.10);
-          opacity: 0;
-          transition: opacity 120ms ease-out;
-          pointer-events: none;
-          z-index: 0;
-        }
-        .global-topbar-dark .topbar-row [data-plus-tab]:hover::before {
-          opacity: 1;
         /* Active tab sits on a white background — force black text/icon
            regardless of the dark-bar default. Folder icon keeps its inline
            color via specificity (set further below). */
