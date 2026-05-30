@@ -30,14 +30,6 @@ function useIsStrippedSurface(): boolean {
   return STRIPPED_SURFACE_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
 }
 
-type CreateKind =
-  | "meeting"
-  | "note"
-  | "file"
-  | "media"
-  | "map-location"
-  | "map-course"
-  | "event";
 
 /**
  * Universal top tab bar fixed under the colored TopBar. Shown on every page.
