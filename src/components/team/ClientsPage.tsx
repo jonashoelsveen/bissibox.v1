@@ -9,7 +9,8 @@ import {
 } from "react";
 
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowUp, PanelRight, Search, User as UserIcon } from "lucide-react";
+import { ArrowUp, PanelRight, Plus, Search, User as UserIcon } from "lucide-react";
+import { GroupMemberHoverMenu } from "@/components/team/GroupMemberHoverMenu";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
 import { useLibrarySetting } from "@/lib/library-settings";
@@ -268,8 +269,7 @@ export function ClientsPage() {
   const tabStrip = (
     <TopBarSlot>
       <nav className="flex min-w-0 flex-1 items-end overflow-hidden">
-        {openTabs.length > 0 && (
-          <div className="relative min-w-0 flex-1">
+        <div className="relative min-w-0 flex-1">
             {edgeFade.left && (
               <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-background to-transparent" />
             )}
@@ -322,7 +322,7 @@ export function ClientsPage() {
                         "flex-basis 180ms cubic-bezier(0.2,0.8,0.2,1), min-width 180ms cubic-bezier(0.2,0.8,0.2,1), max-width 180ms cubic-bezier(0.2,0.8,0.2,1), margin 180ms cubic-bezier(0.2,0.8,0.2,1), padding 180ms cubic-bezier(0.2,0.8,0.2,1), opacity 140ms ease-out",
                     }
                   : {
-                      flex: "1 1 200px",
+                      flex: "0 1 200px",
                       minWidth: 140,
                       maxWidth: 220,
                       height: 38,
@@ -474,9 +474,30 @@ export function ClientsPage() {
                   </Fragment>
                 );
               })}
+              <GroupMemberHoverMenu>
+                <a
+                  href="/clients"
+                  aria-label="New client tab"
+                  title="Clients"
+                  data-no-divider=""
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(new CustomEvent("group-members:show-list"));
+                    }
+                  }}
+                  style={{
+                    marginLeft: openTabs.length > 0 ? 2 : 0,
+                    marginBottom: 1,
+                    transition: "margin-left 180ms cubic-bezier(0.2,0.8,0.2,1)",
+                  }}
+                  className="flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-md text-muted-foreground/70 hover:text-muted-foreground"
+                >
+                  <Plus className="h-[18px] w-[18px]" strokeWidth={2.25} />
+                </a>
+              </GroupMemberHoverMenu>
             </div>
           </div>
-        )}
       </nav>
     </TopBarSlot>
   );
