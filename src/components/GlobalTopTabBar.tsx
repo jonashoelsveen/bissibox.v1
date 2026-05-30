@@ -14,7 +14,7 @@ import { OrganizationIcon } from "@/components/OrganizationIcon";
 // removed:
 import { useAuth } from "@/lib/auth";
 
-import { ProfileTab } from "@/components/ProfileTab";
+
 import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
 import { ProfileSwitcherBar } from "@/components/ProfileSwitcherBar";
@@ -343,7 +343,7 @@ export function GlobalTopTabBar() {
       `}</style>
       <div className="topbar-row relative z-10 flex items-end gap-1 pl-0 pr-4 md:pr-6">
         {user && <ProfileSwitcherBar />}
-        <ProfileTab />
+        
         {user && <NavIconTabs activeKey={activeKey} stripped={stripped} />}
         {/* Page-provided slot — open notes/event tabs etc. */}
         <TopBarSlotMount className="flex min-w-0 flex-1 items-end pl-2" />
