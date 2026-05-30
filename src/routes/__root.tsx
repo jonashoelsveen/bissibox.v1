@@ -8,6 +8,7 @@ import { GlobalCreateOverlay } from "@/components/GlobalCreateOverlay";
 import { TopBarSlotProvider } from "@/components/TopBarSlot";
 // SettingsModal removed — settings are a full page at /settings now.
 import { ProfileModal } from "@/components/ProfileModal";
+import { ProfileRouteMemory } from "@/components/ProfileRouteMemory";
 import { Toaster } from "@/components/ui/sonner";
 
 
@@ -90,6 +91,7 @@ function RootComponent() {
   return (
     <AuthProvider>
       <TopBarSlotProvider>
+        {!isEmbedded && <ProfileRouteMemory />}
         {!isEmbedded && <TopBar />}
         {!isEmbedded && <GlobalTopTabBar />}
         <main
