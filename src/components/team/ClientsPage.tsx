@@ -20,6 +20,7 @@ import {
   type GroupMemberRow,
 } from "@/hooks/useGroupMembers";
 import { MemberWorkspace } from "./MemberWorkspace";
+import { GroupMemberHoverMenu } from "@/components/team/GroupMemberHoverMenu";
 
 interface OpenClientTab {
   user_id: string;
