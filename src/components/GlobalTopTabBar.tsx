@@ -70,7 +70,7 @@ export function GlobalTopTabBar() {
   if (path === "/" && transition === "hidden") return null;
 
 
-  const isEntity = mode === "team" || mode === "organizer";
+
 
   const [appsOpen, setAppsOpen] = useState(false);
   const appsRef = useRef<HTMLDivElement | null>(null);
