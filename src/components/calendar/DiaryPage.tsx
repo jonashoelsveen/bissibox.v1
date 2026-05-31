@@ -1,6 +1,6 @@
 /**
  * Diary — replica of the Calendar page restricted to logging past sessions.
- * Individual seat only; no entity tabs; week + month only.
+ * Profile-scoped (personal or active team); week + month only.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -97,6 +97,7 @@ export function DiaryPage() {
                   visibleCategories={visibleCategories}
                   onToggleCategory={toggleCategory}
                   teamId={teamId}
+                  ownerId={memberId}
                   stravaUserId={memberId}
                 />
               </div>
@@ -131,10 +132,10 @@ export function DiaryPage() {
             viewMode={viewMode}
             onViewModeChange={(v) => setViewMode(v === "day" ? "week" : v)}
             visibleCategories={visibleCategories}
-            memberId={memberId}
+            memberId={memberId ?? undefined}
             viewerRole="owner"
             panelOpen={panelOpen}
-            teamId={teamId}
+            teamId={teamId ?? undefined}
           />
         </div>
       </div>
