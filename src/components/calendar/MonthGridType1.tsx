@@ -1706,14 +1706,21 @@ export function MonthGridType1({
                                 !!creatingDrag &&
                                 creatingDragStartRef.current?.fromPos.row === pos.row &&
                                 creatingDragStartRef.current?.fromPos.col === pos.col;
+                              // While the floating clone is animating into
+                              // this newly-landed slot, keep the placeholder
+                              // mounted (so layout reserves the slot) but
+                              // invisible — the clone covers it. Once the
+                              // clone unmounts, the placeholder fades back in.
+                              const isLanding = !!creatingDrag?.landing;
                               return (
                                 <motion.div
                                   key={`${id}-creating-${idx}`}
                                   layout
                                   initial={{ opacity: 0 }}
-                                  animate={{ opacity: isDragging ? 0.35 : 1 }}
+                                  animate={{ opacity: isDragging ? 0.35 : isLanding ? 0 : 1 }}
                                   exit={{ opacity: 0 }}
                                   transition={{ duration: 0.12 }}
+
                                   onPointerDown={(e) => {
                                     if (e.button !== 0) return;
                                     e.stopPropagation();
