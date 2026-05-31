@@ -187,28 +187,6 @@ export function CategoryActionsMenu({
         collisionPadding={8}
         className="w-44 p-1"
         onPointerDown={(e) => e.stopPropagation()}
-        onPointerMove={(e) => {
-          const target = e.target as HTMLElement | null;
-          // Close Color sub instantly when hovering any non-color row.
-          if (colorSubOpen) {
-            if (
-              target?.closest("[data-instant-sub-close]") &&
-              !target.closest("[data-color-trigger]")
-            ) {
-              cancelColorClose();
-              setColorSubOpen(false);
-            }
-          }
-          // Close Access sub instantly when hovering any non-access row.
-          if (accessSubOpen) {
-            if (
-              target?.closest("[data-instant-sub-close]") &&
-              !target.closest("[data-access-trigger]")
-            ) {
-              setAccessSubOpen(false);
-            }
-          }
-        }}
         onCloseAutoFocus={(e) => {
           if (!skipCloseAutoFocusRef.current) return;
           e.preventDefault();
@@ -249,7 +227,7 @@ export function CategoryActionsMenu({
           />
         )}
         {allowColor && (
-          <DropdownMenuSub open={colorSubOpen} onOpenChange={setColorSubOpen}>
+          <DropdownMenuSub open={colorSubOpen} onOpenChange={(v) => { if (v) setColorSubOpen(true); }}>
             <DropdownMenuSubTrigger
               ref={(el) => { colorTriggerRef.current = el; }}
               data-color-trigger=""
@@ -276,8 +254,6 @@ export function CategoryActionsMenu({
               collisionPadding={8}
               className="p-1"
               onPointerDown={(e) => e.stopPropagation()}
-              onPointerEnter={cancelColorClose}
-              onPointerLeave={scheduleColorClose}
               onInteractOutside={() => {
                 // Single outside click dismisses the entire menu, not just the sub.
                 setColorSubOpen(false);
@@ -302,7 +278,7 @@ export function CategoryActionsMenu({
           </DropdownMenuSub>
         )}
         {accessPanel && (
-          <DropdownMenuSub open={accessSubOpen} onOpenChange={setAccessSubOpen}>
+          <DropdownMenuSub open={accessSubOpen} onOpenChange={(v) => { if (v) setAccessSubOpen(true); }}>
             <DropdownMenuSubTrigger
               data-access-trigger=""
               data-instant-sub-close
