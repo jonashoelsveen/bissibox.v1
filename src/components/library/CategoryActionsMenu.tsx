@@ -258,14 +258,11 @@ export function CategoryActionsMenu({
                 currentColor={currentColor}
                 swatches={colorSwatches}
                 onPick={(hex) => {
-                  // Persistent panel — keep open after click so user sees the
-                  // check move and can pick again. Closes naturally on hover-out.
                   onColorChange(hex);
-                  // Move focus back to the Color trigger so the main menu's
-                  // outside-click detection works on the very next click.
-                  requestAnimationFrame(() => {
-                    colorTriggerRef.current?.focus({ preventScroll: true });
-                  });
+                  // Close the entire menu so a single outside click is not
+                  // required to dismiss it after picking a color.
+                  setColorSubOpen(false);
+                  close();
                 }}
               />
             </DropdownMenuSubContent>
