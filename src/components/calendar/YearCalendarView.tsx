@@ -352,7 +352,7 @@ function YearCalendarViewInner({
               aria-label={statsActive ? "Show calendar" : "Show statistics"}
               title={statsActive ? "Calendar" : "Statistics"}
               aria-pressed={statsActive}
-              onClick={() => setStatsActive((s) => !s)}
+              onClick={() => setStatsActive(!statsActive)}
               className={`grid h-8 w-8 place-items-center rounded-md transition-colors ${
                 statsActive
                   ? "bg-secondary text-ink"
