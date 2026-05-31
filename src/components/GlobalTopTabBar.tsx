@@ -166,7 +166,7 @@ export function GlobalTopTabBar() {
                         aria-label={app.label}
                         aria-disabled={app.disabled || undefined}
                         disabled={app.disabled}
-                        onClick={app.disabled || !app.to ? undefined : () => handleAppNavigate(app.to)}
+                        onClick={app.disabled || !app.to ? undefined : () => handleAppNavigate(app.to!)}
                         className={
                           "flex aspect-square flex-col items-center justify-center gap-1 rounded-xl p-2 " +
                           (app.disabled
