@@ -886,6 +886,36 @@ export function MonthGridType1({
     diaryMaxTop?: number;
   } | null>(null);
 
+  // Pointer-drag for the "creating" placeholder chip — lets the user drag
+  // an in-progress new session to a different day before committing, mirroring
+  // week/day view. Mirrors existing-chip drag, but on drop it only moves the
+  // popover anchor (no event exists yet).
+  const creatingDragStartRef = useRef<{
+    x: number;
+    y: number;
+    offsetX: number;
+    offsetY: number;
+    chipWidth: number;
+    chipHeight: number;
+    fromPos: CellPos;
+  } | null>(null);
+  const [creatingDrag, setCreatingDrag] = useState<{
+    pointerX: number;
+    pointerY: number;
+    offsetX: number;
+    offsetY: number;
+    chipWidth: number;
+    chipHeight: number;
+    color: string | null;
+    title: string;
+    tall: boolean;
+    targetPos: CellPos | null;
+  } | null>(null);
+  const creatingDragRef = useRef(creatingDrag);
+  useEffect(() => {
+    creatingDragRef.current = creatingDrag;
+  }, [creatingDrag]);
+
   // Diary reorder confirmation state.
   const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
   const [stravaBlocked, setStravaBlocked] = useState(false);
