@@ -101,10 +101,7 @@ export function ProfileSwitcherBar() {
 
   const switchTo = (id: string | null) => {
     setOpen(false);
-    if (user) saveLastRoute(user.id, activeEntityId, path);
     setActiveEntity(id);
-    const destination = user ? loadLastRoute(user.id, id) : defaultRouteForProfile(id);
-    void navigate({ to: destination as never, resetScroll: false });
   };
 
   const profiles: { id: string | null; name: string; type: string }[] = [
