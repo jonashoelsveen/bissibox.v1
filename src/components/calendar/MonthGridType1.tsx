@@ -886,6 +886,36 @@ export function MonthGridType1({
     diaryMaxTop?: number;
   } | null>(null);
 
+  // Pointer-drag for the "creating" placeholder chip — lets the user drag
+  // an in-progress new session to a different day before committing, mirroring
+  // week/day view. Mirrors existing-chip drag, but on drop it only moves the
+  // popover anchor (no event exists yet).
+  const creatingDragStartRef = useRef<{
+    x: number;
+    y: number;
+    offsetX: number;
+    offsetY: number;
+    chipWidth: number;
+    chipHeight: number;
+    fromPos: CellPos;
+  } | null>(null);
+  const [creatingDrag, setCreatingDrag] = useState<{
+    pointerX: number;
+    pointerY: number;
+    offsetX: number;
+    offsetY: number;
+    chipWidth: number;
+    chipHeight: number;
+    color: string | null;
+    title: string;
+    tall: boolean;
+    targetPos: CellPos | null;
+  } | null>(null);
+  const creatingDragRef = useRef(creatingDrag);
+  useEffect(() => {
+    creatingDragRef.current = creatingDrag;
+  }, [creatingDrag]);
+
   // Diary reorder confirmation state.
   const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
   const [stravaBlocked, setStravaBlocked] = useState(false);
@@ -1186,6 +1216,71 @@ export function MonthGridType1({
       window.removeEventListener("pointerup", onUp);
     };
   }, [days, events, moveItem, appKind]);
+
+  // Pointer listeners for the "creating" placeholder drag. Independent of the
+  // existing-chip drag flow above so it can move the popover anchor on drop
+  // without coupling to event-move logic.
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const start = creatingDragStartRef.current;
+      if (!start) return;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      const active = creatingDragRef.current;
+      if (!active && Math.hypot(dx, dy) < 4) return;
+
+      const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const cell = node?.closest<HTMLElement>("[data-cell-pos]");
+      const posStr = cell?.getAttribute("data-cell-pos") ?? null;
+      let targetPos: CellPos | null = null;
+      if (posStr) {
+        const [rowS, colS] = posStr.split("-");
+        const r = Number(rowS);
+        const c = Number(colS);
+        const d = days[r * 7 + c];
+        if (d?.inMonth) targetPos = { row: r, col: c };
+      }
+      setCreatingDrag((prev) =>
+        prev
+          ? { ...prev, pointerX: e.clientX, pointerY: e.clientY, targetPos }
+          : null,
+      );
+    };
+    const onUp = () => {
+      const start = creatingDragStartRef.current;
+      const drag = creatingDragRef.current;
+      creatingDragStartRef.current = null;
+      if (!drag) {
+        setCreatingDrag(null);
+        return;
+      }
+      if (
+        drag.targetPos &&
+        start &&
+        (drag.targetPos.row !== start.fromPos.row ||
+          drag.targetPos.col !== start.fromPos.col)
+      ) {
+        const el = containerRef.current?.querySelector<HTMLElement>(
+          `[data-cell-pos="${drag.targetPos.row}-${drag.targetPos.col}"][data-day-anchor]`,
+        );
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          const newPos = drag.targetPos;
+          setPopover((prev) => (prev ? { ...prev, pos: newPos, rect } : prev));
+        }
+      }
+      setCreatingDrag(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [days]);
+
+
+
 
 
   // ───────────────────────── Render ─────────────────────────
@@ -1568,26 +1663,62 @@ export function MonthGridType1({
                                 (monthTileDesign === "split" || monthTileDesign === "stacked");
                               const createColor = popover?.initialColor ?? defaultNewColor;
                               const createTitle = popover?.initialText?.trim() || "New session";
+                              const heightCreate = tallCreate ? 44 : 22;
+                              const isDragging =
+                                !!creatingDrag &&
+                                creatingDragStartRef.current?.fromPos.row === pos.row &&
+                                creatingDragStartRef.current?.fromPos.col === pos.col;
                               return (
                                 <motion.div
                                   key={`${id}-creating-${idx}`}
                                   layout
                                   initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
+                                  animate={{ opacity: isDragging ? 0.35 : 1 }}
                                   exit={{ opacity: 0 }}
                                   transition={{ duration: 0.12 }}
-                                  className="pointer-events-none flex items-center overflow-hidden rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10 px-1 text-[11px] leading-none"
-                                  style={{
-                                    height: tallCreate ? 44 : 22,
-                                    borderColor: createColor ? `${createColor}CC` : undefined,
-                                    background: createColor ? `${createColor}1F` : undefined,
-                                    color: createColor ? undefined : undefined,
+                                  onPointerDown={(e) => {
+                                    if (e.button !== 0) return;
+                                    e.stopPropagation();
+                                    const target = e.currentTarget as HTMLElement;
+                                    const rect = target.getBoundingClientRect();
+                                    creatingDragStartRef.current = {
+                                      x: e.clientX,
+                                      y: e.clientY,
+                                      offsetX: e.clientX - rect.left,
+                                      offsetY: e.clientY - rect.top,
+                                      chipWidth: rect.width,
+                                      chipHeight: rect.height,
+                                      fromPos: pos,
+                                    };
+                                    setCreatingDrag({
+                                      pointerX: e.clientX,
+                                      pointerY: e.clientY,
+                                      offsetX: e.clientX - rect.left,
+                                      offsetY: e.clientY - rect.top,
+                                      chipWidth: rect.width,
+                                      chipHeight: rect.height,
+                                      color: createColor,
+                                      title: createTitle,
+                                      tall: tallCreate,
+                                      targetPos: pos,
+                                    });
                                   }}
+                                  className="flex items-center overflow-hidden rounded-[3px] px-1.5 text-[11.5px] leading-none"
+                                  style={{
+                                    height: heightCreate,
+                                    backgroundColor: createColor ?? "hsl(var(--secondary))",
+                                    boxShadow: createColor ? `inset 2px 0 0 ${createColor}` : undefined,
+                                    color: createColor ? "#fff" : undefined,
+                                    cursor: "grab",
+                                  }}
+                                  data-session-active="1"
                                 >
-                                  <span className="truncate text-ink/80">{createTitle}</span>
+
+                                  <span className="truncate">{createTitle}</span>
                                 </motion.div>
                               );
                             }
+
                             const raw = it.kind === "legacy" ? it.raw : it.event.title;
                             const itemColor = it.kind === "legacy" ? splitColor(it.raw).color : it.event.color;
                             const displayText = it.kind === "legacy" ? splitColor(it.raw).text : it.event.title;
@@ -2150,7 +2281,35 @@ export function MonthGridType1({
             </div>
           );
         })()}
+        {creatingDrag && (() => {
+          const left = creatingDrag.pointerX - creatingDrag.offsetX;
+          const top = creatingDrag.pointerY - creatingDrag.offsetY;
+          const c = creatingDrag.color;
+          return (
+            <div
+              className="pointer-events-none fixed z-[60]"
+              style={{
+                left,
+                top,
+                width: creatingDrag.chipWidth,
+                height: creatingDrag.chipHeight,
+              }}
+            >
+              <div
+                className="flex h-full w-full items-center overflow-hidden rounded-[3px] px-1.5 text-[11.5px] leading-none shadow-lg"
+                style={{
+                  backgroundColor: c ?? "hsl(var(--secondary))",
+                  boxShadow: c ? `inset 2px 0 0 ${c}` : undefined,
+                  color: c ? "#fff" : undefined,
+                }}
+              >
+                <span className="truncate">{creatingDrag.title}</span>
+              </div>
+            </div>
+          );
+        })()}
         {appKind === "diary" && !popover && hoverId && hoverRect && (() => {
+
           const ev = events.find((e) => e.id === hoverId);
           if (!ev) return null;
           return (
