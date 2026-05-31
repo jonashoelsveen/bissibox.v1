@@ -105,7 +105,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   const W = 1000; // viewBox width (scales responsively)
   const H = 420;
   const PAD_L = 56;
-  const PAD_R = 16;
+  const PAD_R = 56;
   const PAD_T = 56;
   const PAD_B = 36;
   const innerW = W - PAD_L - PAD_R;
@@ -126,16 +126,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   };
   const yDistMax = niceMax(distMax);
   const yDurMax = niceMax(durMax);
-
-  // We render two series with independent scales (left axis = primary visible metric).
-  // Primary metric: distance if visible, else duration.
-  const primary: "distance" | "duration" | null = distVisible
-    ? "distance"
-    : durVisible
-      ? "duration"
-      : null;
-  const primaryMax = primary === "distance" ? yDistMax : primary === "duration" ? yDurMax : 1;
-  const primaryLabel = primary === "distance" ? unitLabel(unit) : primary === "duration" ? "h" : "";
+  const durInHours = yDurMax >= 60;
 
   const yDistFor = (kmVal: number) =>
     PAD_T + innerH - (kmToUnit(kmVal, unit) / yDistMax) * innerH;
