@@ -254,8 +254,6 @@ export function CategoryActionsMenu({
               collisionPadding={8}
               className="p-1"
               onPointerDown={(e) => e.stopPropagation()}
-              onPointerEnter={cancelColorClose}
-              onPointerLeave={scheduleColorClose}
               onInteractOutside={() => {
                 // Single outside click dismisses the entire menu, not just the sub.
                 setColorSubOpen(false);
