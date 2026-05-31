@@ -336,6 +336,22 @@ function YearCalendarViewInner({
                   ]
             }
           />
+          {showStatsToggle && (
+            <button
+              type="button"
+              aria-label={statsActive ? "Show calendar" : "Show statistics"}
+              title={statsActive ? "Calendar" : "Statistics"}
+              aria-pressed={statsActive}
+              onClick={() => setStatsActive((s) => !s)}
+              className={`grid h-8 w-8 place-items-center rounded-md transition-colors ${
+                statsActive
+                  ? "bg-secondary text-ink"
+                  : "text-muted-foreground hover:bg-secondary hover:text-ink"
+              }`}
+            >
+              <BarChart3 className="h-4 w-4" />
+            </button>
+          )}
           {appKind !== "diary" && !disableImport && (
             <ImportButton seat={seat} onCommit={(patch) => upsertEvent(patch)} />
           )}
@@ -343,6 +359,13 @@ function YearCalendarViewInner({
       </div>
 
       <div data-preview-active={previewActive ? "true" : "false"} className="flex flex-1 min-h-0 flex-col overflow-hidden">
+        {statsActive ? (
+          <StatsChartView
+            events={mergedEvents}
+            viewMode={viewMode}
+            currentDate={currentDate}
+          />
+        ) : (
         <UnifiedElasticGrid
           calId={calId}
           year={meta.year}
