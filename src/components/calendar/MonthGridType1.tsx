@@ -1717,6 +1717,7 @@ export function MonthGridType1({
                                       title: createTitle,
                                       tall: tallCreate,
                                       targetPos: pos,
+                                      moved: false,
                                     });
                                   }}
                                   className="flex items-center overflow-hidden rounded-[3px] px-1.5 text-[11.5px] leading-none"
