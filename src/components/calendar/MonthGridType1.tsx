@@ -2119,7 +2119,7 @@ export function MonthGridType1({
           );
         })()}
 
-        {popover && appKind !== "diary" && (
+        {popover && appKind !== "diary" && !creatingDrag?.moved && (
           <PopoverEditor
             key={popover.eventId ?? `${popover.pos.row}:${popover.pos.col}:${popover.editIdx ?? -1}`}
             seat={seat}
