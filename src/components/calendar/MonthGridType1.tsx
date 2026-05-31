@@ -2279,7 +2279,35 @@ export function MonthGridType1({
             </div>
           );
         })()}
+        {creatingDrag && (() => {
+          const left = creatingDrag.pointerX - creatingDrag.offsetX;
+          const top = creatingDrag.pointerY - creatingDrag.offsetY;
+          const c = creatingDrag.color;
+          return (
+            <div
+              className="pointer-events-none fixed z-[60]"
+              style={{
+                left,
+                top,
+                width: creatingDrag.chipWidth,
+                height: creatingDrag.chipHeight,
+              }}
+            >
+              <div
+                className="flex h-full w-full items-center overflow-hidden rounded-[3px] px-1.5 text-[11.5px] leading-none shadow-lg"
+                style={{
+                  backgroundColor: c ?? "hsl(var(--secondary))",
+                  boxShadow: c ? `inset 2px 0 0 ${c}` : undefined,
+                  color: c ? "#fff" : undefined,
+                }}
+              >
+                <span className="truncate">{creatingDrag.title}</span>
+              </div>
+            </div>
+          );
+        })()}
         {appKind === "diary" && !popover && hoverId && hoverRect && (() => {
+
           const ev = events.find((e) => e.id === hoverId);
           if (!ev) return null;
           return (
