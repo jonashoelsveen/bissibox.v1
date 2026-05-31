@@ -1699,6 +1699,7 @@ export function MonthGridType1({
                                   onPointerDown={(e) => {
                                     if (e.button !== 0) return;
                                     e.stopPropagation();
+                                    e.preventDefault();
                                     const target = e.currentTarget as HTMLElement;
                                     const rect = target.getBoundingClientRect();
                                     creatingDragStartRef.current = {
@@ -1724,15 +1725,18 @@ export function MonthGridType1({
                                       moved: false,
                                     });
                                   }}
-                                  className="flex items-center overflow-hidden rounded-[3px] px-1.5 text-[11.5px] leading-none"
+                                  className="flex items-center overflow-hidden rounded-[3px] px-1.5 text-[11.5px] leading-none select-none"
                                   style={{
                                     height: heightCreate,
                                     backgroundColor: createColor ?? "hsl(var(--secondary))",
                                     boxShadow: createColor ? `inset 2px 0 0 ${createColor}` : undefined,
                                     color: createColor ? "#fff" : undefined,
                                     cursor: "default",
+                                    userSelect: "none",
+                                    WebkitUserSelect: "none",
                                   }}
                                   data-session-active="1"
+                                >
                                 >
 
                                   <span className="truncate">{createTitle}</span>
