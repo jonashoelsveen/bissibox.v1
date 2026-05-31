@@ -86,7 +86,7 @@ export function DiaryStravaActivitiesSection({
         }}
         style={{ overflow: open ? "visible" : "hidden", pointerEvents: open ? "auto" : "none" }}
       >
-        <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-hairline pl-2">
+        <div className="mt-0.5 flex flex-col gap-0.5">
           {sports.length === 0 ? (
             <div className="px-2 py-1 text-xs text-muted-foreground/70">
               No synced activities yet.

@@ -137,7 +137,7 @@ export function ClientCategoriesSection({
         }}
         style={{ overflow: open ? "visible" : "hidden", pointerEvents: open ? "auto" : "none" }}
       >
-        <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-hairline pl-2">
+        <div className="mt-0.5 flex flex-col gap-0.5">
           {cats.length === 0 ? (
             <div className="px-2 py-1 text-[11px] text-muted-foreground">
               No categories yet.

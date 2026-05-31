@@ -129,7 +129,7 @@ export function MeCategorySection({
         }}
         style={{ overflow: open ? "visible" : "hidden", pointerEvents: open ? "auto" : "none" }}
       >
-        <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-hairline pl-2" style={{ overflow: "visible" }}>
+        <div className="mt-0.5 flex flex-col gap-0.5" style={{ overflow: "visible" }}>
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
