@@ -12,8 +12,8 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 
 const SKIP_PERSIST_ROUTES = new Set(["/", "/auth", "/login"]);
 
-function defaultRouteForProfile(entityId: string | null): string {
-  return entityId ? "/clients" : "/calendar";
+function defaultRouteForProfile(_entityId: string | null): string {
+  return "/";
 }
 
 function lastRouteKey(userId: string, entityId: string | null): string {
