@@ -64,20 +64,19 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   const [distColor] = useMetricColor("distance");
   const [durColor] = useMetricColor("duration");
 
-  const { rangeStart, rangeEnd, days } = useMemo(() => {
+  const { rangeStart, days } = useMemo(() => {
     let start: Date;
     let end: Date;
     if (viewMode === "month") {
       start = startOfMonth(currentDate);
       end = endOfMonth(currentDate);
     } else {
-      // Treat "day" like "week" for stats — but the diary only allows week+month anyway.
       start = startOfWeekMon(currentDate);
       end = new Date(start);
       end.setDate(end.getDate() + 6);
     }
     const n = daysBetween(start, end) + 1;
-    return { rangeStart: start, rangeEnd: end, days: n };
+    return { rangeStart: start, days: n };
   }, [viewMode, currentDate]);
 
   /* Aggregate per-day */
