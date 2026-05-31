@@ -37,7 +37,8 @@ function useIsStrippedSurface(): boolean {
  * Search + Plus menu.
  */
 export function GlobalTopTabBar() {
-  const { user, authReady } = useAuth();
+  const { user, authReady, activeEntityId } = useAuth();
+  const isIndividual = activeEntityId == null;
 
   const activeKey = useActiveNavKey();
   const stripped = useIsStrippedSurface();
@@ -154,18 +155,18 @@ export function GlobalTopTabBar() {
                   <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
                   <div className="grid grid-cols-2 gap-2">
                     {([
-                      { key: "calendar", label: "Calendar", to: "/calendar", icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
-                      { key: "diary", label: "Diary", to: "/diary", icon: <BookOpen strokeWidth={1.75} />, disabled: false },
-                      { key: "photos", label: "Photos", to: "/photos", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
+                      { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
+                      ...(isIndividual ? [{ key: "diary", label: "Diary", to: "/diary" as const, icon: <BookOpen strokeWidth={1.75} />, disabled: false }] : []),
+                      { key: "photos", label: "Photos", to: "/photos" as const, icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
                       { key: "organization", label: "Organization", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: true },
-                    ] as const).map((app) => (
+                    ] as Array<{ key: string; label: string; to: "/calendar" | "/diary" | "/photos" | "/clients" | null; icon: React.ReactNode; disabled: boolean }>).map((app) => (
                       <button
                         key={app.key}
                         type="button"
                         aria-label={app.label}
                         aria-disabled={app.disabled || undefined}
                         disabled={app.disabled}
-                        onClick={app.disabled || !app.to ? undefined : () => handleAppNavigate(app.to)}
+                        onClick={app.disabled || !app.to ? undefined : () => handleAppNavigate(app.to!)}
                         className={
                           "flex aspect-square flex-col items-center justify-center gap-1 rounded-xl p-2 " +
                           (app.disabled
@@ -393,7 +394,7 @@ export function GlobalTopTabBar() {
                 <div className="grid grid-cols-2 gap-2">
                   {([
                     { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
-                    { key: "diary", label: "Diary", to: "/diary" as const, icon: <BookOpen strokeWidth={1.75} />, disabled: false },
+                    ...(isIndividual ? [{ key: "diary", label: "Diary", to: "/diary" as const, icon: <BookOpen strokeWidth={1.75} />, disabled: false }] : []),
                     { key: "photos", label: "Photos", to: "/photos" as const, icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
                     { key: "organization", label: "Organization", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: true },
                     { key: "clients", label: "Clients", to: "/clients" as const, icon: <UsersRound strokeWidth={1.75} />, disabled: false },
