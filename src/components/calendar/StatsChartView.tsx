@@ -198,7 +198,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   const hoverDurMin = hoverIdx != null ? series.dur[hoverIdx] : 0;
 
   return (
-    <div className="flex h-full w-full flex-col bg-white px-4 pb-4 pt-2">
+    <div className="relative flex h-full w-full flex-col bg-white px-4 pb-4 pt-2">
       {/* Top totals row */}
       <div className="mb-2 flex items-start justify-between gap-4">
         <div className="flex items-baseline gap-6">
@@ -217,7 +217,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
         </div>
 
         {hoverDate && (
-          <div className="w-[260px] rounded-md border border-hairline bg-muted px-4 py-3 shadow-sm">
+          <div className="pointer-events-none absolute right-4 top-2 z-10 w-[260px] rounded-md border border-hairline bg-muted px-4 py-3 shadow-sm">
             <div className="text-xs uppercase tracking-wide text-muted-foreground">
               {hoverDate.toLocaleDateString(undefined, {
                 weekday: "short",
