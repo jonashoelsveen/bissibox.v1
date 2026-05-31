@@ -910,6 +910,7 @@ export function MonthGridType1({
     title: string;
     tall: boolean;
     targetPos: CellPos | null;
+    moved: boolean;
   } | null>(null);
   const creatingDragRef = useRef(creatingDrag);
   useEffect(() => {
