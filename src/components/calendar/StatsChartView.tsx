@@ -200,7 +200,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   return (
     <div className="flex h-full w-full flex-col bg-white px-4 pb-4 pt-2">
       {/* Top totals row */}
-      <div className="mb-2 flex items-end justify-between gap-4">
+      <div className="mb-2 flex items-start justify-between gap-4">
         <div className="flex items-baseline gap-6">
           <div className="text-ink" style={{ visibility: distVisible ? "visible" : "hidden" }}>
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Distance</div>
@@ -216,7 +216,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
           </div>
         </div>
 
-        {hoverDate ? (
+        {hoverDate && (
           <div className="w-[260px] rounded-md border border-hairline bg-muted px-4 py-3 shadow-sm">
             <div className="text-xs uppercase tracking-wide text-muted-foreground">
               {hoverDate.toLocaleDateString(undefined, {
@@ -227,29 +227,27 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
             </div>
             <div className="mt-1.5 space-y-1.5">
               <div
-                className="grid grid-cols-[1fr_auto] items-center gap-3 text-base tabular-nums"
+                className="flex items-center gap-3 text-base tabular-nums"
                 style={{ visibility: distVisible ? "visible" : "hidden" }}
               >
-                <span className="text-ink font-medium">{formatDistance(hoverDistKm, unit, 1)}</span>
                 <span
-                  className="inline-block h-3.5 w-3.5 rounded-full justify-self-end"
+                  className="inline-block h-3.5 w-3.5 rounded-full shrink-0"
                   style={{ background: distColor }}
                 />
+                <span className="text-ink font-medium">{formatDistance(hoverDistKm, unit, 1)}</span>
               </div>
               <div
-                className="grid grid-cols-[1fr_auto] items-center gap-3 text-base tabular-nums"
+                className="flex items-center gap-3 text-base tabular-nums"
                 style={{ visibility: durVisible ? "visible" : "hidden" }}
               >
-                <span className="text-ink font-medium">{formatDuration(hoverDurMin)}</span>
                 <span
-                  className="inline-block h-3.5 w-3.5 rounded-full justify-self-end"
+                  className="inline-block h-3.5 w-3.5 rounded-full shrink-0"
                   style={{ background: durColor }}
                 />
+                <span className="text-ink font-medium">{formatDuration(hoverDurMin)}</span>
               </div>
             </div>
           </div>
-        ) : (
-          <div className="w-[260px]" aria-hidden />
         )}
       </div>
 
