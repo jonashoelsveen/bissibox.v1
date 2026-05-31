@@ -198,7 +198,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   const hoverDurMin = hoverIdx != null ? series.dur[hoverIdx] : 0;
 
   return (
-    <div className="flex h-full w-full flex-col bg-white px-4 pb-4 pt-2">
+    <div className="relative flex h-full w-full flex-col bg-white px-4 pb-4 pt-2">
       {/* Top totals row */}
       <div className="mb-2 flex items-start justify-between gap-4">
         <div className="flex items-baseline gap-6">
