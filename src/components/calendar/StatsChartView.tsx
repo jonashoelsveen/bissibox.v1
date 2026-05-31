@@ -105,7 +105,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   const W = 1000; // viewBox width (scales responsively)
   const H = 420;
   const PAD_L = 56;
-  const PAD_R = 16;
+  const PAD_R = 56;
   const PAD_T = 56;
   const PAD_B = 36;
   const innerW = W - PAD_L - PAD_R;
@@ -126,16 +126,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   };
   const yDistMax = niceMax(distMax);
   const yDurMax = niceMax(durMax);
-
-  // We render two series with independent scales (left axis = primary visible metric).
-  // Primary metric: distance if visible, else duration.
-  const primary: "distance" | "duration" | null = distVisible
-    ? "distance"
-    : durVisible
-      ? "duration"
-      : null;
-  const primaryMax = primary === "distance" ? yDistMax : primary === "duration" ? yDurMax : 1;
-  const primaryLabel = primary === "distance" ? unitLabel(unit) : primary === "duration" ? "h" : "";
+  const durInHours = yDurMax >= 60;
 
   const yDistFor = (kmVal: number) =>
     PAD_T + innerH - (kmToUnit(kmVal, unit) / yDistMax) * innerH;
@@ -211,25 +202,21 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
       {/* Top totals row */}
       <div className="mb-2 flex items-end justify-between gap-4">
         <div className="flex items-baseline gap-6">
-          {distVisible && (
-            <div className="text-ink">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Distance</div>
-              <div className="text-xl font-semibold tabular-nums">
-                {formatDistance(totalDistKm, unit, 1)}
-              </div>
+          <div className="text-ink" style={{ visibility: distVisible ? "visible" : "hidden" }}>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Distance</div>
+            <div className="text-xl font-semibold tabular-nums">
+              {formatDistance(totalDistKm, unit, 1)}
             </div>
-          )}
-          {durVisible && (
-            <div className="text-ink">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</div>
-              <div className="text-xl font-semibold tabular-nums">
-                {formatDuration(totalDurMin)}
-              </div>
+          </div>
+          <div className="text-ink" style={{ visibility: durVisible ? "visible" : "hidden" }}>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</div>
+            <div className="text-xl font-semibold tabular-nums">
+              {formatDuration(totalDurMin)}
             </div>
-          )}
+          </div>
         </div>
 
-        <div className="min-w-[160px] rounded-md border border-hairline bg-white px-3 py-2 text-right shadow-sm">
+        <div className="w-[200px] rounded-md border border-hairline bg-white px-3 py-2 text-right shadow-sm">
           <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
             {hoverDate
               ? hoverDate.toLocaleDateString(undefined, {
@@ -240,24 +227,26 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
               : "Hover graph"}
           </div>
           <div className="mt-0.5 space-y-0.5">
-            {distVisible && (
-              <div className="flex items-center justify-end gap-2 text-sm tabular-nums">
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={{ background: distColor }}
-                />
-                <span className="text-ink">{formatDistance(hoverDistKm, unit, 1)}</span>
-              </div>
-            )}
-            {durVisible && (
-              <div className="flex items-center justify-end gap-2 text-sm tabular-nums">
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={{ background: durColor }}
-                />
-                <span className="text-ink">{formatDuration(hoverDurMin)}</span>
-              </div>
-            )}
+            <div
+              className="flex items-center justify-end gap-2 text-sm tabular-nums"
+              style={{ visibility: distVisible ? "visible" : "hidden" }}
+            >
+              <span
+                className="inline-block h-2 w-2 rounded-full"
+                style={{ background: distColor }}
+              />
+              <span className="text-ink">{formatDistance(hoverDistKm, unit, 1)}</span>
+            </div>
+            <div
+              className="flex items-center justify-end gap-2 text-sm tabular-nums"
+              style={{ visibility: durVisible ? "visible" : "hidden" }}
+            >
+              <span
+                className="inline-block h-2 w-2 rounded-full"
+                style={{ background: durColor }}
+              />
+              <span className="text-ink">{formatDuration(hoverDurMin)}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -275,16 +264,12 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
           {/* horizontal grid lines + y axis labels */}
           {ticks.map((t) => {
             const y = PAD_T + innerH - t * innerH;
-            const valDist = (t * yDistMax).toFixed(yDistMax >= 10 ? 0 : 1);
-            const valDur = (t * yDurMax) / 60;
-            const valDurLbl =
-              yDurMax / 60 >= 10 ? `${valDur.toFixed(0)}h` : `${valDur.toFixed(1)}h`;
-            const leftLabel =
-              primary === "distance"
-                ? `${valDist} ${primaryLabel}`
-                : primary === "duration"
-                  ? valDurLbl
-                  : "";
+            const distVal = t * yDistMax;
+            const distLbl = `${distVal.toFixed(yDistMax >= 10 ? 0 : 1)} ${unitLabel(unit)}`;
+            const durValMin = t * yDurMax;
+            const durLbl = durInHours
+              ? `${(durValMin / 60).toFixed(yDurMax / 60 >= 10 ? 0 : 1)}h`
+              : `${Math.round(durValMin)}m`;
             return (
               <g key={t}>
                 <line
@@ -296,7 +281,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
                   strokeWidth={1}
                   shapeRendering="crispEdges"
                 />
-                {primary && (
+                {distVisible && (
                   <text
                     x={PAD_L - 8}
                     y={y + 3}
@@ -304,7 +289,18 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
                     fontSize={10}
                     fill="#6b7280"
                   >
-                    {leftLabel}
+                    {distLbl}
+                  </text>
+                )}
+                {durVisible && (
+                  <text
+                    x={W - PAD_R + 8}
+                    y={y + 3}
+                    textAnchor="start"
+                    fontSize={10}
+                    fill="#6b7280"
+                  >
+                    {durLbl}
                   </text>
                 )}
               </g>
