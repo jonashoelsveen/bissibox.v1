@@ -100,11 +100,17 @@ export function CategoryActionsMenu({
   const [accessSubOpen, setAccessSubOpen] = useState(false);
   const colorTriggerRef = useRef<HTMLDivElement | null>(null);
   const skipCloseAutoFocusRef = useRef(false);
+  const allowCloseRef = useRef(false);
   const menuId = useId();
   const topExtras = extraItems.filter((i) => i.top);
   const bottomExtras = extraItems.filter((i) => !i.top);
 
-  const close = () => setOpen(false);
+  const close = () => {
+    allowCloseRef.current = true;
+    setColorSubOpen(false);
+    setAccessSubOpen(false);
+    setOpen(false);
+  };
 
   // Only one CategoryActionsMenu open at a time across the app.
   useEffect(() => {
@@ -118,12 +124,16 @@ export function CategoryActionsMenu({
   }, [menuId, open]);
 
   const handleOpenChange = (next: boolean) => {
-    setOpen(next);
     if (next) {
+      allowCloseRef.current = false;
+      setOpen(true);
       setOpenMenuId(menuId);
     } else {
+      if (!allowCloseRef.current) return;
+      allowCloseRef.current = false;
       setColorSubOpen(false);
       setAccessSubOpen(false);
+      setOpen(false);
       if (openMenuId === menuId) setOpenMenuId(null);
     }
   };
@@ -162,6 +172,8 @@ export function CategoryActionsMenu({
         collisionPadding={8}
         className="w-44 p-1"
         onPointerDown={(e) => e.stopPropagation()}
+        onInteractOutside={() => close()}
+        onEscapeKeyDown={() => close()}
         onCloseAutoFocus={(e) => {
           if (!skipCloseAutoFocusRef.current) return;
           e.preventDefault();
