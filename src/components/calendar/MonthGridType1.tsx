@@ -1757,7 +1757,9 @@ export function MonthGridType1({
                                     cursor: "default",
                                   }}
                                   data-session-active="1"
+                                  data-creating-placeholder="1"
                                 >
+
 
                                   <span className="truncate">{createTitle}</span>
                                 </motion.div>
