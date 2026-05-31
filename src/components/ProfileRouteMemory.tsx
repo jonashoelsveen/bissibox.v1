@@ -75,14 +75,15 @@ function isAllowedForProfile(path: string, type: ProfileType): boolean {
 
 const STORAGE_PREFIX = "rl_last_path:";
 
-const NON_APP_PREFIXES = ["/", "/auth", "/login", "/accept-coach-invite", "/accept-leader-invite"];
+const NON_APP_PREFIXES = ["/auth", "/login", "/accept-coach-invite", "/accept-leader-invite"];
 
 function profileKey(userId: string, activeEntityId: string | null): string {
   return `${STORAGE_PREFIX}${userId}:${activeEntityId ?? "__individual__"}`;
 }
 
 function isRememberablePath(path: string): boolean {
-  if (!path || path === "/") return false;
+  if (!path) return false;
+  if (path === "/") return true; // Aponna Cloud home is a real app page
   return !NON_APP_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
 }
 
