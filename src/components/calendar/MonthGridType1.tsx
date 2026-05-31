@@ -1663,26 +1663,60 @@ export function MonthGridType1({
                                 (monthTileDesign === "split" || monthTileDesign === "stacked");
                               const createColor = popover?.initialColor ?? defaultNewColor;
                               const createTitle = popover?.initialText?.trim() || "New session";
+                              const heightCreate = tallCreate ? 44 : 22;
+                              const isDragging =
+                                !!creatingDrag &&
+                                creatingDragStartRef.current?.fromPos.row === pos.row &&
+                                creatingDragStartRef.current?.fromPos.col === pos.col;
                               return (
                                 <motion.div
                                   key={`${id}-creating-${idx}`}
                                   layout
                                   initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
+                                  animate={{ opacity: isDragging ? 0.35 : 1 }}
                                   exit={{ opacity: 0 }}
                                   transition={{ duration: 0.12 }}
-                                  className="pointer-events-none flex items-center overflow-hidden rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10 px-1 text-[11px] leading-none"
+                                  onPointerDown={(e) => {
+                                    if (e.button !== 0) return;
+                                    e.stopPropagation();
+                                    const target = e.currentTarget as HTMLElement;
+                                    const rect = target.getBoundingClientRect();
+                                    creatingDragStartRef.current = {
+                                      x: e.clientX,
+                                      y: e.clientY,
+                                      offsetX: e.clientX - rect.left,
+                                      offsetY: e.clientY - rect.top,
+                                      chipWidth: rect.width,
+                                      chipHeight: rect.height,
+                                      fromPos: pos,
+                                    };
+                                    setCreatingDrag({
+                                      pointerX: e.clientX,
+                                      pointerY: e.clientY,
+                                      offsetX: e.clientX - rect.left,
+                                      offsetY: e.clientY - rect.top,
+                                      chipWidth: rect.width,
+                                      chipHeight: rect.height,
+                                      color: createColor,
+                                      title: createTitle,
+                                      tall: tallCreate,
+                                      targetPos: pos,
+                                    });
+                                  }}
+                                  className="flex items-center overflow-hidden rounded-[3px] px-1.5 text-[11.5px] leading-none"
                                   style={{
-                                    height: tallCreate ? 44 : 22,
-                                    borderColor: createColor ? `${createColor}CC` : undefined,
-                                    background: createColor ? `${createColor}1F` : undefined,
-                                    color: createColor ? undefined : undefined,
+                                    height: heightCreate,
+                                    backgroundColor: createColor ?? "hsl(var(--secondary))",
+                                    boxShadow: createColor ? `inset 2px 0 0 ${createColor}` : undefined,
+                                    color: createColor ? "#fff" : undefined,
+                                    cursor: "grab",
                                   }}
                                 >
-                                  <span className="truncate text-ink/80">{createTitle}</span>
+                                  <span className="truncate">{createTitle}</span>
                                 </motion.div>
                               );
                             }
+
                             const raw = it.kind === "legacy" ? it.raw : it.event.title;
                             const itemColor = it.kind === "legacy" ? splitColor(it.raw).color : it.event.color;
                             const displayText = it.kind === "legacy" ? splitColor(it.raw).text : it.event.title;
