@@ -124,6 +124,9 @@ export interface YearCalendarViewProps {
   teamId?: string | null;
   /** Lowercase hex colors the viewer has toggled off locally (coach view). */
   hiddenColors?: Set<string>;
+  /** Controlled "statistics view" toggle (diary only). */
+  statsActive?: boolean;
+  onStatsActiveChange?: (next: boolean) => void;
 }
 
 export function YearCalendarView(props: YearCalendarViewProps) {
