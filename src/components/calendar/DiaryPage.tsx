@@ -147,6 +147,8 @@ export function DiaryPage() {
             viewerRole="owner"
             panelOpen={panelOpen}
             teamId={teamId ?? undefined}
+            statsActive={statsActive}
+            onStatsActiveChange={setStatsActive}
           />
         </div>
       </div>
