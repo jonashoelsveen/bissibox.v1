@@ -1,0 +1,397 @@
+/**
+ * StatsChartView — Nordnet-style minimalist chart for the Diary.
+ *
+ * Aggregates per-day Distance (km / mi) and Duration (minutes) across the
+ * currently selected range (week or month). Renders as an SVG line chart
+ * with a horizontal grid, a follow-the-cursor crosshair, and a stock-style
+ * value box pinned to the top-right.
+ */
+
+import { useMemo, useRef, useState } from "react";
+import type { CalendarEvent } from "./yearStore";
+import {
+  formatDistance,
+  kmToUnit,
+  unitLabel,
+  useDistanceUnit,
+} from "@/lib/units";
+import {
+  useMetricColor,
+  useMetricVisible,
+} from "./metricsSettings";
+
+interface StatsChartViewProps {
+  events: CalendarEvent[];
+  viewMode: "week" | "month" | "day";
+  currentDate: Date;
+}
+
+function startOfDay(d: Date) {
+  const r = new Date(d);
+  r.setHours(0, 0, 0, 0);
+  return r;
+}
+function startOfWeekMon(d: Date) {
+  const r = startOfDay(d);
+  // Monday-first: getDay() returns 0=Sun..6=Sat
+  const dow = (r.getDay() + 6) % 7;
+  r.setDate(r.getDate() - dow);
+  return r;
+}
+function startOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+function endOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+}
+function daysBetween(a: Date, b: Date) {
+  return Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / 86400000);
+}
+
+function formatDuration(minutes: number): string {
+  if (!minutes || minutes <= 0) return "0 min";
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  if (h <= 0) return `${m} min`;
+  if (m === 0) return `${h} h`;
+  return `${h} h ${m} min`;
+}
+
+export function StatsChartView({ events, viewMode, currentDate }: StatsChartViewProps) {
+  const [unit] = useDistanceUnit();
+  const [distVisible] = useMetricVisible("distance");
+  const [durVisible] = useMetricVisible("duration");
+  const [distColor] = useMetricColor("distance");
+  const [durColor] = useMetricColor("duration");
+
+  const { rangeStart, rangeEnd, days } = useMemo(() => {
+    let start: Date;
+    let end: Date;
+    if (viewMode === "month") {
+      start = startOfMonth(currentDate);
+      end = endOfMonth(currentDate);
+    } else {
+      // Treat "day" like "week" for stats — but the diary only allows week+month anyway.
+      start = startOfWeekMon(currentDate);
+      end = new Date(start);
+      end.setDate(end.getDate() + 6);
+    }
+    const n = daysBetween(start, end) + 1;
+    return { rangeStart: start, rangeEnd: end, days: n };
+  }, [viewMode, currentDate]);
+
+  /* Aggregate per-day */
+  const series = useMemo(() => {
+    const dist = new Array(days).fill(0); // km
+    const dur = new Array(days).fill(0); // minutes
+    for (const e of events) {
+      const s = new Date(e.startISO);
+      if (Number.isNaN(s.getTime())) continue;
+      const idx = daysBetween(rangeStart, s);
+      if (idx < 0 || idx >= days) continue;
+      if (e.distanceKm && Number.isFinite(e.distanceKm)) dist[idx] += e.distanceKm;
+      const en = new Date(e.endISO);
+      if (!Number.isNaN(en.getTime())) {
+        const mins = Math.max(0, (en.getTime() - s.getTime()) / 60000);
+        dur[idx] += mins;
+      }
+    }
+    return { dist, dur };
+  }, [events, rangeStart, days]);
+
+  const totalDistKm = series.dist.reduce((a, b) => a + b, 0);
+  const totalDurMin = series.dur.reduce((a, b) => a + b, 0);
+
+  /* Chart dims */
+  const W = 1000; // viewBox width (scales responsively)
+  const H = 420;
+  const PAD_L = 56;
+  const PAD_R = 16;
+  const PAD_T = 56;
+  const PAD_B = 36;
+  const innerW = W - PAD_L - PAD_R;
+  const innerH = H - PAD_T - PAD_B;
+
+  const xFor = (i: number) =>
+    days <= 1 ? PAD_L + innerW / 2 : PAD_L + (i / (days - 1)) * innerW;
+
+  const distMax = Math.max(1, ...series.dist.map((v) => kmToUnit(v, unit)));
+  const durMax = Math.max(1, ...series.dur);
+
+  const niceMax = (v: number) => {
+    if (v <= 0) return 1;
+    const exp = Math.pow(10, Math.floor(Math.log10(v)));
+    const norm = v / exp;
+    const nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
+    return nice * exp;
+  };
+  const yDistMax = niceMax(distMax);
+  const yDurMax = niceMax(durMax);
+
+  // We render two series with independent scales (left axis = primary visible metric).
+  // Primary metric: distance if visible, else duration.
+  const primary: "distance" | "duration" | null = distVisible
+    ? "distance"
+    : durVisible
+      ? "duration"
+      : null;
+  const primaryMax = primary === "distance" ? yDistMax : primary === "duration" ? yDurMax : 1;
+  const primaryLabel = primary === "distance" ? unitLabel(unit) : primary === "duration" ? "h" : "";
+
+  const yDistFor = (kmVal: number) =>
+    PAD_T + innerH - (kmToUnit(kmVal, unit) / yDistMax) * innerH;
+  const yDurFor = (minVal: number) =>
+    PAD_T + innerH - (minVal / yDurMax) * innerH;
+
+  const buildPath = (vals: number[], yFn: (v: number) => number) => {
+    if (vals.length === 0) return "";
+    return vals
+      .map((v, i) => `${i === 0 ? "M" : "L"} ${xFor(i).toFixed(2)} ${yFn(v).toFixed(2)}`)
+      .join(" ");
+  };
+
+  const distPath = buildPath(series.dist, yDistFor);
+  const durPath = buildPath(series.dur, yDurFor);
+
+  /* Cursor / hover */
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+
+  const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const loc = pt.matrixTransform(ctm.inverse());
+    if (loc.x < PAD_L || loc.x > W - PAD_R || loc.y < PAD_T || loc.y > PAD_T + innerH) {
+      setHoverIdx(null);
+      return;
+    }
+    const ratio = (loc.x - PAD_L) / innerW;
+    const idx = Math.max(0, Math.min(days - 1, Math.round(ratio * (days - 1))));
+    setHoverIdx(idx);
+  };
+
+  const onLeave = () => setHoverIdx(null);
+
+  /* Y-axis ticks (5 lines) */
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+
+  /* X labels */
+  const xLabels = useMemo(() => {
+    const labels: { i: number; label: string }[] = [];
+    if (viewMode === "month") {
+      // Show 1, 5, 10, 15, 20, 25, last
+      const last = days;
+      const set = new Set<number>([1, 5, 10, 15, 20, 25, last]);
+      for (const day of Array.from(set).sort((a, b) => a - b)) {
+        if (day >= 1 && day <= last) labels.push({ i: day - 1, label: String(day) });
+      }
+    } else {
+      const names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      for (let i = 0; i < days; i++) labels.push({ i, label: names[i] ?? "" });
+    }
+    return labels;
+  }, [viewMode, days]);
+
+  const hoverDate = useMemo(() => {
+    if (hoverIdx == null) return null;
+    const d = new Date(rangeStart);
+    d.setDate(d.getDate() + hoverIdx);
+    return d;
+  }, [hoverIdx, rangeStart]);
+
+  const hoverDistKm = hoverIdx != null ? series.dist[hoverIdx] : 0;
+  const hoverDurMin = hoverIdx != null ? series.dur[hoverIdx] : 0;
+
+  return (
+    <div className="flex h-full w-full flex-col bg-white px-4 pb-4 pt-2">
+      {/* Top totals row */}
+      <div className="mb-2 flex items-end justify-between gap-4">
+        <div className="flex items-baseline gap-6">
+          {distVisible && (
+            <div className="text-ink">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Distance</div>
+              <div className="text-xl font-semibold tabular-nums">
+                {formatDistance(totalDistKm, unit, 1)}
+              </div>
+            </div>
+          )}
+          {durVisible && (
+            <div className="text-ink">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</div>
+              <div className="text-xl font-semibold tabular-nums">
+                {formatDuration(totalDurMin)}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-[160px] rounded-md border border-hairline bg-white px-3 py-2 text-right shadow-sm">
+          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+            {hoverDate
+              ? hoverDate.toLocaleDateString(undefined, {
+                  weekday: "short",
+                  day: "2-digit",
+                  month: "short",
+                })
+              : "Hover graph"}
+          </div>
+          <div className="mt-0.5 space-y-0.5">
+            {distVisible && (
+              <div className="flex items-center justify-end gap-2 text-sm tabular-nums">
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ background: distColor }}
+                />
+                <span className="text-ink">{formatDistance(hoverDistKm, unit, 1)}</span>
+              </div>
+            )}
+            {durVisible && (
+              <div className="flex items-center justify-end gap-2 text-sm tabular-nums">
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ background: durColor }}
+                />
+                <span className="text-ink">{formatDuration(hoverDurMin)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div className="relative flex-1 min-h-0">
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          className="h-full w-full select-none"
+          onMouseMove={onMove}
+          onMouseLeave={onLeave}
+        >
+          {/* horizontal grid lines + y axis labels */}
+          {ticks.map((t) => {
+            const y = PAD_T + innerH - t * innerH;
+            const valDist = (t * yDistMax).toFixed(yDistMax >= 10 ? 0 : 1);
+            const valDur = (t * yDurMax) / 60;
+            const valDurLbl =
+              yDurMax / 60 >= 10 ? `${valDur.toFixed(0)}h` : `${valDur.toFixed(1)}h`;
+            const leftLabel =
+              primary === "distance"
+                ? `${valDist} ${primaryLabel}`
+                : primary === "duration"
+                  ? valDurLbl
+                  : "";
+            return (
+              <g key={t}>
+                <line
+                  x1={PAD_L}
+                  x2={W - PAD_R}
+                  y1={y}
+                  y2={y}
+                  stroke="#e5e7eb"
+                  strokeWidth={1}
+                  shapeRendering="crispEdges"
+                />
+                {primary && (
+                  <text
+                    x={PAD_L - 8}
+                    y={y + 3}
+                    textAnchor="end"
+                    fontSize={10}
+                    fill="#6b7280"
+                  >
+                    {leftLabel}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+
+          {/* x axis baseline */}
+          <line
+            x1={PAD_L}
+            x2={W - PAD_R}
+            y1={PAD_T + innerH}
+            y2={PAD_T + innerH}
+            stroke="#9ca3af"
+            strokeWidth={1}
+            shapeRendering="crispEdges"
+          />
+
+          {/* x labels */}
+          {xLabels.map(({ i, label }) => (
+            <text
+              key={`${i}-${label}`}
+              x={xFor(i)}
+              y={PAD_T + innerH + 18}
+              textAnchor="middle"
+              fontSize={10}
+              fill="#6b7280"
+            >
+              {label}
+            </text>
+          ))}
+
+          {/* duration line */}
+          {durVisible && (
+            <path
+              d={durPath}
+              fill="none"
+              stroke={durColor}
+              strokeWidth={1.75}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          )}
+          {/* distance line */}
+          {distVisible && (
+            <path
+              d={distPath}
+              fill="none"
+              stroke={distColor}
+              strokeWidth={1.75}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          )}
+
+          {/* crosshair */}
+          {hoverIdx != null && (
+            <>
+              <line
+                x1={xFor(hoverIdx)}
+                x2={xFor(hoverIdx)}
+                y1={PAD_T}
+                y2={PAD_T + innerH}
+                stroke="#9ca3af"
+                strokeWidth={1}
+                strokeDasharray="3 3"
+              />
+              {distVisible && (
+                <circle
+                  cx={xFor(hoverIdx)}
+                  cy={yDistFor(series.dist[hoverIdx])}
+                  r={3}
+                  fill={distColor}
+                />
+              )}
+              {durVisible && (
+                <circle
+                  cx={xFor(hoverIdx)}
+                  cy={yDurFor(series.dur[hoverIdx])}
+                  r={3}
+                  fill={durColor}
+                />
+              )}
+            </>
+          )}
+        </svg>
+      </div>
+    </div>
+  );
+}
