@@ -1,20 +1,6 @@
-import { useEffect, useId, useRef, useState } from "react";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
-  Pencil,
-  Copy,
-  Trash2,
-  Users,
-  Check,
-} from "lucide-react";
+import { useEffect, useId, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { Pencil, Copy, Trash2, Users, Check, ChevronRight } from "lucide-react";
 
 // ---- Singleton coordinator: only one CategoryActionsMenu open at a time ----
 let openMenuId: string | null = null;
@@ -32,7 +18,6 @@ export type CategoryExtraItem = {
   icon?: React.ReactNode;
   onClick: () => void;
   destructive?: boolean;
-  /** When true, item is shown at the top above Rename/Duplicate */
   top?: boolean;
 };
 
@@ -45,18 +30,11 @@ export type CategoryActionsMenuProps = {
   onColorChange: (color: ColorValue) => void;
   extraItems?: CategoryExtraItem[];
   allowColor?: boolean;
-  /** When false the Custom (hue/sat) panel is hidden — only the swatches show. */
   allowCustomColor?: boolean;
-  /** Optional override for the swatch palette (defaults to STANDARD_COLORS). */
   colorSwatches?: ColorValue[];
-  /** Optional render slot for an "Access" submenu (shown under Color). */
   accessPanel?: React.ReactNode;
 };
 
-/**
- * 9 named standard colors — Tailwind 500/600 family for a consistent RGB
- * system. Red on top, brown at the bottom (replaces the old neutral gray).
- */
 export const STANDARD_COLORS_NAMED: { hex: ColorValue; name: string }[] = [
   { hex: "#ef4444", name: "Red" },
   { hex: "#f97316", name: "Orange" },
@@ -70,17 +48,11 @@ export const STANDARD_COLORS_NAMED: { hex: ColorValue; name: string }[] = [
 ];
 
 export const STANDARD_COLORS: ColorValue[] = STANDARD_COLORS_NAMED.map((c) => c.hex);
-
-/** 8-swatch palette (no brown) used by diary activity tabs. */
 export const STANDARD_COLORS_8: ColorValue[] = STANDARD_COLORS.slice(0, 8);
 
+const SUB_GAP = 4;
 
-
-
-
-
-// Gap between adjacent popovers — matches the diary owner/leader note spacing (gap-2 = 8px)
-const SUB_OFFSET = 8;
+type SubPanel = "color" | "access" | null;
 
 export function CategoryActionsMenu({
   trigger,
@@ -91,138 +63,158 @@ export function CategoryActionsMenu({
   onColorChange,
   extraItems = [],
   allowColor = true,
-  allowCustomColor = true,
   colorSwatches,
   accessPanel,
 }: CategoryActionsMenuProps) {
-  const [open, setOpen] = useState(false);
-  const [colorSubOpen, setColorSubOpen] = useState(false);
-  const [accessSubOpen, setAccessSubOpen] = useState(false);
-  const colorTriggerRef = useRef<HTMLDivElement | null>(null);
-  const skipCloseAutoFocusRef = useRef(false);
-  const allowCloseRef = useRef(false);
   const menuId = useId();
+  const [open, setOpen] = useState(false);
+  const [subPanel, setSubPanel] = useState<SubPanel>(null);
+
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const mainPanelRef = useRef<HTMLDivElement>(null);
+  const subPanelRef = useRef<HTMLDivElement>(null);
+  const colorRowRef = useRef<HTMLDivElement>(null);
+  const accessRowRef = useRef<HTMLDivElement>(null);
+  const subCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const topExtras = extraItems.filter((i) => i.top);
   const bottomExtras = extraItems.filter((i) => !i.top);
 
-  const close = () => {
-    allowCloseRef.current = true;
-    setColorSubOpen(false);
-    setAccessSubOpen(false);
+  const close = useCallback(() => {
     setOpen(false);
-  };
+    setSubPanel(null);
+    if (openMenuId === menuId) setOpenMenuId(null);
+  }, [menuId]);
 
-  // Only one CategoryActionsMenu open at a time across the app.
   useEffect(() => {
     const cb = (id: string | null) => {
-      if (id !== menuId && open) setOpen(false);
+      if (id !== menuId) setOpen(false);
     };
     openMenuListeners.add(cb);
-    return () => {
-      openMenuListeners.delete(cb);
-    };
-  }, [menuId, open]);
+    return () => { openMenuListeners.delete(cb); };
+  }, [menuId]);
 
-  const handleOpenChange = (next: boolean) => {
-    if (next) {
-      allowCloseRef.current = false;
-      setOpen(true);
-      setOpenMenuId(menuId);
-    } else {
-      if (!allowCloseRef.current) return;
-      allowCloseRef.current = false;
-      setColorSubOpen(false);
-      setAccessSubOpen(false);
-      setOpen(false);
-      if (openMenuId === menuId) setOpenMenuId(null);
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (
+        triggerRef.current?.contains(target) ||
+        mainPanelRef.current?.contains(target) ||
+        subPanelRef.current?.contains(target)
+      ) return;
+      close();
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [open, close]);
+
+  useEffect(() => () => {
+    if (subCloseTimerRef.current) clearTimeout(subCloseTimerRef.current);
+  }, []);
+
+  const openSub = (panel: SubPanel) => {
+    if (subCloseTimerRef.current) {
+      clearTimeout(subCloseTimerRef.current);
+      subCloseTimerRef.current = null;
+    }
+    setSubPanel(panel);
+  };
+
+  const scheduledCloseSub = () => {
+    if (subCloseTimerRef.current) clearTimeout(subCloseTimerRef.current);
+    subCloseTimerRef.current = setTimeout(() => {
+      setSubPanel(null);
+      subCloseTimerRef.current = null;
+    }, 180);
+  };
+
+  const cancelCloseSub = () => {
+    if (subCloseTimerRef.current) {
+      clearTimeout(subCloseTimerRef.current);
+      subCloseTimerRef.current = null;
     }
   };
 
-  // Robust outside-click close: a single pointerdown anywhere outside the
-  // trigger and any Radix menu/sub content closes the entire menu.
+  const [mainPos, setMainPos] = useState<{ top: number; left: number } | null>(null);
+  const [subPos, setSubPos] = useState<{ top: number; left: number } | null>(null);
+
   useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      const t = e.target as HTMLElement | null;
-      if (!t) return;
-      if (
-        t.closest("[data-radix-popper-content-wrapper]") ||
-        t.closest("[role='menu']") ||
-        t.closest("[data-color-trigger]") ||
-        t.closest("[data-access-trigger]") ||
-        t.closest("[data-state='open']")
-      ) {
-        return;
-      }
-      close();
-    };
-    document.addEventListener("pointerdown", onDown, true);
-    return () => document.removeEventListener("pointerdown", onDown, true);
+    if (!open || !triggerRef.current) { setMainPos(null); return; }
+    const rect = triggerRef.current.getBoundingClientRect();
+    setMainPos({ top: rect.top, left: rect.right + 4 });
   }, [open]);
 
+  useEffect(() => {
+    if (!subPanel || !mainPanelRef.current) { setSubPos(null); return; }
+    const rowRef = subPanel === "color" ? colorRowRef : accessRowRef;
+    if (!rowRef.current) { setSubPos(null); return; }
+    const rowRect = rowRef.current.getBoundingClientRect();
+    const mainRect = mainPanelRef.current.getBoundingClientRect();
+    setSubPos({ top: rowRect.top, left: mainRect.right + SUB_GAP });
+  }, [subPanel]);
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (open) {
+      close();
+    } else {
+      setOpen(true);
+      setOpenMenuId(menuId);
+    }
+  };
+
   return (
-    <DropdownMenu open={open} onOpenChange={handleOpenChange} modal={false}>
-      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        side="right"
-        sideOffset={4}
-        collisionPadding={8}
-        className="w-44 p-1"
-        onPointerDown={(e) => e.stopPropagation()}
-        onInteractOutside={() => close()}
-        onEscapeKeyDown={() => close()}
-        onCloseAutoFocus={(e) => {
-          if (!skipCloseAutoFocusRef.current) return;
-          e.preventDefault();
-          skipCloseAutoFocusRef.current = false;
-        }}
-      >
-        {topExtras.map((it, i) => (
-          <Item
-            key={`t-${i}`}
-            icon={it.icon}
-            label={it.label}
-            destructive={it.destructive}
-            onClick={() => {
-              it.onClick();
-              close();
-            }}
-          />
-        ))}
-        {onRename && (
-          <Item
-            icon={<Pencil className="h-3.5 w-3.5" />}
-            label="Rename"
-            onClick={() => {
-              skipCloseAutoFocusRef.current = true;
-              onRename();
-              close();
-            }}
-          />
-        )}
-        {onDuplicate && (
-          <Item
-            icon={<Copy className="h-3.5 w-3.5" />}
-            label="Duplicate"
-            onClick={() => {
-              onDuplicate();
-              close();
-            }}
-          />
-        )}
-        {allowColor && (
-          <DropdownMenuSub open={colorSubOpen} onOpenChange={(v) => { if (v) setColorSubOpen(true); }}>
-            <DropdownMenuSubTrigger
-              ref={(el) => { colorTriggerRef.current = el; }}
-              data-color-trigger=""
-              data-instant-sub-close
-              onClick={(e) => {
-                // Hover-only: clicking the Color row must not toggle/close the sub.
-                e.preventDefault();
-              }}
-              onPointerEnter={() => setColorSubOpen(true)}
-              className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary"
+    <>
+      <div ref={triggerRef} onClick={handleToggle} style={{ display: "contents" }}>
+        {trigger}
+      </div>
+
+      {open && mainPos && createPortal(
+        <div
+          ref={mainPanelRef}
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{
+            position: "fixed",
+            top: mainPos.top,
+            left: mainPos.left,
+            zIndex: 9999,
+            minWidth: 176,
+          }}
+          className="mac-menu rounded-lg p-1 shadow-md"
+        >
+          {topExtras.map((it, i) => (
+            <MenuItem
+              key={`t-${i}`}
+              icon={it.icon}
+              label={it.label}
+              destructive={it.destructive}
+              onClick={() => { it.onClick(); close(); }}
+            />
+          ))}
+
+          {onRename && (
+            <MenuItem
+              icon={<Pencil className="h-3.5 w-3.5" />}
+              label="Rename"
+              onClick={() => { onRename(); close(); }}
+            />
+          )}
+
+          {onDuplicate && (
+            <MenuItem
+              icon={<Copy className="h-3.5 w-3.5" />}
+              label="Duplicate"
+              onClick={() => { onDuplicate(); close(); }}
+            />
+          )}
+
+          {allowColor && (
+            <div
+              ref={colorRowRef}
+              onPointerEnter={() => openSub("color")}
+              onPointerLeave={scheduledCloseSub}
+              className={`flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs text-ink transition hover:bg-secondary ${subPanel === "color" ? "bg-secondary" : ""}`}
             >
               <span
                 aria-hidden
@@ -230,86 +222,81 @@ export function CategoryActionsMenu({
                 style={{ background: currentColor || "transparent" }}
               />
               <span className="flex-1">Color</span>
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent
-              sideOffset={SUB_OFFSET}
-              collisionPadding={8}
-              className="p-1"
-              onPointerDown={(e) => e.stopPropagation()}
-              onInteractOutside={() => {
-                // Single outside click dismisses the entire menu, not just the sub.
-                setColorSubOpen(false);
-                close();
-              }}
-              onEscapeKeyDown={() => {
-                setColorSubOpen(false);
-                close();
-              }}
-            >
-              <ColorsPanel
-                currentColor={currentColor}
-                swatches={colorSwatches}
-                onPick={(hex) => {
-                  // Keep the panel open after picking so the user sees the
-                  // check move and can pick again. Outside click closes all.
-                  onColorChange(hex);
-                }}
-              />
-            </DropdownMenuSubContent>
+              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+            </div>
+          )}
 
-          </DropdownMenuSub>
-        )}
-        {accessPanel && (
-          <DropdownMenuSub open={accessSubOpen} onOpenChange={(v) => { if (v) setAccessSubOpen(true); }}>
-            <DropdownMenuSubTrigger
-              data-access-trigger=""
-              data-instant-sub-close
-              onPointerEnter={() => setAccessSubOpen(true)}
-              className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary"
+          {accessPanel && (
+            <div
+              ref={accessRowRef}
+              onPointerEnter={() => openSub("access")}
+              onPointerLeave={scheduledCloseSub}
+              className={`flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs text-ink transition hover:bg-secondary ${subPanel === "access" ? "bg-secondary" : ""}`}
             >
               <Users className="h-3.5 w-3.5" />
               <span className="flex-1">Access</span>
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent
-              sideOffset={SUB_OFFSET}
-              collisionPadding={8}
-              className="p-2"
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              {accessPanel}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-        )}
-        {(bottomExtras.length > 0 || onDelete) && <DropdownMenuSeparator />}
-        {bottomExtras.map((it, i) => (
-          <Item
-            key={`b-${i}`}
-            icon={it.icon}
-            label={it.label}
-            destructive={it.destructive}
-            onClick={() => {
-              it.onClick();
-              close();
-            }}
-          />
-        ))}
-        {onDelete && (
-          <Item
-            icon={<Trash2 className="h-3.5 w-3.5" />}
-            label="Delete"
-            destructive
-            onClick={() => {
-              onDelete();
-              close();
-            }}
-          />
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+            </div>
+          )}
+
+          {(bottomExtras.length > 0 || onDelete) && (
+            <div className="my-1 h-px bg-hairline" />
+          )}
+
+          {bottomExtras.map((it, i) => (
+            <MenuItem
+              key={`b-${i}`}
+              icon={it.icon}
+              label={it.label}
+              destructive={it.destructive}
+              onClick={() => { it.onClick(); close(); }}
+            />
+          ))}
+
+          {onDelete && (
+            <MenuItem
+              icon={<Trash2 className="h-3.5 w-3.5" />}
+              label="Delete"
+              destructive
+              onClick={() => { onDelete(); close(); }}
+            />
+          )}
+        </div>,
+        document.body
+      )}
+
+      {open && subPanel && subPos && createPortal(
+        <div
+          ref={subPanelRef}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerEnter={cancelCloseSub}
+          onPointerLeave={scheduledCloseSub}
+          style={{
+            position: "fixed",
+            top: subPos.top,
+            left: subPos.left,
+            zIndex: 10000,
+          }}
+          className="mac-menu rounded-lg p-1 shadow-md"
+        >
+          {subPanel === "color" && (
+            <ColorsPanel
+              currentColor={currentColor}
+              swatches={colorSwatches}
+              onPick={(hex) => {
+                onColorChange(hex);
+              }}
+            />
+          )}
+          {subPanel === "access" && accessPanel}
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
 
-function Item({
+function MenuItem({
   icon,
   label,
   onClick,
@@ -323,8 +310,8 @@ function Item({
   return (
     <button
       type="button"
-      onClick={onClick}
-      data-instant-sub-close
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
       className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs transition ${
         destructive
           ? "text-destructive hover:bg-destructive/10"
@@ -337,7 +324,6 @@ function Item({
   );
 }
 
-// ---- Colors panel (Notion-style vertical list with 9 named colors) ----
 function ColorsPanel({
   currentColor,
   onPick,
@@ -345,7 +331,6 @@ function ColorsPanel({
 }: {
   currentColor: ColorValue;
   onPick: (hex: ColorValue) => void;
-  /** Optional override — when provided, names are auto-derived from STANDARD_COLORS_NAMED if hexes match. */
   swatches?: ColorValue[];
 }) {
   const rows: { hex: ColorValue; name: string }[] = swatches
@@ -365,11 +350,8 @@ function ColorsPanel({
           <button
             key={hex}
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onPick(hex);
-            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPick(hex); }}
             className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-left text-ink transition hover:bg-secondary"
           >
             <span
