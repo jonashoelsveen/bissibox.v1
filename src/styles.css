@@ -269,3 +269,10 @@
     mix-blend-mode: overlay;
   }
 }
+
+/* Keep default cursor while dragging @dnd-kit sortable rows
+   (used in calendar/diary left-panel tabs). */
+body[style*="cursor: grabbing"],
+body[style*="cursor:grabbing"] {
+  cursor: default !important;
+}
