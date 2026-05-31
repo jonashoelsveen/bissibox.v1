@@ -2042,7 +2042,7 @@ export function MonthGridType1({
 
 
         {/* Inline popover (per-item create or edit) */}
-        {popover && appKind === "diary" && (() => {
+        {popover && appKind === "diary" && !creatingDrag?.moved && (() => {
           const cell = days.find(
             (d) => d.row === popover.pos.row && d.col === popover.pos.col,
           );
