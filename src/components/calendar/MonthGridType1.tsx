@@ -2342,8 +2342,9 @@ export function MonthGridType1({
           );
         })()}
         {creatingDrag && (() => {
-          const left = creatingDrag.pointerX - creatingDrag.offsetX;
-          const top = creatingDrag.pointerY - creatingDrag.offsetY;
+          const landing = creatingDrag.landing;
+          const left = landing ? landing.left : creatingDrag.pointerX - creatingDrag.offsetX;
+          const top = landing ? landing.top : creatingDrag.pointerY - creatingDrag.offsetY;
           const c = creatingDrag.color;
           return (
             <div
@@ -2353,6 +2354,9 @@ export function MonthGridType1({
                 top,
                 width: creatingDrag.chipWidth,
                 height: creatingDrag.chipHeight,
+                transition: landing
+                  ? "left 180ms cubic-bezier(0.22, 1, 0.36, 1), top 180ms cubic-bezier(0.22, 1, 0.36, 1)"
+                  : undefined,
               }}
             >
               <div
@@ -2368,6 +2372,7 @@ export function MonthGridType1({
             </div>
           );
         })()}
+
         {appKind === "diary" && !popover && hoverId && hoverRect && (() => {
 
           const ev = events.find((e) => e.id === hoverId);
