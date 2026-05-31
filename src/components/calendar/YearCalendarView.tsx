@@ -10,9 +10,11 @@
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
+import { StatsChartView } from "./StatsChartView";
 
 import { useYearStore, useEventStore, type CellKey, type CalendarEvent } from "./yearStore";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode } from "./UnifiedElasticGrid";
@@ -275,6 +277,10 @@ function YearCalendarViewInner({
     else setInternalViewMode(v);
   };
 
+  // Diary-only: toggle between the calendar grid and the statistics chart.
+  const [statsActive, setStatsActive] = useState(false);
+  const showStatsToggle = appKind === "diary";
+
 
 
 
@@ -330,6 +336,22 @@ function YearCalendarViewInner({
                   ]
             }
           />
+          {showStatsToggle && (
+            <button
+              type="button"
+              aria-label={statsActive ? "Show calendar" : "Show statistics"}
+              title={statsActive ? "Calendar" : "Statistics"}
+              aria-pressed={statsActive}
+              onClick={() => setStatsActive((s) => !s)}
+              className={`grid h-8 w-8 place-items-center rounded-md transition-colors ${
+                statsActive
+                  ? "bg-secondary text-ink"
+                  : "text-muted-foreground hover:bg-secondary hover:text-ink"
+              }`}
+            >
+              <BarChart3 className="h-4 w-4" />
+            </button>
+          )}
           {appKind !== "diary" && !disableImport && (
             <ImportButton seat={seat} onCommit={(patch) => upsertEvent(patch)} />
           )}
@@ -337,6 +359,13 @@ function YearCalendarViewInner({
       </div>
 
       <div data-preview-active={previewActive ? "true" : "false"} className="flex flex-1 min-h-0 flex-col overflow-hidden">
+        {statsActive ? (
+          <StatsChartView
+            events={mergedEvents}
+            viewMode={viewMode}
+            currentDate={currentDate}
+          />
+        ) : (
         <UnifiedElasticGrid
           calId={calId}
           year={meta.year}
@@ -389,6 +418,7 @@ function YearCalendarViewInner({
           viewerRole={viewerRole}
           teamId={teamId}
         />
+        )}
       </div>
     </div>
   );

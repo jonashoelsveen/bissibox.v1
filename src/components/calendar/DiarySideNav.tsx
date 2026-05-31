@@ -14,6 +14,7 @@
 import { MiniCalendar, type DateRange } from "./MiniCalendar";
 import { DiaryActivitiesSection } from "./DiaryActivitiesSection";
 import { DiaryStravaActivitiesSection } from "./DiaryStravaActivitiesSection";
+import { MetricsSection } from "./MetricsSection";
 import type { CategoryKey } from "./CalendarSideNav";
 
 export interface DiarySideNavProps {
@@ -65,6 +66,7 @@ export function DiarySideNav({
           canEdit={canEdit}
           targetUserId={stravaUserId}
         />
+        <MetricsSection title="Metrics" />
       </div>
     </nav>
   );

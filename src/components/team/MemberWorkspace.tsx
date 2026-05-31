@@ -3,6 +3,7 @@ import { BookOpen, CalendarDays, PanelLeft } from "lucide-react";
 import { MiniCalendar, type DateRange } from "@/components/calendar/MiniCalendar";
 import { YearCalendarView } from "@/components/calendar/YearCalendarView";
 import { DiaryActivitiesSection } from "@/components/calendar/DiaryActivitiesSection";
+import { MetricsSection } from "@/components/calendar/MetricsSection";
 import { ClientCategoriesSection } from "@/components/calendar/ClientCategoriesSection";
 import type { ViewMode } from "@/components/calendar/UnifiedElasticGrid";
 import type { CategoryKey } from "@/components/calendar/CalendarSideNav";
@@ -181,6 +182,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
                     canEdit={false}
                     kind="diary_strava"
                   />
+                  <MetricsSection title="Metrics" />
                 </div>
               )}
             </nav>
