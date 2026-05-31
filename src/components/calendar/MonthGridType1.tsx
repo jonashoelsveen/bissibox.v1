@@ -1228,7 +1228,11 @@ export function MonthGridType1({
       const dx = e.clientX - start.x;
       const dy = e.clientY - start.y;
       const active = creatingDragRef.current;
-      if (!active && Math.hypot(dx, dy) < 4) return;
+      const passedThreshold = Math.hypot(dx, dy) >= 4;
+      if (!active?.moved && !passedThreshold) return;
+
+      // Prevent native text selection while dragging.
+      e.preventDefault();
 
       const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
       const cell = node?.closest<HTMLElement>("[data-cell-pos]");
@@ -1243,7 +1247,7 @@ export function MonthGridType1({
       }
       setCreatingDrag((prev) =>
         prev
-          ? { ...prev, pointerX: e.clientX, pointerY: e.clientY, targetPos }
+          ? { ...prev, pointerX: e.clientX, pointerY: e.clientY, targetPos, moved: true }
           : null,
       );
     };
