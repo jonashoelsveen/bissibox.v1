@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PanelLeft } from "lucide-react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { useLibrarySetting } from "@/lib/library-settings";
 import type { CategoryKey } from "./CalendarSideNav";
@@ -15,6 +16,16 @@ import type { ViewMode } from "./UnifiedElasticGrid";
 
 export function DiaryPage() {
   const { user, loading, activeEntityId } = useAuth();
+  const search = useSearch({ from: "/diary" });
+  const navigate = useNavigate({ from: "/diary" });
+  const statsActive = search.view === "stats";
+  const setStatsActive = (next: boolean) => {
+    void navigate({
+      to: "/diary",
+      search: next ? { view: "stats" } : {},
+      replace: true,
+    });
+  };
 
   const { calId, calTitle, teamId, memberId } = useMemo(
     () => ({
@@ -136,6 +147,8 @@ export function DiaryPage() {
             viewerRole="owner"
             panelOpen={panelOpen}
             teamId={teamId ?? undefined}
+            statsActive={statsActive}
+            onStatsActiveChange={setStatsActive}
           />
         </div>
       </div>

@@ -124,6 +124,9 @@ export interface YearCalendarViewProps {
   teamId?: string | null;
   /** Lowercase hex colors the viewer has toggled off locally (coach view). */
   hiddenColors?: Set<string>;
+  /** Controlled "statistics view" toggle (diary only). */
+  statsActive?: boolean;
+  onStatsActiveChange?: (next: boolean) => void;
 }
 
 export function YearCalendarView(props: YearCalendarViewProps) {
@@ -152,6 +155,8 @@ function YearCalendarViewInner({
   disableImport = false,
   teamId = null,
   hiddenColors,
+  statsActive: statsActiveProp,
+  onStatsActiveChange,
 }: YearCalendarViewProps) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta } =
     useYearStore(calId, defaultTitle);
@@ -278,7 +283,12 @@ function YearCalendarViewInner({
   };
 
   // Diary-only: toggle between the calendar grid and the statistics chart.
-  const [statsActive, setStatsActive] = useState(false);
+  const [internalStatsActive, setInternalStatsActive] = useState(false);
+  const statsActive = statsActiveProp ?? internalStatsActive;
+  const setStatsActive = (next: boolean) => {
+    if (onStatsActiveChange) onStatsActiveChange(next);
+    else setInternalStatsActive(next);
+  };
   const showStatsToggle = appKind === "diary";
 
 
@@ -342,7 +352,7 @@ function YearCalendarViewInner({
               aria-label={statsActive ? "Show calendar" : "Show statistics"}
               title={statsActive ? "Calendar" : "Statistics"}
               aria-pressed={statsActive}
-              onClick={() => setStatsActive((s) => !s)}
+              onClick={() => setStatsActive(!statsActive)}
               className={`grid h-8 w-8 place-items-center rounded-md transition-colors ${
                 statsActive
                   ? "bg-secondary text-ink"
