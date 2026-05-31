@@ -1566,6 +1566,8 @@ export function MonthGridType1({
                               const tallCreate =
                                 appKind === "diary" &&
                                 (monthTileDesign === "split" || monthTileDesign === "stacked");
+                              const createColor = popover?.initialColor ?? defaultNewColor;
+                              const createTitle = popover?.initialText?.trim() || "New session";
                               return (
                                 <motion.div
                                   key={`${id}-creating-${idx}`}
@@ -1574,9 +1576,16 @@ export function MonthGridType1({
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
                                   transition={{ duration: 0.12 }}
-                                  className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10"
-                                  style={{ height: tallCreate ? 44 : 22 }}
-                                />
+                                  className="pointer-events-none flex items-center overflow-hidden rounded-[3px] border-2 border-solid border-primary/60 bg-primary/10 px-1 text-[11px] leading-none"
+                                  style={{
+                                    height: tallCreate ? 44 : 22,
+                                    borderColor: createColor ? `${createColor}CC` : undefined,
+                                    background: createColor ? `${createColor}1F` : undefined,
+                                    color: createColor ? undefined : undefined,
+                                  }}
+                                >
+                                  <span className="truncate text-ink/80">{createTitle}</span>
+                                </motion.div>
                               );
                             }
                             const raw = it.kind === "legacy" ? it.raw : it.event.title;
