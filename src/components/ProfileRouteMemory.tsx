@@ -10,7 +10,7 @@ import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 
 const STORAGE_PREFIX = "rl_last_path:";
-const DEFAULT_PATH = "/home";
+const DEFAULT_PATH = "/";
 
 // Paths that should not be remembered as a profile's "last page".
 const NON_APP_PREFIXES = [
