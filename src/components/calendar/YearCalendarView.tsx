@@ -418,6 +418,7 @@ function YearCalendarViewInner({
           viewerRole={viewerRole}
           teamId={teamId}
         />
+        )}
       </div>
     </div>
   );
