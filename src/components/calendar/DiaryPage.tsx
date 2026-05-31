@@ -1,9 +1,9 @@
 /**
  * Diary — replica of the Calendar page restricted to logging past sessions.
- * Individual seat only; no entity tabs; week + month only.
+ * Profile-scoped (personal or active team); week + month only.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PanelLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useLibrarySetting } from "@/lib/library-settings";
@@ -14,19 +14,18 @@ import type { DateRange } from "./MiniCalendar";
 import type { ViewMode } from "./UnifiedElasticGrid";
 
 export function DiaryPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, activeEntityId } = useAuth();
 
-  const { calId, calTitle } = useMemo(
+  const { calId, calTitle, teamId, memberId } = useMemo(
     () => ({
-      // IMPORTANT: never fall back to a shared "anon" key. Diary events are
-      // persisted in localStorage keyed by calId, so a shared key would leak
-      // sessions across accounts on the same browser. We render nothing until
-      // we have an authenticated user id.
-      calId: user ? `diary:${user.id}` : "",
-      calTitle: "My diary",
+      calId: user ? (activeEntityId ? `diary:team:${activeEntityId}` : `diary:user:${user.id}`) : "",
+      calTitle: activeEntityId ? "Team diary" : "My diary",
+      teamId: activeEntityId ?? null,
+      memberId: activeEntityId ? null : user?.id ?? null,
     }),
-    [user],
+    [user, activeEntityId],
   );
+  const profileScopeKey = `${user?.id ?? "anon"}:${activeEntityId ?? "individual"}`;
 
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [currentRange, setCurrentRange] = useState<DateRange>(() => {
@@ -46,7 +45,15 @@ export function DiaryPage() {
       return next;
     });
 
-  const panelScopeKey = user?.id ?? "anon";
+  useEffect(() => {
+    const t = new Date();
+    setCurrentDate(t);
+    setCurrentRange({ start: t, end: t });
+    setViewMode("week");
+    setVisibleCategories(new Set<CategoryKey>(["ind:training"]));
+  }, [profileScopeKey]);
+
+  const panelScopeKey = activeEntityId ?? user?.id ?? "anon";
   const [panelOpen, setPanelOpen] = useLibrarySetting<boolean>(
     `diary:panel:open:${panelScopeKey}`,
     true,
@@ -79,6 +86,7 @@ export function DiaryPage() {
             <div className="mac-panel relative h-full overflow-hidden rounded-lg border border-hairline shadow-sm">
               <div className="h-full overflow-y-auto px-1.5 pb-6 pt-[48px]">
                 <DiarySideNav
+                  key={profileScopeKey}
                   currentDate={currentDate}
                   currentRange={currentRange}
                   onCurrentDateChange={(d, r) => {
@@ -88,6 +96,9 @@ export function DiaryPage() {
                   viewMode={viewMode}
                   visibleCategories={visibleCategories}
                   onToggleCategory={toggleCategory}
+                  teamId={teamId}
+                  ownerId={memberId}
+                  stravaUserId={memberId}
                 />
               </div>
               <div className="mac-panel-fade pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg" />
@@ -107,6 +118,7 @@ export function DiaryPage() {
 
         <div className={`relative min-w-0 md:h-full md:overflow-hidden transition-[padding-left] duration-300 ease-out ${panelOpen ? "pl-0" : "pl-2"}`}>
           <YearCalendarView
+            key={profileScopeKey}
             calId={calId}
             defaultTitle={calTitle}
             seat="individual"
@@ -120,9 +132,10 @@ export function DiaryPage() {
             viewMode={viewMode}
             onViewModeChange={(v) => setViewMode(v === "day" ? "week" : v)}
             visibleCategories={visibleCategories}
-            memberId={user?.id}
+            memberId={memberId ?? undefined}
             viewerRole="owner"
             panelOpen={panelOpen}
+            teamId={teamId ?? undefined}
           />
         </div>
       </div>

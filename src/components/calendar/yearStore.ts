@@ -377,18 +377,24 @@ export interface CalendarEvent {
 interface ScopeUser {
   kind: "user";
   userId: string;
+  diaryOnly?: boolean;
 }
 interface ScopeTeam {
   kind: "team";
   entityId: string;
+  diaryOnly?: boolean;
 }
 interface ScopeClient {
   kind: "client";
   clientId: string;
+  diaryOnly?: boolean;
 }
 type Scope = ScopeUser | ScopeTeam | ScopeClient | null;
 
 function parseScope(calId: string): Scope {
+  if (calId.startsWith("diary:user:")) return { kind: "user", userId: calId.slice(11), diaryOnly: true };
+  if (calId.startsWith("diary:team:")) return { kind: "team", entityId: calId.slice(11), diaryOnly: true };
+  if (calId.startsWith("diary:client:")) return { kind: "client", clientId: calId.slice(13), diaryOnly: true };
   if (calId.startsWith("user:")) return { kind: "user", userId: calId.slice(5) };
   if (calId.startsWith("team:")) return { kind: "team", entityId: calId.slice(5) };
   if (calId.startsWith("client:")) return { kind: "client", clientId: calId.slice(7) };
@@ -622,6 +628,7 @@ export function useEventStore(calId: string) {
       if (scope.kind === "team") q = q.eq("entity_id", scope.entityId);
       else if (scope.kind === "user") q = q.eq("user_id", scope.userId).is("entity_id", null);
       else q = q.eq("user_id", scope.clientId).is("entity_id", null);
+      if (scope.diaryOnly) q = q.not("diary_type", "is", null);
       return q;
     };
 
