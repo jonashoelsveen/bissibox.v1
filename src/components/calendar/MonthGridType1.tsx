@@ -910,6 +910,8 @@ export function MonthGridType1({
     title: string;
     tall: boolean;
     targetPos: CellPos | null;
+    landing?: { left: number; top: number } | null;
+
   } | null>(null);
   const creatingDragRef = useRef(creatingDrag);
   useEffect(() => {
@@ -1254,23 +1256,44 @@ export function MonthGridType1({
         setCreatingDrag(null);
         return;
       }
-      if (
+      const validDrop =
         drag.targetPos &&
         start &&
         (drag.targetPos.row !== start.fromPos.row ||
-          drag.targetPos.col !== start.fromPos.col)
-      ) {
-        const el = containerRef.current?.querySelector<HTMLElement>(
-          `[data-cell-pos="${drag.targetPos.row}-${drag.targetPos.col}"][data-day-anchor]`,
-        );
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          const newPos = drag.targetPos;
-          setPopover((prev) => (prev ? { ...prev, pos: newPos, rect } : prev));
-        }
+          drag.targetPos.col !== start.fromPos.col);
+      if (!validDrop) {
+        setCreatingDrag(null);
+        return;
       }
-      setCreatingDrag(null);
+      const cellEl = containerRef.current?.querySelector<HTMLElement>(
+        `[data-cell-pos="${drag.targetPos!.row}-${drag.targetPos!.col}"][data-day-anchor]`,
+      );
+      if (!cellEl) {
+        setCreatingDrag(null);
+        return;
+      }
+      const rect = cellEl.getBoundingClientRect();
+      const newPos = drag.targetPos!;
+      setPopover((prev) => (prev ? { ...prev, pos: newPos, rect } : prev));
+      // Snap-in: defer one frame so the placeholder mounts in the new cell,
+      // then transition the floating clone to that pixel before unmounting.
+      // Matches the existing-session drop animation (see dragSession landing).
+      requestAnimationFrame(() => {
+        const placeholderEl = containerRef.current?.querySelector<HTMLElement>(
+          `[data-creating-placeholder="1"]`,
+        );
+        if (!placeholderEl) {
+          setCreatingDrag(null);
+          return;
+        }
+        const r = placeholderEl.getBoundingClientRect();
+        setCreatingDrag((prev) =>
+          prev ? { ...prev, landing: { left: r.left, top: r.top } } : prev,
+        );
+        setTimeout(() => setCreatingDrag(null), 200);
+      });
     };
+
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     return () => {
@@ -1683,14 +1706,21 @@ export function MonthGridType1({
                                 !!creatingDrag &&
                                 creatingDragStartRef.current?.fromPos.row === pos.row &&
                                 creatingDragStartRef.current?.fromPos.col === pos.col;
+                              // While the floating clone is animating into
+                              // this newly-landed slot, keep the placeholder
+                              // mounted (so layout reserves the slot) but
+                              // invisible — the clone covers it. Once the
+                              // clone unmounts, the placeholder fades back in.
+                              const isLanding = !!creatingDrag?.landing;
                               return (
                                 <motion.div
                                   key={`${id}-creating-${idx}`}
                                   layout
                                   initial={{ opacity: 0 }}
-                                  animate={{ opacity: isDragging ? 0.35 : 1 }}
+                                  animate={{ opacity: isDragging ? 0.35 : isLanding ? 0 : 1 }}
                                   exit={{ opacity: 0 }}
                                   transition={{ duration: 0.12 }}
+
                                   onPointerDown={(e) => {
                                     if (e.button !== 0) return;
                                     e.stopPropagation();
@@ -1727,7 +1757,9 @@ export function MonthGridType1({
                                     cursor: "default",
                                   }}
                                   data-session-active="1"
+                                  data-creating-placeholder="1"
                                 >
+
 
                                   <span className="truncate">{createTitle}</span>
                                 </motion.div>
@@ -2319,8 +2351,9 @@ export function MonthGridType1({
           );
         })()}
         {creatingDrag && (() => {
-          const left = creatingDrag.pointerX - creatingDrag.offsetX;
-          const top = creatingDrag.pointerY - creatingDrag.offsetY;
+          const landing = creatingDrag.landing;
+          const left = landing ? landing.left : creatingDrag.pointerX - creatingDrag.offsetX;
+          const top = landing ? landing.top : creatingDrag.pointerY - creatingDrag.offsetY;
           const c = creatingDrag.color;
           return (
             <div
@@ -2330,6 +2363,9 @@ export function MonthGridType1({
                 top,
                 width: creatingDrag.chipWidth,
                 height: creatingDrag.chipHeight,
+                transition: landing
+                  ? "left 180ms cubic-bezier(0.22, 1, 0.36, 1), top 180ms cubic-bezier(0.22, 1, 0.36, 1)"
+                  : undefined,
               }}
             >
               <div
@@ -2345,6 +2381,7 @@ export function MonthGridType1({
             </div>
           );
         })()}
+
         {appKind === "diary" && !popover && hoverId && hoverRect && (() => {
 
           const ev = events.find((e) => e.id === hoverId);
