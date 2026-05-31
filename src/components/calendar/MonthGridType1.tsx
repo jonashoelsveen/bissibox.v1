@@ -1568,7 +1568,9 @@ export function MonthGridType1({
                       type RenderItem =
                         | { kind: "ghost" }
                         | { kind: "creating" }
+                        | { kind: "creating-ghost" }
                         | UnifiedItem;
+
                       const renderList: RenderItem[] = [...baseVisible];
                       if (isTargetDay && dragSession && !dragSession.landing) {
                         // Calendar mode: keep the drop-preview chip pinned
