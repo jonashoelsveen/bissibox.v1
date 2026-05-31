@@ -154,9 +154,7 @@ export function CategoryActionsMenu({
       ) {
         return;
       }
-      setColorSubOpen(false);
-      setAccessSubOpen(false);
-      setOpen(false);
+      close();
     };
     document.addEventListener("pointerdown", onDown, true);
     return () => document.removeEventListener("pointerdown", onDown, true);
