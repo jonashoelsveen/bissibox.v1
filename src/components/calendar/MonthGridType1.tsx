@@ -1724,7 +1724,7 @@ export function MonthGridType1({
                                     backgroundColor: createColor ?? "hsl(var(--secondary))",
                                     boxShadow: createColor ? `inset 2px 0 0 ${createColor}` : undefined,
                                     color: createColor ? "#fff" : undefined,
-                                    cursor: "grab",
+                                    cursor: "default",
                                   }}
                                   data-session-active="1"
                                 >
@@ -1733,6 +1733,28 @@ export function MonthGridType1({
                                 </motion.div>
                               );
                             }
+                            if (it.kind === "creating-ghost") {
+                              const tallCreate =
+                                appKind === "diary" &&
+                                (monthTileDesign === "split" || monthTileDesign === "stacked");
+                              const c = creatingDrag?.color ?? null;
+                              return (
+                                <motion.div
+                                  key={`${id}-creating-ghost-${idx}`}
+                                  initial={false}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0 }}
+                                  className="pointer-events-none rounded-[3px] border-2 border-solid border-primary/70 bg-primary/10"
+                                  style={{
+                                    height: tallCreate ? 44 : 22,
+                                    borderColor: c ? `${c}CC` : undefined,
+                                    background: c ? `${c}1F` : undefined,
+                                  }}
+                                />
+                              );
+                            }
+
 
                             const raw = it.kind === "legacy" ? it.raw : it.event.title;
                             const itemColor = it.kind === "legacy" ? splitColor(it.raw).color : it.event.color;
