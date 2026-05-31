@@ -277,6 +277,10 @@ function YearCalendarViewInner({
     else setInternalViewMode(v);
   };
 
+  // Diary-only: toggle between the calendar grid and the statistics chart.
+  const [statsActive, setStatsActive] = useState(false);
+  const showStatsToggle = appKind === "diary";
+
 
 
 
