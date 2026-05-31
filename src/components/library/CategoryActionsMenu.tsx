@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, useCallback } from "react";
+import { cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Pencil, Copy, Trash2, Users, Check, ChevronRight } from "lucide-react";
 
@@ -81,6 +81,10 @@ export function CategoryActionsMenu({
   const bottomExtras = extraItems.filter((i) => !i.top);
 
   const close = useCallback(() => {
+    if (subCloseTimerRef.current) {
+      clearTimeout(subCloseTimerRef.current);
+      subCloseTimerRef.current = null;
+    }
     setOpen(false);
     setSubPanel(null);
     if (openMenuId === menuId) setOpenMenuId(null);
@@ -88,7 +92,10 @@ export function CategoryActionsMenu({
 
   useEffect(() => {
     const cb = (id: string | null) => {
-      if (id !== menuId) setOpen(false);
+      if (id !== menuId) {
+        setOpen(false);
+        setSubPanel(null);
+      }
     };
     openMenuListeners.add(cb);
     return () => { openMenuListeners.delete(cb); };
@@ -155,7 +162,6 @@ export function CategoryActionsMenu({
   }, [subPanel]);
 
   const handleToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
     if (open) {
       close();
     } else {
@@ -164,11 +170,22 @@ export function CategoryActionsMenu({
     }
   };
 
+  const renderedTrigger = isValidElement(trigger)
+    ? cloneElement(trigger as React.ReactElement<Record<string, unknown>>, {
+        "data-state": open ? "open" : "closed",
+        "aria-expanded": open,
+      })
+    : trigger;
+
   return (
     <>
-      <div ref={triggerRef} onClick={handleToggle} style={{ display: "contents" }}>
-        {trigger}
-      </div>
+      <span
+        ref={triggerRef}
+        onClickCapture={handleToggle}
+        className="inline-flex shrink-0"
+      >
+        {renderedTrigger}
+      </span>
 
       {open && mainPos && createPortal(
         <div
