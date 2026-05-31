@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -152,20 +152,9 @@ export function CategoryActionsMenu({
     return () => document.removeEventListener("pointerdown", onDown, true);
   }, [open]);
 
-  const triggerNode = isValidElement(trigger)
-    ? cloneElement(trigger, {
-        ...trigger.props,
-        "data-state": open ? "open" : "closed",
-      })
-    : trigger;
-
-
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange} modal={false}>
-
-
-
-      <DropdownMenuTrigger asChild>{triggerNode}</DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
         side="right"
@@ -222,10 +211,7 @@ export function CategoryActionsMenu({
                 // Hover-only: clicking the Color row must not toggle/close the sub.
                 e.preventDefault();
               }}
-              onPointerEnter={() => {
-                cancelColorClose();
-                setColorSubOpen(true);
-              }}
+              onPointerEnter={() => setColorSubOpen(true)}
               className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary"
             >
               <span
