@@ -278,7 +278,7 @@ export function CategoryActionsMenu({
           </DropdownMenuSub>
         )}
         {accessPanel && (
-          <DropdownMenuSub open={accessSubOpen} onOpenChange={setAccessSubOpen}>
+          <DropdownMenuSub open={accessSubOpen} onOpenChange={(v) => { if (v) setAccessSubOpen(true); }}>
             <DropdownMenuSubTrigger
               data-access-trigger=""
               data-instant-sub-close
