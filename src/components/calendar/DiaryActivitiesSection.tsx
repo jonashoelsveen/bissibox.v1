@@ -47,6 +47,8 @@ export interface DiaryActivitiesSectionProps {
   kind?: "diary_activity" | "diary_strava";
   /** When false, hide the header plus icon entirely. Defaults to true. */
   showAdd?: boolean;
+  teamId?: string | null;
+  ownerId?: string | null;
 }
 
 export function DiaryActivitiesSection({
@@ -55,8 +57,10 @@ export function DiaryActivitiesSection({
   onAddClick,
   kind = "diary_activity",
   showAdd = true,
+  teamId = null,
+  ownerId = null,
 }: DiaryActivitiesSectionProps) {
-  const { categories, create, update, remove, reorder } = useUserCategories({ kind });
+  const { categories, create, update, remove, reorder } = useUserCategories({ kind, teamId, ownerId });
   const [open, setOpen] = useState(true);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [renamingId, setRenamingId] = useState<string | null>(null);
