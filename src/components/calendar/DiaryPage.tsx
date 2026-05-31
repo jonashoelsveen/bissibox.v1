@@ -18,7 +18,7 @@ export function DiaryPage() {
 
   const { calId, calTitle, teamId, memberId } = useMemo(
     () => ({
-      calId: user ? (activeEntityId ? `team:${activeEntityId}` : `user:${user.id}`) : "",
+      calId: user ? (activeEntityId ? `diary:team:${activeEntityId}` : `diary:user:${user.id}`) : "",
       calTitle: activeEntityId ? "Team diary" : "My diary",
       teamId: activeEntityId ?? null,
       memberId: activeEntityId ? null : user?.id ?? null,
