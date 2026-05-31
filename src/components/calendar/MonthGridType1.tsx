@@ -1598,7 +1598,20 @@ export function MonthGridType1({
                           : 0;
                         renderList.splice(createInsertAt, 0, { kind: "creating" });
                       }
+                      // While the user is dragging the creating placeholder,
+                      // show a colored drop-preview ghost at the hovered
+                      // target day (matches existing-session drag UX).
+                      const isCreatingDragTarget =
+                        !!creatingDrag &&
+                        !!creatingDrag.targetPos &&
+                        creatingDrag.targetPos.row === pos.row &&
+                        creatingDrag.targetPos.col === pos.col &&
+                        !isCreatingHere;
+                      if (isCreatingDragTarget) {
+                        renderList.splice(0, 0, { kind: "creating-ghost" });
+                      }
                       const renderVisible = renderList.slice(0, MAX_VISIBLE);
+
 
                       const renderGhost = () => {
                         if (!dragSession) return null;
