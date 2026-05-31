@@ -27,12 +27,14 @@ export interface DiaryStravaActivitiesSectionProps {
   title?: string;
   /** When false, hide rows (read-only leader mode still shows the list). */
   canEdit?: boolean;
+  targetUserId?: string | null;
 }
 
 export function DiaryStravaActivitiesSection({
   title = "Strava activities",
+  targetUserId,
 }: DiaryStravaActivitiesSectionProps) {
-  const { rows } = useStravaActivities();
+  const { rows } = useStravaActivities(targetUserId ?? undefined);
   const [open, setOpen] = useState(true);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
