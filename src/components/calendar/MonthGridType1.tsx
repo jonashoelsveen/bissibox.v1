@@ -1276,7 +1276,7 @@ export function MonthGridType1({
       }
       setCreatingDrag(null);
     };
-    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", onUp);
     return () => {
       window.removeEventListener("pointermove", onMove);
