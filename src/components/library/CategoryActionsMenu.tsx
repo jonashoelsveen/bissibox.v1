@@ -149,6 +149,31 @@ export function CategoryActionsMenu({
 
   useEffect(() => () => cancelColorClose(), []);
 
+  // Robust outside-click close: a single pointerdown anywhere outside the
+  // trigger and any Radix menu/sub content closes the entire menu.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+      if (
+        t.closest("[data-radix-popper-content-wrapper]") ||
+        t.closest("[role='menu']") ||
+        t.closest("[data-color-trigger]") ||
+        t.closest("[data-access-trigger]") ||
+        t.closest("[data-state='open']")
+      ) {
+        return;
+      }
+      setColorSubOpen(false);
+      setAccessSubOpen(false);
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
+  }, [open]);
+
+
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange} modal={false}>
 
