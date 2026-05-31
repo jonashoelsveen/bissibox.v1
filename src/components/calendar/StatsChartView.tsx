@@ -202,25 +202,21 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
       {/* Top totals row */}
       <div className="mb-2 flex items-end justify-between gap-4">
         <div className="flex items-baseline gap-6">
-          {distVisible && (
-            <div className="text-ink">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Distance</div>
-              <div className="text-xl font-semibold tabular-nums">
-                {formatDistance(totalDistKm, unit, 1)}
-              </div>
+          <div className="text-ink" style={{ visibility: distVisible ? "visible" : "hidden" }}>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Distance</div>
+            <div className="text-xl font-semibold tabular-nums">
+              {formatDistance(totalDistKm, unit, 1)}
             </div>
-          )}
-          {durVisible && (
-            <div className="text-ink">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</div>
-              <div className="text-xl font-semibold tabular-nums">
-                {formatDuration(totalDurMin)}
-              </div>
+          </div>
+          <div className="text-ink" style={{ visibility: durVisible ? "visible" : "hidden" }}>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</div>
+            <div className="text-xl font-semibold tabular-nums">
+              {formatDuration(totalDurMin)}
             </div>
-          )}
+          </div>
         </div>
 
-        <div className="min-w-[160px] rounded-md border border-hairline bg-white px-3 py-2 text-right shadow-sm">
+        <div className="w-[200px] rounded-md border border-hairline bg-white px-3 py-2 text-right shadow-sm">
           <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
             {hoverDate
               ? hoverDate.toLocaleDateString(undefined, {
@@ -231,24 +227,26 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
               : "Hover graph"}
           </div>
           <div className="mt-0.5 space-y-0.5">
-            {distVisible && (
-              <div className="flex items-center justify-end gap-2 text-sm tabular-nums">
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={{ background: distColor }}
-                />
-                <span className="text-ink">{formatDistance(hoverDistKm, unit, 1)}</span>
-              </div>
-            )}
-            {durVisible && (
-              <div className="flex items-center justify-end gap-2 text-sm tabular-nums">
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={{ background: durColor }}
-                />
-                <span className="text-ink">{formatDuration(hoverDurMin)}</span>
-              </div>
-            )}
+            <div
+              className="flex items-center justify-end gap-2 text-sm tabular-nums"
+              style={{ visibility: distVisible ? "visible" : "hidden" }}
+            >
+              <span
+                className="inline-block h-2 w-2 rounded-full"
+                style={{ background: distColor }}
+              />
+              <span className="text-ink">{formatDistance(hoverDistKm, unit, 1)}</span>
+            </div>
+            <div
+              className="flex items-center justify-end gap-2 text-sm tabular-nums"
+              style={{ visibility: durVisible ? "visible" : "hidden" }}
+            >
+              <span
+                className="inline-block h-2 w-2 rounded-full"
+                style={{ background: durColor }}
+              />
+              <span className="text-ink">{formatDuration(hoverDurMin)}</span>
+            </div>
           </div>
         </div>
       </div>
