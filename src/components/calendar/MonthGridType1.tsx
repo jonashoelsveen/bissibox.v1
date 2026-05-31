@@ -1254,23 +1254,44 @@ export function MonthGridType1({
         setCreatingDrag(null);
         return;
       }
-      if (
+      const validDrop =
         drag.targetPos &&
         start &&
         (drag.targetPos.row !== start.fromPos.row ||
-          drag.targetPos.col !== start.fromPos.col)
-      ) {
-        const el = containerRef.current?.querySelector<HTMLElement>(
-          `[data-cell-pos="${drag.targetPos.row}-${drag.targetPos.col}"][data-day-anchor]`,
-        );
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          const newPos = drag.targetPos;
-          setPopover((prev) => (prev ? { ...prev, pos: newPos, rect } : prev));
-        }
+          drag.targetPos.col !== start.fromPos.col);
+      if (!validDrop) {
+        setCreatingDrag(null);
+        return;
       }
-      setCreatingDrag(null);
+      const cellEl = containerRef.current?.querySelector<HTMLElement>(
+        `[data-cell-pos="${drag.targetPos!.row}-${drag.targetPos!.col}"][data-day-anchor]`,
+      );
+      if (!cellEl) {
+        setCreatingDrag(null);
+        return;
+      }
+      const rect = cellEl.getBoundingClientRect();
+      const newPos = drag.targetPos!;
+      setPopover((prev) => (prev ? { ...prev, pos: newPos, rect } : prev));
+      // Snap-in: defer one frame so the placeholder mounts in the new cell,
+      // then transition the floating clone to that pixel before unmounting.
+      // Matches the existing-session drop animation (see dragSession landing).
+      requestAnimationFrame(() => {
+        const placeholderEl = containerRef.current?.querySelector<HTMLElement>(
+          `[data-creating-placeholder="1"]`,
+        );
+        if (!placeholderEl) {
+          setCreatingDrag(null);
+          return;
+        }
+        const r = placeholderEl.getBoundingClientRect();
+        setCreatingDrag((prev) =>
+          prev ? { ...prev, landing: { left: r.left, top: r.top } } : prev,
+        );
+        setTimeout(() => setCreatingDrag(null), 200);
+      });
     };
+
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     return () => {
