@@ -253,19 +253,27 @@ export function CategoryActionsMenu({
               onPointerDown={(e) => e.stopPropagation()}
               onPointerEnter={cancelColorClose}
               onPointerLeave={scheduleColorClose}
+              onInteractOutside={() => {
+                // Single outside click dismisses the entire menu, not just the sub.
+                setColorSubOpen(false);
+                close();
+              }}
+              onEscapeKeyDown={() => {
+                setColorSubOpen(false);
+                close();
+              }}
             >
               <ColorsPanel
                 currentColor={currentColor}
                 swatches={colorSwatches}
                 onPick={(hex) => {
+                  // Keep the panel open after picking so the user sees the
+                  // check move and can pick again. Outside click closes all.
                   onColorChange(hex);
-                  // Close the entire menu so a single outside click is not
-                  // required to dismiss it after picking a color.
-                  setColorSubOpen(false);
-                  close();
                 }}
               />
             </DropdownMenuSubContent>
+
           </DropdownMenuSub>
         )}
         {accessPanel && (
