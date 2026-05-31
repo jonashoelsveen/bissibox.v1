@@ -25,8 +25,6 @@ function setOpenMenuId(id: string | null) {
   openMenuListeners.forEach((l) => l(id));
 }
 
-const COLOR_CLOSE_DELAY_MS = 120;
-
 export type ColorValue = string;
 
 export type CategoryExtraItem = {
@@ -100,14 +98,19 @@ export function CategoryActionsMenu({
   const [open, setOpen] = useState(false);
   const [colorSubOpen, setColorSubOpen] = useState(false);
   const [accessSubOpen, setAccessSubOpen] = useState(false);
-  const colorCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const colorTriggerRef = useRef<HTMLDivElement | null>(null);
   const skipCloseAutoFocusRef = useRef(false);
+  const allowCloseRef = useRef(false);
   const menuId = useId();
   const topExtras = extraItems.filter((i) => i.top);
   const bottomExtras = extraItems.filter((i) => !i.top);
 
-  const close = () => setOpen(false);
+  const close = () => {
+    allowCloseRef.current = true;
+    setColorSubOpen(false);
+    setAccessSubOpen(false);
+    setOpen(false);
+  };
 
   // Only one CategoryActionsMenu open at a time across the app.
   useEffect(() => {
@@ -121,33 +124,19 @@ export function CategoryActionsMenu({
   }, [menuId, open]);
 
   const handleOpenChange = (next: boolean) => {
-    setOpen(next);
     if (next) {
+      allowCloseRef.current = false;
+      setOpen(true);
       setOpenMenuId(menuId);
     } else {
+      if (!allowCloseRef.current) return;
+      allowCloseRef.current = false;
       setColorSubOpen(false);
       setAccessSubOpen(false);
+      setOpen(false);
       if (openMenuId === menuId) setOpenMenuId(null);
     }
   };
-
-  const cancelColorClose = () => {
-    if (colorCloseTimerRef.current) {
-      clearTimeout(colorCloseTimerRef.current);
-      colorCloseTimerRef.current = null;
-    }
-  };
-  // Small grace window so cursor can cross the gap between the Color row
-  // and the swatch panel without the sub flickering closed.
-  const scheduleColorClose = () => {
-    cancelColorClose();
-    colorCloseTimerRef.current = setTimeout(() => {
-      setColorSubOpen(false);
-      colorCloseTimerRef.current = null;
-    }, COLOR_CLOSE_DELAY_MS);
-  };
-
-  useEffect(() => () => cancelColorClose(), []);
 
   // Robust outside-click close: a single pointerdown anywhere outside the
   // trigger and any Radix menu/sub content closes the entire menu.
@@ -165,20 +154,14 @@ export function CategoryActionsMenu({
       ) {
         return;
       }
-      setColorSubOpen(false);
-      setAccessSubOpen(false);
-      setOpen(false);
+      close();
     };
     document.addEventListener("pointerdown", onDown, true);
     return () => document.removeEventListener("pointerdown", onDown, true);
   }, [open]);
 
-
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange} modal={false}>
-
-
-
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
@@ -187,6 +170,8 @@ export function CategoryActionsMenu({
         collisionPadding={8}
         className="w-44 p-1"
         onPointerDown={(e) => e.stopPropagation()}
+        onInteractOutside={() => close()}
+        onEscapeKeyDown={() => close()}
         onCloseAutoFocus={(e) => {
           if (!skipCloseAutoFocusRef.current) return;
           e.preventDefault();
@@ -236,10 +221,7 @@ export function CategoryActionsMenu({
                 // Hover-only: clicking the Color row must not toggle/close the sub.
                 e.preventDefault();
               }}
-              onPointerEnter={() => {
-                cancelColorClose();
-                setColorSubOpen(true);
-              }}
+              onPointerEnter={() => setColorSubOpen(true)}
               className="gap-2 px-2 py-1.5 text-xs text-ink focus:bg-secondary focus:text-ink data-[state=open]:bg-secondary"
             >
               <span
