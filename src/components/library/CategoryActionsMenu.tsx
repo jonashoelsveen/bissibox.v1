@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { cloneElement, isValidElement, useEffect, useId, useRef, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -24,8 +24,6 @@ function setOpenMenuId(id: string | null) {
   openMenuId = id;
   openMenuListeners.forEach((l) => l(id));
 }
-
-const COLOR_CLOSE_DELAY_MS = 120;
 
 export type ColorValue = string;
 
@@ -100,7 +98,6 @@ export function CategoryActionsMenu({
   const [open, setOpen] = useState(false);
   const [colorSubOpen, setColorSubOpen] = useState(false);
   const [accessSubOpen, setAccessSubOpen] = useState(false);
-  const colorCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const colorTriggerRef = useRef<HTMLDivElement | null>(null);
   const skipCloseAutoFocusRef = useRef(false);
   const menuId = useId();
@@ -131,24 +128,6 @@ export function CategoryActionsMenu({
     }
   };
 
-  const cancelColorClose = () => {
-    if (colorCloseTimerRef.current) {
-      clearTimeout(colorCloseTimerRef.current);
-      colorCloseTimerRef.current = null;
-    }
-  };
-  // Small grace window so cursor can cross the gap between the Color row
-  // and the swatch panel without the sub flickering closed.
-  const scheduleColorClose = () => {
-    cancelColorClose();
-    colorCloseTimerRef.current = setTimeout(() => {
-      setColorSubOpen(false);
-      colorCloseTimerRef.current = null;
-    }, COLOR_CLOSE_DELAY_MS);
-  };
-
-  useEffect(() => () => cancelColorClose(), []);
-
   // Robust outside-click close: a single pointerdown anywhere outside the
   // trigger and any Radix menu/sub content closes the entire menu.
   useEffect(() => {
@@ -173,13 +152,20 @@ export function CategoryActionsMenu({
     return () => document.removeEventListener("pointerdown", onDown, true);
   }, [open]);
 
+  const triggerNode = isValidElement(trigger)
+    ? cloneElement(trigger, {
+        ...trigger.props,
+        "data-state": open ? "open" : "closed",
+      })
+    : trigger;
+
 
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange} modal={false}>
 
 
 
-      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild>{triggerNode}</DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
         side="right"
