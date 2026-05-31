@@ -216,39 +216,41 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
           </div>
         </div>
 
-        <div className="w-[200px] rounded-md border border-hairline bg-white px-3 py-2 text-right shadow-sm">
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-            {hoverDate
-              ? hoverDate.toLocaleDateString(undefined, {
-                  weekday: "short",
-                  day: "2-digit",
-                  month: "short",
-                })
-              : "Hover graph"}
-          </div>
-          <div className="mt-0.5 space-y-0.5">
-            <div
-              className="flex items-center justify-end gap-2 text-sm tabular-nums"
-              style={{ visibility: distVisible ? "visible" : "hidden" }}
-            >
-              <span
-                className="inline-block h-2 w-2 rounded-full"
-                style={{ background: distColor }}
-              />
-              <span className="text-ink">{formatDistance(hoverDistKm, unit, 1)}</span>
+        {hoverDate ? (
+          <div className="w-[260px] rounded-md border border-hairline bg-muted px-4 py-3 shadow-sm">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+              {hoverDate.toLocaleDateString(undefined, {
+                weekday: "short",
+                day: "2-digit",
+                month: "short",
+              })}
             </div>
-            <div
-              className="flex items-center justify-end gap-2 text-sm tabular-nums"
-              style={{ visibility: durVisible ? "visible" : "hidden" }}
-            >
-              <span
-                className="inline-block h-2 w-2 rounded-full"
-                style={{ background: durColor }}
-              />
-              <span className="text-ink">{formatDuration(hoverDurMin)}</span>
+            <div className="mt-1.5 space-y-1.5">
+              <div
+                className="grid grid-cols-[1fr_auto] items-center gap-3 text-base tabular-nums"
+                style={{ visibility: distVisible ? "visible" : "hidden" }}
+              >
+                <span className="text-ink font-medium">{formatDistance(hoverDistKm, unit, 1)}</span>
+                <span
+                  className="inline-block h-3.5 w-3.5 rounded-full justify-self-end"
+                  style={{ background: distColor }}
+                />
+              </div>
+              <div
+                className="grid grid-cols-[1fr_auto] items-center gap-3 text-base tabular-nums"
+                style={{ visibility: durVisible ? "visible" : "hidden" }}
+              >
+                <span className="text-ink font-medium">{formatDuration(hoverDurMin)}</span>
+                <span
+                  className="inline-block h-3.5 w-3.5 rounded-full justify-self-end"
+                  style={{ background: durColor }}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="w-[260px]" aria-hidden />
+        )}
       </div>
 
       {/* Chart */}
