@@ -910,6 +910,7 @@ export function MonthGridType1({
     title: string;
     tall: boolean;
     targetPos: CellPos | null;
+    moved: boolean;
   } | null>(null);
   const creatingDragRef = useRef(creatingDrag);
   useEffect(() => {
@@ -1227,7 +1228,11 @@ export function MonthGridType1({
       const dx = e.clientX - start.x;
       const dy = e.clientY - start.y;
       const active = creatingDragRef.current;
-      if (!active && Math.hypot(dx, dy) < 4) return;
+      const passedThreshold = Math.hypot(dx, dy) >= 4;
+      if (!active?.moved && !passedThreshold) return;
+
+      // Prevent native text selection while dragging.
+      e.preventDefault();
 
       const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
       const cell = node?.closest<HTMLElement>("[data-cell-pos]");
@@ -1242,7 +1247,7 @@ export function MonthGridType1({
       }
       setCreatingDrag((prev) =>
         prev
-          ? { ...prev, pointerX: e.clientX, pointerY: e.clientY, targetPos }
+          ? { ...prev, pointerX: e.clientX, pointerY: e.clientY, targetPos, moved: true }
           : null,
       );
     };
@@ -1271,7 +1276,7 @@ export function MonthGridType1({
       }
       setCreatingDrag(null);
     };
-    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", onUp);
     return () => {
       window.removeEventListener("pointermove", onMove);
@@ -1694,6 +1699,7 @@ export function MonthGridType1({
                                   onPointerDown={(e) => {
                                     if (e.button !== 0) return;
                                     e.stopPropagation();
+                                    e.preventDefault();
                                     const target = e.currentTarget as HTMLElement;
                                     const rect = target.getBoundingClientRect();
                                     creatingDragStartRef.current = {
@@ -1716,18 +1722,22 @@ export function MonthGridType1({
                                       title: createTitle,
                                       tall: tallCreate,
                                       targetPos: pos,
+                                      moved: false,
                                     });
                                   }}
-                                  className="flex items-center overflow-hidden rounded-[3px] px-1.5 text-[11.5px] leading-none"
+                                  className="flex items-center overflow-hidden rounded-[3px] px-1.5 text-[11.5px] leading-none select-none"
                                   style={{
                                     height: heightCreate,
                                     backgroundColor: createColor ?? "hsl(var(--secondary))",
                                     boxShadow: createColor ? `inset 2px 0 0 ${createColor}` : undefined,
                                     color: createColor ? "#fff" : undefined,
                                     cursor: "default",
+                                    userSelect: "none",
+                                    WebkitUserSelect: "none",
                                   }}
                                   data-session-active="1"
                                 >
+
 
                                   <span className="truncate">{createTitle}</span>
                                 </motion.div>
@@ -2032,7 +2042,7 @@ export function MonthGridType1({
 
 
         {/* Inline popover (per-item create or edit) */}
-        {popover && appKind === "diary" && (() => {
+        {popover && appKind === "diary" && !creatingDrag?.moved && (() => {
           const cell = days.find(
             (d) => d.row === popover.pos.row && d.col === popover.pos.col,
           );
@@ -2109,7 +2119,7 @@ export function MonthGridType1({
           );
         })()}
 
-        {popover && appKind !== "diary" && (
+        {popover && appKind !== "diary" && !creatingDrag?.moved && (
           <PopoverEditor
             key={popover.eventId ?? `${popover.pos.row}:${popover.pos.col}:${popover.editIdx ?? -1}`}
             seat={seat}
