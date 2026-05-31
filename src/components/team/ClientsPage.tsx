@@ -243,10 +243,17 @@ export function ClientsPage() {
     const onMove = (ev: PointerEvent) => {
       const st = dragStateRef.current;
       if (!st) return;
-      const dx = ev.clientX - st.startX;
-      if (!st.moved && Math.abs(dx) < 4) return;
+      const rawDx = ev.clientX - st.startX;
+      if (!st.moved && Math.abs(rawDx) < 4) return;
       st.moved = true;
       if (dragId !== st.id) setDragId(st.id);
+      // Clamp so the dragged tab cannot move past the first or last tab slot
+      // (i.e. it stops at the plus icon on the right, like Chrome browser tabs).
+      const lastOffset = st.offsets[st.offsets.length - 1];
+      const startOffset = st.offsets[st.startIndex];
+      const maxDx = lastOffset - startOffset;
+      const minDx = -startOffset;
+      const dx = Math.max(minDx, Math.min(maxDx, rawDx));
       setDragDx(dx);
       const stripEl = tabStripRef.current;
       if (!stripEl) return;
