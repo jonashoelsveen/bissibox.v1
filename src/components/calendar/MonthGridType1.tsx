@@ -1217,6 +1217,71 @@ export function MonthGridType1({
     };
   }, [days, events, moveItem, appKind]);
 
+  // Pointer listeners for the "creating" placeholder drag. Independent of the
+  // existing-chip drag flow above so it can move the popover anchor on drop
+  // without coupling to event-move logic.
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const start = creatingDragStartRef.current;
+      if (!start) return;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      const active = creatingDragRef.current;
+      if (!active && Math.hypot(dx, dy) < 4) return;
+
+      const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const cell = node?.closest<HTMLElement>("[data-cell-pos]");
+      const posStr = cell?.getAttribute("data-cell-pos") ?? null;
+      let targetPos: CellPos | null = null;
+      if (posStr) {
+        const [rowS, colS] = posStr.split("-");
+        const r = Number(rowS);
+        const c = Number(colS);
+        const d = days[r * 7 + c];
+        if (d?.inMonth) targetPos = { row: r, col: c };
+      }
+      setCreatingDrag((prev) =>
+        prev
+          ? { ...prev, pointerX: e.clientX, pointerY: e.clientY, targetPos }
+          : null,
+      );
+    };
+    const onUp = () => {
+      const start = creatingDragStartRef.current;
+      const drag = creatingDragRef.current;
+      creatingDragStartRef.current = null;
+      if (!drag) {
+        setCreatingDrag(null);
+        return;
+      }
+      if (
+        drag.targetPos &&
+        start &&
+        (drag.targetPos.row !== start.fromPos.row ||
+          drag.targetPos.col !== start.fromPos.col)
+      ) {
+        const el = containerRef.current?.querySelector<HTMLElement>(
+          `[data-cell-pos="${drag.targetPos.row}-${drag.targetPos.col}"][data-day-anchor]`,
+        );
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          const newPos = drag.targetPos;
+          setPopover((prev) => (prev ? { ...prev, pos: newPos, rect } : prev));
+        }
+      }
+      setCreatingDrag(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [days]);
+
+
+
+
 
   // ───────────────────────── Render ─────────────────────────
 
