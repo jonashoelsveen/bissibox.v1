@@ -1,24 +1,80 @@
 /**
  * ProfileRouteMemory — remembers the last visited app page per profile
- * (individual vs each team/entity) and navigates to that page when the
- * active profile changes. Without this, switching profile leaves the
- * user on the previous profile's page showing stale content until they
- * pick a new app from the nav.
+ * and navigates to it when the active profile changes.
+ *
+ * Route permissions are enforced here: a stored path is only restored if
+ * it is allowed for the target profile type. This is the single source of
+ * truth for per-profile navigation — nothing else should navigate on
+ * profile switch.
  */
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 
-const STORAGE_PREFIX = "rl_last_path:";
-const DEFAULT_PATH = "/";
+// ─── Route permission registry ────────────────────────────────────────────────
+// Add future routes here as the platform grows (e.g. /journal, /health).
+// "individual" = activeEntityId is null (personal mode)
+// "entity"     = activeEntityId is a team/company/cooperation id
+//
+// A prefix listed under "individual" only is NEVER restored for entity profiles
+// (e.g. /diary is personal; a coach switching to their team must not land there).
+// A prefix listed under "entity" only is NEVER restored for individual mode.
+// A prefix listed under both is available in all modes.
 
-// Paths that should not be remembered as a profile's "last page".
-const NON_APP_PREFIXES = [
-  "/auth",
-  "/login",
-  "/accept-coach-invite",
-  "/accept-leader-invite",
+type ProfileType = "individual" | "entity";
+
+interface RoutePermission {
+  prefix: string;
+  allowed: ProfileType[];
+  /** Exact match only (no prefix check). Default false. */
+  exact?: boolean;
+}
+
+const ROUTE_PERMISSIONS: RoutePermission[] = [
+  // Shared — available in all profile types
+  { prefix: "/calendar", allowed: ["individual", "entity"] },
+  { prefix: "/media",    allowed: ["individual", "entity"] },
+  { prefix: "/photos",   allowed: ["individual", "entity"] },
+  { prefix: "/settings", allowed: ["individual", "entity"] },
+  { prefix: "/profile",  allowed: ["individual", "entity"] },
+
+  // Individual-only — personal data, never visible in entity context
+  { prefix: "/diary",    allowed: ["individual"] },
+
+  // Entity-only — role-based, never visible in individual context
+  { prefix: "/clients",  allowed: ["entity"] },
+
+  // Future placeholders (uncomment and configure as pages are built):
+  // { prefix: "/journal", allowed: ["entity"] },   // physiotherapist journal
+  // { prefix: "/health",  allowed: ["entity"] },   // health platform
 ];
+
+const DEFAULT_INDIVIDUAL_PATH = "/calendar";
+const DEFAULT_ENTITY_PATH     = "/clients";
+
+function profileType(activeEntityId: string | null): ProfileType {
+  return activeEntityId ? "entity" : "individual";
+}
+
+function defaultPath(activeEntityId: string | null): string {
+  return activeEntityId ? DEFAULT_ENTITY_PATH : DEFAULT_INDIVIDUAL_PATH;
+}
+
+/** Returns true if `path` is permitted for the given profile type. */
+function isAllowedForProfile(path: string, type: ProfileType): boolean {
+  for (const rule of ROUTE_PERMISSIONS) {
+    const matches = rule.exact ? path === rule.prefix : (path === rule.prefix || path.startsWith(rule.prefix + "/"));
+    if (matches) return rule.allowed.includes(type);
+  }
+  // Unknown route — treat as shared (safe default; tightening can be done per-route above)
+  return true;
+}
+
+// ─── Storage helpers ──────────────────────────────────────────────────────────
+
+const STORAGE_PREFIX = "rl_last_path:";
+
+const NON_APP_PREFIXES = ["/", "/auth", "/login", "/accept-coach-invite", "/accept-leader-invite"];
 
 function profileKey(userId: string, activeEntityId: string | null): string {
   return `${STORAGE_PREFIX}${userId}:${activeEntityId ?? "__individual__"}`;
@@ -29,18 +85,35 @@ function isRememberablePath(path: string): boolean {
   return !NON_APP_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
 }
 
+/**
+ * Load the stored path for a profile. If the stored path is not permitted
+ * for that profile type, fall back to the profile's default home.
+ */
+function resolveAllowedTarget(userId: string, activeEntityId: string | null): string {
+  const type = profileType(activeEntityId);
+  const fallback = defaultPath(activeEntityId);
+  try {
+    const stored = localStorage.getItem(profileKey(userId, activeEntityId));
+    if (!stored) return fallback;
+    const storedPath = stored.split("?")[0] ?? stored;
+    if (!isRememberablePath(storedPath)) return fallback;
+    if (!isAllowedForProfile(storedPath, type)) return fallback;
+    return stored; // includes search string if any
+  } catch {
+    return fallback;
+  }
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export function ProfileRouteMemory() {
   const { user, activeEntityId, authReady } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // The profile key whose URL is currently displayed. Used to detect
-  // profile switches and to gate persistence so we never overwrite the
-  // new profile's saved path with the previous profile's stale path.
   const activeProfileRef = useRef<string | null>(null);
 
-  // Profile-switch handler: when activeEntityId changes, jump to that
-  // profile's saved page (or /home if it has none).
+  // Profile-switch handler
   useEffect(() => {
     if (!authReady || !user) {
       activeProfileRef.current = null;
@@ -48,84 +121,42 @@ export function ProfileRouteMemory() {
     }
     const key = profileKey(user.id, activeEntityId);
 
-    // First run: don't override the URL the user landed on (e.g. deep link).
     if (activeProfileRef.current === null) {
       activeProfileRef.current = key;
       if (isRememberablePath(location.pathname)) {
         try {
           localStorage.setItem(key, location.pathname + location.searchStr);
-        } catch {
-          /* ignore */
-        }
+        } catch { /* ignore */ }
       }
       return;
     }
 
     if (activeProfileRef.current === key) return;
 
-    // Resolve the target for the new profile BEFORE flipping the ref —
-    // that way the persist effect (which runs after this one in the same
-    // render) sees the old key and skips, instead of writing the previous
-    // profile's path under the new profile's key.
-    let target = DEFAULT_PATH;
-    try {
-      const stored = localStorage.getItem(key);
-      if (stored && isRememberablePath(stored.split("?")[0] ?? stored)) {
-        target = stored;
-      }
-    } catch {
-      /* ignore */
-    }
-
+    const target = resolveAllowedTarget(user.id, activeEntityId);
     const current = location.pathname + location.searchStr;
+
     if (target === current) {
-      // Already where we want to be — safe to claim the URL for the new
-      // profile right away.
       activeProfileRef.current = key;
       return;
     }
 
-    // Trigger navigation. We DON'T flip activeProfileRef yet — it stays
-    // pointing at the old profile until the location actually changes,
-    // so the persist effect skips this render. The location-change
-    // re-run (after navigate) will flip it.
-    void navigate({ to: target, replace: true });
-  }, [
-    user,
-    activeEntityId,
-    authReady,
-    navigate,
-    location.pathname,
-    location.searchStr,
-  ]);
+    void navigate({ to: target as never, replace: true });
+  }, [user, activeEntityId, authReady, navigate, location.pathname, location.searchStr]);
 
-  // Persist the current path under the active profile — but only when
-  // the displayed URL truly belongs to that profile. If a switch is
-  // in-flight (activeProfileRef still points at the previous profile),
-  // we skip and just adopt the new key, so the next intra-profile
-  // navigation persists correctly.
+  // Persist current path under the active profile
   useEffect(() => {
     if (!authReady || !user) return;
     const key = profileKey(user.id, activeEntityId);
     if (activeProfileRef.current !== key) {
-      // Profile just changed — adopt the new key without writing the
-      // stale path that's still on screen.
       activeProfileRef.current = key;
       return;
     }
     if (!isRememberablePath(location.pathname)) return;
     try {
       localStorage.setItem(key, location.pathname + location.searchStr);
-    } catch {
-      /* ignore */
-    }
-  }, [
-    user,
-    activeEntityId,
-    authReady,
-    location.pathname,
-    location.searchStr,
-  ]);
+    } catch { /* ignore */ }
+  }, [user, activeEntityId, authReady, location.pathname, location.searchStr]);
 
   return null;
 }
