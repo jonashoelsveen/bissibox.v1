@@ -32,6 +32,7 @@ interface RoutePermission {
 
 const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Shared — available in all profile types
+  { prefix: "/", allowed: ["individual", "entity"], exact: true }, // Aponna Cloud home
   { prefix: "/calendar", allowed: ["individual", "entity"] },
   { prefix: "/media",    allowed: ["individual", "entity"] },
   { prefix: "/photos",   allowed: ["individual", "entity"] },
