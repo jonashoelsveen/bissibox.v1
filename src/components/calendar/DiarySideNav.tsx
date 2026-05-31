@@ -27,6 +27,9 @@ export interface DiarySideNavProps {
   displayName?: string;
   /** When false, hides plus icons and disables editing (leader view). */
   canEdit?: boolean;
+  teamId?: string | null;
+  ownerId?: string | null;
+  stravaUserId?: string | null;
 }
 
 export function DiarySideNav({
@@ -35,6 +38,9 @@ export function DiarySideNav({
   onCurrentDateChange,
   viewMode,
   canEdit = true,
+  teamId = null,
+  ownerId = null,
+  stravaUserId = null,
 }: DiarySideNavProps) {
   return (
     <nav className="flex h-full flex-col gap-3 overflow-hidden">
@@ -47,8 +53,18 @@ export function DiarySideNav({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
-        <DiaryActivitiesSection title="Activities" canEdit={canEdit} kind="diary_activity" />
-        <DiaryStravaActivitiesSection title="Strava activities" canEdit={canEdit} />
+        <DiaryActivitiesSection
+          title="Activities"
+          canEdit={canEdit}
+          kind="diary_activity"
+          teamId={teamId}
+          ownerId={ownerId}
+        />
+        <DiaryStravaActivitiesSection
+          title="Strava activities"
+          canEdit={canEdit}
+          targetUserId={stravaUserId}
+        />
       </div>
     </nav>
   );
