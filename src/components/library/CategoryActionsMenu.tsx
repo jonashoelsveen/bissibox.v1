@@ -227,7 +227,7 @@ export function CategoryActionsMenu({
           />
         )}
         {allowColor && (
-          <DropdownMenuSub open={colorSubOpen} onOpenChange={setColorSubOpen}>
+          <DropdownMenuSub open={colorSubOpen} onOpenChange={(v) => { if (v) setColorSubOpen(true); }}>
             <DropdownMenuSubTrigger
               ref={(el) => { colorTriggerRef.current = el; }}
               data-color-trigger=""
