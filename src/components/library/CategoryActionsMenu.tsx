@@ -70,7 +70,7 @@ export function CategoryActionsMenu({
   const [open, setOpen] = useState(false);
   const [subPanel, setSubPanel] = useState<SubPanel>(null);
 
-  const triggerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
   const mainPanelRef = useRef<HTMLDivElement>(null);
   const subPanelRef = useRef<HTMLDivElement>(null);
   const colorRowRef = useRef<HTMLDivElement>(null);
@@ -161,7 +161,7 @@ export function CategoryActionsMenu({
     setSubPos({ top: rowRect.top, left: mainRect.right + SUB_GAP });
   }, [subPanel]);
 
-  const handleToggle = (e: React.MouseEvent) => {
+  const handleToggle = () => {
     if (open) {
       close();
     } else {
