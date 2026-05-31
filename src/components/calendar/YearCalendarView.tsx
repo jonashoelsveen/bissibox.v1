@@ -155,6 +155,8 @@ function YearCalendarViewInner({
   disableImport = false,
   teamId = null,
   hiddenColors,
+  statsActive: statsActiveProp,
+  onStatsActiveChange,
 }: YearCalendarViewProps) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta } =
     useYearStore(calId, defaultTitle);
