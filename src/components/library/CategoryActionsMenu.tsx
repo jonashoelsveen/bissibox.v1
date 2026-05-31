@@ -187,28 +187,6 @@ export function CategoryActionsMenu({
         collisionPadding={8}
         className="w-44 p-1"
         onPointerDown={(e) => e.stopPropagation()}
-        onPointerMove={(e) => {
-          const target = e.target as HTMLElement | null;
-          // Close Color sub instantly when hovering any non-color row.
-          if (colorSubOpen) {
-            if (
-              target?.closest("[data-instant-sub-close]") &&
-              !target.closest("[data-color-trigger]")
-            ) {
-              cancelColorClose();
-              setColorSubOpen(false);
-            }
-          }
-          // Close Access sub instantly when hovering any non-access row.
-          if (accessSubOpen) {
-            if (
-              target?.closest("[data-instant-sub-close]") &&
-              !target.closest("[data-access-trigger]")
-            ) {
-              setAccessSubOpen(false);
-            }
-          }
-        }}
         onCloseAutoFocus={(e) => {
           if (!skipCloseAutoFocusRef.current) return;
           e.preventDefault();
