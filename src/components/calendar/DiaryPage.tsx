@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PanelLeft } from "lucide-react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { useLibrarySetting } from "@/lib/library-settings";
 import type { CategoryKey } from "./CalendarSideNav";
