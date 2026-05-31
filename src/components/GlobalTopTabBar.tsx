@@ -155,11 +155,11 @@ export function GlobalTopTabBar() {
                   <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
                   <div className="grid grid-cols-2 gap-2">
                     {([
-                      { key: "calendar", label: "Calendar", to: "/calendar", icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
-                      ...(isIndividual ? [{ key: "diary", label: "Diary", to: "/diary", icon: <BookOpen strokeWidth={1.75} />, disabled: false }] : []),
-                      { key: "photos", label: "Photos", to: "/photos", icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
+                      { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
+                      ...(isIndividual ? [{ key: "diary", label: "Diary", to: "/diary" as const, icon: <BookOpen strokeWidth={1.75} />, disabled: false }] : []),
+                      { key: "photos", label: "Photos", to: "/photos" as const, icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
                       { key: "organization", label: "Organization", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: true },
-                    ] as const).map((app) => (
+                    ] as Array<{ key: string; label: string; to: "/calendar" | "/diary" | "/photos" | "/clients" | null; icon: React.ReactNode; disabled: boolean }>).map((app) => (
                       <button
                         key={app.key}
                         type="button"
