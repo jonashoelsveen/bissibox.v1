@@ -8,32 +8,6 @@
  * The name truncates with a fade before the chevron when overflowing.
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
-
-const SKIP_PERSIST_ROUTES = new Set(["/", "/auth", "/login"]);
-
-function defaultRouteForProfile(_entityId: string | null): string {
-  return "/";
-}
-
-function lastRouteKey(userId: string, entityId: string | null): string {
-  return `aponna:last-route:${userId}:${entityId ?? "individual"}`;
-}
-
-function saveLastRoute(userId: string, entityId: string | null, path: string): void {
-  if (SKIP_PERSIST_ROUTES.has(path)) return;
-  try {
-    localStorage.setItem(lastRouteKey(userId, entityId), path);
-  } catch { /* storage full */ }
-}
-
-function loadLastRoute(userId: string, entityId: string | null): string {
-  try {
-    return localStorage.getItem(lastRouteKey(userId, entityId)) ?? defaultRouteForProfile(entityId);
-  } catch {
-    return defaultRouteForProfile(entityId);
-  }
-}
 import { ChevronDown } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,13 +33,6 @@ export function ProfileSwitcherBar() {
   const [overflow, setOverflow] = useState(false);
   const [individualName, setIndividualName] = useState("");
   const [entities, setEntities] = useState<Entity[]>([]);
-  const navigate = useNavigate();
-  const path = useRouterState({ select: (s) => s.location.pathname });
-
-  useEffect(() => {
-    if (!user) return;
-    saveLastRoute(user.id, activeEntityId, path);
-  }, [path, user?.id, activeEntityId]);
 
   useEffect(() => {
     if (!user) return;
@@ -134,10 +101,7 @@ export function ProfileSwitcherBar() {
 
   const switchTo = (id: string | null) => {
     setOpen(false);
-    if (user) saveLastRoute(user.id, activeEntityId, path);
     setActiveEntity(id);
-    const destination = user ? loadLastRoute(user.id, id) : defaultRouteForProfile(id);
-    void navigate({ to: destination as never, resetScroll: false });
   };
 
   const profiles: { id: string | null; name: string; type: string }[] = [
