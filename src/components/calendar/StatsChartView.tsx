@@ -584,6 +584,12 @@ export function StatsChartView({
           ))}
 
           {durVisible && (
+            <path d={durArea} fill={`url(#${gradIdDur})`} stroke="none" />
+          )}
+          {distVisible && (
+            <path d={distArea} fill={`url(#${gradIdDist})`} stroke="none" />
+          )}
+          {durVisible && (
             <path d={durPath} fill="none" stroke={durColor} strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" />
           )}
           {distVisible && (
