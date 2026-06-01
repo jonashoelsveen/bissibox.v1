@@ -106,8 +106,9 @@ export interface YearCalendarViewProps {
   currentDate?: Date;
   currentRange?: DateRange;
   onCurrentDateChange?: (date: Date, range?: DateRange) => void;
-  viewMode?: ViewMode;
-  onViewModeChange?: (v: ViewMode) => void;
+  viewMode?: ExtendedViewMode;
+  onViewModeChange?: (v: ExtendedViewMode) => void;
+
   visibleCategories?: Set<CategoryKey>;
   /** "diary" hides import + undo/redo, restricts to week/month, blocks future logging. */
   appKind?: CalendarAppKind;
