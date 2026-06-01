@@ -156,5 +156,6 @@ export function DiaryPage() {
         </div>
       </div>
     </div>
+    </DiaryVisibilityProvider>
   );
 }
