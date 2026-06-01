@@ -104,7 +104,8 @@ export function DiaryPage() {
                     setCurrentDate(d);
                     setCurrentRange(r);
                   }}
-                  viewMode={viewMode}
+                  viewMode={viewMode === "year" ? "month" : viewMode}
+
                   visibleCategories={visibleCategories}
                   onToggleCategory={toggleCategory}
                   teamId={teamId}
