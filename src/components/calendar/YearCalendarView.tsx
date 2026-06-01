@@ -361,37 +361,51 @@ function YearCalendarViewInner({
           >
             <span className="block h-2.5 w-2.5 animate-pulse rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
           </button>
-          <HeaderDropdown<ExtendedViewMode>
-            ariaLabel="Visningsmodus"
-            value={viewMode}
-            onChange={setViewMode}
-            width={108}
-            options={
-              appKind === "diary"
-                ? [
-                    { value: "week", label: "Uke" },
-                    { value: "month", label: "Måned" },
-                    { value: "year", label: "År" },
-                  ]
-                : [
+          {/* When stats is active, hide view-type + timeframe dropdowns and
+              show the x-axis bucket dropdown instead. The Nordnet-style
+              timeframe row lives at the bottom of the chart itself. */}
+          {!statsActive && (
+            <HeaderDropdown<ExtendedViewMode>
+              ariaLabel="Visningsmodus"
+              value={viewMode}
+              onChange={setViewMode}
+              width={108}
+              options={
+                appKind === "diary"
+                  ? [
+                      { value: "week", label: "Uke" },
+                      { value: "month", label: "Måned" },
+                      { value: "year", label: "År" },
+                    ]
+                  : [
+                      { value: "day", label: "Dag" },
+                      { value: "week", label: "Uke" },
+                      { value: "month", label: "Måned" },
+                    ]
+              }
+            />
+          )}
+          {showStatsToggle && statsActive && (
+            <div className="self-end pb-0.5">
+              <HeaderDropdown<XBucket>
+                ariaLabel="X-akse"
+                value={statsXBucket}
+                onChange={setStatsXBucket}
+                width={108}
+                options={(() => {
+                  const allowed = allowedBucketsForTimeframe(statsTimeframe);
+                  const all: { value: XBucket; label: string }[] = [
                     { value: "day", label: "Dag" },
                     { value: "week", label: "Uke" },
                     { value: "month", label: "Måned" },
-                  ]
-            }
-          />
-          {showStatsToggle && statsActive && (
-            <HeaderDropdown<string>
-              ariaLabel={timeframeLabel}
-              value={String(timeframe)}
-              onChange={(v) => setTimeframe(Number(v))}
-              width={108}
-              options={timeframeOptions.map((o) => ({
-                value: String(o.value),
-                label: o.label,
-              }))}
-            />
+                    { value: "year", label: "År" },
+                  ];
+                  return all.filter((o) => allowed.includes(o.value));
+                })()}
+              />
+            </div>
           )}
+
 
           {showStatsToggle && (
             <button
