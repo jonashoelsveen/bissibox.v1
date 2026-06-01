@@ -138,18 +138,10 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   const xFor = (i: number) =>
     days <= 1 ? PAD_L + innerW / 2 : PAD_L + (i / (days - 1)) * innerW;
 
-  const distMax = Math.max(1, ...series.dist.map((v) => kmToUnit(v, unit)));
-  const durMax = Math.max(1, ...series.dur);
-
-  const niceMax = (v: number) => {
-    if (v <= 0) return 1;
-    const exp = Math.pow(10, Math.floor(Math.log10(v)));
-    const norm = v / exp;
-    const nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
-    return nice * exp;
-  };
-  const yDistMax = niceMax(distMax);
-  const yDurMax = niceMax(durMax);
+  // Fixed y-axis maximums from user settings (per scope). Distance is stored
+  // in the user's display unit; duration is stored in minutes.
+  const yDistMax = Math.max(1, distMaxSetting);
+  const yDurMax = Math.max(1, durMaxSettingMin);
   const durInHours = yDurMax >= 60;
 
   const yDistFor = (kmVal: number) =>
