@@ -17,9 +17,6 @@ import {
   useMetricColor,
   useMetricVisible,
   usePriorityMetric,
-  useDistanceMax,
-  useDurationMaxMinutes,
-  type MetricScope,
 } from "./metricsSettings";
 
 export type XBucket = "day" | "week" | "month" | "year";
@@ -153,6 +150,52 @@ function DurationValue({ minutes }: { minutes: number }) {
   return (<>{h}<span className="font-light"> h </span>{m}<span className="font-light"> min</span></>);
 }
 
+/** Round up to a clean step (1/2/2.5/5 × 10^n) for tick-friendly axis maxima. */
+function niceCeil(v: number): number {
+  if (!Number.isFinite(v) || v <= 0) return 1;
+  const exp = Math.floor(Math.log10(v));
+  const pow = Math.pow(10, exp);
+  const m = v / pow;
+  const nice = m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10;
+  return nice * pow;
+}
+
+/** Tween a numeric target with an ease-in-out curve (~260ms). */
+function useTween(target: number, ms = 260): number {
+  const [val, setVal] = useState(target);
+  const fromRef = useRef(target);
+  const targetRef = useRef(target);
+  useEffect(() => {
+    if (target === targetRef.current) return;
+    const from = val;
+    fromRef.current = from;
+    targetRef.current = target;
+    const start = performance.now();
+    let raf = 0;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - start) / ms);
+      const eased = 0.5 - Math.cos(Math.PI * p) / 2;
+      setVal(fromRef.current + (targetRef.current - fromRef.current) * eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, ms]);
+  return val;
+}
+
+/** Format minutes for a duration tick label: "45m", "1h 15m", or "2h". */
+function formatDurationTick(minutes: number): string {
+  if (minutes < 60) return `${Math.round(minutes)}m`;
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+
+
 export function StatsChartView({
   events,
   xBucket,
@@ -167,15 +210,8 @@ export function StatsChartView({
   const [durColor] = useMetricColor("duration");
   const [priority] = usePriorityMetric();
 
-  /** Map timeframe → scope for per-scope max settings. */
-  const scope: MetricScope =
-    timeframe === "1Y" || timeframe === "3Y" || timeframe === "5Y" || timeframe === "10Y" || timeframe === "MAX"
-      ? "year"
-      : timeframe === "1M" || timeframe === "3M" || timeframe === "6M"
-      ? "month"
-      : "week";
-  const [distMaxSetting] = useDistanceMax(scope);
-  const [durMaxSettingMin] = useDurationMaxMinutes(scope);
+  /* Auto-scaling y-axis maxima are derived from the visible series below. */
+
 
   /** Trailing window ending today. */
   const { rangeStart, rangeEndExclusive } = useMemo(() => {
@@ -284,9 +320,32 @@ export function StatsChartView({
   const xFor = (i: number) =>
     buckets <= 1 ? PAD_L + innerW / 2 : PAD_L + (i / (buckets - 1)) * innerW;
 
-  const yDistMax = Math.max(1, distMaxSetting);
-  const yDurMax = Math.max(1, durMaxSettingMin);
-  const durInHours = yDurMax >= 60;
+  /* ── Auto-scaling: derive y-axis maxima from the visible series.
+   * yMax = localMax * 1.15 (10–15% headroom). Min stays at 0 for these
+   * absolute metrics. Both axes scale independently so each line uses the
+   * full chart height, while sharing gridline positions (0/25/50/75/100%).
+   */
+  const localDistMaxDisplay = useMemo(() => {
+    let m = 0;
+    for (const v of series.dist) {
+      const dv = kmToUnit(v, unit);
+      if (dv > m) m = dv;
+    }
+    return m;
+  }, [series.dist, unit]);
+  const localDurMaxMin = useMemo(() => {
+    let m = 0;
+    for (const v of series.dur) if (v > m) m = v;
+    return m;
+  }, [series.dur]);
+
+  const targetDistMax = niceCeil(Math.max(1, localDistMaxDisplay * 1.15));
+  const targetDurMax = niceCeil(Math.max(1, localDurMaxMin * 1.15));
+
+  const yDistMax = useTween(targetDistMax, 260);
+  const yDurMax = useTween(targetDurMax, 260);
+  
+
 
   const yDistFor = (kmVal: number) =>
     PAD_T + innerH - (kmToUnit(kmVal, unit) / yDistMax) * innerH;
@@ -457,11 +516,10 @@ export function StatsChartView({
           {ticks.map((t) => {
             const y = PAD_T + innerH - t * innerH;
             const distVal = t * yDistMax;
-            const distLbl = `${distVal.toFixed(yDistMax >= 10 ? 0 : 1)} ${unitLabel(unit)}`;
+            const distDigits = yDistMax >= 100 ? 0 : yDistMax >= 10 ? (distVal >= 10 ? 0 : 1) : 1;
+            const distLbl = `${distVal.toFixed(distDigits)} ${unitLabel(unit)}`;
             const durValMin = t * yDurMax;
-            const durLbl = durInHours
-              ? `${(durValMin / 60).toFixed(yDurMax / 60 >= 10 ? 0 : 1)}h`
-              : `${Math.round(durValMin)}m`;
+            const durLbl = formatDurationTick(durValMin);
             return (
               <g key={t}>
                 <line x1={PAD_L} x2={W - PAD_R} y1={y} y2={y} stroke="#e5e7eb" strokeWidth={1} shapeRendering="crispEdges" />

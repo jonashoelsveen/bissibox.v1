@@ -27,10 +27,6 @@ import { useDistanceUnit, type DistanceUnit } from "@/lib/units";
 import {
   usePriorityMetric,
   useMetricColor,
-  useDistanceMax,
-  useDurationMaxMinutes,
-  type MetricKey,
-  type MetricScope,
 } from "@/components/calendar/metricsSettings";
 import { useWeekViewHours, clampWeekViewHours } from "@/lib/week-view-hours";
 import stravaLogo from "@/assets/strava-logo.png";
@@ -2577,7 +2573,6 @@ function DiaryChartCard() {
   const [priority, setPriority] = usePriorityMetric();
   const [distColor] = useMetricColor("distance");
   const [durColor] = useMetricColor("duration");
-  const [unit] = useDistanceUnit();
 
   return (
     <Card>
@@ -2630,135 +2625,12 @@ function DiaryChartCard() {
               );
             })}
           </div>
-
-          <ChartScopeRow scope="year" priority={priority} unit={unit} label="Year" />
-          <ChartScopeRow scope="month" priority={priority} unit={unit} label="Month" />
-          <ChartScopeRow scope="week" priority={priority} unit={unit} label="Week" />
         </div>
       )}
     </Card>
   );
 }
 
-function NumericMaxInput({
-  value,
-  onCommit,
-  min = 0,
-  max,
-  width = "w-16",
-  placeholder = "0",
-}: {
-  value: number;
-  onCommit: (n: number) => void;
-  min?: number;
-  max?: number;
-  width?: string;
-  placeholder?: string;
-}) {
-  const [text, setText] = useState(String(value));
-  const [editing, setEditing] = useState(false);
-  useEffect(() => {
-    if (!editing) setText(String(value));
-  }, [value, editing]);
-
-  const commit = (raw: string) => {
-    const digits = raw.replace(/\D/g, "");
-    if (digits.length === 0) {
-      setText(String(value));
-      return;
-    }
-    let n = parseInt(digits, 10);
-    if (!Number.isFinite(n)) n = value;
-    if (typeof max === "number") n = Math.min(max, n);
-    n = Math.max(min, n);
-    setText(String(n));
-    if (n !== value) onCommit(n);
-  };
-
-  return (
-    <input
-      type="text"
-      inputMode="numeric"
-      value={text}
-      placeholder={placeholder}
-      onChange={(e) => setText(e.target.value.replace(/\D/g, ""))}
-      onFocus={(e) => {
-        setEditing(true);
-        e.currentTarget.select();
-      }}
-      onBlur={() => {
-        setEditing(false);
-        commit(text);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          (e.currentTarget as HTMLInputElement).blur();
-        }
-      }}
-      className={`${width} rounded-md border border-hairline bg-white px-2 py-1 text-right text-sm tabular-nums text-ink outline-none focus:bg-ink/5 placeholder:text-ink/30`}
-    />
-  );
-}
-
-function ChartScopeRow({
-  scope,
-  priority,
-  unit,
-  label,
-}: {
-  scope: MetricScope;
-  priority: MetricKey;
-  unit: DistanceUnit;
-  label: string;
-}) {
-  const [distMax, setDistMax] = useDistanceMax(scope);
-  const [durMaxMin, setDurMaxMin] = useDurationMaxMinutes(scope);
-  const hours = Math.floor(durMaxMin / 60);
-  const minutes = Math.max(0, Math.round(durMaxMin % 60));
-
-  return (
-    <div className="rounded-xl border border-hairline px-4 py-3">
-      <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </div>
-      {priority === "distance" ? (
-        <label className="flex items-center justify-between gap-3">
-          <span className="text-sm text-ink">Distance max</span>
-          <div className="flex items-center gap-2">
-            <NumericMaxInput
-              value={distMax}
-              onCommit={(n) => setDistMax(Math.max(1, n))}
-              min={1}
-              width="w-24"
-              placeholder="0"
-            />
-            <span className="text-xs text-muted-foreground">{unit === "mi" ? "mi" : "km"}</span>
-          </div>
-        </label>
-      ) : (
-        <label className="flex items-center justify-between gap-3">
-          <span className="text-sm text-ink">Duration max</span>
-          <div className="flex items-center gap-2">
-            <NumericMaxInput
-              value={hours}
-              onCommit={(h) => setDurMaxMin(h * 60 + minutes)}
-              placeholder="00"
-            />
-            <span className="text-xs text-muted-foreground">h</span>
-            <NumericMaxInput
-              value={minutes}
-              onCommit={(m) => setDurMaxMin(hours * 60 + m)}
-              max={59}
-              placeholder="00"
-            />
-            <span className="text-xs text-muted-foreground">min</span>
-          </div>
-        </label>
-      )}
-    </div>
-  );
-}
 
 function DiaryCategoryCard({ title, items }: { title: string; items: string[] }) {
   const [open, setOpen] = useState(false);
