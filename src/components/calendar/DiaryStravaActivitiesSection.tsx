@@ -12,7 +12,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronRight, Eye, EyeOff } from "lucide-react";
 import { useStravaActivities } from "./useStravaActivities";
-import { colorForStravaSession } from "@/lib/activity-colors";
+import { colorForStravaSportType } from "@/lib/activity-colors";
 
 function prettySportName(sport: string): string {
   // Strava sport_type values come in PascalCase (e.g. "TrailRun", "VirtualRide").
