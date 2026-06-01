@@ -212,6 +212,9 @@ export function StatsChartView({
   timeframe,
   onTimeframeChange,
   earliestDataDate,
+  diaryActivityCats = [],
+  hiddenCategoryIds,
+  hiddenSportTypes,
 }: StatsChartViewProps) {
   const [unit] = useDistanceUnit();
   const [distVisible] = useMetricVisible("distance");
