@@ -344,7 +344,7 @@ export function StatsChartView({
 
   const yDistMax = useTween(targetDistMax, 260);
   const yDurMax = useTween(targetDurMax, 260);
-  const durInHours = yDurMax >= 60;
+  
 
 
   const yDistFor = (kmVal: number) =>
