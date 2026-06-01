@@ -529,6 +529,16 @@ export function StatsChartView({
           onMouseMove={onMove}
           onMouseLeave={onLeave}
         >
+          <defs>
+            <linearGradient id={gradIdDist} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={distColor} stopOpacity={0.13} />
+              <stop offset="100%" stopColor={distColor} stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id={gradIdDur} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={durColor} stopOpacity={0.13} />
+              <stop offset="100%" stopColor={durColor} stopOpacity={0} />
+            </linearGradient>
+          </defs>
           {ticks.map((t) => {
             const y = PAD_T + innerH - t * innerH;
             const distVal = t * yDistMax;
