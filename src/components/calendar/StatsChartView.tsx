@@ -589,13 +589,19 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
             ariaLabel="X-axis grouping"
             openUpward
             width={108}
-            options={[
-              { value: "day", label: "Day" },
-              { value: "week", label: "Week" },
-              { value: "month", label: "Month" },
-              { value: "year", label: "Year" },
-            ]}
+            options={(() => {
+              const all: { value: XBucket; label: string }[] = [
+                { value: "day", label: "Day" },
+                { value: "week", label: "Week" },
+                { value: "month", label: "Month" },
+                { value: "year", label: "Year" },
+              ];
+              const max =
+                viewMode === "year" ? 4 : viewMode === "month" ? 3 : 2;
+              return all.slice(0, max);
+            })()}
           />
+
         </div>
       </div>
 
