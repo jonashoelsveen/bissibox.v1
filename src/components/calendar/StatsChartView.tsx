@@ -61,6 +61,55 @@ function formatDuration(minutes: number): string {
   return `${h} h ${m} min`;
 }
 
+/** Render a "12.3 km" / "5 mi" string with the unit suffix in a lighter weight. */
+function DistanceValue({ km, unit, digits = 1 }: { km: number | null | undefined; unit: "km" | "mi"; digits?: number }) {
+  if (km == null || Number.isNaN(km)) return <>—</>;
+  const num = kmToUnit(km, unit).toFixed(digits);
+  return (
+    <>
+      {num}
+      <span className="font-light"> {unitLabel(unit)}</span>
+    </>
+  );
+}
+
+/** Render a duration with "h" / "min" suffixes in a lighter weight. */
+function DurationValue({ minutes }: { minutes: number }) {
+  if (!minutes || minutes <= 0) {
+    return (
+      <>
+        0<span className="font-light"> min</span>
+      </>
+    );
+  }
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  if (h <= 0) {
+    return (
+      <>
+        {m}
+        <span className="font-light"> min</span>
+      </>
+    );
+  }
+  if (m === 0) {
+    return (
+      <>
+        {h}
+        <span className="font-light"> h</span>
+      </>
+    );
+  }
+  return (
+    <>
+      {h}
+      <span className="font-light"> h </span>
+      {m}
+      <span className="font-light"> min</span>
+    </>
+  );
+}
+
 export function StatsChartView({ events, viewMode, currentDate }: StatsChartViewProps) {
   const [unit] = useDistanceUnit();
   const [distVisible] = useMetricVisible("distance");
