@@ -99,32 +99,6 @@ export function CalendarSideNav({
   teamName,
   displayName,
 }: CalendarSideNavProps) {
-  // Per-entity visibility state (independent across entities).
-  const [entityHidden, setEntityHidden] = useState<Record<string, Set<AdminCatKey>>>({});
-  const [entityAllHidden, setEntityAllHidden] = useState<Set<string>>(new Set());
-
-  const toggleEntityCat = (eid: string, k: AdminCatKey) => {
-    setEntityHidden((prev) => {
-      const cur = new Set(prev[eid] ?? []);
-      if (cur.has(k)) cur.delete(k);
-      else cur.add(k);
-      return { ...prev, [eid]: cur };
-    });
-    setEntityAllHidden((prev) => {
-      if (!prev.has(eid)) return prev;
-      const next = new Set(prev);
-      next.delete(eid);
-      return next;
-    });
-  };
-  const toggleEntityAll = (eid: string) =>
-    setEntityAllHidden((prev) => {
-      const next = new Set(prev);
-      if (next.has(eid)) next.delete(eid);
-      else next.add(eid);
-      return next;
-    });
-
   const name = displayName ?? (seat === "admin" ? teamName ?? "Team" : "Me");
 
   return (
@@ -140,19 +114,21 @@ export function CalendarSideNav({
       {/* Category filters — scrollable */}
       <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
         {seat === "admin" ? (
-          <TeamCategorySectionAdapter teamId={teamId} title={teamName ?? "Categories"} />
+          <TeamCategorySectionAdapter
+            teamId={teamId}
+            title={teamName ?? "Categories"}
+            onToggleCategory={onToggleCategory}
+          />
         ) : (
           <>
-            <MeCategorySectionAdapter />
+            <MeCategorySectionAdapter onToggleCategory={onToggleCategory} />
 
             {entities.map((e) => (
               <EntityGroup
                 key={e.id}
                 entity={e}
-                allHidden={entityAllHidden.has(e.id)}
-                hiddenCats={entityHidden[e.id] ?? new Set()}
-                onToggleAll={() => toggleEntityAll(e.id)}
-                onToggleCat={(k) => toggleEntityCat(e.id, k)}
+                visibleCategories={visibleCategories}
+                onToggleCategory={onToggleCategory}
               />
             ))}
           </>
@@ -163,13 +139,22 @@ export function CalendarSideNav({
 }
 
 /** Same as MeCategorySectionAdapter but scoped to a team. */
-function TeamCategorySectionAdapter({ teamId, title }: { teamId: string | null; title: string }) {
+function TeamCategorySectionAdapter({
+  teamId,
+  title,
+  onToggleCategory,
+}: {
+  teamId: string | null;
+  title: string;
+  onToggleCategory: (k: CategoryKey) => void;
+}) {
   const { categories, update } = useUserCategories({ teamId });
   const hidden = new Set<string>();
   for (const c of categories) if (c.hidden) hidden.add(c.id);
   const handleToggleHidden = (id: string) => {
     const c = categories.find((x) => x.id === id);
     if (!c) return;
+    onToggleCategory(`me:${c.color.toLowerCase()}` as CategoryKey);
     void update(c.id, { hidden: !c.hidden });
   };
   return (
@@ -185,13 +170,18 @@ function TeamCategorySectionAdapter({ teamId, title }: { teamId: string | null; 
 /** Reads category visibility from DB and writes the `hidden` flag back so the
  * grid filter (driven by visibleCategories in CalendarPage's effect) updates
  * via realtime. */
-function MeCategorySectionAdapter() {
+function MeCategorySectionAdapter({
+  onToggleCategory,
+}: {
+  onToggleCategory: (k: CategoryKey) => void;
+}) {
   const { categories, update } = useUserCategories();
   const hidden = new Set<string>();
   for (const c of categories) if (c.hidden) hidden.add(c.id);
   const handleToggleHidden = (id: string) => {
     const c = categories.find((x) => x.id === id);
     if (!c) return;
+    onToggleCategory(`me:${c.color.toLowerCase()}` as CategoryKey);
     void update(c.id, { hidden: !c.hidden });
   };
   return <MeCategorySection hidden={hidden} onToggleHidden={handleToggleHidden} showCoachAccess />;
