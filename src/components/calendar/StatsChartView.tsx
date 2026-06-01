@@ -733,6 +733,27 @@ export function StatsChartView({
             </text>
           ))}
 
+          {Array.from(categorySeriesMap.values()).map((c) => {
+            const area = buildAreaPath(c.distKm, yDistFor);
+            const line = buildPath(c.distKm, yDistFor);
+            return (
+              <g key={`cat-${c.id}`}>
+                <path d={area} fill={c.color} fillOpacity={0.08} stroke="none" />
+                <path d={line} fill="none" stroke={c.color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+              </g>
+            );
+          })}
+          {Array.from(sportTypeSeriesMap.values()).map((s) => {
+            const area = buildAreaPath(s.distKm, yDistFor);
+            const line = buildPath(s.distKm, yDistFor);
+            return (
+              <g key={`sport-${s.sport}`}>
+                <path d={area} fill={s.color} fillOpacity={0.08} stroke="none" />
+                <path d={line} fill="none" stroke={s.color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+              </g>
+            );
+          })}
+
           {durVisible && (
             <path d={durArea} fill={`url(#${gradIdDur})`} stroke="none" />
           )}
@@ -749,6 +770,16 @@ export function StatsChartView({
           {hoverIdx != null && (
             <>
               <line x1={xFor(hoverIdx)} x2={xFor(hoverIdx)} y1={PAD_T} y2={PAD_T + innerH} stroke="#9ca3af" strokeWidth={1} strokeDasharray="3 3" />
+              {Array.from(categorySeriesMap.values()).map((c) => {
+                const v = c.distKm[hoverIdx];
+                if (!(v > 0)) return null;
+                return <circle key={`cat-dot-${c.id}`} cx={xFor(hoverIdx)} cy={yDistFor(v)} r={3} fill={c.color} />;
+              })}
+              {Array.from(sportTypeSeriesMap.values()).map((s) => {
+                const v = s.distKm[hoverIdx];
+                if (!(v > 0)) return null;
+                return <circle key={`sport-dot-${s.sport}`} cx={xFor(hoverIdx)} cy={yDistFor(v)} r={3} fill={s.color} />;
+              })}
               {distVisible && (
                 <circle cx={xFor(hoverIdx)} cy={yDistFor(series.dist[hoverIdx])} r={3} fill={distColor} />
               )}
