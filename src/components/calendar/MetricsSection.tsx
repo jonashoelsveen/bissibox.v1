@@ -49,8 +49,8 @@ export function MetricsSection({ title = "Metrics", canEdit = true }: { title?: 
         style={{ overflow: open ? "visible" : "hidden", pointerEvents: open ? "auto" : "none" }}
       >
         <div className="mt-0.5 flex flex-col gap-0.5">
-          <MetricRow metric="distance" label="Distance" />
-          <MetricRow metric="duration" label="Duration" />
+          <MetricRow metric="distance" label="Distance" canEdit={canEdit} />
+          <MetricRow metric="duration" label="Duration" canEdit={canEdit} />
         </div>
       </motion.div>
     </div>
