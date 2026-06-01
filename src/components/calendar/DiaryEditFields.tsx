@@ -167,13 +167,32 @@ export function ActivitySelectRow({
   diaryGroup,
   diarySub,
   onChange,
+  lockedLabel,
 }: {
   accent: string;
   diaryGroup: string;
   diarySub: string;
   onChange: (groupId: string, subId: string) => void;
+  /** When provided, the row is read-only: shows this label and the
+   *  dropdown will not open (used for Strava-synced sessions). */
+  lockedLabel?: string | null;
 }) {
   const value = `${diaryGroup}:${diarySub}`;
+  if (lockedLabel) {
+    return (
+      <SideRailRow accent={accent}>
+        <div
+          aria-disabled
+          title="Activity is set by Strava and cannot be changed"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          className="block flex-1 cursor-default select-none bg-transparent py-1 pr-3 text-[12px] text-ink outline-none"
+        >
+          {lockedLabel}
+        </div>
+      </SideRailRow>
+    );
+  }
   return (
     <SideRailRow accent={accent}>
       <select
@@ -192,6 +211,14 @@ export function ActivitySelectRow({
       </select>
     </SideRailRow>
   );
+}
+
+/** Format a Strava sport_type (PascalCase) as a readable label, e.g.
+ *  "TrailRun" → "Trail Run", "VirtualRide" → "Virtual Ride". */
+export function prettyStravaSportName(sport: string | null | undefined): string {
+  const s = (sport || "").trim();
+  if (!s) return "";
+  return s.replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 
 export function DurationInput({
