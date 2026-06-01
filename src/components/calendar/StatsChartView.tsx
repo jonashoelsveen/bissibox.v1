@@ -113,7 +113,7 @@ function DurationValue({ minutes }: { minutes: number }) {
   );
 }
 
-export function StatsChartView({ events, viewMode, currentDate }: StatsChartViewProps) {
+export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }: StatsChartViewProps) {
   const [unit] = useDistanceUnit();
   const [distVisible] = useMetricVisible("distance");
   const [durVisible] = useMetricVisible("duration");
@@ -122,34 +122,57 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   const [priority] = usePriorityMetric();
 
   const scope: MetricScope =
-    viewMode === "month" ? "month" : "week";
+    viewMode === "year" ? "year" : viewMode === "month" ? "month" : "week";
   const [distMaxSetting] = useDistanceMax(scope);
   const [durMaxSettingMin] = useDurationMaxMinutes(scope);
 
-  const { rangeStart, days } = useMemo(() => {
-    let start: Date;
-    let end: Date;
-    if (viewMode === "month") {
-      start = startOfMonth(currentDate);
-      end = endOfMonth(currentDate);
-    } else {
-      start = startOfWeekMon(currentDate);
-      end = new Date(start);
-      end.setDate(end.getDate() + 6);
-    }
-    const n = daysBetween(start, end) + 1;
-    return { rangeStart: start, days: n };
-  }, [viewMode, currentDate]);
+  /** Aggregation bucket size: "day" for week/month views, "month" for year view. */
+  const bucket: "day" | "month" = viewMode === "year" ? "month" : "day";
 
-  /* Aggregate per-day */
+  /** Compute the displayed range as N buckets ending at the bucket containing
+   * currentDate. For week/month the bucket is a day; for year it is a month. */
+  const { rangeStart, buckets, dayCount } = useMemo(() => {
+    if (viewMode === "year") {
+      // N years ending at currentDate's year, aggregated per month.
+      const endYear = currentDate.getFullYear();
+      const startYear = endYear - timeframe + 1;
+      const start = new Date(startYear, 0, 1);
+      const n = timeframe * 12;
+      return { rangeStart: start, buckets: n, dayCount: n };
+    }
+    if (viewMode === "month") {
+      const endMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const start = new Date(endMonthStart.getFullYear(), endMonthStart.getMonth() - (timeframe - 1), 1);
+      const endMonthEnd = new Date(endMonthStart.getFullYear(), endMonthStart.getMonth() + 1, 0);
+      const n = daysBetween(start, endMonthEnd) + 1;
+      return { rangeStart: start, buckets: n, dayCount: n };
+    }
+    // week (or day → treat as week)
+    const endWeekStart = startOfWeekMon(currentDate);
+    const start = new Date(endWeekStart);
+    start.setDate(start.getDate() - (timeframe - 1) * 7);
+    const n = timeframe * 7;
+    return { rangeStart: start, buckets: n, dayCount: n };
+  }, [viewMode, currentDate, timeframe]);
+
+  const days = dayCount;
+
+  /* Aggregate per bucket */
   const series = useMemo(() => {
-    const dist = new Array(days).fill(0); // km
-    const dur = new Array(days).fill(0); // minutes
+    const dist = new Array(buckets).fill(0); // km
+    const dur = new Array(buckets).fill(0); // minutes
     for (const e of events) {
       const s = new Date(e.startISO);
       if (Number.isNaN(s.getTime())) continue;
-      const idx = daysBetween(rangeStart, s);
-      if (idx < 0 || idx >= days) continue;
+      let idx: number;
+      if (bucket === "month") {
+        idx =
+          (s.getFullYear() - rangeStart.getFullYear()) * 12 +
+          (s.getMonth() - rangeStart.getMonth());
+      } else {
+        idx = daysBetween(rangeStart, s);
+      }
+      if (idx < 0 || idx >= buckets) continue;
       if (e.distanceKm && Number.isFinite(e.distanceKm)) dist[idx] += e.distanceKm;
       const en = new Date(e.endISO);
       if (!Number.isNaN(en.getTime())) {
@@ -158,7 +181,8 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
       }
     }
     return { dist, dur };
-  }, [events, rangeStart, days]);
+  }, [events, rangeStart, buckets, bucket]);
+
 
   const totalDistKm = series.dist.reduce((a, b) => a + b, 0);
   const totalDurMin = series.dur.reduce((a, b) => a + b, 0);
