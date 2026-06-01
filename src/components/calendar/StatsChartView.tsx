@@ -164,15 +164,8 @@ export function StatsChartView({
   const [durColor] = useMetricColor("duration");
   const [priority] = usePriorityMetric();
 
-  /** Map timeframe → scope for per-scope max settings. */
-  const scope: MetricScope =
-    timeframe === "1Y" || timeframe === "3Y" || timeframe === "5Y" || timeframe === "10Y" || timeframe === "MAX"
-      ? "year"
-      : timeframe === "1M" || timeframe === "3M" || timeframe === "6M"
-      ? "month"
-      : "week";
-  const [distMaxSetting] = useDistanceMax(scope);
-  const [durMaxSettingMin] = useDurationMaxMinutes(scope);
+  /* Auto-scaling y-axis maxima are derived from the visible series below. */
+
 
   /** Trailing window ending today. */
   const { rangeStart, rangeEndExclusive } = useMemo(() => {
