@@ -516,11 +516,10 @@ export function StatsChartView({
           {ticks.map((t) => {
             const y = PAD_T + innerH - t * innerH;
             const distVal = t * yDistMax;
-            const distLbl = `${distVal.toFixed(yDistMax >= 10 ? 0 : 1)} ${unitLabel(unit)}`;
+            const distDigits = yDistMax >= 100 ? 0 : yDistMax >= 10 ? (distVal >= 10 ? 0 : 1) : 1;
+            const distLbl = `${distVal.toFixed(distDigits)} ${unitLabel(unit)}`;
             const durValMin = t * yDurMax;
-            const durLbl = durInHours
-              ? `${(durValMin / 60).toFixed(yDurMax / 60 >= 10 ? 0 : 1)}h`
-              : `${Math.round(durValMin)}m`;
+            const durLbl = formatDurationTick(durValMin);
             return (
               <g key={t}>
                 <line x1={PAD_L} x2={W - PAD_R} y1={y} y2={y} stroke="#e5e7eb" strokeWidth={1} shapeRendering="crispEdges" />
