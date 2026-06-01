@@ -116,36 +116,86 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
   const [distMaxSetting] = useDistanceMax(scope);
   const [durMaxSettingMin] = useDurationMaxMinutes(scope);
 
-  /** Aggregation bucket size: "day" for week/month views, "month" for year view. */
-  const bucket: "day" | "month" = viewMode === "year" ? "month" : "day";
+  /** User-selected aggregation bucket for the x-axis. Always defaults to "day". */
+  const [xBucket, setXBucket] = useState<XBucket>("day");
 
-  /** Compute the displayed range as N buckets ending at the bucket containing
-   * currentDate. For week/month the bucket is a day; for year it is a month. */
-  const { rangeStart, buckets, dayCount } = useMemo(() => {
+  /** Compute the displayed date range based on viewMode + timeframe. */
+  const { rangeStart, rangeEndExclusive } = useMemo(() => {
     if (viewMode === "year") {
-      // N years ending at currentDate's year, aggregated per month.
       const endYear = currentDate.getFullYear();
       const startYear = endYear - timeframe + 1;
-      const start = new Date(startYear, 0, 1);
-      const n = timeframe * 12;
-      return { rangeStart: start, buckets: n, dayCount: n };
+      return {
+        rangeStart: new Date(startYear, 0, 1),
+        rangeEndExclusive: new Date(endYear + 1, 0, 1),
+      };
     }
     if (viewMode === "month") {
       const endMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      const start = new Date(endMonthStart.getFullYear(), endMonthStart.getMonth() - (timeframe - 1), 1);
-      const endMonthEnd = new Date(endMonthStart.getFullYear(), endMonthStart.getMonth() + 1, 0);
-      const n = daysBetween(start, endMonthEnd) + 1;
-      return { rangeStart: start, buckets: n, dayCount: n };
+      const start = new Date(
+        endMonthStart.getFullYear(),
+        endMonthStart.getMonth() - (timeframe - 1),
+        1,
+      );
+      const endExcl = new Date(endMonthStart.getFullYear(), endMonthStart.getMonth() + 1, 1);
+      return { rangeStart: start, rangeEndExclusive: endExcl };
     }
     // week (or day → treat as week)
     const endWeekStart = startOfWeekMon(currentDate);
     const start = new Date(endWeekStart);
     start.setDate(start.getDate() - (timeframe - 1) * 7);
-    const n = timeframe * 7;
-    return { rangeStart: start, buckets: n, dayCount: n };
+    const endExcl = new Date(endWeekStart);
+    endExcl.setDate(endExcl.getDate() + 7);
+    return { rangeStart: start, rangeEndExclusive: endExcl };
   }, [viewMode, currentDate, timeframe]);
 
-  const days = dayCount;
+  /** Build the bucket list (start dates) for the active xBucket. */
+  const bucketStarts = useMemo(() => {
+    const out: Date[] = [];
+    if (xBucket === "day") {
+      const d = new Date(rangeStart);
+      while (d < rangeEndExclusive) {
+        out.push(new Date(d));
+        d.setDate(d.getDate() + 1);
+      }
+    } else if (xBucket === "week") {
+      const d = startOfWeekMon(rangeStart);
+      while (d < rangeEndExclusive) {
+        out.push(new Date(d));
+        d.setDate(d.getDate() + 7);
+      }
+    } else if (xBucket === "month") {
+      const d = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+      while (d < rangeEndExclusive) {
+        out.push(new Date(d));
+        d.setMonth(d.getMonth() + 1);
+      }
+    } else {
+      // year
+      const d = new Date(rangeStart.getFullYear(), 0, 1);
+      while (d < rangeEndExclusive) {
+        out.push(new Date(d));
+        d.setFullYear(d.getFullYear() + 1);
+      }
+    }
+    if (out.length === 0) out.push(new Date(rangeStart));
+    return out;
+  }, [rangeStart, rangeEndExclusive, xBucket]);
+
+  const buckets = bucketStarts.length;
+
+  const bucketIndexFor = (d: Date): number => {
+    if (xBucket === "day") {
+      return daysBetween(bucketStarts[0], d);
+    }
+    if (xBucket === "week") {
+      return Math.floor(daysBetween(bucketStarts[0], d) / 7);
+    }
+    if (xBucket === "month") {
+      const b0 = bucketStarts[0];
+      return (d.getFullYear() - b0.getFullYear()) * 12 + (d.getMonth() - b0.getMonth());
+    }
+    return d.getFullYear() - bucketStarts[0].getFullYear();
+  };
 
   /* Aggregate per bucket */
   const series = useMemo(() => {
@@ -154,14 +204,8 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
     for (const e of events) {
       const s = new Date(e.startISO);
       if (Number.isNaN(s.getTime())) continue;
-      let idx: number;
-      if (bucket === "month") {
-        idx =
-          (s.getFullYear() - rangeStart.getFullYear()) * 12 +
-          (s.getMonth() - rangeStart.getMonth());
-      } else {
-        idx = daysBetween(rangeStart, s);
-      }
+      if (s < rangeStart || s >= rangeEndExclusive) continue;
+      const idx = bucketIndexFor(s);
       if (idx < 0 || idx >= buckets) continue;
       if (e.distanceKm && Number.isFinite(e.distanceKm)) dist[idx] += e.distanceKm;
       const en = new Date(e.endISO);
@@ -171,7 +215,8 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
       }
     }
     return { dist, dur };
-  }, [events, rangeStart, buckets, bucket]);
+  }, [events, rangeStart, rangeEndExclusive, buckets, xBucket, bucketStarts]);
+
 
 
   const totalDistKm = series.dist.reduce((a, b) => a + b, 0);
