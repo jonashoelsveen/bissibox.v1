@@ -266,12 +266,12 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
       </div>
 
       {/* Chart */}
-      <div className="relative flex-1 min-h-0">
+      <div ref={containerRef} className="relative flex-1 min-h-0">
         <svg
           ref={svgRef}
-          viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="none"
-          className="h-full w-full select-none"
+          width={W}
+          height={H}
+          className="block select-none"
           onMouseMove={onMove}
           onMouseLeave={onLeave}
         >
