@@ -161,14 +161,14 @@ export function DiaryActivitiesSection({
                 <SortableActivityRow
                   key={c.id}
                   cat={c}
-                  hidden={hidden.has(c.id)}
+                  hidden={isCategoryHidden(c.id)}
                   canEdit={canEdit}
                   renaming={renamingId === c.id}
                   renameValue={renameValue}
                   setRenameValue={setRenameValue}
                   onCommitRename={() => void commitRename(c)}
                   onCancelRename={() => setRenamingId(null)}
-                  onToggleHidden={() => toggleHidden(c.id)}
+                  onToggleHidden={() => toggleCategoryId(c.id)}
                   onRename={() => startRename(c)}
                   onDelete={() => void remove(c.id)}
                   onColorChange={(hex) => void update(c.id, { color: hex })}
