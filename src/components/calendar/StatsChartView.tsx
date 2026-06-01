@@ -10,7 +10,7 @@
  * dropdown in the page header (lifted to YearCalendarView) and passed in.
  */
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { CalendarEvent } from "./yearStore";
 import { kmToUnit, unitLabel, useDistanceUnit } from "@/lib/units";
 import {
@@ -18,6 +18,8 @@ import {
   useMetricVisible,
   usePriorityMetric,
 } from "./metricsSettings";
+import { colorForStravaSportType } from "@/lib/activity-colors";
+import type { UserCategory } from "@/hooks/useUserCategories";
 
 export type XBucket = "day" | "week" | "month" | "year";
 export type TimeframeKey =
@@ -39,6 +41,14 @@ interface StatsChartViewProps {
   onTimeframeChange: (tf: TimeframeKey) => void;
   /** Earliest event date for this user, used to gate timeframe buttons. */
   earliestDataDate: Date | null;
+  /** Diary activity categories (kind = "diary_activity"), used to attribute manual events. */
+  diaryActivityCats?: UserCategory[];
+  hiddenCategoryIds?: Set<string>;
+  hiddenSportTypes?: Set<string>;
+}
+
+function prettySport(sport: string): string {
+  return sport.replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 
 const MONTHS_NB_SHORT = [
@@ -202,6 +212,9 @@ export function StatsChartView({
   timeframe,
   onTimeframeChange,
   earliestDataDate,
+  diaryActivityCats = [],
+  hiddenCategoryIds,
+  hiddenSportTypes,
 }: StatsChartViewProps) {
   const [unit] = useDistanceUnit();
   const [distVisible] = useMetricVisible("distance");
@@ -260,7 +273,7 @@ export function StatsChartView({
 
   const buckets = bucketStarts.length;
 
-  const bucketIndexFor = (d: Date): number => {
+  const bucketIndexFor = useCallback((d: Date): number => {
     if (xBucket === "day") return daysBetween(bucketStarts[0], d);
     if (xBucket === "week") return Math.floor(daysBetween(bucketStarts[0], d) / 7);
     if (xBucket === "month") {
@@ -268,7 +281,7 @@ export function StatsChartView({
       return (d.getFullYear() - b0.getFullYear()) * 12 + (d.getMonth() - b0.getMonth());
     }
     return d.getFullYear() - bucketStarts[0].getFullYear();
-  };
+  }, [xBucket, bucketStarts]);
 
   /* Aggregate per bucket (SUM distance km, SUM duration minutes) */
   const series = useMemo(() => {
@@ -288,7 +301,73 @@ export function StatsChartView({
       }
     }
     return { dist, dur };
-  }, [events, rangeStart, rangeEndExclusive, buckets, xBucket, bucketStarts]);
+  }, [events, rangeStart, rangeEndExclusive, buckets, bucketIndexFor]);
+
+  /* Per-manual-category series for hover breakdown. */
+  const categorySeriesMap = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; color: string; distKm: number[]; durMin: number[] }>();
+    for (const cat of diaryActivityCats) {
+      if (hiddenCategoryIds?.has(cat.id)) continue;
+      map.set(cat.id, {
+        id: cat.id,
+        name: cat.name,
+        color: cat.color,
+        distKm: new Array(buckets).fill(0),
+        durMin: new Array(buckets).fill(0),
+      });
+    }
+    for (const e of events) {
+      if (e.id.startsWith("strava:")) continue;
+      const c = (e.color ?? "").toLowerCase();
+      const matchingCat = diaryActivityCats.find((cc) => cc.color.toLowerCase() === c);
+      if (!matchingCat) continue;
+      const entry = map.get(matchingCat.id);
+      if (!entry) continue;
+      const s = new Date(e.startISO);
+      if (Number.isNaN(s.getTime())) continue;
+      if (s < rangeStart || s >= rangeEndExclusive) continue;
+      const idx = bucketIndexFor(s);
+      if (idx < 0 || idx >= buckets) continue;
+      if (e.distanceKm && Number.isFinite(e.distanceKm)) entry.distKm[idx] += e.distanceKm;
+      const en = new Date(e.endISO);
+      if (!Number.isNaN(en.getTime())) {
+        entry.durMin[idx] += Math.max(0, (en.getTime() - s.getTime()) / 60000);
+      }
+    }
+    return map;
+  }, [events, diaryActivityCats, hiddenCategoryIds, buckets, rangeStart, rangeEndExclusive, bucketIndexFor]);
+
+  /* Per-Strava-sport-type series for hover breakdown. */
+  const sportTypeSeriesMap = useMemo(() => {
+    const map = new Map<string, { sport: string; color: string; distKm: number[]; durMin: number[] }>();
+    for (const e of events) {
+      if (!e.id.startsWith("strava:")) continue;
+      const sport = e.sportType ?? "";
+      if (!sport) continue;
+      if (hiddenSportTypes?.has(sport)) continue;
+      if (!map.has(sport)) {
+        map.set(sport, {
+          sport,
+          color: colorForStravaSportType(sport),
+          distKm: new Array(buckets).fill(0),
+          durMin: new Array(buckets).fill(0),
+        });
+      }
+      const entry = map.get(sport)!;
+      const s = new Date(e.startISO);
+      if (Number.isNaN(s.getTime())) continue;
+      if (s < rangeStart || s >= rangeEndExclusive) continue;
+      const idx = bucketIndexFor(s);
+      if (idx < 0 || idx >= buckets) continue;
+      if (e.distanceKm && Number.isFinite(e.distanceKm)) entry.distKm[idx] += e.distanceKm;
+      const en = new Date(e.endISO);
+      if (!Number.isNaN(en.getTime())) {
+        entry.durMin[idx] += Math.max(0, (en.getTime() - s.getTime()) / 60000);
+      }
+    }
+    return map;
+  }, [events, hiddenSportTypes, buckets, rangeStart, rangeEndExclusive, bucketIndexFor]);
+
 
   const totalDistKm = series.dist.reduce((a, b) => a + b, 0);
   const totalDurMin = series.dur.reduce((a, b) => a + b, 0);
@@ -494,29 +573,82 @@ export function StatsChartView({
           )}
         </div>
 
-        {hoverDate && (
-          <div className="pointer-events-none absolute right-4 top-2 z-10 w-[260px] rounded-md border border-hairline bg-muted px-4 py-3 shadow-sm">
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">{hoverLabel}</div>
-            <div className="mt-1.5 space-y-1.5">
-              {(priority === "distance"
-                ? (["distance", "duration"] as const)
-                : (["duration", "distance"] as const)
-              ).map((m) =>
-                m === "distance" ? (
-                  <div key="distance" className="flex items-center gap-3 text-base tabular-nums" style={{ visibility: distVisible ? "visible" : "hidden" }}>
-                    <span className="inline-block h-3.5 w-3.5 rounded-full shrink-0" style={{ background: distColor }} />
-                    <span className="text-ink font-medium"><DistanceValue km={hoverDistKm} unit={unit} digits={1} /></span>
-                  </div>
-                ) : (
-                  <div key="duration" className="flex items-center gap-3 text-base tabular-nums" style={{ visibility: durVisible ? "visible" : "hidden" }}>
-                    <span className="inline-block h-3.5 w-3.5 rounded-full shrink-0" style={{ background: durColor }} />
-                    <span className="text-ink font-medium"><DurationValue minutes={hoverDurMin} /></span>
-                  </div>
-                ),
-              )}
+        {hoverDate && (() => {
+          const catRows = Array.from(categorySeriesMap.values())
+            .map((c) => ({
+              key: c.id,
+              label: c.name,
+              color: c.color,
+              distKm: hoverIdx != null ? c.distKm[hoverIdx] : 0,
+              durMin: hoverIdx != null ? c.durMin[hoverIdx] : 0,
+            }))
+            .filter((r) => r.distKm > 0 || r.durMin > 0);
+
+          const sportRows = Array.from(sportTypeSeriesMap.values())
+            .map((s) => ({
+              key: s.sport,
+              label: prettySport(s.sport),
+              color: s.color,
+              distKm: hoverIdx != null ? s.distKm[hoverIdx] : 0,
+              durMin: hoverIdx != null ? s.durMin[hoverIdx] : 0,
+            }))
+            .filter((r) => r.distKm > 0 || r.durMin > 0);
+
+          const catShown = catRows.slice(0, 15);
+          const sportShown = sportRows.slice(0, Math.max(0, 15 - catShown.length));
+          const hasBreakdown = catShown.length > 0 || sportShown.length > 0;
+
+          const renderRow = (r: { key: string; label: string; color: string; distKm: number; durMin: number }) => (
+            <div key={r.key} className="flex items-center gap-2.5 text-sm tabular-nums">
+              <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ background: r.color }} />
+              <span className="min-w-0 flex-1 truncate text-xs text-ink/80">{r.label}</span>
+              <span className="text-xs font-medium text-ink">
+                {r.distKm > 0 ? (
+                  <>
+                    {kmToUnit(r.distKm, unit).toFixed(1)}{" "}
+                    <span className="font-normal text-muted-foreground">{unitLabel(unit)}</span>
+                  </>
+                ) : null}
+                {r.distKm > 0 && r.durMin > 0 ? " · " : null}
+                {r.durMin > 0 ? <DurationValue minutes={r.durMin} /> : null}
+              </span>
             </div>
-          </div>
-        )}
+          );
+
+          return (
+            <div className="pointer-events-none absolute right-4 top-2 z-10 w-[280px] rounded-md border border-hairline bg-muted px-4 py-3 shadow-sm">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">{hoverLabel}</div>
+
+              {hasBreakdown && (
+                <div className="mt-2 space-y-1">
+                  {catShown.map(renderRow)}
+                  {sportShown.length > 0 && catShown.length > 0 && <div className="my-1.5" />}
+                  {sportShown.map(renderRow)}
+                </div>
+              )}
+
+              <div className={`${hasBreakdown ? "mt-2.5 border-t border-hairline/60 pt-2.5" : "mt-1.5"} space-y-1.5`}>
+                {(priority === "distance"
+                  ? (["distance", "duration"] as const)
+                  : (["duration", "distance"] as const)
+                ).map((m) =>
+                  m === "distance" ? (
+                    <div key="distance" className="flex items-center gap-3 text-base tabular-nums" style={{ visibility: distVisible ? "visible" : "hidden" }}>
+                      <span className="inline-block h-3.5 w-3.5 rounded-full shrink-0" style={{ background: distColor }} />
+                      <span className="text-ink font-medium"><DistanceValue km={hoverDistKm} unit={unit} digits={1} /></span>
+                    </div>
+                  ) : (
+                    <div key="duration" className="flex items-center gap-3 text-base tabular-nums" style={{ visibility: durVisible ? "visible" : "hidden" }}>
+                      <span className="inline-block h-3.5 w-3.5 rounded-full shrink-0" style={{ background: durColor }} />
+                      <span className="text-ink font-medium"><DurationValue minutes={hoverDurMin} /></span>
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
       </div>
 
       {/* Chart SVG */}

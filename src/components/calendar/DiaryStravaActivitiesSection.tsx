@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 import { ChevronRight, Eye, EyeOff } from "lucide-react";
 import { useStravaActivities } from "./useStravaActivities";
 import { colorForStravaSportType } from "@/lib/activity-colors";
+import { useDiaryVisibility } from "./DiaryVisibilityContext";
 
 function prettySportName(sport: string): string {
   // Strava sport_type values come in PascalCase (e.g. "TrailRun", "VirtualRide").
@@ -36,7 +37,7 @@ export function DiaryStravaActivitiesSection({
 }: DiaryStravaActivitiesSectionProps) {
   const { rows } = useStravaActivities(targetUserId ?? undefined);
   const [open, setOpen] = useState(true);
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const { isSportTypeHidden, toggleSportType } = useDiaryVisibility();
 
   const sports = useMemo(() => {
     const countMap = new Map<string, number>();
@@ -54,13 +55,8 @@ export function DiaryStravaActivitiesSection({
       .map(([sport, count]) => ({ sport, count, color: colorMap.get(sport)! }));
   }, [rows]);
 
-  const toggleHidden = (id: string) =>
-    setHidden((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
+
+
 
   return (
     <div className="flex flex-col">
@@ -95,11 +91,11 @@ export function DiaryStravaActivitiesSection({
             </div>
           ) : (
             sports.map(({ sport, color }) => {
-              const isHidden = hidden.has(sport);
+              const isHidden = isSportTypeHidden(sport);
               return (
                 <div
                   key={sport}
-                  onClick={() => toggleHidden(sport)}
+                  onClick={() => toggleSportType(sport)}
                   className={`group flex cursor-default items-center gap-2 rounded-md px-2 py-1 text-xs transition-colors hover:bg-secondary/60 ${
                     isHidden ? "text-muted-foreground" : "text-ink"
                   }`}
@@ -114,7 +110,7 @@ export function DiaryStravaActivitiesSection({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleHidden(sport);
+                      toggleSportType(sport);
                     }}
                     aria-label={isHidden ? "Show" : "Hide"}
                     className="grid h-5 w-5 shrink-0 place-items-center rounded hover:bg-secondary"

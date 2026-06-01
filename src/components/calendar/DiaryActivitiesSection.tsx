@@ -35,6 +35,7 @@ import {
   CategoryActionsMenu,
   STANDARD_COLORS_8,
 } from "@/components/library/CategoryActionsMenu";
+import { useDiaryVisibility } from "./DiaryVisibilityContext";
 
 export interface DiaryActivitiesSectionProps {
   /** Header label — defaults to "Activities". */
@@ -62,19 +63,12 @@ export function DiaryActivitiesSection({
 }: DiaryActivitiesSectionProps) {
   const { categories, create, update, remove, reorder } = useUserCategories({ kind, teamId, ownerId });
   const [open, setOpen] = useState(true);
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const { isCategoryHidden, toggleCategoryId } = useDiaryVisibility();
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
-  const toggleHidden = (id: string) =>
-    setHidden((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
 
   const startRename = (c: UserCategory) => {
     setRenamingId(c.id);
@@ -167,14 +161,14 @@ export function DiaryActivitiesSection({
                 <SortableActivityRow
                   key={c.id}
                   cat={c}
-                  hidden={hidden.has(c.id)}
+                  hidden={isCategoryHidden(c.id)}
                   canEdit={canEdit}
                   renaming={renamingId === c.id}
                   renameValue={renameValue}
                   setRenameValue={setRenameValue}
                   onCommitRename={() => void commitRename(c)}
                   onCancelRename={() => setRenamingId(null)}
-                  onToggleHidden={() => toggleHidden(c.id)}
+                  onToggleHidden={() => toggleCategoryId(c.id)}
                   onRename={() => startRename(c)}
                   onDelete={() => void remove(c.id)}
                   onColorChange={(hex) => void update(c.id, { color: hex })}

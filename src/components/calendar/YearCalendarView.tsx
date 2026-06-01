@@ -20,6 +20,7 @@ import {
   type TimeframeKey,
   type XBucket,
 } from "./StatsChartView";
+import { useDiaryVisibilitySafe } from "./DiaryVisibilityContext";
 
 import { useYearStore, useEventStore, type CellKey, type CalendarEvent } from "./yearStore";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode, type ExtendedViewMode } from "./UnifiedElasticGrid";
@@ -209,6 +210,12 @@ function YearCalendarViewInner({
   // category was picked for a session immediately after creation and the
   // resulting event got filtered out until the page refreshed.
   const { categories: userCats } = useUserCategories({ teamId });
+  const { categories: diaryActivityCats } = useUserCategories({
+    teamId,
+    ownerId: memberId,
+    kind: "diary_activity",
+  });
+  const diaryVisibility = useDiaryVisibilitySafe();
   const hiddenMeColors = useMemo(() => {
     const s = new Set<string>();
     for (const c of userCats) {
@@ -216,6 +223,7 @@ function YearCalendarViewInner({
     }
     return s;
   }, [userCats]);
+
 
   // Coach viewing a client: no longer per-category gated — the coach
   // sees every event in the client's personal calendar. Local hide toggles
@@ -249,18 +257,38 @@ function YearCalendarViewInner({
       return !hiddenColors.has(c);
     };
 
+    const passesCategoryHide = (e: CalendarEvent): boolean => {
+      if (!diaryVisibility || appKind !== "diary") return true;
+      if (e.id.startsWith("strava:")) return true;
+      const c = (e.color ?? "").toLowerCase();
+      const matchingCat = diaryActivityCats.find((cat) => cat.color.toLowerCase() === c);
+      if (matchingCat && diaryVisibility.isCategoryHidden(matchingCat.id)) return false;
+      return true;
+    };
+
+    const passesSportTypeHide = (e: CalendarEvent): boolean => {
+      if (!diaryVisibility || appKind !== "diary") return true;
+      if (!e.id.startsWith("strava:")) return true;
+      const sport = e.sportType ?? "";
+      if (!sport) return true;
+      return !diaryVisibility.isSportTypeHidden(sport);
+    };
+
+    const filterChain = (e: CalendarEvent) =>
+      passesLocalHide(e) && passesCategoryHide(e) && passesSportTypeHide(e);
+
     if (!visibleCategories) {
-      if (!isCoachViewer) return base.filter(passesLocalHide);
-      return base.filter(passesLocalHide);
+      return base.filter(filterChain);
     }
     return base.filter((e) => {
-      if (!passesLocalHide(e)) return false;
+      if (!filterChain(e)) return false;
       if (e.diaryType === "training") return visibleCategories.has("ind:training");
       const key = categoryKeyFromColor(e.color);
       if (key.startsWith("me:")) return !hiddenMeColors.has(key);
       return visibleCategories.has(key);
     });
-  }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind, hiddenMeColors, isCoachViewer, hiddenColors]);
+  }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind, hiddenMeColors, isCoachViewer, hiddenColors, diaryVisibility, diaryActivityCats]);
+
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(meta.title);
@@ -442,6 +470,9 @@ function YearCalendarViewInner({
             timeframe={statsTimeframe}
             onTimeframeChange={setStatsTimeframe}
             earliestDataDate={earliestDataDate}
+            diaryActivityCats={diaryActivityCats}
+            hiddenCategoryIds={diaryVisibility?.hiddenCategoryIds ?? new Set()}
+            hiddenSportTypes={diaryVisibility?.hiddenSportTypes ?? new Set()}
           />
 
         ) : (

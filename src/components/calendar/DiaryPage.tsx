@@ -13,6 +13,7 @@ import { DiarySideNav } from "./DiarySideNav";
 import { YearCalendarView } from "./YearCalendarView";
 import type { DateRange } from "./MiniCalendar";
 import type { ExtendedViewMode } from "./UnifiedElasticGrid";
+import { DiaryVisibilityProvider } from "./DiaryVisibilityContext";
 
 export function DiaryPage() {
   const { user, loading, activeEntityId } = useAuth();
@@ -81,6 +82,7 @@ export function DiaryPage() {
   }
 
   return (
+    <DiaryVisibilityProvider>
     <div className="h-full overflow-hidden bg-white">
       <div
         className="relative grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
@@ -154,5 +156,6 @@ export function DiaryPage() {
         </div>
       </div>
     </div>
+    </DiaryVisibilityProvider>
   );
 }
