@@ -26,6 +26,7 @@ import {
   DIARY_GROUPS,
   DurationRow,
   ActivitySelectRow,
+  prettyStravaSportName,
 } from "./DiaryEditFields";
 import { setHoverLock, releaseHoverLockIf } from "./hoverLock";
 
@@ -554,6 +555,11 @@ export function SessionHoverMenu({
                   accent={accent}
                   diaryGroup={diaryGroup}
                   diarySub={diarySub}
+                  lockedLabel={
+                    ev.stravaActivityId
+                      ? prettyStravaSportName(ev.sportType) || "Strava activity"
+                      : null
+                  }
                   onChange={(g, s) => {
                     setDiaryGroup(g);
                     setDiarySub(s);
