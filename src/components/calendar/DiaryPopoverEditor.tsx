@@ -30,6 +30,7 @@ import {
   DIARY_GROUPS,
   DurationRow,
   ActivitySelectRow,
+  prettyStravaSportName,
 } from "./DiaryEditFields";
 
 
