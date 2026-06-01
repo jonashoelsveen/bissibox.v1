@@ -2640,6 +2640,67 @@ function DiaryChartCard() {
   );
 }
 
+function NumericMaxInput({
+  value,
+  onCommit,
+  min = 0,
+  max,
+  width = "w-16",
+  placeholder = "0",
+}: {
+  value: number;
+  onCommit: (n: number) => void;
+  min?: number;
+  max?: number;
+  width?: string;
+  placeholder?: string;
+}) {
+  const [text, setText] = useState(String(value));
+  const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    if (!editing) setText(String(value));
+  }, [value, editing]);
+
+  const commit = (raw: string) => {
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length === 0) {
+      setText(String(value));
+      return;
+    }
+    let n = parseInt(digits, 10);
+    if (!Number.isFinite(n)) n = value;
+    if (typeof max === "number") n = Math.min(max, n);
+    n = Math.max(min, n);
+    setText(String(n));
+    if (n !== value) onCommit(n);
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={text}
+      placeholder={placeholder}
+      onChange={(e) => setText(e.target.value.replace(/\D/g, ""))}
+      onFocus={(e) => {
+        setEditing(true);
+        e.currentTarget.select();
+      }}
+      onBlur={() => {
+        setEditing(false);
+        commit(text);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          (e.currentTarget as HTMLInputElement).blur();
+        }
+      }}
+      className={`${width} rounded-md border border-hairline bg-white px-2 py-1 text-right text-sm tabular-nums text-ink outline-none focus:bg-ink/5 placeholder:text-ink/30`}
+    />
+  );
+}
+
 function ChartScopeRow({
   scope,
   priority,
@@ -2665,15 +2726,12 @@ function ChartScopeRow({
         <label className="flex items-center justify-between gap-3">
           <span className="text-sm text-ink">Distance max</span>
           <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min={1}
+            <NumericMaxInput
               value={distMax}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (Number.isFinite(n) && n > 0) setDistMax(n);
-              }}
-              className="w-24 rounded-md border border-hairline bg-white px-2 py-1 text-right text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
+              onCommit={(n) => setDistMax(Math.max(1, n))}
+              min={1}
+              width="w-24"
+              placeholder="0"
             />
             <span className="text-xs text-muted-foreground">{unit === "mi" ? "mi" : "km"}</span>
           </div>
@@ -2682,27 +2740,17 @@ function ChartScopeRow({
         <label className="flex items-center justify-between gap-3">
           <span className="text-sm text-ink">Duration max</span>
           <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min={0}
+            <NumericMaxInput
               value={hours}
-              onChange={(e) => {
-                const h = Math.max(0, Number(e.target.value) || 0);
-                setDurMaxMin(h * 60 + minutes);
-              }}
-              className="w-16 rounded-md border border-hairline bg-white px-2 py-1 text-right text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
+              onCommit={(h) => setDurMaxMin(h * 60 + minutes)}
+              placeholder="00"
             />
             <span className="text-xs text-muted-foreground">h</span>
-            <input
-              type="number"
-              min={0}
-              max={59}
+            <NumericMaxInput
               value={minutes}
-              onChange={(e) => {
-                const m = Math.min(59, Math.max(0, Number(e.target.value) || 0));
-                setDurMaxMin(hours * 60 + m);
-              }}
-              className="w-16 rounded-md border border-hairline bg-white px-2 py-1 text-right text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
+              onCommit={(m) => setDurMaxMin(hours * 60 + m)}
+              max={59}
+              placeholder="00"
             />
             <span className="text-xs text-muted-foreground">min</span>
           </div>
