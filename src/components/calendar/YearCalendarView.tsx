@@ -284,7 +284,7 @@ function YearCalendarViewInner({
       if (!filterChain(e)) return false;
       if (e.diaryType === "training") return visibleCategories.has("ind:training");
       const key = categoryKeyFromColor(e.color);
-      if (key.startsWith("me:")) return !hiddenMeColors.has(key);
+      if (key.startsWith("me:")) return visibleCategories.has(key);
       return visibleCategories.has(key);
     });
   }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind, hiddenMeColors, isCoachViewer, hiddenColors, diaryVisibility, diaryActivityCats]);
