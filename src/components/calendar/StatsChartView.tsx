@@ -273,7 +273,7 @@ export function StatsChartView({
 
   const buckets = bucketStarts.length;
 
-  const bucketIndexFor = (d: Date): number => {
+  const bucketIndexFor = useCallback((d: Date): number => {
     if (xBucket === "day") return daysBetween(bucketStarts[0], d);
     if (xBucket === "week") return Math.floor(daysBetween(bucketStarts[0], d) / 7);
     if (xBucket === "month") {
@@ -281,7 +281,7 @@ export function StatsChartView({
       return (d.getFullYear() - b0.getFullYear()) * 12 + (d.getMonth() - b0.getMonth());
     }
     return d.getFullYear() - bucketStarts[0].getFullYear();
-  };
+  }, [xBucket, bucketStarts]);
 
   /* Aggregate per bucket (SUM distance km, SUM duration minutes) */
   const series = useMemo(() => {
@@ -301,7 +301,73 @@ export function StatsChartView({
       }
     }
     return { dist, dur };
-  }, [events, rangeStart, rangeEndExclusive, buckets, xBucket, bucketStarts]);
+  }, [events, rangeStart, rangeEndExclusive, buckets, bucketIndexFor]);
+
+  /* Per-manual-category series for hover breakdown. */
+  const categorySeriesMap = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; color: string; distKm: number[]; durMin: number[] }>();
+    for (const cat of diaryActivityCats) {
+      if (hiddenCategoryIds?.has(cat.id)) continue;
+      map.set(cat.id, {
+        id: cat.id,
+        name: cat.name,
+        color: cat.color,
+        distKm: new Array(buckets).fill(0),
+        durMin: new Array(buckets).fill(0),
+      });
+    }
+    for (const e of events) {
+      if (e.id.startsWith("strava:")) continue;
+      const c = (e.color ?? "").toLowerCase();
+      const matchingCat = diaryActivityCats.find((cc) => cc.color.toLowerCase() === c);
+      if (!matchingCat) continue;
+      const entry = map.get(matchingCat.id);
+      if (!entry) continue;
+      const s = new Date(e.startISO);
+      if (Number.isNaN(s.getTime())) continue;
+      if (s < rangeStart || s >= rangeEndExclusive) continue;
+      const idx = bucketIndexFor(s);
+      if (idx < 0 || idx >= buckets) continue;
+      if (e.distanceKm && Number.isFinite(e.distanceKm)) entry.distKm[idx] += e.distanceKm;
+      const en = new Date(e.endISO);
+      if (!Number.isNaN(en.getTime())) {
+        entry.durMin[idx] += Math.max(0, (en.getTime() - s.getTime()) / 60000);
+      }
+    }
+    return map;
+  }, [events, diaryActivityCats, hiddenCategoryIds, buckets, rangeStart, rangeEndExclusive, bucketIndexFor]);
+
+  /* Per-Strava-sport-type series for hover breakdown. */
+  const sportTypeSeriesMap = useMemo(() => {
+    const map = new Map<string, { sport: string; color: string; distKm: number[]; durMin: number[] }>();
+    for (const e of events) {
+      if (!e.id.startsWith("strava:")) continue;
+      const sport = e.sportType ?? "";
+      if (!sport) continue;
+      if (hiddenSportTypes?.has(sport)) continue;
+      if (!map.has(sport)) {
+        map.set(sport, {
+          sport,
+          color: colorForStravaSportType(sport),
+          distKm: new Array(buckets).fill(0),
+          durMin: new Array(buckets).fill(0),
+        });
+      }
+      const entry = map.get(sport)!;
+      const s = new Date(e.startISO);
+      if (Number.isNaN(s.getTime())) continue;
+      if (s < rangeStart || s >= rangeEndExclusive) continue;
+      const idx = bucketIndexFor(s);
+      if (idx < 0 || idx >= buckets) continue;
+      if (e.distanceKm && Number.isFinite(e.distanceKm)) entry.distKm[idx] += e.distanceKm;
+      const en = new Date(e.endISO);
+      if (!Number.isNaN(en.getTime())) {
+        entry.durMin[idx] += Math.max(0, (en.getTime() - s.getTime()) / 60000);
+      }
+    }
+    return map;
+  }, [events, hiddenSportTypes, buckets, rangeStart, rangeEndExclusive, bucketIndexFor]);
+
 
   const totalDistKm = series.dist.reduce((a, b) => a + b, 0);
   const totalDurMin = series.dur.reduce((a, b) => a + b, 0);
