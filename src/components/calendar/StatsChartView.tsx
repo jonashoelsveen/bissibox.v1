@@ -218,18 +218,26 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
       {/* Top totals row */}
       <div className="mb-2 flex items-start justify-between gap-4">
         <div className="flex items-baseline gap-6">
-          <div className="text-ink" style={{ visibility: distVisible ? "visible" : "hidden" }}>
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Distance</div>
-            <div className="text-xl font-semibold tabular-nums">
-              {formatDistance(totalDistKm, unit, 1)}
-            </div>
-          </div>
-          <div className="text-ink" style={{ visibility: durVisible ? "visible" : "hidden" }}>
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</div>
-            <div className="text-xl font-semibold tabular-nums">
-              {formatDuration(totalDurMin)}
-            </div>
-          </div>
+          {(priority === "distance"
+            ? (["distance", "duration"] as const)
+            : (["duration", "distance"] as const)
+          ).map((m) =>
+            m === "distance" ? (
+              <div key="distance" className="text-ink" style={{ visibility: distVisible ? "visible" : "hidden" }}>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Distance</div>
+                <div className="text-xl font-semibold tabular-nums">
+                  {formatDistance(totalDistKm, unit, 1)}
+                </div>
+              </div>
+            ) : (
+              <div key="duration" className="text-ink" style={{ visibility: durVisible ? "visible" : "hidden" }}>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</div>
+                <div className="text-xl font-semibold tabular-nums">
+                  {formatDuration(totalDurMin)}
+                </div>
+              </div>
+            ),
+          )}
         </div>
 
         {hoverDate && (
