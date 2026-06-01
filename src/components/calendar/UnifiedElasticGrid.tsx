@@ -94,12 +94,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
 export type ViewMode = "day" | "week" | "month";
+/** Extended view mode that includes "year". Only the chart/stats view uses
+ * "year"; the grid renders month for it (coerce at the boundary). */
+export type ExtendedViewMode = ViewMode | "year";
 
 const VIEW_MODE_LABEL: Record<ViewMode, string> = {
   day: "Dag",
   week: "Uke",
   month: "Måned",
 };
+
 
 /**
  * HeaderDropdown — minimal dropdown styled to match the TopBar profile
