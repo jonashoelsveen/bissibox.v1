@@ -37,7 +37,7 @@ export function DiaryStravaActivitiesSection({
 }: DiaryStravaActivitiesSectionProps) {
   const { rows } = useStravaActivities(targetUserId ?? undefined);
   const [open, setOpen] = useState(true);
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const { isSportTypeHidden, toggleSportType } = useDiaryVisibility();
 
   const sports = useMemo(() => {
     const countMap = new Map<string, number>();
