@@ -7,7 +7,7 @@
  * value box pinned to the top-right.
  */
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CalendarEvent } from "./yearStore";
 import {
   formatDistance,
