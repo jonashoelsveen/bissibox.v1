@@ -67,6 +67,12 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   const [durVisible] = useMetricVisible("duration");
   const [distColor] = useMetricColor("distance");
   const [durColor] = useMetricColor("duration");
+  const [priority] = usePriorityMetric();
+
+  const scope: MetricScope =
+    viewMode === "month" ? "month" : "week";
+  const [distMaxSetting] = useDistanceMax(scope);
+  const [durMaxSettingMin] = useDurationMaxMinutes(scope);
 
   const { rangeStart, days } = useMemo(() => {
     let start: Date;
