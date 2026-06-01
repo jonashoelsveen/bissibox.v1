@@ -35,6 +35,7 @@ import {
   CategoryActionsMenu,
   STANDARD_COLORS_8,
 } from "@/components/library/CategoryActionsMenu";
+import { useDiaryVisibility } from "./DiaryVisibilityContext";
 
 export interface DiaryActivitiesSectionProps {
   /** Header label — defaults to "Activities". */
