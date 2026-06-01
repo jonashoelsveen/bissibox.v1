@@ -359,8 +359,24 @@ export function StatsChartView({
       .join(" ");
   };
 
+  const buildAreaPath = (vals: number[], yFn: (v: number) => number) => {
+    if (vals.length === 0) return "";
+    const baseline = PAD_T + innerH;
+    const top = vals
+      .map((v, i) => `${i === 0 ? "M" : "L"} ${xFor(i).toFixed(2)} ${yFn(v).toFixed(2)}`)
+      .join(" ");
+    const lastX = xFor(vals.length - 1).toFixed(2);
+    const firstX = xFor(0).toFixed(2);
+    return `${top} L ${lastX} ${baseline.toFixed(2)} L ${firstX} ${baseline.toFixed(2)} Z`;
+  };
+
   const distPath = buildPath(series.dist, yDistFor);
   const durPath = buildPath(series.dur, yDurFor);
+  const distArea = buildAreaPath(series.dist, yDistFor);
+  const durArea = buildAreaPath(series.dur, yDurFor);
+  const reactId = useId();
+  const gradIdDist = `dist-grad-${reactId.replace(/:/g, "")}`;
+  const gradIdDur = `dur-grad-${reactId.replace(/:/g, "")}`;
 
   /* Hover */
   const svgRef = useRef<SVGSVGElement>(null);
