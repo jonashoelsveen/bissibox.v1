@@ -110,7 +110,7 @@ export function DiaryStravaActivitiesSection({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleHidden(sport);
+                      toggleSportType(sport);
                     }}
                     aria-label={isHidden ? "Show" : "Hide"}
                     className="grid h-5 w-5 shrink-0 place-items-center rounded hover:bg-secondary"
