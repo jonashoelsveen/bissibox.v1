@@ -1257,9 +1257,11 @@ export function UnifiedElasticGrid({
                 memberId={memberId}
                 viewerRole={viewerRole}
                 defaultNewColor={
-                  seat === "admin"
-                    ? (teamCategories[0]?.color ?? null)
-                    : (meCategories[0]?.color ?? null)
+                  calId.startsWith("client:")
+                    ? (visibleClientCategories[0]?.color ?? null)
+                    : seat === "admin"
+                      ? (teamCategories[0]?.color ?? null)
+                      : (meCategories[0]?.color ?? null)
                 }
                 teamId={seat === "admin" ? teamId : null}
                 onPrevMonth={() => {
