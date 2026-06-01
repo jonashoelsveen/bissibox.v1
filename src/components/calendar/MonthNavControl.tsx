@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { MiniCalendar, type DateRange } from "./MiniCalendar";
 
-export type CalUnit = "day" | "week" | "month";
+export type CalUnit = "day" | "week" | "month" | "year";
 
 export interface MonthNavControlProps {
   unit: CalUnit;
@@ -27,6 +27,10 @@ function addDays(d: Date, n: number) {
 function addMonths(d: Date, n: number) {
   return new Date(d.getFullYear(), d.getMonth() + n, d.getDate());
 }
+function addYears(d: Date, n: number) {
+  return new Date(d.getFullYear() + n, d.getMonth(), d.getDate());
+}
+
 
 export function MonthNavControl({
   unit,
