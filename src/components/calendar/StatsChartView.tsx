@@ -7,7 +7,7 @@
  * value box pinned to the top-right.
  */
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CalendarEvent } from "./yearStore";
 import {
   formatDistance,
@@ -101,15 +101,29 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   const totalDistKm = series.dist.reduce((a, b) => a + b, 0);
   const totalDurMin = series.dur.reduce((a, b) => a + b, 0);
 
-  /* Chart dims */
-  const W = 1000; // viewBox width (scales responsively)
-  const H = 420;
+  /* Chart dims — measured from container so text stays at true pixel size */
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 1000, h: 420 });
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        setSize({ w: Math.round(r.width), h: Math.round(r.height) });
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const W = size.w;
+  const H = size.h;
   const PAD_L = 56;
   const PAD_R = 56;
-  const PAD_T = 56;
-  const PAD_B = 36;
-  const innerW = W - PAD_L - PAD_R;
-  const innerH = H - PAD_T - PAD_B;
+  const PAD_T = 20;
+  const PAD_B = 28;
+  const innerW = Math.max(1, W - PAD_L - PAD_R);
+  const innerH = Math.max(1, H - PAD_T - PAD_B);
 
   const xFor = (i: number) =>
     days <= 1 ? PAD_L + innerW / 2 : PAD_L + (i / (days - 1)) * innerW;
@@ -252,12 +266,12 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
       </div>
 
       {/* Chart */}
-      <div className="relative flex-1 min-h-0">
+      <div ref={containerRef} className="relative flex-1 min-h-0">
         <svg
           ref={svgRef}
-          viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="none"
-          className="h-full w-full select-none"
+          width={W}
+          height={H}
+          className="block select-none"
           onMouseMove={onMove}
           onMouseLeave={onLeave}
         >
