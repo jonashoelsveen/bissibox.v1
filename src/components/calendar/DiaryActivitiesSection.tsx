@@ -63,19 +63,12 @@ export function DiaryActivitiesSection({
 }: DiaryActivitiesSectionProps) {
   const { categories, create, update, remove, reorder } = useUserCategories({ kind, teamId, ownerId });
   const [open, setOpen] = useState(true);
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const { isCategoryHidden, toggleCategoryId } = useDiaryVisibility();
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
-  const toggleHidden = (id: string) =>
-    setHidden((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
 
   const startRename = (c: UserCategory) => {
     setRenamingId(c.id);
