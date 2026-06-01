@@ -10,7 +10,7 @@
  * dropdown in the page header (lifted to YearCalendarView) and passed in.
  */
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { CalendarEvent } from "./yearStore";
 import { kmToUnit, unitLabel, useDistanceUnit } from "@/lib/units";
 import {
@@ -18,6 +18,8 @@ import {
   useMetricVisible,
   usePriorityMetric,
 } from "./metricsSettings";
+import { colorForStravaSportType } from "@/lib/activity-colors";
+import type { UserCategory } from "@/hooks/useUserCategories";
 
 export type XBucket = "day" | "week" | "month" | "year";
 export type TimeframeKey =
