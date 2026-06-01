@@ -43,7 +43,7 @@ export function DiaryPage() {
     const t = new Date();
     return { start: t, end: t };
   });
-  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [viewMode, setViewMode] = useState<ExtendedViewMode>("week");
 
   const [visibleCategories, setVisibleCategories] = useState<Set<CategoryKey>>(
     () => new Set<CategoryKey>(["ind:training"]),
