@@ -433,10 +433,12 @@ function YearCalendarViewInner({
         {statsActive ? (
           <StatsChartView
             events={mergedEvents}
-            viewMode={viewMode}
-            currentDate={currentDate}
-            timeframe={timeframe}
+            xBucket={statsXBucket}
+            timeframe={statsTimeframe}
+            onTimeframeChange={setStatsTimeframe}
+            earliestDataDate={earliestDataDate}
           />
+
         ) : (
 
         <UnifiedElasticGrid
