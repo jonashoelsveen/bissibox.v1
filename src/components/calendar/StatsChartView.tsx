@@ -757,6 +757,50 @@ export function StatsChartView({
           {distVisible && (
             <path d={distArea} fill={`url(#${gradIdDist})`} stroke="none" />
           )}
+
+          {/* Per-category (manual activities) lines using the priority metric. */}
+          {Array.from(categorySeriesMap.values()).map((c) => {
+            const vals = priority === "distance" ? c.distKm : c.durMin;
+            const yFn = priority === "distance" ? yDistFor : yDurFor;
+            const visible = priority === "distance" ? distVisible : durVisible;
+            if (!visible) return null;
+            const total = vals.reduce((a, b) => a + b, 0);
+            if (total <= 0) return null;
+            return (
+              <path
+                key={`cat-${c.id}`}
+                d={buildPath(vals, yFn)}
+                fill="none"
+                stroke={c.color}
+                strokeWidth={1.25}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                opacity={0.85}
+              />
+            );
+          })}
+          {/* Per-Strava-sport-type lines using the priority metric. */}
+          {Array.from(sportTypeSeriesMap.values()).map((s) => {
+            const vals = priority === "distance" ? s.distKm : s.durMin;
+            const yFn = priority === "distance" ? yDistFor : yDurFor;
+            const visible = priority === "distance" ? distVisible : durVisible;
+            if (!visible) return null;
+            const total = vals.reduce((a, b) => a + b, 0);
+            if (total <= 0) return null;
+            return (
+              <path
+                key={`sport-${s.sport}`}
+                d={buildPath(vals, yFn)}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={1.25}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                opacity={0.85}
+              />
+            );
+          })}
+
           {durVisible && (
             <path d={durPath} fill="none" stroke={durColor} strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" />
           )}
