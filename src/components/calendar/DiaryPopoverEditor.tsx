@@ -284,6 +284,11 @@ export function DiaryPopoverEditor({
             accent={accent}
             diaryGroup={diaryGroup}
             diarySub={diarySub}
+            lockedLabel={
+              initialEvent?.stravaActivityId
+                ? prettyStravaSportName(initialEvent?.sportType) || "Strava activity"
+                : null
+            }
             onChange={(g, s) => {
               setDiaryGroup(g);
               setDiarySub(s);
