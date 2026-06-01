@@ -2573,7 +2573,6 @@ function DiaryChartCard() {
   const [priority, setPriority] = usePriorityMetric();
   const [distColor] = useMetricColor("distance");
   const [durColor] = useMetricColor("duration");
-  const [unit] = useDistanceUnit();
 
   return (
     <Card>
