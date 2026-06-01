@@ -116,7 +116,7 @@ export function allowedBucketsForTimeframe(tf: TimeframeKey): XBucket[] {
     case "5Y":
     case "10Y":
     case "MAX":
-      return ["week", "month", "year"];
+      return ["day", "week", "month", "year"];
   }
 }
 
