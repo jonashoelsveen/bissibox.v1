@@ -61,6 +61,55 @@ function formatDuration(minutes: number): string {
   return `${h} h ${m} min`;
 }
 
+/** Render a "12.3 km" / "5 mi" string with the unit suffix in a lighter weight. */
+function DistanceValue({ km, unit, digits = 1 }: { km: number | null | undefined; unit: "km" | "mi"; digits?: number }) {
+  if (km == null || Number.isNaN(km)) return <>—</>;
+  const num = kmToUnit(km, unit).toFixed(digits);
+  return (
+    <>
+      {num}
+      <span className="font-light"> {unitLabel(unit)}</span>
+    </>
+  );
+}
+
+/** Render a duration with "h" / "min" suffixes in a lighter weight. */
+function DurationValue({ minutes }: { minutes: number }) {
+  if (!minutes || minutes <= 0) {
+    return (
+      <>
+        0<span className="font-light"> min</span>
+      </>
+    );
+  }
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  if (h <= 0) {
+    return (
+      <>
+        {m}
+        <span className="font-light"> min</span>
+      </>
+    );
+  }
+  if (m === 0) {
+    return (
+      <>
+        {h}
+        <span className="font-light"> h</span>
+      </>
+    );
+  }
+  return (
+    <>
+      {h}
+      <span className="font-light"> h </span>
+      {m}
+      <span className="font-light"> min</span>
+    </>
+  );
+}
+
 export function StatsChartView({ events, viewMode, currentDate }: StatsChartViewProps) {
   const [unit] = useDistanceUnit();
   const [distVisible] = useMetricVisible("distance");
@@ -226,14 +275,14 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
               <div key="distance" className="text-ink" style={{ visibility: distVisible ? "visible" : "hidden" }}>
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Distance</div>
                 <div className="text-xl font-semibold tabular-nums">
-                  {formatDistance(totalDistKm, unit, 1)}
+                  <DistanceValue km={totalDistKm} unit={unit} digits={1} />
                 </div>
               </div>
             ) : (
               <div key="duration" className="text-ink" style={{ visibility: durVisible ? "visible" : "hidden" }}>
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</div>
                 <div className="text-xl font-semibold tabular-nums">
-                  {formatDuration(totalDurMin)}
+                  <DurationValue minutes={totalDurMin} />
                 </div>
               </div>
             ),
@@ -264,7 +313,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
                       className="inline-block h-3.5 w-3.5 rounded-full shrink-0"
                       style={{ background: distColor }}
                     />
-                    <span className="text-ink font-medium">{formatDistance(hoverDistKm, unit, 1)}</span>
+                    <span className="text-ink font-medium"><DistanceValue km={hoverDistKm} unit={unit} digits={1} /></span>
                   </div>
                 ) : (
                   <div
@@ -276,7 +325,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
                       className="inline-block h-3.5 w-3.5 rounded-full shrink-0"
                       style={{ background: durColor }}
                     />
-                    <span className="text-ink font-medium">{formatDuration(hoverDurMin)}</span>
+                    <span className="text-ink font-medium"><DurationValue minutes={hoverDurMin} /></span>
                   </div>
                 ),
               )}
