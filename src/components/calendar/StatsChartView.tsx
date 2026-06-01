@@ -274,9 +274,32 @@ export function StatsChartView({
   const xFor = (i: number) =>
     buckets <= 1 ? PAD_L + innerW / 2 : PAD_L + (i / (buckets - 1)) * innerW;
 
-  const yDistMax = Math.max(1, distMaxSetting);
-  const yDurMax = Math.max(1, durMaxSettingMin);
+  /* ── Auto-scaling: derive y-axis maxima from the visible series.
+   * yMax = localMax * 1.15 (10–15% headroom). Min stays at 0 for these
+   * absolute metrics. Both axes scale independently so each line uses the
+   * full chart height, while sharing gridline positions (0/25/50/75/100%).
+   */
+  const localDistMaxDisplay = useMemo(() => {
+    let m = 0;
+    for (const v of series.dist) {
+      const dv = kmToUnit(v, unit);
+      if (dv > m) m = dv;
+    }
+    return m;
+  }, [series.dist, unit]);
+  const localDurMaxMin = useMemo(() => {
+    let m = 0;
+    for (const v of series.dur) if (v > m) m = v;
+    return m;
+  }, [series.dur]);
+
+  const targetDistMax = niceCeil(Math.max(1, localDistMaxDisplay * 1.15));
+  const targetDurMax = niceCeil(Math.max(1, localDurMaxMin * 1.15));
+
+  const yDistMax = useTween(targetDistMax, 260);
+  const yDurMax = useTween(targetDurMax, 260);
   const durInHours = yDurMax >= 60;
+
 
   const yDistFor = (kmVal: number) =>
     PAD_T + innerH - (kmToUnit(kmVal, unit) / yDistMax) * innerH;
