@@ -14,7 +14,12 @@ import { BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { StatsChartView } from "./StatsChartView";
+import {
+  StatsChartView,
+  allowedBucketsForTimeframe,
+  type TimeframeKey,
+  type XBucket,
+} from "./StatsChartView";
 
 import { useYearStore, useEventStore, type CellKey, type CalendarEvent } from "./yearStore";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode, type ExtendedViewMode } from "./UnifiedElasticGrid";
@@ -296,95 +301,27 @@ function YearCalendarViewInner({
   };
   const showStatsToggle = appKind === "diary";
 
-  // Stats-only: timeframe selector (how many units of the active view to show).
-  // Keyed by viewMode so switching back to a view restores the user's choice.
-  const [tfWeek, setTfWeek] = useState<number>(1);
-  const [tfMonth, setTfMonth] = useState<number>(1);
-  const [tfYear, setTfYear] = useState<number>(1);
-  const timeframe =
-    viewMode === "week" ? tfWeek : viewMode === "year" ? tfYear : tfMonth;
-  const setTimeframe = (n: number) => {
-    if (viewMode === "week") setTfWeek(n);
-    else if (viewMode === "year") setTfYear(n);
-    else setTfMonth(n);
-  };
+  // Stats-only: Nordnet-style timeframe + x-axis bucket.
+  const [statsTimeframe, setStatsTimeframe] = useState<TimeframeKey>("1M");
+  const [statsXBucket, setStatsXBucket] = useState<XBucket>("day");
 
-  /** Number of distinct calendar years represented in the merged events,
-   * used to drive the Year timeframe dropdown options. Minimum 1. */
-  const yearsWithData = useMemo(() => {
-    let earliest = new Date().getFullYear();
-    let any = false;
+  /** Earliest event date across the merged feed — gates Nordnet buttons. */
+  const earliestDataDate = useMemo<Date | null>(() => {
+    let earliest: number | null = null;
     for (const e of mergedEvents) {
       const t = new Date(e.startISO).getTime();
-      if (Number.isNaN(t)) continue;
-      const y = new Date(t).getFullYear();
-      if (!any || y < earliest) {
-        earliest = y;
-        any = true;
-      }
+      if (!Number.isFinite(t)) continue;
+      if (earliest === null || t < earliest) earliest = t;
     }
-    if (!any) return 1;
-    const span = new Date().getFullYear() - earliest + 1;
-    return Math.max(1, span);
+    return earliest === null ? null : new Date(earliest);
   }, [mergedEvents]);
 
-  /** Build the timeframe dropdown options for the active view. */
-  const timeframeOptions = useMemo<{ value: number; label: string }[]>(() => {
-    if (viewMode === "week") {
-      return [
-        { value: 1, label: "1 week" },
-        { value: 3, label: "3 weeks" },
-        { value: 6, label: "6 weeks" },
-      ];
-    }
-    if (viewMode === "year") {
-      const n = yearsWithData;
-      if (n <= 1) return [{ value: 1, label: "1 year" }];
-      if (n === 2) {
-        return [
-          { value: 1, label: "1 year" },
-          { value: 2, label: "Max" },
-        ];
-      }
-      if (n === 3) {
-        return [
-          { value: 1, label: "1 year" },
-          { value: 2, label: "2 years" },
-          { value: 3, label: "Max" },
-        ];
-      }
-      if (n <= 6) {
-        return [
-          { value: 1, label: "1 year" },
-          { value: 3, label: "3 years" },
-          { value: n, label: "Max" },
-        ];
-      }
-      return [
-        { value: 1, label: "1 year" },
-        { value: 3, label: "3 years" },
-        { value: 6, label: "6 years" },
-        { value: n, label: "Max" },
-      ];
-    }
-    return [
-      { value: 1, label: "1 month" },
-      { value: 3, label: "3 months" },
-      { value: 6, label: "6 months" },
-    ];
-  }, [viewMode, yearsWithData]);
-
-  // Clamp current timeframe if it no longer exists in the options (e.g. after
-  // switching view modes or when yearsWithData shrinks).
+  // Clamp x-bucket to options allowed by the active timeframe.
   useEffect(() => {
-    if (!timeframeOptions.some((o) => o.value === timeframe)) {
-      setTimeframe(timeframeOptions[0]?.value ?? 1);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeframeOptions]);
+    const allowed = allowedBucketsForTimeframe(statsTimeframe);
+    if (!allowed.includes(statsXBucket)) setStatsXBucket(allowed[0]);
+  }, [statsTimeframe, statsXBucket]);
 
-  const timeframeLabel =
-    viewMode === "week" ? "Tidsramme (uker)" : viewMode === "year" ? "Tidsramme (år)" : "Tidsramme (måneder)";
 
 
 
@@ -424,37 +361,51 @@ function YearCalendarViewInner({
           >
             <span className="block h-2.5 w-2.5 animate-pulse rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
           </button>
-          <HeaderDropdown<ExtendedViewMode>
-            ariaLabel="Visningsmodus"
-            value={viewMode}
-            onChange={setViewMode}
-            width={108}
-            options={
-              appKind === "diary"
-                ? [
-                    { value: "week", label: "Uke" },
-                    { value: "month", label: "Måned" },
-                    { value: "year", label: "År" },
-                  ]
-                : [
+          {/* When stats is active, hide view-type + timeframe dropdowns and
+              show the x-axis bucket dropdown instead. The Nordnet-style
+              timeframe row lives at the bottom of the chart itself. */}
+          {!statsActive && (
+            <HeaderDropdown<ExtendedViewMode>
+              ariaLabel="Visningsmodus"
+              value={viewMode}
+              onChange={setViewMode}
+              width={108}
+              options={
+                appKind === "diary"
+                  ? [
+                      { value: "week", label: "Uke" },
+                      { value: "month", label: "Måned" },
+                      { value: "year", label: "År" },
+                    ]
+                  : [
+                      { value: "day", label: "Dag" },
+                      { value: "week", label: "Uke" },
+                      { value: "month", label: "Måned" },
+                    ]
+              }
+            />
+          )}
+          {showStatsToggle && statsActive && (
+            <div className="self-end pb-0.5">
+              <HeaderDropdown<XBucket>
+                ariaLabel="X-akse"
+                value={statsXBucket}
+                onChange={setStatsXBucket}
+                width={108}
+                options={(() => {
+                  const allowed = allowedBucketsForTimeframe(statsTimeframe);
+                  const all: { value: XBucket; label: string }[] = [
                     { value: "day", label: "Dag" },
                     { value: "week", label: "Uke" },
                     { value: "month", label: "Måned" },
-                  ]
-            }
-          />
-          {showStatsToggle && statsActive && (
-            <HeaderDropdown<string>
-              ariaLabel={timeframeLabel}
-              value={String(timeframe)}
-              onChange={(v) => setTimeframe(Number(v))}
-              width={108}
-              options={timeframeOptions.map((o) => ({
-                value: String(o.value),
-                label: o.label,
-              }))}
-            />
+                    { value: "year", label: "År" },
+                  ];
+                  return all.filter((o) => allowed.includes(o.value));
+                })()}
+              />
+            </div>
           )}
+
 
           {showStatsToggle && (
             <button
@@ -482,10 +433,12 @@ function YearCalendarViewInner({
         {statsActive ? (
           <StatsChartView
             events={mergedEvents}
-            viewMode={viewMode}
-            currentDate={currentDate}
-            timeframe={timeframe}
+            xBucket={statsXBucket}
+            timeframe={statsTimeframe}
+            onTimeframeChange={setStatsTimeframe}
+            earliestDataDate={earliestDataDate}
           />
+
         ) : (
 
         <UnifiedElasticGrid

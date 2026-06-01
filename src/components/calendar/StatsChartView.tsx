@@ -1,19 +1,18 @@
 /**
  * StatsChartView — Nordnet-style minimalist chart for the Diary.
  *
- * Aggregates per-day Distance (km / mi) and Duration (minutes) across the
- * currently selected range (week or month). Renders as an SVG line chart
- * with a horizontal grid, a follow-the-cursor crosshair, and a stock-style
- * value box pinned to the top-right.
+ * Self-contained timeframe controls (1D / 1W / 1M / 3M / 6M / 1Y / 3Y / 5Y /
+ * 10Y / Max) live at the bottom of the chart and gate themselves on how far
+ * back the user has data — exactly like a stock trading platform that
+ * surfaces 5Y/10Y only once a stock has been public that long.
+ *
+ * The x-axis granularity (Day / Week / Month / Year) is controlled from a
+ * dropdown in the page header (lifted to YearCalendarView) and passed in.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CalendarEvent } from "./yearStore";
-import {
-  kmToUnit,
-  unitLabel,
-  useDistanceUnit,
-} from "@/lib/units";
+import { kmToUnit, unitLabel, useDistanceUnit } from "@/lib/units";
 import {
   useMetricColor,
   useMetricVisible,
@@ -22,20 +21,33 @@ import {
   useDurationMaxMinutes,
   type MetricScope,
 } from "./metricsSettings";
-import { HeaderDropdown } from "./UnifiedElasticGrid";
 
-type XBucket = "day" | "week" | "month" | "year";
+export type XBucket = "day" | "week" | "month" | "year";
+export type TimeframeKey =
+  | "1D"
+  | "1W"
+  | "1M"
+  | "3M"
+  | "6M"
+  | "1Y"
+  | "3Y"
+  | "5Y"
+  | "10Y"
+  | "MAX";
 
 interface StatsChartViewProps {
   events: CalendarEvent[];
-  /** "day" is treated as "week" for charting purposes. */
-  viewMode: "day" | "week" | "month" | "year";
-  currentDate: Date;
-  /** How many units of the active view to display. Defaults to 1. */
-  timeframe?: number;
+  xBucket: XBucket;
+  timeframe: TimeframeKey;
+  onTimeframeChange: (tf: TimeframeKey) => void;
+  /** Earliest event date for this user, used to gate timeframe buttons. */
+  earliestDataDate: Date | null;
 }
 
-
+const MONTHS_NB_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "Mai", "Jun",
+  "Jul", "Aug", "Sep", "Okt", "Nov", "Des",
+];
 
 function startOfDay(d: Date) {
   const r = new Date(d);
@@ -44,66 +56,110 @@ function startOfDay(d: Date) {
 }
 function startOfWeekMon(d: Date) {
   const r = startOfDay(d);
-  // Monday-first: getDay() returns 0=Sun..6=Sat
   const dow = (r.getDay() + 6) % 7;
   r.setDate(r.getDate() - dow);
+  return r;
+}
+function addDays(d: Date, n: number) {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
   return r;
 }
 function daysBetween(a: Date, b: Date) {
   return Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / 86400000);
 }
+function isoWeek(d: Date): number {
+  const x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = x.getUTCDay() || 7;
+  x.setUTCDate(x.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(x.getUTCFullYear(), 0, 1));
+  return Math.ceil(((x.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
 
+/** Days included in each Nordnet-style timeframe. */
+const TF_DAYS: Record<TimeframeKey, number> = {
+  "1D": 1,
+  "1W": 7,
+  "1M": 30,
+  "3M": 91,
+  "6M": 182,
+  "1Y": 365,
+  "3Y": 365 * 3,
+  "5Y": 365 * 5,
+  "10Y": 365 * 10,
+  MAX: Number.POSITIVE_INFINITY,
+};
 
-/** Render a "12.3 km" / "5 mi" string with the unit suffix in a lighter weight. */
+const TF_LABEL: Record<TimeframeKey, string> = {
+  "1D": "1 D",
+  "1W": "1 U",
+  "1M": "1 M",
+  "3M": "3 M",
+  "6M": "6 M",
+  "1Y": "1 År",
+  "3Y": "3 År",
+  "5Y": "5 År",
+  "10Y": "10 År",
+  MAX: "Maks",
+};
+
+/** Allowed x-axis buckets for a given timeframe. */
+export function allowedBucketsForTimeframe(tf: TimeframeKey): XBucket[] {
+  switch (tf) {
+    case "1D":
+      return ["day"];
+    case "1W":
+      return ["day", "week"];
+    case "1M":
+    case "3M":
+    case "6M":
+    case "1Y":
+      return ["day", "week", "month"];
+    case "3Y":
+    case "5Y":
+    case "10Y":
+    case "MAX":
+      return ["week", "month", "year"];
+  }
+}
+
+/** Pick which Nordnet timeframe buttons are visible given the user's data span. */
+export function visibleTimeframes(spanDays: number): TimeframeKey[] {
+  const all: TimeframeKey[] = ["1D", "1W", "1M", "3M", "6M", "1Y", "3Y", "5Y", "10Y"];
+  const out: TimeframeKey[] = [];
+  for (const k of all) {
+    // 1D / 1W / 1M always shown (low bar).
+    if (k === "1D" || k === "1W" || k === "1M") {
+      out.push(k);
+      continue;
+    }
+    if (spanDays >= TF_DAYS[k]) out.push(k);
+  }
+  out.push("MAX");
+  return out;
+}
+
 function DistanceValue({ km, unit, digits = 1 }: { km: number | null | undefined; unit: "km" | "mi"; digits?: number }) {
   if (km == null || Number.isNaN(km)) return <>—</>;
   const num = kmToUnit(km, unit).toFixed(digits);
-  return (
-    <>
-      {num}
-      <span className="font-light"> {unitLabel(unit)}</span>
-    </>
-  );
+  return (<>{num}<span className="font-light"> {unitLabel(unit)}</span></>);
 }
-
-/** Render a duration with "h" / "min" suffixes in a lighter weight. */
 function DurationValue({ minutes }: { minutes: number }) {
-  if (!minutes || minutes <= 0) {
-    return (
-      <>
-        0<span className="font-light"> min</span>
-      </>
-    );
-  }
+  if (!minutes || minutes <= 0) return (<>0<span className="font-light"> min</span></>);
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
-  if (h <= 0) {
-    return (
-      <>
-        {m}
-        <span className="font-light"> min</span>
-      </>
-    );
-  }
-  if (m === 0) {
-    return (
-      <>
-        {h}
-        <span className="font-light"> h</span>
-      </>
-    );
-  }
-  return (
-    <>
-      {h}
-      <span className="font-light"> h </span>
-      {m}
-      <span className="font-light"> min</span>
-    </>
-  );
+  if (h <= 0) return (<>{m}<span className="font-light"> min</span></>);
+  if (m === 0) return (<>{h}<span className="font-light"> h</span></>);
+  return (<>{h}<span className="font-light"> h </span>{m}<span className="font-light"> min</span></>);
 }
 
-export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }: StatsChartViewProps) {
+export function StatsChartView({
+  events,
+  xBucket,
+  timeframe,
+  onTimeframeChange,
+  earliestDataDate,
+}: StatsChartViewProps) {
   const [unit] = useDistanceUnit();
   const [distVisible] = useMetricVisible("distance");
   const [durVisible] = useMetricVisible("duration");
@@ -111,57 +167,34 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
   const [durColor] = useMetricColor("duration");
   const [priority] = usePriorityMetric();
 
+  /** Map timeframe → scope for per-scope max settings. */
   const scope: MetricScope =
-    viewMode === "year" ? "year" : viewMode === "month" ? "month" : "week";
+    timeframe === "1Y" || timeframe === "3Y" || timeframe === "5Y" || timeframe === "10Y" || timeframe === "MAX"
+      ? "year"
+      : timeframe === "1M" || timeframe === "3M" || timeframe === "6M"
+      ? "month"
+      : "week";
   const [distMaxSetting] = useDistanceMax(scope);
   const [durMaxSettingMin] = useDurationMaxMinutes(scope);
 
-  /** User-selected aggregation bucket for the x-axis. Always defaults to "day". */
-  const [xBucket, setXBucket] = useState<XBucket>("day");
-
-  // Clamp xBucket to options allowed by the current viewMode.
-  useEffect(() => {
-    const maxAllowed: XBucket =
-      viewMode === "year" ? "year" : viewMode === "month" ? "month" : "week";
-    const rank: Record<XBucket, number> = { day: 0, week: 1, month: 2, year: 3 };
-    if (rank[xBucket] > rank[maxAllowed]) setXBucket(maxAllowed === "week" ? "day" : "day");
-  }, [viewMode, xBucket]);
-
-
-  /** Compute the displayed date range based on viewMode + timeframe. */
+  /** Trailing window ending today. */
   const { rangeStart, rangeEndExclusive } = useMemo(() => {
-    if (viewMode === "year") {
-      const endYear = currentDate.getFullYear();
-      const startYear = endYear - timeframe + 1;
-      return {
-        rangeStart: new Date(startYear, 0, 1),
-        rangeEndExclusive: new Date(endYear + 1, 0, 1),
-      };
-    }
-    if (viewMode === "month") {
-      const endMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      const start = new Date(
-        endMonthStart.getFullYear(),
-        endMonthStart.getMonth() - (timeframe - 1),
-        1,
-      );
-      const endExcl = new Date(endMonthStart.getFullYear(), endMonthStart.getMonth() + 1, 1);
+    const todayStart = startOfDay(new Date());
+    const endExcl = addDays(todayStart, 1);
+    if (timeframe === "MAX") {
+      const start = earliestDataDate ? startOfDay(earliestDataDate) : addDays(todayStart, -6);
       return { rangeStart: start, rangeEndExclusive: endExcl };
     }
-    // week (or day → treat as week)
-    const endWeekStart = startOfWeekMon(currentDate);
-    const start = new Date(endWeekStart);
-    start.setDate(start.getDate() - (timeframe - 1) * 7);
-    const endExcl = new Date(endWeekStart);
-    endExcl.setDate(endExcl.getDate() + 7);
+    const days = TF_DAYS[timeframe];
+    const start = addDays(endExcl, -days);
     return { rangeStart: start, rangeEndExclusive: endExcl };
-  }, [viewMode, currentDate, timeframe]);
+  }, [timeframe, earliestDataDate]);
 
-  /** Build the bucket list (start dates) for the active xBucket. */
+  /** Build bucket starts based on xBucket. */
   const bucketStarts = useMemo(() => {
     const out: Date[] = [];
     if (xBucket === "day") {
-      const d = new Date(rangeStart);
+      const d = startOfDay(rangeStart);
       while (d < rangeEndExclusive) {
         out.push(new Date(d));
         d.setDate(d.getDate() + 1);
@@ -179,26 +212,21 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
         d.setMonth(d.getMonth() + 1);
       }
     } else {
-      // year
       const d = new Date(rangeStart.getFullYear(), 0, 1);
       while (d < rangeEndExclusive) {
         out.push(new Date(d));
         d.setFullYear(d.getFullYear() + 1);
       }
     }
-    if (out.length === 0) out.push(new Date(rangeStart));
+    if (out.length === 0) out.push(startOfDay(rangeStart));
     return out;
   }, [rangeStart, rangeEndExclusive, xBucket]);
 
   const buckets = bucketStarts.length;
 
   const bucketIndexFor = (d: Date): number => {
-    if (xBucket === "day") {
-      return daysBetween(bucketStarts[0], d);
-    }
-    if (xBucket === "week") {
-      return Math.floor(daysBetween(bucketStarts[0], d) / 7);
-    }
+    if (xBucket === "day") return daysBetween(bucketStarts[0], d);
+    if (xBucket === "week") return Math.floor(daysBetween(bucketStarts[0], d) / 7);
     if (xBucket === "month") {
       const b0 = bucketStarts[0];
       return (d.getFullYear() - b0.getFullYear()) * 12 + (d.getMonth() - b0.getMonth());
@@ -206,10 +234,10 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
     return d.getFullYear() - bucketStarts[0].getFullYear();
   };
 
-  /* Aggregate per bucket */
+  /* Aggregate per bucket (SUM distance km, SUM duration minutes) */
   const series = useMemo(() => {
-    const dist = new Array(buckets).fill(0); // km
-    const dur = new Array(buckets).fill(0); // minutes
+    const dist = new Array(buckets).fill(0);
+    const dur = new Array(buckets).fill(0);
     for (const e of events) {
       const s = new Date(e.startISO);
       if (Number.isNaN(s.getTime())) continue;
@@ -226,16 +254,14 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
     return { dist, dur };
   }, [events, rangeStart, rangeEndExclusive, buckets, xBucket, bucketStarts]);
 
-
-
   const totalDistKm = series.dist.reduce((a, b) => a + b, 0);
   const totalDurMin = series.dur.reduce((a, b) => a + b, 0);
 
-  /* Chart dims — measured from container so text stays at true pixel size */
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ w: 1000, h: 420 });
+  /* Chart dims */
+  const chartWrapRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 1000, h: 380 });
   useEffect(() => {
-    const el = containerRef.current;
+    const el = chartWrapRef.current;
     if (!el) return;
     const ro = new ResizeObserver(() => {
       const r = el.getBoundingClientRect();
@@ -251,15 +277,13 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
   const PAD_L = 56;
   const PAD_R = 56;
   const PAD_T = 20;
-  const PAD_B = 56; // extra room for x-bucket dropdown under x-axis
+  const PAD_B = 36;
   const innerW = Math.max(1, W - PAD_L - PAD_R);
   const innerH = Math.max(1, H - PAD_T - PAD_B);
 
   const xFor = (i: number) =>
     buckets <= 1 ? PAD_L + innerW / 2 : PAD_L + (i / (buckets - 1)) * innerW;
 
-  // Fixed y-axis maximums from user settings (per scope). Distance is stored
-  // in the user's display unit; duration is stored in minutes.
   const yDistMax = Math.max(1, distMaxSetting);
   const yDurMax = Math.max(1, durMaxSettingMin);
   const durInHours = yDurMax >= 60;
@@ -279,7 +303,7 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
   const distPath = buildPath(series.dist, yDistFor);
   const durPath = buildPath(series.dur, yDurFor);
 
-  /* Cursor / hover */
+  /* Hover */
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
@@ -300,33 +324,20 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
     const idx = Math.max(0, Math.min(buckets - 1, Math.round(ratio * (buckets - 1))));
     setHoverIdx(idx);
   };
-
   const onLeave = () => setHoverIdx(null);
 
-  /* Y-axis ticks (5 lines) */
   const ticks = [0, 0.25, 0.5, 0.75, 1];
 
-  /* X labels — depend on the active xBucket. */
-  const monthAbbr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  /* X-axis label formatting based on xBucket. */
   const xLabels = useMemo(() => {
     const labels: { i: number; label: string }[] = [];
-    const stride = (() => {
-      // Cap to ~12 labels for readability.
-      const target = 12;
-      if (buckets <= target) return 1;
-      return Math.ceil(buckets / target);
-    })();
+    const stride = buckets <= 12 ? 1 : Math.ceil(buckets / 12);
 
     if (xBucket === "day") {
-      if (viewMode === "week" && timeframe === 1 && buckets === 7) {
-        const names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-        for (let i = 0; i < buckets; i++) labels.push({ i, label: names[i] ?? "" });
-      } else if (viewMode === "month" && timeframe === 1) {
-        const last = buckets;
-        const set = new Set<number>([1, 5, 10, 15, 20, 25, last]);
-        for (const day of Array.from(set).sort((a, b) => a - b)) {
-          if (day >= 1 && day <= last) labels.push({ i: day - 1, label: String(day) });
-        }
+      // Single-day timeframe → just today
+      if (buckets === 1) {
+        const d = bucketStarts[0];
+        labels.push({ i: 0, label: `${d.getDate()}.${d.getMonth() + 1}` });
       } else {
         for (let i = 0; i < buckets; i += stride) {
           const d = bucketStarts[i];
@@ -334,9 +345,13 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
         }
       }
     } else if (xBucket === "week") {
+      // Show "Uke NN" if buckets are few enough; else just "NN" to avoid clutter.
+      const displayCount = Math.ceil(buckets / stride);
+      const withPrefix = displayCount <= 8;
       for (let i = 0; i < buckets; i += stride) {
         const d = bucketStarts[i];
-        labels.push({ i, label: `${d.getDate()}.${d.getMonth() + 1}` });
+        const wk = isoWeek(d);
+        labels.push({ i, label: withPrefix ? `Uke ${wk}` : String(wk) });
       }
     } else if (xBucket === "month") {
       for (let i = 0; i < buckets; i += stride) {
@@ -344,47 +359,41 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
         const lbl =
           d.getMonth() === 0 && buckets > 12
             ? String(d.getFullYear())
-            : monthAbbr[d.getMonth()] ?? "";
+            : MONTHS_NB_SHORT[d.getMonth()] ?? "";
         labels.push({ i, label: lbl });
       }
     } else {
-      // year
       for (let i = 0; i < buckets; i += stride) {
         labels.push({ i, label: String(bucketStarts[i].getFullYear()) });
       }
     }
     return labels;
-  }, [xBucket, viewMode, timeframe, buckets, bucketStarts]);
+  }, [xBucket, buckets, bucketStarts]);
 
-  const hoverDate = useMemo(() => {
-    if (hoverIdx == null) return null;
-    return bucketStarts[hoverIdx] ?? null;
-  }, [hoverIdx, bucketStarts]);
-
+  const hoverDate = hoverIdx != null ? bucketStarts[hoverIdx] ?? null : null;
   const hoverLabel = useMemo(() => {
     if (!hoverDate) return "";
     if (xBucket === "year") return String(hoverDate.getFullYear());
     if (xBucket === "month")
-      return hoverDate.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+      return `${MONTHS_NB_SHORT[hoverDate.getMonth()]} ${hoverDate.getFullYear()}`;
     if (xBucket === "week") {
-      const end = new Date(hoverDate);
-      end.setDate(end.getDate() + 6);
-      return `${hoverDate.getDate()} ${monthAbbr[hoverDate.getMonth()]} – ${end.getDate()} ${monthAbbr[end.getMonth()]}`;
+      const end = addDays(hoverDate, 6);
+      return `Uke ${isoWeek(hoverDate)} · ${hoverDate.getDate()} ${MONTHS_NB_SHORT[hoverDate.getMonth()]} – ${end.getDate()} ${MONTHS_NB_SHORT[end.getMonth()]}`;
     }
-    return hoverDate.toLocaleDateString(undefined, {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-    });
+    return `${hoverDate.getDate()}.${hoverDate.getMonth() + 1}.${hoverDate.getFullYear()}`;
   }, [hoverDate, xBucket]);
 
   const hoverDistKm = hoverIdx != null ? series.dist[hoverIdx] : 0;
   const hoverDurMin = hoverIdx != null ? series.dur[hoverIdx] : 0;
 
-
+  /* Nordnet-style timeframe buttons (gated by user's data span) */
+  const spanDays = earliestDataDate
+    ? Math.max(1, daysBetween(earliestDataDate, new Date()) + 1)
+    : 1;
+  const tfVisible = useMemo(() => visibleTimeframes(spanDays), [spanDays]);
 
   return (
-    <div className="relative flex h-full w-full flex-col bg-white px-4 pb-4 pt-2">
+    <div className="relative flex h-full w-full flex-col bg-white px-4 pb-2 pt-2">
       {/* Top totals row */}
       <div className="mb-2 flex items-start justify-between gap-4">
         <div className="flex items-baseline gap-6">
@@ -412,50 +421,31 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
 
         {hoverDate && (
           <div className="pointer-events-none absolute right-4 top-2 z-10 w-[260px] rounded-md border border-hairline bg-muted px-4 py-3 shadow-sm">
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">
-              {hoverLabel}
-            </div>
-
-
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">{hoverLabel}</div>
             <div className="mt-1.5 space-y-1.5">
               {(priority === "distance"
                 ? (["distance", "duration"] as const)
                 : (["duration", "distance"] as const)
               ).map((m) =>
                 m === "distance" ? (
-                  <div
-                    key="distance"
-                    className="flex items-center gap-3 text-base tabular-nums"
-                    style={{ visibility: distVisible ? "visible" : "hidden" }}
-                  >
-                    <span
-                      className="inline-block h-3.5 w-3.5 rounded-full shrink-0"
-                      style={{ background: distColor }}
-                    />
+                  <div key="distance" className="flex items-center gap-3 text-base tabular-nums" style={{ visibility: distVisible ? "visible" : "hidden" }}>
+                    <span className="inline-block h-3.5 w-3.5 rounded-full shrink-0" style={{ background: distColor }} />
                     <span className="text-ink font-medium"><DistanceValue km={hoverDistKm} unit={unit} digits={1} /></span>
                   </div>
                 ) : (
-                  <div
-                    key="duration"
-                    className="flex items-center gap-3 text-base tabular-nums"
-                    style={{ visibility: durVisible ? "visible" : "hidden" }}
-                  >
-                    <span
-                      className="inline-block h-3.5 w-3.5 rounded-full shrink-0"
-                      style={{ background: durColor }}
-                    />
+                  <div key="duration" className="flex items-center gap-3 text-base tabular-nums" style={{ visibility: durVisible ? "visible" : "hidden" }}>
+                    <span className="inline-block h-3.5 w-3.5 rounded-full shrink-0" style={{ background: durColor }} />
                     <span className="text-ink font-medium"><DurationValue minutes={hoverDurMin} /></span>
                   </div>
                 ),
               )}
             </div>
-
           </div>
         )}
       </div>
 
-      {/* Chart */}
-      <div ref={containerRef} className="relative flex-1 min-h-0">
+      {/* Chart SVG */}
+      <div ref={chartWrapRef} className="relative flex-1 min-h-0">
         <svg
           ref={svgRef}
           width={W}
@@ -464,7 +454,6 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
           onMouseMove={onMove}
           onMouseLeave={onLeave}
         >
-          {/* horizontal grid lines + y axis labels */}
           {ticks.map((t) => {
             const y = PAD_T + innerH - t * innerH;
             const distVal = t * yDistMax;
@@ -475,15 +464,7 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
               : `${Math.round(durValMin)}m`;
             return (
               <g key={t}>
-                <line
-                  x1={PAD_L}
-                  x2={W - PAD_R}
-                  y1={y}
-                  y2={y}
-                  stroke="#e5e7eb"
-                  strokeWidth={1}
-                  shapeRendering="crispEdges"
-                />
+                <line x1={PAD_L} x2={W - PAD_R} y1={y} y2={y} stroke="#e5e7eb" strokeWidth={1} shapeRendering="crispEdges" />
                 {distVisible && (
                   <text
                     x={priority === "distance" ? PAD_L - 8 : W - PAD_R + 8}
@@ -510,110 +491,56 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
             );
           })}
 
-          {/* x axis baseline */}
-          <line
-            x1={PAD_L}
-            x2={W - PAD_R}
-            y1={PAD_T + innerH}
-            y2={PAD_T + innerH}
-            stroke="#9ca3af"
-            strokeWidth={1}
-            shapeRendering="crispEdges"
-          />
+          <line x1={PAD_L} x2={W - PAD_R} y1={PAD_T + innerH} y2={PAD_T + innerH} stroke="#9ca3af" strokeWidth={1} shapeRendering="crispEdges" />
 
-          {/* x labels */}
           {xLabels.map(({ i, label }) => (
-            <text
-              key={`${i}-${label}`}
-              x={xFor(i)}
-              y={PAD_T + innerH + 18}
-              textAnchor="middle"
-              fontSize={10}
-              fill="#6b7280"
-            >
+            <text key={`${i}-${label}`} x={xFor(i)} y={PAD_T + innerH + 18} textAnchor="middle" fontSize={10} fill="#6b7280">
               {label}
             </text>
           ))}
 
-          {/* duration line */}
           {durVisible && (
-            <path
-              d={durPath}
-              fill="none"
-              stroke={durColor}
-              strokeWidth={1.75}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
+            <path d={durPath} fill="none" stroke={durColor} strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" />
           )}
-          {/* distance line */}
           {distVisible && (
-            <path
-              d={distPath}
-              fill="none"
-              stroke={distColor}
-              strokeWidth={1.75}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
+            <path d={distPath} fill="none" stroke={distColor} strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" />
           )}
 
-          {/* crosshair */}
           {hoverIdx != null && (
             <>
-              <line
-                x1={xFor(hoverIdx)}
-                x2={xFor(hoverIdx)}
-                y1={PAD_T}
-                y2={PAD_T + innerH}
-                stroke="#9ca3af"
-                strokeWidth={1}
-                strokeDasharray="3 3"
-              />
+              <line x1={xFor(hoverIdx)} x2={xFor(hoverIdx)} y1={PAD_T} y2={PAD_T + innerH} stroke="#9ca3af" strokeWidth={1} strokeDasharray="3 3" />
               {distVisible && (
-                <circle
-                  cx={xFor(hoverIdx)}
-                  cy={yDistFor(series.dist[hoverIdx])}
-                  r={3}
-                  fill={distColor}
-                />
+                <circle cx={xFor(hoverIdx)} cy={yDistFor(series.dist[hoverIdx])} r={3} fill={distColor} />
               )}
               {durVisible && (
-                <circle
-                  cx={xFor(hoverIdx)}
-                  cy={yDurFor(series.dur[hoverIdx])}
-                  r={3}
-                  fill={durColor}
-                />
+                <circle cx={xFor(hoverIdx)} cy={yDurFor(series.dur[hoverIdx])} r={3} fill={durColor} />
               )}
             </>
           )}
         </svg>
-
-        {/* X-axis bucket selector — opens upward */}
-        <div className="absolute bottom-1 right-2 z-20">
-          <HeaderDropdown<XBucket>
-            value={xBucket}
-            onChange={setXBucket}
-            ariaLabel="X-axis grouping"
-            openUpward
-            width={108}
-            options={(() => {
-              const all: { value: XBucket; label: string }[] = [
-                { value: "day", label: "Day" },
-                { value: "week", label: "Week" },
-                { value: "month", label: "Month" },
-                { value: "year", label: "Year" },
-              ];
-              const max =
-                viewMode === "year" ? 4 : viewMode === "month" ? 3 : 2;
-              return all.slice(0, max);
-            })()}
-          />
-
-        </div>
       </div>
 
+      {/* Nordnet-style timeframe button row */}
+      <div className="mt-2 flex flex-none items-center justify-center gap-1 border-t border-hairline pt-2">
+        {tfVisible.map((k) => {
+          const active = k === timeframe;
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={() => onTimeframeChange(k)}
+              aria-pressed={active}
+              className={`h-7 min-w-[44px] rounded-md px-2.5 text-xs font-medium tabular-nums transition-colors ${
+                active
+                  ? "bg-ink text-white"
+                  : "text-muted-foreground hover:bg-secondary hover:text-ink"
+              }`}
+            >
+              {TF_LABEL[k]}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
