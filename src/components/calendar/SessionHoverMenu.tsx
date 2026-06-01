@@ -26,6 +26,7 @@ import {
   DIARY_GROUPS,
   DurationRow,
   ActivitySelectRow,
+  prettyStravaSportName,
 } from "./DiaryEditFields";
 import { setHoverLock, releaseHoverLockIf } from "./hoverLock";
 
