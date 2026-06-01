@@ -13,6 +13,7 @@ import { DiarySideNav } from "./DiarySideNav";
 import { YearCalendarView } from "./YearCalendarView";
 import type { DateRange } from "./MiniCalendar";
 import type { ExtendedViewMode } from "./UnifiedElasticGrid";
+import { DiaryVisibilityProvider } from "./DiaryVisibilityContext";
 
 export function DiaryPage() {
   const { user, loading, activeEntityId } = useAuth();
