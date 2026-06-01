@@ -307,9 +307,9 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
                 />
                 {distVisible && (
                   <text
-                    x={PAD_L - 8}
+                    x={priority === "distance" ? PAD_L - 8 : W - PAD_R + 8}
                     y={y + 3}
-                    textAnchor="end"
+                    textAnchor={priority === "distance" ? "end" : "start"}
                     fontSize={10}
                     fill="#6b7280"
                   >
@@ -318,9 +318,9 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
                 )}
                 {durVisible && (
                   <text
-                    x={W - PAD_R + 8}
+                    x={priority === "duration" ? PAD_L - 8 : W - PAD_R + 8}
                     y={y + 3}
-                    textAnchor="start"
+                    textAnchor={priority === "duration" ? "end" : "start"}
                     fontSize={10}
                     fill="#6b7280"
                   >
