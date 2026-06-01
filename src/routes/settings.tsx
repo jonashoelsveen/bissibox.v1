@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { colorForStravaSportType } from "@/lib/activity-colors";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
@@ -2954,6 +2955,67 @@ const STRAVA_ACTIVITY_CATEGORIES: { title: string; items: string[] }[] = [
   },
 ];
 
+function displayNameToSportType(name: string): string {
+  const map: Record<string, string> = {
+    'Run': 'Run',
+    'Trail Run': 'TrailRun',
+    'Walk': 'Walk',
+    'Hike': 'Hike',
+    'Wheelchair': 'Wheelchair',
+    'Virtual Run': 'VirtualRun',
+    'Ride (Standard Cycling)': 'Ride',
+    'Mountain Bike Ride': 'MountainBikeRide',
+    'Gravel Ride': 'GravelRide',
+    'E-Bike Ride': 'EBikeRide',
+    'E-Mountain Bike Ride': 'EMountainBikeRide',
+    'Handcycle': 'Handcycle',
+    'Velomobile': 'Velomobile',
+    'Swim': 'Swim',
+    'Surfing': 'Surfing',
+    'Stand Up Paddling (SUP)': 'StandUpPaddling',
+    'Kayak': 'Kayaking',
+    'Canoe': 'Canoeing',
+    'Rowing': 'Rowing',
+    'Windsurf': 'Windsurf',
+    'Kitesurf': 'Kitesurf',
+    'Sailing': 'Sailing',
+    'Alpine Ski': 'AlpineSki',
+    'Backcountry Ski': 'BackcountrySki',
+    'Nordic Ski': 'NordicSki',
+    'Snowboard': 'Snowboard',
+    'Snowshoe': 'Snowshoe',
+    'Ice Skate': 'IceSkate',
+    'Tennis': 'Tennis',
+    'Pickleball': 'Pickleball',
+    'Padel': 'Padel',
+    'Badminton': 'Badminton',
+    'Squash': 'Squash',
+    'Racquetball': 'Racquetball',
+    'Table Tennis': 'TableTennis',
+    'Football (Soccer)': 'Soccer',
+    'Basketball': 'Basketball',
+    'Volleyball': 'Volleyball',
+    'Cricket': 'Cricket',
+    'Workout (Catch-all generic category)': 'Workout',
+    'Weight Training': 'WeightTraining',
+    'Crossfit': 'Crossfit',
+    'HIIT (High-Intensity Interval Training)': 'HIIT',
+    'Yoga': 'Yoga',
+    'Pilates': 'Pilates',
+    'Dance': 'Dance',
+    'Physical Therapy': 'PhysicalTherapy',
+    'Stair Stepper': 'StairStepper',
+    'Elliptical': 'Elliptical',
+    'Rock Climbing': 'RockClimbing',
+    'Skateboarding': 'Skateboard',
+    'Inline Skate': 'InlineSkate',
+    'Roller Ski': 'RollerSki',
+    'Golf': 'Golf',
+    'Virtual Ride': 'VirtualRide',
+  };
+  return map[name] ?? name;
+}
+
 function StravaConnectorDetail({ onBack }: { onBack: () => void }) {
   return (
     <div className="space-y-6">
@@ -2979,10 +3041,20 @@ function StravaConnectorDetail({ onBack }: { onBack: () => void }) {
         {STRAVA_ACTIVITY_CATEGORIES.map((cat) => (
           <div key={cat.title}>
             <h3 className="text-sm font-semibold text-ink">{cat.title}</h3>
-            <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-              {cat.items.map((it) => (
-                <li key={it}>{it}</li>
-              ))}
+            <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
+              {cat.items.map((it) => {
+                const color = colorForStravaSportType(displayNameToSportType(it));
+                return (
+                  <li key={it} className="flex items-center gap-2.5">
+                    <span
+                      className="inline-block h-4 w-4 shrink-0 rounded-[3px] border border-black/10"
+                      style={{ background: color }}
+                      aria-hidden
+                    />
+                    <span>{it}</span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}

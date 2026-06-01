@@ -12,7 +12,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronRight, Eye, EyeOff } from "lucide-react";
 import { useStravaActivities } from "./useStravaActivities";
-import { colorForStravaSession } from "@/lib/activity-colors";
+import { colorForStravaSportType } from "@/lib/activity-colors";
 
 function prettySportName(sport: string): string {
   // Strava sport_type values come in PascalCase (e.g. "TrailRun", "VirtualRide").
@@ -39,17 +39,19 @@ export function DiaryStravaActivitiesSection({
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
   const sports = useMemo(() => {
-    const map = new Map<string, { sport: string; color: string }>();
+    const countMap = new Map<string, number>();
+    const colorMap = new Map<string, string>();
     Object.values(rows).forEach((r) => {
       const s = (r.sport_type || "").trim();
       if (!s) return;
-      if (!map.has(s)) {
-        map.set(s, { sport: s, color: colorForStravaSession(s, r.name) });
+      countMap.set(s, (countMap.get(s) ?? 0) + 1);
+      if (!colorMap.has(s)) {
+        colorMap.set(s, colorForStravaSportType(s));
       }
     });
-    return Array.from(map.values()).sort((a, b) =>
-      a.sport.localeCompare(b.sport),
-    );
+    return Array.from(countMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([sport, count]) => ({ sport, count, color: colorMap.get(sport)! }));
   }, [rows]);
 
   const toggleHidden = (id: string) =>
