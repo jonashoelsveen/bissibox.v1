@@ -27,10 +27,6 @@ import { useDistanceUnit, type DistanceUnit } from "@/lib/units";
 import {
   usePriorityMetric,
   useMetricColor,
-  useDistanceMax,
-  useDurationMaxMinutes,
-  type MetricKey,
-  type MetricScope,
 } from "@/components/calendar/metricsSettings";
 import { useWeekViewHours, clampWeekViewHours } from "@/lib/week-view-hours";
 import stravaLogo from "@/assets/strava-logo.png";
