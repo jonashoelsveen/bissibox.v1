@@ -55,9 +55,11 @@ export function MonthNavControl({
     let next: Date;
     if (unit === "day") next = addDays(currentDate, dir);
     else if (unit === "week") next = addDays(currentDate, dir * 7);
+    else if (unit === "year") next = addYears(currentDate, dir);
     else next = addMonths(currentDate, dir);
     onChange(next, { start: next, end: next });
   };
+
 
   return (
     <div ref={wrapRef} className="relative flex items-center gap-0.5">
