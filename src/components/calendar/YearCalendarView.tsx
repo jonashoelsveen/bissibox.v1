@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { StatsChartView } from "./StatsChartView";
 
 import { useYearStore, useEventStore, type CellKey, type CalendarEvent } from "./yearStore";
-import { UnifiedElasticGrid, HeaderDropdown, type ViewMode } from "./UnifiedElasticGrid";
+import { UnifiedElasticGrid, HeaderDropdown, type ViewMode, type ExtendedViewMode } from "./UnifiedElasticGrid";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
 import {
@@ -36,13 +36,10 @@ const MONTHS_NB = [
   "Juli", "August", "September", "Oktober", "November", "Desember",
 ];
 
-function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate: Date }) {
+function ViewTitle({ viewMode, currentDate }: { viewMode: ExtendedViewMode; currentDate: Date }) {
   const month = MONTHS_NB[currentDate.getMonth()];
   const year = currentDate.getFullYear();
   const fontStyle = { fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif' };
-  // Widest possible label per view, used as an invisible sizer so the nav
-  // arrows that follow always sit at the same horizontal position regardless
-  // of the actual month/week/day text length.
   const widestMonth = "September";
   let ghost: ReactNode;
   let content: ReactNode;
@@ -73,6 +70,9 @@ function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate:
         <span className="font-normal">{year}</span>
       </>
     );
+  } else if (viewMode === "year") {
+    ghost = <span className="font-semibold">8888</span>;
+    content = <span className="font-semibold">{year}</span>;
   } else {
     ghost = (
       <>
@@ -95,6 +95,7 @@ function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate:
   );
 }
 
+
 export type CalendarSeat = "admin" | "individual";
 export type CalendarAppKind = "calendar" | "diary";
 
@@ -105,8 +106,9 @@ export interface YearCalendarViewProps {
   currentDate?: Date;
   currentRange?: DateRange;
   onCurrentDateChange?: (date: Date, range?: DateRange) => void;
-  viewMode?: ViewMode;
-  onViewModeChange?: (v: ViewMode) => void;
+  viewMode?: ExtendedViewMode;
+  onViewModeChange?: (v: ExtendedViewMode) => void;
+
   visibleCategories?: Set<CategoryKey>;
   /** "diary" hides import + undo/redo, restricts to week/month, blocks future logging. */
   appKind?: CalendarAppKind;
@@ -275,12 +277,15 @@ function YearCalendarViewInner({
       setInternalRange(r ?? { start: d, end: d });
     }
   };
-  const [internalViewMode, setInternalViewMode] = useState<ViewMode>("month");
+  const [internalViewMode, setInternalViewMode] = useState<ExtendedViewMode>("month");
   const viewMode = viewModeProp ?? internalViewMode;
-  const setViewMode = (v: ViewMode) => {
+  const setViewMode = (v: ExtendedViewMode) => {
     if (onViewModeChange) onViewModeChange(v);
     else setInternalViewMode(v);
   };
+  /** Coerced view mode used by parts of the UI that only understand
+   * day/week/month (the grid, side nav, MonthNavControl). */
+  const gridViewMode: ViewMode = viewMode === "year" ? "month" : viewMode;
 
   // Diary-only: toggle between the calendar grid and the statistics chart.
   const [internalStatsActive, setInternalStatsActive] = useState(false);
@@ -290,6 +295,97 @@ function YearCalendarViewInner({
     else setInternalStatsActive(next);
   };
   const showStatsToggle = appKind === "diary";
+
+  // Stats-only: timeframe selector (how many units of the active view to show).
+  // Keyed by viewMode so switching back to a view restores the user's choice.
+  const [tfWeek, setTfWeek] = useState<number>(1);
+  const [tfMonth, setTfMonth] = useState<number>(1);
+  const [tfYear, setTfYear] = useState<number>(1);
+  const timeframe =
+    viewMode === "week" ? tfWeek : viewMode === "year" ? tfYear : tfMonth;
+  const setTimeframe = (n: number) => {
+    if (viewMode === "week") setTfWeek(n);
+    else if (viewMode === "year") setTfYear(n);
+    else setTfMonth(n);
+  };
+
+  /** Number of distinct calendar years represented in the merged events,
+   * used to drive the Year timeframe dropdown options. Minimum 1. */
+  const yearsWithData = useMemo(() => {
+    let earliest = new Date().getFullYear();
+    let any = false;
+    for (const e of mergedEvents) {
+      const t = new Date(e.startISO).getTime();
+      if (Number.isNaN(t)) continue;
+      const y = new Date(t).getFullYear();
+      if (!any || y < earliest) {
+        earliest = y;
+        any = true;
+      }
+    }
+    if (!any) return 1;
+    const span = new Date().getFullYear() - earliest + 1;
+    return Math.max(1, span);
+  }, [mergedEvents]);
+
+  /** Build the timeframe dropdown options for the active view. */
+  const timeframeOptions = useMemo<{ value: number; label: string }[]>(() => {
+    if (viewMode === "week") {
+      return [
+        { value: 1, label: "1 week" },
+        { value: 3, label: "3 weeks" },
+        { value: 6, label: "6 weeks" },
+      ];
+    }
+    if (viewMode === "year") {
+      const n = yearsWithData;
+      if (n <= 1) return [{ value: 1, label: "1 year" }];
+      if (n === 2) {
+        return [
+          { value: 1, label: "1 year" },
+          { value: 2, label: "Max" },
+        ];
+      }
+      if (n === 3) {
+        return [
+          { value: 1, label: "1 year" },
+          { value: 2, label: "2 years" },
+          { value: 3, label: "Max" },
+        ];
+      }
+      if (n <= 6) {
+        return [
+          { value: 1, label: "1 year" },
+          { value: 3, label: "3 years" },
+          { value: n, label: "Max" },
+        ];
+      }
+      return [
+        { value: 1, label: "1 year" },
+        { value: 3, label: "3 years" },
+        { value: 6, label: "6 years" },
+        { value: n, label: "Max" },
+      ];
+    }
+    return [
+      { value: 1, label: "1 month" },
+      { value: 3, label: "3 months" },
+      { value: 6, label: "6 months" },
+    ];
+  }, [viewMode, yearsWithData]);
+
+  // Clamp current timeframe if it no longer exists in the options (e.g. after
+  // switching view modes or when yearsWithData shrinks).
+  useEffect(() => {
+    if (!timeframeOptions.some((o) => o.value === timeframe)) {
+      setTimeframe(timeframeOptions[0]?.value ?? 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeframeOptions]);
+
+  const timeframeLabel =
+    viewMode === "week" ? "Tidsramme (uker)" : viewMode === "year" ? "Tidsramme (år)" : "Tidsramme (måneder)";
+
 
 
 
@@ -328,7 +424,7 @@ function YearCalendarViewInner({
           >
             <span className="block h-2.5 w-2.5 animate-pulse rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
           </button>
-          <HeaderDropdown<ViewMode>
+          <HeaderDropdown<ExtendedViewMode>
             ariaLabel="Visningsmodus"
             value={viewMode}
             onChange={setViewMode}
@@ -338,6 +434,7 @@ function YearCalendarViewInner({
                 ? [
                     { value: "week", label: "Uke" },
                     { value: "month", label: "Måned" },
+                    { value: "year", label: "År" },
                   ]
                 : [
                     { value: "day", label: "Dag" },
@@ -346,6 +443,19 @@ function YearCalendarViewInner({
                   ]
             }
           />
+          {showStatsToggle && statsActive && (
+            <HeaderDropdown<string>
+              ariaLabel={timeframeLabel}
+              value={String(timeframe)}
+              onChange={(v) => setTimeframe(Number(v))}
+              width={108}
+              options={timeframeOptions.map((o) => ({
+                value: String(o.value),
+                label: o.label,
+              }))}
+            />
+          )}
+
           {showStatsToggle && (
             <button
               type="button"
@@ -374,8 +484,10 @@ function YearCalendarViewInner({
             events={mergedEvents}
             viewMode={viewMode}
             currentDate={currentDate}
+            timeframe={timeframe}
           />
         ) : (
+
         <UnifiedElasticGrid
           calId={calId}
           year={meta.year}
@@ -421,8 +533,9 @@ function YearCalendarViewInner({
           currentDate={currentDate}
           currentRange={currentRange}
           onCurrentDateChange={(d, r) => updateCurrent(d, r)}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
+          viewMode={gridViewMode}
+          onViewModeChange={(v) => setViewMode(v)}
+
           appKind={appKind}
           memberId={memberId}
           viewerRole={viewerRole}

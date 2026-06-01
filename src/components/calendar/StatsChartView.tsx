@@ -10,7 +10,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CalendarEvent } from "./yearStore";
 import {
-  formatDistance,
   kmToUnit,
   unitLabel,
   useDistanceUnit,
@@ -26,9 +25,13 @@ import {
 
 interface StatsChartViewProps {
   events: CalendarEvent[];
-  viewMode: "week" | "month" | "day";
+  /** "day" is treated as "week" for charting purposes. */
+  viewMode: "day" | "week" | "month" | "year";
   currentDate: Date;
+  /** How many units of the active view to display. Defaults to 1. */
+  timeframe?: number;
 }
+
 
 function startOfDay(d: Date) {
   const r = new Date(d);
@@ -42,24 +45,10 @@ function startOfWeekMon(d: Date) {
   r.setDate(r.getDate() - dow);
   return r;
 }
-function startOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-function endOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
-}
 function daysBetween(a: Date, b: Date) {
   return Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / 86400000);
 }
 
-function formatDuration(minutes: number): string {
-  if (!minutes || minutes <= 0) return "0 min";
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  if (h <= 0) return `${m} min`;
-  if (m === 0) return `${h} h`;
-  return `${h} h ${m} min`;
-}
 
 /** Render a "12.3 km" / "5 mi" string with the unit suffix in a lighter weight. */
 function DistanceValue({ km, unit, digits = 1 }: { km: number | null | undefined; unit: "km" | "mi"; digits?: number }) {
@@ -110,7 +99,7 @@ function DurationValue({ minutes }: { minutes: number }) {
   );
 }
 
-export function StatsChartView({ events, viewMode, currentDate }: StatsChartViewProps) {
+export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }: StatsChartViewProps) {
   const [unit] = useDistanceUnit();
   const [distVisible] = useMetricVisible("distance");
   const [durVisible] = useMetricVisible("duration");
@@ -119,34 +108,57 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   const [priority] = usePriorityMetric();
 
   const scope: MetricScope =
-    viewMode === "month" ? "month" : "week";
+    viewMode === "year" ? "year" : viewMode === "month" ? "month" : "week";
   const [distMaxSetting] = useDistanceMax(scope);
   const [durMaxSettingMin] = useDurationMaxMinutes(scope);
 
-  const { rangeStart, days } = useMemo(() => {
-    let start: Date;
-    let end: Date;
-    if (viewMode === "month") {
-      start = startOfMonth(currentDate);
-      end = endOfMonth(currentDate);
-    } else {
-      start = startOfWeekMon(currentDate);
-      end = new Date(start);
-      end.setDate(end.getDate() + 6);
-    }
-    const n = daysBetween(start, end) + 1;
-    return { rangeStart: start, days: n };
-  }, [viewMode, currentDate]);
+  /** Aggregation bucket size: "day" for week/month views, "month" for year view. */
+  const bucket: "day" | "month" = viewMode === "year" ? "month" : "day";
 
-  /* Aggregate per-day */
+  /** Compute the displayed range as N buckets ending at the bucket containing
+   * currentDate. For week/month the bucket is a day; for year it is a month. */
+  const { rangeStart, buckets, dayCount } = useMemo(() => {
+    if (viewMode === "year") {
+      // N years ending at currentDate's year, aggregated per month.
+      const endYear = currentDate.getFullYear();
+      const startYear = endYear - timeframe + 1;
+      const start = new Date(startYear, 0, 1);
+      const n = timeframe * 12;
+      return { rangeStart: start, buckets: n, dayCount: n };
+    }
+    if (viewMode === "month") {
+      const endMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const start = new Date(endMonthStart.getFullYear(), endMonthStart.getMonth() - (timeframe - 1), 1);
+      const endMonthEnd = new Date(endMonthStart.getFullYear(), endMonthStart.getMonth() + 1, 0);
+      const n = daysBetween(start, endMonthEnd) + 1;
+      return { rangeStart: start, buckets: n, dayCount: n };
+    }
+    // week (or day → treat as week)
+    const endWeekStart = startOfWeekMon(currentDate);
+    const start = new Date(endWeekStart);
+    start.setDate(start.getDate() - (timeframe - 1) * 7);
+    const n = timeframe * 7;
+    return { rangeStart: start, buckets: n, dayCount: n };
+  }, [viewMode, currentDate, timeframe]);
+
+  const days = dayCount;
+
+  /* Aggregate per bucket */
   const series = useMemo(() => {
-    const dist = new Array(days).fill(0); // km
-    const dur = new Array(days).fill(0); // minutes
+    const dist = new Array(buckets).fill(0); // km
+    const dur = new Array(buckets).fill(0); // minutes
     for (const e of events) {
       const s = new Date(e.startISO);
       if (Number.isNaN(s.getTime())) continue;
-      const idx = daysBetween(rangeStart, s);
-      if (idx < 0 || idx >= days) continue;
+      let idx: number;
+      if (bucket === "month") {
+        idx =
+          (s.getFullYear() - rangeStart.getFullYear()) * 12 +
+          (s.getMonth() - rangeStart.getMonth());
+      } else {
+        idx = daysBetween(rangeStart, s);
+      }
+      if (idx < 0 || idx >= buckets) continue;
       if (e.distanceKm && Number.isFinite(e.distanceKm)) dist[idx] += e.distanceKm;
       const en = new Date(e.endISO);
       if (!Number.isNaN(en.getTime())) {
@@ -155,7 +167,8 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
       }
     }
     return { dist, dur };
-  }, [events, rangeStart, days]);
+  }, [events, rangeStart, buckets, bucket]);
+
 
   const totalDistKm = series.dist.reduce((a, b) => a + b, 0);
   const totalDurMin = series.dur.reduce((a, b) => a + b, 0);
@@ -236,31 +249,70 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   const ticks = [0, 0.25, 0.5, 0.75, 1];
 
   /* X labels */
+  const monthAbbr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const xLabels = useMemo(() => {
     const labels: { i: number; label: string }[] = [];
-    if (viewMode === "month") {
-      // Show 1, 5, 10, 15, 20, 25, last
-      const last = days;
-      const set = new Set<number>([1, 5, 10, 15, 20, 25, last]);
-      for (const day of Array.from(set).sort((a, b) => a - b)) {
-        if (day >= 1 && day <= last) labels.push({ i: day - 1, label: String(day) });
+    if (viewMode === "year") {
+      // One label per month for a single year; for multi-year ranges show
+      // every quarter and the year boundary.
+      if (timeframe === 1) {
+        for (let i = 0; i < buckets; i++) labels.push({ i, label: monthAbbr[i] ?? "" });
+      } else {
+        for (let i = 0; i < buckets; i++) {
+          const m = (rangeStart.getMonth() + i) % 12;
+          if (m === 0) {
+            const y = rangeStart.getFullYear() + Math.floor((rangeStart.getMonth() + i) / 12);
+            labels.push({ i, label: String(y) });
+          }
+        }
+      }
+    } else if (viewMode === "month") {
+      if (timeframe === 1) {
+        const last = days;
+        const set = new Set<number>([1, 5, 10, 15, 20, 25, last]);
+        for (const day of Array.from(set).sort((a, b) => a - b)) {
+          if (day >= 1 && day <= last) labels.push({ i: day - 1, label: String(day) });
+        }
+      } else {
+        // Multi-month: label the first day of each month using the month abbr.
+        for (let i = 0; i < buckets; i++) {
+          const d = new Date(rangeStart);
+          d.setDate(d.getDate() + i);
+          if (d.getDate() === 1) labels.push({ i, label: monthAbbr[d.getMonth()] ?? "" });
+        }
       }
     } else {
-      const names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-      for (let i = 0; i < days; i++) labels.push({ i, label: names[i] ?? "" });
+      // week (or day → treated as week)
+      if (timeframe === 1) {
+        const names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        for (let i = 0; i < days; i++) labels.push({ i, label: names[i] ?? "" });
+      } else {
+        // Multi-week: label every Monday with the date number.
+        for (let i = 0; i < buckets; i++) {
+          if (i % 7 === 0) {
+            const d = new Date(rangeStart);
+            d.setDate(d.getDate() + i);
+            labels.push({ i, label: String(d.getDate()) });
+          }
+        }
+      }
     }
     return labels;
-  }, [viewMode, days]);
+  }, [viewMode, days, buckets, rangeStart, timeframe]);
 
   const hoverDate = useMemo(() => {
     if (hoverIdx == null) return null;
+    if (bucket === "month") {
+      return new Date(rangeStart.getFullYear(), rangeStart.getMonth() + hoverIdx, 1);
+    }
     const d = new Date(rangeStart);
     d.setDate(d.getDate() + hoverIdx);
     return d;
-  }, [hoverIdx, rangeStart]);
+  }, [hoverIdx, rangeStart, bucket]);
 
   const hoverDistKm = hoverIdx != null ? series.dist[hoverIdx] : 0;
   const hoverDurMin = hoverIdx != null ? series.dur[hoverIdx] : 0;
+
 
   return (
     <div className="relative flex h-full w-full flex-col bg-white px-4 pb-4 pt-2">
@@ -292,12 +344,15 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
         {hoverDate && (
           <div className="pointer-events-none absolute right-4 top-2 z-10 w-[260px] rounded-md border border-hairline bg-muted px-4 py-3 shadow-sm">
             <div className="text-xs uppercase tracking-wide text-muted-foreground">
-              {hoverDate.toLocaleDateString(undefined, {
-                weekday: "short",
-                day: "2-digit",
-                month: "short",
-              })}
+              {bucket === "month"
+                ? hoverDate.toLocaleDateString(undefined, { month: "short", year: "numeric" })
+                : hoverDate.toLocaleDateString(undefined, {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "short",
+                  })}
             </div>
+
             <div className="mt-1.5 space-y-1.5">
               {(priority === "distance"
                 ? (["distance", "duration"] as const)

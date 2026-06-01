@@ -12,7 +12,7 @@ import type { CategoryKey } from "./CalendarSideNav";
 import { DiarySideNav } from "./DiarySideNav";
 import { YearCalendarView } from "./YearCalendarView";
 import type { DateRange } from "./MiniCalendar";
-import type { ViewMode } from "./UnifiedElasticGrid";
+import type { ExtendedViewMode } from "./UnifiedElasticGrid";
 
 export function DiaryPage() {
   const { user, loading, activeEntityId } = useAuth();
@@ -43,7 +43,7 @@ export function DiaryPage() {
     const t = new Date();
     return { start: t, end: t };
   });
-  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [viewMode, setViewMode] = useState<ExtendedViewMode>("week");
 
   const [visibleCategories, setVisibleCategories] = useState<Set<CategoryKey>>(
     () => new Set<CategoryKey>(["ind:training"]),
@@ -104,7 +104,8 @@ export function DiaryPage() {
                     setCurrentDate(d);
                     setCurrentRange(r);
                   }}
-                  viewMode={viewMode}
+                  viewMode={viewMode === "year" ? "month" : viewMode}
+
                   visibleCategories={visibleCategories}
                   onToggleCategory={toggleCategory}
                   teamId={teamId}
