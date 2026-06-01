@@ -2980,10 +2980,20 @@ function StravaConnectorDetail({ onBack }: { onBack: () => void }) {
         {STRAVA_ACTIVITY_CATEGORIES.map((cat) => (
           <div key={cat.title}>
             <h3 className="text-sm font-semibold text-ink">{cat.title}</h3>
-            <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-              {cat.items.map((it) => (
-                <li key={it}>{it}</li>
-              ))}
+            <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
+              {cat.items.map((it) => {
+                const color = colorForStravaSportType(displayNameToSportType(it));
+                return (
+                  <li key={it} className="flex items-center gap-2.5">
+                    <span
+                      className="inline-block h-4 w-4 shrink-0 rounded-[3px] border border-black/10"
+                      style={{ background: color }}
+                      aria-hidden
+                    />
+                    <span>{it}</span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}
