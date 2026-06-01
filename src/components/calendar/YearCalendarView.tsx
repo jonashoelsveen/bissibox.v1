@@ -277,12 +277,15 @@ function YearCalendarViewInner({
       setInternalRange(r ?? { start: d, end: d });
     }
   };
-  const [internalViewMode, setInternalViewMode] = useState<ViewMode>("month");
+  const [internalViewMode, setInternalViewMode] = useState<ExtendedViewMode>("month");
   const viewMode = viewModeProp ?? internalViewMode;
-  const setViewMode = (v: ViewMode) => {
+  const setViewMode = (v: ExtendedViewMode) => {
     if (onViewModeChange) onViewModeChange(v);
     else setInternalViewMode(v);
   };
+  /** Coerced view mode used by parts of the UI that only understand
+   * day/week/month (the grid, side nav, MonthNavControl). */
+  const gridViewMode: ViewMode = viewMode === "year" ? "month" : viewMode;
 
   // Diary-only: toggle between the calendar grid and the statistics chart.
   const [internalStatsActive, setInternalStatsActive] = useState(false);
@@ -292,6 +295,97 @@ function YearCalendarViewInner({
     else setInternalStatsActive(next);
   };
   const showStatsToggle = appKind === "diary";
+
+  // Stats-only: timeframe selector (how many units of the active view to show).
+  // Keyed by viewMode so switching back to a view restores the user's choice.
+  const [tfWeek, setTfWeek] = useState<number>(1);
+  const [tfMonth, setTfMonth] = useState<number>(1);
+  const [tfYear, setTfYear] = useState<number>(1);
+  const timeframe =
+    viewMode === "week" ? tfWeek : viewMode === "year" ? tfYear : tfMonth;
+  const setTimeframe = (n: number) => {
+    if (viewMode === "week") setTfWeek(n);
+    else if (viewMode === "year") setTfYear(n);
+    else setTfMonth(n);
+  };
+
+  /** Number of distinct calendar years represented in the merged events,
+   * used to drive the Year timeframe dropdown options. Minimum 1. */
+  const yearsWithData = useMemo(() => {
+    let earliest = new Date().getFullYear();
+    let any = false;
+    for (const e of mergedEvents) {
+      const t = new Date(e.startISO).getTime();
+      if (Number.isNaN(t)) continue;
+      const y = new Date(t).getFullYear();
+      if (!any || y < earliest) {
+        earliest = y;
+        any = true;
+      }
+    }
+    if (!any) return 1;
+    const span = new Date().getFullYear() - earliest + 1;
+    return Math.max(1, span);
+  }, [mergedEvents]);
+
+  /** Build the timeframe dropdown options for the active view. */
+  const timeframeOptions = useMemo<{ value: number; label: string }[]>(() => {
+    if (viewMode === "week") {
+      return [
+        { value: 1, label: "1 week" },
+        { value: 3, label: "3 weeks" },
+        { value: 6, label: "6 weeks" },
+      ];
+    }
+    if (viewMode === "year") {
+      const n = yearsWithData;
+      if (n <= 1) return [{ value: 1, label: "1 year" }];
+      if (n === 2) {
+        return [
+          { value: 1, label: "1 year" },
+          { value: 2, label: "Max" },
+        ];
+      }
+      if (n === 3) {
+        return [
+          { value: 1, label: "1 year" },
+          { value: 2, label: "2 years" },
+          { value: 3, label: "Max" },
+        ];
+      }
+      if (n <= 6) {
+        return [
+          { value: 1, label: "1 year" },
+          { value: 3, label: "3 years" },
+          { value: n, label: "Max" },
+        ];
+      }
+      return [
+        { value: 1, label: "1 year" },
+        { value: 3, label: "3 years" },
+        { value: 6, label: "6 years" },
+        { value: n, label: "Max" },
+      ];
+    }
+    return [
+      { value: 1, label: "1 month" },
+      { value: 3, label: "3 months" },
+      { value: 6, label: "6 months" },
+    ];
+  }, [viewMode, yearsWithData]);
+
+  // Clamp current timeframe if it no longer exists in the options (e.g. after
+  // switching view modes or when yearsWithData shrinks).
+  useEffect(() => {
+    if (!timeframeOptions.some((o) => o.value === timeframe)) {
+      setTimeframe(timeframeOptions[0]?.value ?? 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeframeOptions]);
+
+  const timeframeLabel =
+    viewMode === "week" ? "Tidsramme (uker)" : viewMode === "year" ? "Tidsramme (år)" : "Tidsramme (måneder)";
+
 
 
 
