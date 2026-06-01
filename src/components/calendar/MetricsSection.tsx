@@ -20,7 +20,7 @@ import {
   type MetricKey,
 } from "./metricsSettings";
 
-export function MetricsSection({ title = "Metrics" }: { title?: string }) {
+export function MetricsSection({ title = "Metrics", canEdit = true }: { title?: string; canEdit?: boolean }) {
   const [open, setOpen] = useState(true);
   return (
     <div className="flex flex-col">
