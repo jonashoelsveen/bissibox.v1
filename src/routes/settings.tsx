@@ -24,6 +24,14 @@ import { SESSION_TILE_DESIGNS, useSessionTileDesign, useDiarySimpleView, type Se
 import { Switch } from "@/components/ui/switch";
 import { MONTH_TILE_DESIGNS, useMonthTileDesign, type MonthTileDesign } from "@/lib/month-tile-design";
 import { useDistanceUnit, type DistanceUnit } from "@/lib/units";
+import {
+  usePriorityMetric,
+  useMetricColor,
+  useDistanceMax,
+  useDurationMaxMinutes,
+  type MetricKey,
+  type MetricScope,
+} from "@/components/calendar/metricsSettings";
 import { useWeekViewHours, clampWeekViewHours } from "@/lib/week-view-hours";
 import stravaLogo from "@/assets/strava-logo.png";
 import eqTimingLogo from "@/assets/eq-timing-logo.png";
@@ -2087,15 +2095,11 @@ function CategoryAutosaveCard({
 function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
   return (
     <div className="space-y-3">
-      <DiaryCategoryCard
-        title="Training"
-        items={["Units", "Activitytypes"]}
-      />
-      <DiaryCategoryCard title="Notes" items={[]} />
       <WeekViewCard app="diary" />
       <SessionTileDesignCard />
       <MonthSessionTileDesignCard />
       <DiarySessionDetailsCard />
+      <DiaryChartCard />
     </div>
   );
 }
@@ -2563,6 +2567,148 @@ function DiarySessionDetailsCard() {
         </div>
       )}
     </Card>
+  );
+}
+
+/* ───────── Diary chart settings ───────── */
+
+function DiaryChartCard() {
+  const [open, setOpen] = useState(false);
+  const [priority, setPriority] = usePriorityMetric();
+  const [distColor] = useMetricColor("distance");
+  const [durColor] = useMetricColor("duration");
+  const [unit] = useDistanceUnit();
+
+  return (
+    <Card>
+      <div className="flex w-full items-center gap-3">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          <h3 className="text-sm font-semibold text-ink">Chart</h3>
+        </button>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Collapse" : "Expand"}
+          className="text-muted-foreground hover:text-ink"
+        >
+          {open ? (
+            <ChevronDown className="h-4 w-4" strokeWidth={2.25} />
+          ) : (
+            <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+          )}
+        </button>
+      </div>
+      {open && (
+        <div className="mt-4 space-y-4">
+          {/* Priority dots */}
+          <div className="flex items-center gap-6 rounded-xl border border-hairline px-4 py-3">
+            {(["distance", "duration"] as const).map((m) => {
+              const active = priority === m;
+              const color = m === "distance" ? distColor : durColor;
+              const label = m === "distance" ? "Distance" : "Duration";
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setPriority(m)}
+                  className="flex items-center gap-2 text-sm"
+                  aria-pressed={active}
+                >
+                  <span
+                    className="inline-block h-3.5 w-3.5 rounded-full border"
+                    style={{
+                      background: active ? color : "transparent",
+                      borderColor: color,
+                    }}
+                  />
+                  <span className={active ? "text-ink font-medium" : "text-muted-foreground"}>
+                    {label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <ChartScopeRow scope="year" priority={priority} unit={unit} label="Year" />
+          <ChartScopeRow scope="month" priority={priority} unit={unit} label="Month" />
+          <ChartScopeRow scope="week" priority={priority} unit={unit} label="Week" />
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ChartScopeRow({
+  scope,
+  priority,
+  unit,
+  label,
+}: {
+  scope: MetricScope;
+  priority: MetricKey;
+  unit: DistanceUnit;
+  label: string;
+}) {
+  const [distMax, setDistMax] = useDistanceMax(scope);
+  const [durMaxMin, setDurMaxMin] = useDurationMaxMinutes(scope);
+  const hours = Math.floor(durMaxMin / 60);
+  const minutes = Math.max(0, Math.round(durMaxMin % 60));
+
+  return (
+    <div className="rounded-xl border border-hairline px-4 py-3">
+      <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </div>
+      {priority === "distance" ? (
+        <label className="flex items-center justify-between gap-3">
+          <span className="text-sm text-ink">Distance max</span>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              value={distMax}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (Number.isFinite(n) && n > 0) setDistMax(n);
+              }}
+              className="w-24 rounded-md border border-hairline bg-white px-2 py-1 text-right text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <span className="text-xs text-muted-foreground">{unit === "mi" ? "mi" : "km"}</span>
+          </div>
+        </label>
+      ) : (
+        <label className="flex items-center justify-between gap-3">
+          <span className="text-sm text-ink">Duration max</span>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              value={hours}
+              onChange={(e) => {
+                const h = Math.max(0, Number(e.target.value) || 0);
+                setDurMaxMin(h * 60 + minutes);
+              }}
+              className="w-16 rounded-md border border-hairline bg-white px-2 py-1 text-right text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <span className="text-xs text-muted-foreground">h</span>
+            <input
+              type="number"
+              min={0}
+              max={59}
+              value={minutes}
+              onChange={(e) => {
+                const m = Math.min(59, Math.max(0, Number(e.target.value) || 0));
+                setDurMaxMin(hours * 60 + m);
+              }}
+              className="w-16 rounded-md border border-hairline bg-white px-2 py-1 text-right text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <span className="text-xs text-muted-foreground">min</span>
+          </div>
+        </label>
+      )}
+    </div>
   );
 }
 

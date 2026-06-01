@@ -18,6 +18,10 @@ import {
 import {
   useMetricColor,
   useMetricVisible,
+  usePriorityMetric,
+  useDistanceMax,
+  useDurationMaxMinutes,
+  type MetricScope,
 } from "./metricsSettings";
 
 interface StatsChartViewProps {
@@ -63,6 +67,12 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   const [durVisible] = useMetricVisible("duration");
   const [distColor] = useMetricColor("distance");
   const [durColor] = useMetricColor("duration");
+  const [priority] = usePriorityMetric();
+
+  const scope: MetricScope =
+    viewMode === "month" ? "month" : "week";
+  const [distMaxSetting] = useDistanceMax(scope);
+  const [durMaxSettingMin] = useDurationMaxMinutes(scope);
 
   const { rangeStart, days } = useMemo(() => {
     let start: Date;
@@ -128,18 +138,10 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
   const xFor = (i: number) =>
     days <= 1 ? PAD_L + innerW / 2 : PAD_L + (i / (days - 1)) * innerW;
 
-  const distMax = Math.max(1, ...series.dist.map((v) => kmToUnit(v, unit)));
-  const durMax = Math.max(1, ...series.dur);
-
-  const niceMax = (v: number) => {
-    if (v <= 0) return 1;
-    const exp = Math.pow(10, Math.floor(Math.log10(v)));
-    const norm = v / exp;
-    const nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
-    return nice * exp;
-  };
-  const yDistMax = niceMax(distMax);
-  const yDurMax = niceMax(durMax);
+  // Fixed y-axis maximums from user settings (per scope). Distance is stored
+  // in the user's display unit; duration is stored in minutes.
+  const yDistMax = Math.max(1, distMaxSetting);
+  const yDurMax = Math.max(1, durMaxSettingMin);
   const durInHours = yDurMax >= 60;
 
   const yDistFor = (kmVal: number) =>
@@ -216,18 +218,26 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
       {/* Top totals row */}
       <div className="mb-2 flex items-start justify-between gap-4">
         <div className="flex items-baseline gap-6">
-          <div className="text-ink" style={{ visibility: distVisible ? "visible" : "hidden" }}>
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Distance</div>
-            <div className="text-xl font-semibold tabular-nums">
-              {formatDistance(totalDistKm, unit, 1)}
-            </div>
-          </div>
-          <div className="text-ink" style={{ visibility: durVisible ? "visible" : "hidden" }}>
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</div>
-            <div className="text-xl font-semibold tabular-nums">
-              {formatDuration(totalDurMin)}
-            </div>
-          </div>
+          {(priority === "distance"
+            ? (["distance", "duration"] as const)
+            : (["duration", "distance"] as const)
+          ).map((m) =>
+            m === "distance" ? (
+              <div key="distance" className="text-ink" style={{ visibility: distVisible ? "visible" : "hidden" }}>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Distance</div>
+                <div className="text-xl font-semibold tabular-nums">
+                  {formatDistance(totalDistKm, unit, 1)}
+                </div>
+              </div>
+            ) : (
+              <div key="duration" className="text-ink" style={{ visibility: durVisible ? "visible" : "hidden" }}>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</div>
+                <div className="text-xl font-semibold tabular-nums">
+                  {formatDuration(totalDurMin)}
+                </div>
+              </div>
+            ),
+          )}
         </div>
 
         {hoverDate && (
@@ -297,9 +307,9 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
                 />
                 {distVisible && (
                   <text
-                    x={PAD_L - 8}
+                    x={priority === "distance" ? PAD_L - 8 : W - PAD_R + 8}
                     y={y + 3}
-                    textAnchor="end"
+                    textAnchor={priority === "distance" ? "end" : "start"}
                     fontSize={10}
                     fill="#6b7280"
                   >
@@ -308,9 +318,9 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
                 )}
                 {durVisible && (
                   <text
-                    x={W - PAD_R + 8}
+                    x={priority === "duration" ? PAD_L - 8 : W - PAD_R + 8}
                     y={y + 3}
-                    textAnchor="start"
+                    textAnchor={priority === "duration" ? "end" : "start"}
                     fontSize={10}
                     fill="#6b7280"
                   >
