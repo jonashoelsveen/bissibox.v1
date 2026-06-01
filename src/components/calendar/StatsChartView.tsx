@@ -325,7 +325,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
                       className="inline-block h-3.5 w-3.5 rounded-full shrink-0"
                       style={{ background: durColor }}
                     />
-                    <span className="text-ink font-medium">{formatDuration(hoverDurMin)}</span>
+                    <span className="text-ink font-medium"><DurationValue minutes={hoverDurMin} /></span>
                   </div>
                 ),
               )}
