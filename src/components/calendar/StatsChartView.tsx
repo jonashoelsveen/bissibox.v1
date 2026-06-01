@@ -18,6 +18,10 @@ import {
 import {
   useMetricColor,
   useMetricVisible,
+  usePriorityMetric,
+  useDistanceMax,
+  useDurationMaxMinutes,
+  type MetricScope,
 } from "./metricsSettings";
 
 interface StatsChartViewProps {
