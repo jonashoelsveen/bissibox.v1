@@ -339,14 +339,19 @@ function YearCalendarViewInner({
       {/* Header — title + nav arrows on the left, action cluster on the right */}
       <div className="flex h-12 flex-none items-center justify-between gap-3 bg-white px-0.5 pr-4 md:pr-6">
         <div className={`flex items-center gap-2 min-w-0 transition-[padding-left] duration-300 ease-out ${panelOpen ? "pl-0" : "pl-9"}`}>
-          <ViewTitle viewMode={viewMode} currentDate={currentDate} />
-          <MonthNavControl
-            unit={viewMode}
-            currentDate={currentDate}
-            selectedRange={currentRange}
-            onChange={(d, r) => updateCurrent(d, r)}
-          />
+          {!statsActive && (
+            <>
+              <ViewTitle viewMode={viewMode} currentDate={currentDate} />
+              <MonthNavControl
+                unit={viewMode}
+                currentDate={currentDate}
+                selectedRange={currentRange}
+                onChange={(d, r) => updateCurrent(d, r)}
+              />
+            </>
+          )}
         </div>
+
 
         <div className={`flex items-center gap-1 transition-[padding-right] duration-300 ease-out ${rightPanelOpen ? "pr-0" : "pr-9"}`}>
           <button
