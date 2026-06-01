@@ -282,7 +282,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
               <div key="duration" className="text-ink" style={{ visibility: durVisible ? "visible" : "hidden" }}>
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Duration</div>
                 <div className="text-xl font-semibold tabular-nums">
-                  {formatDuration(totalDurMin)}
+                  <DurationValue minutes={totalDurMin} />
                 </div>
               </div>
             ),
