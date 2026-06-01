@@ -598,51 +598,69 @@ export function StatsChartView({
           const sportShown = sportRows.slice(0, Math.max(0, 15 - catShown.length));
           const hasBreakdown = catShown.length > 0 || sportShown.length > 0;
 
-          const renderRow = (r: { key: string; label: string; color: string; distKm: number; durMin: number }) => (
-            <div key={r.key} className="flex items-center gap-2.5 text-sm tabular-nums">
-              <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ background: r.color }} />
-              <span className="min-w-0 flex-1 truncate text-xs text-ink/80">{r.label}</span>
-              <span className="text-xs font-medium text-ink">
-                {r.distKm > 0 ? (
-                  <>
-                    {kmToUnit(r.distKm, unit).toFixed(1)}{" "}
-                    <span className="font-normal text-muted-foreground">{unitLabel(unit)}</span>
-                  </>
-                ) : null}
-                {r.distKm > 0 && r.durMin > 0 ? " · " : null}
-                {r.durMin > 0 ? <DurationValue minutes={r.durMin} /> : null}
-              </span>
-            </div>
-          );
+          const renderUnifiedRow = (
+            key: string,
+            color: string,
+            label: string,
+            distKm: number,
+            durMin: number,
+          ) => {
+            const distDisplay =
+              distKm > 0 ? (
+                <>
+                  {kmToUnit(distKm, unit).toFixed(1)}{" "}
+                  <span className="font-normal text-muted-foreground">{unitLabel(unit)}</span>
+                </>
+              ) : (
+                "—"
+              );
+            const durDisplay = durMin > 0 ? <DurationValue minutes={durMin} /> : "—";
+            return (
+              <div key={key} className="flex items-center gap-1.5 tabular-nums">
+                <span
+                  className="inline-block h-3 w-3 shrink-0 rounded-full"
+                  style={{ background: color }}
+                />
+                <span className="flex-1 min-w-0 truncate text-xs text-ink/80">{label}</span>
+                <span className="w-[72px] text-right text-xs font-medium text-ink">
+                  {distDisplay}
+                </span>
+                <span className="w-[72px] text-right text-xs font-medium text-ink">
+                  {durDisplay}
+                </span>
+              </div>
+            );
+          };
 
           return (
-            <div className="pointer-events-none absolute right-4 top-2 z-10 w-[280px] rounded-md border border-hairline bg-muted px-4 py-3 shadow-sm">
+            <div className="pointer-events-none absolute right-4 top-2 z-10 w-[320px] rounded-md border border-hairline bg-muted px-4 py-3 shadow-sm">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">{hoverLabel}</div>
 
               {hasBreakdown && (
                 <div className="mt-2 space-y-1">
-                  {catShown.map(renderRow)}
-                  {sportShown.length > 0 && catShown.length > 0 && <div className="my-1.5" />}
-                  {sportShown.map(renderRow)}
+                  {catShown.map((r) =>
+                    renderUnifiedRow(r.key, r.color, r.label, r.distKm, r.durMin),
+                  )}
+                  {sportShown.map((r) =>
+                    renderUnifiedRow(r.key, r.color, r.label, r.distKm, r.durMin),
+                  )}
                 </div>
               )}
 
-              <div className={`${hasBreakdown ? "mt-2.5 border-t border-hairline/60 pt-2.5" : "mt-1.5"} space-y-1.5`}>
+              <div
+                className={`${hasBreakdown ? "mt-2.5 border-t border-hairline/60 pt-2.5" : "mt-1.5"} space-y-1`}
+              >
                 {(priority === "distance"
                   ? (["distance", "duration"] as const)
                   : (["duration", "distance"] as const)
                 ).map((m) =>
-                  m === "distance" ? (
-                    <div key="distance" className="flex items-center gap-3 text-base tabular-nums" style={{ visibility: distVisible ? "visible" : "hidden" }}>
-                      <span className="inline-block h-3.5 w-3.5 rounded-full shrink-0" style={{ background: distColor }} />
-                      <span className="text-ink font-medium"><DistanceValue km={hoverDistKm} unit={unit} digits={1} /></span>
-                    </div>
-                  ) : (
-                    <div key="duration" className="flex items-center gap-3 text-base tabular-nums" style={{ visibility: durVisible ? "visible" : "hidden" }}>
-                      <span className="inline-block h-3.5 w-3.5 rounded-full shrink-0" style={{ background: durColor }} />
-                      <span className="text-ink font-medium"><DurationValue minutes={hoverDurMin} /></span>
-                    </div>
-                  ),
+                  m === "distance"
+                    ? distVisible
+                      ? renderUnifiedRow("__distance", distColor, "Distance", hoverDistKm, 0)
+                      : null
+                    : durVisible
+                      ? renderUnifiedRow("__duration", durColor, "Duration", 0, hoverDurMin)
+                      : null,
                 )}
               </div>
             </div>
