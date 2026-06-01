@@ -216,9 +216,8 @@ function SortableCategoryRow(props: {
       {...attributes}
       {...listeners}
       onClick={(e) => {
-        if (props.renaming) return;
         const tgt = e.target as HTMLElement;
-        if (tgt.closest("button")) return;
+        if (tgt.closest("button") || tgt.closest("input")) return;
         props.onToggleHidden();
       }}
       className={`group flex items-center gap-2 rounded-md px-2 py-1 text-xs transition-colors hover:bg-secondary/60 ${
