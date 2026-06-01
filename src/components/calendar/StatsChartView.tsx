@@ -10,7 +10,7 @@
  * dropdown in the page header (lifted to YearCalendarView) and passed in.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { CalendarEvent } from "./yearStore";
 import { kmToUnit, unitLabel, useDistanceUnit } from "@/lib/units";
 import {
