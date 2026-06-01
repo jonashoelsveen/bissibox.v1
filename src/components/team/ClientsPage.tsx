@@ -518,7 +518,9 @@ export function ClientsPage() {
               <button
                 type="button"
                 data-plus-tab
-                onClick={() => setPanelOpen(true)}
+                tabIndex={-1}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => e.preventDefault()}
                 aria-label="Add client tab"
                 title="Add client tab"
                 className="relative ml-1 flex h-[38px] w-[28px] shrink-0 items-center justify-center bg-transparent"
