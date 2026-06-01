@@ -17,9 +17,6 @@ import {
   useMetricColor,
   useMetricVisible,
   usePriorityMetric,
-  useDistanceMax,
-  useDurationMaxMinutes,
-  type MetricScope,
 } from "./metricsSettings";
 
 export type XBucket = "day" | "week" | "month" | "year";
