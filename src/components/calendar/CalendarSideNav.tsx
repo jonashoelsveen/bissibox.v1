@@ -301,14 +301,14 @@ function EntityGroup({
           >
             <div className="mt-0.5 flex flex-col gap-0.5">
               {items.map((c) => {
-                const on = !allHidden && !hiddenCats.has(c.key);
+                const on = visibleCategories.has(c.key);
                 return (
                   <CategoryRow
                     key={`${entity.id}:${c.key}`}
                     label={c.label}
                     color={c.color}
                     on={on}
-                    onClick={() => onToggleCat(c.key)}
+                    onClick={() => onToggleCategory(c.key)}
                   />
                 );
               })}
