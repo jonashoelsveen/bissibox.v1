@@ -55,13 +55,8 @@ export function DiaryStravaActivitiesSection({
       .map(([sport, count]) => ({ sport, count, color: colorMap.get(sport)! }));
   }, [rows]);
 
-  const toggleHidden = (id: string) =>
-    setHidden((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
+
+
 
   return (
     <div className="flex flex-col">
