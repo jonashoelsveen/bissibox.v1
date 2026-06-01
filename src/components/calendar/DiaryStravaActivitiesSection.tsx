@@ -91,11 +91,11 @@ export function DiaryStravaActivitiesSection({
             </div>
           ) : (
             sports.map(({ sport, color }) => {
-              const isHidden = hidden.has(sport);
+              const isHidden = isSportTypeHidden(sport);
               return (
                 <div
                   key={sport}
-                  onClick={() => toggleHidden(sport)}
+                  onClick={() => toggleSportType(sport)}
                   className={`group flex cursor-default items-center gap-2 rounded-md px-2 py-1 text-xs transition-colors hover:bg-secondary/60 ${
                     isHidden ? "text-muted-foreground" : "text-ink"
                   }`}
