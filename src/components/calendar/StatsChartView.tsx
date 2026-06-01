@@ -580,7 +580,25 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
             </>
           )}
         </svg>
+
+        {/* X-axis bucket selector — opens upward */}
+        <div className="absolute bottom-1 right-2 z-20">
+          <HeaderDropdown<XBucket>
+            value={xBucket}
+            onChange={setXBucket}
+            ariaLabel="X-axis grouping"
+            openUpward
+            width={108}
+            options={[
+              { value: "day", label: "Day" },
+              { value: "week", label: "Week" },
+              { value: "month", label: "Month" },
+              { value: "year", label: "Year" },
+            ]}
+          />
+        </div>
       </div>
+
     </div>
   );
 }
