@@ -313,7 +313,7 @@ export function StatsChartView({ events, viewMode, currentDate }: StatsChartView
                       className="inline-block h-3.5 w-3.5 rounded-full shrink-0"
                       style={{ background: distColor }}
                     />
-                    <span className="text-ink font-medium">{formatDistance(hoverDistKm, unit, 1)}</span>
+                    <span className="text-ink font-medium"><DistanceValue km={hoverDistKm} unit={unit} digits={1} /></span>
                   </div>
                 ) : (
                   <div
