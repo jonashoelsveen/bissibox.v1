@@ -154,7 +154,8 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
                       setCurrentDate(r.start);
                       setCurrentRange(r);
                     }}
-                    viewMode={viewMode}
+                    viewMode={viewMode === "year" ? "month" : viewMode}
+
                   />
                 </div>
               </div>
