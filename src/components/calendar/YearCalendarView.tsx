@@ -20,6 +20,7 @@ import {
   type TimeframeKey,
   type XBucket,
 } from "./StatsChartView";
+import { useDiaryVisibilitySafe } from "./DiaryVisibilityContext";
 
 import { useYearStore, useEventStore, type CellKey, type CalendarEvent } from "./yearStore";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode, type ExtendedViewMode } from "./UnifiedElasticGrid";
