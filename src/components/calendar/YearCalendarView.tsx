@@ -424,7 +424,7 @@ function YearCalendarViewInner({
           >
             <span className="block h-2.5 w-2.5 animate-pulse rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
           </button>
-          <HeaderDropdown<ViewMode>
+          <HeaderDropdown<ExtendedViewMode>
             ariaLabel="Visningsmodus"
             value={viewMode}
             onChange={setViewMode}
@@ -434,6 +434,7 @@ function YearCalendarViewInner({
                 ? [
                     { value: "week", label: "Uke" },
                     { value: "month", label: "Måned" },
+                    { value: "year", label: "År" },
                   ]
                 : [
                     { value: "day", label: "Dag" },
@@ -442,6 +443,19 @@ function YearCalendarViewInner({
                   ]
             }
           />
+          {showStatsToggle && statsActive && (
+            <HeaderDropdown<string>
+              ariaLabel={timeframeLabel}
+              value={String(timeframe)}
+              onChange={(v) => setTimeframe(Number(v))}
+              width={108}
+              options={timeframeOptions.map((o) => ({
+                value: String(o.value),
+                label: o.label,
+              }))}
+            />
+          )}
+
           {showStatsToggle && (
             <button
               type="button"
