@@ -38,6 +38,9 @@ export function writeSetting<T>(key: string, value: T): void {
 export function useLibrarySetting<T>(key: string, fallback: T): [T, (v: T) => void] {
   const [val, setVal] = useState<T>(() => readSetting<T>(key, fallback));
   useEffect(() => {
+    // Re-read whenever the key changes so subscribers tracking a dynamic key
+    // (e.g. per-scope settings) reflect the new key's value immediately.
+    setVal(readSetting<T>(key, fallback));
     const onChange = (e: Event) => {
       const ce = e as CustomEvent<{ key: string }>;
       if (!ce.detail || ce.detail.key === key) {
