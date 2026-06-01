@@ -57,7 +57,7 @@ export function MetricsSection({ title = "Metrics", canEdit = true }: { title?: 
   );
 }
 
-function MetricRow({ metric, label }: { metric: MetricKey; label: string }) {
+function MetricRow({ metric, label, canEdit = true }: { metric: MetricKey; label: string; canEdit?: boolean }) {
   const [visible, setVisible] = useMetricVisible(metric);
   const [color, setColor] = useMetricColor(metric);
   const hidden = !visible;
@@ -80,22 +80,24 @@ function MetricRow({ metric, label }: { metric: MetricKey; label: string }) {
       />
       <span className="min-w-0 flex-1 truncate">{label}</span>
 
-      <CategoryActionsMenu
-        trigger={
-          <button
-            type="button"
-            onClick={(e) => e.stopPropagation()}
-            className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground/60 opacity-0 hover:bg-secondary hover:text-ink group-hover:opacity-100 data-[state=open]:opacity-100"
-            aria-label="More"
-          >
-            <MoreHorizontal className="h-3 w-3" />
-          </button>
-        }
-        currentColor={color}
-        onColorChange={(hex) => setColor(hex)}
-        allowCustomColor={false}
-        colorSwatches={STANDARD_COLORS_8}
-      />
+      {canEdit ? (
+        <CategoryActionsMenu
+          trigger={
+            <button
+              type="button"
+              onClick={(e) => e.stopPropagation()}
+              className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground/60 opacity-0 hover:bg-secondary hover:text-ink group-hover:opacity-100 data-[state=open]:opacity-100"
+              aria-label="More"
+            >
+              <MoreHorizontal className="h-3 w-3" />
+            </button>
+          }
+          currentColor={color}
+          onColorChange={(hex) => setColor(hex)}
+          allowCustomColor={false}
+          colorSwatches={STANDARD_COLORS_8}
+        />
+      ) : null}
 
       <button
         type="button"
