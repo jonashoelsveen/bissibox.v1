@@ -102,7 +102,7 @@ export function DiaryStravaActivitiesSection({
                 >
                   <span
                     aria-hidden
-                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-hairline"
+                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-[3px] border border-hairline"
                     style={{ background: color, opacity: isHidden ? 0.35 : 1 }}
                   />
                   <span className="min-w-0 flex-1 truncate">{prettySportName(sport)}</span>

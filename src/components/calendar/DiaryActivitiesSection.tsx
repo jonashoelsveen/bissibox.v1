@@ -239,7 +239,7 @@ function SortableActivityRow(props: {
     >
       <span
         aria-hidden
-        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-hairline"
+        className="inline-block h-2.5 w-2.5 shrink-0 rounded-[3px] border border-hairline"
         style={{ background: cat.color, opacity: props.hidden ? 0.35 : 1 }}
       />
       {props.renaming ? (
