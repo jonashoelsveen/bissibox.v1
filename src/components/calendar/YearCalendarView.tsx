@@ -210,6 +210,12 @@ function YearCalendarViewInner({
   // category was picked for a session immediately after creation and the
   // resulting event got filtered out until the page refreshed.
   const { categories: userCats } = useUserCategories({ teamId });
+  const { categories: diaryActivityCats } = useUserCategories({
+    teamId,
+    ownerId: memberId,
+    kind: "diary_activity",
+  });
+  const diaryVisibility = useDiaryVisibilitySafe();
   const hiddenMeColors = useMemo(() => {
     const s = new Set<string>();
     for (const c of userCats) {
@@ -217,6 +223,7 @@ function YearCalendarViewInner({
     }
     return s;
   }, [userCats]);
+
 
   // Coach viewing a client: no longer per-category gated — the coach
   // sees every event in the client's personal calendar. Local hide toggles
