@@ -66,7 +66,7 @@ export function DiarySideNav({
           canEdit={canEdit}
           targetUserId={stravaUserId}
         />
-        <MetricsSection title="Metrics" />
+        <MetricsSection title="Metrics" canEdit={canEdit} />
       </div>
     </nav>
   );
