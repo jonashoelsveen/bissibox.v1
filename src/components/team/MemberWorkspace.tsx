@@ -5,7 +5,7 @@ import { YearCalendarView } from "@/components/calendar/YearCalendarView";
 import { DiaryActivitiesSection } from "@/components/calendar/DiaryActivitiesSection";
 import { MetricsSection } from "@/components/calendar/MetricsSection";
 import { ClientCategoriesSection } from "@/components/calendar/ClientCategoriesSection";
-import type { ViewMode } from "@/components/calendar/UnifiedElasticGrid";
+import type { ViewMode, ExtendedViewMode } from "@/components/calendar/UnifiedElasticGrid";
 import type { CategoryKey } from "@/components/calendar/CalendarSideNav";
 import { useAuth } from "@/lib/auth";
 import { useViewerRole } from "@/hooks/useViewerRole";
@@ -61,8 +61,8 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
     const t = new Date();
     return { start: t, end: t };
   });
-  const [calViewMode, setCalViewMode] = useState<ViewMode>("month");
-  const [diaryViewMode, setDiaryViewMode] = useState<ViewMode>("week");
+  const [calViewMode, setCalViewMode] = useState<ExtendedViewMode>("month");
+  const [diaryViewMode, setDiaryViewMode] = useState<ExtendedViewMode>("week");
 
   // Categories the coach is hiding locally — toggled from the side rail.
   // Stored as a set of lowercase hex colors. Only events whose color is in
@@ -98,7 +98,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
   }, [isCoach]);
 
   const viewMode = subTab === "diary" ? diaryViewMode : calViewMode;
-  const setViewMode = (v: ViewMode) => {
+  const setViewMode = (v: ExtendedViewMode) => {
     if (subTab === "diary") setDiaryViewMode(v === "day" ? "week" : v);
     else setCalViewMode(v);
   };

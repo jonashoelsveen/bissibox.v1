@@ -27,7 +27,7 @@ import {
 } from "./CalendarSideNav";
 import { YearCalendarView } from "./YearCalendarView";
 import type { DateRange } from "./MiniCalendar";
-import type { ViewMode } from "./UnifiedElasticGrid";
+import type { ViewMode, ExtendedViewMode } from "./UnifiedElasticGrid";
 
 export function CalendarPage() {
   const { user, mode, activeEntityId } = useAuth();
@@ -82,7 +82,7 @@ export function CalendarPage() {
     const t = new Date();
     return { start: t, end: t };
   });
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [viewMode, setViewMode] = useState<ExtendedViewMode>("month");
 
   // Default: every category visible. Categories load lazily; new keys are
   // added to the visible set as soon as we encounter them in the grid filter.
