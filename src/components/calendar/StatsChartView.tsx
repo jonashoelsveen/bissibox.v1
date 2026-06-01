@@ -45,24 +45,10 @@ function startOfWeekMon(d: Date) {
   r.setDate(r.getDate() - dow);
   return r;
 }
-function startOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-function endOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
-}
 function daysBetween(a: Date, b: Date) {
   return Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / 86400000);
 }
 
-function formatDuration(minutes: number): string {
-  if (!minutes || minutes <= 0) return "0 min";
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  if (h <= 0) return `${m} min`;
-  if (m === 0) return `${h} h`;
-  return `${h} h ${m} min`;
-}
 
 /** Render a "12.3 km" / "5 mi" string with the unit suffix in a lighter weight. */
 function DistanceValue({ km, unit, digits = 1 }: { km: number | null | undefined; unit: "km" | "mi"; digits?: number }) {
