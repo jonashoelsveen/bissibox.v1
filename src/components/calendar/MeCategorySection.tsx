@@ -241,7 +241,6 @@ function SortableCategoryRow(props: {
             if (e.key === "Enter") props.onCommitRename();
             else if (e.key === "Escape") props.onCancelRename();
           }}
-          onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           className="min-w-0 flex-1 bg-transparent outline-none"
         />
