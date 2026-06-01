@@ -14,7 +14,12 @@ import { BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { StatsChartView } from "./StatsChartView";
+import {
+  StatsChartView,
+  allowedBucketsForTimeframe,
+  type TimeframeKey,
+  type XBucket,
+} from "./StatsChartView";
 
 import { useYearStore, useEventStore, type CellKey, type CalendarEvent } from "./yearStore";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode, type ExtendedViewMode } from "./UnifiedElasticGrid";
