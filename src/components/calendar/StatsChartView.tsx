@@ -10,7 +10,7 @@
  * dropdown in the page header (lifted to YearCalendarView) and passed in.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { CalendarEvent } from "./yearStore";
 import { kmToUnit, unitLabel, useDistanceUnit } from "@/lib/units";
 import {
@@ -359,8 +359,24 @@ export function StatsChartView({
       .join(" ");
   };
 
+  const buildAreaPath = (vals: number[], yFn: (v: number) => number) => {
+    if (vals.length === 0) return "";
+    const baseline = PAD_T + innerH;
+    const top = vals
+      .map((v, i) => `${i === 0 ? "M" : "L"} ${xFor(i).toFixed(2)} ${yFn(v).toFixed(2)}`)
+      .join(" ");
+    const lastX = xFor(vals.length - 1).toFixed(2);
+    const firstX = xFor(0).toFixed(2);
+    return `${top} L ${lastX} ${baseline.toFixed(2)} L ${firstX} ${baseline.toFixed(2)} Z`;
+  };
+
   const distPath = buildPath(series.dist, yDistFor);
   const durPath = buildPath(series.dur, yDurFor);
+  const distArea = buildAreaPath(series.dist, yDistFor);
+  const durArea = buildAreaPath(series.dur, yDurFor);
+  const reactId = useId();
+  const gradIdDist = `dist-grad-${reactId.replace(/:/g, "")}`;
+  const gradIdDur = `dur-grad-${reactId.replace(/:/g, "")}`;
 
   /* Hover */
   const svgRef = useRef<SVGSVGElement>(null);
@@ -513,6 +529,16 @@ export function StatsChartView({
           onMouseMove={onMove}
           onMouseLeave={onLeave}
         >
+          <defs>
+            <linearGradient id={gradIdDist} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={distColor} stopOpacity={0.13} />
+              <stop offset="100%" stopColor={distColor} stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id={gradIdDur} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={durColor} stopOpacity={0.13} />
+              <stop offset="100%" stopColor={durColor} stopOpacity={0} />
+            </linearGradient>
+          </defs>
           {ticks.map((t) => {
             const y = PAD_T + innerH - t * innerH;
             const distVal = t * yDistMax;
@@ -557,6 +583,12 @@ export function StatsChartView({
             </text>
           ))}
 
+          {durVisible && (
+            <path d={durArea} fill={`url(#${gradIdDur})`} stroke="none" />
+          )}
+          {distVisible && (
+            <path d={distArea} fill={`url(#${gradIdDist})`} stroke="none" />
+          )}
           {durVisible && (
             <path d={durPath} fill="none" stroke={durColor} strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" />
           )}
