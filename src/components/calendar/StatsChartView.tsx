@@ -404,14 +404,9 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
         {hoverDate && (
           <div className="pointer-events-none absolute right-4 top-2 z-10 w-[260px] rounded-md border border-hairline bg-muted px-4 py-3 shadow-sm">
             <div className="text-xs uppercase tracking-wide text-muted-foreground">
-              {bucket === "month"
-                ? hoverDate.toLocaleDateString(undefined, { month: "short", year: "numeric" })
-                : hoverDate.toLocaleDateString(undefined, {
-                    weekday: "short",
-                    day: "2-digit",
-                    month: "short",
-                  })}
+              {hoverLabel}
             </div>
+
 
             <div className="mt-1.5 space-y-1.5">
               {(priority === "distance"
