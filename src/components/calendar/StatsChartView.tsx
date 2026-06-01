@@ -41,6 +41,14 @@ interface StatsChartViewProps {
   onTimeframeChange: (tf: TimeframeKey) => void;
   /** Earliest event date for this user, used to gate timeframe buttons. */
   earliestDataDate: Date | null;
+  /** Diary activity categories (kind = "diary_activity"), used to attribute manual events. */
+  diaryActivityCats?: UserCategory[];
+  hiddenCategoryIds?: Set<string>;
+  hiddenSportTypes?: Set<string>;
+}
+
+function prettySport(sport: string): string {
+  return sport.replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 
 const MONTHS_NB_SHORT = [
