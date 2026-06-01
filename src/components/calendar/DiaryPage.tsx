@@ -12,7 +12,7 @@ import type { CategoryKey } from "./CalendarSideNav";
 import { DiarySideNav } from "./DiarySideNav";
 import { YearCalendarView } from "./YearCalendarView";
 import type { DateRange } from "./MiniCalendar";
-import type { ViewMode } from "./UnifiedElasticGrid";
+import type { ExtendedViewMode } from "./UnifiedElasticGrid";
 
 export function DiaryPage() {
   const { user, loading, activeEntityId } = useAuth();
