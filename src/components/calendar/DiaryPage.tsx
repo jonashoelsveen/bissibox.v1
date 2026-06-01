@@ -82,6 +82,7 @@ export function DiaryPage() {
   }
 
   return (
+    <DiaryVisibilityProvider>
     <div className="h-full overflow-hidden bg-white">
       <div
         className="relative grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
