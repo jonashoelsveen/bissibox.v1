@@ -116,12 +116,14 @@ export function HeaderDropdown<T extends string>({
   onChange,
   width = 132,
   ariaLabel,
+  openUpward = false,
 }: {
   value: T;
   options: { value: T; label: string; hint?: string; disabled?: boolean }[];
   onChange: (v: T) => void;
   width?: number;
   ariaLabel: string;
+  openUpward?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value);
@@ -147,7 +149,9 @@ export function HeaderDropdown<T extends string>({
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div
-            className="absolute right-0 top-full z-40 mt-1 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg"
+            className={`absolute right-0 z-40 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg ${
+              openUpward ? "bottom-full mb-1" : "top-full mt-1"
+            }`}
             style={{ width }}
           >
             {options.map((o) => {
@@ -185,6 +189,7 @@ export function HeaderDropdown<T extends string>({
     </div>
   );
 }
+
 
 // Type 2 spreadsheet column headers — weekday names cycling across the
 // 12 underlying month columns. The user requested the headers be relabelled
