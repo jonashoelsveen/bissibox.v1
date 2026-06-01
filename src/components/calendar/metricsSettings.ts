@@ -11,8 +11,8 @@ export type MetricKey = "distance" | "duration";
 export type MetricScope = "year" | "month" | "week";
 
 export const METRIC_DEFAULT_COLOR: Record<MetricKey, string> = {
-  distance: "#3b82f6", // blue
-  duration: "#f97316", // orange
+  distance: "#8b5cf6", // purple
+  duration: "#22c55e", // green
 };
 
 /** Default y-axis maximums for distance (stored & shown in user's display unit). */
