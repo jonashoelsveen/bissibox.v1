@@ -555,6 +555,11 @@ export function SessionHoverMenu({
                   accent={accent}
                   diaryGroup={diaryGroup}
                   diarySub={diarySub}
+                  lockedLabel={
+                    ev.stravaActivityId
+                      ? prettyStravaSportName(ev.sportType) || "Strava activity"
+                      : null
+                  }
                   onChange={(g, s) => {
                     setDiaryGroup(g);
                     setDiarySub(s);
