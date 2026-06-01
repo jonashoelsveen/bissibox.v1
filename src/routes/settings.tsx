@@ -2087,15 +2087,11 @@ function CategoryAutosaveCard({
 function DiarySettingsPanel({ scopeKey: _scopeKey }: { scopeKey: string }) {
   return (
     <div className="space-y-3">
-      <DiaryCategoryCard
-        title="Training"
-        items={["Units", "Activitytypes"]}
-      />
-      <DiaryCategoryCard title="Notes" items={[]} />
       <WeekViewCard app="diary" />
       <SessionTileDesignCard />
       <MonthSessionTileDesignCard />
       <DiarySessionDetailsCard />
+      <DiaryChartCard />
     </div>
   );
 }
