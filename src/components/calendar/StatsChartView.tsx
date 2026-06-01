@@ -22,6 +22,9 @@ import {
   useDurationMaxMinutes,
   type MetricScope,
 } from "./metricsSettings";
+import { HeaderDropdown } from "./UnifiedElasticGrid";
+
+type XBucket = "day" | "week" | "month" | "year";
 
 interface StatsChartViewProps {
   events: CalendarEvent[];
@@ -31,6 +34,7 @@ interface StatsChartViewProps {
   /** How many units of the active view to display. Defaults to 1. */
   timeframe?: number;
 }
+
 
 
 function startOfDay(d: Date) {
