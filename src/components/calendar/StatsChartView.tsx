@@ -150,6 +150,52 @@ function DurationValue({ minutes }: { minutes: number }) {
   return (<>{h}<span className="font-light"> h </span>{m}<span className="font-light"> min</span></>);
 }
 
+/** Round up to a clean step (1/2/2.5/5 × 10^n) for tick-friendly axis maxima. */
+function niceCeil(v: number): number {
+  if (!Number.isFinite(v) || v <= 0) return 1;
+  const exp = Math.floor(Math.log10(v));
+  const pow = Math.pow(10, exp);
+  const m = v / pow;
+  const nice = m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10;
+  return nice * pow;
+}
+
+/** Tween a numeric target with an ease-in-out curve (~260ms). */
+function useTween(target: number, ms = 260): number {
+  const [val, setVal] = useState(target);
+  const fromRef = useRef(target);
+  const targetRef = useRef(target);
+  useEffect(() => {
+    if (target === targetRef.current) return;
+    const from = val;
+    fromRef.current = from;
+    targetRef.current = target;
+    const start = performance.now();
+    let raf = 0;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - start) / ms);
+      const eased = 0.5 - Math.cos(Math.PI * p) / 2;
+      setVal(fromRef.current + (targetRef.current - fromRef.current) * eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, ms]);
+  return val;
+}
+
+/** Format minutes for a duration tick label: "45m", "1h 15m", or "2h". */
+function formatDurationTick(minutes: number): string {
+  if (minutes < 60) return `${Math.round(minutes)}m`;
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+
+
 export function StatsChartView({
   events,
   xBucket,
