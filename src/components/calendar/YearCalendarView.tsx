@@ -484,8 +484,10 @@ function YearCalendarViewInner({
             events={mergedEvents}
             viewMode={viewMode}
             currentDate={currentDate}
+            timeframe={timeframe}
           />
         ) : (
+
         <UnifiedElasticGrid
           calId={calId}
           year={meta.year}
