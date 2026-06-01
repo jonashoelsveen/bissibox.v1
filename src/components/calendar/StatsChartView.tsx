@@ -10,7 +10,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CalendarEvent } from "./yearStore";
 import {
-  formatDistance,
   kmToUnit,
   unitLabel,
   useDistanceUnit,
@@ -26,9 +25,13 @@ import {
 
 interface StatsChartViewProps {
   events: CalendarEvent[];
-  viewMode: "week" | "month" | "day";
+  /** "day" is treated as "week" for charting purposes. */
+  viewMode: "day" | "week" | "month" | "year";
   currentDate: Date;
+  /** How many units of the active view to display. Defaults to 1. */
+  timeframe?: number;
 }
+
 
 function startOfDay(d: Date) {
   const r = new Date(d);
