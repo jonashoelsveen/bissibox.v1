@@ -599,48 +599,84 @@ export function StatsChartView({
           const hasBreakdown = catShown.length > 0 || sportShown.length > 0;
 
           const renderRow = (r: { key: string; label: string; color: string; distKm: number; durMin: number }) => (
-            <div key={r.key} className="flex items-center gap-2.5 text-sm tabular-nums">
-              <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ background: r.color }} />
-              <span className="min-w-0 flex-1 truncate text-xs text-ink/80">{r.label}</span>
-              <span className="text-xs font-medium text-ink">
-                {r.distKm > 0 ? (
-                  <>
-                    {kmToUnit(r.distKm, unit).toFixed(1)}{" "}
-                    <span className="font-normal text-muted-foreground">{unitLabel(unit)}</span>
-                  </>
-                ) : null}
-                {r.distKm > 0 && r.durMin > 0 ? " · " : null}
-                {r.durMin > 0 ? <DurationValue minutes={r.durMin} /> : null}
+            <div key={r.key} className="contents">
+              <span
+                aria-hidden
+                className="inline-block h-3.5 w-3.5 shrink-0 rounded-full"
+                style={{ background: r.color }}
+              />
+              <span className="min-w-0 truncate text-xs text-ink/80">{r.label}</span>
+              <span className="text-right text-xs font-medium text-ink">
+                {distVisible && r.distKm > 0 ? (
+                  <DistanceValue km={r.distKm} unit={unit} digits={1} />
+                ) : (
+                  <span className="text-muted-foreground/30">—</span>
+                )}
+              </span>
+              <span className="text-right text-xs font-medium text-ink">
+                {durVisible && r.durMin > 0 ? (
+                  <DurationValue minutes={r.durMin} />
+                ) : (
+                  <span className="text-muted-foreground/30">—</span>
+                )}
               </span>
             </div>
           );
 
           return (
-            <div className="pointer-events-none absolute right-4 top-2 z-10 w-[280px] rounded-md border border-hairline bg-muted px-4 py-3 shadow-sm">
+            <div className="pointer-events-none absolute right-4 top-2 z-10 w-[340px] rounded-md border border-hairline bg-muted px-4 py-3 shadow-sm">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">{hoverLabel}</div>
 
               {hasBreakdown && (
-                <div className="mt-2 space-y-1">
+                <div className="mt-2 grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-1 tabular-nums">
                   {catShown.map(renderRow)}
-                  {sportShown.length > 0 && catShown.length > 0 && <div className="my-1.5" />}
+                  {sportShown.length > 0 && catShown.length > 0 && (
+                    <div className="col-span-4 my-0.5" />
+                  )}
                   {sportShown.map(renderRow)}
                 </div>
               )}
 
-              <div className={`${hasBreakdown ? "mt-2.5 border-t border-hairline/60 pt-2.5" : "mt-1.5"} space-y-1.5`}>
+              <div
+                className={`${hasBreakdown ? "mt-2.5 border-t border-hairline/60 pt-2.5" : "mt-1.5"} grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-1.5 tabular-nums`}
+              >
                 {(priority === "distance"
                   ? (["distance", "duration"] as const)
                   : (["duration", "distance"] as const)
                 ).map((m) =>
                   m === "distance" ? (
-                    <div key="distance" className="flex items-center gap-3 text-base tabular-nums" style={{ visibility: distVisible ? "visible" : "hidden" }}>
-                      <span className="inline-block h-3.5 w-3.5 rounded-full shrink-0" style={{ background: distColor }} />
-                      <span className="text-ink font-medium"><DistanceValue km={hoverDistKm} unit={unit} digits={1} /></span>
+                    <div
+                      key="distance"
+                      className="contents"
+                      style={{ visibility: distVisible ? "visible" : "hidden" }}
+                    >
+                      <span
+                        aria-hidden
+                        className="inline-block h-3.5 w-3.5 shrink-0 rounded-full"
+                        style={{ background: distColor }}
+                      />
+                      <span className="min-w-0 truncate text-xs text-ink/80">Distance</span>
+                      <span className="text-right text-sm font-medium text-ink">
+                        <DistanceValue km={hoverDistKm} unit={unit} digits={1} />
+                      </span>
+                      <span className="text-right text-sm font-medium text-muted-foreground/30">—</span>
                     </div>
                   ) : (
-                    <div key="duration" className="flex items-center gap-3 text-base tabular-nums" style={{ visibility: durVisible ? "visible" : "hidden" }}>
-                      <span className="inline-block h-3.5 w-3.5 rounded-full shrink-0" style={{ background: durColor }} />
-                      <span className="text-ink font-medium"><DurationValue minutes={hoverDurMin} /></span>
+                    <div
+                      key="duration"
+                      className="contents"
+                      style={{ visibility: durVisible ? "visible" : "hidden" }}
+                    >
+                      <span
+                        aria-hidden
+                        className="inline-block h-3.5 w-3.5 shrink-0 rounded-full"
+                        style={{ background: durColor }}
+                      />
+                      <span className="min-w-0 truncate text-xs text-ink/80">Duration</span>
+                      <span className="text-right text-sm font-medium text-muted-foreground/30">—</span>
+                      <span className="text-right text-sm font-medium text-ink">
+                        <DurationValue minutes={hoverDurMin} />
+                      </span>
                     </div>
                   ),
                 )}
@@ -721,6 +757,50 @@ export function StatsChartView({
           {distVisible && (
             <path d={distArea} fill={`url(#${gradIdDist})`} stroke="none" />
           )}
+
+          {/* Per-category (manual activities) lines using the priority metric. */}
+          {Array.from(categorySeriesMap.values()).map((c) => {
+            const vals = priority === "distance" ? c.distKm : c.durMin;
+            const yFn = priority === "distance" ? yDistFor : yDurFor;
+            const visible = priority === "distance" ? distVisible : durVisible;
+            if (!visible) return null;
+            const total = vals.reduce((a, b) => a + b, 0);
+            if (total <= 0) return null;
+            return (
+              <path
+                key={`cat-${c.id}`}
+                d={buildPath(vals, yFn)}
+                fill="none"
+                stroke={c.color}
+                strokeWidth={1.25}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                opacity={0.85}
+              />
+            );
+          })}
+          {/* Per-Strava-sport-type lines using the priority metric. */}
+          {Array.from(sportTypeSeriesMap.values()).map((s) => {
+            const vals = priority === "distance" ? s.distKm : s.durMin;
+            const yFn = priority === "distance" ? yDistFor : yDurFor;
+            const visible = priority === "distance" ? distVisible : durVisible;
+            if (!visible) return null;
+            const total = vals.reduce((a, b) => a + b, 0);
+            if (total <= 0) return null;
+            return (
+              <path
+                key={`sport-${s.sport}`}
+                d={buildPath(vals, yFn)}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={1.25}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                opacity={0.85}
+              />
+            );
+          })}
+
           {durVisible && (
             <path d={durPath} fill="none" stroke={durColor} strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" />
           )}
