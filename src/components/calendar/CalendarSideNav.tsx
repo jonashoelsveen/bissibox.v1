@@ -250,16 +250,12 @@ function CategoryRow({
 
 function EntityGroup({
   entity,
-  allHidden,
-  hiddenCats,
-  onToggleAll,
-  onToggleCat,
+  visibleCategories,
+  onToggleCategory,
 }: {
   entity: SideNavEntity;
-  allHidden: boolean;
-  hiddenCats: Set<AdminCatKey>;
-  onToggleAll: () => void;
-  onToggleCat: (k: AdminCatKey) => void;
+  visibleCategories: Set<CategoryKey>;
+  onToggleCategory: (k: CategoryKey) => void;
 }) {
   const storageKey = `calendar:sidenav:entityOpen:${entity.id}`;
   const [open, setOpen] = useState<boolean>(() => {
