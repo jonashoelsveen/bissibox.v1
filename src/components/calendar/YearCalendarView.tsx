@@ -36,13 +36,10 @@ const MONTHS_NB = [
   "Juli", "August", "September", "Oktober", "November", "Desember",
 ];
 
-function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate: Date }) {
+function ViewTitle({ viewMode, currentDate }: { viewMode: ExtendedViewMode; currentDate: Date }) {
   const month = MONTHS_NB[currentDate.getMonth()];
   const year = currentDate.getFullYear();
   const fontStyle = { fontFamily: 'Helvetica, "Helvetica Neue", Arial, sans-serif' };
-  // Widest possible label per view, used as an invisible sizer so the nav
-  // arrows that follow always sit at the same horizontal position regardless
-  // of the actual month/week/day text length.
   const widestMonth = "September";
   let ghost: ReactNode;
   let content: ReactNode;
@@ -73,6 +70,9 @@ function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate:
         <span className="font-normal">{year}</span>
       </>
     );
+  } else if (viewMode === "year") {
+    ghost = <span className="font-semibold">8888</span>;
+    content = <span className="font-semibold">{year}</span>;
   } else {
     ghost = (
       <>
@@ -94,6 +94,7 @@ function ViewTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDate:
     </h1>
   );
 }
+
 
 export type CalendarSeat = "admin" | "individual";
 export type CalendarAppKind = "calendar" | "diary";
