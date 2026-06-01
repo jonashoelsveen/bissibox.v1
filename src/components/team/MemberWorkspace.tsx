@@ -182,7 +182,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
                     canEdit={false}
                     kind="diary_strava"
                   />
-                  <MetricsSection title="Metrics" />
+                  <MetricsSection title="Metrics" canEdit={false} />
                 </div>
               )}
             </nav>
