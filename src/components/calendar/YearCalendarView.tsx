@@ -533,8 +533,9 @@ function YearCalendarViewInner({
           currentDate={currentDate}
           currentRange={currentRange}
           onCurrentDateChange={(d, r) => updateCurrent(d, r)}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
+          viewMode={gridViewMode}
+          onViewModeChange={(v) => setViewMode(v)}
+
           appKind={appKind}
           memberId={memberId}
           viewerRole={viewerRole}
