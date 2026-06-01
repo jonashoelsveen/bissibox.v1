@@ -470,6 +470,9 @@ function YearCalendarViewInner({
             timeframe={statsTimeframe}
             onTimeframeChange={setStatsTimeframe}
             earliestDataDate={earliestDataDate}
+            diaryActivityCats={diaryActivityCats}
+            hiddenCategoryIds={diaryVisibility?.hiddenCategoryIds ?? new Set()}
+            hiddenSportTypes={diaryVisibility?.hiddenSportTypes ?? new Set()}
           />
 
         ) : (
