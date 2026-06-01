@@ -263,31 +263,70 @@ export function StatsChartView({ events, viewMode, currentDate, timeframe = 1 }:
   const ticks = [0, 0.25, 0.5, 0.75, 1];
 
   /* X labels */
+  const monthAbbr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const xLabels = useMemo(() => {
     const labels: { i: number; label: string }[] = [];
-    if (viewMode === "month") {
-      // Show 1, 5, 10, 15, 20, 25, last
-      const last = days;
-      const set = new Set<number>([1, 5, 10, 15, 20, 25, last]);
-      for (const day of Array.from(set).sort((a, b) => a - b)) {
-        if (day >= 1 && day <= last) labels.push({ i: day - 1, label: String(day) });
+    if (viewMode === "year") {
+      // One label per month for a single year; for multi-year ranges show
+      // every quarter and the year boundary.
+      if (timeframe === 1) {
+        for (let i = 0; i < buckets; i++) labels.push({ i, label: monthAbbr[i] ?? "" });
+      } else {
+        for (let i = 0; i < buckets; i++) {
+          const m = (rangeStart.getMonth() + i) % 12;
+          if (m === 0) {
+            const y = rangeStart.getFullYear() + Math.floor((rangeStart.getMonth() + i) / 12);
+            labels.push({ i, label: String(y) });
+          }
+        }
+      }
+    } else if (viewMode === "month") {
+      if (timeframe === 1) {
+        const last = days;
+        const set = new Set<number>([1, 5, 10, 15, 20, 25, last]);
+        for (const day of Array.from(set).sort((a, b) => a - b)) {
+          if (day >= 1 && day <= last) labels.push({ i: day - 1, label: String(day) });
+        }
+      } else {
+        // Multi-month: label the first day of each month using the month abbr.
+        for (let i = 0; i < buckets; i++) {
+          const d = new Date(rangeStart);
+          d.setDate(d.getDate() + i);
+          if (d.getDate() === 1) labels.push({ i, label: monthAbbr[d.getMonth()] ?? "" });
+        }
       }
     } else {
-      const names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-      for (let i = 0; i < days; i++) labels.push({ i, label: names[i] ?? "" });
+      // week (or day → treated as week)
+      if (timeframe === 1) {
+        const names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        for (let i = 0; i < days; i++) labels.push({ i, label: names[i] ?? "" });
+      } else {
+        // Multi-week: label every Monday with the date number.
+        for (let i = 0; i < buckets; i++) {
+          if (i % 7 === 0) {
+            const d = new Date(rangeStart);
+            d.setDate(d.getDate() + i);
+            labels.push({ i, label: String(d.getDate()) });
+          }
+        }
+      }
     }
     return labels;
-  }, [viewMode, days]);
+  }, [viewMode, days, buckets, rangeStart, timeframe]);
 
   const hoverDate = useMemo(() => {
     if (hoverIdx == null) return null;
+    if (bucket === "month") {
+      return new Date(rangeStart.getFullYear(), rangeStart.getMonth() + hoverIdx, 1);
+    }
     const d = new Date(rangeStart);
     d.setDate(d.getDate() + hoverIdx);
     return d;
-  }, [hoverIdx, rangeStart]);
+  }, [hoverIdx, rangeStart, bucket]);
 
   const hoverDistKm = hoverIdx != null ? series.dist[hoverIdx] : 0;
   const hoverDurMin = hoverIdx != null ? series.dur[hoverIdx] : 0;
+
 
   return (
     <div className="relative flex h-full w-full flex-col bg-white px-4 pb-4 pt-2">
