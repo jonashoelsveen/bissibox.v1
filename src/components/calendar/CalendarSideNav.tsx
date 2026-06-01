@@ -235,7 +235,7 @@ function CategoryRow({
     >
       <span
         aria-hidden
-        className="inline-block h-2.5 w-2.5 shrink-0 rounded-[3px] border border-hairline"
+        className="inline-block h-3.5 w-3.5 shrink-0 rounded-[3px] border border-hairline"
         style={{ background: color ?? "transparent", opacity: on ? 1 : 0.35 }}
       />
       <span className="min-w-0 flex-1 truncate">{label}</span>
