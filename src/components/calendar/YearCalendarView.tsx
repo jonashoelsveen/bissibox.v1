@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { StatsChartView } from "./StatsChartView";
 
 import { useYearStore, useEventStore, type CellKey, type CalendarEvent } from "./yearStore";
-import { UnifiedElasticGrid, HeaderDropdown, type ViewMode } from "./UnifiedElasticGrid";
+import { UnifiedElasticGrid, HeaderDropdown, type ViewMode, type ExtendedViewMode } from "./UnifiedElasticGrid";
 import { MonthNavControl } from "./MonthNavControl";
 import type { DateRange } from "./MiniCalendar";
 import {
