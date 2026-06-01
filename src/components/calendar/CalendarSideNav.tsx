@@ -313,7 +313,7 @@ function EntityGroup({
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             style={{ overflow: "hidden" }}
           >
-            <div className="ml-3 border-l border-hairline pl-1">
+            <div className="mt-0.5 flex flex-col gap-0.5">
               {items.map((c) => {
                 const on = !allHidden && !hiddenCats.has(c.key);
                 return (
