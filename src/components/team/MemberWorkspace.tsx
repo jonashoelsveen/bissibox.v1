@@ -106,7 +106,9 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
   // Calendar scope id. Coaches write into the client's calendar via the
   // `client:` scope so RLS attaches `coach_pending = true` + the coach id.
   const calId = useMemo(() => {
-    if (subTab === "diary") return `diary:${userId}`;
+    if (subTab === "diary") {
+      return isCoach ? `diary:client:${userId}` : `diary:user:${userId}`;
+    }
     return isCoach ? `client:${userId}` : `user:${userId}`;
   }, [subTab, userId, isCoach]);
 
