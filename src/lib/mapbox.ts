@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { getMapboxToken } from "@/server/mapbox-token.functions";
+import { getMapboxToken } from "@/lib/mapbox-token.functions";
 
 export type MapStyleId = "outdoors" | "satellite-streets" | "light";
 
