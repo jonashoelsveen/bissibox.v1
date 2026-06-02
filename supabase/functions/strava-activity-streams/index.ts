@@ -16,7 +16,17 @@ Deno.serve(async (req) => {
     const activityId = Number(body?.activityId);
     if (!activityId) return json({ error: "activityId required" }, 400);
 
-    const accessToken = await getValidAccessToken(u.user.id);
+    let accessToken: string;
+    try {
+      accessToken = await getValidAccessToken(u.user.id);
+    } catch (e) {
+      // Viewer (e.g. a coach) is not connected to Strava — return empty
+      // streams instead of 500 so the UI degrades gracefully.
+      if (String((e as Error)?.message || e) === "not connected") {
+        return json({ ok: true, altitude: [], distance: [], notConnected: true });
+      }
+      throw e;
+    }
     const url = new URL(`https://www.strava.com/api/v3/activities/${activityId}/streams`);
     url.searchParams.set("keys", "altitude,distance");
     url.searchParams.set("key_by_type", "true");
