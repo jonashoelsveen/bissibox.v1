@@ -2,7 +2,7 @@
  * Single-building glyph used for the "Organization" app tile in the
  * apps menu. Matches the lucide outline weight used for Calendar / Diary /
  * Photos (strokeWidth ~1.75). Shows a tall building with a centered door
- * and two rows of two windows above.
+ * and two rows of three narrow windows above.
  */
 export function OrganizationIcon({
   className,
@@ -26,12 +26,14 @@ export function OrganizationIcon({
       <rect x="5" y="3" width="14" height="18" rx="0.5" />
       {/* centered door at the bottom */}
       <path d="M10.5 21V16h3v5" />
-      {/* row of windows (top) */}
-      <line x1="8" y1="7" x2="9.5" y2="7" />
-      <line x1="14.5" y1="7" x2="16" y2="7" />
+      {/* row of windows (top) — three narrow windows taller than wide */}
+      <rect x="7.5" y="6" width="1" height="2" rx="0.25" />
+      <rect x="11.5" y="6" width="1" height="2" rx="0.25" />
+      <rect x="15.5" y="6" width="1" height="2" rx="0.25" />
       {/* row of windows (middle) */}
-      <line x1="8" y1="11" x2="9.5" y2="11" />
-      <line x1="14.5" y1="11" x2="16" y2="11" />
+      <rect x="7.5" y="10.5" width="1" height="2" rx="0.25" />
+      <rect x="11.5" y="10.5" width="1" height="2" rx="0.25" />
+      <rect x="15.5" y="10.5" width="1" height="2" rx="0.25" />
     </svg>
   );
 }
