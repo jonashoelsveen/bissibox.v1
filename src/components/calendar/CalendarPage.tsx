@@ -172,7 +172,7 @@ export function CalendarPage() {
             }}
           >
             <div className="mac-panel relative h-full overflow-hidden rounded-lg border border-hairline shadow-sm">
-              <div className="h-full overflow-hidden px-1.5 pt-[48px]">
+              <div className="h-full overflow-hidden pl-1.5 pr-0 pt-[48px]">
                 <CalendarSideNav
                   currentDate={currentDate}
                   currentRange={currentRange}
