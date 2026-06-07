@@ -103,13 +103,14 @@ export function CalendarSideNav({
 
   return (
     <nav className="flex h-full flex-col gap-3 overflow-hidden">
-      <div className="shrink-0">
+      <div className="shrink-0 pr-1.5">
         <MiniCalendar
           selectedRange={currentRange ?? { start: currentDate, end: currentDate }}
           onSelectRange={(r) => onCurrentDateChange(r.start, r)}
           viewMode={viewMode}
         />
       </div>
+
 
       {/* Category filters — scrollable */}
       <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
