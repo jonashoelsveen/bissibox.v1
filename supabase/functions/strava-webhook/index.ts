@@ -1,6 +1,31 @@
 import { activityRowFromStrava, adminClient, getValidAccessToken } from "../_shared/strava.ts";
 
 const VERIFY_TOKEN = Deno.env.get("STRAVA_WEBHOOK_VERIFY_TOKEN")!;
+const STRAVA_CLIENT_SECRET = Deno.env.get("STRAVA_CLIENT_SECRET") ?? "";
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return mismatch === 0;
+}
+
+async function verifyStravaSignature(body: string, sigHeader: string): Promise<boolean> {
+  if (!STRAVA_CLIENT_SECRET || !sigHeader) return false;
+  const provided = sigHeader.replace(/^sha256=/i, "").trim();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(STRAVA_CLIENT_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sigBuf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
+  const expectedHex = Array.from(new Uint8Array(sigBuf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return timingSafeEqual(expectedHex, provided.toLowerCase());
+}
 
 Deno.serve(async (req) => {
   const url = new URL(req.url);
@@ -21,7 +46,17 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method not allowed", { status: 405 });
 
   try {
-    const event = await req.json();
+    const rawBody = await req.text();
+    const sigHeader =
+      req.headers.get("X-Hub-Signature-256") ??
+      req.headers.get("X-Hub-Signature") ??
+      "";
+    const ok = await verifyStravaSignature(rawBody, sigHeader);
+    if (!ok) {
+      console.warn("strava-webhook: invalid signature");
+      return new Response("forbidden", { status: 403 });
+    }
+    const event = JSON.parse(rawBody);
     // event: { aspect_type: 'create'|'update'|'delete', object_type: 'activity'|'athlete',
     //          object_id, owner_id, event_time, updates }
     if (event.object_type !== "activity") return new Response("ok");
