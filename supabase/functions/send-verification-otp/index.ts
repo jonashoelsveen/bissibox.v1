@@ -131,6 +131,14 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "SMS not enabled yet" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Prevent abuse: OTPs may only be sent to the signed-in user's own email.
+    if ((body.destination ?? "").toLowerCase() !== (user.email ?? "").toLowerCase()) {
+      return new Response(
+        JSON.stringify({ error: "Destination must match your account email" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
     const unsubscribeToken = await getOrCreateUnsubscribeToken(admin, body.destination);
 
