@@ -15,7 +15,11 @@ Deno.serve(async (req) => {
   const stateParam = url.searchParams.get("state") || "";
   const error = url.searchParams.get("error");
   const [state, redirectEnc] = stateParam.split("|");
-  const redirectTo = decodeURIComponent(redirectEnc || "/settings/connectors");
+  let redirectTo = decodeURIComponent(redirectEnc || "") || "/settings/connectors";
+  // Open-redirect guard: only allow same-origin relative paths.
+  if (!redirectTo.startsWith("/") || redirectTo.startsWith("//")) {
+    redirectTo = "/settings/connectors";
+  }
 
   if (error) return redirect(`${redirectTo}?strava=denied`);
   if (!code || !state) return redirect(`${redirectTo}?strava=error`);
