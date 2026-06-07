@@ -22,11 +22,6 @@ Deno.serve(async (req) => {
 
   try {
     const event = await req.json();
-    // Strava webhook events are unsigned by design (no HMAC support). To prevent
-    // spoofed `delete` events from erasing data, we never trust the event payload
-    // for deletes — we only mark the row as needing re-sync. For create/update
-    // events we re-fetch the canonical activity from Strava using the linked
-    // user's own access token, which fails for events not actually owned by them.
     // event: { aspect_type: 'create'|'update'|'delete', object_type: 'activity'|'athlete',
     //          object_id, owner_id, event_time, updates }
     if (event.object_type !== "activity") return new Response("ok");
