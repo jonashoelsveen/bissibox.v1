@@ -342,10 +342,8 @@ export function GlobalTopTabBar() {
           transition: none !important;
         }
       `}</style>
-      <div className="topbar-row relative z-10 flex items-end gap-1 pl-0 pr-4 md:pr-6">
-        {user && <ProfileSwitcherBar />}
-        
-        {user && <NavIconTabs activeKey={activeKey} stripped={stripped} />}
+      <div className="topbar-row relative z-10 flex items-end gap-1 pl-3 pr-4 md:pr-6">
+        {user && <InitialBadge user={user} />}
         {/* Page-provided slot — open notes/event tabs etc. */}
         <div className="flex min-w-0 flex-1 items-end pl-2">
           <TopBarSlotMount className="flex min-w-0 flex-1 items-end" />
