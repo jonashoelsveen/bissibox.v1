@@ -18,7 +18,7 @@ import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import { DIARY_ACTIVITIES } from "./DiaryEditFields";
 import { useDiarySessionNote } from "@/hooks/useDiarySessionNote";
 import { useLibrarySetting, diaryAutosyncKey } from "@/lib/library-settings";
-import { StravaMapPanel } from "./StravaMapPanel";
+// Strava map panel removed along with the Strava integration.
 import { colorForActivity } from "@/lib/activity-colors";
 import {
   AlertDialog,
@@ -436,24 +436,15 @@ export function SessionDetailsModal({
                   />
                 )}
                 {tab === "map" && (
-                  strava?.polyline ? (
-                    <StravaMapPanel
-                      polyline={strava.polyline}
-                      elevationGainM={strava.elevationGainM ?? null}
-                      distanceKm={strava.distanceKm ?? value.distanceKm ?? null}
-                      stravaActivityId={strava.stravaActivityId ?? null}
-                    />
-                  ) : (
-                    <div className="grid place-items-center rounded-lg border border-dashed border-hairline bg-muted/20 py-16 text-center">
-                      <div className="space-y-1">
-                        <MapPin className="mx-auto h-6 w-6 text-muted-foreground/60" />
-                        <p className="text-sm text-ink">Map syncs automatically with Strava</p>
-                        <p className="text-xs text-muted-foreground">
-                          Connect Strava in the Connectors settings to see your activity route here.
-                        </p>
-                      </div>
+                  <div className="grid place-items-center rounded-lg border border-dashed border-hairline bg-muted/20 py-16 text-center">
+                    <div className="space-y-1">
+                      <MapPin className="mx-auto h-6 w-6 text-muted-foreground/60" />
+                      <p className="text-sm text-ink">No map for this session</p>
+                      <p className="text-xs text-muted-foreground">
+                        Activity maps are not available on this platform.
+                      </p>
                     </div>
-                  )
+                  </div>
                 )}
                 {tab === "note" && (
                   readOnly && memberId && eventId && viewerRole && viewerRole !== "owner" ? (
