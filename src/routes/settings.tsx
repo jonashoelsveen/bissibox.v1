@@ -6,7 +6,7 @@ import { colorForStravaSportType } from "@/lib/activity-colors";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
-import { RolesPanel } from "@/components/RolesPanel";
+
 import { ChevronDown, ChevronRight, ChevronLeft, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network, Settings as SettingsIcon, PanelLeft } from "lucide-react";
 
 import { TopBarColorPicker } from "@/components/appearance/TopBarColorPicker";
@@ -499,7 +499,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
 
   const meTabs: Tab[] = [
     "calendar",
-    "diary",
     "library",
     "profiles",
     "coaches",
@@ -601,12 +600,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
                   <div key={e.id} className="flex items-center justify-between rounded-xl border border-hairline bg-background px-4 py-3">
                     <div className="min-w-0">
                       <div className="truncate text-sm text-ink">{e.name}</div>
-                      <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                        {ENTITY_LABEL[e.entity_type as EntityType] ?? e.entity_type}
-                      </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {e.roles.join(", ")}
                     </div>
                   </div>
                 ))

@@ -11,10 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as PhotosRouteImport } from './routes/photos'
 import { Route as MediaRouteImport } from './routes/media'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as DiaryRouteImport } from './routes/diary'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -42,11 +40,6 @@ const ProfileRoute = ProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PhotosRoute = PhotosRouteImport.update({
-  id: '/photos',
-  path: '/photos',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const MediaRoute = MediaRouteImport.update({
   id: '/media',
   path: '/media',
@@ -55,11 +48,6 @@ const MediaRoute = MediaRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DiaryRoute = DiaryRouteImport.update({
-  id: '/diary',
-  path: '/diary',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientsRoute = ClientsRouteImport.update({
@@ -151,10 +139,8 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/clients': typeof ClientsRoute
-  '/diary': typeof DiaryRoute
   '/login': typeof LoginRoute
   '/media': typeof MediaRoute
-  '/photos': typeof PhotosRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
@@ -175,10 +161,8 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/clients': typeof ClientsRoute
-  '/diary': typeof DiaryRoute
   '/login': typeof LoginRoute
   '/media': typeof MediaRoute
-  '/photos': typeof PhotosRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
@@ -200,10 +184,8 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/clients': typeof ClientsRoute
-  '/diary': typeof DiaryRoute
   '/login': typeof LoginRoute
   '/media': typeof MediaRoute
-  '/photos': typeof PhotosRoute
   '/profile': typeof ProfileRoute
   '/settings': typeof SettingsRoute
   '/c/$companyId': typeof CCompanyIdRoute
@@ -226,10 +208,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/calendar'
     | '/clients'
-    | '/diary'
     | '/login'
     | '/media'
-    | '/photos'
     | '/profile'
     | '/settings'
     | '/c/$companyId'
@@ -250,10 +230,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/calendar'
     | '/clients'
-    | '/diary'
     | '/login'
     | '/media'
-    | '/photos'
     | '/profile'
     | '/settings'
     | '/c/$companyId'
@@ -274,10 +252,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/calendar'
     | '/clients'
-    | '/diary'
     | '/login'
     | '/media'
-    | '/photos'
     | '/profile'
     | '/settings'
     | '/c/$companyId'
@@ -299,10 +275,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CalendarRoute: typeof CalendarRoute
   ClientsRoute: typeof ClientsRoute
-  DiaryRoute: typeof DiaryRoute
   LoginRoute: typeof LoginRoute
   MediaRoute: typeof MediaRoute
-  PhotosRoute: typeof PhotosRoute
   ProfileRoute: typeof ProfileRoute
   SettingsRoute: typeof SettingsRoute
   CCompanyIdRoute: typeof CCompanyIdRoute
@@ -333,13 +307,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/photos': {
-      id: '/photos'
-      path: '/photos'
-      fullPath: '/photos'
-      preLoaderRoute: typeof PhotosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/media': {
       id: '/media'
       path: '/media'
@@ -352,13 +319,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/diary': {
-      id: '/diary'
-      path: '/diary'
-      fullPath: '/diary'
-      preLoaderRoute: typeof DiaryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clients': {
@@ -483,10 +443,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CalendarRoute: CalendarRoute,
   ClientsRoute: ClientsRoute,
-  DiaryRoute: DiaryRoute,
   LoginRoute: LoginRoute,
   MediaRoute: MediaRoute,
-  PhotosRoute: PhotosRoute,
   ProfileRoute: ProfileRoute,
   SettingsRoute: SettingsRoute,
   CCompanyIdRoute: CCompanyIdRoute,
@@ -503,13 +461,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

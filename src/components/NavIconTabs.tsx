@@ -3,9 +3,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Library,
   LogIn,
-  Plus,
   CalendarDays,
-  BookOpen,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useIsGroupLeader } from "@/hooks/useIsGroupLeader";
@@ -15,7 +13,6 @@ import { GroupMemberHoverMenu } from "@/components/team/GroupMemberHoverMenu";
 type NavKey =
   | "library"
   | "calendar"
-  | "diary"
   | "map"
   | "group-members"
   | "desk"
@@ -32,13 +29,11 @@ interface NavItem {
 
 /** Keys that render as a fixed, non-draggable "active-tab" style icon
  *  rather than the standard hover-tile nav icon. */
-const FIXED_TAB_KEYS = new Set<NavKey>(["calendar", "diary"]);
+const FIXED_TAB_KEYS = new Set<NavKey>(["calendar"]);
 
 function useNavItems(): NavItem[] {
-  const { user, mode } = useAuth();
+  const { user } = useAuth();
   useIsGroupLeader();
-  const isOrganizer = (mode === "organizer" || mode === "team") && !!user;
-  const isIndividual = !isOrganizer;
 
   const items: NavItem[] = [];
   if (!user) {
@@ -47,11 +42,9 @@ function useNavItems(): NavItem[] {
   }
   items.push({ key: "library", to: "/media", label: "Library", icon: Library });
   items.push({ key: "calendar", to: "/calendar", label: "Calendar", icon: CalendarDays });
-  if (isIndividual) {
-    items.push({ key: "diary", to: "/diary", label: "Diary", icon: BookOpen });
-  }
   return items;
 }
+
 
 
 function useOrderKey() {
@@ -417,7 +410,6 @@ export function useActiveNavKey(): NavKey {
   if (path.startsWith("/clients")) return "group-members";
   if (path.startsWith("/media")) return "library";
   if (path.startsWith("/calendar")) return "calendar";
-  if (path.startsWith("/diary")) return "diary";
   if (path.startsWith("/desk")) return "desk";
   if (path.startsWith("/settings")) return "settings";
   if (path.startsWith("/auth")) return "auth";

@@ -35,19 +35,11 @@ const ROUTE_PERMISSIONS: RoutePermission[] = [
   { prefix: "/", allowed: ["individual", "entity"], exact: true }, // Aponna Cloud home
   { prefix: "/calendar", allowed: ["individual", "entity"] },
   { prefix: "/media",    allowed: ["individual", "entity"] },
-  { prefix: "/photos",   allowed: ["individual", "entity"] },
   { prefix: "/settings", allowed: ["individual", "entity"] },
   { prefix: "/profile",  allowed: ["individual", "entity"] },
 
-  // Individual-only — personal data, never visible in entity context
-  { prefix: "/diary",    allowed: ["individual"] },
-
-  // Entity-only — role-based, never visible in individual context
+  // Entity-only
   { prefix: "/clients",  allowed: ["entity"] },
-
-  // Future placeholders (uncomment and configure as pages are built):
-  // { prefix: "/journal", allowed: ["entity"] },   // physiotherapist journal
-  // { prefix: "/health",  allowed: ["entity"] },   // health platform
 ];
 
 const DEFAULT_INDIVIDUAL_PATH = "/calendar";
