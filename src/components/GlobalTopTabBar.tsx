@@ -479,11 +479,16 @@ function InitialBadge({ user }: { user: { email?: string | null; user_metadata?:
   const last = typeof meta.last_name === "string" ? meta.last_name : "";
   const initial =
     (first.trim()[0] || last.trim()[0] || user.email?.trim()[0] || "?").toUpperCase();
+  const displayName =
+    first.trim() || last.trim() || user.email?.split("@")[0] || "Your profile";
 
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [groupModalOpen, setGroupModalOpen] = useState(false);
+  const [groupName, setGroupName] = useState("");
   const ref = useRef<HTMLDivElement | null>(null);
+  const groups = useLocalGroups();
 
   useEffect(() => {
     if (!open) return;
@@ -502,18 +507,24 @@ function InitialBadge({ user }: { user: { email?: string | null; user_metadata?:
     };
   }, [open]);
 
-  // Placeholder for additional profiles — logic for adding profiles will follow.
-  const extraProfiles: { id: string; name: string; initial: string }[] = [];
-
   const handleSignOut = async () => {
     setOpen(false);
     await signOut();
     void navigate({ to: "/" });
   };
 
-  const handleAddProfile = () => {
+  const handleOpenAddGroup = () => {
     setOpen(false);
-    // Logic for adding a new profile will follow.
+    setGroupName("");
+    setGroupModalOpen(true);
+  };
+
+  const handleConfirmAddGroup = () => {
+    const trimmed = groupName.trim();
+    if (!trimmed) return;
+    addLocalGroup(trimmed);
+    setGroupModalOpen(false);
+    setGroupName("");
   };
 
   return (
@@ -533,31 +544,34 @@ function InitialBadge({ user }: { user: { email?: string | null; user_metadata?:
           role="menu"
           className="absolute left-0 top-full z-50 mt-2 w-60 origin-top-left overflow-hidden rounded-xl border border-hairline bg-popover text-ink shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
         >
-          {extraProfiles.length > 0 && (
+          <div className="border-b border-hairline px-3 py-2 text-sm font-semibold text-ink">
+            {displayName}
+          </div>
+          {groups.length > 0 && (
             <div className="border-b border-hairline py-1">
-              {extraProfiles.map((p) => (
+              {groups.map((g) => (
                 <button
-                  key={p.id}
+                  key={g.id}
                   type="button"
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink hover:bg-secondary"
                 >
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-[11px] font-semibold">
-                    {p.initial}
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-secondary text-muted-foreground">
+                    <OrganizationIcon className="h-3.5 w-3.5" strokeWidth={1.75} />
                   </span>
-                  <span className="truncate">{p.name}</span>
+                  <span className="truncate">{g.name}</span>
                 </button>
               ))}
             </div>
           )}
           <button
             type="button"
-            onClick={handleAddProfile}
+            onClick={handleOpenAddGroup}
             className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-ink hover:bg-secondary"
           >
             <span className="flex h-5 w-5 items-center justify-center">
               <PlusIcon />
             </span>
-            <span>Add new profile</span>
+            <span>Add group</span>
           </button>
           <div className="h-px w-full bg-hairline" />
           <button
@@ -569,6 +583,33 @@ function InitialBadge({ user }: { user: { email?: string | null; user_metadata?:
           </button>
         </div>
       )}
+      <Dialog open={groupModalOpen} onOpenChange={setGroupModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New group</DialogTitle>
+          </DialogHeader>
+          <Input
+            autoFocus
+            placeholder="Group name"
+            value={groupName}
+            onChange={(e) => setGroupName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleConfirmAddGroup();
+              }
+            }}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGroupModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmAddGroup} disabled={!groupName.trim()}>
+              Add group
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
