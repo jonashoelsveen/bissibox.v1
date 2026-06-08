@@ -223,6 +223,14 @@ function YearCalendarViewInner({
     }
     return s;
   }, [userCats]);
+  // Per-category hidden set keyed by category id. Filtering sessions by id
+  // (rather than by color) eliminates ordering / color-collision bugs where
+  // two categories sharing the same color would toggle each other's events.
+  const hiddenCategoryIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of userCats) if (c.hidden) s.add(c.id);
+    return s;
+  }, [userCats]);
 
 
   // Coach viewing a client: no longer per-category gated — the coach
@@ -284,10 +292,16 @@ function YearCalendarViewInner({
       if (!filterChain(e)) return false;
       if (e.diaryType === "training") return visibleCategories.has("ind:training");
       const key = categoryKeyFromColor(e.color);
-      if (key.startsWith("me:")) return visibleCategories.has(key);
+      if (key.startsWith("me:")) {
+        // Prefer per-id filtering when the event carries its categoryId so
+        // two categories sharing the same color don't toggle each other.
+        const cid = (e as { categoryId?: string | null }).categoryId;
+        if (cid) return !hiddenCategoryIds.has(cid);
+        return !hiddenMeColors.has(key);
+      }
       return visibleCategories.has(key);
     });
-  }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind, hiddenMeColors, isCoachViewer, hiddenColors, diaryVisibility, diaryActivityCats]);
+  }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind, hiddenMeColors, hiddenCategoryIds, isCoachViewer, hiddenColors, diaryVisibility, diaryActivityCats]);
 
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
