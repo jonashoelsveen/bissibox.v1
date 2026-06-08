@@ -10,6 +10,16 @@ import {
 } from "lucide-react";
 import { OrganizationIcon } from "@/components/OrganizationIcon";
 import { useAuth } from "@/lib/auth";
+import { addLocalGroup, useLocalGroups } from "@/lib/local-groups";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 
 import { TopBarSlotMount } from "@/components/TopBarSlot";
