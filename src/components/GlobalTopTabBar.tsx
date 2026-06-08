@@ -461,3 +461,20 @@ function AppsIcon({ className }: { className?: string }) {
   );
 }
 
+function InitialBadge({ user }: { user: { email?: string | null; user_metadata?: Record<string, unknown> } }) {
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const first = typeof meta.first_name === "string" ? meta.first_name : "";
+  const last = typeof meta.last_name === "string" ? meta.last_name : "";
+  const initial =
+    (first.trim()[0] || last.trim()[0] || user.email?.trim()[0] || "?").toUpperCase();
+  return (
+    <div
+      aria-label="Your profile"
+      className="mb-1 flex h-7 w-7 select-none items-center justify-center rounded-full bg-white/15 text-[12px] font-semibold text-white"
+    >
+      {initial}
+    </div>
+  );
+}
+
+
