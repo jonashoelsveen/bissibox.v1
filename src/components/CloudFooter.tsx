@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { SignInModal, type SignInContext } from "@/components/SignInModal";
 import { CreateEntityModal } from "@/components/CreateEntityModal";
-import { GetRoleModal } from "@/components/GetRoleModal";
 
 const HELVETICA =
   '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -12,9 +11,7 @@ export function CloudFooter() {
   const [signInOpen, setSignInOpen] = useState(false);
   const [signInContext, setSignInContext] = useState<SignInContext>("cloud");
   const [createEntityOpen, setCreateEntityOpen] = useState(false);
-  const [getRoleOpen, setGetRoleOpen] = useState(false);
   const [pendingEntity, setPendingEntity] = useState(false);
-  const [pendingRole, setPendingRole] = useState(false);
 
   const handleEntity = () => {
     if (user) {
@@ -25,15 +22,6 @@ export function CloudFooter() {
       setSignInOpen(true);
     }
   };
-  const handleRole = () => {
-    if (user) {
-      setGetRoleOpen(true);
-    } else {
-      setPendingRole(true);
-      setSignInContext("role");
-      setSignInOpen(true);
-    }
-  };
 
   useEffect(() => {
     if (!user) return;
@@ -41,12 +29,8 @@ export function CloudFooter() {
       setPendingEntity(false);
       setSignInOpen(false);
       setCreateEntityOpen(true);
-    } else if (pendingRole) {
-      setPendingRole(false);
-      setSignInOpen(false);
-      setGetRoleOpen(true);
     }
-  }, [user, pendingEntity, pendingRole]);
+  }, [user, pendingEntity]);
 
   const linkStyle: React.CSSProperties = {
     fontFamily: HELVETICA,
@@ -74,15 +58,7 @@ export function CloudFooter() {
             className="footer-link"
             style={linkStyle}
           >
-            Register your organization
-          </button>
-          <button
-            type="button"
-            onClick={handleRole}
-            className="footer-link"
-            style={linkStyle}
-          >
-            Get a role
+            Register your team
           </button>
         </div>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
@@ -107,17 +83,12 @@ export function CloudFooter() {
         onClose={() => {
           setSignInOpen(false);
           setPendingEntity(false);
-          setPendingRole(false);
         }}
         context={signInContext}
       />
       <CreateEntityModal
         open={createEntityOpen}
         onClose={() => setCreateEntityOpen(false)}
-      />
-      <GetRoleModal
-        open={getRoleOpen}
-        onClose={() => setGetRoleOpen(false)}
       />
     </footer>
   );
