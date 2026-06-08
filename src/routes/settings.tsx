@@ -1155,7 +1155,7 @@ function ProfileSelector({
               >
                 <span className="truncate">{e.name}</span>
                 <span className="mono ml-2 shrink-0 text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {ENTITY_LABEL[e.entity_type]}
+                  Team
                 </span>
               </button>
             ))}
