@@ -639,17 +639,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
         </div>
       )}
 
-      {tab === "profiles" && !isTeamMode && (
-        <ProfileVisibilityPanel
-          scopeKey={`user:${user.id}`}
-          active={profile.athlete_active}
-          onActiveChange={async (v) => {
-            updateProfile("athlete_active", v);
-            await supabase.from("profiles").update({ athlete_active: v }).eq("id", user.id);
-          }}
-        />
-      )}
-
       {tab === "calendar" && !isTeamMode && (
         <div className="space-y-3">
           <WeekViewCard app="calendar" />
@@ -661,10 +650,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       )}
 
       {tab === "clients" && !isTeamMode && <ClientsPanel />}
-
-      {tab === "connectors" && <ConnectorsPanel />}
-
-      {tab === "system" && <SystemPanel />}
 
       {tab === "appearance" && <AppearancePanel />}
 
@@ -1246,45 +1231,6 @@ function Grid({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{children}</div>;
 }
 
-function SystemPanel() {
-  const [unit, setUnit] = useDistanceUnit();
-  const options: { value: DistanceUnit; label: string; hint: string }[] = [
-    { value: "km", label: "Kilometers", hint: "km" },
-    { value: "mi", label: "Miles", hint: "mi" },
-  ];
-  return (
-    <Card>
-      <h3 className="text-sm font-semibold text-ink">Measurement units</h3>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Choose how distances are displayed across the platform.
-      </p>
-      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {options.map((o) => {
-          const active = unit === o.value;
-          return (
-            <button
-              key={o.value}
-              onClick={() => setUnit(o.value)}
-              className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
-                active
-                  ? "border-primary bg-primary/5 text-ink"
-                  : "border-hairline bg-card text-ink hover:bg-secondary"
-              }`}
-            >
-              <div>
-                <div className="text-sm font-medium">{o.label}</div>
-                <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {o.hint}
-                </div>
-              </div>
-              {active && <Check className="h-4 w-4 text-primary" strokeWidth={2.5} />}
-            </button>
-          );
-        })}
-      </div>
-    </Card>
-  );
-}
 
 function Field({
   label,
@@ -1702,65 +1648,9 @@ function DeskSettingsPanel() {
 }
 
 function AppearancePanel() {
-  const { user, activeEntityId } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [currentColor, setCurrentColor] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancel = false;
-    if (!user) return;
-    (async () => {
-      if (activeEntityId) {
-        const { data } = await supabase
-          .from("teams")
-          .select("top_bar_color")
-          .eq("id", activeEntityId)
-          .maybeSingle();
-        if (!cancel) setCurrentColor((data?.top_bar_color as string | null) ?? null);
-      } else {
-        const { data } = await supabase
-          .from("profiles")
-          .select("top_bar_color")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (!cancel) setCurrentColor((data?.top_bar_color as string | null) ?? null);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, [user, activeEntityId]);
-
   return (
     <div className="space-y-3">
       <ThemeSettingsPanel />
-      <Card>
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="flex w-full items-center justify-between text-left"
-        >
-          <div className="flex items-center gap-3">
-            <span
-              className="h-4 w-4 border border-hairline"
-              style={{ background: currentColor || "transparent" }}
-            />
-            <h3 className="text-sm font-semibold text-ink">Top bar color</h3>
-          </div>
-          {open ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
-          )}
-        </button>
-        {open && (
-          <div className="mt-4">
-            <TopBarColorPicker
-              initial={currentColor}
-              onSaved={(hex) => setCurrentColor(hex)}
-            />
-          </div>
-        )}
-      </Card>
     </div>
   );
 }
