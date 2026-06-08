@@ -332,17 +332,16 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   }, [user, activeEntityId]);
 
   useEffect(() => {
-    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "diary" || tab === "library" || tab === "coaches" || tab === "clients" || tab === "connectors")) {
+    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "coaches" || tab === "clients" || tab === "connectors")) {
       setTab("entity-profile");
     }
     if (
       !isTeamMode &&
       (tab === "entity-profile" ||
-        tab === "entity-organization" ||
+        tab === "entity-team" ||
         tab === "entity-calendar" ||
         tab === "entity-map" ||
-        tab === "entity-events" ||
-        tab === "entity-library")
+        tab === "entity-events")
     )
       setTab("account");
   }, [isTeamMode, tab]);
