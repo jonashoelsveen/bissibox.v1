@@ -104,8 +104,6 @@ type Tab =
   | "account"
   | "profiles"
   | "calendar"
-  | "diary"
-  | "library"
   | "coaches"
   | "clients"
   | "connectors"
@@ -113,11 +111,10 @@ type Tab =
   | "appearance"
   | "entity-profile"
   | "entity-general"
-  | "entity-organization"
+  | "entity-team"
   | "entity-calendar"
   | "entity-map"
   | "entity-events"
-  | "entity-library"
   | "entity-clients";
 
 type DividerKey = `divider-${number}`;
