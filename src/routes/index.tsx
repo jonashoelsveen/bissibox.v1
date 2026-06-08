@@ -3,21 +3,13 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { SignInModal, type SignInContext } from "@/components/SignInModal";
 import { CreateEntityModal } from "@/components/CreateEntityModal";
-import { GetRoleModal } from "@/components/GetRoleModal";
 import { CloudFooter } from "@/components/CloudFooter";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
   validateSearch: (s: Record<string, unknown>): { signin?: SignInContext } => {
     const v = s.signin;
-    if (
-      v === "cloud" ||
-      v === "calendar" ||
-      v === "diary" ||
-      v === "photos" ||
-      v === "entity" ||
-      v === "role"
-    ) {
+    if (v === "cloud" || v === "calendar" || v === "entity") {
       return { signin: v };
     }
     return {};
@@ -43,9 +35,7 @@ function HomePage() {
   const [signInOpen, setSignInOpen] = useState(false);
   const [signInContext, setSignInContext] = useState<SignInContext>("cloud");
   const [createEntityOpen, setCreateEntityOpen] = useState(false);
-  const [getRoleOpen, setGetRoleOpen] = useState(false);
   const [pendingEntityAfterSignIn, setPendingEntityAfterSignIn] = useState(false);
-  const [pendingRoleAfterSignIn, setPendingRoleAfterSignIn] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -56,20 +46,8 @@ function HomePage() {
       setCreateEntityOpen(true);
       return;
     }
-    if (pendingRoleAfterSignIn) {
-      setPendingRoleAfterSignIn(false);
-      setGetRoleOpen(true);
-      return;
-    }
     if (!wasOpen) return;
-    const target =
-      signInContext === "calendar"
-        ? "/calendar"
-        : signInContext === "diary"
-          ? "/diary"
-          : signInContext === "photos"
-            ? "/photos"
-            : null;
+    const target = signInContext === "calendar" ? "/calendar" : null;
     if (target) void navigate({ to: target, replace: true });
   }, [user]);
 
@@ -87,7 +65,6 @@ function HomePage() {
   const closeSignIn = () => {
     setSignInOpen(false);
     setPendingEntityAfterSignIn(false);
-    setPendingRoleAfterSignIn(false);
     if (search.signin) {
       void navigate({ to: "/", search: {}, replace: true });
     }
@@ -103,7 +80,7 @@ function HomePage() {
     letterSpacing: "-0.01em",
   };
 
-  // Logged-in Aponna Cloud home — 2×2 cards.
+  // Logged-in Aponna Cloud home — 2 cards side by side.
   const pendingRedirect =
     !!user && !!search.signin && search.signin !== "cloud";
 
@@ -121,8 +98,8 @@ function HomePage() {
           className="mx-auto flex max-w-[1600px] flex-col px-6 py-6"
           style={{ minHeight: "calc(100vh - 80px)" }}
         >
-          <div className="grid flex-1 grid-cols-2 grid-rows-2 gap-6">
-            {[0, 1, 2, 3].map((i) => (
+          <div className="grid flex-1 grid-cols-2 gap-6">
+            {[0, 1].map((i) => (
               <div
                 key={i}
                 className="h-full w-full bg-white"
@@ -139,10 +116,6 @@ function HomePage() {
           open={createEntityOpen}
           onClose={() => setCreateEntityOpen(false)}
         />
-        <GetRoleModal
-          open={getRoleOpen}
-          onClose={() => setGetRoleOpen(false)}
-        />
         <CloudFooter />
       </div>
     );
@@ -157,7 +130,7 @@ function HomePage() {
 
         <div
           className="flex w-full flex-col items-center text-center"
-          style={{ paddingTop: "clamp(120px, 22vh, 240px)" }}
+          style={{ paddingTop: "clamp(120px, 22vh, 240px)", paddingBottom: "clamp(120px, 22vh, 240px)" }}
         >
           <h1
             className="tracking-tight text-[#1d1d1f]"
@@ -194,81 +167,6 @@ function HomePage() {
             Sign in
           </button>
         </div>
-
-        <div className="flex w-full flex-col items-center pb-16 pt-24">
-          <h2
-            className="tracking-tight text-[#1d1d1f]"
-            style={{
-              fontFamily: HELVETICA,
-              fontSize: "clamp(32px, 4.5vw, 56px)",
-              lineHeight: 1.05,
-              letterSpacing: "-0.03em",
-              fontWeight: 600,
-            }}
-          >
-            Get a role
-          </h2>
-          <p
-            className="mt-4 text-[#1d1d1f]"
-            style={{
-              fontFamily: HELVETICA,
-              fontSize: "clamp(15px, 1.2vw, 19px)",
-              fontWeight: 400,
-            }}
-          >
-            Athletes, coaches, photographers.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setPendingRoleAfterSignIn(true);
-              setSignInContext("role");
-              setSignInOpen(true);
-            }}
-            className="mt-8 text-white transition active:scale-[0.98]"
-            style={primaryButtonStyle}
-          >
-            Get a role
-          </button>
-        </div>
-
-        <div className="flex w-full flex-col items-center pb-24 pt-8">
-          <h2
-            className="tracking-tight text-[#1d1d1f]"
-            style={{
-              fontFamily: HELVETICA,
-              fontSize: "clamp(32px, 4.5vw, 56px)",
-              lineHeight: 1.05,
-              letterSpacing: "-0.03em",
-              fontWeight: 600,
-            }}
-          >
-            Aponna Cloud for organizations
-          </h2>
-          <p
-            className="mt-4 text-[#1d1d1f]"
-            style={{
-              fontFamily: HELVETICA,
-              fontSize: "clamp(15px, 1.2vw, 19px)",
-              fontWeight: 400,
-              opacity: 0.55,
-            }}
-          >
-            Manage your team.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setPendingEntityAfterSignIn(true);
-              setSignInContext("entity");
-              setSignInOpen(true);
-            }}
-            className="mt-8 text-white transition active:scale-[0.98]"
-            style={primaryButtonStyle}
-          >
-            Register your organization
-          </button>
-        </div>
       </div>
 
       <SignInModal
@@ -279,10 +177,6 @@ function HomePage() {
       <CreateEntityModal
         open={createEntityOpen}
         onClose={() => setCreateEntityOpen(false)}
-      />
-      <GetRoleModal
-        open={getRoleOpen}
-        onClose={() => setGetRoleOpen(false)}
       />
       <CloudFooter />
     </div>
