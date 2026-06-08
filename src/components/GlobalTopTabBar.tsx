@@ -23,7 +23,7 @@ import { useAuthTransition, useSignInModalOpen, setAuthTransitionPhase } from "@
 
 /** Routes whose top tab-bar is stripped down to: Me/We + (conditional)
  *  Group Members. Calendar / Diary / Photos icons move into the apps menu. */
-const STRIPPED_SURFACE_PREFIXES = ["/calendar", "/diary", "/media", "/photos", "/clients"];
+const STRIPPED_SURFACE_PREFIXES = ["/calendar", "/media", "/clients"];
 
 function useIsStrippedSurface(): boolean {
   const path = useRouterState({ select: (s) => s.location.pathname });

@@ -11,7 +11,7 @@ import { COUNTRIES, COUNTRY_CALLING_CODES } from "@/lib/countries";
 const HELVETICA =
   '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
-export type SignInContext = "cloud" | "calendar" | "diary" | "photos" | "entity" | "role";
+export type SignInContext = "cloud" | "calendar" | "entity";
 
 type Mode = "signin" | "signup" | "otp";
 
@@ -19,14 +19,8 @@ function headerFor(ctx: SignInContext) {
   switch (ctx) {
     case "calendar":
       return "Welcome to Aponna Cloud Calendar";
-    case "diary":
-      return "Welcome to Aponna Cloud Diary";
-    case "photos":
-      return "Welcome to Aponna Cloud Photos";
     case "entity":
       return "Sign in before creating Aponna-entity";
-    case "role":
-      return "Sign in before getting a role";
     default:
       return "Welcome to Aponna Cloud";
   }
