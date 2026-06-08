@@ -38,12 +38,12 @@ const ROUTE_PERMISSIONS: RoutePermission[] = [
   { prefix: "/settings", allowed: ["individual", "entity"] },
   { prefix: "/profile",  allowed: ["individual", "entity"] },
 
-  // Entity-only
-  { prefix: "/clients",  allowed: ["entity"] },
+  // Individual-only — Clients lives on the personal profile.
+  { prefix: "/clients",  allowed: ["individual"] },
 ];
 
 const DEFAULT_INDIVIDUAL_PATH = "/calendar";
-const DEFAULT_ENTITY_PATH     = "/clients";
+const DEFAULT_ENTITY_PATH     = "/calendar";
 
 function profileType(activeEntityId: string | null): ProfileType {
   return activeEntityId ? "entity" : "individual";
