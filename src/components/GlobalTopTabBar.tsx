@@ -659,36 +659,6 @@ function InitialBadge({ user }: { user: { email?: string | null; user_metadata?:
     </div>
   );
 }
-      <Dialog open={groupModalOpen} onOpenChange={setGroupModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>New group</DialogTitle>
-          </DialogHeader>
-          <Input
-            autoFocus
-            placeholder="Group name"
-            value={groupName}
-            onChange={(e) => setGroupName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleConfirmAddGroup();
-              }
-            }}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setGroupModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmAddGroup} disabled={!groupName.trim()}>
-              Add group
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
 
 function PlusIcon() {
   return (
