@@ -9,40 +9,27 @@ import {
   UsersRound,
 } from "lucide-react";
 import { OrganizationIcon } from "@/components/OrganizationIcon";
-// removed:
 import { useAuth } from "@/lib/auth";
 
 
-import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
-import { ProfileSwitcherBar } from "@/components/ProfileSwitcherBar";
 import { HomeIcon } from "@/components/HomeIcon";
 import { useAuthTransition, useSignInModalOpen, setAuthTransitionPhase } from "@/lib/auth-transition";
-
-/** Routes whose top tab-bar is stripped down to: Me/We + (conditional)
- *  Group Members. Calendar / Diary / Photos icons move into the apps menu. */
-const STRIPPED_SURFACE_PREFIXES = ["/calendar", "/media", "/clients"];
-
-function useIsStrippedSurface(): boolean {
-  const path = useRouterState({ select: (s) => s.location.pathname });
-  return STRIPPED_SURFACE_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
-}
 
 
 /**
  * Universal top tab bar fixed under the colored TopBar. Shown on every page.
- * Hosts: ProfileTab + section icons + page-provided open tabs (slot) +
- * Search + Plus menu.
+ * Always shows: user initial badge (left) + apps menu (right). Page-provided
+ * tabs (notes/events/etc.) mount into the middle slot when applicable.
  */
 export function GlobalTopTabBar() {
   const { user, authReady } = useAuth();
 
-  const activeKey = useActiveNavKey();
-  const stripped = useIsStrippedSurface();
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const transition = useAuthTransition();
   const signInOpen = useSignInModalOpen();
+
 
   // Safety net: the sign-in exit choreography mutates module-level state
   // through a chain of setTimeouts. If the tab is backgrounded for a long
@@ -355,10 +342,8 @@ export function GlobalTopTabBar() {
           transition: none !important;
         }
       `}</style>
-      <div className="topbar-row relative z-10 flex items-end gap-1 pl-0 pr-4 md:pr-6">
-        {user && <ProfileSwitcherBar />}
-        
-        {user && <NavIconTabs activeKey={activeKey} stripped={stripped} />}
+      <div className="topbar-row relative z-10 flex items-end gap-1 pl-3 pr-4 md:pr-6">
+        {user && <InitialBadge user={user} />}
         {/* Page-provided slot — open notes/event tabs etc. */}
         <div className="flex min-w-0 flex-1 items-end pl-2">
           <TopBarSlotMount className="flex min-w-0 flex-1 items-end" />
@@ -475,4 +460,21 @@ function AppsIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+function InitialBadge({ user }: { user: { email?: string | null; user_metadata?: Record<string, unknown> } }) {
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const first = typeof meta.first_name === "string" ? meta.first_name : "";
+  const last = typeof meta.last_name === "string" ? meta.last_name : "";
+  const initial =
+    (first.trim()[0] || last.trim()[0] || user.email?.trim()[0] || "?").toUpperCase();
+  return (
+    <div
+      aria-label="Your profile"
+      className="mb-1 flex h-7 w-7 select-none items-center justify-center rounded-full bg-white/15 text-[12px] font-semibold text-white"
+    >
+      {initial}
+    </div>
+  );
+}
+
 
