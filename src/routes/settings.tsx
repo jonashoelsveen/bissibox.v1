@@ -464,8 +464,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       case "account": return "Account";
       case "profiles": return "Profile";
       case "calendar": return "Calendar";
-      case "diary": return "Diary";
-      case "library": return "Photos";
       case "coaches": return "Coaches";
       case "clients": return "Clients";
       case "connectors": return "Connectors";
@@ -473,11 +471,10 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       case "appearance": return "Appearance";
       case "entity-profile": return "Profile";
       case "entity-general": return "About";
-      case "entity-organization": return "Organization";
+      case "entity-team": return "Team";
       case "entity-calendar": return "Calendar";
       case "entity-map": return "Map";
       case "entity-events": return "Events";
-      case "entity-library": return "Photos";
       case "entity-clients": return "Clients";
     }
   };
@@ -495,7 +492,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
 
   const meTabs: Tab[] = [
     "calendar",
-    "library",
     "profiles",
     "coaches",
     "clients",
@@ -510,13 +506,10 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
     const roles = e.roles.map((r) => r.toLowerCase());
     const out: Tab[] = [];
     if (roles.includes("admin")) {
-      out.push("entity-general", "entity-profile", "entity-calendar", "entity-organization");
+      out.push("entity-general", "entity-profile", "entity-calendar", "entity-team");
     }
     if (roles.some((r) => r.includes("coach"))) {
       out.push("entity-clients");
-    }
-    if (roles.some((r) => r.includes("photographer"))) {
-      out.push("entity-library");
     }
     // Every profile gets its own System + Appearance per spec.
     out.push("system", "appearance");
