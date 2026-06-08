@@ -2,14 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { colorForStravaSportType } from "@/lib/activity-colors";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 
 import { ChevronDown, ChevronRight, ChevronLeft, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network, Settings as SettingsIcon, PanelLeft } from "lucide-react";
 
-import { TopBarColorPicker } from "@/components/appearance/TopBarColorPicker";
 import {
   PROFILE_VISIBILITY_ITEMS,
   useProfileVisibility,
@@ -24,19 +22,11 @@ import { Footprints, Check, Bike, Dumbbell } from "lucide-react";
 import { SESSION_TILE_DESIGNS, useSessionTileDesign, useDiarySimpleView, type SessionTileDesign, COMBINED_SESSION_TILE_DESIGNS, useCombinedSessionTileDesign, type CombinedSessionTileDesign } from "@/lib/session-tile-design";
 import { Switch } from "@/components/ui/switch";
 import { MONTH_TILE_DESIGNS, useMonthTileDesign, type MonthTileDesign } from "@/lib/month-tile-design";
-import { useDistanceUnit, type DistanceUnit } from "@/lib/units";
 import {
   usePriorityMetric,
   useMetricColor,
 } from "@/components/calendar/metricsSettings";
 import { useWeekViewHours, clampWeekViewHours } from "@/lib/week-view-hours";
-import stravaLogo from "@/assets/strava-logo.png";
-import eqTimingLogo from "@/assets/eq-timing-logo.png";
-
-const CONNECTOR_LOGOS: Record<string, string> = {
-  "Strava": stravaLogo,
-  "EQ Timing": eqTimingLogo,
-};
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -102,12 +92,9 @@ interface LikedRow {
 
 type Tab =
   | "account"
-  | "profiles"
   | "calendar"
   | "coaches"
   | "clients"
-  | "connectors"
-  | "system"
   | "appearance"
   | "entity-profile"
   | "entity-general"
