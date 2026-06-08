@@ -223,6 +223,14 @@ function YearCalendarViewInner({
     }
     return s;
   }, [userCats]);
+  // Per-category hidden set keyed by category id. Filtering sessions by id
+  // (rather than by color) eliminates ordering / color-collision bugs where
+  // two categories sharing the same color would toggle each other's events.
+  const hiddenCategoryIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of userCats) if (c.hidden) s.add(c.id);
+    return s;
+  }, [userCats]);
 
 
   // Coach viewing a client: no longer per-category gated — the coach
