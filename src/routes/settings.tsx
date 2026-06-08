@@ -319,7 +319,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   }, [user, activeEntityId]);
 
   useEffect(() => {
-    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "coaches" || tab === "clients" || tab === "connectors")) {
+    if (isTeamMode && (tab === "account" || tab === "coaches" || tab === "clients")) {
       setTab("entity-profile");
     }
     if (
@@ -449,12 +449,9 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   const tabLabel = (t: Tab): string => {
     switch (t) {
       case "account": return "Account";
-      case "profiles": return "Profile";
       case "calendar": return "Calendar";
       case "coaches": return "Coaches";
       case "clients": return "Clients";
-      case "connectors": return "Connectors";
-      case "system": return "System";
       case "appearance": return "Appearance";
       case "entity-profile": return "Profile";
       case "entity-general": return "About";
@@ -479,15 +476,11 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
 
   const meTabs: Tab[] = [
     "calendar",
-    "profiles",
     "coaches",
     "clients",
-    "connectors",
-    "system",
     "appearance",
   ];
-  // Override label for the Me-Profile entry per spec.
-  const meTabLabel = (t: Tab) => (t === "profiles" ? "Profile" : tabLabel(t));
+  const meTabLabel = (t: Tab) => tabLabel(t);
 
   const entityTabsFor = (e: { entity_type: string; roles: string[] }): Tab[] => {
     const roles = e.roles.map((r) => r.toLowerCase());
@@ -498,9 +491,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
     if (roles.some((r) => r.includes("coach"))) {
       out.push("entity-clients");
     }
-    // Every profile gets its own System + Appearance per spec.
-    out.push("system", "appearance");
-    // De-dupe in case admin already added something.
+    out.push("appearance");
     return Array.from(new Set(out));
   };
 
