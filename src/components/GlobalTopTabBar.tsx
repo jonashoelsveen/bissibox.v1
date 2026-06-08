@@ -383,7 +383,7 @@ export function GlobalTopTabBar() {
                   {((inGroupMode
                     ? [
                         { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
-                        { key: "organization", label: "Team", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: true },
+                        { key: "organization", label: "Team", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: false },
                       ]
                     : [
                         { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
