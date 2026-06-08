@@ -39,6 +39,8 @@ export function GlobalTopTabBar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const transition = useAuthTransition();
   const signInOpen = useSignInModalOpen();
+  const groups = useLocalGroups();
+  const hasGroups = groups.length > 0;
 
 
   // Safety net: the sign-in exit choreography mutates module-level state
