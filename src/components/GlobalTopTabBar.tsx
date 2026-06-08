@@ -33,13 +33,12 @@ import { useAuthTransition, useSignInModalOpen, setAuthTransitionPhase } from "@
  * tabs (notes/events/etc.) mount into the middle slot when applicable.
  */
 export function GlobalTopTabBar() {
-  const { user, authReady } = useAuth();
+  const { user, authReady, activeEntityId } = useAuth();
 
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const transition = useAuthTransition();
   const signInOpen = useSignInModalOpen();
-  const { activeEntityId } = useAuth();
   const { groups } = useUserGroups();
   const inGroupMode = !!activeEntityId;
 
