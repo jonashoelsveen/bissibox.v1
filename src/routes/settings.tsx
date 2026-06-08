@@ -1176,7 +1176,6 @@ function CreateEntityModal({
   onCreated: (row: EntityRow) => void;
 }) {
   const [name, setName] = useState("");
-  const [entityType, setEntityType] = useState<EntityType>("team");
   const [busy, setBusy] = useState(false);
 
   const create = async () => {
@@ -1188,12 +1187,12 @@ function CreateEntityModal({
     try {
       const { data, error } = await supabase
         .from("teams")
-        .insert({ name: name.trim(), entity_type: entityType, owner_id: ownerId } as never)
+        .insert({ name: name.trim(), entity_type: "team", owner_id: ownerId } as never)
         .select("id, name, entity_type")
         .single();
       if (error) throw error;
       onCreated(data as EntityRow);
-      toast.success(`${ENTITY_LABEL[entityType]} created.`);
+      toast.success("Team created.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not create.");
     } finally {
