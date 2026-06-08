@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { OrganizationIcon } from "@/components/OrganizationIcon";
 import { useAuth } from "@/lib/auth";
-import { addLocalGroup, useLocalGroups } from "@/lib/local-groups";
+import { useUserGroups, type UserGroup } from "@/hooks/useUserGroups";
 import {
   Dialog,
   DialogContent,
