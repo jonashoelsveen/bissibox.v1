@@ -678,15 +678,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
         </div>
       )}
 
-      {tab === "diary" && !isTeamMode && (
-        <DiarySettingsPanel scopeKey={`user:${user.id}`} />
-      )}
-
-      {tab === "library" && !isTeamMode && (
-        <LibrarySettingsPanel scopeKey={`user:${user.id}`} />
-      )}
-
-
       {tab === "coaches" && !isTeamMode && (
         <CoachesPanel ref={coachesRef} onDirtyChange={setCoachesDirty} />
       )}
@@ -699,11 +690,11 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
 
       {tab === "appearance" && <AppearancePanel />}
 
-      {tab === "entity-organization" && isTeamMode && (
+      {tab === "entity-team" && isTeamMode && (
         <Card>
-          <h3 className="text-sm font-semibold text-ink">Organization</h3>
+          <h3 className="text-sm font-semibold text-ink">Team</h3>
           <p className="mt-2 text-xs text-muted-foreground">
-            Settings related to your organization page will appear here.
+            Settings related to your team page will appear here.
           </p>
         </Card>
       )}
@@ -724,10 +715,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
             Settings related to events will appear here.
           </p>
         </Card>
-      )}
-
-      {tab === "entity-library" && isTeamMode && team && (
-        <LibrarySettingsPanel scopeKey={`entity:${team.id}`} />
       )}
 
       {tab === "entity-clients" && isTeamMode && (
