@@ -2,9 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 
 import {
-  Image as ImageIcon,
   CalendarDays,
-  BookOpen,
   Home,
   UserRound,
   Settings as SettingsIcon,
@@ -37,8 +35,7 @@ function useIsStrippedSurface(): boolean {
  * Search + Plus menu.
  */
 export function GlobalTopTabBar() {
-  const { user, authReady, activeEntityId } = useAuth();
-  const isIndividual = activeEntityId == null;
+  const { user, authReady } = useAuth();
 
   const activeKey = useActiveNavKey();
   const stripped = useIsStrippedSurface();
@@ -93,14 +90,10 @@ export function GlobalTopTabBar() {
     };
   }, [appsOpen]);
 
-  const handleAppNavigate = (to: "/calendar" | "/diary" | "/photos" | "/clients") => {
+  const handleAppNavigate = (to: "/calendar" | "/clients") => {
     setAppsOpen(false);
     if (!user) {
-      const ctx =
-        to === "/calendar" ? "calendar"
-        : to === "/diary" ? "diary"
-        : to === "/clients" ? "clients"
-        : "photos";
+      const ctx = to === "/calendar" ? "calendar" : "calendar";
       void navigate({ to: "/", search: { signin: ctx } });
       return;
     }
@@ -156,10 +149,8 @@ export function GlobalTopTabBar() {
                   <div className="grid grid-cols-2 gap-2">
                     {([
                       { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
-                      ...(isIndividual ? [{ key: "diary", label: "Diary", to: "/diary" as const, icon: <BookOpen strokeWidth={1.75} />, disabled: false }] : []),
-                      { key: "photos", label: "Photos", to: "/photos" as const, icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
-                      { key: "organization", label: "Organization", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: true },
-                    ] as Array<{ key: string; label: string; to: "/calendar" | "/diary" | "/photos" | "/clients" | null; icon: React.ReactNode; disabled: boolean }>).map((app) => (
+                      { key: "organization", label: "Team", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: true },
+                    ] as Array<{ key: string; label: string; to: "/calendar" | "/clients" | null; icon: React.ReactNode; disabled: boolean }>).map((app) => (
                       <button
                         key={app.key}
                         type="button"
@@ -394,11 +385,9 @@ export function GlobalTopTabBar() {
                 <div className="grid grid-cols-2 gap-2">
                   {([
                     { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
-                    ...(isIndividual ? [{ key: "diary", label: "Diary", to: "/diary" as const, icon: <BookOpen strokeWidth={1.75} />, disabled: false }] : []),
-                    { key: "photos", label: "Photos", to: "/photos" as const, icon: <ImageIcon strokeWidth={1.75} />, disabled: false },
-                    { key: "organization", label: "Organization", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: true },
+                    { key: "organization", label: "Team", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: true },
                     { key: "clients", label: "Clients", to: "/clients" as const, icon: <UsersRound strokeWidth={1.75} />, disabled: false },
-                  ] as Array<{ key: string; label: string; to: "/calendar" | "/diary" | "/photos" | "/clients" | null; icon: React.ReactNode; disabled: boolean }>).map((app) => (
+                  ] as Array<{ key: string; label: string; to: "/calendar" | "/clients" | null; icon: React.ReactNode; disabled: boolean }>).map((app) => (
                     <button
                       key={app.key}
                       type="button"
