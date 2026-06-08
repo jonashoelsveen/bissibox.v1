@@ -9,40 +9,27 @@ import {
   UsersRound,
 } from "lucide-react";
 import { OrganizationIcon } from "@/components/OrganizationIcon";
-// removed:
 import { useAuth } from "@/lib/auth";
 
 
-import { NavIconTabs, useActiveNavKey } from "@/components/NavIconTabs";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
-import { ProfileSwitcherBar } from "@/components/ProfileSwitcherBar";
 import { HomeIcon } from "@/components/HomeIcon";
 import { useAuthTransition, useSignInModalOpen, setAuthTransitionPhase } from "@/lib/auth-transition";
-
-/** Routes whose top tab-bar is stripped down to: Me/We + (conditional)
- *  Group Members. Calendar / Diary / Photos icons move into the apps menu. */
-const STRIPPED_SURFACE_PREFIXES = ["/calendar", "/media", "/clients"];
-
-function useIsStrippedSurface(): boolean {
-  const path = useRouterState({ select: (s) => s.location.pathname });
-  return STRIPPED_SURFACE_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
-}
 
 
 /**
  * Universal top tab bar fixed under the colored TopBar. Shown on every page.
- * Hosts: ProfileTab + section icons + page-provided open tabs (slot) +
- * Search + Plus menu.
+ * Always shows: user initial badge (left) + apps menu (right). Page-provided
+ * tabs (notes/events/etc.) mount into the middle slot when applicable.
  */
 export function GlobalTopTabBar() {
   const { user, authReady } = useAuth();
 
-  const activeKey = useActiveNavKey();
-  const stripped = useIsStrippedSurface();
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const transition = useAuthTransition();
   const signInOpen = useSignInModalOpen();
+
 
   // Safety net: the sign-in exit choreography mutates module-level state
   // through a chain of setTimeouts. If the tab is backgrounded for a long
