@@ -2,14 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { colorForStravaSportType } from "@/lib/activity-colors";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 
 import { ChevronDown, ChevronRight, ChevronLeft, Plus, X, User as UserIcon, Users as UsersIcon, Building2, Network, Settings as SettingsIcon, PanelLeft } from "lucide-react";
 
-import { TopBarColorPicker } from "@/components/appearance/TopBarColorPicker";
 import {
   PROFILE_VISIBILITY_ITEMS,
   useProfileVisibility,
@@ -24,19 +22,11 @@ import { Footprints, Check, Bike, Dumbbell } from "lucide-react";
 import { SESSION_TILE_DESIGNS, useSessionTileDesign, useDiarySimpleView, type SessionTileDesign, COMBINED_SESSION_TILE_DESIGNS, useCombinedSessionTileDesign, type CombinedSessionTileDesign } from "@/lib/session-tile-design";
 import { Switch } from "@/components/ui/switch";
 import { MONTH_TILE_DESIGNS, useMonthTileDesign, type MonthTileDesign } from "@/lib/month-tile-design";
-import { useDistanceUnit, type DistanceUnit } from "@/lib/units";
 import {
   usePriorityMetric,
   useMetricColor,
 } from "@/components/calendar/metricsSettings";
 import { useWeekViewHours, clampWeekViewHours } from "@/lib/week-view-hours";
-import stravaLogo from "@/assets/strava-logo.png";
-import eqTimingLogo from "@/assets/eq-timing-logo.png";
-
-const CONNECTOR_LOGOS: Record<string, string> = {
-  "Strava": stravaLogo,
-  "EQ Timing": eqTimingLogo,
-};
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -102,12 +92,9 @@ interface LikedRow {
 
 type Tab =
   | "account"
-  | "profiles"
   | "calendar"
   | "coaches"
   | "clients"
-  | "connectors"
-  | "system"
   | "appearance"
   | "entity-profile"
   | "entity-general"
@@ -332,7 +319,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   }, [user, activeEntityId]);
 
   useEffect(() => {
-    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "coaches" || tab === "clients" || tab === "connectors")) {
+    if (isTeamMode && (tab === "account" || tab === "coaches" || tab === "clients")) {
       setTab("entity-profile");
     }
     if (
@@ -462,12 +449,9 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   const tabLabel = (t: Tab): string => {
     switch (t) {
       case "account": return "Account";
-      case "profiles": return "Profile";
       case "calendar": return "Calendar";
       case "coaches": return "Coaches";
       case "clients": return "Clients";
-      case "connectors": return "Connectors";
-      case "system": return "System";
       case "appearance": return "Appearance";
       case "entity-profile": return "Profile";
       case "entity-general": return "About";
@@ -492,15 +476,11 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
 
   const meTabs: Tab[] = [
     "calendar",
-    "profiles",
     "coaches",
     "clients",
-    "connectors",
-    "system",
     "appearance",
   ];
-  // Override label for the Me-Profile entry per spec.
-  const meTabLabel = (t: Tab) => (t === "profiles" ? "Profile" : tabLabel(t));
+  const meTabLabel = (t: Tab) => tabLabel(t);
 
   const entityTabsFor = (e: { entity_type: string; roles: string[] }): Tab[] => {
     const roles = e.roles.map((r) => r.toLowerCase());
@@ -511,9 +491,7 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
     if (roles.some((r) => r.includes("coach"))) {
       out.push("entity-clients");
     }
-    // Every profile gets its own System + Appearance per spec.
-    out.push("system", "appearance");
-    // De-dupe in case admin already added something.
+    out.push("appearance");
     return Array.from(new Set(out));
   };
 
@@ -661,17 +639,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
         </div>
       )}
 
-      {tab === "profiles" && !isTeamMode && (
-        <ProfileVisibilityPanel
-          scopeKey={`user:${user.id}`}
-          active={profile.athlete_active}
-          onActiveChange={async (v) => {
-            updateProfile("athlete_active", v);
-            await supabase.from("profiles").update({ athlete_active: v }).eq("id", user.id);
-          }}
-        />
-      )}
-
       {tab === "calendar" && !isTeamMode && (
         <div className="space-y-3">
           <WeekViewCard app="calendar" />
@@ -683,10 +650,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       )}
 
       {tab === "clients" && !isTeamMode && <ClientsPanel />}
-
-      {tab === "connectors" && <ConnectorsPanel />}
-
-      {tab === "system" && <SystemPanel />}
 
       {tab === "appearance" && <AppearancePanel />}
 
@@ -1268,45 +1231,6 @@ function Grid({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-1 gap-4 md:grid-cols-2">{children}</div>;
 }
 
-function SystemPanel() {
-  const [unit, setUnit] = useDistanceUnit();
-  const options: { value: DistanceUnit; label: string; hint: string }[] = [
-    { value: "km", label: "Kilometers", hint: "km" },
-    { value: "mi", label: "Miles", hint: "mi" },
-  ];
-  return (
-    <Card>
-      <h3 className="text-sm font-semibold text-ink">Measurement units</h3>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Choose how distances are displayed across the platform.
-      </p>
-      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {options.map((o) => {
-          const active = unit === o.value;
-          return (
-            <button
-              key={o.value}
-              onClick={() => setUnit(o.value)}
-              className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
-                active
-                  ? "border-primary bg-primary/5 text-ink"
-                  : "border-hairline bg-card text-ink hover:bg-secondary"
-              }`}
-            >
-              <div>
-                <div className="text-sm font-medium">{o.label}</div>
-                <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {o.hint}
-                </div>
-              </div>
-              {active && <Check className="h-4 w-4 text-primary" strokeWidth={2.5} />}
-            </button>
-          );
-        })}
-      </div>
-    </Card>
-  );
-}
 
 function Field({
   label,
@@ -1724,65 +1648,9 @@ function DeskSettingsPanel() {
 }
 
 function AppearancePanel() {
-  const { user, activeEntityId } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [currentColor, setCurrentColor] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancel = false;
-    if (!user) return;
-    (async () => {
-      if (activeEntityId) {
-        const { data } = await supabase
-          .from("teams")
-          .select("top_bar_color")
-          .eq("id", activeEntityId)
-          .maybeSingle();
-        if (!cancel) setCurrentColor((data?.top_bar_color as string | null) ?? null);
-      } else {
-        const { data } = await supabase
-          .from("profiles")
-          .select("top_bar_color")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (!cancel) setCurrentColor((data?.top_bar_color as string | null) ?? null);
-      }
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, [user, activeEntityId]);
-
   return (
     <div className="space-y-3">
       <ThemeSettingsPanel />
-      <Card>
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="flex w-full items-center justify-between text-left"
-        >
-          <div className="flex items-center gap-3">
-            <span
-              className="h-4 w-4 border border-hairline"
-              style={{ background: currentColor || "transparent" }}
-            />
-            <h3 className="text-sm font-semibold text-ink">Top bar color</h3>
-          </div>
-          {open ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
-          )}
-        </button>
-        {open && (
-          <div className="mt-4">
-            <TopBarColorPicker
-              initial={currentColor}
-              onSaved={(hex) => setCurrentColor(hex)}
-            />
-          </div>
-        )}
-      </Card>
     </div>
   );
 }
@@ -2627,411 +2495,6 @@ function DiaryCategoryCard({ title, items }: { title: string; items: string[] })
         </p>
       )}
     </Card>
-  );
-}
-
-/* ───────── Connectors panel ───────── */
-
-const CONNECTOR_GROUPS: { title: string; items: { name: string; tag: string }[] }[] = [
-  {
-    title: "Sports & timing",
-    items: [
-      { name: "Strava", tag: "fitness" },
-      { name: "EQ Timing", tag: "timing" },
-    ],
-  },
-  {
-    title: "Cloud storage",
-    items: [
-      { name: "One Drive", tag: "storage" },
-      { name: "iCloud", tag: "storage" },
-      { name: "Google Drive", tag: "storage" },
-      { name: "Dropbox", tag: "storage" },
-    ],
-  },
-  {
-    title: "Email",
-    items: [
-      { name: "Outlook", tag: "email" },
-      { name: "Hotmail", tag: "email" },
-      { name: "Gmail", tag: "email" },
-    ],
-  },
-];
-
-function ConnectorsPanel() {
-  const [query, setQuery] = useState("");
-  const q = query.trim().toLowerCase();
-  const [stravaConnected, setStravaConnected] = useState<boolean | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [detail, setDetail] = useState<null | "strava">(null);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u?.user) { if (active) setStravaConnected(false); return; }
-      const { data } = await supabase
-        .from("strava_auth")
-        .select("user_id")
-        .eq("user_id", u.user.id)
-        .maybeSingle();
-      if (active) setStravaConnected(!!data);
-    })();
-    // Surface OAuth result toast
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      const r = url.searchParams.get("strava");
-      if (r === "connected") { toast.success("Strava connected. Syncing the last 90 days…"); url.searchParams.delete("strava"); window.history.replaceState({}, "", url.toString()); }
-      else if (r === "denied") { toast.error("Strava connection denied."); url.searchParams.delete("strava"); window.history.replaceState({}, "", url.toString()); }
-      else if (r) { toast.error("Strava connection failed."); url.searchParams.delete("strava"); window.history.replaceState({}, "", url.toString()); }
-    }
-    return () => { active = false; };
-  }, []);
-
-  const handleStravaConnect = async () => {
-    setBusy(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("strava-oauth-start", {
-        body: { redirect_to: window.location.origin + "/settings/connectors" },
-      });
-      if (error) throw error;
-      if (data?.url) window.location.href = data.url;
-    } catch (e: any) {
-      toast.error(e?.message || "Could not start Strava connection");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleStravaDisconnect = async () => {
-    setBusy(true);
-    try {
-      const { error } = await supabase.functions.invoke("strava-disconnect", { body: {} });
-      if (error) throw error;
-      setStravaConnected(false);
-      toast.success("Strava disconnected.");
-    } catch (e: any) {
-      toast.error(e?.message || "Disconnect failed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleStravaResync = async () => {
-    setBusy(true);
-    try {
-      const { error } = await supabase.functions.invoke("strava-sync-recent", { body: { days: 90 } });
-      if (error) throw error;
-      toast.success("Re-syncing recent activities…");
-    } catch (e: any) {
-      toast.error(e?.message || "Sync failed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (detail === "strava") {
-    return <StravaConnectorDetail onBack={() => setDetail(null)} />;
-  }
-
-  const renderRow = (name: string, key?: string) => {
-    if (name === "Strava") {
-      return (
-        <div className="rounded-xl border border-hairline px-4 py-3" key={key || name}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={stravaLogo} alt="Strava" className="h-9 w-9 rounded-lg object-cover" />
-              <div>
-              <div className="text-sm text-ink">Strava</div>
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                Auto-syncs your activities into the Diary. Recent activities cover the <strong>last 90 days</strong>.{" "}
-                <button
-                  type="button"
-                  onClick={() => setDetail("strava")}
-                  className="text-ink underline-offset-2 hover:underline"
-                >
-                  Read more
-                </button>
-              </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {stravaConnected && (
-                <button
-                  type="button"
-                  onClick={handleStravaResync}
-                  disabled={busy}
-                  className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-ink hover:text-ink disabled:opacity-50"
-                >
-                  Re-sync
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={stravaConnected ? handleStravaDisconnect : handleStravaConnect}
-                disabled={busy || stravaConnected === null}
-                className={`rounded-md border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
-                  stravaConnected
-                    ? "border-hairline text-muted-foreground hover:border-ink hover:text-ink"
-                    : "border-ink bg-ink text-background hover:opacity-90"
-                }`}
-              >
-                {stravaConnected ? "Disconnect" : "Connect"}
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return <ConnectorRow key={key || name} name={name} />;
-  };
-
-  const allItems = CONNECTOR_GROUPS.flatMap((g) =>
-    g.items.map((it) => ({ ...it, group: g.title })),
-  );
-  const matches = q ? allItems.filter((it) => it.name.toLowerCase().includes(q)) : [];
-
-  return (
-    <div className="space-y-6">
-      <div className="relative">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search connectors…"
-          className="w-full rounded-xl border border-hairline bg-background px-4 py-2.5 text-sm text-ink outline-none transition focus:border-primary"
-        />
-      </div>
-
-      {matches.length > 0 && (
-        <Card>
-          <h3 className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            Matches
-          </h3>
-          <div className="mt-3 space-y-2">
-            {matches.map((it) => renderRow(it.name, `m-${it.name}`))}
-          </div>
-        </Card>
-      )}
-
-      {CONNECTOR_GROUPS.map((g) => (
-        <Card key={g.title}>
-          <h3 className="text-sm font-semibold text-ink">{g.title}</h3>
-          <div className="mt-3 space-y-2">
-            {g.items.map((it) => renderRow(it.name))}
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-const STRAVA_ACTIVITY_CATEGORIES: { title: string; items: string[] }[] = [
-  {
-    title: "Foot Sports",
-    items: ["Run", "Trail Run", "Walk", "Hike", "Wheelchair"],
-  },
-  {
-    title: "Cycle Sports",
-    items: [
-      "Ride (Standard Cycling)",
-      "Mountain Bike Ride",
-      "Gravel Ride",
-      "E-Bike Ride",
-      "E-Mountain Bike Ride",
-      "Handcycle",
-      "Velomobile",
-    ],
-  },
-  {
-    title: "Water Sports",
-    items: [
-      "Swim",
-      "Surfing",
-      "Stand Up Paddling (SUP)",
-      "Kayak",
-      "Canoe",
-      "Rowing",
-      "Windsurf",
-      "Kitesurf",
-      "Sailing",
-    ],
-  },
-  {
-    title: "Winter Sports",
-    items: [
-      "Alpine Ski",
-      "Backcountry Ski",
-      "Nordic Ski",
-      "Snowboard",
-      "Snowshoe",
-      "Ice Skate",
-    ],
-  },
-  {
-    title: "Racquet Sports",
-    items: ["Tennis", "Pickleball", "Padel", "Badminton", "Squash", "Racquetball", "Table Tennis"],
-  },
-  {
-    title: "Team & Ball Sports",
-    items: ["Football (Soccer)", "Basketball", "Volleyball", "Cricket"],
-  },
-  {
-    title: "Gym & Studio Fitness",
-    items: [
-      "Workout (Catch-all generic category)",
-      "Weight Training",
-      "Crossfit",
-      "HIIT (High-Intensity Interval Training)",
-      "Yoga",
-      "Pilates",
-      "Dance",
-      "Physical Therapy",
-    ],
-  },
-  {
-    title: "Machines & Other Sports",
-    items: [
-      "Stair Stepper",
-      "Elliptical",
-      "Rock Climbing",
-      "Skateboarding",
-      "Inline Skate",
-      "Roller Ski",
-      "Golf",
-    ],
-  },
-  {
-    title: "Virtual Sports (e.g., Zwift)",
-    items: ["Virtual Ride", "Virtual Run"],
-  },
-];
-
-function displayNameToSportType(name: string): string {
-  const map: Record<string, string> = {
-    'Run': 'Run',
-    'Trail Run': 'TrailRun',
-    'Walk': 'Walk',
-    'Hike': 'Hike',
-    'Wheelchair': 'Wheelchair',
-    'Virtual Run': 'VirtualRun',
-    'Ride (Standard Cycling)': 'Ride',
-    'Mountain Bike Ride': 'MountainBikeRide',
-    'Gravel Ride': 'GravelRide',
-    'E-Bike Ride': 'EBikeRide',
-    'E-Mountain Bike Ride': 'EMountainBikeRide',
-    'Handcycle': 'Handcycle',
-    'Velomobile': 'Velomobile',
-    'Swim': 'Swim',
-    'Surfing': 'Surfing',
-    'Stand Up Paddling (SUP)': 'StandUpPaddling',
-    'Kayak': 'Kayaking',
-    'Canoe': 'Canoeing',
-    'Rowing': 'Rowing',
-    'Windsurf': 'Windsurf',
-    'Kitesurf': 'Kitesurf',
-    'Sailing': 'Sailing',
-    'Alpine Ski': 'AlpineSki',
-    'Backcountry Ski': 'BackcountrySki',
-    'Nordic Ski': 'NordicSki',
-    'Snowboard': 'Snowboard',
-    'Snowshoe': 'Snowshoe',
-    'Ice Skate': 'IceSkate',
-    'Tennis': 'Tennis',
-    'Pickleball': 'Pickleball',
-    'Padel': 'Padel',
-    'Badminton': 'Badminton',
-    'Squash': 'Squash',
-    'Racquetball': 'Racquetball',
-    'Table Tennis': 'TableTennis',
-    'Football (Soccer)': 'Soccer',
-    'Basketball': 'Basketball',
-    'Volleyball': 'Volleyball',
-    'Cricket': 'Cricket',
-    'Workout (Catch-all generic category)': 'Workout',
-    'Weight Training': 'WeightTraining',
-    'Crossfit': 'Crossfit',
-    'HIIT (High-Intensity Interval Training)': 'HIIT',
-    'Yoga': 'Yoga',
-    'Pilates': 'Pilates',
-    'Dance': 'Dance',
-    'Physical Therapy': 'PhysicalTherapy',
-    'Stair Stepper': 'StairStepper',
-    'Elliptical': 'Elliptical',
-    'Rock Climbing': 'RockClimbing',
-    'Skateboarding': 'Skateboard',
-    'Inline Skate': 'InlineSkate',
-    'Roller Ski': 'RollerSki',
-    'Golf': 'Golf',
-    'Virtual Ride': 'VirtualRide',
-  };
-  return map[name] ?? name;
-}
-
-function StravaConnectorDetail({ onBack }: { onBack: () => void }) {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onBack}
-          className="rounded-md p-1 text-muted-foreground transition hover:text-ink"
-          aria-label="Back"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <h2 className="text-base font-semibold text-ink">Strava connector</h2>
-      </div>
-
-      <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-        Connecting Strava auto-syncs your training activities straight into your Diary,
-        so every run, ride, swim or session you record on Strava appears as a tile on
-        the matching day without any manual entry. The platform recognises and imports
-        every Strava sport type listed below.
-      </p>
-
-      <div className="space-y-6">
-        {STRAVA_ACTIVITY_CATEGORIES.map((cat) => (
-          <div key={cat.title}>
-            <h3 className="text-sm font-semibold text-ink">{cat.title}</h3>
-            <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
-              {cat.items.map((it) => {
-                const color = colorForStravaSportType(displayNameToSportType(it));
-                return (
-                  <li key={it} className="flex items-center gap-2.5">
-                    <span
-                      className="inline-block h-4 w-4 shrink-0 rounded-[3px] border border-black/10"
-                      style={{ background: color }}
-                      aria-hidden
-                    />
-                    <span>{it}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-
-function ConnectorRow({ name }: { name: string }) {
-  const logo = CONNECTOR_LOGOS[name];
-  return (
-    <div className="flex items-center justify-between rounded-xl border border-hairline px-4 py-3">
-      <div className="flex items-center gap-3">
-        {logo && <img src={logo} alt={name} className="h-9 w-9 rounded-lg object-cover" />}
-        <span className="text-sm text-ink">{name}</span>
-      </div>
-      <button
-        type="button"
-        className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-ink hover:text-ink"
-      >
-        Connect
-      </button>
-    </div>
   );
 }
 
