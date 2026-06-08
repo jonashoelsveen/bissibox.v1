@@ -380,11 +380,16 @@ export function GlobalTopTabBar() {
               <div className="p-3">
                 <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
                 <div className="grid grid-cols-2 gap-2">
-                  {([
-                    { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
-                    { key: "organization", label: "Team", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: !hasGroups },
-                    { key: "clients", label: "Clients", to: "/clients" as const, icon: <UsersRound strokeWidth={1.75} />, disabled: false },
-                  ] as Array<{ key: string; label: string; to: "/calendar" | "/clients" | null; icon: React.ReactNode; disabled: boolean }>).map((app) => (
+                  {((inGroupMode
+                    ? [
+                        { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
+                        { key: "organization", label: "Team", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: true },
+                      ]
+                    : [
+                        { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
+                        { key: "clients", label: "Clients", to: "/clients" as const, icon: <UsersRound strokeWidth={1.75} />, disabled: false },
+                      ]
+                  ) as Array<{ key: string; label: string; to: "/calendar" | "/clients" | null; icon: React.ReactNode; disabled: boolean }>).map((app) => (
                     <button
                       key={app.key}
                       type="button"
