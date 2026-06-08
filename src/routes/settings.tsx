@@ -1235,21 +1235,6 @@ function CreateEntityModal({
               className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
             />
           </label>
-
-          <label className="block">
-            <span className="mono mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-              Entity type
-            </span>
-            <select
-              value={entityType}
-              onChange={(e) => setEntityType(e.target.value as EntityType)}
-              className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-            >
-              <option value="team">Team</option>
-              <option value="company">Company</option>
-              <option value="cooperation">Cooperation</option>
-            </select>
-          </label>
         </div>
 
         <footer className="flex items-center justify-end gap-2 border-t border-hairline bg-background/60 px-5 py-3">
