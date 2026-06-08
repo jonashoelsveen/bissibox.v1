@@ -1,16 +1,1 @@
-project_id = "amakxzegfryagorwoxbx"
-
-[functions.ai-draw-course]
-verify_jwt = false
-
-[functions.note-cover-worker]
-verify_jwt = false
-
-[functions.parse-calendar-file]
-verify_jwt = true
-
-[functions.strava-oauth-callback]
-verify_jwt = false
-
-[functions.strava-webhook]
-verify_jwt = false
+project_id = "adzzdnxvjnhcpsjtjwdu"
