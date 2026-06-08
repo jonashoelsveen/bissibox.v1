@@ -104,8 +104,6 @@ type Tab =
   | "account"
   | "profiles"
   | "calendar"
-  | "diary"
-  | "library"
   | "coaches"
   | "clients"
   | "connectors"
@@ -113,11 +111,10 @@ type Tab =
   | "appearance"
   | "entity-profile"
   | "entity-general"
-  | "entity-organization"
+  | "entity-team"
   | "entity-calendar"
   | "entity-map"
   | "entity-events"
-  | "entity-library"
   | "entity-clients";
 
 type DividerKey = `divider-${number}`;
@@ -335,17 +332,16 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
   }, [user, activeEntityId]);
 
   useEffect(() => {
-    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "diary" || tab === "library" || tab === "coaches" || tab === "clients" || tab === "connectors")) {
+    if (isTeamMode && (tab === "account" || tab === "profiles" || tab === "coaches" || tab === "clients" || tab === "connectors")) {
       setTab("entity-profile");
     }
     if (
       !isTeamMode &&
       (tab === "entity-profile" ||
-        tab === "entity-organization" ||
+        tab === "entity-team" ||
         tab === "entity-calendar" ||
         tab === "entity-map" ||
-        tab === "entity-events" ||
-        tab === "entity-library")
+        tab === "entity-events")
     )
       setTab("account");
   }, [isTeamMode, tab]);
@@ -468,8 +464,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       case "account": return "Account";
       case "profiles": return "Profile";
       case "calendar": return "Calendar";
-      case "diary": return "Diary";
-      case "library": return "Photos";
       case "coaches": return "Coaches";
       case "clients": return "Clients";
       case "connectors": return "Connectors";
@@ -477,11 +471,10 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
       case "appearance": return "Appearance";
       case "entity-profile": return "Profile";
       case "entity-general": return "About";
-      case "entity-organization": return "Organization";
+      case "entity-team": return "Team";
       case "entity-calendar": return "Calendar";
       case "entity-map": return "Map";
       case "entity-events": return "Events";
-      case "entity-library": return "Photos";
       case "entity-clients": return "Clients";
     }
   };
@@ -499,7 +492,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
 
   const meTabs: Tab[] = [
     "calendar",
-    "library",
     "profiles",
     "coaches",
     "clients",
@@ -514,13 +506,10 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
     const roles = e.roles.map((r) => r.toLowerCase());
     const out: Tab[] = [];
     if (roles.includes("admin")) {
-      out.push("entity-general", "entity-profile", "entity-calendar", "entity-organization");
+      out.push("entity-general", "entity-profile", "entity-calendar", "entity-team");
     }
     if (roles.some((r) => r.includes("coach"))) {
       out.push("entity-clients");
-    }
-    if (roles.some((r) => r.includes("photographer"))) {
-      out.push("entity-library");
     }
     // Every profile gets its own System + Appearance per spec.
     out.push("system", "appearance");
@@ -689,15 +678,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
         </div>
       )}
 
-      {tab === "diary" && !isTeamMode && (
-        <DiarySettingsPanel scopeKey={`user:${user.id}`} />
-      )}
-
-      {tab === "library" && !isTeamMode && (
-        <LibrarySettingsPanel scopeKey={`user:${user.id}`} />
-      )}
-
-
       {tab === "coaches" && !isTeamMode && (
         <CoachesPanel ref={coachesRef} onDirtyChange={setCoachesDirty} />
       )}
@@ -710,11 +690,11 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
 
       {tab === "appearance" && <AppearancePanel />}
 
-      {tab === "entity-organization" && isTeamMode && (
+      {tab === "entity-team" && isTeamMode && (
         <Card>
-          <h3 className="text-sm font-semibold text-ink">Organization</h3>
+          <h3 className="text-sm font-semibold text-ink">Team</h3>
           <p className="mt-2 text-xs text-muted-foreground">
-            Settings related to your organization page will appear here.
+            Settings related to your team page will appear here.
           </p>
         </Card>
       )}
@@ -735,10 +715,6 @@ export function SettingsView({ onClose }: { onClose?: () => void } = {}) {
             Settings related to events will appear here.
           </p>
         </Card>
-      )}
-
-      {tab === "entity-library" && isTeamMode && team && (
-        <LibrarySettingsPanel scopeKey={`entity:${team.id}`} />
       )}
 
       {tab === "entity-clients" && isTeamMode && (
@@ -1179,7 +1155,7 @@ function ProfileSelector({
               >
                 <span className="truncate">{e.name}</span>
                 <span className="mono ml-2 shrink-0 text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {ENTITY_LABEL[e.entity_type]}
+                  Team
                 </span>
               </button>
             ))}
@@ -1200,7 +1176,6 @@ function CreateEntityModal({
   onCreated: (row: EntityRow) => void;
 }) {
   const [name, setName] = useState("");
-  const [entityType, setEntityType] = useState<EntityType>("team");
   const [busy, setBusy] = useState(false);
 
   const create = async () => {
@@ -1212,12 +1187,12 @@ function CreateEntityModal({
     try {
       const { data, error } = await supabase
         .from("teams")
-        .insert({ name: name.trim(), entity_type: entityType, owner_id: ownerId } as never)
+        .insert({ name: name.trim(), entity_type: "team", owner_id: ownerId } as never)
         .select("id, name, entity_type")
         .single();
       if (error) throw error;
       onCreated(data as EntityRow);
-      toast.success(`${ENTITY_LABEL[entityType]} created.`);
+      toast.success("Team created.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not create.");
     } finally {
@@ -1259,21 +1234,6 @@ function CreateEntityModal({
               placeholder="e.g. Raufoss IL Langrenn"
               className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
             />
-          </label>
-
-          <label className="block">
-            <span className="mono mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-              Entity type
-            </span>
-            <select
-              value={entityType}
-              onChange={(e) => setEntityType(e.target.value as EntityType)}
-              className="w-full rounded-md border border-hairline bg-background px-3 py-2 text-sm text-ink outline-none focus:border-primary"
-            >
-              <option value="team">Team</option>
-              <option value="company">Company</option>
-              <option value="cooperation">Cooperation</option>
-            </select>
           </label>
         </div>
 
