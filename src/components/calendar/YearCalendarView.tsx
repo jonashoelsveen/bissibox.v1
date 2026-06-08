@@ -34,7 +34,7 @@ import { ImportButton } from "./ImportCalendar/ImportButton";
 import { buildGhostEvents } from "./ImportCalendar/ghost";
 import { isoWeekNumber } from "./dateUtils";
 import { categoryKeyFromColor, type CategoryKey } from "./CalendarSideNav";
-import { useStravaActivities } from "./useStravaActivities";
+// Strava integration removed; diary/strava activity sync is no longer available.
 import { useUserCategories } from "@/hooks/useUserCategories";
 
 const MONTHS_NB = [
@@ -201,7 +201,7 @@ function YearCalendarViewInner({
     ],
   );
   const previewActive = overlay.events !== null;
-  const { events: stravaEvents } = useStravaActivities(memberId);
+  const stravaEvents: CalendarEvent[] = [];
 
   // Read the user's category list so we can tell which `me:#color` keys are
   // explicitly hidden. Anything NOT in this hidden set is treated as visible —
