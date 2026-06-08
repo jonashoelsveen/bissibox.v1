@@ -467,13 +467,106 @@ function InitialBadge({ user }: { user: { email?: string | null; user_metadata?:
   const last = typeof meta.last_name === "string" ? meta.last_name : "";
   const initial =
     (first.trim()[0] || last.trim()[0] || user.email?.trim()[0] || "?").toUpperCase();
+
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  // Placeholder for additional profiles — logic for adding profiles will follow.
+  const extraProfiles: { id: string; name: string; initial: string }[] = [];
+
+  const handleSignOut = async () => {
+    setOpen(false);
+    await signOut();
+    void navigate({ to: "/" });
+  };
+
+  const handleAddProfile = () => {
+    setOpen(false);
+    // Logic for adding a new profile will follow.
+  };
+
   return (
-    <div
-      aria-label="Your profile"
-      className="mb-1 flex h-7 w-7 select-none items-center justify-center rounded-full bg-white/15 text-[12px] font-semibold text-white"
-    >
-      {initial}
+    <div className="relative mb-1" ref={ref}>
+      <button
+        type="button"
+        aria-label="Your profile"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-7 w-7 select-none items-center justify-center rounded-full bg-white/15 text-[12px] font-semibold text-white transition hover:bg-white/25"
+      >
+        {initial}
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute left-0 top-full z-50 mt-2 w-60 origin-top-left overflow-hidden rounded-xl border border-hairline bg-popover text-ink shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
+        >
+          {extraProfiles.length > 0 && (
+            <div className="border-b border-hairline py-1">
+              {extraProfiles.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink hover:bg-secondary"
+                >
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-[11px] font-semibold">
+                    {p.initial}
+                  </span>
+                  <span className="truncate">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleAddProfile}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-ink hover:bg-secondary"
+          >
+            <span className="flex h-5 w-5 items-center justify-center">
+              <PlusIcon />
+            </span>
+            <span>Add new profile</span>
+          </button>
+          <div className="h-px w-full bg-hairline" />
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-ink hover:bg-secondary"
+          >
+            <span>Log out</span>
+          </button>
+        </div>
+      )}
     </div>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
   );
 }
 

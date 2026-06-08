@@ -1620,45 +1620,6 @@ export type Database = {
           },
         ]
       }
-      strava_auth: {
-        Row: {
-          access_token: string
-          athlete_id: number
-          connected_at: string
-          created_at: string
-          expires_at: string
-          id: string
-          refresh_token: string
-          scope: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          access_token: string
-          athlete_id: number
-          connected_at?: string
-          created_at?: string
-          expires_at: string
-          id?: string
-          refresh_token: string
-          scope?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          access_token?: string
-          athlete_id?: number
-          connected_at?: string
-          created_at?: string
-          expires_at?: string
-          id?: string
-          refresh_token?: string
-          scope?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       suppressed_emails: {
         Row: {
           created_at: string
