@@ -1,184 +1,183 @@
-import { createFileRoute, useSearch, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, useSearch, useNavigate, Navigate } from "@tanstack/react-router";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { SignInModal, type SignInContext } from "@/components/SignInModal";
-import { CreateEntityModal } from "@/components/CreateEntityModal";
-import { CloudFooter } from "@/components/CloudFooter";
+import { CloudPageWithFooter } from "@/components/CloudFooter";
+import { CloudLandingSection, CLOUD_OPEN_SIGNIN, restoreCloudHomeScroll } from "@/components/CloudLandingSection";
+import { AccountIndexRoute } from "@/components/account/AccountIndexRoute";
+import { clearAccountSurfacePreference, useAppSurface } from "@/lib/app-surface";
+import { isEntityFeatureEnabled } from "@/lib/features";
+import {
+  CLOUD_PAGE_BG,
+  HELVETICA_STACK,
+  LANDING_COMPACT_ILLUSTRATION_PAD_TOP,
+  LANDING_DARK_BAND_GAP_ABOVE,
+  LANDING_DARK_SECTION_BG,
+  landingHeroPadding,
+} from "@/lib/cloud-landing-design";
+import { Route as RootRoute } from "./__root";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
-  validateSearch: (s: Record<string, unknown>): { signin?: SignInContext } => {
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): { signin?: SignInContext; invite?: string; surface?: "account" } => {
     const v = s.signin;
-    if (v === "cloud" || v === "calendar" || v === "entity") {
-      return { signin: v };
-    }
-    return {};
+    const signin =
+      v === "cloud" || v === "calendar" || v === "entity" || v === "account"
+        ? v
+        : undefined;
+    const invite = typeof s.invite === "string" && s.invite.trim() ? s.invite.trim() : undefined;
+    const surface = s.surface === "account" ? "account" : undefined;
+    return {
+      ...(signin ? { signin } : {}),
+      ...(invite ? { invite } : {}),
+      ...(surface ? { surface } : {}),
+    };
   },
-  head: () => ({
-    meta: [
-      { title: "Aponna Cloud" },
-      {
-        name: "description",
-        content: "Aponna Cloud — Enjoy the past, and plan the future.",
-      },
-    ],
-  }),
+  head: ({ match }) => {
+    const isAccount =
+      (match.context as { appSurface?: string } | undefined)?.appSurface === "account";
+    return {
+      meta: isAccount
+        ? [
+            { title: "Aponna Account" },
+            {
+              name: "description",
+              content: "Your identity across the Aponna Cloud platform.",
+            },
+          ]
+        : [
+            { title: "Aponna Cloud" },
+            {
+              name: "description",
+              content: "Aponna Cloud — Manage your output.",
+            },
+          ],
+    };
+  },
 });
 
-const HELVETICA =
-  '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
-
 function HomePage() {
+  const { appSurface: initialSurface } = RootRoute.useRouteContext();
+  const surface = useAppSurface(initialSurface);
+  if (surface === "account") {
+    return <AccountIndexRoute />;
+  }
+  return <CloudHomePage />;
+}
+
+function CloudHomePage() {
   const { user, authReady } = useAuth();
   const search = useSearch({ from: "/" });
   const navigate = useNavigate();
   const [signInOpen, setSignInOpen] = useState(false);
   const [signInContext, setSignInContext] = useState<SignInContext>("cloud");
-  const [createEntityOpen, setCreateEntityOpen] = useState(false);
-  const [pendingEntityAfterSignIn, setPendingEntityAfterSignIn] = useState(false);
 
+  // Cloud home is never the account surface — drop sticky same-origin account mode.
+  useEffect(() => {
+    clearAccountSurfacePreference();
+  }, []);
+  useLayoutEffect(() => {
+    if (!authReady || user) return;
+    restoreCloudHomeScroll();
+  }, [authReady, user]);
   useEffect(() => {
     if (!user) return;
-    const wasOpen = signInOpen;
     setSignInOpen(false);
-    if (pendingEntityAfterSignIn) {
-      setPendingEntityAfterSignIn(false);
-      setCreateEntityOpen(true);
-      return;
-    }
-    if (!wasOpen) return;
-    const target = signInContext === "calendar" ? "/calendar" : null;
-    if (target) void navigate({ to: target, replace: true });
   }, [user]);
 
-
-  // Open the modal automatically when arriving with ?signin=<ctx>.
   useEffect(() => {
     if (user) return;
-    const ctx = search.signin;
+    let ctx = search.signin;
+    /** Entity sign-in context — Bucket A: only reachable from the marketing band. */
+    if (ctx === "entity" && !isEntityFeatureEnabled("entityMarketing")) ctx = undefined;
     if (ctx) {
       setSignInContext(ctx);
       setSignInOpen(true);
+    } else if (search.invite && isEntityFeatureEnabled("entityInviteFlow")) {
+      setSignInContext("cloud");
+      setSignInOpen(true);
     }
-  }, [search.signin, user]);
+  }, [search.signin, search.invite, user]);
+
+  useEffect(() => {
+    const open = () => {
+      setSignInContext("cloud");
+      setSignInOpen(true);
+    };
+    window.addEventListener(CLOUD_OPEN_SIGNIN, open);
+    return () => window.removeEventListener(CLOUD_OPEN_SIGNIN, open);
+  }, []);
 
   const closeSignIn = () => {
     setSignInOpen(false);
-    setPendingEntityAfterSignIn(false);
     if (search.signin) {
-      void navigate({ to: "/", search: {}, replace: true });
+      void navigate({
+        to: "/",
+        search: search.invite ? { invite: search.invite } : {},
+        replace: true,
+      });
     }
   };
 
-  const primaryButtonStyle: React.CSSProperties = {
-    backgroundColor: "#1d1d1f",
-    borderRadius: 14,
-    padding: "14px 36px",
-    fontFamily: HELVETICA,
-    fontSize: 17,
-    fontWeight: 500,
-    letterSpacing: "-0.01em",
-  };
-
-  // Logged-in Aponna Cloud home — 2 cards side by side.
-  const pendingRedirect =
-    !!user && !!search.signin && search.signin !== "cloud";
-
-  if (pendingRedirect) {
-    return <div className="min-h-full w-full" style={{ backgroundColor: "#fafafa" }} />;
+  if (!authReady) {
+    return <div className="min-h-full w-full" style={{ backgroundColor: CLOUD_PAGE_BG }} />;
   }
 
-  if (authReady && user) {
-    return (
-      <div
-        className="min-h-full w-full"
-        style={{ backgroundColor: "#fafafa", fontFamily: HELVETICA }}
-      >
-        <div
-          className="mx-auto flex max-w-[1600px] flex-col px-6 py-6"
-          style={{ minHeight: "calc(100vh - 80px)" }}
-        >
-          <div className="grid flex-1 grid-cols-2 gap-6">
-            {[0, 1].map((i) => (
-              <div
-                key={i}
-                className="h-full w-full bg-white"
-                style={{
-                  borderRadius: 24,
-                  boxShadow:
-                    "0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.05)",
-                }}
-              />
-            ))}
-          </div>
-        </div>
-        <CreateEntityModal
-          open={createEntityOpen}
-          onClose={() => setCreateEntityOpen(false)}
-        />
-        <CloudFooter />
-      </div>
-    );
+  if (user) {
+    return <Navigate to="/calendar" replace />;
   }
 
   return (
-    <div
-      className="min-h-full w-full"
-      style={{ backgroundColor: "#fafafa", fontFamily: HELVETICA }}
-    >
+    <CloudPageWithFooter showAudienceLinks style={{ fontFamily: HELVETICA_STACK }}>
       <div className="mx-auto flex max-w-6xl flex-col items-center px-6">
-
-        <div
-          className="flex w-full flex-col items-center text-center"
-          style={{ paddingTop: "clamp(120px, 22vh, 240px)", paddingBottom: "clamp(120px, 22vh, 240px)" }}
-        >
-          <h1
-            className="tracking-tight text-[#1d1d1f]"
-            style={{
-              fontFamily: HELVETICA,
-              fontSize: "clamp(56px, 9vw, 112px)",
-              lineHeight: 1.02,
-              letterSpacing: "-0.04em",
-              fontWeight: 600,
-            }}
-          >
-            Aponna Cloud
-          </h1>
-          <p
-            className="mt-5 text-[#1d1d1f]"
-            style={{
-              fontFamily: HELVETICA,
-              fontSize: "clamp(17px, 1.4vw, 21px)",
-              fontWeight: 400,
-            }}
-          >
-            Enjoy the past, and plan the future.
-          </p>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSignInContext("cloud");
+        <CloudLandingSection
+          title="Aponna Cloud"
+          description="Manage your output." 
+          readMoreTo="/cloud/individuals"
+          heroIllustrationSrc="/aponna-cloud-hero.png"
+          heroIllustrationAlt=""
+          heroIllustrationWidth={585}
+          heroIllustrationHeight={549}
+          onSignIn={() => {
+            setSignInContext("cloud");
+            setSignInOpen(true);
+          }}
+          paddingBottom={LANDING_DARK_BAND_GAP_ABOVE}
+        />
+      </div>
+      {/** Dark “Aponna Cloud for entities” band — Bucket A: currently live, hidden this round. */}
+      {isEntityFeatureEnabled("entityMarketing") ? (
+      <div className="w-full" style={{ backgroundColor: LANDING_DARK_SECTION_BG }}>
+        <div className="mx-auto flex max-w-6xl flex-col items-center px-6">
+          <CloudLandingSection
+            title="Aponna Cloud for entities"
+            description="Register your team."
+            readMoreTo="/cloud/entities"
+            compactTop
+            onDark
+            paddingTop={`calc(${landingHeroPadding.paddingBottom} + ${LANDING_COMPACT_ILLUSTRATION_PAD_TOP} - ${LANDING_DARK_BAND_GAP_ABOVE})`}
+            heroIllustrationSrc="/aponna-cloud-entities-hero.png"
+            heroIllustrationAlt=""
+            heroIllustrationWidth={1170}
+            heroIllustrationHeight={673}
+            heroIllustrationScale={1.3}
+            heroIllustrationOffsetY={10}
+            onSignIn={() => {
+              setSignInContext("entity");
               setSignInOpen(true);
             }}
-            className="mt-10 text-white transition active:scale-[0.98]"
-            style={primaryButtonStyle}
-          >
-            Sign in
-          </button>
+          />
         </div>
       </div>
+      ) : null}
 
       <SignInModal
         open={signInOpen}
         onClose={closeSignIn}
         context={signInContext}
       />
-      <CreateEntityModal
-        open={createEntityOpen}
-        onClose={() => setCreateEntityOpen(false)}
-      />
-      <CloudFooter />
-    </div>
+    </CloudPageWithFooter>
   );
 }

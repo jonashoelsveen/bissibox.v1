@@ -47,8 +47,8 @@
 :root {
   --radius: 12px;
 
-  /* Off-white palette inspired by BankID / Ruter */
-  --background: oklch(0.985 0.003 90);          /* warm off-white */
+  /* Page canvas — match Calendar `bg-white` across the cloud platform */
+  --background: oklch(1 0 0);                   /* pure white */
   --foreground: oklch(0.18 0.01 260);           /* near-black ink */
   --ink: oklch(0.14 0.012 260);
   --subtle: oklch(0.96 0.004 90);                /* card surface */
@@ -200,11 +200,57 @@
     background: transparent;
   }
   .mini-dur-scroll::-webkit-scrollbar-thumb {
-    background: color-mix(in oklab, var(--ink) 18%, transparent);
+    background-color: color-mix(in oklab, var(--ink) 18%, transparent);
+    background-image: none;
     border-radius: 999px;
+    transition: background-image 0s linear;
   }
   .mini-dur-scroll::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in oklab, var(--ink) 32%, transparent);
+    background-image: linear-gradient(
+      color-mix(in oklab, var(--ink) 32%, transparent),
+      color-mix(in oklab, var(--ink) 32%, transparent)
+    );
+    transition: background-image 0s linear 0.2s;
+  }
+
+  /* Calendar side-nav: thin scrollbar that fades out shortly after scrolling.
+     Track + thumb appear together. Thumb hover darkens immediately. */
+  .sidenav-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 300ms ease-out;
+  }
+  .sidenav-scroll::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .sidenav-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .sidenav-scroll::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    background-image: none;
+    border-radius: 999px;
+    transition: background-color 300ms ease-out, background-image 0s linear;
+  }
+  .sidenav-scroll:hover,
+  .sidenav-scroll[data-scrolling="1"] {
+    scrollbar-color: color-mix(in oklab, var(--ink) 22%, transparent) transparent;
+    transition: scrollbar-color 0s linear;
+  }
+  .sidenav-scroll:hover::-webkit-scrollbar-thumb,
+  .sidenav-scroll[data-scrolling="1"]::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--ink) 22%, transparent);
+    background-image: none;
+    transition: background-color 0s linear, background-image 0s linear;
+  }
+  .sidenav-scroll:hover::-webkit-scrollbar-thumb:hover,
+  .sidenav-scroll[data-scrolling="1"]::-webkit-scrollbar-thumb:hover {
+    background-image: linear-gradient(
+      color-mix(in oklab, var(--ink) 36%, transparent),
+      color-mix(in oklab, var(--ink) 36%, transparent)
+    );
+    transition: background-color 0s linear, background-image 0s linear;
   }
 
   /* Time-wheel picker: hide native scrollbar so only the focus band is visible. */
@@ -235,19 +281,71 @@
   }
 }
 
-@layer utilities {
-  /* Import-calendar preview overlay: dim the real events so the imported
-     "ghost" events (rendered with a dashed green outline) stand out. */
-  [data-preview-active="true"] [data-real-event="1"] {
-    opacity: 0.3;
-    filter: grayscale(0.2);
-    transition: opacity 180ms ease, filter 180ms ease;
-  }
-  [data-preview-active="true"] [data-ghost-event="1"] {
-    outline: 2px dashed #22C55E;
-    outline-offset: -2px;
-    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25), 0 4px 14px -6px rgba(34, 197, 94, 0.55);
-  }
+/* Account fields and membership rows. Unlayered so the focus ring wins. */
+.account-field {
+  outline: none;
+  outline-offset: 0;
+}
+.account-field:focus,
+.account-field:focus-visible,
+.account-field.is-focused {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-offset: 0;
+  box-shadow: 0 0 0 2px #0066cc !important;
+}
+
+/*
+ * Sign-in / create-account fields keep a 1px idle border. On focus, fold that
+ * border into the same 2px #0066cc ring used on the account page — not a 2px
+ * shadow sitting outside a black border (thicker, mixed colour).
+ */
+.signin-field {
+  outline: none !important;
+  outline-width: 0 !important;
+  outline-offset: 0;
+}
+.signin-field:focus,
+.signin-field:focus-visible,
+.signin-field.is-focused {
+  outline: none !important;
+  outline-width: 0 !important;
+  border-color: #0066cc !important;
+  box-shadow: 0 0 0 1px #0066cc !important;
+}
+
+.account-membership-row {
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.account-membership-row:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+}
+.account-membership-row:focus,
+.account-membership-row:focus-visible {
+  outline: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 0 2px #0066cc;
+}
+.account-membership-row:hover:focus,
+.account-membership-row:hover:focus-visible {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16), 0 0 0 2px #0066cc;
+}
+
+.account-membership-renew {
+  border-color: #5c5cff;
+  color: #5c5cff;
+}
+.account-membership-renew:hover {
+  background-color: #5c5cff;
+  color: #fff;
 }
 
 @layer utilities {
@@ -275,4 +373,49 @@
 body[style*="cursor: grabbing"],
 body[style*="cursor:grabbing"] {
   cursor: default !important;
+}
+
+/* Calendar left-panel session search — grey non-matches. Tiles all carry
+   [data-event-id]; CalendarPage stamps [data-search-match] on matching
+   nodes. The clicked result uses the usual solid fill, with no outline. */
+.calendar-search-active [data-event-id]:not([data-search-match="1"]) {
+  filter: grayscale(1);
+  opacity: 0.45;
+  transition: filter 120ms ease, opacity 120ms ease;
+}
+
+/* Left-panel pick (search / upcoming): solid click fill, no thin ring. */
+[data-event-id][data-search-highlight="1"] {
+  outline: none;
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+}
+
+/* Finder-style drop blink on Entity Overview group folders. */
+@keyframes entity-drop-blink {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  35% {
+    filter: brightness(1.35);
+  }
+  70% {
+    filter: brightness(0.92);
+  }
+}
+
+/*
+ * Chart group header: Finder destination-folder blink.
+ * One short selected flash, then rest — no dark dip.
+ */
+@keyframes entity-chart-drop-blink {
+  0%,
+  50%,
+  100% {
+    filter: brightness(1);
+  }
+  18% {
+    filter: brightness(1.55);
+  }
 }

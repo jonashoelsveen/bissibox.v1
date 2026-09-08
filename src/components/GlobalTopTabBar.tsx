@@ -1,76 +1,42 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-
-import {
-  CalendarDays,
-  Home,
-  UserRound,
-  Settings as SettingsIcon,
-  UsersRound,
-} from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { OrganizationIcon } from "@/components/OrganizationIcon";
+import { ProfileSwitcherMenu } from "@/components/ProfileSwitcherMenu";
 import { useAuth } from "@/lib/auth";
 import { useUserGroups, type UserGroup } from "@/hooks/useUserGroups";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-
-
+import { useProfileDisplayName } from "@/hooks/useProfileDisplayName";
 import { TopBarSlotMount } from "@/components/TopBarSlot";
-import { HomeIcon } from "@/components/HomeIcon";
+import { TopBarBrandTitle } from "@/components/HomeIcon";
+import { clearCloudHomeScroll, requestCloudSignIn, scrollCloudPageToTop } from "@/components/CloudLandingSection";
+import { isCloudLandingChromePath, minimalTopTabBarShellStyle, MINIMAL_TOP_TAB_BAR_HEIGHT, ACTIVE_STATUS_COLOR, landingPrimaryButtonCompactStyle, CLOUD_PAGE_BG } from "@/lib/cloud-landing-design";
 import { useAuthTransition, useSignInModalOpen, setAuthTransitionPhase } from "@/lib/auth-transition";
-
+import {
+  clearAccountSurfacePreference,
+} from "@/lib/app-surface";
+import { isEntityFeatureEnabled } from "@/lib/features";
 
 /**
  * Universal top tab bar fixed under the colored TopBar. Shown on every page.
- * Always shows: user initial badge (left) + apps menu (right). Page-provided
- * tabs (notes/events/etc.) mount into the middle slot when applicable.
+ * Logged-out: Log in on the right. Logged-in: Apps launcher only when
+ * entityAppsLauncher is on and the user owns an entity.
  */
 export function GlobalTopTabBar() {
-  const { user, authReady, activeEntityId } = useAuth();
+  const { user, authReady, activeEntityId, setActiveEntity } = useAuth();
+  const { groups } = useUserGroups();
 
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const transition = useAuthTransition();
   const signInOpen = useSignInModalOpen();
-  const { groups } = useUserGroups();
-  const inGroupMode = !!activeEntityId;
-
-
-  // Safety net: the sign-in exit choreography mutates module-level state
-  // through a chain of setTimeouts. If the tab is backgrounded for a long
-  // time, browsers throttle/coalesce timers and the chain can leave the
-  // phase stuck on "hidden" or "reveal-dark" after the modal has already
-  // unmounted. That used to cause the entire top tab-bar to vanish on the
-  // destination page (Calendar, Diary, Photos, Clients, …) after logging
-  // back in. Whenever we're no longer on the landing page, force the
-  // phase back to idle so the dark bar always renders.
-  useEffect(() => {
-    if (path !== "/" && transition !== "idle") {
-      setAuthTransitionPhase("idle");
-    }
-  }, [path, transition]);
-
-  // White minimal bar on landing "/" (logged-out). Keep showing it during
-  // the sign-in exit fade so it can animate away in sync with the modal.
-  const isHome =
-    path === "/" && (!user || transition === "fading-out");
-  // During the gap between the modal vanishing and the dark bar revealing,
-  // render nothing — but only on the landing page where the choreography
-  // is actually playing.
-  if (path === "/" && transition === "hidden") return null;
-
-
-
-
   const [appsOpen, setAppsOpen] = useState(false);
   const appsRef = useRef<HTMLDivElement | null>(null);
+
+  /** Apps launcher — Bucket A: hidden until entityAppsLauncher and the user owns an entity. */
+  const showAppsMenu =
+    !!user &&
+    isEntityFeatureEnabled("entityAppsLauncher") &&
+    groups.length > 0;
 
   useEffect(() => {
     if (!appsOpen) return;
@@ -89,134 +55,117 @@ export function GlobalTopTabBar() {
     };
   }, [appsOpen]);
 
-  const handleAppNavigate = (to: "/calendar" | "/clients") => {
+  const isCloudLandingChrome = isCloudLandingChromePath(path);
+  const recede = isCloudLandingChrome && signInOpen && transition !== "fading-out" && transition !== "hidden";
+
+  // While the modal dim covers the page, drop the bar's own plate so its
+  // 48px edge is not a separate layer under the same fade.
+  useEffect(() => {
+    if (!isCloudLandingChrome || !recede) return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtml = html.style.backgroundColor;
+    const prevBody = body.style.backgroundColor;
+    html.style.backgroundColor = CLOUD_PAGE_BG;
+    body.style.backgroundColor = CLOUD_PAGE_BG;
+    return () => {
+      html.style.backgroundColor = prevHtml;
+      body.style.backgroundColor = prevBody;
+    };
+  }, [isCloudLandingChrome, recede]);
+
+
+  // Safety net: the sign-in exit choreography mutates module-level state
+  // through a chain of setTimeouts. If the tab is backgrounded for a long
+  // time, browsers throttle/coalesce timers and the chain can leave the
+  // phase stuck on "hidden" or "reveal-dark" after the modal has already
+  // unmounted. That used to cause the entire top tab-bar to vanish on the
+  // destination page (Calendar, Diary, Photos, Clients, …) after logging
+  // back in. Whenever we're no longer on the landing page, force the
+  // phase back to idle so the dark bar always renders.
+  useEffect(() => {
+    if (!isCloudLandingChrome && transition !== "idle") {
+      setAuthTransitionPhase("idle");
+    }
+  }, [isCloudLandingChrome, transition]);
+
+  const handleAppPick = (key: "calendar" | "entity") => {
     setAppsOpen(false);
-    if (!user) {
-      const ctx = to === "/calendar" ? "calendar" : "calendar";
-      void navigate({ to: "/", search: { signin: ctx } });
+    if (key === "entity") {
+      if (!activeEntityId && groups[0]) setActiveEntity(groups[0].id);
+      void navigate({ to: "/entity", resetScroll: false });
       return;
     }
-    void navigate({ to, resetScroll: false });
+    void navigate({ to: "/calendar", resetScroll: false });
   };
 
+  // White minimal bar on cloud home (logged in or out), read-more pages, etc.
+  // During the gap between the modal vanishing and the dark bar revealing,
+  // render nothing — but only on the landing page where the choreography
+  // is actually playing.
+  if (isCloudLandingChrome && transition === "hidden") return null;
 
-  if (isHome) {
-    const fading = transition === "fading-out";
-    const recede = signInOpen && !fading;
+  if (isCloudLandingChrome) {
+    const fading = isCloudLandingChrome && transition === "fading-out";
+    const hideCloudBrand = path === "/" && !!user;
     return (
       <div
         className="fixed left-0 right-0 top-0 z-[90] flex items-center justify-between"
         style={{
-          backgroundColor: "#fafafa",
-          height: 40,
-          paddingLeft: 16,
-          paddingRight: 16,
-          opacity: fading ? 0 : recede ? 0 : authReady ? 1 : 0.5,
+          ...minimalTopTabBarShellStyle,
+          backgroundColor: recede ? "transparent" : minimalTopTabBarShellStyle.backgroundColor,
+          // Stay fully painted under the modal dim so the bar fades with the
+          // page, not as a separate rectangle. `recede` only blocks clicks.
+          opacity: fading ? 0 : authReady ? 1 : 0.5,
           pointerEvents: fading || recede || !authReady ? "none" : "auto",
           transition: fading
             ? "opacity 700ms ease-out"
             : "opacity 220ms ease-out",
         }}
       >
-        <button
-          type="button"
-          aria-label="Home"
-          className="flex items-center justify-center text-[#1d1d1f] hover:bg-black/5"
-          style={{ height: 34, width: 34 }}
-        >
-          <HomeIcon className="h-[30px] w-[30px]" strokeWidth={2.2} />
-        </button>
-        {(
-          
-          <div className="relative" ref={appsRef}>
-            <button
-              onClick={() => setAppsOpen((v) => !v)}
-              aria-label="Apps"
-              aria-haspopup="menu"
-              aria-expanded={appsOpen}
-              className="flex h-9 w-9 items-center justify-center rounded-md text-[#1d1d1f] transition hover:bg-black/5"
-            >
-              <AppsIcon className="h-[18px] w-[18px]" />
-            </button>
-            {appsOpen && (
-              <div
-                role="menu"
-                className="absolute right-0 top-full z-50 mt-2 w-56 origin-top-right overflow-hidden rounded-xl border border-hairline bg-popover text-ink shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
-              >
-                <div className="p-3">
-                  <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {([
-                      { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
-                      { key: "organization", label: "Team", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: false },
-                    ] as Array<{ key: string; label: string; to: "/calendar" | "/clients" | null; icon: React.ReactNode; disabled: boolean }>).map((app) => (
-                      <button
-                        key={app.key}
-                        type="button"
-                        aria-label={app.label}
-                        aria-disabled={app.disabled || undefined}
-                        disabled={app.disabled}
-                        onClick={app.disabled || !app.to ? undefined : () => handleAppNavigate(app.to!)}
-                        className={
-                          "flex aspect-square flex-col items-center justify-center gap-1 rounded-xl p-2 " +
-                          (app.disabled
-                            ? "pointer-events-none opacity-50 text-muted-foreground"
-                            : "text-ink hover:bg-secondary")
-                        }
-                        style={{ transition: "none" }}
-                      >
-                        <span className="flex h-[58%] w-full items-center justify-center [&_svg]:h-full [&_svg]:w-auto">
-                          {app.icon}
-                        </span>
-                        <span className="text-[11px] leading-none">{app.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <a
-                  href="/"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setAppsOpen(false);
-                    void navigate({ to: "/" });
-                  }}
-                  className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-sm text-ink"
-                  style={{ transition: "none" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
-                >
-                  <Home className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
-                  <span>aponnacloud.com</span>
-                </a>
-                <a
-                  href="/settings"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setAppsOpen(false);
-                    void navigate({ to: "/settings" });
-                  }}
-                  className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-sm text-ink"
-                  style={{ transition: "none" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
-                >
-                  <SettingsIcon className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
-                  <span>Aponna Cloud settings</span>
-                </a>
-                <a
-                  href="#"
-                  onClick={(e) => e.preventDefault()}
-                  className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-sm text-ink"
-                  style={{ transition: "none" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
-                >
-                  <UserRound className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
-                  <span>account.aponna.com</span>
-                </a>
-              </div>
-            )}
-          </div>
+        {hideCloudBrand ? (
+          <span aria-hidden className="h-9 w-9" />
+        ) : (
+          <TopBarBrandTitle
+            label="Cloud"
+            ariaLabel="Aponna Cloud home"
+            onClick={() => {
+              clearAccountSurfacePreference();
+              clearCloudHomeScroll();
+              scrollCloudPageToTop();
+              void navigate({ to: "/", resetScroll: true }).then(() => {
+                scrollCloudPageToTop();
+                requestAnimationFrame(() => scrollCloudPageToTop());
+                window.setTimeout(scrollCloudPageToTop, 50);
+              });
+            }}
+          />
+        )}
+        {user ? (
+          showAppsMenu ? (
+            <AppsLauncher
+              open={appsOpen}
+              onToggle={() => setAppsOpen((v) => !v)}
+              menuRef={appsRef}
+              onPick={handleAppPick}
+              buttonClassName="flex h-9 w-9 items-center justify-center rounded-md text-[#1d1d1f] transition hover:bg-black/5"
+            />
+          ) : null
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              if (isCloudLandingChrome) {
+                requestCloudSignIn();
+                return;
+              }
+              void navigate({ to: "/", search: { signin: "cloud" } });
+            }}
+            className="text-white transition active:scale-[0.98]"
+            style={landingPrimaryButtonCompactStyle}
+          >
+            Log in
+          </button>
         )}
       </div>
     );
@@ -228,56 +177,43 @@ export function GlobalTopTabBar() {
   const revealing = path === "/" && transition === "reveal-dark";
   return (
     <div
-      className="global-topbar-dark fixed left-0 right-0 top-0 z-[90]"
+      className="global-topbar-dark fixed right-0 top-0 z-[90]"
       style={{
-        backgroundColor: revealing
-          ? "rgba(74, 74, 74, 0.91)"
-          : "rgba(29, 29, 31, 0.91)",
-        backdropFilter: "saturate(180%) blur(20px)",
-        WebkitBackdropFilter: "saturate(180%) blur(20px)",
+        left: "var(--topbar-left-offset, 0px)",
+        backgroundColor: "#ffffff",
+        height: MINIMAL_TOP_TAB_BAR_HEIGHT,
         opacity: revealing ? 0 : authReady ? 1 : 0.5,
         pointerEvents: revealing || !authReady ? "none" : "auto",
-        transition: revealing
-          ? "opacity 350ms ease-out, background-color 450ms ease-out"
-          : "opacity 350ms ease-out, background-color 350ms ease-out",
-        animation: revealing
-          ? "aponna-bar-reveal 500ms ease-out forwards"
-          : undefined,
+        transition: "opacity 350ms ease-out",
       }}
+
     >
       <style>{`
-        @keyframes aponna-bar-reveal {
-          0% { opacity: 0; background-color: rgba(74,74,74,0.91); }
-          60% { opacity: 1; }
-          100% { opacity: 1; background-color: rgba(29,29,31,0.91); }
-        }
-      `}</style>
-      <style>{`
-        .global-topbar-dark .topbar-row { color: #ffffff; }
-        .global-topbar-dark .topbar-row > *:not([role="menu"]):not([role="menu"] *) { color: #ffffff; }
-        .global-topbar-dark .topbar-row > *:not([role="menu"]):not([role="menu"] *) *:not([data-folder-icon]):not([data-folder-icon] *):not([role="menu"]):not([role="menu"] *) { color: #ffffff; }
+        .global-topbar-dark .topbar-row { color: #1d1d1f; }
+        .global-topbar-dark .topbar-row > *:not([role="menu"]):not([role="menu"] *) { color: #1d1d1f; }
+        .global-topbar-dark .topbar-row > *:not([role="menu"]):not([role="menu"] *) *:not([data-folder-icon]):not([data-folder-icon] *):not([role="menu"]):not([role="menu"] *) { color: #1d1d1f; }
         /* macOS menu-bar style hover: instant on/off, no easing. */
         .global-topbar-dark .topbar-row [data-nav-icon] {
           border-radius: 6px;
           transition: none !important;
         }
         .global-topbar-dark .topbar-row [data-nav-icon]:hover {
-          background-color: rgba(255, 255, 255, 0.10) !important;
+          background-color: rgba(0, 0, 0, 0.06) !important;
         }
         .global-topbar-dark .topbar-row [data-nav-icon]:active {
-          background-color: rgba(255, 255, 255, 0.16) !important;
+          background-color: rgba(0, 0, 0, 0.10) !important;
         }
         /* Group-members icon: slightly darker hover so it reads as the
            same tile family as the menu it opens, with a touch more weight. */
         .global-topbar-dark .topbar-row [data-nav-icon][data-nav-key="group-members"]:hover {
-          background-color: rgba(255, 255, 255, 0.16) !important;
+          background-color: rgba(0, 0, 0, 0.10) !important;
         }
         .global-topbar-dark .topbar-row [data-nav-icon][data-nav-key="group-members"]:active {
-          background-color: rgba(255, 255, 255, 0.22) !important;
+          background-color: rgba(0, 0, 0, 0.14) !important;
         }
-        /* Generic button hover fallback for plus/apps icons. */
+        /* Generic button hover fallback for plus icons. */
         .global-topbar-dark .topbar-row button:hover {
-          background-color: rgba(255,255,255,0.10) !important;
+          background-color: rgba(0,0,0,0.06) !important;
         }
         /* Chrome-style inset hover pill for the plus (new client tab) button —
            keep the hit area tall but shrink the visible hover to a small square. */
@@ -292,7 +228,7 @@ export function GlobalTopTabBar() {
           left: 3px;
           right: 3px;
           border-radius: 6px;
-          background-color: rgba(255, 255, 255, 0.10);
+          background-color: rgba(0, 0, 0, 0.06);
           opacity: 0;
           transition: opacity 120ms ease-out;
           pointer-events: none;
@@ -315,7 +251,7 @@ export function GlobalTopTabBar() {
           left: 4px;
           right: 4px;
           border-radius: 8px;
-          background-color: rgba(255, 255, 255, 0.10);
+          background-color: rgba(0, 0, 0, 0.06);
           opacity: 0;
           transition: opacity 120ms ease-out;
           pointer-events: none;
@@ -347,118 +283,116 @@ export function GlobalTopTabBar() {
           opacity: 0 !important;
         }
         .global-topbar-dark .topbar-row [role="menu"],
-        .global-topbar-dark .topbar-row [role="menu"] * { color: oklch(0.14 0.012 260) !important; }
+        .global-topbar-dark .topbar-row [role="menu"] *:not([data-active-label]) { color: oklch(0.14 0.012 260) !important; }
+        .global-topbar-dark .topbar-row [role="menu"] [data-active-label] { color: ${ACTIVE_STATUS_COLOR} !important; }
         .global-topbar-dark .topbar-row [role="menu"] .text-muted-foreground { color: oklch(0.5 0.01 260) !important; }
         .global-topbar-dark .topbar-row [role="menu"] button:hover {
           background-color: rgba(0, 0, 0, 0.06) !important;
           transition: none !important;
         }
       `}</style>
-      <div className="topbar-row relative z-10 flex items-end gap-1 pl-3 pr-4 md:pr-6">
-        {user && <InitialBadge user={user} />}
+      <div className="topbar-row relative z-10 flex h-full items-end gap-1 pl-3 pr-4 md:pr-6">
         {/* Page-provided slot — open notes/event tabs etc. */}
-        <div className="flex min-w-0 flex-1 items-end pl-2">
-          <TopBarSlotMount className="flex min-w-0 flex-1 items-end" />
+        <div className="flex h-full min-w-0 flex-1 items-end">
+          <TopBarSlotMount className="flex h-full min-w-0 flex-1 items-end" />
         </div>
-        {user && (
-        <div className="relative mb-1" ref={appsRef}>
-          <button
-            onClick={() => { setAppsOpen((v) => !v); }}
-
-            aria-label="Apps"
-            aria-haspopup="menu"
-            aria-expanded={appsOpen}
-            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
-          >
-            <AppsIcon className="h-[18px] w-[18px]" />
-          </button>
-          {appsOpen && (
-            <div
-              role="menu"
-              className="absolute right-0 top-full z-50 mt-2 w-56 origin-top-right overflow-hidden rounded-xl border border-hairline bg-popover shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
-            >
-              <div className="p-3">
-                <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {((inGroupMode
-                    ? [
-                        { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
-                        { key: "organization", label: "Team", to: null, icon: <OrganizationIcon strokeWidth={1.75} />, disabled: false },
-                      ]
-                    : [
-                        { key: "calendar", label: "Calendar", to: "/calendar" as const, icon: <CalendarDays strokeWidth={1.75} />, disabled: false },
-                        { key: "clients", label: "Clients", to: "/clients" as const, icon: <UsersRound strokeWidth={1.75} />, disabled: false },
-                      ]
-                  ) as Array<{ key: string; label: string; to: "/calendar" | "/clients" | null; icon: React.ReactNode; disabled: boolean }>).map((app) => (
-                    <button
-                      key={app.key}
-                      type="button"
-                      aria-label={app.label}
-                      aria-disabled={app.disabled || undefined}
-                      disabled={app.disabled}
-                      onClick={app.disabled || !app.to ? undefined : () => handleAppNavigate(app.to!)}
-                      className={
-                        "flex aspect-square flex-col items-center justify-center gap-1 rounded-xl p-2 " +
-                        (app.disabled
-                          ? "pointer-events-none opacity-50 text-muted-foreground"
-                          : "text-ink hover:bg-secondary")
-                      }
-                      style={{ transition: "none" }}
-                    >
-                      <span className="flex h-[58%] w-full items-center justify-center [&_svg]:h-full [&_svg]:w-auto">
-                        {app.icon}
-                      </span>
-                      <span className="text-[11px] leading-none">{app.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <a
-                href="/"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setAppsOpen(false);
-                  void navigate({ to: "/" });
-                }}
-                className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-sm text-ink"
-                style={{ transition: "none" }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
-              >
-                <Home className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
-                <span>aponnacloud.com</span>
-              </a>
-              <a
-                href="/settings"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setAppsOpen(false);
-                  void navigate({ to: "/settings" });
-                }}
-                className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-sm text-ink"
-                style={{ transition: "none" }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
-              >
-                <SettingsIcon className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
-                <span>Aponna Cloud settings</span>
-              </a>
-              <a
-                href="#"
-                onClick={(e) => e.preventDefault()}
-                className="flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-sm text-ink"
-                style={{ transition: "none" }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.06)")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
-              >
-                <UserRound className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
-                <span>account.aponna.com</span>
-              </a>
+        {user ? (
+          showAppsMenu ? (
+            <div className="relative mb-1">
+              <AppsLauncher
+                open={appsOpen}
+                onToggle={() => setAppsOpen((v) => !v)}
+                menuRef={appsRef}
+                onPick={handleAppPick}
+                buttonClassName="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
+              />
             </div>
-          )}
-        </div>
+          ) : null
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              /** Entity sign-in context — Bucket A: only when the workspace flag is on. */
+              const signin =
+                path.startsWith("/entity") && isEntityFeatureEnabled("entityWorkspace")
+                  ? "entity"
+                  : path.startsWith("/calendar")
+                    ? "calendar"
+                    : "cloud";
+              void navigate({ to: "/", search: { signin } });
+            }}
+            className="mb-1 text-white transition active:scale-[0.98]"
+            style={landingPrimaryButtonCompactStyle}
+          >
+            Log in
+          </button>
         )}
       </div>
+    </div>
+  );
+}
+
+function AppsLauncher({
+  open,
+  onToggle,
+  menuRef,
+  onPick,
+  buttonClassName,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  menuRef: RefObject<HTMLDivElement | null>;
+  onPick: (key: "calendar" | "entity") => void;
+  buttonClassName: string;
+}) {
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label="Apps"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className={buttonClassName}
+      >
+        <AppsIcon className="h-[18px] w-[18px]" />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-50 mt-2 w-56 origin-top-right overflow-hidden rounded-xl border border-hairline bg-popover text-ink shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
+        >
+          <div className="p-3">
+            <div className="px-1 pb-2 text-xs font-semibold text-muted-foreground">Apps</div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                aria-label="Calendar"
+                onClick={() => onPick("calendar")}
+                className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl p-2 text-ink hover:bg-secondary"
+                style={{ transition: "none" }}
+              >
+                <span className="flex h-[58%] w-full items-center justify-center [&_svg]:h-full [&_svg]:w-auto">
+                  <CalendarDays strokeWidth={1.75} />
+                </span>
+                <span className="text-[11px] leading-none">Calendar</span>
+              </button>
+              <button
+                type="button"
+                aria-label="Entity"
+                onClick={() => onPick("entity")}
+                className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl p-2 text-ink hover:bg-secondary"
+                style={{ transition: "none" }}
+              >
+                <span className="flex h-[58%] w-full items-center justify-center [&_svg]:h-full [&_svg]:w-auto">
+                  <OrganizationIcon strokeWidth={1.75} />
+                </span>
+                <span className="text-[11px] leading-none">Entity</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -472,7 +406,7 @@ function AppsIcon({ className }: { className?: string }) {
       aria-hidden="true"
     >
       {[5, 12, 19].flatMap((y) =>
-        [5, 12, 19].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.6" />)
+        [5, 12, 19].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.6" />),
       )}
     </svg>
   );
@@ -484,16 +418,13 @@ function InitialBadge({ user }: { user: { email?: string | null; user_metadata?:
   const last = typeof meta.last_name === "string" ? meta.last_name : "";
   const personalInitial =
     (first.trim()[0] || last.trim()[0] || user.email?.trim()[0] || "?").toUpperCase();
-  const personalName =
-    first.trim() || last.trim() || user.email?.split("@")[0] || "Your profile";
+  const { personalName } = useProfileDisplayName();
 
   const { signOut, activeEntityId, setActiveEntity } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [groupModalOpen, setGroupModalOpen] = useState(false);
-  const [groupName, setGroupName] = useState("");
   const ref = useRef<HTMLDivElement | null>(null);
-  const { groups, createGroup } = useUserGroups();
+  const { groups, refresh } = useUserGroups();
 
   const activeGroup: UserGroup | null = activeEntityId
     ? groups.find((g) => g.id === activeEntityId) ?? null
@@ -519,6 +450,10 @@ function InitialBadge({ user }: { user: { email?: string | null; user_metadata?:
     };
   }, [open]);
 
+  useEffect(() => {
+    if (open) void refresh();
+  }, [open, refresh]);
+
   const handleSignOut = async () => {
     setOpen(false);
     await signOut();
@@ -535,45 +470,6 @@ function InitialBadge({ user }: { user: { email?: string | null; user_metadata?:
     setActiveEntity(id);
   };
 
-  const handleOpenAddGroup = () => {
-    setOpen(false);
-    setGroupName("");
-    setGroupModalOpen(true);
-  };
-
-  const handleConfirmAddGroup = async () => {
-    const trimmed = groupName.trim();
-    if (!trimmed) return;
-    const created = await createGroup(trimmed);
-    setGroupModalOpen(false);
-    setGroupName("");
-    if (created) setActiveEntity(created.id);
-  };
-
-  const renderProfileRow = (
-    key: string,
-    label: string,
-    isActive: boolean,
-    onClick: () => void,
-    iconNode: React.ReactNode,
-  ) => (
-    <button
-      key={key}
-      type="button"
-      onClick={onClick}
-      className={
-        "flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-secondary " +
-        (isActive ? "text-ink font-medium" : "text-ink")
-      }
-    >
-      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-secondary text-muted-foreground">
-        {iconNode}
-      </span>
-      <span className="flex-1 truncate">{label}</span>
-      {isActive && <span className="text-xs text-muted-foreground">Active</span>}
-    </button>
-  );
-
   return (
     <div className="relative mb-1" ref={ref}>
       <button
@@ -587,85 +483,20 @@ function InitialBadge({ user }: { user: { email?: string | null; user_metadata?:
         {badgeInitial}
       </button>
       {open && (
-        <div
-          role="menu"
-          className="absolute left-0 top-full z-50 mt-2 w-64 origin-top-left overflow-hidden rounded-xl border border-hairline bg-popover text-ink shadow-xl animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150"
-        >
-          <div className="border-b border-hairline py-1">
-            {renderProfileRow(
-              "__personal",
-              personalName,
-              !activeGroup,
-              handleSelectPersonal,
-              <span className="text-[11px] font-semibold">{personalInitial}</span>,
-            )}
-            {groups.map((g) =>
-              renderProfileRow(
-                g.id,
-                g.name,
-                activeGroup?.id === g.id,
-                () => handleSelectGroup(g.id),
-                <OrganizationIcon className="h-3.5 w-3.5" strokeWidth={1.75} />,
-              ),
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={handleOpenAddGroup}
-            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-ink hover:bg-secondary"
-          >
-            <span className="flex h-5 w-5 items-center justify-center">
-              <PlusIcon />
-            </span>
-            <span>Add group</span>
-          </button>
-          <div className="h-px w-full bg-hairline" />
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-ink hover:bg-secondary"
-          >
-            <span>Log out</span>
-          </button>
-        </div>
+        <ProfileSwitcherMenu
+          personalName={personalName}
+          personalInitial={personalInitial}
+          groups={groups}
+          activeEntityId={activeEntityId}
+          onSelectPersonal={handleSelectPersonal}
+          onSelectEntity={handleSelectGroup}
+          onClose={() => setOpen(false)}
+          onSignOut={() => void handleSignOut()}
+          isLoggedIn
+          className="absolute right-0 top-full z-50 mt-1.5 w-60 origin-top-right"
+        />
       )}
-      <Dialog open={groupModalOpen} onOpenChange={setGroupModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>New group</DialogTitle>
-          </DialogHeader>
-          <Input
-            autoFocus
-            placeholder="Group name"
-            value={groupName}
-            onChange={(e) => setGroupName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                void handleConfirmAddGroup();
-              }
-            }}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setGroupModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => void handleConfirmAddGroup()} disabled={!groupName.trim()}>
-              Add group
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
   );
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 
@@ -6,12 +7,15 @@ import {
   setAuthTransitionPhase,
   setSignInModalOpen,
 } from "@/lib/auth-transition";
-import { COUNTRIES, COUNTRY_CALLING_CODES } from "@/lib/countries";
+import { formatBirthIso } from "@/lib/birth-date";
+import { COUNTRIES } from "@/lib/countries";
+import { SIGN_IN_BUTTON_BORDER_RADIUS } from "@/lib/cloud-landing-design";
+import { isEntityFeatureEnabled } from "@/lib/features";
 
 const HELVETICA =
   '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
-export type SignInContext = "cloud" | "calendar" | "entity";
+export type SignInContext = "cloud" | "calendar" | "entity" | "account";
 
 type Mode = "signin" | "signup" | "otp";
 
@@ -21,6 +25,8 @@ function headerFor(ctx: SignInContext) {
       return "Welcome to Aponna Cloud Calendar";
     case "entity":
       return "Sign in before creating Aponna-entity";
+    case "account":
+      return "Welcome to your Aponna-account";
     default:
       return "Welcome to Aponna Cloud";
   }
@@ -50,11 +56,7 @@ export function SignInModal({
   const [bDay, setBDay] = useState("");
   const [bMonth, setBMonth] = useState("");
   const [bYear, setBYear] = useState("");
-  const [callingCode, setCallingCode] = useState("+1");
-  const [phone, setPhone] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [verifyVia, setVerifyVia] = useState<"email" | "sms">("email");
-  const [marketing, setMarketing] = useState(true);
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -77,6 +79,11 @@ export function SignInModal({
   const [pendingAccessToken, setPendingAccessToken] = useState<string | null>(null);
   const [pendingRefreshToken, setPendingRefreshToken] = useState<string | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [portalReady, setPortalReady] = useState(false);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
 
   useEffect(() => {
     setSignInModalOpen(open);
@@ -89,6 +96,29 @@ export function SignInModal({
       // cleanup below) and the top bar disappears after navigating into
       // an app from the Apps menu.
       setAuthTransitionPhase("idle");
+      setEmail("");
+      setPassword("");
+      setFirstName("");
+      setLastName("");
+      setCountry("");
+      setBDay("");
+      setBMonth("");
+      setBYear("");
+      setConfirmPassword("");
+      setError(null);
+      setSubmitting(false);
+      setSwitchingMode(false);
+      setMode("signin");
+      setOtpEmail("");
+      setOtpAttemptId(null);
+      setOtpDigits(["", "", "", "", "", ""]);
+      setOtpResendIn(0);
+      setOtpSending(false);
+      setOtpVerifying(false);
+      setOtpError(null);
+      setPendingAccessToken(null);
+      setPendingRefreshToken(null);
+      setPendingUserId(null);
       return;
     }
     setFieldsReady(false);
@@ -197,7 +227,7 @@ export function SignInModal({
       const payload = (await res.json().catch(() => ({}))) as { error?: string; ok?: boolean };
       if (payload?.error) throw new Error(payload.error);
       // OTP verified — NOW activate the Supabase client session so the
-      // user becomes "logged in" in the UI and lands on home.
+      // user becomes "logged in" in the UI and lands on calendar.
       if (pendingRefreshToken) {
         await activateSession(pendingAccessToken, pendingRefreshToken);
       }
@@ -229,6 +259,14 @@ export function SignInModal({
         setError("Passwords do not match.");
         return;
       }
+      /** Signup birth date — Bucket A: required only when extended fields are shown. */
+      if (isEntityFeatureEnabled("entityExtendedProfileFields")) {
+        const birthDate = formatBirthIso(bYear, bMonth, bDay);
+        if (!birthDate) {
+          setError("Please enter a valid birth date.");
+          return;
+        }
+      }
     }
 
     setSubmitting(true);
@@ -246,11 +284,18 @@ export function SignInModal({
 
     // signup
     const trimmedEmail = email.trim();
+    const extended = isEntityFeatureEnabled("entityExtendedProfileFields");
+    const birthDate = extended ? formatBirthIso(bYear, bMonth, bDay) : null;
     const result = await signUp({
       email: trimmedEmail,
       password,
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
+      ...(extended
+        ? {
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            birth_date: birthDate ?? undefined,
+          }
+        : {}),
     });
     const { error: err, needsEmailConfirmation, needsOtpVerification, userId } = result;
     if (err) {
@@ -284,8 +329,7 @@ export function SignInModal({
 
 
   const title = headerFor(context);
-
-  return (
+  const overlay = (
     <AnimatePresence>
       {open && (
         <motion.div
@@ -370,6 +414,7 @@ export function SignInModal({
                     error={error}
                     submitting={submitting}
                     onCreate={() => switchMode("signup")}
+                    ready={fieldsReady}
                   />
                 </div>
               ) : mode === "signup" ? (
@@ -389,18 +434,10 @@ export function SignInModal({
                   setBYear={setBYear}
                   email={email}
                   setEmail={setEmail}
-                  callingCode={callingCode}
-                  setCallingCode={setCallingCode}
-                  phone={phone}
-                  setPhone={setPhone}
                   password={password}
                   setPassword={setPassword}
                   confirmPassword={confirmPassword}
                   setConfirmPassword={setConfirmPassword}
-                  verifyVia={verifyVia}
-                  setVerifyVia={setVerifyVia}
-                  marketing={marketing}
-                  setMarketing={setMarketing}
                   error={error}
                   submitting={submitting}
                   onCancel={() => switchMode("signin")}
@@ -444,6 +481,12 @@ export function SignInModal({
       )}
     </AnimatePresence>
   );
+
+  // Render on document.body so the dim covers the top tab bar too. Inside
+  // `<main>` the overlay is clipped below the 48px bar and that bar then
+  // fades on its own — you see its edges.
+  if (!portalReady) return null;
+  return createPortal(overlay, document.body);
 }
 
 function Spinner() {
@@ -472,17 +515,19 @@ function SignInForm(props: {
   error: string | null;
   submitting: boolean;
   onCreate: () => void;
+  ready: boolean;
 }) {
-  const { onSubmit, email, setEmail, password, setPassword, error, submitting, onCreate } = props;
+  const { onSubmit, email, setEmail, password, setPassword, error, submitting, onCreate, ready } = props;
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4" autoComplete="off">
       <LabeledField
         label="E-mail adress"
         value={email}
         onChange={setEmail}
         type="email"
         autoComplete="email"
-        autoFocus
+        autoFocus={ready}
+        lockAutofillUntilPointer
         required
       />
       <LabeledField
@@ -528,12 +573,8 @@ function SignUpForm(props: {
   bMonth: string; setBMonth: (v: string) => void;
   bYear: string; setBYear: (v: string) => void;
   email: string; setEmail: (v: string) => void;
-  callingCode: string; setCallingCode: (v: string) => void;
-  phone: string; setPhone: (v: string) => void;
   password: string; setPassword: (v: string) => void;
   confirmPassword: string; setConfirmPassword: (v: string) => void;
-  verifyVia: "email" | "sms"; setVerifyVia: (v: "email" | "sms") => void;
-  marketing: boolean; setMarketing: (v: boolean) => void;
   error: string | null;
   submitting: boolean;
   onCancel: () => void;
@@ -541,9 +582,8 @@ function SignUpForm(props: {
   const {
     onSubmit, firstName, setFirstName, lastName, setLastName,
     country, setCountry, bDay, setBDay, bMonth, setBMonth, bYear, setBYear,
-    email, setEmail, callingCode, setCallingCode, phone, setPhone,
+    email, setEmail,
     password, setPassword, confirmPassword, setConfirmPassword,
-    verifyVia, setVerifyVia, marketing, setMarketing,
     error, submitting, onCancel,
   } = props;
 
@@ -573,6 +613,9 @@ function SignUpForm(props: {
           subtitle="Your key to the Aponna ecosystem"
           subtitleSize={13}
         />
+        {/** Signup name, country, birth date — Bucket A: currently live, hidden this round. */}
+        {isEntityFeatureEnabled("entityExtendedProfileFields") ? (
+        <>
         <div className="grid grid-cols-2 gap-3">
           <LabeledField label="First name" value={firstName} onChange={setFirstName} autoComplete="given-name" autoFocus required />
           <LabeledField label="Last name" value={lastName} onChange={setLastName} autoComplete="family-name" required />
@@ -602,59 +645,13 @@ function SignUpForm(props: {
             </RawSelect>
           </div>
         </div>
+        </>
+        ) : null}
 
-        <LabeledField label="E-mail adress" value={email} onChange={setEmail} type="email" autoComplete="email" required />
-
-        <div>
-          <FieldLabel>Phone number</FieldLabel>
-          <div className="grid gap-3" style={{ gridTemplateColumns: "110px 1fr" }}>
-            <RawSelect value={callingCode} onChange={setCallingCode} required>
-              {COUNTRY_CALLING_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </RawSelect>
-            <RawInput type="tel" value={phone} onChange={setPhone} autoComplete="tel-national" required />
-          </div>
-        </div>
+        <LabeledField label="E-mail adress" value={email} onChange={setEmail} type="email" autoComplete="email" required autoFocus={!isEntityFeatureEnabled("entityExtendedProfileFields")} />
 
         <LabeledField label="Password" value={password} onChange={setPassword} type="password" autoComplete="new-password" required />
         <LabeledField label="Confirm password" value={confirmPassword} onChange={setConfirmPassword} type="password" autoComplete="new-password" required />
-
-        <div>
-          <FieldLabel>Verification</FieldLabel>
-          <div className="space-y-2">
-            <RadioRow
-              label="Verify with code via e-mail"
-              checked={verifyVia === "email"}
-              onChange={() => setVerifyVia("email")}
-            />
-            <RadioRow
-              label="Verify with code via text message"
-              checked={verifyVia === "sms"}
-              onChange={() => setVerifyVia("sms")}
-            />
-          </div>
-        </div>
-
-        <div style={{ marginTop: 8 }}>
-          <div
-            style={{
-              fontFamily: HELVETICA, fontSize: 12, fontWeight: 700,
-              color: "#1d1d1f", marginBottom: 6, letterSpacing: "-0.005em",
-            }}
-          >
-            Announcements
-          </div>
-          <label className="flex items-start gap-2" style={{ cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={marketing}
-              onChange={(e) => setMarketing(e.target.checked)}
-              style={{ marginTop: 3, accentColor: "#1d1d1f" }}
-            />
-            <span style={{ fontFamily: HELVETICA, fontSize: 12, color: "#86868b", lineHeight: 1.4 }}>
-              Receive email-communication from Aponna about marketing, recomendations and updates about Aponna software and services.
-            </span>
-          </label>
-        </div>
 
         {error && <ErrorLine error={error} />}
       </div>
@@ -738,7 +735,7 @@ function PrimaryButton({ submitting, label }: { submitting: boolean; label: stri
         marginTop: 4,
         background: "#1d1d1f",
         color: "#ffffff",
-        borderRadius: 12,
+        borderRadius: SIGN_IN_BUTTON_BORDER_RADIUS,
         padding: "12px 18px",
         fontFamily: HELVETICA,
         fontSize: 15,
@@ -778,6 +775,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 
 function LabeledField({
   label, value, onChange, type = "text", required, autoComplete, autoFocus,
+  lockAutofillUntilPointer,
 }: {
   label: string;
   value: string;
@@ -786,6 +784,7 @@ function LabeledField({
   required?: boolean;
   autoComplete?: string;
   autoFocus?: boolean;
+  lockAutofillUntilPointer?: boolean;
 }) {
   return (
     <label className="block">
@@ -797,6 +796,7 @@ function LabeledField({
         required={required}
         autoComplete={autoComplete}
         autoFocus={autoFocus}
+        lockAutofillUntilPointer={lockAutofillUntilPointer}
       />
     </label>
   );
@@ -821,11 +821,36 @@ function LabeledSelect({
   );
 }
 
+function bindFocusedField(el: HTMLElement | null) {
+  if (!el) return () => {};
+  const sync = () => {
+    el.classList.toggle("is-focused", document.activeElement === el);
+  };
+  const activate = () => {
+    document.querySelectorAll(".account-field.is-focused").forEach((node) => {
+      if (node !== el) node.classList.remove("is-focused");
+    });
+    el.classList.add("is-focused");
+  };
+  sync();
+  document.addEventListener("focusin", sync);
+  document.addEventListener("focusout", sync);
+  el.addEventListener("pointerdown", activate);
+  return () => {
+    document.removeEventListener("focusin", sync);
+    document.removeEventListener("focusout", sync);
+    el.removeEventListener("pointerdown", activate);
+    el.classList.remove("is-focused");
+  };
+}
+
 const inputStyle: React.CSSProperties = {
   fontFamily: HELVETICA,
   width: "100%",
   background: "#ffffff",
   color: "#1d1d1f",
+  caretColor: "#1d1d1f",
+  cursor: "text",
   border: "1px solid #1d1d1f",
   borderRadius: 10,
   padding: "10px 12px",
@@ -836,6 +861,7 @@ const inputStyle: React.CSSProperties = {
 
 function RawInput({
   type = "text", value, onChange, required, autoComplete, autoFocus,
+  lockAutofillUntilPointer = false,
 }: {
   type?: string;
   value: string;
@@ -843,21 +869,70 @@ function RawInput({
   required?: boolean;
   autoComplete?: string;
   autoFocus?: boolean;
+  lockAutofillUntilPointer?: boolean;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const unbindRef = useRef<(() => void) | null>(null);
+  const [allowAutofill, setAllowAutofill] = useState(!lockAutofillUntilPointer);
+  const autofillLocked = lockAutofillUntilPointer && !allowAutofill;
+
+  const setInputRef = (el: HTMLInputElement | null) => {
+    inputRef.current = el;
+    unbindRef.current?.();
+    unbindRef.current = bindFocusedField(el);
+  };
+
+  useEffect(() => () => {
+    unbindRef.current?.();
+    unbindRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    const el = inputRef.current;
+    if (!el) return;
+    const placeCaret = () => {
+      el.focus({ preventScroll: true });
+      document.querySelectorAll(".account-field.is-focused").forEach((node) => {
+        if (node !== el) node.classList.remove("is-focused");
+      });
+      el.classList.add("is-focused");
+      try {
+        const pos = el.value.length;
+        el.setSelectionRange(pos, pos);
+      } catch {
+        /* type=email does not always expose a selection range */
+      }
+    };
+    placeCaret();
+  }, [autoFocus, lockAutofillUntilPointer]);
+
   return (
     <input
-      type={type}
+      ref={setInputRef}
+      type={autofillLocked ? "text" : type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       required={required}
-      autoComplete={autoComplete}
-      autoFocus={autoFocus}
+      name={allowAutofill ? undefined : `deferred-${type}`}
+      autoComplete={allowAutofill ? autoComplete : "off"}
+      inputMode={type === "email" ? "email" : undefined}
+      autoCapitalize="none"
+      autoCorrect="off"
+      spellCheck={false}
       style={inputStyle}
-      onFocus={(e) => {
-        e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,29,31,0.08)";
-      }}
-      onBlur={(e) => {
-        e.currentTarget.style.boxShadow = "none";
+      className="account-field signin-field"
+      onPointerDown={(e) => {
+        const target = e.currentTarget;
+        document.querySelectorAll(".account-field.is-focused").forEach((node) => {
+          if (node !== target) node.classList.remove("is-focused");
+        });
+        target.classList.add("is-focused");
+        if (!autofillLocked) return;
+        if (type) target.type = type;
+        if (autoComplete) target.autoComplete = autoComplete;
+        target.removeAttribute("name");
+        setAllowAutofill(true);
       }}
     />
   );
@@ -871,43 +946,33 @@ function RawSelect({
   required?: boolean;
   children: React.ReactNode;
 }) {
+  const unbindRef = useRef<(() => void) | null>(null);
+  const setSelectRef = (el: HTMLSelectElement | null) => {
+    unbindRef.current?.();
+    unbindRef.current = bindFocusedField(el);
+  };
+  useEffect(() => () => {
+    unbindRef.current?.();
+    unbindRef.current = null;
+  }, []);
   return (
     <select
+      ref={setSelectRef}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       required={required}
       style={{ ...inputStyle, appearance: "auto" }}
-      onFocus={(e) => {
-        e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,29,31,0.08)";
-      }}
-      onBlur={(e) => {
-        e.currentTarget.style.boxShadow = "none";
+      className="account-field signin-field"
+      onPointerDown={(e) => {
+        const target = e.currentTarget;
+        document.querySelectorAll(".account-field.is-focused").forEach((node) => {
+          if (node !== target) node.classList.remove("is-focused");
+        });
+        target.classList.add("is-focused");
       }}
     >
       {children}
     </select>
-  );
-}
-
-function RadioRow({
-  label, checked, onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: () => void;
-}) {
-  return (
-    <label className="flex items-center gap-2" style={{ cursor: "pointer" }}>
-      <input
-        type="radio"
-        checked={checked}
-        onChange={onChange}
-        style={{ accentColor: "#1d1d1f" }}
-      />
-      <span style={{ fontFamily: HELVETICA, fontSize: 13, color: "#1d1d1f" }}>
-        {label}
-      </span>
-    </label>
   );
 }
 
@@ -934,6 +999,13 @@ function OtpStep({
   verifying: boolean;
   error: string | null;
 }) {
+  useEffect(() => {
+    const cleanups = inputsRef.current.map((el) => bindFocusedField(el));
+    return () => {
+      cleanups.forEach((fn) => fn());
+    };
+  }, [inputsRef]);
+
   const handleDigit = (i: number, v: string) => {
     const clean = v.replace(/\D/g, "");
     if (!clean) {
@@ -989,6 +1061,14 @@ function OtpStep({
             onChange={(e) => handleDigit(i, e.target.value)}
             onKeyDown={(e) => handleKey(i, e)}
             disabled={verifying}
+            className="account-field signin-field"
+            onPointerDown={(e) => {
+              const target = e.currentTarget;
+              document.querySelectorAll(".account-field.is-focused").forEach((node) => {
+                if (node !== target) node.classList.remove("is-focused");
+              });
+              target.classList.add("is-focused");
+            }}
             style={{
               fontFamily: HELVETICA,
               width: 48,
@@ -1001,12 +1081,6 @@ function OtpStep({
               textAlign: "center",
               outline: "none",
               transition: "box-shadow 120ms ease-out",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,29,31,0.08)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.boxShadow = "none";
             }}
           />
         ))}
@@ -1048,7 +1122,7 @@ function OtpStep({
               ? `Resend in ${resendIn}s`
               : "Resend code"}
         </button>
-        <span>Check your spam folder if you don't see the email.</span>
+        <span>Check your spam folder if you can't find the email.</span>
       </div>
 
       <button
