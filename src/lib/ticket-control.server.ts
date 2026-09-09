@@ -123,12 +123,12 @@ export const CONTROL_ANIMATIONS: ReadonlyArray<{
 function getControlSecretBase(): string {
   const dedicated = process.env.TICKET_CONTROL_SECRET;
   if (dedicated && dedicated.length >= 16) return dedicated;
-  const session = process.env.APONNA_SESSION_SECRET;
+  const session = process.env.BISSIBOX_SESSION_SECRET;
   if (session && session.length >= 16) return session;
   if (process.env.NODE_ENV !== "production") {
     return "local-dev-ticket-control-secret";
   }
-  throw new Error("TICKET_CONTROL_SECRET (or APONNA_SESSION_SECRET) is missing or too short");
+  throw new Error("TICKET_CONTROL_SECRET (or BISSIBOX_SESSION_SECRET) is missing or too short");
 }
 
 /** UTC calendar day key + day-of-year (1–366). */

@@ -1,6 +1,6 @@
 // Server-only HMAC-signed cookie helpers for the aponna_session cookie.
 // Holds the Supabase refresh token (and minimal user metadata) sealed with
-// APONNA_SESSION_SECRET. Not encrypted — Supabase refresh tokens are already
+// BISSIBOX_SESSION_SECRET. Not encrypted — Supabase refresh tokens are already
 // opaque and HTTPS-only; HMAC prevents tampering.
 
 import { createHmac, timingSafeEqual } from "crypto";
@@ -48,12 +48,12 @@ export function cookieAccessTokenIsFresh(
 }
 
 function getSecret(): string {
-  const s = process.env.APONNA_SESSION_SECRET;
+  const s = process.env.BISSIBOX_SESSION_SECRET;
   if (s && s.length >= 16) return s;
   if (process.env.NODE_ENV !== "production") {
     return "local-dev-aponna-session-secret";
   }
-  throw new Error("APONNA_SESSION_SECRET is missing or too short");
+  throw new Error("BISSIBOX_SESSION_SECRET is missing or too short");
 }
 
 function b64urlEncode(buf: Buffer): string {
