@@ -19,6 +19,7 @@ export const Route = createFileRoute("/cloud/entities")({
 function CloudEntitiesPage() {
   return (
     <CloudPageWithFooter
+      showLegalLinks={false}
       style={{ fontFamily: HELVETICA_STACK, backgroundColor: LANDING_DARK_SECTION_BG }}
     >
       <CloudReadMorePage

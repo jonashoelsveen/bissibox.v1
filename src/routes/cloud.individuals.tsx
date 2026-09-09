@@ -13,7 +13,7 @@ export const Route = createFileRoute("/cloud/individuals")({
 
 function CloudIndividualsPage() {
   return (
-    <CloudPageWithFooter style={{ fontFamily: HELVETICA_STACK }}>
+    <CloudPageWithFooter showLegalLinks={false} style={{ fontFamily: HELVETICA_STACK }}>
       <CloudReadMorePage title="Bissibox">
         <p>
           </p>
