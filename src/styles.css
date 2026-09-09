@@ -419,3 +419,50 @@ body[style*="cursor:grabbing"] {
     filter: brightness(1.55);
   }
 }
+
+/*
+ * Bissibox platform is desktop-only below 640px (half of 1280×800 WXGA, the
+ * standard 13" laptop CSS width / Tailwind `sm`). CSS (not JS) so Log in /
+ * Read more never flash on the first compact paint.
+ */
+.bissibox-compact-only {
+  display: none;
+}
+.bissibox-platform-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  background-color: #fafafa;
+  pointer-events: auto;
+}
+
+@media (max-width: 639px) {
+  .bissibox-desktop-only {
+    display: none !important;
+  }
+  span.bissibox-compact-only {
+    display: inline-block !important;
+  }
+  button.bissibox-compact-only {
+    display: grid !important;
+  }
+  .bissibox-platform-overlay {
+    display: flex !important;
+    flex-direction: column;
+  }
+  .account-nav-panel {
+    display: block;
+  }
+}
+
+@media (min-width: 640px) {
+  .account-nav-panel,
+  .account-nav-dim,
+  .account-menu-toggle {
+    display: none !important;
+  }
+}

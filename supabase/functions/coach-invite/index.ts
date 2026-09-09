@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
+import { FROM_EMAIL } from "../_shared/resend.ts";
 
 interface Body {
   coach_email: string;
@@ -124,7 +125,7 @@ Deno.serve(async (req) => {
         "X-Connection-Api-Key": resendKey,
       },
       body: JSON.stringify({
-        from: "Aponna <noreply@aponnacloud.com>",
+        from: FROM_EMAIL,
         to: [email],
         reply_to: inviterProfile?.email || userData.user.email || undefined,
         subject: `${inviterName} invited you to coach them on Aponna`,

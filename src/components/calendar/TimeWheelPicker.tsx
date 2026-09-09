@@ -8,8 +8,10 @@
  * step, ArrowLeft/Right or Tab to move between cells. No scroll-wheel
  * behavior.
  *
- * Guardrail: when "from" moves past "to", "to" auto-bumps to from + 60 min
- * (capped at 23:55).
+ * Duration preservation (matches mobile session wheels):
+ *   • Lowering "to" to ≤ previous "from" shifts "from" earlier by the
+ *     same duration the range had before the edit.
+ *   • Raising "from" to ≥ previous "to" shifts "to" later by that duration.
  */
 
 import {
@@ -33,35 +35,53 @@ interface TimeWheelPickerProps {
   onChange: (next: TimeRange) => void;
   /** Minute step used when stepping with arrow keys. Defaults to 5. */
   minuteStep?: number;
+  muted?: boolean;
+  disabled?: boolean;
 }
 
 const twoDigit = (n: number) => String(n).padStart(2, "0");
+/** Inclusive day length — 24:00 is a valid end (stored as next-day 00:00). */
+const DAY_MINUTES = 24 * 60;
 
 export function TimeWheelPicker({
   value,
   onChange,
   minuteStep = 5,
+  muted = false,
+  disabled = false,
 }: TimeWheelPickerProps) {
   const fromH = Math.floor(value.startMin / 60);
   const fromM = value.startMin % 60;
   const toH = Math.floor(value.endMin / 60);
   const toM = value.endMin % 60;
+  const endAtMidnight = toH >= 24;
 
   const setFrom = (h: number, m: number) => {
-    const start = clamp(h, 0, 23) * 60 + clamp(m, 0, 59);
-    let end = value.endMin;
-    if (end <= start) end = Math.min(23 * 60 + 55, start + 60);
-    onChange({ startMin: start, endMin: end });
+    if (disabled) return;
+    const prevFrom = value.startMin;
+    const prevTo = value.endMin;
+    const durationMins = prevTo - prevFrom;
+    const newFrom = clamp(h, 0, 23) * 60 + clamp(m, 0, 59);
+
+    if (newFrom >= prevTo) {
+      const newTo = Math.min(DAY_MINUTES, newFrom + durationMins);
+      onChange({ startMin: newFrom, endMin: newTo });
+    } else {
+      onChange({ startMin: newFrom, endMin: prevTo });
+    }
   };
   const setTo = (h: number, m: number) => {
-    const end = clamp(h, 0, 23) * 60 + clamp(m, 0, 59);
-    if (end <= value.startMin) {
-      onChange({
-        startMin: value.startMin,
-        endMin: Math.min(23 * 60 + 55, value.startMin + minuteStep),
-      });
+    if (disabled) return;
+    const prevFrom = value.startMin;
+    const prevTo = value.endMin;
+    const durationMins = prevTo - prevFrom;
+    const newTo = h >= 24 ? DAY_MINUTES : clamp(h, 0, 23) * 60 + clamp(m, 0, 59);
+
+    if (newTo <= prevFrom) {
+      const newFrom = Math.max(0, newTo - durationMins);
+      onChange({ startMin: newFrom, endMin: newTo });
     } else {
-      onChange({ startMin: value.startMin, endMin: end });
+      onChange({ startMin: prevFrom, endMin: newTo });
     }
   };
 
@@ -74,10 +94,13 @@ export function TimeWheelPicker({
   const focusSibling = useCallback((from: number, dir: -1 | 1) => {
     const next = Math.max(0, Math.min(3, from + dir));
     const el = refs[next].current;
-    if (el) {
+    if (!el) return;
+    // Focus after the committing cell's blur/commit paint so select() sticks
+    // on minutes (otherwise the next keypress appends and auto-advances).
+    requestAnimationFrame(() => {
       el.focus();
       el.select();
-    }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -89,39 +112,47 @@ export function TimeWheelPicker({
         value={fromH}
         max={23}
         step={1}
+        muted={muted}
+        disabled={disabled}
         onCommit={(h) => setFrom(h, fromM)}
         onAutoAdvance={() => focusSibling(0, 1)}
         onArrowH={(d) => focusSibling(0, d)}
       />
-      <Sep />
+      <Sep muted={muted} />
       <Cell
         ref={refs[1]}
         ariaLabel="Fra minutt"
         value={fromM}
         max={59}
         step={minuteStep}
+        muted={muted}
+        disabled={disabled}
         onCommit={(m) => setFrom(fromH, m)}
         onAutoAdvance={() => focusSibling(1, 1)}
         onArrowH={(d) => focusSibling(1, d)}
       />
-      <span className="mx-1.5 text-[12px] font-medium text-ink/60">–</span>
+      <span className={["mx-1.5 text-[12px] font-medium", muted ? "text-ink/30" : "text-ink/60"].join(" ")}>–</span>
       <Cell
         ref={refs[2]}
         ariaLabel="Til time"
-        value={toH}
-        max={23}
+        value={Math.min(24, toH)}
+        max={24}
         step={1}
-        onCommit={(h) => setTo(h, toM)}
+        muted={muted}
+        disabled={disabled}
+        onCommit={(h) => setTo(h, endAtMidnight ? 0 : toM)}
         onAutoAdvance={() => focusSibling(2, 1)}
         onArrowH={(d) => focusSibling(2, d)}
       />
-      <Sep />
+      <Sep muted={muted} />
       <Cell
         ref={refs[3]}
         ariaLabel="Til minutt"
-        value={toM}
-        max={59}
+        value={endAtMidnight ? 0 : toM}
+        max={endAtMidnight ? 0 : 59}
         step={minuteStep}
+        muted={muted}
+        disabled={disabled}
         onCommit={(m) => setTo(toH, m)}
         onAutoAdvance={() => focusSibling(3, 1)}
         onArrowH={(d) => focusSibling(3, d)}
@@ -130,8 +161,11 @@ export function TimeWheelPicker({
   );
 }
 
-const Sep = () => (
-  <span className="text-[12px] font-medium text-ink/60">:</span>
+const Sep = ({ muted = false }: { muted?: boolean }) => (
+  <span
+    style={{ fontFamily: 'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}
+    className={["text-[12px] font-medium", muted ? "text-ink/30" : "text-ink/60"].join(" ")}
+  >:</span>
 );
 
 function clamp(n: number, lo: number, hi: number) {
@@ -143,6 +177,8 @@ interface CellProps {
   max: number;
   step: number;
   ariaLabel: string;
+  muted?: boolean;
+  disabled?: boolean;
   onCommit: (n: number) => void;
   onAutoAdvance: () => void;
   onArrowH: (dir: -1 | 1) => void;
@@ -151,7 +187,7 @@ interface CellProps {
 import { forwardRef } from "react";
 
 const Cell = forwardRef<HTMLInputElement, CellProps>(function Cell(
-  { value, max, step, ariaLabel, onCommit, onAutoAdvance, onArrowH },
+  { value, max, step, ariaLabel, muted, disabled, onCommit, onAutoAdvance, onArrowH },
   ref,
 ) {
   const [text, setText] = useState(twoDigit(value));
@@ -187,11 +223,22 @@ const Cell = forwardRef<HTMLInputElement, CellProps>(function Cell(
   };
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const digits = e.target.value.replace(/\D/g, "").slice(-2);
+    if (disabled) return;
+    let digits = e.target.value.replace(/\D/g, "");
+    // When the cell still shows two digits and selection was lost (common
+    // after auto-advance into minutes), a single keypress appends and yields
+    // 3 digits. Treat that as starting a new entry with the typed digit —
+    // otherwise slice(-2) looks like a finished value and jumps right away.
+    if (digits.length > 2) {
+      digits = digits.slice(-1);
+    } else {
+      digits = digits.slice(-2);
+    }
     setText(digits);
     textRef.current = digits;
     if (digits.length === 1) {
       const d = parseInt(digits, 10);
+      // Hours max 23 → firstDigitMax 2 (3–9 complete). Minutes max 59 → 5 (6–9).
       if (d > firstDigitMax) {
         const n = clamp(d, 0, max);
         const next = twoDigit(n);
@@ -212,6 +259,7 @@ const Cell = forwardRef<HTMLInputElement, CellProps>(function Cell(
   };
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (disabled) return;
     // Stop propagation for keys we handle internally (digits, arrows, tab),
     // but let Enter/Escape bubble so the surrounding popover can close.
     if (e.key !== "Enter" && e.key !== "Escape") e.stopPropagation();
@@ -265,6 +313,10 @@ const Cell = forwardRef<HTMLInputElement, CellProps>(function Cell(
   };
 
   const onFocus = (e: FocusEvent<HTMLInputElement>) => {
+    if (disabled) {
+      e.currentTarget.blur();
+      return;
+    }
     setEditing(true);
     // Select both digits so typing replaces.
     e.currentTarget.select();
@@ -281,12 +333,18 @@ const Cell = forwardRef<HTMLInputElement, CellProps>(function Cell(
       inputMode="numeric"
       aria-label={ariaLabel}
       value={text}
+      readOnly={disabled}
+      tabIndex={disabled ? -1 : 0}
       onChange={onChange}
       onKeyDown={onKeyDown}
       onFocus={onFocus}
       onBlur={onBlur}
       maxLength={2}
-      className="mono w-[18px] bg-transparent p-0 text-center text-[12px] tabular-nums text-ink outline-none cursor-text caret-ink focus:bg-ink/5 rounded-[3px]"
+      style={{ fontFamily: 'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', fontVariantNumeric: 'tabular-nums lining-nums', fontFeatureSettings: '"zero" 0, "ss01" 0' }}
+      className={[
+        "w-[18px] bg-transparent p-0 text-center text-[12px] font-medium outline-none rounded-[3px]",
+        muted ? "text-ink/30 cursor-default" : "text-ink cursor-text caret-ink focus:bg-ink/5",
+      ].join(" ")}
     />
   );
 });

@@ -586,7 +586,7 @@ export function MapPage({ embedded = true }: { embedded?: boolean } = {}) {
     // top tab bar. Render the tab strip inline at the top of the body so it
     // doesn't fight the Library page's own TopBarSlot tabs.
     return (
-      <div className="flex h-full min-h-0 flex-col">
+      <div className="flex h-full min-h-0 flex-col bg-white">
         <div className="flex items-end border-b border-hairline">{tabStripUI}</div>
         <div className="min-w-0 flex-1 overflow-y-auto">{bodyUI}</div>
         {renderDialogs()}
@@ -595,7 +595,7 @@ export function MapPage({ embedded = true }: { embedded?: boolean } = {}) {
   }
 
   return (
-    <div className="h-full overflow-hidden px-4 md:px-6">
+    <div className="h-full overflow-hidden bg-white px-4 md:px-6">
       <TopBarSlot>{tabStripUI}</TopBarSlot>
 
       <div className="grid h-full gap-6 overflow-hidden pt-4 md:grid-cols-[220px_1fr]">

@@ -5,16 +5,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProfileShell, MediaGrid } from "@/components/ProfileShell";
 import { FollowButton } from "@/components/FollowButton";
 import { useAuth } from "@/lib/auth";
-import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { useProfileVisibility } from "@/lib/library-settings";
 
 const search = z.object({
-  as: fallback(z.enum(["athlete", "photographer"]), "athlete").default("athlete"),
+  as: z.enum(["athlete", "photographer"]).default("athlete").catch("athlete"),
 });
 
 export const Route = createFileRoute("/u/$userId")({
-  validateSearch: zodValidator(search),
+  validateSearch: search,
   component: UserProfilePage,
   head: () => ({ meta: [{ title: "Profile · Raceline" }] }),
 });

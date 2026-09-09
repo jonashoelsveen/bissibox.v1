@@ -11,7 +11,7 @@ import { CAT_TRAINING_COLOR } from "./MonthGridType1";
 import { colorForActivity } from "@/lib/activity-colors";
 import { DIARY_GROUPS, type DiaryType } from "./DiaryPopoverEditor";
 import type { CalendarEvent } from "./yearStore";
-import { fromISOLocal, toISOLocal, setHM } from "./dateUtils";
+import { fromISOLocal, toISOLocal, setHM, startEndMinsOnStartDay } from "./dateUtils";
 
 import type { ViewerRole } from "@/hooks/useViewerRole";
 
@@ -46,8 +46,7 @@ export function SessionDetailsContainer({
   useEffect(() => {
     const start = fromISOLocal(ev.startISO);
     const end = fromISOLocal(ev.endISO);
-    const startMin = start.getHours() * 60 + start.getMinutes();
-    const endMin = end.getHours() * 60 + end.getMinutes();
+    const { startMin, endMin } = startEndMinsOnStartDay(start, end);
     const durationMin = Math.max(0, endMin - startMin);
     let activities = ev.activities ?? [];
     if (activities.length === 0 && ev.stravaActivityId) {

@@ -127,8 +127,7 @@ export function GlobalTopTabBar() {
           <span aria-hidden className="h-9 w-9" />
         ) : (
           <TopBarBrandTitle
-            label="Cloud"
-            ariaLabel="Aponna Cloud home"
+            ariaLabel="Bissibox home"
             onClick={() => {
               clearAccountSurfacePreference();
               clearCloudHomeScroll();
@@ -161,7 +160,7 @@ export function GlobalTopTabBar() {
               }
               void navigate({ to: "/", search: { signin: "cloud" } });
             }}
-            className="text-white transition active:scale-[0.98]"
+            className="bissibox-desktop-only text-white transition active:scale-[0.98]"
             style={landingPrimaryButtonCompactStyle}
           >
             Log in
@@ -321,7 +320,7 @@ export function GlobalTopTabBar() {
                     : "cloud";
               void navigate({ to: "/", search: { signin } });
             }}
-            className="mb-1 text-white transition active:scale-[0.98]"
+            className="bissibox-desktop-only mb-1 text-white transition active:scale-[0.98]"
             style={landingPrimaryButtonCompactStyle}
           >
             Log in

@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
+import { FROM_EMAIL } from "../_shared/resend.ts";
 
 interface Body {
   leader_id: string;
@@ -124,7 +125,7 @@ Deno.serve(async (req) => {
         "X-Connection-Api-Key": resendKey,
       },
       body: JSON.stringify({
-        from: "Raceline <onboarding@resend.dev>",
+        from: FROM_EMAIL,
         to: [leader.email],
         subject: `You've been invited as group leader for ${teamName}`,
         html,

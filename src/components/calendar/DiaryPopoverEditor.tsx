@@ -10,9 +10,8 @@
  *   3. Duration row with a clock icon on the left and two compact digit
  *      inputs (HH "h" MM "min") that auto-advance like the calendar
  *      session modal.
- *   4. Activity group dropdown (Endurance / Strength / Stretch).
- *   5. Subgroup dropdown when applicable.
- *   6. Footer with Save button.
+ *   4. Colour dropdown (same palette as three-dot menus).
+ *   5. Footer with Save button.
  *
  * Start time is intentionally NOT editable here; that lives in the
  * Session Details modal (opened via the pencil icon).
@@ -21,17 +20,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Pencil, Trash2, StickyNote } from "lucide-react";
 import type { CalendarEvent } from "./yearStore";
-import { CAT_TRAINING_COLOR } from "./MonthGridType1";
-import { colorForActivity } from "@/lib/activity-colors";
 import { SessionDetailsModal, type SessionDetailsValue } from "./SessionDetailsModal";
 import { ConfirmDeleteSessionDialog } from "./ConfirmDeleteSessionDialog";
 import { NotePanel } from "./DayNoteButton";
+import { computePopoverPosition } from "./popoverPosition";
 import {
   DIARY_GROUPS,
   DurationRow,
-  ActivitySelectRow,
-  prettyStravaSportName,
+  ColorSelectRow,
 } from "./DiaryEditFields";
+import { SessionLocationField } from "./SessionLocationField";
+import { DEFAULT_SESSION_COLOR } from "@/components/library/CategoryActionsMenu";
 
 
 export { DIARY_GROUPS };
@@ -41,13 +40,20 @@ export type DiaryType = "training" | "note";
 export interface DiaryPopoverValue {
   title: string;
   color: string | null;
+  /** Resolved diary_activity category id, when the activity matches one of
+   *  the user's category tabs. Persisted on the session so future color
+   *  changes to that category cascade to this session. */
+  categoryId?: string | null;
   time: { startMin: number; endMin: number } | null;
+  allDay?: boolean;
   diaryType: DiaryType;
   diaryGroup?: string;
   diarySub?: string;
   distanceKm?: number;
   paceSecPerKm?: number;
   sessionNote?: string;
+  location?: string;
+  locationUrl?: string;
   activities?: { type: string; durationMin?: number; distanceKm?: number }[];
 }
 
@@ -59,12 +65,12 @@ export interface DiaryPopoverEditorProps {
   date?: Date;
   onClose: () => void;
   onCommit: (value: DiaryPopoverValue, opts?: { delete?: boolean }) => void;
-  /** When provided, overrides the computed colorForActivity accent for the
-   *  initial paint. Used to match the tile's actual saved color (existing
-   *  sessions) or the top diary-activity tab color (new sessions). */
+  /** When provided, used as the session colour (existing tile, or Blue for new). */
   defaultColor?: string | null;
-  /** The user's diary_activity category list — used to resolve the correct
-   *  color for the selected activity type when saving. */
+  /** Fires as soon as the user picks a colour so the parent can recolor the tile. */
+  onColorChange?: (color: string) => void;
+  /** The user's diary_activity category list — used to keep the session on
+   *  the matching activity tab without driving colour. */
   diaryActivityCategories?: { id: string; name: string; color: string }[];
 }
 
@@ -77,6 +83,7 @@ export function DiaryPopoverEditor({
   onClose,
   onCommit,
   defaultColor,
+  onColorChange,
   diaryActivityCategories = [],
 }: DiaryPopoverEditorProps) {
   const [title, setTitle] = useState(initialEvent?.title ?? "");
@@ -96,6 +103,9 @@ export function DiaryPopoverEditor({
   const [diarySub, setDiarySub] = useState<string>(
     initialEvent?.diarySub ?? inferredFromActivity?.sub ?? "running",
   );
+  const [sessionColor, setSessionColor] = useState<string>(
+    defaultColor ?? initialEvent?.color ?? DEFAULT_SESSION_COLOR,
+  );
 
   // Duration in minutes. Derived from initialTime / initialEvent on mount.
   const initialDurationMin = (() => {
@@ -108,6 +118,20 @@ export function DiaryPopoverEditor({
     return 0;
   })();
   const [durationMin, setDurationMin] = useState<number>(initialDurationMin);
+  const [allDay, setAllDay] = useState<boolean>(!!initialEvent?.allDay);
+  const [location, setLocation] = useState(initialEvent?.location ?? "");
+  const [locationUrl, setLocationUrl] = useState(initialEvent?.locationUrl ?? "");
+  const prevDurationRef = useRef<number>(initialDurationMin || 60);
+  const handleAllDayToggle = (next: boolean) => {
+    if (next) {
+      if (durationMin > 0) prevDurationRef.current = durationMin;
+      setDurationMin(0);
+      setAllDay(true);
+    } else {
+      setAllDay(false);
+      setDurationMin(prevDurationRef.current > 0 ? prevDurationRef.current : 60);
+    }
+  };
   // Keep the original start so we can rebuild the time range when only the
   // duration changes here. Falls back to initialTime?.startMin or null.
   const initialStartMin = (() => {
@@ -134,23 +158,12 @@ export function DiaryPopoverEditor({
 
   const groupDef = DIARY_GROUPS.find((g) => g.id === diaryGroup);
   const hasSubs = !!groupDef?.children?.length;
-
-  // Resolve the stripe color from the left-panel diary_activity category
-  // so it always matches the dot in the Activities section.
-  const activityKeyForAccent = (diaryGroup === "endurance" ? diarySub : diaryGroup) || "";
-  const matchedCategoryForAccent = diaryActivityCategories.find(
-    (c) => c.name.toLowerCase() === activityKeyForAccent.toLowerCase(),
-  );
-  const accent =
-    matchedCategoryForAccent?.color ??
-    defaultColor ??
-    initialEvent?.color ??
-    (diaryGroup === "endurance" ? colorForActivity(diarySub) : CAT_TRAINING_COLOR);
+  const accent = sessionColor || DEFAULT_SESSION_COLOR;
 
   // Refs for unmount-safe autosave
-  const stateRef = useRef({ title, diaryGroup, diarySub, durationMin, distanceKm, paceSecPerKm, sessionNote, activities });
+  const stateRef = useRef({ title, diaryGroup, diarySub, durationMin, allDay, distanceKm, paceSecPerKm, sessionNote, location, locationUrl, activities, sessionColor });
   useEffect(() => {
-    stateRef.current = { title, diaryGroup, diarySub, durationMin, distanceKm, paceSecPerKm, sessionNote, activities };
+    stateRef.current = { title, diaryGroup, diarySub, durationMin, allDay, distanceKm, paceSecPerKm, sessionNote, location, locationUrl, activities, sessionColor };
   });
 
   const buildValue = (): DiaryPopoverValue => {
@@ -159,24 +172,27 @@ export function DiaryPopoverEditor({
     const matchedCategory = diaryActivityCategories.find(
       (c) => c.name.toLowerCase() === activityKey.toLowerCase(),
     );
-    const trainingColor =
-      matchedCategory?.color ??
-      (s.diaryGroup === "endurance" ? colorForActivity(s.diarySub) : CAT_TRAINING_COLOR);
     // Reconstruct the time range from the original start + current duration.
     const startMin = initialStartMin ?? 9 * 60;
-    const time = s.durationMin > 0
-      ? { startMin, endMin: startMin + s.durationMin }
-      : initialTime ?? null;
+    const time = s.allDay
+      ? { startMin: 0, endMin: 0 }
+      : s.durationMin > 0
+        ? { startMin, endMin: startMin + s.durationMin }
+        : initialTime ?? null;
     return {
       title: s.title.trim(),
-      color: trainingColor,
+      color: s.sessionColor || DEFAULT_SESSION_COLOR,
+      categoryId: initialEvent?.categoryId ?? matchedCategory?.id ?? null,
       time,
+      allDay: s.allDay,
       diaryType: "training",
       diaryGroup: s.diaryGroup,
       diarySub: hasSubs ? s.diarySub : undefined,
       distanceKm: s.distanceKm,
       paceSecPerKm: s.paceSecPerKm,
       sessionNote: s.sessionNote || undefined,
+      location: s.location.trim() || undefined,
+      locationUrl: s.locationUrl.trim() || undefined,
       activities: s.activities && s.activities.length ? s.activities : undefined,
     };
   };
@@ -186,7 +202,12 @@ export function DiaryPopoverEditor({
       if (showDetails || confirmDelete) return;
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) {
-        onCommit(buildValue());
+        // Defer the commit so a click that lands on another session tile
+        // (or day cell) can run first and open its own editor. The parent
+        // close-handler is guarded to ignore stale closes once the popover
+        // has been re-pointed at a different target.
+        const value = buildValue();
+        setTimeout(() => onCommit(value), 0);
       }
     };
     const onKey = (e: globalThis.KeyboardEvent) => {
@@ -213,15 +234,8 @@ export function DiaryPopoverEditor({
   // Positioning — same heuristic as before.
   const POPOVER_W = 280;
   const POPOVER_H = (hasSubs ? 240 : 210) + (showNote ? 180 : 0);
-  const margin = 8;
-  let top = anchor.top;
-  let left = anchor.right + margin;
-  if (left + POPOVER_W > window.innerWidth) {
-    left = Math.max(margin, anchor.left - POPOVER_W - margin);
-  }
-  if (top + POPOVER_H > window.innerHeight) {
-    top = Math.max(margin, window.innerHeight - POPOVER_H - margin);
-  }
+  const { top, left } = computePopoverPosition(anchor, POPOVER_W, POPOVER_H);
+
 
   return (
     <>
@@ -277,21 +291,29 @@ export function DiaryPopoverEditor({
           </div>
 
           {/* Duration row — clock icon + auto-advance HH/MM inputs */}
-          <DurationRow accent={accent} durationMin={durationMin} onChange={setDurationMin} />
+          <DurationRow accent={accent} durationMin={durationMin} onChange={setDurationMin} allDay={allDay} onAllDayChange={handleAllDayToggle} />
 
-          {/* Combined activity dropdown (group + subgroup in one) */}
-          <ActivitySelectRow
+          <div className="px-2 py-1.5">
+            <SessionLocationField
+              value={location}
+              onChange={setLocation}
+              size="compact"
+              locationUrl={locationUrl || null}
+              onLocationUrlClear={() => setLocationUrl("")}
+              onPlaceSelect={(place) => {
+                setLocation(place.name);
+                setLocationUrl(place.locationUrl);
+              }}
+            />
+          </div>
+
+          {/* Colour dropdown — same palette as three-dot menus */}
+          <ColorSelectRow
             accent={accent}
-            diaryGroup={diaryGroup}
-            diarySub={diarySub}
-            lockedLabel={
-              initialEvent?.stravaActivityId
-                ? prettyStravaSportName(initialEvent?.sportType) || "Strava activity"
-                : null
-            }
-            onChange={(g, s) => {
-              setDiaryGroup(g);
-              setDiarySub(s);
+            color={sessionColor}
+            onChange={(hex) => {
+              setSessionColor(hex);
+              onColorChange?.(hex);
             }}
           />
 
@@ -376,10 +398,7 @@ export function DiaryPopoverEditor({
           onSave={(v) => {
             const merged: DiaryPopoverValue = {
               title: v.title.trim(),
-              color:
-                v.diaryGroup === "endurance"
-                  ? colorForActivity(v.diarySub)
-                  : CAT_TRAINING_COLOR,
+              color: sessionColor || DEFAULT_SESSION_COLOR,
               time: v.time,
               diaryType: "training",
               diaryGroup: v.diaryGroup,

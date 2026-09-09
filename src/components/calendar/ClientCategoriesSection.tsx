@@ -62,6 +62,7 @@ export function ClientCategoriesSection({
         .from("calendar_categories")
         .select("id, name, color, sort_order, pinned")
         .eq("user_id", clientUserId)
+        .is("app_team_id", null)
         .is("team_id", null)
         .eq("kind", "calendar")
         .in("id", categoryIds)

@@ -12,6 +12,47 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      calendar_accounts_public: {
+        Row: {
+          id: string
+          user_id: string
+          provider: "google" | "outlook" | "icloud"
+          email: string | null
+          provider_account_id: string
+          calendar_id: string | null
+          calendar_name: string
+          last_synced_at: string | null
+          last_error: string | null
+          status: "connected" | "needs_reauth" | "error"
+          created_at: string
+          updated_at: string
+        }
+        Relationships: []
+      }
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       activities: {
@@ -89,16 +130,491 @@ export type Database = {
         }
         Relationships: []
       }
+      account_change_log: {
+        Row: {
+          change_type: string
+          created_at: string
+          field_names: string[]
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          change_type: string
+          created_at?: string
+          field_names?: string[]
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          change_type?: string
+          created_at?: string
+          field_names?: string[]
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      app_team_admins: {
+        Row: {
+          created_at: string
+          date_of_birth: string | null
+          email: string | null
+          first_name: string | null
+          id: string
+          invite_token: string | null
+          invited_at: string | null
+          last_name: string | null
+          phone: string | null
+          sex: string | null
+          status: string
+          team_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          last_name?: string | null
+          phone?: string | null
+          sex?: string | null
+          status?: string
+          team_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          last_name?: string | null
+          phone?: string | null
+          sex?: string | null
+          status?: string
+          team_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_team_admins_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "app_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_team_athletes: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          invite_token: string | null
+          invited_at: string | null
+          status: string
+          team_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          status?: string
+          team_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          status?: string
+          team_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_team_athletes_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "app_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_team_coaches: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          invite_token: string | null
+          invited_at: string | null
+          status: string
+          team_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          status?: string
+          team_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          status?: string
+          team_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_team_coaches_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "app_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_team_groups: {
+        Row: {
+          age_from: number | null
+          age_to: number | null
+          color: string | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          name: string
+          sort_order: number
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          age_from?: number | null
+          age_to?: number | null
+          color?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          age_from?: number | null
+          age_to?: number | null
+          color?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_team_groups_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "app_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_member_groups: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          member_id: string
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          member_id: string
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          member_id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_member_groups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "app_team_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_member_groups_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "entity_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_member_groups_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "app_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_admin_groups: {
+        Row: {
+          admin_id: string
+          created_at: string
+          group_id: string
+          id: string
+          team_id: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          group_id: string
+          id?: string
+          team_id: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_admin_groups_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "app_team_admins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_admin_groups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "app_team_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_admin_groups_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "app_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_members: {
+        Row: {
+          app_group_id: string | null
+          cancelled_at: string | null
+          created_at: string
+          date_of_birth: string | null
+          email: string | null
+          first_name: string | null
+          id: string
+          invite_token: string | null
+          invited_at: string | null
+          last_name: string | null
+          payment_status: string
+          phone: string | null
+          sex: string | null
+          status: string
+          team_id: string
+          user_id: string | null
+        }
+        Insert: {
+          app_group_id?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          last_name?: string | null
+          payment_status?: string
+          phone?: string | null
+          sex?: string | null
+          status?: string
+          team_id: string
+          user_id?: string | null
+        }
+        Update: {
+          app_group_id?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          last_name?: string | null
+          payment_status?: string
+          phone?: string | null
+          sex?: string | null
+          status?: string
+          team_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_members_app_group_id_fkey"
+            columns: ["app_group_id"]
+            isOneToOne: false
+            referencedRelation: "app_team_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "app_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_membership_requests: {
+        Row: {
+          created_at: string
+          date_of_birth: string | null
+          decided_at: string | null
+          decided_by: string | null
+          deny_expires_at: string | null
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          requester_id: string
+          status: string
+          team_id: string
+          team_name: string
+        }
+        Insert: {
+          created_at?: string
+          date_of_birth?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          deny_expires_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          requester_id: string
+          status?: string
+          team_id: string
+          team_name: string
+        }
+        Update: {
+          created_at?: string
+          date_of_birth?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          deny_expires_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          requester_id?: string
+          status?: string
+          team_id?: string
+          team_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_membership_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "app_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_teams: {
+        Row: {
+          created_at: string
+          description: string | null
+          entity_code: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          entity_code?: string
+          id?: string
+          name?: string
+          owner_id: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          entity_code?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       calendar_categories: {
         Row: {
+          app_group_id: string | null
+          app_team_id: string | null
           color: string
           created_at: string
           default_key: string | null
+          gantt_end_week: number | null
+          gantt_start_week: number | null
+          gantt_end_date: string | null
+          gantt_start_date: string | null
           hidden: boolean
           id: string
           is_default: boolean
           kind: string
           name: string
+          parent_id: string | null
           pinned: boolean
           sort_order: number
           team_id: string | null
@@ -106,14 +622,21 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          app_group_id?: string | null
+          app_team_id?: string | null
           color: string
           created_at?: string
           default_key?: string | null
+          gantt_end_week?: number | null
+          gantt_start_week?: number | null
+          gantt_end_date?: string | null
+          gantt_start_date?: string | null
           hidden?: boolean
           id?: string
           is_default?: boolean
           kind?: string
           name: string
+          parent_id?: string | null
           pinned?: boolean
           sort_order?: number
           team_id?: string | null
@@ -121,14 +644,21 @@ export type Database = {
           user_id: string
         }
         Update: {
+          app_group_id?: string | null
+          app_team_id?: string | null
           color?: string
           created_at?: string
           default_key?: string | null
+          gantt_end_week?: number | null
+          gantt_start_week?: number | null
+          gantt_end_date?: string | null
+          gantt_start_date?: string | null
           hidden?: boolean
           id?: string
           is_default?: boolean
           kind?: string
           name?: string
+          parent_id?: string | null
           pinned?: boolean
           sort_order?: number
           team_id?: string | null
@@ -136,6 +666,27 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "calendar_categories_app_group_id_fkey"
+            columns: ["app_group_id"]
+            isOneToOne: false
+            referencedRelation: "app_team_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_categories_app_team_id_fkey"
+            columns: ["app_team_id"]
+            isOneToOne: false
+            referencedRelation: "app_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "calendar_categories_team_id_fkey"
             columns: ["team_id"]
@@ -182,6 +733,7 @@ export type Database = {
           activities: Json | null
           activity: string | null
           all_day: boolean
+          app_group_id: string | null
           average_heartrate: number | null
           category: string | null
           category_id: string | null
@@ -197,9 +749,20 @@ export type Database = {
           ends_at: string
           entity_id: string | null
           id: string
+          import_batch_id: string | null
+          ical_last_modified: string | null
+          ical_recurrence_id: string | null
+          ical_sequence: number | null
+          ical_uid: string | null
+          location: string | null
+          location_url: string | null
+          subscription_id: string | null
           pace_sec_per_km: number | null
+          repeat_rule: string | null
+          repeat_series_id: string | null
           session_note: string | null
           session_note_updated_at: string | null
+          signup_enabled: boolean
           sort_index: number | null
           sport_type: string | null
           starts_at: string
@@ -215,6 +778,7 @@ export type Database = {
           activities?: Json | null
           activity?: string | null
           all_day?: boolean
+          app_group_id?: string | null
           average_heartrate?: number | null
           category?: string | null
           category_id?: string | null
@@ -230,9 +794,20 @@ export type Database = {
           ends_at: string
           entity_id?: string | null
           id?: string
+          import_batch_id?: string | null
+          ical_last_modified?: string | null
+          ical_recurrence_id?: string | null
+          ical_sequence?: number | null
+          ical_uid?: string | null
+          location?: string | null
+          location_url?: string | null
+          subscription_id?: string | null
           pace_sec_per_km?: number | null
+          repeat_rule?: string | null
+          repeat_series_id?: string | null
           session_note?: string | null
           session_note_updated_at?: string | null
+          signup_enabled?: boolean
           sort_index?: number | null
           sport_type?: string | null
           starts_at: string
@@ -248,6 +823,7 @@ export type Database = {
           activities?: Json | null
           activity?: string | null
           all_day?: boolean
+          app_group_id?: string | null
           average_heartrate?: number | null
           category?: string | null
           category_id?: string | null
@@ -263,9 +839,20 @@ export type Database = {
           ends_at?: string
           entity_id?: string | null
           id?: string
+          import_batch_id?: string | null
+          ical_last_modified?: string | null
+          ical_recurrence_id?: string | null
+          ical_sequence?: number | null
+          ical_uid?: string | null
+          location?: string | null
+          location_url?: string | null
+          subscription_id?: string | null
           pace_sec_per_km?: number | null
+          repeat_rule?: string | null
+          repeat_series_id?: string | null
           session_note?: string | null
           session_note_updated_at?: string | null
+          signup_enabled?: boolean
           sort_index?: number | null
           sport_type?: string | null
           starts_at?: string
@@ -279,75 +866,231 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "calendar_sessions_app_group_id_fkey"
+            columns: ["app_group_id"]
+            isOneToOne: false
+            referencedRelation: "app_team_groups"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "calendar_sessions_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "calendar_categories"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      companies: {
-        Row: {
-          cover_media_id: string | null
-          created_at: string
-          description: string | null
-          id: string
-          kind: Database["public"]["Enums"]["company_kind"]
-          logo_url: string | null
-          name: string
-          website: string | null
-        }
-        Insert: {
-          cover_media_id?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          kind: Database["public"]["Enums"]["company_kind"]
-          logo_url?: string | null
-          name: string
-          website?: string | null
-        }
-        Update: {
-          cover_media_id?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          kind?: Database["public"]["Enums"]["company_kind"]
-          logo_url?: string | null
-          name?: string
-          website?: string | null
-        }
-        Relationships: []
-      }
-      company_follows: {
-        Row: {
-          company_id: string
-          created_at: string
-          follower_id: string
-          id: string
-        }
-        Insert: {
-          company_id: string
-          created_at?: string
-          follower_id: string
-          id?: string
-        }
-        Update: {
-          company_id?: string
-          created_at?: string
-          follower_id?: string
-          id?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "company_follows_company_id_fkey"
-            columns: ["company_id"]
+            foreignKeyName: "calendar_sessions_import_batch_id_fkey"
+            columns: ["import_batch_id"]
             isOneToOne: false
-            referencedRelation: "companies"
+            referencedRelation: "calendar_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_sessions_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_subscriptions"
             referencedColumns: ["id"]
           },
         ]
+      }
+      calendar_accounts: {
+        Row: {
+          id: string
+          user_id: string
+          provider: "google" | "outlook" | "icloud"
+          email: string | null
+          provider_account_id: string
+          calendar_id: string | null
+          calendar_name: string
+          access_token_enc: string | null
+          refresh_token_enc: string | null
+          caldav_password_enc: string | null
+          token_expires_at: string | null
+          scope: string | null
+          last_synced_at: string | null
+          last_error: string | null
+          status: "connected" | "needs_reauth" | "error"
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          provider: "google" | "outlook" | "icloud"
+          email?: string | null
+          provider_account_id: string
+          calendar_id?: string | null
+          calendar_name?: string
+          access_token_enc?: string | null
+          refresh_token_enc?: string | null
+          caldav_password_enc?: string | null
+          token_expires_at?: string | null
+          scope?: string | null
+          last_synced_at?: string | null
+          last_error?: string | null
+          status?: "connected" | "needs_reauth" | "error"
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          provider?: "google" | "outlook" | "icloud"
+          email?: string | null
+          provider_account_id?: string
+          calendar_id?: string | null
+          calendar_name?: string
+          access_token_enc?: string | null
+          refresh_token_enc?: string | null
+          caldav_password_enc?: string | null
+          token_expires_at?: string | null
+          scope?: string | null
+          last_synced_at?: string | null
+          last_error?: string | null
+          status?: "connected" | "needs_reauth" | "error"
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      calendar_account_event_map: {
+        Row: {
+          id: string
+          account_id: string
+          session_id: string | null
+          ical_uid: string
+          ical_recurrence_id: string | null
+          provider_event_id: string
+          fingerprint: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          account_id: string
+          session_id?: string | null
+          ical_uid: string
+          ical_recurrence_id?: string | null
+          provider_event_id: string
+          fingerprint: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          account_id?: string
+          session_id?: string | null
+          ical_uid?: string
+          ical_recurrence_id?: string | null
+          provider_event_id?: string
+          fingerprint?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_account_event_map_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_subscriptions: {
+        Row: {
+          id: string
+          cal_id: string
+          created_by: string
+          scope_user_id: string | null
+          scope_entity_id: string | null
+          input_url: string
+          feed_url: string
+          etag: string | null
+          http_last_modified: string | null
+          sync_token: string | null
+          last_synced_at: string | null
+          next_sync_at: string
+          last_http_status: number | null
+          last_error: string | null
+          event_count: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          cal_id: string
+          created_by: string
+          scope_user_id?: string | null
+          scope_entity_id?: string | null
+          input_url: string
+          feed_url: string
+          etag?: string | null
+          http_last_modified?: string | null
+          sync_token?: string | null
+          last_synced_at?: string | null
+          next_sync_at?: string
+          last_http_status?: number | null
+          last_error?: string | null
+          event_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          cal_id?: string
+          created_by?: string
+          scope_user_id?: string | null
+          scope_entity_id?: string | null
+          input_url?: string
+          feed_url?: string
+          etag?: string | null
+          http_last_modified?: string | null
+          sync_token?: string | null
+          last_synced_at?: string | null
+          next_sync_at?: string
+          last_http_status?: number | null
+          last_error?: string | null
+          event_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      calendar_import_batches: {
+        Row: {
+          id: string
+          cal_id: string
+          created_by: string
+          scope_user_id: string | null
+          scope_entity_id: string | null
+          source_name: string | null
+          session_count: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          cal_id: string
+          created_by: string
+          scope_user_id?: string | null
+          scope_entity_id?: string | null
+          source_name?: string | null
+          session_count?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          cal_id?: string
+          created_by?: string
+          scope_user_id?: string | null
+          scope_entity_id?: string | null
+          source_name?: string | null
+          session_count?: number
+          created_at?: string
+        }
+        Relationships: []
       }
       diary_day_notes: {
         Row: {
@@ -676,13 +1419,6 @@ export type Database = {
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "event_media_media_item_id_fkey"
-            columns: ["media_item_id"]
-            isOneToOne: false
-            referencedRelation: "media_items"
-            referencedColumns: ["id"]
-          },
         ]
       }
       event_subevents: {
@@ -693,8 +1429,11 @@ export type Database = {
           course_path: Json
           created_at: string
           distance_km: number | null
+          ends_at: string | null
           event_id: string
           id: string
+          color: string | null
+          live: boolean
           max_participants: number | null
           name: string
           sort_order: number
@@ -709,8 +1448,11 @@ export type Database = {
           course_path?: Json
           created_at?: string
           distance_km?: number | null
+          ends_at?: string | null
           event_id: string
           id?: string
+          color?: string | null
+          live?: boolean
           max_participants?: number | null
           name: string
           sort_order?: number
@@ -725,8 +1467,11 @@ export type Database = {
           course_path?: Json
           created_at?: string
           distance_km?: number | null
+          ends_at?: string | null
           event_id?: string
           id?: string
+          color?: string | null
+          live?: boolean
           max_participants?: number | null
           name?: string
           sort_order?: number
@@ -764,13 +1509,17 @@ export type Database = {
           pin_description: string | null
           pin_lat: number | null
           pin_lng: number | null
+          mapbox_place_id: string | null
+          ticket_color: string | null
+          participants_json: Json
+          co_organizer_emails: Json
           popularity: number
           published: boolean
           race_types: string[]
           region: string | null
           signup_deadline: string | null
           signup_fee: number
-          starts_at: string
+          starts_at: string | null
           team_id: string | null
           timing_company_id: string | null
           title: string
@@ -796,13 +1545,17 @@ export type Database = {
           pin_description?: string | null
           pin_lat?: number | null
           pin_lng?: number | null
+          mapbox_place_id?: string | null
+          ticket_color?: string | null
+          participants_json?: Json
+          co_organizer_emails?: Json
           popularity?: number
           published?: boolean
           race_types?: string[]
           region?: string | null
           signup_deadline?: string | null
           signup_fee?: number
-          starts_at: string
+          starts_at?: string | null
           team_id?: string | null
           timing_company_id?: string | null
           title: string
@@ -828,13 +1581,17 @@ export type Database = {
           pin_description?: string | null
           pin_lat?: number | null
           pin_lng?: number | null
+          mapbox_place_id?: string | null
+          ticket_color?: string | null
+          participants_json?: Json
+          co_organizer_emails?: Json
           popularity?: number
           published?: boolean
           race_types?: string[]
           region?: string | null
           signup_deadline?: string | null
           signup_fee?: number
-          starts_at?: string
+          starts_at?: string | null
           team_id?: string | null
           timing_company_id?: string | null
           title?: string
@@ -846,14 +1603,7 @@ export type Database = {
             foreignKeyName: "events_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "events_timing_company_id_fkey"
-            columns: ["timing_company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
+            referencedRelation: "app_teams"
             referencedColumns: ["id"]
           },
         ]
@@ -950,183 +1700,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      media_albums: {
-        Row: {
-          color: string | null
-          created_at: string
-          description: string | null
-          id: string
-          member_user_id: string | null
-          name: string
-          pinned: boolean
-          sort_order: number
-          team_id: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          color?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          member_user_id?: string | null
-          name: string
-          pinned?: boolean
-          sort_order?: number
-          team_id?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          color?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          member_user_id?: string | null
-          name?: string
-          pinned?: boolean
-          sort_order?: number
-          team_id?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "media_albums_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      media_item_albums: {
-        Row: {
-          album_id: string
-          created_at: string
-          id: string
-          media_item_id: string
-        }
-        Insert: {
-          album_id: string
-          created_at?: string
-          id?: string
-          media_item_id: string
-        }
-        Update: {
-          album_id?: string
-          created_at?: string
-          id?: string
-          media_item_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "media_item_albums_album_id_fkey"
-            columns: ["album_id"]
-            isOneToOne: false
-            referencedRelation: "media_albums"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "media_item_albums_media_item_id_fkey"
-            columns: ["media_item_id"]
-            isOneToOne: false
-            referencedRelation: "media_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      media_items: {
-        Row: {
-          album_id: string | null
-          allowed_media_houses: string[]
-          captured_at: string | null
-          created_at: string
-          event_id: string | null
-          file_size: number | null
-          id: string
-          media_type: string
-          mime_type: string | null
-          organizer: string | null
-          photographer: string | null
-          storage_path: string
-          subject: string | null
-          team_id: string | null
-          updated_at: string
-          uploaded_in_mode: string
-          user_id: string
-          visible_friends: boolean
-          visible_media: boolean
-          visible_world: boolean
-        }
-        Insert: {
-          album_id?: string | null
-          allowed_media_houses?: string[]
-          captured_at?: string | null
-          created_at?: string
-          event_id?: string | null
-          file_size?: number | null
-          id?: string
-          media_type: string
-          mime_type?: string | null
-          organizer?: string | null
-          photographer?: string | null
-          storage_path: string
-          subject?: string | null
-          team_id?: string | null
-          updated_at?: string
-          uploaded_in_mode?: string
-          user_id: string
-          visible_friends?: boolean
-          visible_media?: boolean
-          visible_world?: boolean
-        }
-        Update: {
-          album_id?: string | null
-          allowed_media_houses?: string[]
-          captured_at?: string | null
-          created_at?: string
-          event_id?: string | null
-          file_size?: number | null
-          id?: string
-          media_type?: string
-          mime_type?: string | null
-          organizer?: string | null
-          photographer?: string | null
-          storage_path?: string
-          subject?: string | null
-          team_id?: string | null
-          updated_at?: string
-          uploaded_in_mode?: string
-          user_id?: string
-          visible_friends?: boolean
-          visible_media?: boolean
-          visible_world?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "media_items_album_id_fkey"
-            columns: ["album_id"]
-            isOneToOne: false
-            referencedRelation: "media_albums"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "media_items_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "media_items_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       meeting_audience: {
         Row: {
@@ -1462,12 +2035,15 @@ export type Database = {
           country: string | null
           created_at: string
           default_class: string | null
+          display_name: string | null
           email: string | null
+          email_verified: boolean
           emergency_contact: string | null
           emergency_phone: string | null
           first_name: string | null
           gender: string | null
           id: string
+          is_beta_tester: boolean
           is_photographer: boolean
           last_name: string | null
           license: string | null
@@ -1500,12 +2076,15 @@ export type Database = {
           country?: string | null
           created_at?: string
           default_class?: string | null
+          display_name?: string | null
           email?: string | null
+          email_verified?: boolean
           emergency_contact?: string | null
           emergency_phone?: string | null
           first_name?: string | null
           gender?: string | null
           id: string
+          is_beta_tester?: boolean
           is_photographer?: boolean
           last_name?: string | null
           license?: string | null
@@ -1538,12 +2117,15 @@ export type Database = {
           country?: string | null
           created_at?: string
           default_class?: string | null
+          display_name?: string | null
           email?: string | null
+          email_verified?: boolean
           emergency_contact?: string | null
           emergency_phone?: string | null
           first_name?: string | null
           gender?: string | null
           id?: string
+          is_beta_tester?: boolean
           is_photographer?: boolean
           last_name?: string | null
           license?: string | null
@@ -2540,6 +3122,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_plans: {
+        Row: {
+          created_at: string
+          plan: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          plan?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          plan?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           company_id: string | null
@@ -2562,15 +3171,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_roles_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       verification_attempts: {
         Row: {
@@ -2622,23 +3223,60 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      calendar_accounts_public: {
+        Row: {
+          id: string
+          user_id: string
+          provider: "google" | "outlook" | "icloud"
+          email: string | null
+          provider_account_id: string
+          calendar_id: string | null
+          calendar_name: string
+          last_synced_at: string | null
+          last_error: string | null
+          status: "connected" | "needs_reauth" | "error"
+          created_at: string
+          updated_at: string
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      claim_due_calendar_subscriptions: {
+        Args: { p_limit?: number }
+        Returns: Database["public"]["Tables"]["calendar_subscriptions"]["Row"][]
+      }
       calc_word_count: { Args: { _body: string }; Returns: number }
+      ensure_own_profile_row: { Args: never; Returns: string }
+      email_registered_to_other_user: {
+        Args: { p_email: string; p_except_user_id: string }
+        Returns: boolean
+      }
+      patch_own_account_profile: {
+        Args: {
+          p_birth_date?: string | null
+          p_first_name?: string | null
+          p_last_name?: string | null
+          p_mobile?: string | null
+          p_patch_birth_date?: boolean
+          p_patch_first_name?: boolean
+          p_patch_last_name?: boolean
+          p_patch_mobile?: boolean
+        }
+        Returns: {
+          birth_date: string | null
+          email: string | null
+          first_name: string | null
+          last_name: string | null
+          mobile: string | null
+          updated_at: string
+        }[]
+      }
       can_annotate_member: { Args: { _member: string }; Returns: boolean }
       can_view_member: { Args: { _member: string }; Returns: boolean }
       coach_can_edit_owner_category: {
         Args: { _category_id: string; _owner: string }
         Returns: boolean
-      }
-      delete_email: {
-        Args: { message_id: number; queue_name: string }
-        Returns: boolean
-      }
-      enqueue_email: {
-        Args: { payload: Json; queue_name: string }
-        Returns: number
       }
       get_member_viewer_role: { Args: { _member: string }; Returns: string }
       get_member_viewer_role_for_leader: {
@@ -2656,29 +3294,48 @@ export type Database = {
         Args: { _member: string }
         Returns: boolean
       }
+      is_app_team_admin: { Args: { p_team_id: string }; Returns: boolean }
+      is_app_team_admin_for: {
+        Args: { p_user_id: string; p_team_id: string }
+        Returns: boolean
+      }
+      is_app_team_owner: { Args: { p_team_id: string }; Returns: boolean }
+      is_app_team_member: { Args: { p_team_id: string }; Returns: boolean }
+      upsert_entity_calendar_session: { Args: { p: Json }; Returns: string }
+      upsert_entity_calendar_session_for: {
+        Args: { p_actor: string; p: Json }
+        Returns: string
+      }
+      delete_entity_calendar_session: { Args: { p_id: string }; Returns: boolean }
+      delete_entity_calendar_session_for: {
+        Args: { p_actor: string; p_id: string }
+        Returns: boolean
+      }
+      list_member_entity_calendar: { Args: never; Returns: Json }
+      list_member_entity_calendar_for: {
+        Args: { p_user_id: string; p_email?: string | null }
+        Returns: Json
+      }
+      list_visible_calendar_sessions: { Args: never; Returns: Json }
+      list_visible_calendar_sessions_for: {
+        Args: { p_user_id: string; p_email?: string | null }
+        Returns: Json
+      }
+      decide_entity_membership_request: {
+        Args: {
+          p_request_id: string
+          p_actor_id: string
+          p_action: string
+          p_group_id?: string | null
+        }
+        Returns: Json
+      }
       is_coach_of_member: { Args: { _member: string }; Returns: boolean }
       is_follower_of_member: { Args: { _member: string }; Returns: boolean }
       is_group_leader_of_member: { Args: { _member: string }; Returns: boolean }
       is_media_in_team_profile_album: {
         Args: { _media_id: string }
         Returns: boolean
-      }
-      move_to_dlq: {
-        Args: {
-          dlq_name: string
-          message_id: number
-          payload: Json
-          source_queue: string
-        }
-        Returns: number
-      }
-      read_email_batch: {
-        Args: { batch_size: number; queue_name: string; vt: number }
-        Returns: {
-          message: Json
-          msg_id: number
-          read_ct: number
-        }[]
       }
     }
     Enums: {
@@ -2811,6 +3468,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       account_type: ["individual", "team"],

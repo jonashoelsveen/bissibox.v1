@@ -4,6 +4,7 @@ import { motion, useMotionValue, useSpring, useTransform, type MotionValue } fro
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { MINIMAL_TOP_TAB_BAR_HEIGHT } from "@/lib/cloud-landing-design";
 import * as tus from "tus-js-client";
 import { LibrarySideNav, type LibrarySideNavValue } from "@/components/library/LibrarySideNav";
 import { TopBarSlot } from "@/components/TopBarSlot";
@@ -2484,8 +2485,8 @@ function Lightbox({
 
   return (
     <div
-      className={`fixed right-0 bottom-0 flex animate-in fade-in transition-[left] duration-300 ease-out ${isFullscreen ? "left-0 top-0 z-[95]" : "top-10 z-30"}`}
-      style={isFullscreen ? undefined : { left: panelOpen ? 256 : 0 }}
+      className={`fixed right-0 bottom-0 flex animate-in fade-in transition-[left] duration-300 ease-out ${isFullscreen ? "left-0 top-0 z-[95]" : "z-30"}`}
+      style={isFullscreen ? undefined : { left: panelOpen ? 256 : 0, top: MINIMAL_TOP_TAB_BAR_HEIGHT }}
       onClick={onClose}
     >
       <div className="absolute inset-0 bg-white" />

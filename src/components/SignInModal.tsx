@@ -11,6 +11,8 @@ import { formatBirthIso } from "@/lib/birth-date";
 import { COUNTRIES } from "@/lib/countries";
 import { SIGN_IN_BUTTON_BORDER_RADIUS } from "@/lib/cloud-landing-design";
 import { isEntityFeatureEnabled } from "@/lib/features";
+import { otpVerifyFailureFromPayload, focusOtpFirstBox, applyOtpBoxInput, focusOtpBox } from "@/lib/otpAttempts";
+import { VerificationCodeExpiredPanel } from "@/components/account/VerificationCodeExpiredPanel";
 
 const HELVETICA =
   '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -26,9 +28,9 @@ function headerFor(ctx: SignInContext) {
     case "entity":
       return "Sign in before creating Aponna-entity";
     case "account":
-      return "Welcome to your Aponna-account";
+      return "Welcome to your Bissibox-account";
     default:
-      return "Welcome to Aponna Cloud";
+      return "Welcome to Bissibox";
   }
 }
 
@@ -71,6 +73,7 @@ export function SignInModal({
   const [otpSending, setOtpSending] = useState(false);
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpExpired, setOtpExpired] = useState(false);
   const otpInputsRef = useRef<Array<HTMLInputElement | null>>([]);
   // Pending session tokens — held in memory between signup response and
   // successful OTP verification. The Supabase client session is NOT set
@@ -199,7 +202,10 @@ export function SignInModal({
       if (!payload?.attempt_id) throw new Error("Failed to send code");
       setOtpAttemptId(payload.attempt_id);
       setOtpResendIn(60);
-      setTimeout(() => otpInputsRef.current[0]?.focus(), 50);
+      setOtpDigits(["", "", "", "", "", ""]);
+      setOtpExpired(false);
+      setOtpError(null);
+      setTimeout(() => focusOtpFirstBox(otpInputsRef.current), 50);
     } catch (e) {
       setOtpError((e as Error).message || "Failed to send code");
     } finally {
@@ -224,8 +230,21 @@ export function SignInModal({
         },
         body: JSON.stringify({ attempt_id: otpAttemptId, code }),
       });
-      const payload = (await res.json().catch(() => ({}))) as { error?: string; ok?: boolean };
-      if (payload?.error) throw new Error(payload.error);
+      const payload = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        ok?: boolean;
+        remaining?: number;
+        code?: string;
+      };
+      if (!res.ok || payload?.error) {
+        const failure = otpVerifyFailureFromPayload(payload);
+        setOtpExpired(failure.expired);
+        setOtpError(failure.expired ? null : failure.message);
+        setOtpDigits(["", "", "", "", "", ""]);
+        setOtpVerifying(false);
+        setTimeout(() => focusOtpFirstBox(otpInputsRef.current), 50);
+        return;
+      }
       // OTP verified — NOW activate the Supabase client session so the
       // user becomes "logged in" in the UI and lands on calendar.
       if (pendingRefreshToken) {
@@ -233,10 +252,14 @@ export function SignInModal({
       }
       choreographExit();
     } catch (e) {
-      setOtpError((e as Error).message || "Verification failed");
+      const failure = otpVerifyFailureFromPayload({
+        error: e instanceof Error ? e.message : "Verification failed",
+      });
+      setOtpExpired(failure.expired);
+      setOtpError(failure.expired ? null : failure.message);
       setOtpDigits(["", "", "", "", "", ""]);
-      otpInputsRef.current[0]?.focus();
       setOtpVerifying(false);
+      setTimeout(() => focusOtpFirstBox(otpInputsRef.current), 50);
       return;
     }
     setOtpVerifying(false);
@@ -353,7 +376,7 @@ export function SignInModal({
             transition={{ duration: exiting ? 0.6 : 0.3, ease: "easeOut" }}
             style={{ background: "rgba(0,0,0,0.28)" }}
             onClick={() => {
-              if (!submitting && !exiting) onClose();
+              if (!submitting && !exiting && !otpVerifying && !otpSending) onClose();
             }}
           />
 
@@ -404,7 +427,7 @@ export function SignInModal({
             >
               {mode === "signin" ? (
                 <div style={{ padding: "44px 40px 32px" }}>
-                  <ModalHeader title={title} subtitle="Sign in with your Aponna-account" subtitleSize={14} />
+                  <ModalHeader title={title} subtitle="Sign in with your Bissibox-account" subtitleSize={14} />
                   <SignInForm
                     onSubmit={onSubmit}
                     email={email}
@@ -454,10 +477,12 @@ export function SignInModal({
                       void sendSignupOtp(otpEmail, pendingUserId, pendingAccessToken);
                     }
                   }}
+                  onCancel={onClose}
                   resendIn={otpResendIn}
                   sending={otpSending}
                   verifying={otpVerifying}
                   error={otpError}
+                  expired={otpExpired}
                 />
               )}
             </motion.div>
@@ -518,6 +543,8 @@ function SignInForm(props: {
   ready: boolean;
 }) {
   const { onSubmit, email, setEmail, password, setPassword, error, submitting, onCreate, ready } = props;
+  const [allowCredentialAutofill, setAllowCredentialAutofill] = useState(false);
+  const unlockCredentialAutofill = () => setAllowCredentialAutofill(true);
   return (
     <form onSubmit={onSubmit} className="space-y-4" autoComplete="off">
       <LabeledField
@@ -528,6 +555,8 @@ function SignInForm(props: {
         autoComplete="email"
         autoFocus={ready}
         lockAutofillUntilPointer
+        autofillAllowed={allowCredentialAutofill}
+        onAutofillUnlock={unlockCredentialAutofill}
         required
       />
       <LabeledField
@@ -536,6 +565,9 @@ function SignInForm(props: {
         onChange={setPassword}
         type="password"
         autoComplete="current-password"
+        lockAutofillUntilPointer
+        autofillAllowed={allowCredentialAutofill}
+        onAutofillUnlock={unlockCredentialAutofill}
         required
       />
       {error && <ErrorLine error={error} />}
@@ -555,11 +587,11 @@ function SignInForm(props: {
             cursor: "pointer",
           }}
         >
-          Create Aponna-account
+          Create Bissibox-account
         </button>
       </div>
 
-      <PrimaryButton submitting={submitting} label="Sign in" />
+      <PrimaryButton submitting={submitting} label="Log in" />
     </form>
   );
 }
@@ -609,8 +641,8 @@ function SignUpForm(props: {
         style={{ padding: "44px 40px 20px" }}
       >
         <ModalHeader
-          title="Create Aponna-account"
-          subtitle="Your key to the Aponna ecosystem"
+          title="Create Bissibox-account"
+          subtitle="Your key to the Bissibox ecosystem"
           subtitleSize={13}
         />
         {/** Signup name, country, birth date — Bucket A: currently live, hidden this round. */}
@@ -668,13 +700,11 @@ function SignUpForm(props: {
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="transition active:scale-[0.99]"
+          className="border border-[#1d1d1f] bg-white text-[#1d1d1f] transition-colors hover:bg-[#f0f0f0] active:scale-[0.99] disabled:cursor-default"
           style={{
-            background: "#ffffff", color: "#1d1d1f",
             borderRadius: 12, padding: "11px 22px",
             fontFamily: HELVETICA, fontSize: 14, fontWeight: 500,
             letterSpacing: "-0.005em",
-            border: "1px solid #1d1d1f",
             cursor: submitting ? "default" : "pointer",
           }}
         >
@@ -683,12 +713,11 @@ function SignUpForm(props: {
         <button
           type="submit"
           disabled={submitting}
-          className="transition active:scale-[0.99]"
+          className="border-0 bg-[#1d1d1f] text-white transition-colors hover:bg-black active:scale-[0.99] disabled:cursor-default"
           style={{
-            background: "#1d1d1f", color: "#ffffff",
             borderRadius: 12, padding: "11px 22px",
             fontFamily: HELVETICA, fontSize: 14, fontWeight: 500,
-            letterSpacing: "-0.005em", border: "none",
+            letterSpacing: "-0.005em",
             cursor: submitting ? "default" : "pointer",
             opacity: submitting ? 0.85 : 1,
           }}
@@ -775,7 +804,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 
 function LabeledField({
   label, value, onChange, type = "text", required, autoComplete, autoFocus,
-  lockAutofillUntilPointer,
+  lockAutofillUntilPointer, autofillAllowed, onAutofillUnlock,
 }: {
   label: string;
   value: string;
@@ -785,6 +814,8 @@ function LabeledField({
   autoComplete?: string;
   autoFocus?: boolean;
   lockAutofillUntilPointer?: boolean;
+  autofillAllowed?: boolean;
+  onAutofillUnlock?: () => void;
 }) {
   return (
     <label className="block">
@@ -797,6 +828,8 @@ function LabeledField({
         autoComplete={autoComplete}
         autoFocus={autoFocus}
         lockAutofillUntilPointer={lockAutofillUntilPointer}
+        autofillAllowed={autofillAllowed}
+        onAutofillUnlock={onAutofillUnlock}
       />
     </label>
   );
@@ -861,7 +894,7 @@ const inputStyle: React.CSSProperties = {
 
 function RawInput({
   type = "text", value, onChange, required, autoComplete, autoFocus,
-  lockAutofillUntilPointer = false,
+  lockAutofillUntilPointer = false, autofillAllowed = false, onAutofillUnlock,
 }: {
   type?: string;
   value: string;
@@ -870,11 +903,24 @@ function RawInput({
   autoComplete?: string;
   autoFocus?: boolean;
   lockAutofillUntilPointer?: boolean;
+  autofillAllowed?: boolean;
+  onAutofillUnlock?: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const unbindRef = useRef<(() => void) | null>(null);
   const [allowAutofill, setAllowAutofill] = useState(!lockAutofillUntilPointer);
   const autofillLocked = lockAutofillUntilPointer && !allowAutofill;
+
+  const unlockAutofill = (target?: HTMLInputElement) => {
+    if (!autofillLocked) return;
+    if (target) {
+      if (type) target.type = type;
+      if (autoComplete) target.autoComplete = autoComplete;
+      target.removeAttribute("name");
+    }
+    setAllowAutofill(true);
+    onAutofillUnlock?.();
+  };
 
   const setInputRef = (el: HTMLInputElement | null) => {
     inputRef.current = el;
@@ -888,9 +934,16 @@ function RawInput({
   }, []);
 
   useEffect(() => {
+    if (autofillAllowed) unlockAutofill(inputRef.current ?? undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autofillAllowed]);
+
+  useEffect(() => {
     if (!autoFocus) return;
     const el = inputRef.current;
     if (!el) return;
+    // Same caret placement as Create account. Credential autofill stays locked
+    // until pointerdown so Google's suggestion does not open on its own.
     const placeCaret = () => {
       el.focus({ preventScroll: true });
       document.querySelectorAll(".account-field.is-focused").forEach((node) => {
@@ -904,8 +957,9 @@ function RawInput({
         /* type=email does not always expose a selection range */
       }
     };
-    placeCaret();
-  }, [autoFocus, lockAutofillUntilPointer]);
+    const t = window.setTimeout(placeCaret, 0);
+    return () => window.clearTimeout(t);
+  }, [autoFocus]);
 
   return (
     <input
@@ -916,7 +970,7 @@ function RawInput({
       required={required}
       name={allowAutofill ? undefined : `deferred-${type}`}
       autoComplete={allowAutofill ? autoComplete : "off"}
-      inputMode={type === "email" ? "email" : undefined}
+      inputMode={autofillLocked || type !== "email" ? undefined : "email"}
       autoCapitalize="none"
       autoCorrect="off"
       spellCheck={false}
@@ -928,11 +982,7 @@ function RawInput({
           if (node !== target) node.classList.remove("is-focused");
         });
         target.classList.add("is-focused");
-        if (!autofillLocked) return;
-        if (type) target.type = type;
-        if (autoComplete) target.autoComplete = autoComplete;
-        target.removeAttribute("name");
-        setAllowAutofill(true);
+        unlockAutofill(target);
       }}
     />
   );
@@ -983,10 +1033,12 @@ function OtpStep({
   inputsRef,
   onVerify,
   onResend,
+  onCancel,
   resendIn,
   sending,
   verifying,
   error,
+  expired = false,
 }: {
   email: string;
   digits: string[];
@@ -994,41 +1046,91 @@ function OtpStep({
   inputsRef: React.MutableRefObject<Array<HTMLInputElement | null>>;
   onVerify: (code?: string) => void;
   onResend: () => void;
+  onCancel: () => void;
   resendIn: number;
   sending: boolean;
   verifying: boolean;
   error: string | null;
+  expired?: boolean;
 }) {
   useEffect(() => {
+    if (expired) return;
     const cleanups = inputsRef.current.map((el) => bindFocusedField(el));
     return () => {
       cleanups.forEach((fn) => fn());
     };
-  }, [inputsRef]);
+  }, [inputsRef, expired, verifying]);
+
+  useEffect(() => {
+    if (expired || verifying) return;
+    if (digits.some((d) => d)) return;
+    const t = window.setTimeout(() => focusOtpFirstBox(inputsRef.current), 50);
+    return () => window.clearTimeout(t);
+  }, [expired, verifying, digits, inputsRef]);
+
+  if (expired) {
+    return (
+      <div style={{ padding: "44px 40px 32px" }}>
+        <VerificationCodeExpiredPanel
+          compactTitle
+          error={error}
+          footer={
+            <div
+              className="flex items-center justify-between"
+              style={{ marginTop: 28 }}
+            >
+              <button
+                type="button"
+                onClick={onCancel}
+                disabled={sending}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  color: "#ff3b30",
+                  fontFamily: HELVETICA,
+                  fontSize: 15,
+                  fontWeight: 400,
+                  letterSpacing: "-0.01em",
+                  opacity: sending ? 0.45 : 1,
+                  cursor: sending ? "default" : "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onResend}
+                disabled={sending}
+                className="transition active:scale-[0.99]"
+                style={{
+                  background: "#1d1d1f",
+                  color: "#ffffff",
+                  borderRadius: 12,
+                  padding: "12px 18px",
+                  fontFamily: HELVETICA,
+                  fontSize: 15,
+                  fontWeight: 500,
+                  letterSpacing: "-0.005em",
+                  border: "none",
+                  cursor: sending ? "default" : "pointer",
+                  opacity: sending ? 0.7 : 1,
+                }}
+              >
+                {sending ? "Sending…" : "Resend"}
+              </button>
+            </div>
+          }
+        />
+      </div>
+    );
+  }
 
   const handleDigit = (i: number, v: string) => {
-    const clean = v.replace(/\D/g, "");
-    if (!clean) {
-      const next = [...digits];
-      next[i] = "";
-      setDigits(next);
-      return;
-    }
-    if (clean.length > 1) {
-      const chars = clean.slice(0, 6).split("");
-      const next = ["", "", "", "", "", ""];
-      chars.forEach((c, idx) => (next[idx] = c));
-      setDigits(next);
-      const lastIdx = Math.min(chars.length, 6) - 1;
-      inputsRef.current[lastIdx]?.focus();
-      if (chars.length === 6) onVerify(next.join(""));
-      return;
-    }
-    const next = [...digits];
-    next[i] = clean[0];
-    setDigits(next);
-    if (i < 5) inputsRef.current[i + 1]?.focus();
-    if (i === 5 && next.every((d) => d)) onVerify(next.join(""));
+    const result = applyOtpBoxInput({ index: i, value: v, digits });
+    setDigits(result.digits);
+    focusOtpBox(inputsRef.current, result.focusIndex);
+    if (result.complete) onVerify(result.digits.join(""));
   };
 
   const handleKey = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {

@@ -538,13 +538,13 @@ export function ClientsPage() {
   const rightPanel = (
     <aside className="relative md:h-full overflow-hidden">
       <div
-        className="relative h-full pl-2 pr-2 py-2 transition-transform duration-300 ease-out"
+        className="relative h-full transition-transform duration-300 ease-out"
         style={{
           width: 256,
           transform: panelOpen ? "translateX(0)" : "translateX(100%)",
         }}
       >
-        <div className="mac-panel relative h-full overflow-hidden rounded-lg border border-hairline shadow-sm">
+        <div className="mac-panel relative h-full overflow-hidden border-l border-hairline">
           <div className="h-full overflow-y-auto px-3 pb-6 pt-[48px]">
             <div className="flex flex-col gap-2">
               <div className="relative">
@@ -629,7 +629,7 @@ export function ClientsPage() {
               </div>
             </div>
           </div>
-          <div className="mac-panel-fade pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-lg" />
+          <div className="mac-panel-fade pointer-events-none absolute inset-x-0 bottom-0 h-10" />
         </div>
       </div>
     </aside>

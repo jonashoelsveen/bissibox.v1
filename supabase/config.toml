@@ -1,1 +1,13 @@
-project_id = "urnxwvxzyablnqjnthsg"
+project_id = "ifskkkjimvyyzpqliwjo"
+
+[auth]
+site_url = "exp+aponna://"
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+# Disable Supabase's own email confirmation so signUp() immediately returns a
+# live session. Email verification is handled entirely by our custom OTP flow
+# (send-verification-otp / verify-otp edge functions).
+enable_confirmations = false
+double_confirm_changes = false

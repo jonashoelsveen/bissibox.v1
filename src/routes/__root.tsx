@@ -1,16 +1,28 @@
-import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/react-router";
+import { Outlet, createRootRouteWithContext, HeadContent, Scripts, Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TopBar } from "@/components/TopBar";
 import { GlobalTopTabBar } from "@/components/GlobalTopTabBar";
+import { AccountTopTabBar } from "@/components/account/AccountTopTabBar";
+import { resolveAppSurface, useAppSurface } from "@/lib/app-surface";
 import { GlobalCreateOverlay } from "@/components/GlobalCreateOverlay";
 import { TopBarSlotProvider } from "@/components/TopBarSlot";
-// SettingsModal removed — settings are a full page at /settings now.
 import { ProfileModal } from "@/components/ProfileModal";
 import { ProfileRouteMemory } from "@/components/ProfileRouteMemory";
+import { EntityInviteGate } from "@/components/entity/EntityInviteGate";
 import { Toaster } from "@/components/ui/sonner";
+import { BissiboxPlatformOverlay } from "@/components/BissiboxPlatformOverlay";
+import {
+  CLOUD_FOOTER_BG,
+  CLOUD_PAGE_BG,
+  isCloudLandingChromePath,
+  MINIMAL_TOP_TAB_BAR_HEIGHT,
+} from "@/lib/cloud-landing-design";
 
+export type RouterAppContext = {
+  appSurface: "cloud" | "account";
+};
 
 function NotFoundComponent() {
   return (
@@ -34,7 +46,45 @@ function NotFoundComponent() {
   );
 }
 
-export const Route = createRootRoute({
+function surfaceFromLocation(location: {
+  href: string;
+  pathname: string;
+  search: unknown;
+  url?: string;
+}): "cloud" | "account" {
+  if (typeof window !== "undefined") {
+    return resolveAppSurface({
+      host: window.location.hostname,
+      search: window.location.search,
+      pathname: location.pathname || window.location.pathname,
+    });
+  }
+
+  let host = "";
+  let search = "";
+  let pathname = location.pathname || "/";
+  try {
+    const raw = location.url ?? location.href;
+    const url = new URL(raw, "http://localhost");
+    host = url.hostname;
+    search = url.search;
+    if (url.pathname) pathname = url.pathname;
+  } catch {
+    /* ignore */
+  }
+
+  if (!search && location.search && typeof location.search === "object") {
+    const params = new URLSearchParams(location.search as Record<string, string>);
+    search = params.toString() ? `?${params.toString()}` : "";
+  }
+
+  return resolveAppSurface({ host, search, pathname, surfaceCookie: false });
+}
+
+export const Route = createRootRouteWithContext<RouterAppContext>()({
+  beforeLoad: ({ location }): RouterAppContext => ({
+    appSurface: surfaceFromLocation(location),
+  }),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -47,6 +97,8 @@ export const Route = createRootRoute({
       },
     ],
     links: [
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png?v=3" },
+      { rel: "icon", href: "/favicon.ico?v=3" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "" },
@@ -76,9 +128,14 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  // When rendered inside an iframe (e.g. the ProfileModal), hide the global
-  // chrome so only the page content is visible inside the modal.
   const [isEmbedded, setIsEmbedded] = useState(false);
+  const { appSurface: initialSurface } = Route.useRouteContext();
+  const surface = useAppSurface(initialSurface);
+  const isAccount = surface === "account";
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const isCloudLanding = !isAccount && isCloudLandingChromePath(path);
+  const isSoftOverscroll = isAccount || isCloudLanding;
+
   useEffect(() => {
     try {
       setIsEmbedded(window.location.hash.includes("embed=1"));
@@ -87,26 +144,62 @@ function RootComponent() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!isSoftOverscroll) return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtml = html.style.backgroundColor;
+    const prevBody = body.style.backgroundColor;
+    html.style.backgroundColor = CLOUD_PAGE_BG;
+    body.style.backgroundColor = CLOUD_PAGE_BG;
+    return () => {
+      html.style.backgroundColor = prevHtml;
+      body.style.backgroundColor = prevBody;
+    };
+  }, [isSoftOverscroll]);
 
   return (
     <AuthProvider>
       <TopBarSlotProvider>
-        {!isEmbedded && <ProfileRouteMemory />}
-        {!isEmbedded && <TopBar />}
-        {!isEmbedded && <GlobalTopTabBar />}
+        {!isEmbedded && !isAccount && <ProfileRouteMemory />}
+        {!isEmbedded && !isAccount && <TopBar />}
+        {!isEmbedded && (isAccount ? <AccountTopTabBar /> : <GlobalTopTabBar />)}
+        {isSoftOverscroll ? (
+          <div
+            aria-hidden
+            className="pointer-events-none fixed bottom-0 right-0 z-0"
+            style={{
+              left: "var(--topbar-left-offset, 0px)",
+              height: "50vh",
+              backgroundColor: CLOUD_FOOTER_BG,
+            }}
+          />
+        ) : null}
         <main
           className={
             isEmbedded
-              ? "fixed inset-0 overflow-y-auto"
-              : "fixed inset-x-0 top-10 bottom-0 overflow-y-auto"
+              ? "fixed inset-0 overflow-y-auto bg-white"
+              : isSoftOverscroll
+                ? "fixed right-0 bottom-0 z-[1] overflow-y-auto"
+                : "fixed right-0 bottom-0 overflow-y-auto bg-white"
+          }
+          style={
+            isEmbedded
+              ? undefined
+              : {
+                  left: "var(--topbar-left-offset, 0px)",
+                  top: MINIMAL_TOP_TAB_BAR_HEIGHT,
+                  ...(isSoftOverscroll ? { backgroundColor: "transparent" } : {}),
+                }
           }
         >
           <Outlet />
         </main>
         {!isEmbedded && <Toaster />}
-        {!isEmbedded && <GlobalCreateOverlay />}
-        {/* SettingsModal removed — settings live at /settings */}
-        {!isEmbedded && <ProfileModal />}
+        {!isEmbedded && <EntityInviteGate />}
+        {!isEmbedded && !isAccount && <GlobalCreateOverlay />}
+        {!isEmbedded && !isAccount && <ProfileModal />}
+        {!isEmbedded && !isAccount && <BissiboxPlatformOverlay />}
       </TopBarSlotProvider>
     </AuthProvider>
   );

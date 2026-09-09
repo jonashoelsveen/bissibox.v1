@@ -1,0 +1,18 @@
+# 1. Package Dependencies
+node_modules/
+
+# 2. Expo Tooling & Auto-generated Types (Crucial for image_e1b27b.png)
+.expo/
+*.d.ts
+
+# 3. Active Build Logs (Seen in image_e1b27b.png)
+xcodebuild-error.log
+xcodebuild.log
+*.log
+
+# 4. Native iOS and Android Platforms
+ios/
+android/
+
+# 5. Environment Profiles
+.env

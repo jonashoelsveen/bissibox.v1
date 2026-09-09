@@ -9,8 +9,8 @@
  * calendar in the grid header and the main view stay in lockstep.
  */
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { BarChart3 } from "lucide-react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { BarChart3, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -22,25 +22,60 @@ import {
 } from "./StatsChartView";
 import { useDiaryVisibilitySafe } from "./DiaryVisibilityContext";
 
-import { useYearStore, useEventStore, type CellKey, type CalendarEvent } from "./yearStore";
+import { useYearStore, type CellKey, type CalendarEvent } from "./yearStore";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode, type ExtendedViewMode } from "./UnifiedElasticGrid";
 import { MonthNavControl } from "./MonthNavControl";
-import type { DateRange } from "./MiniCalendar";
-import {
-  PreviewOverlayProvider,
-  usePreviewOverlay,
-} from "./ImportCalendar/PreviewOverlayContext";
-import { ImportButton } from "./ImportCalendar/ImportButton";
-import { buildGhostEvents } from "./ImportCalendar/ghost";
-import { isoWeekNumber } from "./dateUtils";
+import { YearGrid } from "./YearGrid";
+import { miniCalendarViewMode, type DateRange } from "./MiniCalendar";
+import { addDays, isoWeekNumber, startOfWeekMon } from "./dateUtils";
+import { useCalendarViewActions, useCalendarViewActionsOptional, CalendarViewActionsProvider } from "./CalendarViewActionsContext";
+import { CalendarInfoToast } from "./CalendarInfoToast";
+import { useShortcut } from "@/hooks/useShortcut";
 import { categoryKeyFromColor, type CategoryKey } from "./CalendarSideNav";
 // Strava integration removed; diary/strava activity sync is no longer available.
 import { useUserCategories } from "@/hooks/useUserCategories";
+import { useCalendarSearchSafe } from "./CalendarSearchContext";
+import { useMacroProjectNavSafe } from "./MacroProjectNavContext";
+import type { CalendarScale } from "./CalendarSearch";
+import { GanttYearGrid } from "./GanttYearGrid";
+import { GanttMacroZoomControl } from "./GanttMacroZoomControl";
+import { GanttItemPanel } from "./GanttItemPanel";
+import {
+  HEADER_CLUSTER_GAP_PX,
+  HEADER_CLUSTER_SHOW_SLACK_PX,
+  nextHeaderClusterHiding,
+} from "./headerClusterVisibility";
+import { unionGanttDaySpan, weeksForCalendarYear } from "./ganttWeeks";
+import { useMembershipCalendarSafe } from "./MembershipCalendarContext";
+import { useEntityGroupVisibilitySafe } from "./EntityGroupVisibilityContext";
+
+/** Keep a newly saved titled session visible this long when its activity tab is hidden,
+ *  so it doesn't share the instant fade of an untitled cancelled draft. */
+const HIDDEN_NEW_SESSION_LINGER_MS = 1000;
+
 
 const MONTHS_NB = [
   "Januar", "Februar", "Mars", "April", "Mai", "Juni",
   "Juli", "August", "September", "Oktober", "November", "Desember",
 ];
+
+/** Cmd+V target: month-cell focus, highlighted week column, or the nav date. */
+function dateForSessionPaste(
+  viewMode: ViewMode,
+  currentDate: Date,
+  selected: CellKey | null,
+  monthAnchor: Date | null,
+): Date {
+  if (viewMode === "month" && monthAnchor) return monthAnchor;
+  if (viewMode === "week" && selected != null) {
+    const col = selected.month;
+    if (col >= 0 && col <= 6) {
+      const monday = startOfWeekMon(currentDate);
+      return new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + col);
+    }
+  }
+  return currentDate;
+}
 
 function ViewTitle({ viewMode, currentDate }: { viewMode: ExtendedViewMode; currentDate: Date }) {
   const month = MONTHS_NB[currentDate.getMonth()];
@@ -77,8 +112,8 @@ function ViewTitle({ viewMode, currentDate }: { viewMode: ExtendedViewMode; curr
       </>
     );
   } else if (viewMode === "year") {
-    ghost = <span className="font-semibold">8888</span>;
-    content = <span className="font-semibold">{year}</span>;
+    ghost = <span className="font-semibold tabular-nums">8888</span>;
+    content = <span className="font-semibold tabular-nums">{year}</span>;
   } else {
     ghost = (
       <>
@@ -114,9 +149,12 @@ export interface YearCalendarViewProps {
   onCurrentDateChange?: (date: Date, range?: DateRange) => void;
   viewMode?: ExtendedViewMode;
   onViewModeChange?: (v: ExtendedViewMode) => void;
+  /** Year view: week-number click tints the week (mini-cal follows in week mode). */
+  yearWeekHighlight?: boolean;
+  onYearWeekHighlightChange?: (active: boolean) => void;
 
   visibleCategories?: Set<CategoryKey>;
-  /** "diary" hides import + undo/redo, restricts to week/month, blocks future logging. */
+  /** "diary" restricts to week/month/year, blocks future logging. */
   appKind?: CalendarAppKind;
   /** When viewing a member's diary as a leader/follower, the member's user_id. */
   memberId?: string;
@@ -126,8 +164,6 @@ export interface YearCalendarViewProps {
   panelOpen?: boolean;
   /** When the surrounding right panel is closed, the header right cluster makes room for the right panel toggle icon. */
   rightPanelOpen?: boolean;
-  /** Hide the Import button (e.g. when viewing another user's calendar). */
-  disableImport?: boolean;
   /** Team scope for resolving the user's category list (defaults to personal). */
   teamId?: string | null;
   /** Lowercase hex colors the viewer has toggled off locally (coach view). */
@@ -135,14 +171,20 @@ export interface YearCalendarViewProps {
   /** Controlled "statistics view" toggle (diary only). */
   statsActive?: boolean;
   onStatsActiveChange?: (next: boolean) => void;
+  /** Micro = day/week/month grid; Macro = year Gantt shell. */
+  calendarScale?: CalendarScale;
 }
 
 export function YearCalendarView(props: YearCalendarViewProps) {
-  return (
-    <PreviewOverlayProvider>
-      <YearCalendarViewInner {...props} />
-    </PreviewOverlayProvider>
-  );
+  const ctx = useCalendarViewActionsOptional();
+  if (!ctx) {
+    return (
+      <CalendarViewActionsProvider calId={props.calId}>
+        <YearCalendarViewInner {...props} />
+      </CalendarViewActionsProvider>
+    );
+  }
+  return <YearCalendarViewInner {...props} />;
 }
 
 function YearCalendarViewInner({
@@ -154,17 +196,19 @@ function YearCalendarViewInner({
   onCurrentDateChange,
   viewMode: viewModeProp,
   onViewModeChange,
+  yearWeekHighlight: yearWeekHighlightProp,
+  onYearWeekHighlightChange,
   visibleCategories,
   appKind = "calendar",
   memberId,
   viewerRole = "owner",
   panelOpen = true,
   rightPanelOpen = true,
-  disableImport = false,
   teamId = null,
   hiddenColors,
   statsActive: statsActiveProp,
   onStatsActiveChange,
+  calendarScale = "micro",
 }: YearCalendarViewProps) {
   const { data, meta, upsertCell, upsertCells, fillRange, setMeta } =
     useYearStore(calId, defaultTitle);
@@ -174,33 +218,20 @@ function YearCalendarViewInner({
     reorderEvents,
     moveEvent,
     deleteEvent,
+    deleteEvents,
     acceptCoachSession,
-  } = useEventStore(calId);
+    canPaste,
+    pasteAtDate,
+    peekPasteAnchorDate,
+  } = useCalendarViewActions();
 
-  // Preview overlay (Import Calendar). When active, ghost events are merged
-  // into the events list so the existing month/week renderers display them
-  // without bespoke overlay layers. Real events are dimmed via wrapper class.
-  const overlay = usePreviewOverlay();
-  const ghostEvents = useMemo(
-    () =>
-      buildGhostEvents(
-        overlay.events,
-        overlay.visibleCategoryIds,
-        overlay.categoryColors,
-        overlay.categories,
-        overlay.categoryMappings,
-        overlay.internalColors,
-      ),
-    [
-      overlay.events,
-      overlay.visibleCategoryIds,
-      overlay.categoryColors,
-      overlay.categories,
-      overlay.categoryMappings,
-      overlay.internalColors,
-    ],
-  );
-  const previewActive = overlay.events !== null;
+  const membershipCalendar = useMembershipCalendarSafe();
+  const entityGroupVisibility = useEntityGroupVisibilitySafe();
+  const overlayIdSet = useMemo(() => {
+    if (seat !== "individual") return new Set<string>();
+    return new Set(events.filter((e) => e.entityId).map((e) => e.id));
+  }, [events, seat]);
+
   const stravaEvents: CalendarEvent[] = [];
 
   // Read the user's category list so we can tell which `me:#color` keys are
@@ -215,6 +246,39 @@ function YearCalendarViewInner({
     ownerId: memberId,
     kind: "diary_activity",
   });
+  const { categories: ganttProjects, create: createGanttProject, update: updateGanttProject, remove: removeGanttProject } =
+    useUserCategories({
+      teamId,
+      kind: "gantt_project",
+    });
+  const { openProjectId, setOpenProjectId } = useMacroProjectNavSafe();
+  const {
+    categories: allGanttPhases,
+    create: createGanttPhase,
+    update: updateGanttPhase,
+    remove: removeGanttPhase,
+  } = useUserCategories({
+    teamId,
+    kind: "gantt_phase",
+    allParents: true,
+  });
+  const isMacro = calendarScale === "macro";
+  const ganttPhases = useMemo(
+    () =>
+      openProjectId
+        ? allGanttPhases.filter((p) => p.parent_id === openProjectId)
+        : [],
+    [allGanttPhases, openProjectId],
+  );
+  const lockedGanttBlockIds = useMemo(() => {
+    if (openProjectId) return undefined;
+    return new Set(ganttProjects.map((p) => p.id));
+  }, [openProjectId, ganttProjects]);
+  const [ganttPanel, setGanttPanel] = useState<{ id: string; rect: DOMRect } | null>(null);
+  const [ganttLiveSpan, setGanttLiveSpan] = useState<{
+    gantt_start_date: string;
+    gantt_end_date: string;
+  } | null>(null);
   const diaryVisibility = useDiaryVisibilitySafe();
   const hiddenMeColors = useMemo(() => {
     const s = new Set<string>();
@@ -240,6 +304,97 @@ function YearCalendarViewInner({
   const isCoachViewer =
     !!memberId && !!user && memberId !== user.id && appKind === "calendar";
 
+  /** Event ids allowed through the hidden-category filter until this timestamp. */
+  const [hiddenLingerUntilById, setHiddenLingerUntilById] = useState<Record<string, number>>(
+    {},
+  );
+  const knownEventIdsRef = useRef<Set<string>>(new Set());
+  const knownEventsPrimedRef = useRef(false);
+  const lingerTimersRef = useRef<Map<string, number>>(new Map());
+  const lingerCalIdRef = useRef(calId);
+
+  const isHiddenByActivityTab = useMemo(() => {
+    return (e: CalendarEvent): boolean => {
+      if (!visibleCategories) return false;
+      if (e.diaryType === "training") return !visibleCategories.has("ind:training");
+      let key = categoryKeyFromColor(e.color);
+      if (!e.categoryId && key.startsWith("admin:")) {
+        key = `me:${(e.color ?? "").toLowerCase()}` as CategoryKey;
+      }
+      if (key.startsWith("me:")) {
+        const cid = e.categoryId;
+        if (cid) return hiddenCategoryIds.has(cid);
+        return hiddenMeColors.has(key);
+      }
+      return !visibleCategories.has(key);
+    };
+  }, [visibleCategories, hiddenCategoryIds, hiddenMeColors]);
+
+  // When a titled session first appears under a hidden activity tab, keep it
+  // on the grid for 1s so the save is distinguishable from an untitled discard.
+  // useLayoutEffect so the linger is applied before paint (no hide→show flash).
+  useLayoutEffect(() => {
+    if (lingerCalIdRef.current !== calId) {
+      lingerCalIdRef.current = calId;
+      knownEventsPrimedRef.current = false;
+      knownEventIdsRef.current = new Set();
+      setHiddenLingerUntilById({});
+      for (const timer of lingerTimersRef.current.values()) window.clearTimeout(timer);
+      lingerTimersRef.current.clear();
+    }
+
+    const known = knownEventIdsRef.current;
+    if (!knownEventsPrimedRef.current) {
+      knownEventsPrimedRef.current = true;
+      for (const e of events) known.add(e.id);
+      return;
+    }
+
+    const liveIds = new Set(events.map((e) => e.id));
+    for (const id of [...known]) {
+      if (!liveIds.has(id)) known.delete(id);
+    }
+
+    const now = Date.now();
+    const toLinger: string[] = [];
+    for (const e of events) {
+      if (known.has(e.id)) continue;
+      known.add(e.id);
+      if (!e.title.trim()) continue;
+      if (!isHiddenByActivityTab(e)) continue;
+      toLinger.push(e.id);
+    }
+    if (toLinger.length === 0) return;
+
+    setHiddenLingerUntilById((prev) => {
+      const next = { ...prev };
+      for (const id of toLinger) next[id] = now + HIDDEN_NEW_SESSION_LINGER_MS;
+      return next;
+    });
+
+    for (const id of toLinger) {
+      const prevTimer = lingerTimersRef.current.get(id);
+      if (prevTimer != null) window.clearTimeout(prevTimer);
+      const timer = window.setTimeout(() => {
+        lingerTimersRef.current.delete(id);
+        setHiddenLingerUntilById((prev) => {
+          if (!(id in prev)) return prev;
+          const { [id]: _removed, ...rest } = prev;
+          return rest;
+        });
+      }, HIDDEN_NEW_SESSION_LINGER_MS);
+      lingerTimersRef.current.set(id, timer);
+    }
+  }, [events, isHiddenByActivityTab, calId]);
+
+  useEffect(
+    () => () => {
+      for (const timer of lingerTimersRef.current.values()) window.clearTimeout(timer);
+      lingerTimersRef.current.clear();
+    },
+    [],
+  );
+
   const mergedEvents = useMemo(() => {
     const stravaForDiary = appKind === "diary" ? stravaEvents : [];
     const localById = new Map(events.map((e) => [e.id, e]));
@@ -255,9 +410,17 @@ function YearCalendarViewInner({
       return { ...s, ...overrides, id: s.id } as CalendarEvent;
     });
     const localOnly = events.filter((e) => !stravaIds.has(e.id));
-    const base = previewActive
-      ? [...localOnly, ...mergedStrava, ...ghostEvents]
-      : [...localOnly, ...mergedStrava];
+    const withMembershipPrefs: CalendarEvent[] =
+      membershipCalendar && seat === "individual"
+        ? localOnly.flatMap((e) => {
+            if (!e.entityId) return [e];
+            if (membershipCalendar.isHidden(e.entityId)) return [];
+            const overlay = membershipCalendar.overlayColor(e.entityId);
+            return overlay ? [{ ...e, color: overlay }] : [e];
+          })
+        : localOnly;
+    const base = [...withMembershipPrefs, ...mergedStrava];
+    const now = Date.now();
 
     const passesLocalHide = (e: CalendarEvent) => {
       if (!hiddenColors || hiddenColors.size === 0) return true;
@@ -285,23 +448,69 @@ function YearCalendarViewInner({
     const filterChain = (e: CalendarEvent) =>
       passesLocalHide(e) && passesCategoryHide(e) && passesSportTypeHide(e);
 
+    const passesGroupHide = (e: CalendarEvent) => {
+      if (seat !== "admin" || !entityGroupVisibility) return true;
+      return entityGroupVisibility.isSessionVisible(e.appGroupId ?? null);
+    };
+
+    const isLingeringHidden = (e: CalendarEvent) => {
+      const until = hiddenLingerUntilById[e.id];
+      return until != null && now < until;
+    };
+
     if (!visibleCategories) {
-      return base.filter(filterChain);
+      return base.filter((e) => passesGroupHide(e) && (e.entityId || filterChain(e)));
     }
     return base.filter((e) => {
+      if (!passesGroupHide(e)) return false;
+      if (e.entityId) return true;
       if (!filterChain(e)) return false;
-      if (e.diaryType === "training") return visibleCategories.has("ind:training");
-      const key = categoryKeyFromColor(e.color);
+      if (e.diaryType === "training") {
+        return visibleCategories.has("ind:training") || isLingeringHidden(e);
+      }
+      let key = categoryKeyFromColor(e.color);
+      // Uncategorized sessions (imports, free-color tiles) must not disappear
+      // behind admin tabs just because their hex collides with meeting/event/race.
+      if (!e.categoryId && key.startsWith("admin:")) {
+        key = `me:${(e.color ?? "").toLowerCase()}` as CategoryKey;
+      }
       if (key.startsWith("me:")) {
         // Prefer per-id filtering when the event carries its categoryId so
         // two categories sharing the same color don't toggle each other.
         const cid = (e as { categoryId?: string | null }).categoryId;
-        if (cid) return !hiddenCategoryIds.has(cid);
-        return !hiddenMeColors.has(key);
+        const hidden = cid ? hiddenCategoryIds.has(cid) : hiddenMeColors.has(key);
+        if (!hidden) return true;
+        return isLingeringHidden(e);
       }
-      return visibleCategories.has(key);
+      if (visibleCategories.has(key)) return true;
+      return isLingeringHidden(e);
     });
-  }, [previewActive, events, stravaEvents, ghostEvents, visibleCategories, appKind, hiddenMeColors, hiddenCategoryIds, isCoachViewer, hiddenColors, diaryVisibility, diaryActivityCats]);
+  }, [
+    events,
+    stravaEvents,
+    visibleCategories,
+    appKind,
+    hiddenMeColors,
+    hiddenCategoryIds,
+    isCoachViewer,
+    hiddenColors,
+    diaryVisibility,
+    diaryActivityCats,
+    hiddenLingerUntilById,
+    membershipCalendar,
+    entityGroupVisibility,
+    seat,
+  ]);
+
+  // Publish the (pre-filter) event list to the side-panel search so it can
+  // surface matches regardless of which categories are currently hidden.
+  const search = useCalendarSearchSafe();
+  const publishSearchEvents = search?.publishEvents;
+  useEffect(() => {
+    if (!publishSearchEvents) return;
+    publishSearchEvents(events);
+  }, [events, publishSearchEvents]);
+
 
   const [selected, setSelected] = useState<CellKey | null>(null);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -317,6 +526,42 @@ function YearCalendarViewInner({
   });
   const currentDate = currentDateProp ?? internalDate;
   const currentRange = currentRangeProp ?? internalRange;
+  const ganttYear = currentDate.getFullYear();
+  const ganttWeeks = useMemo(() => weeksForCalendarYear(ganttYear), [ganttYear]);
+  /** Project list bars = live union of child phase spans (not stored on the project). */
+  const ganttTracks = useMemo(() => {
+    if (openProjectId) return ganttPhases;
+    return ganttProjects.map((project) => {
+      const phases = allGanttPhases.filter((p) => p.parent_id === project.id);
+      const union = unionGanttDaySpan(ganttWeeks, phases);
+      if (!union) {
+        return {
+          ...project,
+          gantt_start_week: null,
+          gantt_end_week: null,
+          gantt_start_date: null,
+          gantt_end_date: null,
+        };
+      }
+      return { ...project, ...union };
+    });
+  }, [openProjectId, ganttPhases, ganttProjects, allGanttPhases, ganttWeeks]);
+  const ganttPanelItem = useMemo(
+    () => (ganttPanel ? ganttTracks.find((t) => t.id === ganttPanel.id) ?? null : null),
+    [ganttPanel, ganttTracks],
+  );
+
+  useEffect(() => {
+    setGanttPanel(null);
+    setGanttLiveSpan(null);
+  }, [openProjectId, isMacro]);
+
+  useEffect(() => {
+    if (ganttPanel && !ganttPanelItem) {
+      setGanttPanel(null);
+      setGanttLiveSpan(null);
+    }
+  }, [ganttPanel, ganttPanelItem]);
   const updateCurrent = (d: Date, r?: DateRange) => {
     if (onCurrentDateChange) onCurrentDateChange(d, r);
     else {
@@ -330,9 +575,29 @@ function YearCalendarViewInner({
     if (onViewModeChange) onViewModeChange(v);
     else setInternalViewMode(v);
   };
+  const [internalYearWeekHighlight, setInternalYearWeekHighlight] = useState(false);
+  const yearWeekHighlight = yearWeekHighlightProp ?? internalYearWeekHighlight;
+  const setYearWeekHighlight = (active: boolean) => {
+    if (yearWeekHighlightProp === undefined) setInternalYearWeekHighlight(active);
+    onYearWeekHighlightChange?.(active);
+  };
+  useEffect(() => {
+    if (viewMode !== "year") setYearWeekHighlight(false);
+  }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
   /** Coerced view mode used by parts of the UI that only understand
    * day/week/month (the grid, side nav, MonthNavControl). */
   const gridViewMode: ViewMode = viewMode === "year" ? "month" : viewMode;
+  const navMiniViewMode = miniCalendarViewMode(viewMode, yearWeekHighlight);
+
+  /** Keep year view on this year when the week's Monday falls in December. */
+  const dateInYearForWeek = (anchor: Date, year: number) => {
+    const monday = startOfWeekMon(anchor);
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(monday, i);
+      if (d.getFullYear() === year) return d;
+    }
+    return monday;
+  };
 
   // Diary-only: toggle between the calendar grid and the statistics chart.
   const [internalStatsActive, setInternalStatsActive] = useState(false);
@@ -342,6 +607,90 @@ function YearCalendarViewInner({
     else setInternalStatsActive(next);
   };
   const showStatsToggle = appKind === "diary";
+
+  /** Calendar day/week: hide the hour scale and stack sessions at equal height. */
+  const [hideTimeScale, setHideTimeScale] = useState(false);
+  const showTimeScaleToggle =
+    appKind === "calendar" && (viewMode === "day" || viewMode === "week");
+  const headerClusterHostRef = useRef<HTMLDivElement | null>(null);
+  const headerClusterRef = useRef<HTMLDivElement | null>(null);
+  const clockBtnRef = useRef<HTMLButtonElement | null>(null);
+  const viewTypeRef = useRef<HTMLDivElement | null>(null);
+  const todayBtnRef = useRef<HTMLButtonElement | null>(null);
+  const clockWidthRef = useRef(32);
+  const todayWidthRef = useRef(58);
+  const viewTypeWidthRef = useRef(108);
+  const [hideToday, setHideToday] = useState(false);
+  const [hideViewType, setHideViewType] = useState(false);
+  const hideTodayRef = useRef(hideToday);
+  const hideViewTypeRef = useRef(hideViewType);
+  hideTodayRef.current = hideToday;
+  hideViewTypeRef.current = hideViewType;
+  const [pasteToast, setPasteToast] = useState<string | null>(null);
+
+  useLayoutEffect(() => {
+    if (statsActive || isMacro) {
+      setHideToday(false);
+      setHideViewType(false);
+      return;
+    }
+    const parent = headerClusterHostRef.current;
+    const cluster = headerClusterRef.current;
+    if (!parent || !cluster) return;
+
+    const measure = () => {
+      const clockEl = clockBtnRef.current;
+      const todayEl = todayBtnRef.current;
+      const viewEl = viewTypeRef.current;
+      if (clockEl) clockWidthRef.current = clockEl.offsetWidth;
+      if (todayEl) todayWidthRef.current = todayEl.offsetWidth;
+      if (viewEl) viewTypeWidthRef.current = viewEl.offsetWidth;
+
+      const next = nextHeaderClusterHiding({
+        available: parent.clientWidth,
+        clockWidth: showTimeScaleToggle ? clockWidthRef.current : 0,
+        todayWidth: todayWidthRef.current,
+        viewTypeWidth: viewTypeWidthRef.current,
+        hideToday: hideTodayRef.current,
+        hideViewType: hideViewTypeRef.current,
+        gap: HEADER_CLUSTER_GAP_PX,
+        slack: HEADER_CLUSTER_SHOW_SLACK_PX,
+      });
+      setHideToday((prev) => (prev === next.hideToday ? prev : next.hideToday));
+      setHideViewType((prev) =>
+        prev === next.hideViewType ? prev : next.hideViewType,
+      );
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(parent);
+    ro.observe(cluster);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [statsActive, isMacro, showTimeScaleToggle, showStatsToggle, viewMode, rightPanelOpen]);
+
+  useShortcut(
+    "pasteSession",
+    () => {
+      if (statsActive || isMacro) return;
+      if (viewMode === "year") return;
+      if (viewerRole !== "owner") return;
+      if (!canPaste(gridViewMode)) return;
+      if (
+        pasteAtDate(
+          dateForSessionPaste(gridViewMode, currentDate, selected, peekPasteAnchorDate()),
+          gridViewMode,
+        )
+      ) {
+        setPasteToast("Session was pasted.");
+      }
+    },
+    { enabled: !statsActive && !isMacro && viewMode !== "year" && viewerRole === "owner" },
+  );
 
   // Stats-only: Nordnet-style timeframe + x-axis bucket.
   const [statsTimeframe, setStatsTimeframe] = useState<TimeframeKey>("1M");
@@ -378,82 +727,38 @@ function YearCalendarViewInner({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Header — title + nav arrows on the left, action cluster on the right */}
-      <div className="flex h-12 flex-none items-center justify-between gap-3 bg-white px-0.5 pr-4 md:pr-6">
-        <div className={`flex items-center gap-2 min-w-0 transition-[padding-left] duration-300 ease-out ${panelOpen ? "pl-0" : "pl-9"}`}>
+      {/* Header — title + nav arrows on the left, action cluster on the right.
+          z-50 + overflow-visible so header controls stay above the calendar grid. */}
+      <div className="relative z-50 flex h-12 flex-none items-center justify-between gap-3 overflow-visible bg-white px-0.5 pr-4 md:pr-6">
+        <div className="flex items-center gap-2 min-w-0 pl-9">
           {!statsActive && (
             <>
-              <ViewTitle viewMode={viewMode} currentDate={currentDate} />
+              <ViewTitle
+                viewMode={isMacro ? "year" : viewMode}
+                currentDate={currentDate}
+              />
               <MonthNavControl
-                unit={viewMode}
+                unit={isMacro ? "year" : viewMode === "year" ? "year" : viewMode}
                 currentDate={currentDate}
                 selectedRange={currentRange}
                 onChange={(d, r) => updateCurrent(d, r)}
+                viewMode={navMiniViewMode}
               />
             </>
           )}
         </div>
 
-
-        <div className={`flex items-center gap-1 transition-[padding-right] duration-300 ease-out ${rightPanelOpen ? "pr-0" : "pr-9"}`}>
-          <button
-            type="button"
-            aria-label="Gå til i dag"
-            title="I dag"
-            onClick={() => {
-              const t = new Date();
-              updateCurrent(t, { start: t, end: t });
-            }}
-            className="group grid h-8 w-8 place-items-center rounded-md transition-colors hover:bg-secondary"
-          >
-            <span className="block h-2.5 w-2.5 animate-pulse rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
-          </button>
-          {/* When stats is active, hide view-type + timeframe dropdowns and
-              show the x-axis bucket dropdown instead. The Nordnet-style
-              timeframe row lives at the bottom of the chart itself. */}
-          {!statsActive && (
-            <HeaderDropdown<ExtendedViewMode>
-              ariaLabel="Visningsmodus"
-              value={viewMode}
-              onChange={setViewMode}
-              width={108}
-              options={
-                appKind === "diary"
-                  ? [
-                      { value: "week", label: "Uke" },
-                      { value: "month", label: "Måned" },
-                      { value: "year", label: "År" },
-                    ]
-                  : [
-                      { value: "day", label: "Dag" },
-                      { value: "week", label: "Uke" },
-                      { value: "month", label: "Måned" },
-                    ]
-              }
-            />
-          )}
-          {showStatsToggle && statsActive && (
-            <div className="self-end pb-0.5">
-              <HeaderDropdown<XBucket>
-                ariaLabel="X-akse"
-                value={statsXBucket}
-                onChange={setStatsXBucket}
-                width={108}
-                options={(() => {
-                  const allowed = allowedBucketsForTimeframe(statsTimeframe);
-                  const all: { value: XBucket; label: string }[] = [
-                    { value: "day", label: "Dag" },
-                    { value: "week", label: "Uke" },
-                    { value: "month", label: "Måned" },
-                    { value: "year", label: "År" },
-                  ];
-                  return all.filter((o) => allowed.includes(o.value));
-                })()}
-              />
+        {isMacro && !statsActive ? (
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex h-12 items-center justify-center">
+            <div className="pointer-events-auto">
+              <GanttMacroZoomControl />
             </div>
-          )}
+          </div>
+        ) : null}
 
-
+        <div
+          className={`flex flex-1 items-center min-w-0 transition-[padding-right] duration-300 ease-out ${rightPanelOpen ? "pr-0" : "pr-9"}`}
+        >
           {showStatsToggle && (
             <button
               type="button"
@@ -470,13 +775,113 @@ function YearCalendarViewInner({
               <BarChart3 className="h-4 w-4" />
             </button>
           )}
-          {appKind !== "diary" && !disableImport && (
-            <ImportButton seat={seat} onCommit={(patch) => upsertEvent(patch)} />
-          )}
+
+          <div
+            ref={headerClusterHostRef}
+            className="flex min-w-0 flex-1 justify-end"
+          >
+          <div
+            ref={headerClusterRef}
+            className="relative z-50 flex shrink-0 items-center gap-1.5 overflow-visible"
+          >
+            {!statsActive && (
+              <>
+                {!isMacro && showTimeScaleToggle && (
+                  <button
+                    ref={clockBtnRef}
+                    type="button"
+                    aria-label={
+                      hideTimeScale ? "Show hour scale" : "Hide hour scale"
+                    }
+                    aria-pressed={hideTimeScale}
+                    title={
+                      hideTimeScale
+                        ? "Show timed layout"
+                        : "Stack sessions without hours"
+                    }
+                    onClick={() => setHideTimeScale((v) => !v)}
+                    className="relative grid h-8 w-8 place-items-center rounded-md border border-hairline bg-background/90 text-ink shadow-sm backdrop-blur transition-colors hover:bg-secondary"
+                  >
+                    <Clock className="h-4 w-4" strokeWidth={2} />
+                    {hideTimeScale && (
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute left-1/2 top-1/2 h-[1.5px] w-[18px] -translate-x-1/2 -translate-y-1/2 rotate-[-45deg] rounded-full bg-muted-foreground/70"
+                      />
+                    )}
+                  </button>
+                )}
+                {!isMacro && (
+                  <>
+                    {!hideToday && (
+                      <button
+                        ref={todayBtnRef}
+                        type="button"
+                        aria-label="Go to today"
+                        onClick={() => {
+                          const t = new Date();
+                          setYearWeekHighlight(false);
+                          updateCurrent(t, { start: t, end: t });
+                        }}
+                        className="flex h-8 items-center justify-center rounded-md border border-hairline bg-background/90 px-2.5 text-xs font-medium text-ink shadow-sm backdrop-blur transition-colors hover:bg-secondary"
+                      >
+                        Today
+                      </button>
+                    )}
+                    {!hideViewType && (
+                      <div ref={viewTypeRef}>
+                        <HeaderDropdown<ExtendedViewMode>
+                          ariaLabel="View mode"
+                          value={viewMode}
+                          onChange={setViewMode}
+                          width={108}
+                          options={
+                            appKind === "diary"
+                              ? [
+                                  { value: "week", label: "Week" },
+                                  { value: "month", label: "Month" },
+                                  { value: "year", label: "Year" },
+                                ]
+                              : [
+                                  { value: "day", label: "Day" },
+                                  { value: "week", label: "Week" },
+                                  { value: "month", label: "Month" },
+                                  { value: "year", label: "Year" },
+                                ]
+                          }
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+            {showStatsToggle && statsActive && (
+              <div className="self-end pb-0.5">
+                <HeaderDropdown<XBucket>
+                  ariaLabel="X axis"
+                  value={statsXBucket}
+                  onChange={setStatsXBucket}
+                  width={108}
+                  options={(() => {
+                    const allowed = allowedBucketsForTimeframe(statsTimeframe);
+                    const all: { value: XBucket; label: string }[] = [
+                      { value: "day", label: "Day" },
+                      { value: "week", label: "Week" },
+                      { value: "month", label: "Month" },
+                      { value: "year", label: "Year" },
+                    ];
+                    return all.filter((o) => allowed.includes(o.value));
+                  })()}
+                />
+              </div>
+            )}
+          </div>
+          </div>
         </div>
       </div>
 
-      <div data-preview-active={previewActive ? "true" : "false"} className="flex flex-1 min-h-0 flex-col overflow-hidden">
+      <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
         {statsActive ? (
           <StatsChartView
             events={mergedEvents}
@@ -489,8 +894,124 @@ function YearCalendarViewInner({
             hiddenSportTypes={diaryVisibility?.hiddenSportTypes ?? new Set()}
           />
 
+        ) : isMacro ? (
+          <>
+            <GanttYearGrid
+              year={ganttYear}
+              projects={ganttTracks}
+              lockedBlockIds={lockedGanttBlockIds}
+              scrollResetKey={openProjectId ?? "list"}
+              scrollFocusPhases={!!openProjectId}
+              onCommitSpan={(rowId, span) => {
+                setGanttLiveSpan(null);
+                if (openProjectId) {
+                  void updateGanttPhase(rowId, span);
+                }
+              }}
+              onCreateSpan={(span) => {
+                if (openProjectId) {
+                  void createGanttPhase("New phase", "#C7C7CC", null, span, openProjectId);
+                } else {
+                  void (async () => {
+                    const project = await createGanttProject(
+                      "New project",
+                      "#C7C7CC",
+                      null,
+                      null,
+                    );
+                    if (!project) return;
+                    await createGanttPhase(
+                      "New phase",
+                      "#C7C7CC",
+                      null,
+                      span,
+                      project.id,
+                    );
+                  })();
+                }
+              }}
+              onOpenItem={(id, rect) => {
+                if (!openProjectId) {
+                  setOpenProjectId(id);
+                  return;
+                }
+                setGanttLiveSpan(null);
+                setGanttPanel({ id, rect });
+              }}
+              onBlockDragStart={() => {
+                setGanttPanel(null);
+                setGanttLiveSpan(null);
+              }}
+              onLiveResize={(id, span) => {
+                if (ganttPanel?.id !== id) return;
+                setGanttLiveSpan({
+                  gantt_start_date: span.gantt_start_date,
+                  gantt_end_date: span.gantt_end_date,
+                });
+              }}
+            />
+            {ganttPanel && ganttPanelItem ? (
+              <GanttItemPanel
+                key={ganttPanelItem.id}
+                item={ganttPanelItem}
+                year={currentDate.getFullYear()}
+                anchor={ganttPanel.rect}
+                teamId={teamId}
+                liveSpan={
+                  ganttLiveSpan && ganttPanel.id === ganttPanelItem.id
+                    ? ganttLiveSpan
+                    : null
+                }
+                onChange={(patch) => {
+                  if (openProjectId) {
+                    void updateGanttPhase(ganttPanelItem.id, patch);
+                  } else {
+                    void updateGanttProject(ganttPanelItem.id, patch);
+                  }
+                }}
+                onDelete={() => {
+                  if (openProjectId) {
+                    void removeGanttPhase(ganttPanelItem.id);
+                  } else {
+                    void removeGanttProject(ganttPanelItem.id);
+                  }
+                }}
+                onClose={() => {
+                  setGanttPanel(null);
+                  setGanttLiveSpan(null);
+                }}
+              />
+            ) : null}
+          </>
+        ) : appKind === "calendar" && viewMode === "year" ? (
+          <YearGrid
+            year={currentDate.getFullYear()}
+            selectedDate={currentDate}
+            weekHighlight={yearWeekHighlight}
+            onSelectDate={(d) => {
+              setYearWeekHighlight(false);
+              updateCurrent(d, { start: d, end: d });
+            }}
+            onWeekClick={(anchor) => {
+              const d = dateInYearForWeek(anchor, currentDate.getFullYear());
+              updateCurrent(d, { start: d, end: d });
+              setYearWeekHighlight(true);
+            }}
+            onWeekDoubleClick={(anchor) => {
+              updateCurrent(anchor, { start: anchor, end: anchor });
+              setViewMode("week");
+            }}
+            onDayDoubleClick={(d) => {
+              updateCurrent(d, { start: d, end: d });
+              setViewMode("day");
+            }}
+            onMonthClick={(monthIndex) => {
+              const d = new Date(currentDate.getFullYear(), monthIndex, 1);
+              updateCurrent(d, { start: d, end: d });
+              setViewMode("month");
+            }}
+          />
         ) : (
-
         <UnifiedElasticGrid
           calId={calId}
           year={meta.year}
@@ -504,6 +1025,18 @@ function YearCalendarViewInner({
           seat={seat}
           events={mergedEvents}
           onUpsertEvent={(patch) => {
+            const patchId = (patch as { id?: string }).id;
+            if (patchId && overlayIdSet.has(patchId)) {
+              return events.find((e) => e.id === patchId) ?? {
+                id: patchId,
+                startISO: "",
+                endISO: "",
+                allDay: false,
+                title: "",
+                color: null,
+                entityId: "overlay",
+              };
+            }
             if (appKind === "diary") {
               const startISO = (patch as { startISO?: string }).startISO;
               if (startISO && new Date(startISO).getTime() > Date.now()) {
@@ -523,8 +1056,17 @@ function YearCalendarViewInner({
             }
             return upsertEvent(patch);
           }}
-          onMoveEvent={moveEvent}
-          onDeleteEvent={deleteEvent}
+          onMoveEvent={(id, patch) => {
+            if (overlayIdSet.has(id)) return;
+            moveEvent(id, patch);
+          }}
+          onDeleteEvent={(id) => {
+            if (overlayIdSet.has(id)) return;
+            deleteEvent(id);
+          }}
+          onDeleteEvents={(ids) => {
+            deleteEvents(ids.filter((id) => !overlayIdSet.has(id)));
+          }}
           onAcceptCoachSession={
             // Only the actual owner of the calendar (scope kind "user")
             // can accept a coach-pending session. For coaches viewing a
@@ -532,12 +1074,18 @@ function YearCalendarViewInner({
             // so the modal renders Save/Edit instead of Accept.
             calId.startsWith("user:") ? acceptCoachSession : undefined
           }
-          onReorderEvents={reorderEvents}
+          onReorderEvents={(ids) => {
+            const next = ids.filter((id) => !overlayIdSet.has(id));
+            if (next.length === 0) return;
+            reorderEvents(next);
+          }}
           currentDate={currentDate}
           currentRange={currentRange}
           onCurrentDateChange={(d, r) => updateCurrent(d, r)}
           viewMode={gridViewMode}
           onViewModeChange={(v) => setViewMode(v)}
+          onOpenYearView={() => setViewMode("year")}
+          hideTimeScale={showTimeScaleToggle && hideTimeScale}
 
           appKind={appKind}
           memberId={memberId}
@@ -546,6 +1094,9 @@ function YearCalendarViewInner({
         />
         )}
       </div>
+      {pasteToast ? (
+        <CalendarInfoToast message={pasteToast} onDismiss={() => setPasteToast(null)} />
+      ) : null}
     </div>
   );
 }

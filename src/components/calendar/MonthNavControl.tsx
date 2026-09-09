@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { MiniCalendar, type DateRange } from "./MiniCalendar";
+import { MiniCalendar, type DateRange, type MiniCalendarViewMode } from "./MiniCalendar";
 
 export type CalUnit = "day" | "week" | "month" | "year";
 
@@ -19,6 +19,7 @@ export interface MonthNavControlProps {
   currentDate: Date;
   onChange: (date: Date, range?: DateRange) => void;
   selectedRange?: DateRange;
+  viewMode?: MiniCalendarViewMode;
 }
 
 function addDays(d: Date, n: number) {
@@ -37,6 +38,7 @@ export function MonthNavControl({
   currentDate,
   onChange,
   selectedRange,
+  viewMode,
 }: MonthNavControlProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -87,6 +89,7 @@ export function MonthNavControl({
           <MiniCalendar
             selectedRange={selectedRange ?? { start: currentDate, end: currentDate }}
             onSelectRange={(r) => onChange(r.start, r)}
+            viewMode={viewMode}
           />
         </div>
       )}

@@ -1,7 +1,7 @@
 /**
  * ProfileModal — listens for "open-profile-modal" events and renders the
- * user's profile page inside a Notion-style centered modal that matches the
- * Settings modal size. Embeds the existing public profile route via iframe
+ * user's profile page inside a Notion-style centered modal.
+ * Embeds the existing public profile route via iframe
  * so we reuse the exact same content + horizontal tab bar without
  * duplicating the page. An "Active" / "Not active" badge is shown in the
  * top-right based on the current profile's active flag.

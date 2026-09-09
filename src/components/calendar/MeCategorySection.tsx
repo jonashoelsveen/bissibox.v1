@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronRight, Plus, Eye, EyeOff, MoreHorizontal, Pin, PinOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Eye, EyeOff, MoreHorizontal, Pin, PinOff } from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -17,24 +17,61 @@ import {
 } from "@dnd-kit/sortable";
 import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
-import { useUserCategories, type UserCategory } from "@/hooks/useUserCategories";
+import {
+  useUserCategories,
+  type CategoryKind,
+  type UserCategory,
+} from "@/hooks/useUserCategories";
 import { DEFAULT_SWATCHES } from "./MiniColorPicker";
 import { CategoryActionsMenu } from "@/components/library/CategoryActionsMenu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
+/** Matches week-view ROW_HEIGHT in UnifiedElasticGrid / GanttYearGrid. */
+export const GANTT_PROJECT_ROW_HEIGHT = 28;
 
 export function MeCategorySection({
   hidden,
   onToggleHidden,
   teamId,
+  groupId = null,
   title = "Me",
   showCoachAccess = false,
+  defaultOpen = true,
+  /** `flat` = settings page: always expanded, no sticky collapse chrome. */
+  variant = "sidenav",
+  kind = "calendar",
+  createName = "New tab",
+  /** Fixed row height so Macro project rows line up with Gantt tracks. */
+  rowHeight,
+  hidePin = false,
+  /** Blank strip under the sticky header (Macro: matches Gantt week-number row). */
+  listOffsetTop,
+  /** Optional span for newly created Macro projects / phases. */
+  createSpan,
+  /** Parent project id when creating/listing Macro phases. */
+  parentId = null,
+  /** Row click opens/activates instead of hide toggle. */
+  onRowActivate,
+  /**
+   * When false, row body click does not toggle visibility (eye only).
+   * Defaults to true when `onRowActivate` is unset.
+   */
+  rowClickTogglesHidden,
+  /** When set, header shows back arrow and stays expanded (drill-in). */
+  onBack,
+  /** Open project — header three-dot menu (rename / color / delete). */
+  headerCategory,
+  onHeaderColorChange,
+  onHeaderRename,
+  onHeaderDelete,
 }: {
   hidden: Set<string>; // category ids that are hidden
   onToggleHidden: (id: string) => void;
   /** When set, scopes categories to this team. */
   teamId?: string | null;
+  /** When set on a team, shows only categories for this group. */
+  groupId?: string | null;
   /** Header label for the section. Defaults to "Me". */
   title?: string;
   /**
@@ -44,11 +81,57 @@ export function MeCategorySection({
    *    access to specific coaches.
    */
   showCoachAccess?: boolean;
+  defaultOpen?: boolean;
+  variant?: "sidenav" | "flat";
+  kind?: CategoryKind;
+  /** Default name for newly created rows. */
+  createName?: string;
+  rowHeight?: number;
+  /** Hide pin action (Macro projects). */
+  hidePin?: boolean;
+  listOffsetTop?: number;
+  createSpan?: () => {
+    gantt_start_week: number;
+    gantt_end_week: number;
+    gantt_start_date?: string;
+    gantt_end_date?: string;
+  };
+  parentId?: string | null;
+  onRowActivate?: (id: string) => void;
+  rowClickTogglesHidden?: boolean;
+  onBack?: () => void;
+  headerCategory?: UserCategory;
+  onHeaderColorChange?: (hex: string) => void;
+  onHeaderRename?: (name: string) => Promise<void> | void;
+  onHeaderDelete?: () => void;
 }) {
-  const { categories, create, update, remove, reorder } = useUserCategories({ teamId });
-  const [open, setOpen] = useState(true);
+  const allowRowHideToggle = rowClickTogglesHidden ?? !onRowActivate;
+  const { categories, create, update, remove, reorder } = useUserCategories({
+    teamId,
+    kind,
+    parentId: kind === "gantt_phase" ? parentId : null,
+  });
+  const visibleCategories = useMemo(() => {
+    if (!teamId) return categories;
+    if (groupId) return categories.filter((c) => c.app_group_id === groupId);
+    return categories.filter((c) => !c.app_group_id);
+  }, [categories, teamId, groupId]);
+  const [open, setOpen] = useState(defaultOpen);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [headerRenaming, setHeaderRenaming] = useState(false);
+  const [headerRenameValue, setHeaderRenameValue] = useState("");
+  const headerRenameRef = useRef<HTMLInputElement>(null);
+  const flat = variant === "flat";
+  const suppressPin = showCoachAccess || hidePin;
+  const drilledIn = typeof onBack === "function";
+  const listOpen = drilledIn ? true : open;
+
+  useEffect(() => {
+    if (!headerRenaming) return;
+    headerRenameRef.current?.focus();
+    headerRenameRef.current?.select();
+  }, [headerRenaming]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -63,6 +146,19 @@ export function MeCategorySection({
       setRenameValue(c.name);
     }, 0);
   };
+  const startHeaderRename = () => {
+    if (!headerCategory) return;
+    setTimeout(() => {
+      setHeaderRenaming(true);
+      setHeaderRenameValue(headerCategory.name);
+    }, 0);
+  };
+  const commitHeaderRename = async () => {
+    const v = headerRenameValue.trim();
+    setHeaderRenaming(false);
+    if (!headerCategory || !v || v === headerCategory.name) return;
+    await onHeaderRename?.(v);
+  };
   const commitRename = async (c: UserCategory) => {
     const v = renameValue.trim();
     setRenamingId(null);
@@ -70,94 +166,205 @@ export function MeCategorySection({
     await update(c.id, { name: v });
   };
 
-
   const handleAdd = async () => {
-    const created = await create("New tab", DEFAULT_SWATCHES[0]);
+    // Default new tabs to a neutral grey slightly darker than the left
+    // panel background (rgb(245,245,247)) so the swatch is visible but
+    // unopinionated — users pick a real color when they want one.
+    const created = await create(
+      createName,
+      "#C7C7CC",
+      teamId ? groupId : null,
+      createSpan?.() ?? null,
+      kind === "gantt_phase" ? parentId : null,
+    );
     if (created) {
-      setOpen(true);
+      if (!drilledIn) setOpen(true);
       setRenamingId(created.id);
       setRenameValue(created.name);
     }
   };
 
-
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
-    const from = categories.findIndex((c) => c.id === active.id);
-    const to = categories.findIndex((c) => c.id === over.id);
+    const from = visibleCategories.findIndex((c) => c.id === active.id);
+    const to = visibleCategories.findIndex((c) => c.id === over.id);
     if (from < 0 || to < 0) return;
-    if (categories[from].pinned !== categories[to].pinned) return;
-    const next = arrayMove(categories, from, to);
+    if (visibleCategories[from].pinned !== visibleCategories[to].pinned) return;
+    const next = arrayMove(visibleCategories, from, to);
     void reorder(next);
   };
 
-  const ids = categories.map((c) => c.id);
+  const ids = visibleCategories.map((c) => c.id);
+
+  const listEl = (
+    <div
+      className={`flex flex-col ${rowHeight != null ? "gap-0" : "gap-0.5"} ${flat ? "" : rowHeight != null ? "" : "mt-0.5"}`}
+      style={{ overflow: "visible" }}
+    >
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          {visibleCategories.map((c) => (
+            <SortableCategoryRow
+              key={c.id}
+              cat={c}
+              hidden={hidden.has(c.id)}
+              renaming={renamingId === c.id}
+              renameValue={renameValue}
+              setRenameValue={setRenameValue}
+              onCommitRename={() => void commitRename(c)}
+              onCancelRename={() => setRenamingId(null)}
+              onToggleHidden={() => onToggleHidden(c.id)}
+              onActivate={onRowActivate ? () => onRowActivate(c.id) : undefined}
+              rowClickTogglesHidden={allowRowHideToggle}
+              onRename={() => startRename(c)}
+              onTogglePin={() => void update(c.id, { pinned: !c.pinned })}
+              onDelete={() => void remove(c.id)}
+              onColorChange={(hex) => void update(c.id, { color: hex })}
+              showCoachAccess={showCoachAccess}
+              hidePin={suppressPin}
+              rowHeight={rowHeight}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
+    </div>
+  );
+
+  if (flat) {
+    return (
+      <div className="flex max-w-md flex-col items-stretch">
+        <div className="mb-2 flex items-center justify-between gap-2 px-1">
+          {title ? (
+            <span className="text-sm font-medium text-ink">{title}</span>
+          ) : (
+            <span />
+          )}
+          <button
+            type="button"
+            onClick={() => void handleAdd()}
+            aria-label="Add activity type"
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+        {listEl}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col">
-      {/* Header row — chevron LEFT (entity-style), plus on the RIGHT */}
-      <div className="group flex w-full items-center gap-1.5 rounded-md px-3 py-2 text-sm transition hover:bg-secondary/60">
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          aria-label={open ? "Collapse" : "Expand"}
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-ink"
-        >
-          <ChevronRight
-            className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-90" : ""}`}
-          />
-          <span className="min-w-0 flex-1 truncate font-medium">{title}</span>
-        </button>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); void handleAdd(); }}
-          aria-label="Add category"
-          className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground hover:bg-secondary hover:text-ink"
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
+      {/* Header row — sticky so it stays visible while the list scrolls */}
+      <div
+        className="group sticky top-0 z-[2] flex w-full items-center gap-1.5 rounded-md bg-[rgba(245,245,247,0.92)] px-2 text-sm transition-colors hover:bg-[#EAEAEC]"
+        style={
+          rowHeight != null ? { height: 36, minHeight: 36 } : { paddingTop: 8, paddingBottom: 8 }
+        }
+      >
+        {drilledIn ? (
+          headerRenaming ? (
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 text-ink">
+              <ChevronLeft className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <input
+                ref={headerRenameRef}
+                value={headerRenameValue}
+                onChange={(e) => setHeaderRenameValue(e.target.value)}
+                onBlur={() => void commitHeaderRename()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void commitHeaderRename();
+                  else if (e.key === "Escape") setHeaderRenaming(false);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="min-w-0 flex-1 bg-transparent font-medium outline-none"
+                aria-label="Project name"
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="Back to projects"
+              className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-ink"
+            >
+              <ChevronLeft className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate font-medium">{title}</span>
+            </button>
+          )
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-label={open ? "Collapse" : "Expand"}
+            className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-ink"
+          >
+            <ChevronRight
+              className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-90" : ""}`}
+            />
+            <span className="min-w-0 flex-1 truncate font-medium">{title}</span>
+          </button>
+        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {headerCategory ? (
+            <CategoryActionsMenu
+              trigger={
+                <button
+                  type="button"
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground/60 opacity-0 hover:bg-secondary hover:text-ink group-hover:opacity-100 data-[state=open]:opacity-100"
+                  aria-label="Project actions"
+                >
+                  <MoreHorizontal className="h-3 w-3" />
+                </button>
+              }
+              currentColor={headerCategory.color}
+              onColorChange={(hex) => onHeaderColorChange?.(hex)}
+              onRename={startHeaderRename}
+              onDelete={() => onHeaderDelete?.()}
+            />
+          ) : null}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); void handleAdd(); }}
+            aria-label="Add category"
+            className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground hover:bg-secondary hover:text-ink"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
+
+      {listOffsetTop != null && listOffsetTop > 0 ? (
+        <div
+          aria-hidden
+          className="sticky z-[2]"
+          style={{
+            top: rowHeight != null ? 36 : 0,
+            height: listOffsetTop,
+            backgroundColor: "rgba(245, 245, 247, 0.92)",
+          }}
+        />
+      ) : null}
 
       <motion.div
         initial={false}
-        animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0 }}
+        animate={{ height: listOpen ? "auto" : 0, opacity: listOpen ? 1 : 0 }}
         transition={{
           height: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
-          opacity: { duration: open ? 0.18 : 0.12, ease: "easeOut", delay: open ? 0.04 : 0 },
+          opacity: { duration: listOpen ? 0.18 : 0.12, ease: "easeOut", delay: listOpen ? 0.04 : 0 },
         }}
-        style={{ overflow: open ? "visible" : "hidden", pointerEvents: open ? "auto" : "none" }}
+        style={{ overflow: listOpen ? "visible" : "hidden", pointerEvents: listOpen ? "auto" : "none" }}
       >
-        <div className="mt-0.5 flex flex-col gap-0.5" style={{ overflow: "visible" }}>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-              {categories.map((c) => (
-                <SortableCategoryRow
-                  key={c.id}
-                  cat={c}
-                  hidden={hidden.has(c.id)}
-                  renaming={renamingId === c.id}
-                  renameValue={renameValue}
-                  setRenameValue={setRenameValue}
-                  onCommitRename={() => void commitRename(c)}
-                  onCancelRename={() => setRenamingId(null)}
-                  onToggleHidden={() => onToggleHidden(c.id)}
-                  onRename={() => startRename(c)}
-                  onTogglePin={() => void update(c.id, { pinned: !c.pinned })}
-                  onDelete={() => void remove(c.id)}
-                  onColorChange={(hex) => void update(c.id, { color: hex })}
-                  showCoachAccess={showCoachAccess}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
-        </div>
+        {listEl}
       </motion.div>
     </div>
   );
@@ -172,11 +379,16 @@ function SortableCategoryRow(props: {
   onCommitRename: () => void;
   onCancelRename: () => void;
   onToggleHidden: () => void;
+  onActivate?: () => void;
+  /** When false, row body click is a no-op for visibility. */
+  rowClickTogglesHidden?: boolean;
   onRename: () => void;
   onTogglePin: () => void;
   onDelete: () => void;
   onColorChange: (hex: string) => void;
   showCoachAccess?: boolean;
+  hidePin?: boolean;
+  rowHeight?: number;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.cat.id });
   const style: React.CSSProperties = {
@@ -187,6 +399,9 @@ function SortableCategoryRow(props: {
     boxShadow: isDragging
       ? "0 1px 0 rgba(0,0,0,0.04), 0 10px 24px -10px rgba(0,0,0,0.25)"
       : undefined,
+    ...(props.rowHeight != null
+      ? { height: props.rowHeight, minHeight: props.rowHeight, boxSizing: "border-box" as const }
+      : null),
   };
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -198,7 +413,7 @@ function SortableCategoryRow(props: {
 
   const { cat } = props;
 
-  const extraItems = props.showCoachAccess
+  const extraItems = props.hidePin
     ? []
     : [
         {
@@ -216,15 +431,22 @@ function SortableCategoryRow(props: {
       {...attributes}
       {...listeners}
       onClick={(e) => {
+        if (props.renaming) return;
         const tgt = e.target as HTMLElement;
         if (tgt.closest("button")) return;
+        if (tgt.closest("input")) return;
+        if (props.onActivate) {
+          props.onActivate();
+          return;
+        }
+        if (props.rowClickTogglesHidden === false) return;
         props.onToggleHidden();
       }}
-      className={`group flex items-center gap-2 rounded-md px-2 py-1 text-xs transition-colors hover:bg-secondary/60 ${
-        isDragging ? "cursor-default" : "cursor-default"
-      } ${props.hidden ? "text-muted-foreground" : "text-ink"} ${
-        props.renaming ? "ring-1 ring-inset ring-hairline" : ""
-      }`}
+      className={`group flex items-center gap-2 rounded-md px-2 text-xs transition-colors hover:bg-secondary/60 ${
+        props.rowHeight != null ? "py-0" : "py-1"
+      } ${isDragging ? "cursor-default" : "cursor-default"} ${
+        props.hidden ? "text-muted-foreground" : "text-ink"
+      } ${props.renaming ? "ring-1 ring-inset ring-hairline" : ""}`}
     >
       <span
         aria-hidden
@@ -241,6 +463,7 @@ function SortableCategoryRow(props: {
             if (e.key === "Enter") props.onCommitRename();
             else if (e.key === "Escape") props.onCancelRename();
           }}
+          onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           className="min-w-0 flex-1 bg-transparent outline-none"
         />

@@ -50,9 +50,24 @@ function dateKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
+/** Inset so a week bar’s ends line up with the 1.75rem today/day chips. */
+const WEEK_MARK_INSET = "calc((100% / 7 - 1.75rem) / 2)";
+
 export interface DateRange {
   start: Date;
   end: Date;
+}
+
+export type MiniCalendarViewMode = "day" | "week" | "month";
+
+/** Week tint in week view, and in year view after a week-number click. */
+export function miniCalendarViewMode(
+  viewMode: "day" | "week" | "month" | "year",
+  yearWeekHighlight = false,
+): MiniCalendarViewMode {
+  if (viewMode === "week" || (viewMode === "year" && yearWeekHighlight)) return "week";
+  if (viewMode === "day") return "day";
+  return "month";
 }
 
 export interface MiniCalendarProps {
@@ -61,7 +76,7 @@ export interface MiniCalendarProps {
   /** Called continuously during drag, and on click. */
   onSelectRange: (range: DateRange) => void;
   /** When "week", the whole week-row containing the selected day is highlighted. */
-  viewMode?: "day" | "week" | "month";
+  viewMode?: MiniCalendarViewMode;
 }
 
 export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" }: MiniCalendarProps) {
@@ -176,55 +191,67 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
       </div>
 
       {/* Day grid */}
-      <div className="grid grid-cols-7 gap-y-0.5">
-        {days.map(({ date, inMonth }, i) => {
-          const isToday = sameDay(date, today);
-          // In week view we do not show a per-day selected dot — only the
-          // light week-row tint, so the UX stays focused on the week.
-          const isSelected = viewMode !== "week" && inSelectedRange(date);
-          const dow = i % 7;
+      <div className="flex flex-col gap-y-0.5">
+        {Array.from({ length: days.length / 7 }, (_, wi) => {
+          const weekDays = days.slice(wi * 7, wi * 7 + 7);
           const inSelectedWeek =
             viewMode === "week" &&
-            ymdNum(startOfWeekMon(date)) === ymdNum(startOfWeekMon(selectedRange.start));
-          const weekBg = inSelectedWeek && !isSelected;
-
+            ymdNum(startOfWeekMon(weekDays[0].date)) ===
+              ymdNum(startOfWeekMon(selectedRange.start));
           return (
-            <button
-              type="button"
-              key={dateKey(date)}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                if (!inMonth) {
-                  // Clicking an adjacent-month day simply navigates both the
-                  // mini-calendar and the main view to that day's month —
-                  // no drag-range, no stray highlights.
-                  setView({ year: date.getFullYear(), month: date.getMonth() });
-                  onSelectRange({ start: date, end: date });
-                  return;
-                }
-                dragStartRef.current = date;
-                onSelectRange({ start: date, end: date });
-              }}
-              onMouseEnter={() => {
-                if (dragStartRef.current) {
-                  onSelectRange({ start: dragStartRef.current, end: date });
-                }
-              }}
-              className={[
-                "relative grid h-6 w-full place-items-center text-[12px] tabular-nums transition-colors",
-                isSelected
-                  ? "rounded-sm bg-primary text-primary-foreground"
-                  : weekBg
-                    ? `bg-primary/15 text-ink ${dow === 0 ? "rounded-l-sm" : ""} ${dow === 6 ? "rounded-r-sm" : ""}`
-                    : isToday
-                      ? "rounded-sm bg-secondary text-ink"
-                      : inMonth
-                        ? "rounded-sm text-ink hover:bg-secondary"
-                        : "rounded-sm text-muted-foreground/40 hover:bg-secondary/60",
-              ].join(" ")}
-            >
-              {date.getDate()}
-            </button>
+            <div key={wi} className="relative grid grid-cols-7">
+              {inSelectedWeek ? (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 rounded-sm bg-primary/15"
+                  style={{ left: WEEK_MARK_INSET, right: WEEK_MARK_INSET }}
+                />
+              ) : null}
+              {weekDays.map(({ date, inMonth }) => {
+                const isToday = sameDay(date, today);
+                const isSelected = viewMode !== "week" && inSelectedRange(date);
+                const weekBg = inSelectedWeek && !isSelected;
+                return (
+                  <button
+                    type="button"
+                    key={dateKey(date)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (!inMonth) {
+                        setView({ year: date.getFullYear(), month: date.getMonth() });
+                        onSelectRange({ start: date, end: date });
+                        return;
+                      }
+                      dragStartRef.current = date;
+                      onSelectRange({ start: date, end: date });
+                    }}
+                    onMouseEnter={() => {
+                      if (dragStartRef.current) {
+                        onSelectRange({ start: dragStartRef.current, end: date });
+                      }
+                    }}
+                    className="relative z-10 grid h-7 w-full place-items-center text-[12px] tabular-nums transition-colors"
+                  >
+                    <span
+                      className={[
+                        "grid h-7 w-7 place-items-center rounded-sm",
+                        isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : isToday
+                            ? "bg-[#ED5C5C] text-white"
+                            : weekBg
+                              ? "text-ink"
+                              : inMonth
+                                ? "text-ink hover:bg-secondary"
+                                : "text-muted-foreground/40 hover:bg-secondary/60",
+                      ].join(" ")}
+                    >
+                      {date.getDate()}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           );
         })}
       </div>

@@ -8,6 +8,7 @@ import {
   markAccountFieldFocused,
 } from "@/components/account/AccountFormFields";
 import { getAccountAccessToken } from "@/lib/account-profile-client";
+import { otpVerifyFailureFromPayload } from "@/lib/otpAttempts";
 import { supabase } from "@/integrations/supabase/client";
 import {
   accountFieldControlStyle,
@@ -34,6 +35,7 @@ export function AccountEmailChangePanel({
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpExpired, setOtpExpired] = useState(false);
   const [emailTaken, setEmailTaken] = useState(false);
   const newEmailRef = useRef<HTMLInputElement>(null);
 
@@ -99,6 +101,8 @@ export function AccountEmailChangePanel({
       setAttemptId(data.attempt_id ?? null);
       setDigits(["", "", "", "", "", ""]);
       setResendIn(60);
+      setOtpExpired(false);
+      setOtpError(null);
       setOtpOpen(true);
     } finally {
       setSending(false);
@@ -126,7 +130,12 @@ export function AccountEmailChangePanel({
           ...(attemptId ? { attempt_id: attemptId } : {}),
         }),
       });
-      const data = (await res.json()) as { error?: string; code?: string; ok?: boolean };
+      const data = (await res.json()) as {
+        error?: string;
+        code?: string;
+        remaining?: number;
+        ok?: boolean;
+      };
       if (!res.ok) {
         if (data.code === "email_taken" || data.error === EMAIL_TAKEN_MESSAGE) {
           setOtpOpen(false);
@@ -134,7 +143,9 @@ export function AccountEmailChangePanel({
           toast.error(EMAIL_TAKEN_MESSAGE);
           return;
         }
-        setOtpError(data.error ?? "Verification failed");
+        const failure = otpVerifyFailureFromPayload(data);
+        setOtpExpired(failure.expired);
+        setOtpError(failure.expired ? null : failure.message);
         setDigits(["", "", "", "", "", ""]);
         return;
       }
@@ -171,8 +182,8 @@ export function AccountEmailChangePanel({
       />
 
       {editing ? (
-        <AccountFieldGroup label="New email">
-          <div className="relative">
+        <>
+          <AccountFieldGroup label="New email">
             <input
               ref={newEmailRef}
               type="email"
@@ -193,52 +204,47 @@ export function AccountEmailChangePanel({
                 if (e.key === "Enter") void sendCode();
               }}
               className="account-field"
-              style={{
-                ...accountFieldControlStyle,
-                paddingRight: 160,
-              }}
+              style={accountFieldControlStyle}
             />
-            <div className="absolute inset-y-0 right-3 flex items-center gap-5">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditing(false);
-                  setNewEmail("");
-                  setEmailTaken(false);
-                }}
-                disabled={sending}
-                style={{
-                  ...accountHeaderActionStyle,
-                  fontSize: 17,
-                  color: "#6e6e73",
-                  opacity: sending ? 0.5 : 1,
-                }}
+            {emailTaken ? (
+              <p
+                className="mt-1.5 text-[13px] leading-snug"
+                style={{ fontFamily: HELVETICA_STACK, color: "#6e6e73" }}
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => void sendCode()}
-                disabled={sending}
-                style={{
-                  ...accountHeaderActionStyle,
-                  fontSize: 17,
-                  opacity: sending ? 0.5 : 1,
-                }}
-              >
-                Verify
-              </button>
-            </div>
-          </div>
-          {emailTaken ? (
-            <p
-              className="mt-1.5 text-[13px] leading-snug"
-              style={{ fontFamily: HELVETICA_STACK, color: "#6e6e73" }}
+                {EMAIL_TAKEN_MESSAGE}
+              </p>
+            ) : null}
+          </AccountFieldGroup>
+          <div className="flex items-center justify-end gap-5">
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(false);
+                setNewEmail("");
+                setEmailTaken(false);
+              }}
+              disabled={sending}
+              style={{
+                ...accountHeaderActionStyle,
+                color: "#6e6e73",
+                opacity: sending ? 0.5 : 1,
+              }}
             >
-              {EMAIL_TAKEN_MESSAGE}
-            </p>
-          ) : null}
-        </AccountFieldGroup>
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void sendCode()}
+              disabled={sending}
+              style={{
+                ...accountHeaderActionStyle,
+                opacity: sending ? 0.5 : 1,
+              }}
+            >
+              Verify
+            </button>
+          </div>
+        </>
       ) : null}
 
       <AccountEmailOtpModal
@@ -255,6 +261,7 @@ export function AccountEmailChangePanel({
         sending={sending}
         verifying={verifying}
         error={otpError}
+        expired={otpExpired}
       />
     </div>
   );

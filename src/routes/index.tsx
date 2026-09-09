@@ -41,17 +41,17 @@ export const Route = createFileRoute("/")({
     return {
       meta: isAccount
         ? [
-            { title: "Aponna Account" },
+            { title: "Bissibox Account" },
             {
               name: "description",
-              content: "Your identity across the Aponna Cloud platform.",
+              content: "Your identity across the Bissibox platform.",
             },
           ]
         : [
-            { title: "Aponna Cloud" },
+            { title: "Bissibox" },
             {
               name: "description",
-              content: "Aponna Cloud — Manage your output.",
+              content: "Bissibox — Manage your output.",
             },
           ],
     };
@@ -130,11 +130,11 @@ function CloudHomePage() {
   }
 
   return (
-    <CloudPageWithFooter showAudienceLinks style={{ fontFamily: HELVETICA_STACK }}>
+    <CloudPageWithFooter showAudienceLinks showLegalLinks={false} style={{ fontFamily: HELVETICA_STACK }}>
       <div className="mx-auto flex max-w-6xl flex-col items-center px-6">
         <CloudLandingSection
-          title="Aponna Cloud"
-          description="Manage your output." 
+          title="Bissibox"
+          description="" 
           readMoreTo="/cloud/individuals"
           heroIllustrationSrc="/aponna-cloud-hero.png"
           heroIllustrationAlt=""
@@ -152,7 +152,7 @@ function CloudHomePage() {
       <div className="w-full" style={{ backgroundColor: LANDING_DARK_SECTION_BG }}>
         <div className="mx-auto flex max-w-6xl flex-col items-center px-6">
           <CloudLandingSection
-            title="Aponna Cloud for entities"
+            title="Bissibox for entities"
             description="Register your team."
             readMoreTo="/cloud/entities"
             compactTop

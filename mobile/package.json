@@ -1,0 +1,57 @@
+{
+  "name": "calendar-mobile",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "RCT_METRO_PORT=8088 node ./node_modules/expo/bin/cli start --lan --port 8088",
+    "start:localhost": "RCT_METRO_PORT=8088 node ./node_modules/expo/bin/cli start --port 8088",
+    "start:lan": "RCT_METRO_PORT=8088 node ./node_modules/expo/bin/cli start --lan --port 8088",
+    "android": "RCT_METRO_PORT=8088 node ./node_modules/expo/bin/cli run:android --port 8088",
+    "ios": "RCT_METRO_PORT=8088 node ./node_modules/expo/bin/cli run:ios --port 8088 --lan",
+    "ios:device": "RCT_METRO_PORT=8088 node ./node_modules/expo/bin/cli run:ios --device --port 8088 --lan",
+    "ios:clean": "node ./scripts/clean-native-build.js && RCT_METRO_PORT=8088 node ./node_modules/expo/bin/cli run:ios --port 8088 --lan",
+    "clean:native": "node ./scripts/clean-native-build.js",
+    "web": "node ./node_modules/expo/bin/cli start --web"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "9.1.0",
+    "@supabase/supabase-js": "^2.104.0",
+    "@tanstack/react-query": "^5.83.0",
+    "date-fns": "^4.1.0",
+    "expo": "~56.0.11",
+    "expo-blur": "~56.0.3",
+    "expo-constants": "~56.0.17",
+    "expo-glass-effect": "~56.0.4",
+    "expo-linear-gradient": "~56.0.4",
+    "expo-linking": "~56.0.13",
+    "expo-native-liquid-glass": "file:./modules/expo-native-liquid-glass",
+    "expo-router": "~56.2.9",
+    "expo-splash-screen": "~56.0.10",
+    "expo-status-bar": "~56.0.4",
+    "lucide-react-native": "^1.17.0",
+    "nativewind": "^4.1.23",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-gesture-handler": "~2.31.1",
+    "react-native-reanimated": "4.3.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "4.25.2",
+    "react-native-svg": "15.15.4",
+    "react-native-url-polyfill": "^2.0.0",
+    "react-native-worklets": "0.8.3",
+    "tailwindcss": "^3.4.17"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/react": "~19.2.14",
+    "babel-preset-expo": "^56.0.14",
+    "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  }
+}

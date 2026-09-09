@@ -58,19 +58,50 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Code expired. Request a new one." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     if (attempt.attempts >= attempt.max_attempts) {
-      return new Response(JSON.stringify({ error: "Too many attempts. Request a new code." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({
+          error: "Verification code expired",
+          code: "otp_exhausted",
+          remaining: 0,
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const ok = await verifyCode(body.code, attempt.code_hash);
     if (!ok) {
-      const newAttempts = attempt.attempts + 1;
-      await admin
+      const { data: updated, error: updErr } = await admin
         .from("verification_attempts")
-        .update({ attempts: newAttempts })
-        .eq("id", attempt.id);
-      const remaining = attempt.max_attempts - newAttempts;
+        .update({ attempts: attempt.attempts + 1 })
+        .eq("id", attempt.id)
+        .eq("attempts", attempt.attempts)
+        .select("attempts, max_attempts")
+        .single();
+      if (updErr || !updated) {
+        console.error("verification_attempts increment failed", updErr);
+        return new Response(JSON.stringify({ error: "Verification failed" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const newAttempts = updated.attempts;
+      const maxAttempts = updated.max_attempts;
+      const remaining = Math.max(0, maxAttempts - newAttempts);
+      if (remaining <= 0) {
+        return new Response(
+          JSON.stringify({
+            error: "Verification code expired",
+            code: "otp_exhausted",
+            remaining: 0,
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
       return new Response(
-        JSON.stringify({ error: `Wrong code. ${remaining} attempt${remaining === 1 ? "" : "s"} left.` }),
+        JSON.stringify({
+          error: `Wrong code. ${remaining} attempt${remaining === 1 ? "" : "s"} left.`,
+          remaining,
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -317,6 +348,80 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, kind: "account_signup" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (attempt.target_kind === "account_deletion") {
+      return new Response(JSON.stringify({ ok: true, kind: "account_deletion" }), {
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (attempt.target_kind === "account_password_change") {
+      return new Response(JSON.stringify({ ok: true, kind: "account_password_change" }), {
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (attempt.target_kind === "account_email_change") {
+      const newEmail = String(attempt.destination ?? "").trim().toLowerCase();
+      if (!newEmail.includes("@")) {
+        return new Response(JSON.stringify({ error: "Enter a valid email" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: taken, error: takenErr } = await admin.rpc("email_registered_to_other_user", {
+        p_email: newEmail,
+        p_except_user_id: user.id,
+      });
+      if (takenErr) {
+        console.error("email_registered_to_other_user failed", takenErr);
+      } else if (taken === true || taken === "true" || taken === "t") {
+        return new Response(
+          JSON.stringify({
+            error: "Email is already registered. Please use another email.",
+            code: "email_taken",
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const { error: authErr } = await admin.auth.admin.updateUserById(user.id, {
+        email: newEmail,
+        email_confirm: true,
+      });
+      if (authErr) {
+        const message = (authErr.message ?? "").toLowerCase();
+        if (
+          authErr.code === "email_exists" ||
+          message.includes("already been registered") ||
+          message.includes("already registered") ||
+          message.includes("email address is already")
+        ) {
+          return new Response(
+            JSON.stringify({
+              error: "Email is already registered. Please use another email.",
+              code: "email_taken",
+            }),
+            { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        throw authErr;
+      }
+
+      const { error: profileErr } = await admin
+        .from("profiles")
+        .update({ email: newEmail })
+        .eq("id", user.id);
+      if (profileErr) {
+        console.error("account_email_change profile update failed", profileErr);
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, kind: "account_email_change", email: newEmail }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     return new Response(JSON.stringify({ error: "Unknown target" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });

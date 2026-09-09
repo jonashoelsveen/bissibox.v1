@@ -1,8 +1,8 @@
 /**
- * Single-building glyph used for the "Organization" app tile in the
- * apps menu. Matches the lucide outline weight used for Calendar / Diary /
- * Photos (strokeWidth ~1.75). Shows a tall building with a centered door
- * and two rows of three narrow windows above.
+ * Single-building glyph used for the Entity app tile and entity profile
+ * rows. Matches the lucide outline weight used for Calendar / Events
+ * (strokeWidth ~1.75). Tall building with a centered door and two rows of
+ * three narrow windows above.
  */
 export function OrganizationIcon({
   className,

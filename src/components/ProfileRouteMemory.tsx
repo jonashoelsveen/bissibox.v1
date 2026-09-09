@@ -10,6 +10,7 @@
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
+import { isEntityFeatureEnabled, type FeatureFlag } from "@/lib/features";
 
 // ─── Route permission registry ────────────────────────────────────────────────
 // Add future routes here as the platform grows (e.g. /journal, /health).
@@ -28,18 +29,31 @@ interface RoutePermission {
   allowed: ProfileType[];
   /** Exact match only (no prefix check). Default false. */
   exact?: boolean;
+  /** When set, the route is only restoreable if this local flag is on. */
+  feature?: FeatureFlag;
 }
 
 const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Shared — available in all profile types
-  { prefix: "/", allowed: ["individual", "entity"], exact: true }, // Aponna Cloud home
+  { prefix: "/", allowed: ["individual", "entity"], exact: true }, // marketing home (logged-in users are sent to calendar)
   { prefix: "/calendar", allowed: ["individual", "entity"] },
+  { prefix: "/projects", allowed: ["individual", "entity"], feature: "projectsApp" },
   { prefix: "/media",    allowed: ["individual", "entity"] },
-  { prefix: "/settings", allowed: ["individual", "entity"] },
+  { prefix: "/events",   allowed: ["individual", "entity"], feature: "eventsApp" },
   { prefix: "/profile",  allowed: ["individual", "entity"] },
+  /** Invite landing — Bucket A: currently live, hidden this round. */
+  { prefix: "/accept-entity-invite", allowed: ["individual", "entity"], feature: "entityInviteFlow" },
+
+  // Entity-only — the Entity app has no individual workspace.
+  /** Entity workspace — Bucket A: currently live, hidden this round. */
+  { prefix: "/entity", allowed: ["entity"], feature: "entityWorkspace" },
+  /** Entity memberships — Bucket A: currently live, hidden this round. */
+  { prefix: "/family", allowed: ["individual", "entity"], feature: "entityMembershipManagement" },
+  /** Entities marketing page — Bucket A: currently live, hidden this round. */
+  { prefix: "/cloud/entities", allowed: ["individual", "entity"], feature: "entityMarketing" },
 
   // Individual-only — Clients lives on the personal profile.
-  { prefix: "/clients",  allowed: ["individual"] },
+  { prefix: "/clients",  allowed: ["individual"], feature: "clientsApp" },
 ];
 
 const DEFAULT_INDIVIDUAL_PATH = "/calendar";
@@ -57,7 +71,10 @@ function defaultPath(activeEntityId: string | null): string {
 function isAllowedForProfile(path: string, type: ProfileType): boolean {
   for (const rule of ROUTE_PERMISSIONS) {
     const matches = rule.exact ? path === rule.prefix : (path === rule.prefix || path.startsWith(rule.prefix + "/"));
-    if (matches) return rule.allowed.includes(type);
+    if (matches) {
+      if (rule.feature && !isEntityFeatureEnabled(rule.feature)) return false;
+      return rule.allowed.includes(type);
+    }
   }
   // Unknown route — treat as shared (safe default; tightening can be done per-route above)
   return true;
@@ -67,7 +84,7 @@ function isAllowedForProfile(path: string, type: ProfileType): boolean {
 
 const STORAGE_PREFIX = "rl_last_path:";
 
-const NON_APP_PREFIXES = ["/auth", "/login", "/accept-coach-invite", "/accept-leader-invite"];
+const NON_APP_PREFIXES = ["/auth", "/login", "/mail", "/accept-coach-invite", "/accept-leader-invite"];
 
 function profileKey(userId: string, activeEntityId: string | null): string {
   return `${STORAGE_PREFIX}${userId}:${activeEntityId ?? "__individual__"}`;
@@ -75,7 +92,7 @@ function profileKey(userId: string, activeEntityId: string | null): string {
 
 function isRememberablePath(path: string): boolean {
   if (!path) return false;
-  if (path === "/") return true; // Aponna Cloud home is a real app page
+  if (path === "/") return false; // marketing landing — logged-in default is /calendar
   return !NON_APP_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
 }
 

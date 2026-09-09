@@ -12,6 +12,7 @@ import {
   accountHeaderActionStyle,
   HELVETICA_STACK,
 } from "@/lib/cloud-landing-design";
+import { otpVerifyFailureFromPayload } from "@/lib/otpAttempts";
 
 export function AccountPasswordChangePanel({
   onChangePassword,
@@ -22,6 +23,8 @@ export function AccountPasswordChangePanel({
     extra?: { code: string; attempt_id: string },
   ) => Promise<{
     error?: string;
+    code?: string;
+    remaining?: number;
     pending?: boolean;
     masked?: string;
     attempt_id?: string;
@@ -39,6 +42,7 @@ export function AccountPasswordChangePanel({
   const [resendIn, setResendIn] = useState(0);
   const [verifying, setVerifying] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpExpired, setOtpExpired] = useState(false);
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -55,6 +59,7 @@ export function AccountPasswordChangePanel({
     setAttemptId(null);
     setDigits(["", "", "", "", "", ""]);
     setOtpError(null);
+    setOtpExpired(false);
   };
 
   const startVerify = async () => {
@@ -86,6 +91,8 @@ export function AccountPasswordChangePanel({
       setAttemptId(result.attempt_id ?? null);
       setDigits(["", "", "", "", "", ""]);
       setResendIn(60);
+      setOtpExpired(false);
+      setOtpError(null);
       setOtpOpen(true);
       return;
     }
@@ -106,7 +113,9 @@ export function AccountPasswordChangePanel({
     setVerifying(false);
 
     if (result.error) {
-      setOtpError(result.error);
+      const failure = otpVerifyFailureFromPayload(result);
+      setOtpExpired(failure.expired);
+      setOtpError(failure.expired ? null : failure.message);
       setDigits(["", "", "", "", "", ""]);
       return;
     }
@@ -203,6 +212,7 @@ export function AccountPasswordChangePanel({
         sending={saving}
         verifying={verifying}
         error={otpError}
+        expired={otpExpired}
       />
     </div>
   );

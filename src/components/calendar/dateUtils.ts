@@ -22,6 +22,26 @@ export function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
 }
 
+/**
+ * Minutes from midnight on the session's start day.
+ * A "24:00" end is stored as next-day 00:00 and is returned as 1440 so
+ * week/day tiles and time wheels can round-trip 00:00–24:00.
+ */
+export function startEndMinsOnStartDay(
+  start: Date,
+  end: Date,
+): { startMin: number; endMin: number } {
+  const startMin = start.getHours() * 60 + start.getMinutes();
+  let endMin = end.getHours() * 60 + end.getMinutes();
+  if (!sameDay(start, end)) {
+    const startDay = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+    const endDay = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+    const dayDiff = (endDay - startDay) / 86400000;
+    endMin += dayDiff * 1440;
+  }
+  return { startMin, endMin };
+}
+
 export function setHM(d: Date, h: number, m: number): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m, 0, 0);
 }
@@ -36,22 +56,6 @@ export function toISOLocal(d: Date): string {
     `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
     `T${pad(d.getHours())}:${pad(d.getMinutes())}:00`
   );
-}
-
-/**
- * Normalize imported datetimes into a local ISO string while preserving the
- * literal clock time from the source. If the input includes a timezone suffix
- * like Z or +02:00, we intentionally ignore that offset because imported file
- * times should land exactly as written in the document.
- */
-export function normalizeImportedLocalISO(value: string): string | null {
-  const trimmed = value.trim();
-  const literal = /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/.exec(trimmed);
-  if (literal) {
-    return `${literal[1]}-${literal[2]}-${literal[3]}T${literal[4]}:${literal[5]}:${literal[6] ?? "00"}`;
-  }
-  const parsed = new Date(trimmed);
-  return Number.isFinite(parsed.getTime()) ? toISOLocal(parsed) : null;
 }
 
 export function fromISOLocal(s: string): Date {
@@ -88,4 +92,19 @@ export function isoWeekNumber(date: Date): number {
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+}
+
+/** Monday 00:00 local of the week containing `d` (ISO: Mon–Sun). */
+export function startOfWeekMon(d: Date): Date {
+  const x = startOfDay(d);
+  const day = x.getDay(); // 0=Sun … 6=Sat
+  const diff = day === 0 ? -6 : 1 - day;
+  x.setDate(x.getDate() + diff);
+  return x;
+}
+
+export function addDays(d: Date, days: number): Date {
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  return x;
 }

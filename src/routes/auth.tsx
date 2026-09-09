@@ -8,7 +8,7 @@ export const Route = createFileRoute("/auth")({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
   }),
   component: AuthRedirect,
-  head: () => ({ meta: [{ title: "Aponna Cloud" }] }),
+  head: () => ({ meta: [{ title: "Bissibox" }] }),
 });
 
 /**

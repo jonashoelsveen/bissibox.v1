@@ -12,7 +12,7 @@ export const Route = createFileRoute("/cloud/entities")({
   validateSearch: parseCloudSignInSearch,
   component: CloudEntitiesPage,
   head: () => ({
-    meta: [{ title: "Aponna Cloud for entities" }],
+    meta: [{ title: "Bissibox for entities" }],
   }),
 });
 
@@ -22,7 +22,7 @@ function CloudEntitiesPage() {
       style={{ fontFamily: HELVETICA_STACK, backgroundColor: LANDING_DARK_SECTION_BG }}
     >
       <CloudReadMorePage
-        title="Aponna Cloud for entities"
+        title="Bissibox for entities"
         illustrationSrc="/aponna-cloud-entities-info.png"
         illustrationWidth={810}
         illustrationHeight={926}
@@ -32,7 +32,7 @@ function CloudEntitiesPage() {
         <p>
         </p>
         <p>
-          Aponna Cloud for entities is an intuitive platform for organizing your
+          Bissibox for entities is an intuitive platform for organizing your
           team&apos;s members and plan. Organize your entity in groups and keep an overview of all members.
           The calendar helps the members
           to keep up with and stay prepared for future activities and events. Enable

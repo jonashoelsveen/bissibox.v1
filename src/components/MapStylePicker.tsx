@@ -1,7 +1,6 @@
 /**
  * In-map style switcher — a small dropdown rendered as a pill in the
- * map's top toolbar. It mirrors the choices shown in
- * Settings → Map Settings → Map type, but applies per map instance.
+ * map's top toolbar. Applies per map instance.
  *
  * The actual style swap (calling `map.setStyle()` and re-adding custom
  * sources/layers) happens in each map component's `useEffect` that

@@ -8,7 +8,7 @@ export const Route = createFileRoute("/login")({
     redirect: typeof s.redirect === "string" ? s.redirect : undefined,
   }),
   component: LoginRedirect,
-  head: () => ({ meta: [{ title: "Aponna Cloud" }] }),
+  head: () => ({ meta: [{ title: "Bissibox" }] }),
 });
 
 /** Legacy /login route forwards to the new landing page sign-in modal. */

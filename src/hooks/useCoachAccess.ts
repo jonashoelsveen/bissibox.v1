@@ -76,20 +76,9 @@ export function useCoachAccess(ownerId: string | null | undefined): CoachAccess 
       )
       .subscribe();
 
-    const onFocus = () => void load();
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void load();
-    };
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVisible);
-    const poll = window.setInterval(() => void load(), 15000);
-
     return () => {
       cancelled = true;
       void supabase.removeChannel(ch);
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.clearInterval(poll);
     };
   }, [user, ownerId]);
 

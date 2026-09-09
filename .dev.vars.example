@@ -1,0 +1,22 @@
+# Copy to .dev.vars for local `wrangler dev` / vite preview against Worker bindings.
+# Production values go in `wrangler secret put` on the aponna-cloud Worker.
+# Never commit .dev.vars.
+
+# Required on the Worker (runtime)
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+APONNA_SESSION_SECRET=
+
+# Optional Worker
+MAPBOX_PUBLIC_TOKEN=
+TICKET_CONTROL_SECRET=
+APONNA_COOKIE_DOMAIN=
+ACCOUNT_URL=https://account.aponna.com
+VITE_ACCOUNT_URL=https://account.aponna.com
+VITE_CLOUD_URL=https://aponnacloud.com
+VITE_ACCOUNT_HOST=account.aponna.com
+
+# Keep until Lovable email/AI gateways are replaced (also check Lovable Cloud UI)
+LOVABLE_API_KEY=
+LOVABLE_SEND_URL=

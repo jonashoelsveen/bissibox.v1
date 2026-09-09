@@ -487,7 +487,7 @@ async function createItem(
     case "event": {
       let organizer = "";
       if (ctx.teamId) {
-        const { data } = await sb.from("teams").select("name").eq("id", ctx.teamId).maybeSingle();
+        const { data } = await sb.from("app_teams").select("name").eq("id", ctx.teamId).maybeSingle();
         organizer = data?.name ?? "Organizer";
       } else {
         const { data } = await sb
@@ -501,13 +501,16 @@ async function createItem(
         ? await resolveFolderName(kind, folder, ctx)
         : null;
       const startsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      // owner_id must be the signed-in user (RLS); team_id scopes to app_teams entity.
       const { error } = await sb.from("events").insert({
         title: name,
         organizer,
         starts_at: startsAt,
-        owner_id: ctx.teamId ? null : ctx.userId,
+        owner_id: ctx.userId,
         team_id: ctx.teamId,
         folder: folderName,
+        event_type: "event",
+        published: false,
       });
       if (error) throw error;
       return null;

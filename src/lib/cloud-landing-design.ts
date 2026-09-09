@@ -32,14 +32,22 @@ export const TOP_BAR_BRAND_LABEL_CLASS = "relative top-0.5";
 
 export const topBarBrandLabelStyle: CSSProperties = {
   fontFamily: HELVETICA_STACK,
-  fontSize: 18,
+  fontSize: 22,
   fontWeight: 600,
   letterSpacing: "-0.01em",
+  lineHeight: 1,
+  whiteSpace: "nowrap",
 };
 
 /** Aponna Cloud / Account hero display width. Other heroes use this width times their scale. */
 export const HERO_ILLUSTRATION_DISPLAY_PX = 576;
 export const HERO_ILLUSTRATION_DISPLAY_VW = 111.6;
+
+/** Half of 1280×800 WXGA — the standard 13" laptop CSS width (Tailwind `sm`). */
+export const BISSIBOX_DESKTOP_MIN_PX = 640;
+
+export const BISSIBOX_COMPACT_SCREEN_NOTICE =
+  "The bissibox platform require a bigger screen size, for optimal use. Please increase the view window. If you're on mobile, switch to a larger screen.";
 
 export const CLOUD_LANDING_CHROME_PATHS = ["/", "/cloud/individuals", "/cloud/entities"] as const;
 

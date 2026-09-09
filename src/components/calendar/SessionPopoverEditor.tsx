@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
+import { computePopoverPosition } from "./popoverPosition";
 
 export interface SessionPopoverEditorProps {
   initialText: string;
@@ -57,15 +58,7 @@ export function SessionPopoverEditor({
 
   const POPOVER_W = 280;
   const POPOVER_H = timeLabel ? 200 : 170;
-  const margin = 8;
-  let top = anchor.top;
-  let left = anchor.right + margin;
-  if (left + POPOVER_W > window.innerWidth) {
-    left = Math.max(margin, anchor.left - POPOVER_W - margin);
-  }
-  if (top + POPOVER_H > window.innerHeight) {
-    top = Math.max(margin, window.innerHeight - POPOVER_H - margin);
-  }
+  const { top, left } = computePopoverPosition(anchor, POPOVER_W, POPOVER_H);
 
   return (
     <div

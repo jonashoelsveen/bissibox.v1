@@ -87,7 +87,7 @@ export function DiaryActivitiesSection({
       onAddClick();
       return;
     }
-    const created = await create("New activity", STANDARD_COLORS_8[0]);
+    const created = await create("New activity", "#C7C7CC");
     if (created) {
       setOpen(true);
       setRenamingId(created.id);

@@ -1,0 +1,13 @@
+{
+  "name": "expo-native-liquid-glass",
+  "version": "1.0.0",
+  "description": "Native iOS 26 Liquid Glass via SwiftUI glassEffect and GlassEffectContainer bridge",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "sideEffects": false,
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

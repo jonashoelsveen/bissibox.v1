@@ -1,9 +1,10 @@
 /**
  * Week-view day timeframe preference.
  *
- * Persisted per-user via library-settings (localStorage). Drives the
- * left time-column rendering and event placement in the calendar /
- * diary week view.
+ * Persisted per-user via library-settings (localStorage). `startHour`
+ * is the default week/day viewport (that hour is pinned at the top on
+ * enter). Timed week/day grids always include 00:00 above it so the
+ * user can scroll up to midnight. `endHour` still caps the bottom.
  *
  * Constraints:
  *   - startHour: 0..12 (00:00 – 12:00)

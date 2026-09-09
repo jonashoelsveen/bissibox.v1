@@ -20,14 +20,13 @@ import { fromISOLocal, toISOLocal, setHM } from "./dateUtils";
 import { useDiarySessionNote } from "@/hooks/useDiarySessionNote";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { CAT_TRAINING_COLOR } from "./MonthGridType1";
-import { colorForActivity } from "@/lib/activity-colors";
 import {
   DIARY_GROUPS,
   DurationRow,
-  ActivitySelectRow,
-  prettyStravaSportName,
+  ColorSelectRow,
 } from "./DiaryEditFields";
+import { DEFAULT_SESSION_COLOR } from "@/components/library/CategoryActionsMenu";
+import { SessionLocationField } from "./SessionLocationField";
 import { setHoverLock, releaseHoverLockIf } from "./hoverLock";
 
 function dayLabel(date: Date): string {
@@ -81,7 +80,7 @@ export interface SessionHoverMenuProps {
   defaultEditMode?: boolean;
   onMenuEnter?: () => void;
   onMenuLeave?: () => void;
-  onForceClose?: () => void;
+  onForceClose?: (closingEventId?: string) => void;
   /** Fired whenever the menu becomes "sticky" (note panel open, leader note
    *  open, edit mode, or confirm dialog). Parent uses this to lock hover
    *  state to this event id so hovering other tiles cannot steal focus. */
@@ -139,20 +138,41 @@ export function SessionHoverMenu({
   }, [ev.startISO, ev.endISO]);
 
   const [durationMin, setDurationMin] = useState<number>(initialDuration);
+  const [allDay, setAllDay] = useState<boolean>(!!ev.allDay);
+  const [location, setLocation] = useState(ev.location ?? "");
+  const [locationUrl, setLocationUrl] = useState(ev.locationUrl ?? "");
+  const prevDurationRef = useRef<number>(initialDuration || 60);
+  const handleAllDayToggle = (next: boolean) => {
+    if (next) {
+      if (durationMin > 0) prevDurationRef.current = durationMin;
+      setDurationMin(0);
+      setAllDay(true);
+    } else {
+      setAllDay(false);
+      setDurationMin(prevDurationRef.current > 0 ? prevDurationRef.current : 60);
+    }
+  };
   const [diaryGroup, setDiaryGroup] = useState<string>(ev.diaryGroup ?? inferred.group);
   const [diarySub, setDiarySub] = useState<string>(ev.diarySub ?? inferred.sub);
+  const [sessionColor, setSessionColor] = useState<string>(
+    ev.color ?? DEFAULT_SESSION_COLOR,
+  );
   // Re-seed editing fields when switching to a different event.
   useEffect(() => {
     setDurationMin(initialDuration);
+    setAllDay(!!ev.allDay);
+    setLocation(ev.location ?? "");
+    setLocationUrl(ev.locationUrl ?? "");
+    prevDurationRef.current = initialDuration || 60;
     setDiaryGroup(ev.diaryGroup ?? inferred.group);
     setDiarySub(ev.diarySub ?? inferred.sub);
+    setSessionColor(ev.color ?? DEFAULT_SESSION_COLOR);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ev.id]);
+  }, [ev.id, ev.color]);
 
   const groupDef = DIARY_GROUPS.find((g) => g.id === diaryGroup);
   const hasSubs = !!groupDef?.children?.length;
-  const accent =
-    diaryGroup === "endurance" ? colorForActivity(diarySub) : CAT_TRAINING_COLOR;
+  const accent = sessionColor || DEFAULT_SESSION_COLOR;
 
   const commitEdit = () => {
     const start = fromISOLocal(ev.startISO);
@@ -160,16 +180,17 @@ export function SessionHoverMenu({
     const endMin = startMin + Math.max(0, durationMin);
     const startISO = toISOLocal(setHM(start, Math.floor(startMin / 60), startMin % 60));
     const endISO = toISOLocal(setHM(start, Math.floor(endMin / 60), endMin % 60));
-    const trainingColor =
-      diaryGroup === "endurance" ? colorForActivity(diarySub) : CAT_TRAINING_COLOR;
     onUpsert({
       id: ev.id,
       startISO,
       endISO,
-      color: trainingColor,
+      allDay,
+      color: sessionColor || DEFAULT_SESSION_COLOR,
       diaryType: "training",
       diaryGroup,
       diarySub: hasSubs ? diarySub : undefined,
+      location: location.trim() || undefined,
+      locationUrl: locationUrl.trim() || undefined,
     });
     setEditMode(false);
   };
@@ -224,17 +245,29 @@ export function SessionHoverMenu({
       const inNote = (t as HTMLElement | null)?.closest('[data-note-panel="1"]');
       const inEditPanel = (t as HTMLElement | null)?.closest('[data-session-edit-panel="1"]');
       if (!inMenu && !inNote && !inEditPanel) {
-        if (editMode) commitEdit();
-        setNoteEdit(false);
-        setLeaderNoteEdit(false);
-        setEditMode(false);
-        onForceClose?.();
+        // If the click is on another session tile, defer the commit/close
+        // so that tile's click handler can run first and open its own
+        // edit menu. Without this, the synchronous state-resets here race
+        // with the new tile's click, occasionally swallowing the open.
+        const targetTile = (t as HTMLElement | null)?.closest('[data-event-id]');
+        const onAnotherTile =
+          targetTile instanceof HTMLElement &&
+          targetTile.getAttribute('data-event-id') !== ev.id;
+        const run = () => {
+          if (editMode) commitEdit();
+          setNoteEdit(false);
+          setLeaderNoteEdit(false);
+          setEditMode(false);
+          onForceClose?.(ev.id);
+        };
+        if (onAnotherTile) setTimeout(run, 0);
+        else run();
       }
     };
     window.addEventListener("mousedown", onDown);
     return () => window.removeEventListener("mousedown", onDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteEdit, leaderNoteEdit, editMode, onForceClose]);
+  }, [noteEdit, leaderNoteEdit, editMode, onForceClose, ev.id]);
 
   // Enter to save edits, Escape to cancel.
   useEffect(() => {
@@ -550,19 +583,26 @@ export function SessionHoverMenu({
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               >
-                <DurationRow accent={accent} durationMin={durationMin} onChange={setDurationMin} />
-                <ActivitySelectRow
+                <DurationRow accent={accent} durationMin={durationMin} onChange={setDurationMin} allDay={allDay} onAllDayChange={handleAllDayToggle} />
+                <div className="px-2 py-1.5">
+                  <SessionLocationField
+                    value={location}
+                    onChange={setLocation}
+                    size="compact"
+                    locationUrl={locationUrl || null}
+                    onLocationUrlClear={() => setLocationUrl("")}
+                    onPlaceSelect={(place) => {
+                      setLocation(place.name);
+                      setLocationUrl(place.locationUrl);
+                    }}
+                  />
+                </div>
+                <ColorSelectRow
                   accent={accent}
-                  diaryGroup={diaryGroup}
-                  diarySub={diarySub}
-                  lockedLabel={
-                    ev.stravaActivityId
-                      ? prettyStravaSportName(ev.sportType) || "Strava activity"
-                      : null
-                  }
-                  onChange={(g, s) => {
-                    setDiaryGroup(g);
-                    setDiarySub(s);
+                  color={sessionColor}
+                  onChange={(hex) => {
+                    setSessionColor(hex);
+                    onUpsert({ id: ev.id, color: hex });
                   }}
                 />
 

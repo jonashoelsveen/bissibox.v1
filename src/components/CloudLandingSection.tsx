@@ -12,6 +12,8 @@ import {
   landingReadMoreClassName,
   HERO_ILLUSTRATION_DISPLAY_PX,
   HERO_ILLUSTRATION_DISPLAY_VW,
+  BISSIBOX_COMPACT_SCREEN_NOTICE,
+  MINIMAL_TOP_TAB_BAR_PADDING_X,
 } from "@/lib/cloud-landing-design";
 
 /** 20% larger than the 24px native iOS back chevron. */
@@ -24,8 +26,8 @@ const READ_MORE_PAGE_PAD_X = Math.max(24, READ_MORE_BACK_ICON_PX + READ_MORE_BAC
 const READ_MORE_BODY_MAX = "42rem"; // Tailwind max-w-2xl
 const READ_MORE_BACK_HANG_MIN_PX = READ_MORE_BACK_ICON_PX + READ_MORE_BACK_GAP_PX;
 const READ_MORE_BACK_HANG_WIDE_PX = READ_MORE_BACK_HANG_MIN_PX + READ_MORE_BACK_WIDE_EXTRA_PX;
-/** Hang up to the wide offset, but never past the column's left gutter (shrink-safe). */
-const READ_MORE_BACK_TRANSFORM = `translate(calc(-1 * min(${READ_MORE_BACK_HANG_WIDE_PX}px, (100vw - min(${READ_MORE_BODY_MAX}, 100vw - ${2 * READ_MORE_PAGE_PAD_X}px)) / 2)), -50%)`;
+/** Hang up to the wide offset, but never left of the top-bar logo. */
+const READ_MORE_BACK_TRANSFORM = `translate(calc(-1 * min(${READ_MORE_BACK_HANG_WIDE_PX}px, max(0px, (100vw - min(${READ_MORE_BODY_MAX}, 100vw - ${2 * READ_MORE_PAGE_PAD_X}px)) / 2 - ${MINIMAL_TOP_TAB_BAR_PADDING_X}px))), -50%)`;
 
 const CLOUD_READ_MORE_SIGNIN_PATHS = ["/cloud/individuals", "/cloud/entities"] as const;
 
@@ -193,24 +195,27 @@ export function CloudLandingSection({
         className="mt-5"
         style={{ ...landingHeroBodyStyle, ...(typeColor ? { color: typeColor } : {}) }}
       >
-        {description}{" "}
-        <Link
-          to={readMoreTo}
-          resetScroll
-          className={landingReadMoreClassName}
-          onClick={saveCloudHomeScroll}
-        >
-          Read more
-        </Link>
+        <span className="bissibox-desktop-only">
+          {description}{" "}
+          <Link
+            to={readMoreTo}
+            resetScroll
+            className={landingReadMoreClassName}
+            onClick={saveCloudHomeScroll}
+          >
+            Read more
+          </Link>
+        </span>
+        <span className="bissibox-compact-only">{BISSIBOX_COMPACT_SCREEN_NOTICE}</span>
       </p>
 
       <button
         type="button"
         onClick={onSignIn}
-        className={`mt-10 transition active:scale-[0.98] ${onDark ? "text-[#1d1d1f]" : "text-white"}`}
+        className={`bissibox-desktop-only mt-10 transition active:scale-[0.98] ${onDark ? "text-[#1d1d1f]" : "text-white"}`}
         style={onDark ? landingPrimaryButtonOnDarkStyle : landingPrimaryButtonStyle}
       >
-        Sign in
+        Log in
       </button>
     </div>
   );

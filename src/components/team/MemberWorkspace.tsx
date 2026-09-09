@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BookOpen, CalendarDays, PanelLeft } from "lucide-react";
-import { MiniCalendar, type DateRange } from "@/components/calendar/MiniCalendar";
+import { MiniCalendar, miniCalendarViewMode, type DateRange } from "@/components/calendar/MiniCalendar";
 import { YearCalendarView } from "@/components/calendar/YearCalendarView";
+import { CalendarViewActionsProvider } from "@/components/calendar/CalendarViewActionsContext";
 import { DiaryActivitiesSection } from "@/components/calendar/DiaryActivitiesSection";
 import { MetricsSection } from "@/components/calendar/MetricsSection";
 import { ClientCategoriesSection } from "@/components/calendar/ClientCategoriesSection";
@@ -64,6 +65,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
   });
   const [calViewMode, setCalViewMode] = useState<ExtendedViewMode>("month");
   const [diaryViewMode, setDiaryViewMode] = useState<ExtendedViewMode>("week");
+  const [yearWeekHighlight, setYearWeekHighlight] = useState(false);
 
   // Categories the coach is hiding locally — toggled from the side rail.
   // Stored as a set of lowercase hex colors. Only events whose color is in
@@ -103,6 +105,9 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
     if (subTab === "diary") setDiaryViewMode(v === "day" ? "week" : v);
     else setCalViewMode(v);
   };
+  useEffect(() => {
+    if (viewMode !== "year") setYearWeekHighlight(false);
+  }, [viewMode]);
 
   // Calendar scope id. Coaches write into the client's calendar via the
   // `client:` scope so RLS attaches `coach_pending = true` + the coach id.
@@ -158,7 +163,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
                         setCurrentDate(r.start);
                         setCurrentRange(r);
                       }}
-                      viewMode={viewMode === "year" ? "month" : viewMode}
+                      viewMode={miniCalendarViewMode(viewMode, yearWeekHighlight)}
                     />
                   </div>
                 </div>
@@ -210,27 +215,30 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
             leftPanelOpen ? "pl-0" : "pl-2"
           }`}
         >
-          <YearCalendarView
-            calId={calId}
-            defaultTitle={subTab === "diary" ? "Diary" : "Calendar"}
-            seat="individual"
-            appKind={subTab}
-            currentDate={currentDate}
-            currentRange={currentRange}
-            onCurrentDateChange={(d, r) => {
-              setCurrentDate(d);
-              setCurrentRange(r ?? { start: d, end: d });
-            }}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            visibleCategories={visibleCategories}
-            hiddenColors={hiddenColors}
-            memberId={userId}
-            viewerRole={gridViewerRole}
-            panelOpen={leftPanelOpen}
-            rightPanelOpen={rightPanelOpen}
-            disableImport
-          />
+          <CalendarViewActionsProvider calId={calId}>
+            <YearCalendarView
+              calId={calId}
+              defaultTitle={subTab === "diary" ? "Diary" : "Calendar"}
+              seat="individual"
+              appKind={subTab}
+              currentDate={currentDate}
+              currentRange={currentRange}
+              onCurrentDateChange={(d, r) => {
+                setCurrentDate(d);
+                setCurrentRange(r ?? { start: d, end: d });
+              }}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              yearWeekHighlight={yearWeekHighlight}
+              onYearWeekHighlightChange={setYearWeekHighlight}
+              visibleCategories={visibleCategories}
+              hiddenColors={hiddenColors}
+              memberId={userId}
+              viewerRole={gridViewerRole}
+              panelOpen={leftPanelOpen}
+              rightPanelOpen={rightPanelOpen}
+            />
+          </CalendarViewActionsProvider>
         </div>
       </div>
     </DiaryVisibilityProvider>
