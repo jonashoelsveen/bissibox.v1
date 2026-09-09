@@ -94,7 +94,7 @@ export function ProfileSwitcherMenu({
         target="_blank"
         rel="noopener noreferrer"
         role="menuitem"
-        aria-label="account.aponna.com"
+        aria-label="account.bissibox.com"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -106,7 +106,7 @@ export function ProfileSwitcherMenu({
         <span className="flex h-5 w-5 shrink-0 items-center justify-center text-white/50">
           <UserRound className="h-3.5 w-3.5" strokeWidth={1.75} />
         </span>
-        <span className="min-w-0 flex-1">account.aponna.com</span>
+        <span className="min-w-0 flex-1">account.bissibox.com</span>
         <ExternalLink className="h-3.5 w-3.5 shrink-0 text-white/50" strokeWidth={1.75} aria-hidden />
       </a>
 

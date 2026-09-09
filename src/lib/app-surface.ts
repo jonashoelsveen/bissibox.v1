@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 
 /** Canonical production account URL (menu label / explicit env target). */
-export const ACCOUNT_URL_PRODUCTION = "https://account.aponna.com";
+export const ACCOUNT_URL_PRODUCTION = "https://account.bissibox.com";
 
 /** Cookie + session flag for same-origin account surface (`?surface=account`). */
 export const ACCOUNT_SURFACE_COOKIE = "aponna_surface";
 const ACCOUNT_SURFACE_STORAGE_KEY = "aponna_app_surface";
 
-const ACCOUNT_HOSTS = new Set(["account.aponna.com", "account.localhost"]);
+const ACCOUNT_HOSTS = new Set(["account.bissibox.com", "account.localhost"]);
 
 function hostnameFromHost(host: string): string {
   return host.toLowerCase().split(":")[0] ?? "";
