@@ -76,7 +76,7 @@ export interface CalendarSideNavProps {
   currentRange: DateRange;
   onCurrentDateChange: (date: Date, range: DateRange) => void;
   /** Active view mode — drives whole-week highlighting in mini calendar. */
-  viewMode?: "day" | "week" | "month";
+  viewMode?: "day" | "week" | "month" | "monthMark";
   /** Visible category keys (toggle set) — kept for CalendarPage API compat. */
   visibleCategories: Set<CategoryKey>;
   onToggleCategory: (key: CategoryKey) => void;

@@ -126,7 +126,7 @@ export function AccountTopTabBar() {
         />
         {user ? (
           <span className="bissibox-compact-only h-9 w-9" aria-hidden />
-        ) : (
+        ) : authReady ? (
           <button
             type="button"
             onClick={() => {
@@ -144,7 +144,7 @@ export function AccountTopTabBar() {
           >
             Log in
           </button>
-        )}
+        ) : null}
       </div>
       {user && typeof document !== "undefined"
         ? createPortal(

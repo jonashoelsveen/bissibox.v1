@@ -5,5 +5,5 @@ import { accountRouteGuard } from "@/lib/account-route";
 export const Route = createFileRoute("/me")({
   beforeLoad: ({ context }) => accountRouteGuard({ context }),
   component: () => <AccountSectionView id="me" />,
-  head: () => ({ meta: [{ title: "Account info — Bissibox Account" }] }),
+  head: () => ({ meta: [{ title: "Account" }] }),
 });

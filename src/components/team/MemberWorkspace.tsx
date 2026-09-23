@@ -66,6 +66,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
   const [calViewMode, setCalViewMode] = useState<ExtendedViewMode>("month");
   const [diaryViewMode, setDiaryViewMode] = useState<ExtendedViewMode>("week");
   const [yearWeekHighlight, setYearWeekHighlight] = useState(false);
+  const [yearMonthHighlight, setYearMonthHighlight] = useState(false);
 
   // Categories the coach is hiding locally — toggled from the side rail.
   // Stored as a set of lowercase hex colors. Only events whose color is in
@@ -106,7 +107,10 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
     else setCalViewMode(v);
   };
   useEffect(() => {
-    if (viewMode !== "year") setYearWeekHighlight(false);
+    if (viewMode !== "year") {
+      setYearWeekHighlight(false);
+      setYearMonthHighlight(false);
+    }
   }, [viewMode]);
 
   // Calendar scope id. Coaches write into the client's calendar via the
@@ -163,7 +167,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
                         setCurrentDate(r.start);
                         setCurrentRange(r);
                       }}
-                      viewMode={miniCalendarViewMode(viewMode, yearWeekHighlight)}
+                      viewMode={miniCalendarViewMode(viewMode, yearWeekHighlight, yearMonthHighlight)}
                     />
                   </div>
                 </div>
@@ -231,6 +235,8 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
               onViewModeChange={setViewMode}
               yearWeekHighlight={yearWeekHighlight}
               onYearWeekHighlightChange={setYearWeekHighlight}
+              yearMonthHighlight={yearMonthHighlight}
+              onYearMonthHighlightChange={setYearMonthHighlight}
               visibleCategories={visibleCategories}
               hiddenColors={hiddenColors}
               memberId={userId}

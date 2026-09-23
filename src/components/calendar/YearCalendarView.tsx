@@ -152,6 +152,9 @@ export interface YearCalendarViewProps {
   /** Year view: week-number click tints the week (mini-cal follows in week mode). */
   yearWeekHighlight?: boolean;
   onYearWeekHighlightChange?: (active: boolean) => void;
+  /** Year view: month-header click tints the month. */
+  yearMonthHighlight?: boolean;
+  onYearMonthHighlightChange?: (active: boolean) => void;
 
   visibleCategories?: Set<CategoryKey>;
   /** "diary" restricts to week/month/year, blocks future logging. */
@@ -198,6 +201,8 @@ function YearCalendarViewInner({
   onViewModeChange,
   yearWeekHighlight: yearWeekHighlightProp,
   onYearWeekHighlightChange,
+  yearMonthHighlight: yearMonthHighlightProp,
+  onYearMonthHighlightChange,
   visibleCategories,
   appKind = "calendar",
   memberId,
@@ -581,13 +586,26 @@ function YearCalendarViewInner({
     if (yearWeekHighlightProp === undefined) setInternalYearWeekHighlight(active);
     onYearWeekHighlightChange?.(active);
   };
+  const [internalYearMonthHighlight, setInternalYearMonthHighlight] = useState(false);
+  const yearMonthHighlight = yearMonthHighlightProp ?? internalYearMonthHighlight;
+  const setYearMonthHighlight = (active: boolean) => {
+    if (yearMonthHighlightProp === undefined) setInternalYearMonthHighlight(active);
+    onYearMonthHighlightChange?.(active);
+  };
   useEffect(() => {
-    if (viewMode !== "year") setYearWeekHighlight(false);
+    if (viewMode !== "year") {
+      setYearWeekHighlight(false);
+      setYearMonthHighlight(false);
+    }
   }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
   /** Coerced view mode used by parts of the UI that only understand
    * day/week/month (the grid, side nav, MonthNavControl). */
   const gridViewMode: ViewMode = viewMode === "year" ? "month" : viewMode;
-  const navMiniViewMode = miniCalendarViewMode(viewMode, yearWeekHighlight);
+  const navMiniViewMode = miniCalendarViewMode(
+    viewMode,
+    yearWeekHighlight,
+    yearMonthHighlight,
+  );
 
   /** Keep year view on this year when the week's Monday falls in December. */
   const dateInYearForWeek = (anchor: Date, year: number) => {
@@ -821,6 +839,7 @@ function YearCalendarViewInner({
                         onClick={() => {
                           const t = new Date();
                           setYearWeekHighlight(false);
+                          setYearMonthHighlight(false);
                           updateCurrent(t, { start: t, end: t });
                         }}
                         className="flex h-8 items-center justify-center rounded-md border border-hairline bg-background/90 px-2.5 text-xs font-medium text-ink shadow-sm backdrop-blur transition-colors hover:bg-secondary"
@@ -988,13 +1007,16 @@ function YearCalendarViewInner({
             year={currentDate.getFullYear()}
             selectedDate={currentDate}
             weekHighlight={yearWeekHighlight}
+            monthHighlight={yearMonthHighlight}
             onSelectDate={(d) => {
               setYearWeekHighlight(false);
+              setYearMonthHighlight(false);
               updateCurrent(d, { start: d, end: d });
             }}
             onWeekClick={(anchor) => {
               const d = dateInYearForWeek(anchor, currentDate.getFullYear());
               updateCurrent(d, { start: d, end: d });
+              setYearMonthHighlight(false);
               setYearWeekHighlight(true);
             }}
             onWeekDoubleClick={(anchor) => {
@@ -1008,6 +1030,14 @@ function YearCalendarViewInner({
             onMonthClick={(monthIndex) => {
               const d = new Date(currentDate.getFullYear(), monthIndex, 1);
               updateCurrent(d, { start: d, end: d });
+              setYearWeekHighlight(false);
+              setYearMonthHighlight(true);
+            }}
+            onMonthDoubleClick={(monthIndex) => {
+              const d = new Date(currentDate.getFullYear(), monthIndex, 1);
+              updateCurrent(d, { start: d, end: d });
+              setYearWeekHighlight(false);
+              setYearMonthHighlight(false);
               setViewMode("month");
             }}
           />

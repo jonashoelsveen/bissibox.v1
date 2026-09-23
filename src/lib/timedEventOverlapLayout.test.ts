@@ -374,6 +374,24 @@ describe("layoutTimedOverlaps", () => {
     assert.equal(layout.get("__mark-preview__")?.colCount, 3);
   });
 
+  it("packs a full-window session with timed sessions in the same column", () => {
+    const windowStart = 8 * 60;
+    const windowEnd = 20 * 60;
+    const layout = layoutTimedOverlaps([
+      { id: "all-day", startMin: windowStart, endMin: windowEnd, sortIndex: 1 },
+      { id: "timed", startMin: 9 * 60, endMin: 10 * 60, sortIndex: 2 },
+    ]);
+    const allDay = layout.get("all-day");
+    const timed = layout.get("timed");
+    assert.ok(allDay && timed);
+    assert.equal(allDay.colCount, 2);
+    assert.equal(timed.colCount, 2);
+    assert.equal(allDay.col, 0);
+    assert.equal(timed.col, 1);
+    assert.equal(allDay.widthPct, 0.5);
+    assert.equal(timed.widthPct, 0.5);
+  });
+
   it("puts a session on the right after its sortIndex is promoted", () => {
     const before = layoutTimedOverlaps([
       { id: "left", startMin: 9 * 60, endMin: 10 * 60, sortIndex: 1 },

@@ -1,5 +1,5 @@
 import type { CalendarEvent } from "@/components/calendar/yearStore";
-import { addMinutes, fromISOLocal, makeEventId, setHM, startOfDay, toISOLocal } from "@/components/calendar/dateUtils";
+import { addMinutes, fromISOLocal, makeEventId, setHM, startOfDay, toISOLocal } from "../components/calendar/dateUtils.ts";
 
 export const SESSION_REPEAT_RULES = [
   "daily",
@@ -185,17 +185,18 @@ export function eventsInRepeatSeries(
     }
   }
 
-  if (out.length === 1) {
-    const loose = sessionSeriesFingerprint(target, { omitRule: true });
-    const matching = realEvents.filter(
-      (e) => sessionSeriesFingerprint(e, { omitRule: true }) === loose,
-    );
-    const hasSeriesMeta = matching.some((e) => !!(e.repeatRule || e.repeatSeriesId));
-    // One tagged sibling is enough: later instances often store no
-    // repeat_rule / repeat_series_id of their own. Include untagged
-    // matches so this/all-series ops cover the whole run.
-    if (hasSeriesMeta && matching.length > 1) matching.forEach(add);
-  }
+  // Later instances often store no repeat_rule / repeat_series_id. Include
+  // untagged fingerprint matches whenever the run is a real series so All
+  // covers every occurrence. Detached paste/duplicate copies are already
+  // excluded from `realEvents`.
+  const loose = sessionSeriesFingerprint(target, { omitRule: true });
+  const matching = realEvents.filter(
+    (e) => sessionSeriesFingerprint(e, { omitRule: true }) === loose,
+  );
+  const hasSeriesMeta =
+    !!(target.repeatRule || target.repeatSeriesId) ||
+    matching.some((e) => !!(e.repeatRule || e.repeatSeriesId));
+  if (hasSeriesMeta && matching.length > 1) matching.forEach(add);
 
   const seriesIds = new Set(
     out.map((e) => e.repeatSeriesId).filter((id): id is string => !!id),
@@ -549,6 +550,22 @@ export function isPersistedRepeatSeries(
   }
   if (target.repeatSeriesId || target.repeatRule) return true;
   return eventsInRepeatSeries(allEvents, target).length > 1;
+}
+
+/**
+ * True when the session menu must ask this vs all-in-series before applying
+ * an edit or delete. A tagged series member still counts even if siblings
+ * are not in the current `allEvents` snapshot.
+ */
+export function sessionIsRepeatSeries(
+  target: CalendarEvent | null | undefined,
+  allEvents: CalendarEvent[] = [],
+): boolean {
+  if (!target || isRepeatPreviewEventId(target.id) || isRepeatDetachedEvent(target)) {
+    return false;
+  }
+  if (isPersistedRepeatSeries(target, allEvents)) return true;
+  return resolveSessionRepeatState(target, allEvents).enabled;
 }
 
 export function eventIdsForDeleteScope(

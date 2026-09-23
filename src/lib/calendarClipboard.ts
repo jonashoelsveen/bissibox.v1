@@ -6,7 +6,7 @@ import {
   setHM,
   startOfDay,
   toISOLocal,
-} from "@/components/calendar/dateUtils";
+} from "../components/calendar/dateUtils.ts";
 
 export type ClipboardSourceView = ViewMode;
 export type ClipboardOperation = "copy" | "cut";
@@ -35,6 +35,15 @@ export type CalendarClipboardPayload = {
 };
 
 const STORAGE_KEY = "calendar_clipboard_v1";
+
+/** Paste / duplicate is always a one-off, even if the source was repeating. */
+export function oneOffRepeatFields() {
+  return {
+    repeatRule: null,
+    repeatSeriesId: null,
+    repeatDetached: true,
+  } as const;
+}
 
 /** Word-like session clipboard lifetime (24 hours within the browser tab). */
 export const CALENDAR_CLIPBOARD_TTL_MS = 24 * 60 * 60 * 1000;
@@ -143,6 +152,7 @@ function buildEventOnDate(session: ClipboardSession, date: Date): CalendarEvent 
     location: session.location ?? undefined,
     locationUrl: session.locationUrl ?? undefined,
     appGroupId: session.appGroupId ?? null,
+    ...oneOffRepeatFields(),
   };
 }
 
@@ -242,5 +252,6 @@ export function eventToDuplicatePatch(event: CalendarEvent) {
       : {}),
     ...(event.appGroupId != null ? { appGroupId: event.appGroupId } : {}),
     ...(event.signUpEnabled ? { signUpEnabled: true } : {}),
+    ...oneOffRepeatFields(),
   };
 }

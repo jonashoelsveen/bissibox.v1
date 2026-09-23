@@ -186,8 +186,12 @@ function CalendarPageInner({ scale: calendarScale }: { scale: CalendarScale }) {
   });
   const [viewMode, setViewMode] = useState<ExtendedViewMode>("month");
   const [yearWeekHighlight, setYearWeekHighlight] = useState(false);
+  const [yearMonthHighlight, setYearMonthHighlight] = useState(false);
   useEffect(() => {
-    if (viewMode !== "year") setYearWeekHighlight(false);
+    if (viewMode !== "year") {
+      setYearWeekHighlight(false);
+      setYearMonthHighlight(false);
+    }
   }, [viewMode]);
 
   // Default: every category visible. Categories load lazily; new keys are
@@ -373,7 +377,7 @@ function CalendarPageInner({ scale: calendarScale }: { scale: CalendarScale }) {
               setCurrentDate(d);
               setCurrentRange(r);
             }}
-            viewMode={miniCalendarViewMode(viewMode, yearWeekHighlight)}
+            viewMode={miniCalendarViewMode(viewMode, yearWeekHighlight, yearMonthHighlight)}
             visibleCategories={visibleCategories}
             onToggleCategory={toggleCategory}
             seat={seat}
@@ -404,6 +408,8 @@ function CalendarPageInner({ scale: calendarScale }: { scale: CalendarScale }) {
               onViewModeChange={setViewMode}
               yearWeekHighlight={yearWeekHighlight}
               onYearWeekHighlightChange={setYearWeekHighlight}
+              yearMonthHighlight={yearMonthHighlight}
+              onYearMonthHighlightChange={setYearMonthHighlight}
               visibleCategories={visibleCategories}
               teamId={teamId}
               panelOpen={panelOpen}

@@ -41,7 +41,7 @@ export const Route = createFileRoute("/")({
     return {
       meta: isAccount
         ? [
-            { title: "Bissibox Account" },
+            { title: "Account" },
             {
               name: "description",
               content: "Your identity across the Bissibox platform.",

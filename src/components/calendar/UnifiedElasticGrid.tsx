@@ -862,7 +862,7 @@ export function UnifiedElasticGrid({
     /** Pending unsaved drag — date/time to apply on Save. */
     pendingDate?: Date;
     pendingTime?: { startMin: number; endMin: number };
-    /** Bumped after week/day edge-resize so PopoverEditor can ask this vs all. */
+    /** Bumped after week/day edge-resize so the open menu can sync times. */
     timeCommitNonce?: number;
     categoryId?: string | null;
     categoryName?: string | null;
@@ -2861,13 +2861,23 @@ export function UnifiedElasticGrid({
           }
           onAppGroupChange={
             seat === "admin"
-              ? (groupId) => {
+              ? (groupId, eventIds) => {
                   setPopover((p) => (p ? { ...p, appGroupId: groupId } : p));
-                  if (!popover.eventId) return;
-                  if (draftEventRef.current?.id === popover.eventId) {
-                    setDraftEvent({ ...draftEventRef.current, appGroupId: groupId ?? undefined });
-                  } else {
-                    onUpsertEvent({ id: popover.eventId, appGroupId: groupId ?? null });
+                  const ids =
+                    eventIds && eventIds.length > 0
+                      ? eventIds
+                      : popover.eventId
+                        ? [popover.eventId]
+                        : [];
+                  for (const id of ids) {
+                    if (draftEventRef.current?.id === id) {
+                      setDraftEvent({
+                        ...draftEventRef.current,
+                        appGroupId: groupId ?? undefined,
+                      });
+                    } else {
+                      onUpsertEvent({ id, appGroupId: groupId ?? null });
+                    }
                   }
                 }
               : undefined
@@ -2914,15 +2924,20 @@ export function UnifiedElasticGrid({
               ? getEventById(popover.eventId)?.repeatRule ?? null
               : null
           }
-          onColorChange={(c) => {
+          onColorChange={(c, eventIds) => {
             setPopover((p) => (p ? { ...p, initialColor: c } : p));
-            // Real-time tile recolor while the popover is open and bound
-            // to an existing event.
-            if (popover.eventId && c) {
-              if (draftEventRef.current?.id === popover.eventId) {
+            if (!c) return;
+            const ids =
+              eventIds && eventIds.length > 0
+                ? eventIds
+                : popover.eventId
+                  ? [popover.eventId]
+                  : [];
+            for (const id of ids) {
+              if (draftEventRef.current?.id === id) {
                 setDraftEvent({ ...draftEventRef.current, color: c });
               } else {
-                onUpsertEvent({ id: popover.eventId, color: c });
+                onUpsertEvent({ id, color: c });
               }
             }
           }}
@@ -3003,6 +3018,31 @@ export function UnifiedElasticGrid({
               }
             }
           }}
+          onLocationChange={(location, locationUrl, eventIds) => {
+            const ids =
+              eventIds && eventIds.length > 0
+                ? eventIds
+                : popover.eventId
+                  ? [popover.eventId]
+                  : [];
+            const nextLocation = (location ?? "").trim() || undefined;
+            const nextLocationUrl = (locationUrl ?? "").trim() || undefined;
+            for (const id of ids) {
+              if (draftEventRef.current?.id === id) {
+                setDraftEvent({
+                  ...draftEventRef.current,
+                  location: nextLocation,
+                  locationUrl: nextLocationUrl,
+                });
+              } else {
+                onUpsertEvent({
+                  id,
+                  location: nextLocation,
+                  locationUrl: nextLocationUrl,
+                });
+              }
+            }
+          }}
           onClearRepeat={(ids) => {
             for (const id of ids) {
               if (draftEventRef.current?.id === id) {
@@ -3077,9 +3117,18 @@ export function UnifiedElasticGrid({
 
                 if (popover.eventId) {
                   if (!t) {
-                    if (draftEventRef.current?.id === popover.eventId)
-                      clearDraftEvent(popover.eventId);
-                    else onDeleteEvent(popover.eventId);
+                    const deleteIds =
+                      eventIds && eventIds.length > 0
+                        ? eventIds
+                        : [popover.eventId];
+                    for (const id of deleteIds) {
+                      if (draftEventRef.current?.id === id) clearDraftEvent(id);
+                    }
+                    if (deleteIds.length > 1 && onDeleteEvents) {
+                      onDeleteEvents(deleteIds);
+                    } else {
+                      deleteIds.forEach((id) => onDeleteEvent(id));
+                    }
                   } else {
                     const targetIds =
                       eventIds && eventIds.length > 0
@@ -4768,8 +4817,8 @@ function WeekEventsOverlay({
       const end = fromISOLocal(ev.endISO);
       const idx = weekDates.findIndex((d) => sameDay(d, start));
       if (idx < 0) continue;
-      // All-day events: render as a full-column tile spanning the visible
-      // window so they behave like normal sessions (clickable, draggable,
+      // All-day events: render as a tile spanning the visible window so they
+      // pack with other sessions in the same column (clickable, draggable,
       // resizable). They keep their `allDay` flag for the editor.
       if (ev.allDay) {
         arr[idx].push({ ev, startMin: windowStart, endMin: windowEnd });
@@ -4813,7 +4862,7 @@ function WeekEventsOverlay({
           liveList.filter(({ ev }) => !ev.title.trim()).map(({ ev }) => ev.id),
         );
         const baseLayoutEvents = liveList
-          .filter(({ ev }) => !ev.allDay && ev.id !== draggingId)
+          .filter(({ ev }) => ev.id !== draggingId)
           .map(({ ev, startMin, endMin }) => ({
             id: ev.id,
             startMin,
@@ -5527,7 +5576,7 @@ function WeekEventsOverlay({
         const height = (dragSnap.durationMin / 30) * ROW_HEIGHT;
         const list = byCol[dragSnap.colIdx] ?? [];
         const others = list
-          .filter(({ ev }) => ev.id !== dragSnap.id && !ev.allDay)
+          .filter(({ ev }) => ev.id !== dragSnap.id)
           .map(({ ev, startMin, endMin }) => {
             const resizing = resize?.id === ev.id;
             return {

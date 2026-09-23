@@ -396,6 +396,9 @@ export function SessionLocationField({
               window.setTimeout(() => setSearchOpen(false), 180);
             }}
             onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.stopPropagation();
+              }
               if (e.key === "Escape") {
                 setSearchOpen(false);
                 (e.target as HTMLInputElement).blur();

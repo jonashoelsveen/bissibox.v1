@@ -870,6 +870,43 @@ export function useEventStore(calId: string) {
       setEvents(next);
     };
 
+    /** Keep drag/time edits that have not been GET-acked yet. */
+    const overlayInFlightSessionTimes = (painted: CalendarEvent[]): CalendarEvent[] => {
+      const live = eventsRef.current;
+      if (live.length === 0) return painted;
+      const byId = new Map(painted.map((event) => [event.id, event]));
+      let changed = false;
+      for (const event of live) {
+        const recent = recentWriteAtRef.current.get(event.id);
+        const inflight =
+          isCalendarSessionWritePending(event.id) ||
+          (recent != null && Date.now() - recent < 30_000);
+        if (!inflight || !event.startISO || !event.endISO) continue;
+        const current = byId.get(event.id);
+        if (!current) {
+          if (hasRenderableTitle(event.title)) {
+            byId.set(event.id, event);
+            changed = true;
+          }
+          continue;
+        }
+        if (
+          current.startISO !== event.startISO ||
+          current.endISO !== event.endISO ||
+          !!current.allDay !== !!event.allDay
+        ) {
+          byId.set(event.id, {
+            ...current,
+            startISO: event.startISO,
+            endISO: event.endISO,
+            allDay: event.allDay,
+          });
+          changed = true;
+        }
+      }
+      return changed ? [...byId.values()] : painted;
+    };
+
     // For coaches viewing a client's calendar, the only sessions we may
     // surface are those whose `category_id` has been explicitly granted via
     // `calendar_category_coach_access`. Default = no access. We resolve the
@@ -956,7 +993,7 @@ export function useEventStore(calId: string) {
           local,
           mutations,
         });
-        const next = replicaToCalendarEvents(merged.next);
+        const next = overlayInFlightSessionTimes(replicaToCalendarEvents(merged.next));
         persistedIdsRef.current = new Set(
           merged.next.filter((row) => row.synced !== false).map((row) => row.id),
         );
@@ -1041,7 +1078,9 @@ export function useEventStore(calId: string) {
         }
       }
 
-      const next = replicaToCalendarEvents(merged.next);
+      const next = overlayInFlightSessionTimes(
+        replicaToCalendarEvents(merged.next),
+      );
       persistedIdsRef.current = new Set(
         merged.next.filter((row) => row.synced !== false).map((row) => row.id),
       );
@@ -1134,7 +1173,22 @@ export function useEventStore(calId: string) {
     const applyRowToEvents = (row: Row) => {
       if (!rowMatchesScope(row)) return;
       const existing = eventsRef.current.find((e) => e.id === row.id);
-      if (isCalendarSessionWritePending(row.id)) return;
+      if (isCalendarSessionWritePending(row.id)) {
+        // Persist just committed, but the queue is still marked pending.
+        // Apply only when the payload matches the in-memory times; skip a
+        // stale UPDATE that still has the pre-drag 08:00–09:00 range.
+        if (existing?.startISO && existing.endISO) {
+          const incomingPending = rowToEvent(row);
+          if (
+            incomingPending.startISO !== existing.startISO ||
+            incomingPending.endISO !== existing.endISO
+          ) {
+            return;
+          }
+        } else {
+          return;
+        }
+      }
       if (!hasRenderableTitle(row.title)) {
         if (existing && hasRenderableTitle(existing.title)) return;
         const next = eventsRef.current.filter((e) => e.id !== row.id);
@@ -1207,14 +1261,10 @@ export function useEventStore(calId: string) {
         return;
       }
       if (payload.eventType === "UPDATE") {
-        const updatedId = payload.new?.id;
-        if (updatedId && isCalendarSessionWritePending(updatedId)) return;
         applyRowToEvents(payload.new as Row);
         return;
       }
       if (payload.eventType === "INSERT") {
-        const insertedId = payload.new?.id;
-        if (insertedId && isCalendarSessionWritePending(insertedId)) return;
         applyRowToEvents(payload.new as Row);
       }
     };
@@ -1314,14 +1364,10 @@ export function useEventStore(calId: string) {
               return;
             }
             if (payload.eventType === "UPDATE") {
-              const updatedId = (payload.new as { id?: string })?.id;
-              if (updatedId && isCalendarSessionWritePending(updatedId)) return;
               applyRowToEvents(payload.new as Row);
               return;
             }
             if (payload.eventType === "INSERT") {
-              const insertedId = (payload.new as { id?: string })?.id;
-              if (insertedId && isCalendarSessionWritePending(insertedId)) return;
               applyRowToEvents(payload.new as Row);
             }
           },
@@ -1632,6 +1678,7 @@ export function useEventStore(calId: string) {
       if (!existing || !canMutateEvent(existing)) return;
       const merged: CalendarEvent = { ...existing, ...patch };
       if (sessionSnapshotEqual(existing, merged)) return;
+      recentWriteAtRef.current.set(id, Date.now());
       const next = current.map((e) => (e.id === id ? merged : e));
       applyLocal(next);
       if (scope && merged.startISO && merged.endISO) {

@@ -566,6 +566,7 @@ export const SessionLocationMapPanel = forwardRef<
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
+                  e.stopPropagation();
                   void confirmLocation();
                 } else if (e.key === "Escape") {
                   setSearchOpen(false);

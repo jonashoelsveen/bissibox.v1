@@ -24,8 +24,8 @@ export function eventTargetElement(target: EventTarget | null): Element | null {
 }
 
 /**
- * Portal menu for this-session vs all-in-series scope — used by delete
- * and the first edit on a stored repeat series.
+ * Portal menu for this-session vs all-in-series scope — used by Gantt delete.
+ * Session-menu edits use SessionSeriesScopeTabs instead.
  */
 export function SessionScopeMenu({
   open,
@@ -40,7 +40,11 @@ export function SessionScopeMenu({
   onDismiss: () => void;
   heading?: string;
 }) {
-  const [menuPos, setMenuPos] = useState<{ left: number; bottom: number } | null>(null);
+  const [menuPos, setMenuPos] = useState<{
+    left: number;
+    top: number;
+    placeBelow: boolean;
+  } | null>(null);
 
   useLayoutEffect(() => {
     if (!open) {
@@ -50,15 +54,26 @@ export function SessionScopeMenu({
     const update = () => {
       const rect = anchorRef.current?.getBoundingClientRect();
       if (!rect) return;
+      const gap = SESSION_SIDE_MENU_GAP_PX;
+      const spaceAbove = rect.top - gap;
+      const spaceBelow = window.innerHeight - rect.bottom - gap;
+      const placeBelow = spaceAbove < 96 && spaceBelow > spaceAbove;
+      const left = Math.min(
+        Math.max(8, rect.left),
+        Math.max(8, window.innerWidth - 248),
+      );
       setMenuPos({
-        left: rect.left,
-        bottom: window.innerHeight - rect.top + SESSION_SIDE_MENU_GAP_PX,
+        left,
+        top: placeBelow ? rect.bottom + gap : rect.top - gap,
+        placeBelow,
       });
     };
     update();
+    const raf = window.requestAnimationFrame(update);
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     return () => {
+      window.cancelAnimationFrame(raf);
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
@@ -66,11 +81,21 @@ export function SessionScopeMenu({
 
   useEffect(() => {
     if (!open) return;
+    let armed = false;
+    const armId = window.setTimeout(() => {
+      armed = true;
+    }, 0);
     const onDoc = (e: MouseEvent) => {
+      if (!armed) return;
       const t = e.target as Node;
       if (anchorRef.current?.contains(t)) return;
       const el = eventTargetElement(e.target);
       if (el?.closest(`[${SESSION_SCOPE_MENU_ATTR}]`)) return;
+      // Map / session card clicks must not dismiss — the prompt is opened
+      // from those surfaces, and Mapbox can emit extra pointer events.
+      if (el?.closest('[data-role="popover"]')) return;
+      if (el?.closest("[data-session-location-map]")) return;
+      if (el?.closest("[data-session-location-field]")) return;
       onDismiss();
     };
     const onKey = (e: KeyboardEvent) => {
@@ -82,6 +107,7 @@ export function SessionScopeMenu({
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
     return () => {
+      window.clearTimeout(armId);
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
     };
@@ -93,8 +119,13 @@ export function SessionScopeMenu({
     <div
       data-session-delete-menu
       role="menu"
-      className={`fixed z-[60] min-w-[240px] p-1 ${SESSION_SIDE_MENU_SHELL_CLASS}`}
-      style={{ ...SESSION_SIDE_MENU_SHELL_STYLE, left: menuPos.left, bottom: menuPos.bottom }}
+      className={`fixed z-[80] min-w-[240px] p-1 ${SESSION_SIDE_MENU_SHELL_CLASS}`}
+      style={{
+        ...SESSION_SIDE_MENU_SHELL_STYLE,
+        left: menuPos.left,
+        top: menuPos.top,
+        transform: menuPos.placeBelow ? undefined : "translateY(-100%)",
+      }}
     >
       <div className="flex flex-col gap-1">
         {heading ? (

@@ -10,5 +10,5 @@ export const Route = createFileRoute("/calendar")({
     open: typeof s.open === "string" ? (s.open as string) : undefined,
     view: s.view === "previous" ? "previous" : undefined,
   }),
-  head: () => ({ meta: [{ title: "Calendar · Raceline" }] }),
+  head: () => ({ meta: [{ title: "Bissibox" }] }),
 });

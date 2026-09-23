@@ -10,5 +10,5 @@ export const Route = createFileRoute("/family")({
     entityFeatureRouteGuard("entityMembershipManagement", "/me");
   },
   component: () => <AccountSectionView id="family" />,
-  head: () => ({ meta: [{ title: "Entity memberships — Aponna Account" }] }),
+  head: () => ({ meta: [{ title: "Account" }] }),
 });

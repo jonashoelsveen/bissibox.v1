@@ -18,8 +18,9 @@ import { isEntityFeatureEnabled } from "@/lib/features";
 
 /**
  * Universal top tab bar fixed under the colored TopBar. Shown on every page.
- * Logged-out: Log in on the right. Logged-in: Apps launcher only when
- * entityAppsLauncher is on and the user owns an entity.
+ * Logged-out landing: Log in on the right. Platform (calendar, etc.): never
+ * show Log in — that chrome is only for the logged-out home. Logged-in: Apps
+ * launcher only when entityAppsLauncher is on and the user owns an entity.
  */
 export function GlobalTopTabBar() {
   const { user, authReady, activeEntityId, setActiveEntity } = useAuth();
@@ -150,22 +151,18 @@ export function GlobalTopTabBar() {
               buttonClassName="flex h-9 w-9 items-center justify-center rounded-md text-[#1d1d1f] transition hover:bg-black/5"
             />
           ) : null
-        ) : (
+        ) : authReady ? (
           <button
             type="button"
             onClick={() => {
-              if (isCloudLandingChrome) {
-                requestCloudSignIn();
-                return;
-              }
-              void navigate({ to: "/", search: { signin: "cloud" } });
+              requestCloudSignIn();
             }}
             className="bissibox-desktop-only text-white transition active:scale-[0.98]"
             style={landingPrimaryButtonCompactStyle}
           >
             Log in
           </button>
-        )}
+        ) : null}
       </div>
     );
   }
@@ -295,37 +292,17 @@ export function GlobalTopTabBar() {
         <div className="flex h-full min-w-0 flex-1 items-end">
           <TopBarSlotMount className="flex h-full min-w-0 flex-1 items-end" />
         </div>
-        {user ? (
-          showAppsMenu ? (
-            <div className="relative mb-1">
-              <AppsLauncher
-                open={appsOpen}
-                onToggle={() => setAppsOpen((v) => !v)}
-                menuRef={appsRef}
-                onPick={handleAppPick}
-                buttonClassName="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
-              />
-            </div>
-          ) : null
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              /** Entity sign-in context — Bucket A: only when the workspace flag is on. */
-              const signin =
-                path.startsWith("/entity") && isEntityFeatureEnabled("entityWorkspace")
-                  ? "entity"
-                  : path.startsWith("/calendar")
-                    ? "calendar"
-                    : "cloud";
-              void navigate({ to: "/", search: { signin } });
-            }}
-            className="bissibox-desktop-only mb-1 text-white transition active:scale-[0.98]"
-            style={landingPrimaryButtonCompactStyle}
-          >
-            Log in
-          </button>
-        )}
+        {showAppsMenu ? (
+          <div className="relative mb-1">
+            <AppsLauncher
+              open={appsOpen}
+              onToggle={() => setAppsOpen((v) => !v)}
+              menuRef={appsRef}
+              onPick={handleAppPick}
+              buttonClassName="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-ink"
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );

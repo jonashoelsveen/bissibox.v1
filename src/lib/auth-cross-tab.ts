@@ -69,6 +69,7 @@ export function subscribeForcedLogout(onLogout: () => void): () => void {
     channel = null;
   }
 
+  let cookieConfirmTimer: number | null = null;
   const onCookieChange = (ev: Event) => {
     const detail = ev as Event & {
       deleted?: Array<{ name?: string }>;
@@ -77,9 +78,26 @@ export function subscribeForcedLogout(onLogout: () => void): () => void {
     const isSession = (c: { name?: string }) => c.name === SESSION_COOKIE;
     const gone = (detail.deleted ?? []).some(isSession);
     const replaced = (detail.changed ?? []).some(isSession);
-    // Rotation is delete+set; only treat as logout when the cookie is gone
-    // and not immediately replaced.
-    if (gone && !replaced) onLogout();
+    // Rotation is delete+set, often as two Cookie Store events. Wait briefly
+    // and confirm the cookie is actually missing before logging this tab out.
+    if (gone && !replaced) {
+      if (cookieConfirmTimer != null) window.clearTimeout(cookieConfirmTimer);
+      cookieConfirmTimer = window.setTimeout(() => {
+        cookieConfirmTimer = null;
+        const cookieStore = (window as unknown as {
+          cookieStore?: { get: (name: string) => Promise<{ name?: string } | null> };
+        }).cookieStore;
+        if (!cookieStore?.get) {
+          onLogout();
+          return;
+        }
+        void cookieStore.get(SESSION_COOKIE).then((cookie) => {
+          if (!cookie) onLogout();
+        }).catch(() => {
+          /* ignore — do not log out on a Cookie Store read failure */
+        });
+      }, 80);
+    }
   };
   const store = (window as unknown as { cookieStore?: EventTarget }).cookieStore;
   store?.addEventListener("change", onCookieChange);
@@ -88,5 +106,6 @@ export function subscribeForcedLogout(onLogout: () => void): () => void {
     window.removeEventListener("storage", onStorage);
     channel?.close();
     store?.removeEventListener("change", onCookieChange);
+    if (cookieConfirmTimer != null) window.clearTimeout(cookieConfirmTimer);
   };
 }

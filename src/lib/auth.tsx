@@ -70,20 +70,34 @@ interface SessionResponse {
   error?: string;
 }
 
-async function fetchSession(): Promise<SessionResponse | null> {
+type SessionFetchResult =
+  | { kind: "authenticated"; data: SessionResponse }
+  | { kind: "unauthenticated" }
+  | { kind: "unavailable" };
+
+async function fetchSession(): Promise<SessionFetchResult> {
   try {
     const res = await fetch("/api/auth/session", {
       method: "GET",
       credentials: "include",
       headers: { Accept: "application/json" },
     });
-    if (res.status === 401) return null;
-    if (!res.ok) return null;
-    return (await res.json()) as SessionResponse;
+    if (res.status === 401) return { kind: "unauthenticated" };
+    if (!res.ok) return { kind: "unavailable" };
+    const data = (await res.json()) as SessionResponse;
+    if (data.user && data.access_token && data.refresh_token) {
+      return { kind: "authenticated", data };
+    }
+    if (data.user == null) return { kind: "unauthenticated" };
+    return { kind: "unavailable" };
   } catch {
-    return null;
+    return { kind: "unavailable" };
   }
 }
+
+/** Survives Fast Refresh / provider remount so the top bar never flashes Log in. */
+let lastKnownSession: Session | null = null;
+let lastKnownUser: User | null = null;
 
 /** Stable identity for skipping React updates that remount Calendar. */
 function sessionIdentityKey(session: Session | null, user: User | null): string | null {
@@ -94,43 +108,62 @@ function sessionIdentityKey(session: Session | null, user: User | null): string 
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [authReady, setAuthReady] = useState(false);
+  const [session, setSession] = useState<Session | null>(lastKnownSession);
+  const [user, setUser] = useState<User | null>(lastKnownUser);
+  const [loading, setLoading] = useState(!lastKnownUser);
+  const [authReady, setAuthReady] = useState(() => lastKnownUser != null);
   const [mode, setModeState] = useState<Mode>("participant");
   const [activeEntityId, setActiveEntityIdState] = useState<string | null>(null);
   const [isBetaTester, setIsBetaTester] = useState(false);
   const [betaReady, setBetaReady] = useState(false);
   const bootedRef = useRef(false);
-  const rehydratingRef = useRef(false);
+  const rehydrateInFlightRef = useRef<Promise<boolean> | null>(null);
   const signingOutRef = useRef(false);
-  const userIdRef = useRef<string | null>(null);
-  const sessionTokenRef = useRef<string | null>(null);
+  const userIdRef = useRef<string | null>(lastKnownUser?.id ?? null);
+  const sessionTokenRef = useRef<string | null>(sessionIdentityKey(lastKnownSession, lastKnownUser));
   userIdRef.current = user?.id ?? null;
 
   const applySessionIfChanged = useCallback((nextSession: Session | null, nextUser: User | null) => {
     const key = sessionIdentityKey(nextSession, nextUser);
-    if (key === sessionTokenRef.current) return;
+    if (key === sessionTokenRef.current) {
+      if (key === null) {
+        lastKnownSession = null;
+        lastKnownUser = null;
+      }
+      return;
+    }
     sessionTokenRef.current = key;
+    lastKnownSession = nextSession;
+    lastKnownUser = nextUser;
     setSession(nextSession);
     setUser(nextUser);
   }, []);
 
   const recoverFromLocalSession = useCallback(async (): Promise<boolean> => {
     try {
-      const [{ data: sessionData }, { data: userData, error }] = await Promise.all([
-        supabase.auth.getSession(),
-        supabase.auth.getUser(),
-      ]);
+      const { data: sessionData } = await supabase.auth.getSession();
       const localSession = sessionData.session ?? null;
-      const localUser = userData.user ?? localSession?.user ?? null;
+      if (localSession?.user) {
+        applySessionIfChanged(localSession, localSession.user);
+        return true;
+      }
+      const { data: userData, error } = await supabase.auth.getUser();
+      const localUser = userData.user ?? null;
       if (error || !localUser) return false;
       applySessionIfChanged(localSession, localUser);
       return true;
     } catch {
       return false;
     }
+  }, [applySessionIfChanged]);
+
+  const clearLocalAuth = useCallback(async () => {
+    try {
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      /* ignore */
+    }
+    applySessionIfChanged(null, null);
   }, [applySessionIfChanged]);
 
   // Re-hydrate the Supabase client from the HTTP-only cookie. Used both on
@@ -143,55 +176,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       applySessionIfChanged(null, null);
       return false;
     }
-    if (rehydratingRef.current) {
-      return recoverFromLocalSession();
+    if (rehydrateInFlightRef.current) {
+      return rehydrateInFlightRef.current;
     }
-    rehydratingRef.current = true;
-    try {
-      // Prefer a still-valid local session. /api/auth/session rotates the
-      // refresh token, which signs other same-origin tabs out (Cloud loses
-      // apps + left-panel profile when Account opens in a new tab).
+    const run = (async (): Promise<boolean> => {
       try {
-        const { data: existing } = await supabase.auth.getSession();
-        const local = existing.session;
-        const expiresAtMs = (local?.expires_at ?? 0) * 1000;
-        if (local?.user && local.access_token && expiresAtMs > Date.now() + 60_000) {
-          applySessionIfChanged(local, local.user);
-          await supabase.realtime.setAuth(local.access_token);
+        // Prefer a still-valid local session. /api/auth/session rotates the
+        // refresh token, which signs other same-origin tabs out (Cloud loses
+        // apps + left-panel profile when Account opens in a new tab).
+        try {
+          const { data: existing } = await supabase.auth.getSession();
+          const local = existing.session;
+          const expiresAtMs = (local?.expires_at ?? 0) * 1000;
+          if (local?.user && local.access_token && expiresAtMs > Date.now() + 60_000) {
+            applySessionIfChanged(local, local.user);
+            await supabase.realtime.setAuth(local.access_token);
+            return true;
+          }
+        } catch {
+          /* fall through to cookie refresh */
+        }
+        const fetched = await fetchSession();
+        if (fetched.kind === "authenticated") {
+          const { data: nextSession } = await supabase.auth.setSession({
+            access_token: fetched.data.access_token!,
+            refresh_token: fetched.data.refresh_token!,
+          });
+          applySessionIfChanged(nextSession.session ?? null, nextSession.user ?? fetched.data.user ?? null);
+          await supabase.realtime.setAuth(fetched.data.access_token!);
+          void import("@/lib/calendarSessionPersist").then((m) => m.drainCalendarSessionOutbox());
           return true;
         }
-      } catch {
-        /* fall through to cookie refresh */
-      }
-      const data = await fetchSession();
-      if (data && data.user && data.access_token && data.refresh_token) {
-        const { data: nextSession } = await supabase.auth.setSession({
-          access_token: data.access_token,
-          refresh_token: data.refresh_token,
-        });
-        applySessionIfChanged(nextSession.session ?? null, nextSession.user ?? data.user);
-        await supabase.realtime.setAuth(data.access_token);
-        void import("@/lib/calendarSessionPersist").then((m) => m.drainCalendarSessionOutbox());
-        return true;
-      }
-      const localOk = await recoverFromLocalSession();
-      if (localOk) return true;
-      if (opts?.onBoot) {
-        // Cookie missing/invalid on first load → clear any stale local state.
-        try {
-          await supabase.auth.signOut({ scope: "local" });
-        } catch {
-          /* ignore */
+        const localOk = await recoverFromLocalSession();
+        if (localOk) return true;
+        if (fetched.kind === "unavailable") {
+          // Network / 5xx — keep whatever user we already have.
+          return false;
         }
-        applySessionIfChanged(null, null);
+        // Cookie missing or expired. Only clear on first load, or when this
+        // tab has no user yet. If we already have a signed-in user, keep them
+        // — idle SIGNED_OUT / cookie 401 must not flash Log in on the platform.
+        if (opts?.onBoot || !userIdRef.current) {
+          await clearLocalAuth();
+        }
+        return false;
+      } finally {
+        rehydrateInFlightRef.current = null;
       }
-      // On a focus-driven rehydrate we deliberately do NOT sign the user
-      // out on a transient /api/auth/session failure (network blip, etc).
-      return false;
-    } finally {
-      rehydratingRef.current = false;
-    }
-  }, [applySessionIfChanged, recoverFromLocalSession]);
+    })();
+    rehydrateInFlightRef.current = run;
+    return run;
+  }, [applySessionIfChanged, clearLocalAuth, recoverFromLocalSession]);
 
   // Boot: hydrate from the HTTP-only cookie via /api/auth/session.
   useEffect(() => {
@@ -202,12 +237,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // CRITICAL: Supabase fires SIGNED_OUT whenever its in-memory /
     // localStorage refresh attempt fails (which happens silently after
     // long idle even when our HTTP-only cookie session is still valid).
-    // If we naively clear the user here, the very next click into an app
-    // navigates to the signed-out landing because GlobalTopTabBar treats
-    // `!user` as logged out. Instead, on SIGNED_OUT / null-session we
-    // re-check our cookie-backed session and only flip the user to null
-    // when that cookie is ALSO gone or expired.
-    const { data: sub } = supabase.auth.onAuthStateChange((event, sess) => {
+    // Never treat that event as logout. Rehydrate from the cookie instead
+    // and keep the existing user so the platform bar cannot show Log in.
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
       if (signingOutRef.current || isCalendarExplicitlySignedOut()) {
         applySessionIfChanged(null, null);
         return;
@@ -216,13 +248,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         applySessionIfChanged(sess, sess.user);
         return;
       }
-      // Recover from cookie before flipping to logged-out.
-      void (async () => {
-        const ok = await rehydrate();
-        if (!ok && event === "SIGNED_OUT") {
-          applySessionIfChanged(null, null);
-        }
-      })();
+      // Recover from cookie. Do not clear the user on SIGNED_OUT — that
+      // event fires after idle refresh failures even when the cookie is
+      // still valid. Clearing here is what put Log in on the platform bar.
+      void rehydrate();
     });
 
     (async () => {

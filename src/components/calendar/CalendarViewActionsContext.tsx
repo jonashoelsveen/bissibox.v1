@@ -6,6 +6,7 @@ import {
   buildPasteEventsAtDateTime,
   canPasteClipboard,
   eventToDuplicatePatch,
+  oneOffRepeatFields,
   readCalendarClipboard,
   writeEventsToClipboard,
 } from "@/lib/calendarClipboard";
@@ -117,6 +118,7 @@ export function CalendarViewActionsProvider({
             ? { locationUrl: event.locationUrl }
             : {}),
           ...(event.appGroupId != null ? { appGroupId: event.appGroupId } : {}),
+          ...oneOffRepeatFields(),
         });
       }
       bumpClipboard();

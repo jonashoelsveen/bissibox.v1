@@ -62,9 +62,9 @@ export function SessionPopoverHeader({
   }, [menuOpen]);
 
   return (
-    <>
+    <div className="flex items-center gap-0.5">
       {showActions ? (
-        <div ref={wrapRef} className="relative">
+        <div ref={wrapRef} className="relative shrink-0">
           <button
             type="button"
             aria-label="Session actions"
@@ -162,6 +162,6 @@ export function SessionPopoverHeader({
       >
         <X className="h-4 w-4" strokeWidth={2.25} />
       </button>
-    </>
+    </div>
   );
 }

@@ -58,14 +58,17 @@ export interface DateRange {
   end: Date;
 }
 
-export type MiniCalendarViewMode = "day" | "week" | "month";
+export type MiniCalendarViewMode = "day" | "week" | "month" | "monthMark";
 
-/** Week tint in week view, and in year view after a week-number click. */
+/** Week tint in week view, and in year view after a week-number click.
+ *  After a year-view month click, stay on that month with no day/week mark. */
 export function miniCalendarViewMode(
   viewMode: "day" | "week" | "month" | "year",
   yearWeekHighlight = false,
+  yearMonthHighlight = false,
 ): MiniCalendarViewMode {
   if (viewMode === "week" || (viewMode === "year" && yearWeekHighlight)) return "week";
+  if (viewMode === "year" && yearMonthHighlight) return "monthMark";
   if (viewMode === "day") return "day";
   return "month";
 }
@@ -209,7 +212,10 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
               ) : null}
               {weekDays.map(({ date, inMonth }) => {
                 const isToday = sameDay(date, today);
-                const isSelected = viewMode !== "week" && inSelectedRange(date);
+                const isSelected =
+                  viewMode !== "week" &&
+                  viewMode !== "monthMark" &&
+                  inSelectedRange(date);
                 const weekBg = inSelectedWeek && !isSelected;
                 return (
                   <button

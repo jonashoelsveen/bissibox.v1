@@ -170,6 +170,8 @@ function persistWal() {
 }
 
 function rememberReplica(row: ReplicaSession) {
+  const existing = replicaMemory.get(row.id);
+  if (existing && existing.updatedAt > row.updatedAt) return;
   replicaMemory.set(row.id, row);
 }
 
@@ -455,6 +457,8 @@ export async function listReplicaEvents(
       const rows = await db.sessions.where("calId").equals(calId).toArray();
       for (const row of rows) {
         if (!isReplicaEvent(row.event)) continue;
+        const existing = replicaMemory.get(row.id);
+        if (existing && existing.updatedAt > row.updatedAt) continue;
         rememberReplica(row);
         byId.set(row.id, { ...row.event, synced: row.synced });
       }

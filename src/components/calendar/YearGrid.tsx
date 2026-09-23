@@ -4,9 +4,12 @@
  * Read-only date matrix styled like the left-rail mini calendar: no cell
  * grids, 12px day numbers, selected/today chips. Click a day to select it
  * (mini-cal syncs). Double-click a day → day view. Click a week number to
- * highlight that week (same grey as the mini calendar in week view);
- * double-click the week number → week view. Click a month header → month
- * view; hovering the header tints the whole month.
+ * highlight that week (same grey as the mini calendar in week view).
+ * Hovering a week number uses that same week mark and also tints the week
+ * number square, with a gap between the two. Double-click the week
+ * number → week view. Click a month header to mark that month;
+ * double-click the header → month view. Hovering an unmarked header tints
+ * the whole month.
  *
  * Month columns follow the year-grid container width: 1–6, then a jump to
  * 12 (one row) only on very wide grids (~3000px, larger than a 27" 2560
@@ -88,6 +91,9 @@ export interface YearGridProps {
   onWeekDoubleClick: (anchor: Date) => void;
   onDayDoubleClick: (date: Date) => void;
   onMonthClick: (monthIndex: number) => void;
+  onMonthDoubleClick: (monthIndex: number) => void;
+  /** When true, tint the month containing selectedDate instead of a day chip. */
+  monthHighlight?: boolean;
 }
 
 export function YearGrid({
@@ -99,6 +105,8 @@ export function YearGrid({
   onWeekDoubleClick,
   onDayDoubleClick,
   onMonthClick,
+  onMonthDoubleClick,
+  monthHighlight = false,
 }: YearGridProps) {
   const today = new Date();
   const months = useMemo(
@@ -112,14 +120,26 @@ export function YearGrid({
       style={{ scrollbarGutter: "stable" }}
     >
       <div className="grid grid-cols-1 gap-x-6 gap-y-7 p-4 @min-[520px]:grid-cols-2 @min-[780px]:grid-cols-3 @min-[1040px]:grid-cols-4 @min-[1300px]:grid-cols-5 @min-[1560px]:grid-cols-6 @min-[3000px]:grid-cols-12 md:p-5">
-        {months.map(({ month, weeks }) => (
+        {months.map(({ month, weeks }) => {
+          const monthSelected =
+            monthHighlight &&
+            selectedDate.getFullYear() === year &&
+            selectedDate.getMonth() === month;
+          return (
           <section
             key={month}
-            className="min-w-0 rounded-sm p-1.5 -mx-1.5 text-[12px] transition-colors has-[.year-month-title:hover]:bg-secondary"
+            className={[
+              "min-w-0 rounded-sm p-1.5 -mx-1.5 text-[12px] transition-colors",
+              monthSelected
+                ? "bg-primary/15"
+                : "has-[.year-month-title:hover]:bg-secondary",
+            ].join(" ")}
           >
             <button
               type="button"
+              aria-pressed={monthSelected}
               onClick={() => onMonthClick(month)}
+              onDoubleClick={() => onMonthDoubleClick(month)}
               className="year-month-title mb-1.5 flex h-7 w-full items-center px-1 text-left text-[12px] font-medium text-ink outline-none transition-colors hover:text-ink"
             >
               {MONTHS_EN[month]}
@@ -146,7 +166,12 @@ export function YearGrid({
                 return (
                   <div
                     key={`${month}-w-${week.weekNo}-${week.firstDate.getTime()}`}
-                    className="grid"
+                    className={[
+                      "grid",
+                      inSelectedWeek
+                        ? ""
+                        : "has-[.year-week-number:hover]:[&_.year-week-mark]:visible",
+                    ].join(" ")}
                     style={{ gridTemplateColumns: "28px minmax(0, 1fr)" }}
                   >
                     <button
@@ -154,22 +179,26 @@ export function YearGrid({
                       aria-pressed={inSelectedWeek}
                       onClick={() => onWeekClick(week.firstDate)}
                       onDoubleClick={() => onWeekDoubleClick(week.firstDate)}
-                      className="grid h-7 place-items-center rounded-sm text-[12px] font-extrabold tabular-nums text-ink transition-colors hover:bg-secondary hover:text-ink"
+                      className="year-week-number grid h-7 w-full place-items-center rounded-sm text-[12px] font-extrabold tabular-nums text-ink hover:bg-primary/15"
                     >
                       {week.weekNo}
                     </button>
                     <div className="relative grid grid-cols-7">
-                      {inSelectedWeek ? (
-                        <span
-                          aria-hidden
-                          className="pointer-events-none absolute inset-y-0 rounded-sm bg-primary/15"
-                          style={{ left: WEEK_MARK_INSET, right: WEEK_MARK_INSET }}
-                        />
-                      ) : null}
+                      <span
+                        aria-hidden
+                        className={[
+                          "year-week-mark pointer-events-none absolute inset-y-0 rounded-sm bg-primary/15",
+                          inSelectedWeek ? "" : "invisible",
+                        ].join(" ")}
+                        style={{ left: WEEK_MARK_INSET, right: WEEK_MARK_INSET }}
+                      />
                       {week.days.map((d) => {
                         const isToday = d.inMonth && sameDay(d.date, today);
                         const isSelected =
-                          d.inMonth && !weekHighlight && sameDay(d.date, selectedDate);
+                          d.inMonth &&
+                          !weekHighlight &&
+                          !monthHighlight &&
+                          sameDay(d.date, selectedDate);
                         const weekBg = inSelectedWeek && !isSelected;
                         return (
                           <button
@@ -204,7 +233,8 @@ export function YearGrid({
               })}
             </div>
           </section>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

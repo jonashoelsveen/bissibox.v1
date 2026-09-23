@@ -9,7 +9,7 @@ export const Route = createFileRoute("/account")({
   component: AccountReadMorePage,
   head: () => ({
     meta: [
-      { title: "Bissibox Account" },
+      { title: "Account" },
       {
         name: "description",
         content: "Your identity across the Bissibox platform.",

@@ -33,6 +33,10 @@ function hasRenderableSession(row: MergeableSession | undefined): row is Mergeab
   return title.length > 0 && startISO.length > 0 && endISO.length > 0;
 }
 
+function sessionTimeKey(row: MergeableSession): string {
+  return `${row.startISO ?? ""}|${row.endISO ?? ""}|${row.allDay === true ? "1" : "0"}`;
+}
+
 export function mergeRemoteSessions<T extends MergeableSession>(opts: {
   remoteOk: boolean;
   remote: T[];
@@ -66,12 +70,28 @@ export function mergeRemoteSessions<T extends MergeableSession>(opts: {
   const upsertById = new Map(
     mutations.filter((m) => m.op === "upsert").map((m) => [m.id, m] as const),
   );
+  const localById = new Map(local.map((row) => [row.id, row] as const));
   const remoteIds = new Set(remote.map((row) => row.id));
   const byId = new Map<string, T>();
 
   for (const row of remote) {
     if (deleteIds.has(row.id)) continue;
     if (!hasRenderableSession(row)) continue;
+    const mutationEvent = upsertById.get(row.id)?.event;
+    const localRow = localById.get(row.id);
+    const pending =
+      (hasRenderableSession(mutationEvent) ? mutationEvent : null) ??
+      (localRow &&
+      hasRenderableSession(localRow) &&
+      (localRow.synced !== true || retainIds.has(row.id))
+        ? localRow
+        : null);
+    // A GET that still has the previous wall-clock (common for a second or
+    // two after drag/time-edit) must not replace the in-flight local write.
+    if (pending && sessionTimeKey(pending) !== sessionTimeKey(row)) {
+      byId.set(row.id, { ...(pending as T), synced: false });
+      continue;
+    }
     byId.set(row.id, { ...row, synced: true });
   }
 

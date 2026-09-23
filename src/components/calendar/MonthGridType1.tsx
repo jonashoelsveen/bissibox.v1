@@ -141,6 +141,7 @@ import {
   expandRepeatingEvents,
   isPersistedRepeatSeries,
   isRepeatPreviewEventId,
+  sessionIsRepeatSeries,
   sharedRepeatSeriesId,
   mergeEventsWithRepeatPreview,
   resolveSessionRepeatState,
@@ -150,7 +151,8 @@ import {
   type SessionDeleteScope,
   type SessionRepeatRule,
 } from "@/lib/sessionRepeat";
-import { SessionScopeMenu, eventTargetElement } from "./SessionScopeMenu";
+import { eventTargetElement } from "./SessionScopeMenu";
+import { SessionSeriesScopeTabs } from "./SessionSeriesScopeTabs";
 
 function activityIconFor(ev: CalendarEvent): LucideIcon {
   const k = (ev.activity || ev.diarySub || "").toLowerCase();
@@ -2628,10 +2630,18 @@ export function MonthGridType1({
             enableDuration={!!onUpsertEvent}
             readOnly={viewerRole !== "owner" || isMembershipOverlayEvent(events.find((e) => e.id === popover.eventId), calId)}
             categoryOwnerId={seat === "individual" ? memberId ?? null : null}
-            onColorChange={(c) => {
+            onColorChange={(c, eventIds) => {
               setPopover((prev) => (prev ? { ...prev, initialColor: c } : prev));
-              if (!popover?.eventId || !c) return;
-              onUpsertEvent?.({ id: popover.eventId, color: c });
+              if (!c) return;
+              const ids =
+                eventIds && eventIds.length > 0
+                  ? eventIds
+                  : popover.eventId
+                    ? [popover.eventId]
+                    : [];
+              for (const id of ids) {
+                onUpsertEvent?.({ id, color: c });
+              }
             }}
             initialAppGroupId={
               seat === "admin" && popover.eventId
@@ -2642,10 +2652,17 @@ export function MonthGridType1({
             }
             onAppGroupChange={
               seat === "admin"
-                ? (groupId) => {
+                ? (groupId, eventIds) => {
                     setPopover((prev) => (prev ? { ...prev, appGroupId: groupId } : prev));
-                    if (!popover?.eventId) return;
-                    onUpsertEvent?.({ id: popover.eventId, appGroupId: groupId });
+                    const ids =
+                      eventIds && eventIds.length > 0
+                        ? eventIds
+                        : popover.eventId
+                          ? [popover.eventId]
+                          : [];
+                    for (const id of ids) {
+                      onUpsertEvent?.({ id, appGroupId: groupId });
+                    }
                   }
                 : undefined
             }
@@ -2715,9 +2732,30 @@ export function MonthGridType1({
                 ? events.find((e) => e.id === popover.eventId)?.repeatRule ?? null
                 : null
             }
-            onTimeChange={(time) => {
+            onTimeChange={(time, eventIds) => {
               if (!popover.eventId && popover.editIdx < 0) {
                 setCreatePreviewTime(time ?? { startMin: 9 * 60, endMin: 10 * 60 });
+                return;
+              }
+              if (!time || !onMoveEvent) return;
+              const ids =
+                eventIds && eventIds.length > 0
+                  ? eventIds
+                  : popover.eventId
+                    ? [popover.eventId]
+                    : [];
+              for (const id of ids) {
+                const ev = events.find((e) => e.id === id);
+                if (!ev || ev.allDay) continue;
+                const date = fromISOLocal(ev.startISO);
+                onMoveEvent(id, {
+                  startISO: toISOLocal(
+                    setHM(date, Math.floor(time.startMin / 60), time.startMin % 60),
+                  ),
+                  endISO: toISOLocal(
+                    setHM(date, Math.floor(time.endMin / 60), time.endMin % 60),
+                  ),
+                });
               }
             }}
             onAllDayChange={(nextAllDay, t, eventIds) => {
@@ -2754,6 +2792,23 @@ export function MonthGridType1({
                     : [];
               for (const id of ids) {
                 onUpsertEvent?.({ id, signUpEnabled: enabled });
+              }
+            }}
+            onLocationChange={(location, locationUrl, eventIds) => {
+              const ids =
+                eventIds && eventIds.length > 0
+                  ? eventIds
+                  : popover.eventId
+                    ? [popover.eventId]
+                    : [];
+              const nextLocation = (location ?? "").trim() || undefined;
+              const nextLocationUrl = (locationUrl ?? "").trim() || undefined;
+              for (const id of ids) {
+                onUpsertEvent?.({
+                  id,
+                  location: nextLocation,
+                  locationUrl: nextLocationUrl,
+                });
               }
             }}
             onClearRepeat={(ids) => {
@@ -2793,7 +2848,15 @@ export function MonthGridType1({
               // ── Editing an existing unified event. ──
               if (popover.eventId) {
                 if (!t) {
-                  onDeleteEvent?.(popover.eventId);
+                  const deleteIds =
+                    eventIds && eventIds.length > 0
+                      ? eventIds
+                      : [popover.eventId];
+                  if (deleteIds.length > 1 && onDeleteEvents) {
+                    onDeleteEvents(deleteIds);
+                  } else {
+                    deleteIds.forEach((id) => onDeleteEvent?.(id));
+                  }
                 } else {
                   const targetIds =
                     eventIds && eventIds.length > 0
@@ -3270,7 +3333,7 @@ export interface PopoverEditorProps {
    * Entity mode only — fires when the user picks a different group so the
    * parent can persist without waiting for an explicit save.
    */
-  onAppGroupChange?: (appGroupId: string | null) => void;
+  onAppGroupChange?: (appGroupId: string | null, eventIds?: string[]) => void;
   /** Initial session description. */
   initialDescription?: string | null;
   /** Initial location / room text. */
@@ -3305,6 +3368,16 @@ export interface PopoverEditorProps {
    */
   onSignUpEnabledChange?: (enabled: boolean, eventIds?: string[]) => void;
   /**
+   * Fires when the user confirms or clears a map/place location, including
+   * after choosing this / all in series. Persists without closing the menu.
+   */
+  onLocationChange?: (
+    location: string | null,
+    locationUrl: string | null,
+    /** When set (repeat series scope), patch these event ids. */
+    eventIds?: string[],
+  ) => void;
+  /**
    * Clear repeat metadata (`repeatRule` / `repeatSeriesId`) on the given
    * session ids — used when turning Repeat off for this / all in series.
    */
@@ -3314,7 +3387,7 @@ export interface PopoverEditorProps {
    * push the new color to the bound CalendarEvent so the session tile
    * reflects the selection in real time.
    */
-  onColorChange?: (color: string | null) => void;
+  onColorChange?: (color: string | null, eventIds?: string[]) => void;
   onCategoryChange?: (selection: CategorySelection) => void;
   /**
    * When true, the popover renders as a view-only panel: the title input is
@@ -3733,6 +3806,7 @@ export function PopoverEditor({
   onTimeChange,
   onAllDayChange,
   onSignUpEnabledChange,
+  onLocationChange,
   onClearRepeat,
   onColorChange,
   readOnly = false,
@@ -3756,7 +3830,7 @@ export function PopoverEditor({
   initialLocationMapOpen = false,
   onSidePanelsChange,
   hidden = false,
-  externalTimeCommitNonce = 0,
+  externalTimeCommitNonce: _externalTimeCommitNonce = 0,
 }: PopoverEditorProps) {
   const isEntity = seat === "admin";
   const hiddenRef = useRef(hidden);
@@ -3786,14 +3860,6 @@ export function PopoverEditor({
   const [color, setColorState] = useState<string | null>(
     initialColor ?? (isEdit ? null : getSessionDefaultColor()),
   );
-  const setColor = useCallback(
-    (c: string | null) => {
-      setColorState(c);
-      onColorChange?.(c);
-    },
-    [onColorChange],
-  );
-
   useEffect(() => {
     if (initialColor == null) return;
     setColorState((cur) => (cur === initialColor ? cur : initialColor));
@@ -3804,7 +3870,7 @@ export function PopoverEditor({
   }, [initialCategoryId]);
   const defaultTimedRange = { startMin: 8 * 60, endMin: 9 * 60 };
   const [time, setTime] = useState<{ startMin: number; endMin: number } | null>(
-    initialTime ?? (enableDuration ? defaultTimedRange : null),
+    initialTime ?? (enableDuration && !isEdit ? defaultTimedRange : null),
   );
   const [allDay, setAllDay] = useState<boolean>(!!initialAllDay);
   const [description, setDescription] = useState(initialDescription ?? "");
@@ -3820,7 +3886,9 @@ export function PopoverEditor({
   const [location, setLocation] = useState(initialLocation ?? "");
   const [locationUrl, setLocationUrl] = useState(initialLocationUrl ?? "");
   const locationRef = useRef(location);
+  const locationUrlRef = useRef(locationUrl);
   locationRef.current = location;
+  locationUrlRef.current = locationUrl;
   const captureMapSearchHandoff = useCallback(() => {
     const handoff = locationMapPanelRef.current?.getSearchHandoff();
     if (!handoff) return;
@@ -3862,23 +3930,12 @@ export function PopoverEditor({
   const [repeatEnabled, setRepeatEnabled] = useState(() => resolvedRepeat.enabled);
   const [repeatRule, setRepeatRule] = useState<SessionRepeatRule>(() => resolvedRepeat.rule);
   const [appGroupId, setAppGroupId] = useState<string | null>(initialAppGroupId ?? null);
-  /** Pending switch / save value while the this/all series scope menu is open. */
-  type ScopePrompt =
-    | { kind: "allDay"; next: boolean }
-    | { kind: "signUp"; next: boolean }
-    | { kind: "repeatToggle"; next: boolean }
-    | { kind: "repeatRule"; next: SessionRepeatRule }
-    | {
-        kind: "time";
-        next: { startMin: number; endMin: number };
-        origin: { startMin: number; endMin: number };
-      };
-  const [scopePrompt, setScopePrompt] = useState<ScopePrompt | null>(null);
-  const scopeAnchorRef = useRef<HTMLElement | null>(null);
-  const scopePromptRef = useRef<ScopePrompt | null>(null);
-  scopePromptRef.current = scopePrompt;
-  /** This-session vs series — chosen once per panel open, then reused. */
-  const seriesEditScopeRef = useRef<SessionDeleteScope | null>(null);
+  type LocationScopeValue = { location: string; locationUrl: string };
+  const [seriesEditScope, setSeriesEditScope] = useState<"this" | "allInSeries">("this");
+  const seriesEditScopeRef = useRef<"this" | "allInSeries">("this");
+  seriesEditScopeRef.current = seriesEditScope;
+  /** Series member ids at open, so All still works if This detaches this row. */
+  const seriesMemberIdsRef = useRef<string[] | null>(null);
   const eventForCopyRef = useRef(eventForCopy);
   const calendarEventsRef = useRef(calendarEvents);
   eventForCopyRef.current = eventForCopy;
@@ -3887,6 +3944,10 @@ export function PopoverEditor({
   const signUpSwitchRef = useRef<HTMLLabelElement | null>(null);
   const repeatRowRef = useRef<HTMLDivElement | null>(null);
   const durationRowRef = useRef<HTMLDivElement | null>(null);
+  const locationFieldRef = useRef<HTMLDivElement | null>(null);
+  const locationMapWrapRef = useRef<HTMLDivElement | null>(null);
+  const colorRowRef = useRef<HTMLDivElement | null>(null);
+  const headerActionsRef = useRef<HTMLDivElement | null>(null);
   const descriptionInputRef = useRef<HTMLTextAreaElement | null>(null);
   const descriptionDirtyRef = useRef(false);
   const lastDescriptionWriteRef = useRef<string | null>(
@@ -3901,7 +3962,9 @@ export function PopoverEditor({
   useEffect(() => {
     repeatUserTouchedRef.current = false;
     setRepeatConfigDirty(false);
-    seriesEditScopeRef.current = null;
+    seriesEditScopeRef.current = "this";
+    setSeriesEditScope("this");
+    seriesMemberIdsRef.current = null;
   }, [eventForCopy?.id]);
 
   useEffect(() => {
@@ -3914,15 +3977,6 @@ export function PopoverEditor({
     if (!isEntity) return;
     setAppGroupId(initialAppGroupId ?? null);
   }, [isEntity, initialAppGroupId]);
-
-  const handleAppGroupChange = useCallback(
-    (nextGroupId: string | null) => {
-      if (readOnly) return;
-      setAppGroupId(nextGroupId);
-      onAppGroupChange?.(nextGroupId);
-    },
-    [onAppGroupChange, readOnly],
-  );
 
   useLayoutEffect(() => {
     if (descriptionDirtyRef.current) return;
@@ -3983,30 +4037,41 @@ export function PopoverEditor({
     return !!signUpEnabledRef.current;
   };
 
-  const needsSeriesScopePrompt = (): boolean => {
-    if (!eventForCopy || seriesEditScopeRef.current) return false;
-    if (!isPersistedRepeatSeries(eventForCopy, calendarEvents)) return false;
-    return eventIdsForDeleteScope("allInSeries", calendarEvents, eventForCopy).length > 1;
+  const isRepeatSeriesSession = (): boolean => {
+    if (!eventForCopy) return false;
+    return sessionIsRepeatSeries(eventForCopy, calendarEvents) || resolvedRepeat.enabled;
   };
+
+  const showSeriesScopeTabs =
+    !readOnly && isEdit && !!eventForCopy && isRepeatSeriesSession();
+
+  useEffect(() => {
+    if (!eventForCopy || !isPersistedRepeatSeries(eventForCopy, calendarEvents)) {
+      return;
+    }
+    seriesMemberIdsRef.current = eventIdsForDeleteScope(
+      "allInSeries",
+      calendarEvents,
+      eventForCopy,
+    );
+  }, [eventForCopy, calendarEvents]);
 
   const seriesEventIdsIfAny = (): string[] | undefined => {
     if (!eventForCopy) return undefined;
-    if (!isPersistedRepeatSeries(eventForCopy, calendarEvents)) return undefined;
-    const scope = seriesEditScopeRef.current ?? "allInSeries";
-    return eventIdsForDeleteScope(scope, calendarEvents, eventForCopy);
+    if (!showSeriesScopeTabs && !seriesMemberIdsRef.current) return undefined;
+    if (seriesEditScopeRef.current === "this") return [eventForCopy.id];
+    const live = eventIdsForDeleteScope(
+      "allInSeries",
+      calendarEvents,
+      eventForCopy,
+    );
+    const snap = seriesMemberIdsRef.current ?? [];
+    return [...new Set([...snap, ...live, eventForCopy.id])];
   };
 
-  const dismissScopePrompt = useCallback(() => {
-    const pending = scopePromptRef.current;
-    if (pending?.kind === "time") {
-      setTime(pending.origin);
-      previousTimedRangeRef.current = pending.origin;
-      onTimeChange?.(pending.origin);
-    }
-    setScopePrompt(null);
-    scopePromptRef.current = null;
-    scopeAnchorRef.current = null;
-  }, [onTimeChange]);
+  const applyWithSeriesScope = (fn: (ids: string[] | undefined) => void) => {
+    fn(seriesEventIdsIfAny());
+  };
 
   const applyAllDayChange = useCallback(
     (next: boolean, eventIds?: string[]) => {
@@ -4018,7 +4083,7 @@ export function PopoverEditor({
         const nextTime = defaultTimedRange;
         setAllDay(false);
         setTime(nextTime);
-        onTimeChange?.(nextTime);
+        onTimeChange?.(nextTime, eventIds);
         onAllDayChange?.(false, nextTime, eventIds);
       }
     },
@@ -4034,12 +4099,24 @@ export function PopoverEditor({
     [onSignUpEnabledChange],
   );
 
-  const resolveScopeIds = useCallback(
-    (scope: SessionDeleteScope): string[] | undefined => {
-      if (!eventForCopy) return undefined;
-      return eventIdsForDeleteScope(scope, calendarEvents, eventForCopy);
+  const applyLocationChange = useCallback(
+    (next: LocationScopeValue, eventIds?: string[]) => {
+      setLocation(next.location);
+      setLocationUrl(next.locationUrl);
+      locationRef.current = next.location;
+      locationUrlRef.current = next.locationUrl;
+      initialSnapshotRef.current = {
+        ...initialSnapshotRef.current,
+        location: next.location.trim() || null,
+        locationUrl: next.locationUrl.trim() || null,
+      };
+      onLocationChange?.(
+        next.location.trim() || null,
+        next.locationUrl.trim() || null,
+        eventIds,
+      );
     },
-    [calendarEvents, eventForCopy],
+    [onLocationChange],
   );
 
   /** Turn Repeat off: keep this instance; all-in-series also removes the rest. */
@@ -4077,99 +4154,30 @@ export function PopoverEditor({
     (accept?: boolean, eventIds?: string[]) => void
   >(() => {});
 
-  const confirmScopePrompt = useCallback(
-    (scope: SessionDeleteScope) => {
-      // Prefer ref so a dismiss race that cleared state still applies the
-      // pending switch if select already captured the choice.
-      const pending = scopePromptRef.current ?? scopePrompt;
-      if (!pending) return;
-      seriesEditScopeRef.current = scope;
-      const ids = resolveScopeIds(scope);
-      setScopePrompt(null);
-      scopePromptRef.current = null;
-      scopeAnchorRef.current = null;
+  const handleColorPick = (c: string | null) => {
+    if (readOnly) return;
+    setColorState(c);
+    applyWithSeriesScope((ids) => onColorChange?.(c, ids));
+  };
 
-      if (scope === "this") {
-        detachThisSessionFromSeries();
-      }
-
-      if (pending.kind === "allDay") {
-        applyAllDayChange(pending.next, ids);
-        return;
-      }
-      if (pending.kind === "signUp") {
-        applySignUpChange(pending.next, ids);
-        return;
-      }
-      if (pending.kind === "repeatToggle") {
-        repeatUserTouchedRef.current = true;
-        setRepeatConfigDirty(true);
-        if (pending.next) {
-          if (scope === "this") return;
-          setRepeatEnabled(true);
-          setRepeatRule(resolvedRepeat.rule ?? SESSION_REPEAT_DEFAULT);
-        } else {
-          applyRepeatOff(scope);
-        }
-        return;
-      }
-      if (pending.kind === "repeatRule") {
-        if (scope === "this") return;
-        repeatUserTouchedRef.current = true;
-        setRepeatConfigDirty(true);
-        setRepeatEnabled(true);
-        setRepeatRule(pending.next);
-        return;
-      }
-      if (pending.kind === "time") {
-        setTime(pending.next);
-        previousTimedRangeRef.current = pending.next;
-        onTimeChange?.(pending.next, ids);
-      }
-    },
-    [
-      applyAllDayChange,
-      applySignUpChange,
-      applyRepeatOff,
-      detachThisSessionFromSeries,
-      onClearRepeat,
-      onTimeChange,
-      resolveScopeIds,
-      resolvedRepeat.rule,
-      scopePrompt,
-    ],
-  );
-
-  const requestSeriesScope = useCallback(
-    (anchor: HTMLElement | null, prompt: ScopePrompt) => {
-      scopeAnchorRef.current = anchor;
-      scopePromptRef.current = prompt;
-      setScopePrompt(prompt);
-    },
-    [],
-  );
+  const handleGroupPick = (nextGroupId: string | null) => {
+    if (readOnly) return;
+    setAppGroupId(nextGroupId);
+    applyWithSeriesScope((ids) => onAppGroupChange?.(nextGroupId, ids));
+  };
 
   const handleAllDaySwitch = (next: boolean) => {
     if (readOnly) return;
-    if (needsSeriesScopePrompt()) {
-      requestSeriesScope(allDaySwitchRef.current, { kind: "allDay", next });
-      return;
-    }
-    applyAllDayChange(next, seriesEventIdsIfAny());
+    applyWithSeriesScope((ids) => applyAllDayChange(next, ids));
   };
 
   const handleSignUpSwitch = (next: boolean) => {
     if (readOnly) return;
-    if (needsSeriesScopePrompt()) {
-      requestSeriesScope(signUpSwitchRef.current, { kind: "signUp", next });
-      return;
-    }
-    applySignUpChange(next, seriesEventIdsIfAny());
+    applyWithSeriesScope((ids) => applySignUpChange(next, ids));
   };
 
   const handleRepeatToggle = (next: boolean) => {
     if (readOnly) return;
-    // Turning Repeat ON before a series exists: no scope menu.
     if (next) {
       repeatUserTouchedRef.current = true;
       setRepeatConfigDirty(true);
@@ -4177,18 +4185,13 @@ export function PopoverEditor({
       setRepeatRule(resolvedRepeat.rule ?? SESSION_REPEAT_DEFAULT);
       return;
     }
-    if (needsSeriesScopePrompt()) {
-      requestSeriesScope(repeatRowRef.current, { kind: "repeatToggle", next });
-      return;
-    }
-    applyRepeatOff(seriesEditScopeRef.current ?? "allInSeries");
+    applyRepeatOff(seriesEditScopeRef.current);
   };
 
   const handleRepeatRuleChange = (next: SessionRepeatRule) => {
     if (readOnly) return;
-    if (needsSeriesScopePrompt()) {
-      requestSeriesScope(repeatRowRef.current, { kind: "repeatRule", next });
-      return;
+    if (seriesEditScopeRef.current === "this" && isRepeatSeriesSession()) {
+      detachThisSessionFromSeries();
     }
     repeatUserTouchedRef.current = true;
     setRepeatConfigDirty(true);
@@ -4198,42 +4201,28 @@ export function PopoverEditor({
 
   const handleTimeChange = (t: { startMin: number; endMin: number }) => {
     if (readOnly || allDay) return;
-    const prev = time ?? defaultTimedRange;
     setTime(t);
     previousTimedRangeRef.current = t;
-    if (scopePromptRef.current?.kind === "time") {
-      requestSeriesScope(durationRowRef.current, {
-        kind: "time",
-        next: t,
-        origin: scopePromptRef.current.origin,
-      });
-      onTimeChange?.(t);
-      return;
-    }
-    if (needsSeriesScopePrompt()) {
-      onTimeChange?.(t);
-      requestSeriesScope(durationRowRef.current, {
-        kind: "time",
-        next: t,
-        origin: prev,
-      });
-      return;
-    }
-    onTimeChange?.(t, seriesEventIdsIfAny());
+    applyWithSeriesScope((ids) => onTimeChange?.(t, ids));
   };
 
-  const displayAllDay =
-    scopePrompt?.kind === "allDay" ? scopePrompt.next : allDay;
-  const displaySignUpEnabled =
-    scopePrompt?.kind === "signUp" ? scopePrompt.next : signUpEnabled;
-  const displayRepeatEnabled =
-    scopePrompt?.kind === "repeatToggle"
-      ? scopePrompt.next
-      : scopePrompt?.kind === "repeatRule"
-        ? true
-        : repeatEnabled;
-  const displayRepeatRule =
-    scopePrompt?.kind === "repeatRule" ? scopePrompt.next : repeatRule;
+  const handleLocationChange = (next: LocationScopeValue) => {
+    if (readOnly) return;
+    const same =
+      (locationRef.current.trim() || "") === (next.location.trim() || "") &&
+      (locationUrlRef.current.trim() || "") === (next.locationUrl.trim() || "");
+    setLocation(next.location);
+    setLocationUrl(next.locationUrl);
+    locationRef.current = next.location;
+    locationUrlRef.current = next.locationUrl;
+    if (same) return;
+    applyWithSeriesScope((ids) => applyLocationChange(next, ids));
+  };
+
+  const displayAllDay = allDay;
+  const displaySignUpEnabled = signUpEnabled;
+  const displayRepeatEnabled = repeatEnabled;
+  const displayRepeatRule = repeatRule;
   // Sync the wheel when the parent pushes a new initialTime (e.g. while the
   // user is dragging a tile's top/bottom edge to resize it in the week-view).
   useEffect(() => {
@@ -4254,7 +4243,6 @@ export function PopoverEditor({
   const timeRef = useRef(time);
   const allDayRef = useRef(allDay);
   const descriptionRef = useRef(description);
-  const locationUrlRef = useRef(locationUrl);
   const repeatEnabledRef = useRef(repeatEnabled);
   const repeatRuleRef = useRef(repeatRule);
   const liveCategoryIdRef = useRef(liveCategoryId);
@@ -4423,8 +4411,11 @@ export function PopoverEditor({
     if (readOnly || !isEdit || !eventForCopy) return;
     settledRef.current = true;
     onClose();
+    const scoped = seriesEventIdsIfAny();
+    const deleteIds =
+      scoped && scoped.length > 0 ? scoped : [eventForCopy.id];
     if (onDeleteSessions) {
-      onDeleteSessions([eventForCopy.id]);
+      onDeleteSessions(deleteIds);
       return;
     }
     onCommit(
@@ -4440,6 +4431,7 @@ export function PopoverEditor({
       commitLocation(),
       commitLocationUrl(),
       commitSignUpEnabled(),
+      deleteIds,
     );
   }, [
     allDay,
@@ -4524,25 +4516,6 @@ export function PopoverEditor({
   const initialTimeRef = useRef(initialTime);
   initialTimeRef.current = initialTime;
 
-  // Week/day tile edge-resize writes times immediately, then bumps this nonce
-  // so a repeating session can ask this vs all without snapping the tile back.
-  useEffect(() => {
-    if (!externalTimeCommitNonce) return;
-    const ev = eventForCopyRef.current;
-    const events = calendarEventsRef.current;
-    if (!ev || seriesEditScopeRef.current) return;
-    if (!isPersistedRepeatSeries(ev, events)) return;
-    if (eventIdsForDeleteScope("allInSeries", events, ev).length <= 1) return;
-    const t = initialTimeRef.current;
-    if (!t) return;
-    const origin = initialSnapshotRef.current.time ?? t;
-    requestSeriesScope(durationRowRef.current, {
-      kind: "time",
-      next: t,
-      origin,
-    });
-  }, [externalTimeCommitNonce, requestSeriesScope]);
-
   const isFormDirty = useCallback(() => {
     const v = (valueRef.current ?? "").trim();
     const init = initialSnapshotRef.current;
@@ -4612,12 +4585,17 @@ export function PopoverEditor({
         return;
       }
       if (isEdit && eventForCopy && isFormDirty()) {
+        if (seriesEditScopeRef.current === "this" && isRepeatSeriesSession()) {
+          detachThisSessionFromSeries();
+          // Same-tick flush reads this ref; setState would not have committed yet.
+          repeatEnabledRef.current = false;
+        }
         flushCommitRef.current(accept, seriesEventIdsIfAny());
         return;
       }
       flushCommitRef.current(accept);
     },
-    [calendarEvents, eventForCopy, isEdit, isFormDirty, onClose],
+    [eventForCopy, isEdit, isFormDirty, onClose],
   );
 
   // Unmount-time autosave. If the popover is torn down without an explicit
@@ -4626,8 +4604,7 @@ export function PopoverEditor({
   // so the edit isn't lost. Skipped on read-only, when nothing changed, or
   // when the title is empty (empty would mean delete — only explicit paths
   // should trigger that).
-  // Series scope is not prompted here (no UI); uses the first-edit choice,
-  // otherwise every instance in the stored series.
+  // Series scope follows the This / All island (default This).
   useEffect(() => {
     return () => {
       if (settledRef.current) return;
@@ -4665,26 +4642,55 @@ export function PopoverEditor({
       if (sameTitle && sameColor && sameTime && sameAllDay && sameDescription && sameRepeat && sameAppGroup && sameSignUp && sameLocation && sameLocationUrl) return;
       const ev = eventForCopyRef.current;
       const events = calendarEventsRef.current;
-      const seriesIds =
-        ev && isPersistedRepeatSeries(ev, events)
-          ? eventIdsForDeleteScope(
-              seriesEditScopeRef.current ?? "allInSeries",
-              events,
-              ev,
-            )
-          : undefined;
+      const scope = seriesEditScopeRef.current;
+      const snap = seriesMemberIdsRef.current;
+      let seriesIds: string[] | undefined;
+      if (ev && (snap?.length || isPersistedRepeatSeries(ev, events))) {
+        if (scope === "this") {
+          seriesIds = [ev.id];
+        } else {
+          const live = eventIdsForDeleteScope("allInSeries", events, ev);
+          seriesIds = [...new Set([...(snap ?? []), ...live, ev.id])];
+        }
+      }
+      const repeatArg =
+        scope === "this" && ev && isPersistedRepeatSeries(ev, events)
+          ? null
+          : commitRepeatRule();
+      let commitTime = allDayRef.current
+        ? { startMin: 0, endMin: 0 }
+        : timeRef.current;
+      if (!allDayRef.current && ev && !ev.allDay && ev.startISO && ev.endISO) {
+        const actual = startEndMinsOnStartDay(
+          fromISOLocal(ev.startISO),
+          fromISOLocal(ev.endISO),
+        );
+        const editorTime = timeRef.current;
+        const editorIsDefault =
+          !!editorTime &&
+          editorTime.startMin === defaultTimedRange.startMin &&
+          editorTime.endMin === defaultTimedRange.endMin;
+        const actualIsDefault =
+          actual.startMin === defaultTimedRange.startMin &&
+          actual.endMin === defaultTimedRange.endMin;
+        // Unmount (e.g. week/day drag) must not persist the 08:00–09:00
+        // editor fallback over the session's real times.
+        if (sameTime || (editorIsDefault && !actualIsDefault)) {
+          commitTime = actual;
+        }
+      }
       // Treat unmount-time autosave as implicit acceptance for coach-pending
       // sessions — matches the click-outside UX so the stripe clears the
       // moment the user moves on, and subsequent edits autosave normally.
       onCommitRef.current(
         v,
         colorRef.current,
-        allDayRef.current ? { startMin: 0, endMin: 0 } : timeRef.current,
+        commitTime,
         true,
         allDayRef.current,
         commitDescription(),
         commitAppGroupId(),
-        commitRepeatRule(),
+        repeatArg,
         commitCategoryId(),
         commitLocation(),
         commitLocationUrl(),
@@ -4725,26 +4731,23 @@ export function PopoverEditor({
           // Click-outside on a coach-pending session implicitly accepts the
           // proposal (same end state as Enter / Save): the stripe clears and
           // later edits behave like any other owner-created session.
-          // Repeating sessions keep the first this/series choice; Save does not re-ask.
-          // Don't save-and-close while this vs all is open — time resize already
-          // wrote this instance, and a default all-in-series commit would skip the choice.
-          if (scopePromptRef.current) return;
           requestCommit(true);
         }
       }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (scopePromptRef.current) {
-          e.preventDefault();
-          dismissScopePrompt();
-          return;
-        }
         e.preventDefault();
         settledRef.current = true;
         onClose();
       } else if (e.key === "Enter" && !e.shiftKey) {
-        if (scopePromptRef.current) return;
+        if (
+          e.target instanceof Element &&
+          (e.target.closest("[data-session-location-map]") ||
+            e.target.closest("[data-session-location-field]"))
+        ) {
+          return;
+        }
         if (readOnly) {
           e.preventDefault();
           settledRef.current = true;
@@ -4771,7 +4774,7 @@ export function PopoverEditor({
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("keydown", onKey);
     };
-  }, [onClose, readOnly, dismissScopePrompt, requestCommit]);
+  }, [onClose, readOnly, requestCommit]);
 
   const POPOVER_W = 280;
   const showParticipantsSide = isEntity && signUpEnabled && participantsPanelOpen;
@@ -5274,6 +5277,7 @@ export function PopoverEditor({
                 ) : undefined
               }
               actions={
+                <div ref={headerActionsRef} className="flex items-center">
                 <SessionPopoverHeader
                   isEdit={isExistingSession}
                   onClose={handleHeaderClose}
@@ -5285,10 +5289,19 @@ export function PopoverEditor({
                     isExistingSession && !readOnly ? handleDeleteSession : undefined
                   }
                 />
+                </div>
               }
             />
           </div>
           <div className={`flex min-h-0 flex-1 flex-col ${POPOVER_CONTENT_GAP} px-3 pb-3 pt-1.5`}>
+            {showSeriesScopeTabs ? (
+              <SessionSeriesScopeTabs
+                value={seriesEditScope === "allInSeries" ? "allInSeries" : "this"}
+                onChange={(scope) =>
+                  setSeriesEditScope(scope === "allInSeries" ? "allInSeries" : "this")
+                }
+              />
+            ) : null}
             <input
               ref={titleInputRef}
               value={value}
@@ -5327,16 +5340,29 @@ export function PopoverEditor({
 
             {durationRow}
 
+            <div ref={locationFieldRef} data-session-location-field="">
             <SessionLocationField
               value={location}
-              onChange={setLocation}
+              onChange={(next) => {
+                if (!next.trim() && (locationRef.current.trim() || locationUrlRef.current.trim())) {
+                  handleLocationChange({ location: "", locationUrl: "" });
+                  return;
+                }
+                setLocation(next);
+                locationRef.current = next;
+              }}
               readOnly={readOnly}
               size="calendar"
               locationUrl={locationUrl || null}
-              onLocationUrlClear={() => setLocationUrl("")}
+              onLocationUrlClear={() => {
+                setLocationUrl("");
+                locationUrlRef.current = "";
+              }}
               onPlaceSelect={(place) => {
-                setLocation(place.name);
-                setLocationUrl(place.locationUrl);
+                handleLocationChange({
+                  location: place.name,
+                  locationUrl: place.locationUrl,
+                });
               }}
               mapOpen={locationMapOpen}
               onMapToggle={() => {
@@ -5347,6 +5373,7 @@ export function PopoverEditor({
               searchHandoff={locationSearchHandoff}
               onSearchHandoffConsumed={() => setLocationSearchHandoff(null)}
             />
+            </div>
 
             <div ref={repeatRowRef}>
               <SessionRepeatRow
@@ -5368,7 +5395,7 @@ export function PopoverEditor({
                   teamId={teamId}
                   initialAppGroupId={initialAppGroupId}
                   selectedAppGroupId={appGroupId}
-                  onSelectionChange={handleAppGroupChange}
+                  onSelectionChange={handleGroupPick}
                   readOnly={readOnly}
                   sessionCardRef={sessionCardRef}
                   clusterRef={ref}
@@ -5377,10 +5404,10 @@ export function PopoverEditor({
               </div>
             ) : null}
 
-            <div className={readOnly ? "pointer-events-none" : undefined}>
+            <div className={readOnly ? "pointer-events-none" : undefined} ref={colorRowRef}>
               <ColorDropdownRow
                 color={color}
-                onSetColor={setColor}
+                onSetColor={handleColorPick}
                 readOnly={readOnly}
                 sessionCardRef={sessionCardRef}
                 clusterRef={ref}
@@ -5394,18 +5421,24 @@ export function PopoverEditor({
         </div>
 
         {showLocationMapSide ? (
-          <div className="min-h-0 shrink-0 self-stretch" style={{ width: POPOVER_W }}>
+          <div
+            ref={locationMapWrapRef}
+            className="min-h-0 shrink-0 self-stretch"
+            style={{ width: POPOVER_W }}
+            data-session-location-map=""
+          >
             <SessionLocationMapPanel
               ref={locationMapPanelRef}
               locationName={location}
               locationUrl={locationUrl || null}
               onConfirm={(next) => {
-                setLocation(next.name);
-                setLocationUrl(next.locationUrl);
+                handleLocationChange({
+                  location: next.name,
+                  locationUrl: next.locationUrl,
+                });
               }}
               onClear={() => {
-                setLocation("");
-                setLocationUrl("");
+                handleLocationChange({ location: "", locationUrl: "" });
               }}
               onClose={() => setLocationMapOpen(false)}
             />
@@ -5424,12 +5457,6 @@ export function PopoverEditor({
       {copyToast ? (
         <CalendarInfoToast message={copyToast} onDismiss={() => setCopyToast(null)} />
       ) : null}
-      <SessionScopeMenu
-        open={!!scopePrompt}
-        anchorRef={scopeAnchorRef}
-        onSelect={confirmScopePrompt}
-        onDismiss={dismissScopePrompt}
-      />
     </div>
   </>,
   document.body,

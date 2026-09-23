@@ -122,6 +122,26 @@ test("incomplete remote row does not replace a complete local row", () => {
   assert.equal(kept?.endISO, created.endISO);
 });
 
+test("stale GET times do not replace an in-flight local move", () => {
+  const moved: MergeableSession = {
+    ...older,
+    startISO: "2026-05-01T14:00:00",
+    endISO: "2026-05-01T15:00:00",
+    synced: false,
+  };
+  const merged = mergeRemoteSessions({
+    remoteOk: true,
+    remote: [older],
+    local: [moved],
+    mutations: [{ id: older.id, op: "upsert", event: moved }],
+  });
+  const kept = merged.next.find((row) => row.id === older.id);
+  assert.equal(kept?.startISO, moved.startISO);
+  assert.equal(kept?.endISO, moved.endISO);
+  assert.equal(kept?.synced, false);
+  assert.deepEqual(merged.ackUpsertIds, []);
+});
+
 test("failed GET leaves replica rows unchanged", () => {
   const local = [older, created];
   const merged = mergeRemoteSessions({
