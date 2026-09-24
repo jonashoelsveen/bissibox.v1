@@ -174,6 +174,20 @@ async function writeSessionRow(
 ) {
   const id = payload.id;
   if (!id) return { message: "Missing id" };
+  const { id: _id, ...patch } = payload;
+
+  const updateExisting = async () =>
+    writer.from("calendar_sessions").update(patch as never).eq("id", id).select("id").maybeSingle();
+
+  const updated = await updateExisting();
+  if (!updated.error && updated.data?.id) return null;
+
+  const missing =
+    updated.error?.code === "PGRST116" || (!updated.error && !updated.data);
+  if (!missing && updated.error) {
+    logSessionWriteError(`${stage}:update`, updated.error);
+    return updated.error;
+  }
 
   const insertResult = await writer
     .from("calendar_sessions")
@@ -182,38 +196,15 @@ async function writeSessionRow(
     .maybeSingle();
   if (!insertResult.error && insertResult.data?.id) return null;
 
-  const insertedWithoutReturn =
-    insertResult.error?.code === "PGRST116" ||
-    insertResult.error?.code === "23505" ||
-    (!insertResult.error && !insertResult.data);
-  if (insertedWithoutReturn) {
-    const { data: found } = await writer
-      .from("calendar_sessions")
-      .select("id")
-      .eq("id", id)
-      .maybeSingle();
-    if (typeof found?.id === "string") return null;
-
-    const { id: _id, ...patch } = payload;
-    const updateResult = await writer
-      .from("calendar_sessions")
-      .update(patch as never)
-      .eq("id", id)
-      .select("id")
-      .maybeSingle();
-    if (!updateResult.error && updateResult.data?.id) return null;
-    const { data: foundAfterUpdate } = await writer
-      .from("calendar_sessions")
-      .select("id")
-      .eq("id", id)
-      .maybeSingle();
-    if (typeof foundAfterUpdate?.id === "string") return null;
-    logSessionWriteError(`${stage}:update`, updateResult.error ?? insertResult.error);
-    return updateResult.error ?? insertResult.error ?? { message: "Write not confirmed" };
+  if (insertResult.error?.code === "23505") {
+    const retry = await updateExisting();
+    if (!retry.error && retry.data?.id) return null;
+    logSessionWriteError(`${stage}:update-after-conflict`, retry.error ?? insertResult.error);
+    return retry.error ?? insertResult.error ?? { message: "Update not confirmed" };
   }
 
   logSessionWriteError(`${stage}:insert`, insertResult.error);
-  return insertResult.error;
+  return insertResult.error ?? { message: "Write not confirmed" };
 }
 
 async function handleUpsertRequest(request: Request): Promise<Response> {
@@ -317,11 +308,14 @@ async function handleUpsertRequest(request: Request): Promise<Response> {
       return false;
     };
 
-    // Same insert as Fungerer_1/2 (core keys only), then extras as an update.
-    let wroteViaRpc = await tryEntityRpc(corePayload, "entity-rpc-core");
-    if (rpcPayload && Object.keys(rpcPayload).length > Object.keys(corePayload).length) {
-      const extrasOk = await tryEntityRpc(rpcPayload, "entity-rpc-full");
-      if (extrasOk) wroteViaRpc = true;
+    // Full payload only. A core-only upsert nulls colour, repeat, and notes
+    // on conflict because omitted jsonb keys become NULL in the UPDATE.
+    let wroteViaRpc = false;
+    if (rpcPayload) {
+      wroteViaRpc = await tryEntityRpc(rpcPayload, "entity-rpc-full");
+    }
+    if (!wroteViaRpc) {
+      wroteViaRpc = await tryEntityRpc(corePayload, "entity-rpc-core");
     }
 
     const writer = admin ?? userClient;

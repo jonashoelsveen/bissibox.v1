@@ -142,6 +142,32 @@ test("stale GET times do not replace an in-flight local move", () => {
   assert.deepEqual(merged.ackUpsertIds, []);
 });
 
+test("stale GET colour does not replace an in-flight recolour", () => {
+  const recolored: MergeableSession = { ...older, color: "#ff0000", synced: false };
+  const merged = mergeRemoteSessions({
+    remoteOk: true,
+    remote: [{ ...older, color: "#0000ff" }],
+    local: [recolored],
+    mutations: [{ id: older.id, op: "upsert", event: recolored }],
+  });
+  const kept = merged.next.find((row) => row.id === older.id);
+  assert.equal(kept?.color, "#ff0000");
+  assert.equal(kept?.synced, false);
+  assert.deepEqual(merged.ackUpsertIds, []);
+});
+
+test("GET that matches the pending colour and time acks the write", () => {
+  const recolored: MergeableSession = { ...older, color: "#ff0000", synced: false };
+  const merged = mergeRemoteSessions({
+    remoteOk: true,
+    remote: [{ ...older, color: "#ff0000" }],
+    local: [recolored],
+    mutations: [{ id: older.id, op: "upsert", event: recolored }],
+  });
+  assert.equal(merged.next.find((row) => row.id === older.id)?.synced, true);
+  assert.deepEqual(merged.ackUpsertIds, [older.id]);
+});
+
 test("failed GET leaves replica rows unchanged", () => {
   const local = [older, created];
   const merged = mergeRemoteSessions({

@@ -349,33 +349,25 @@ async function insertThenUpdate(
       .maybeSingle();
     return { data, error };
   };
-  const verify = async (id: string) => {
-    const { data, error } = await client
-      .from("calendar_sessions")
-      .select("id, entity_id")
-      .eq("id", id)
-      .maybeSingle();
-    if (error || data?.id !== id) return false;
-    const expectedEntityId =
-      typeof payload.entity_id === "string" && payload.entity_id ? payload.entity_id : null;
-    if (expectedEntityId && data.entity_id !== expectedEntityId) return false;
-    return true;
-  };
 
   const tryRow = async (row: CalendarSessionRow, stage: string) => {
-    const first = await insertOnce(row);
-    if (!first.error && first.data?.id) return { error: null };
-    if (first.error?.code === "PGRST116" || first.error?.code === "23505" || (!first.error && !first.data)) {
-      if (await verify(row.id)) return { error: null };
-      const second = await updateOnce(row);
-      if (!second.error && second.data?.id) return { error: null };
-      if (await verify(row.id)) return { error: null };
-      logWriteError(stage, second.error ?? first.error);
-      return { error: second.error ?? first.error ?? { message: "Write not confirmed" } };
+    const updated = await updateOnce(row);
+    if (!updated.error && updated.data?.id) return { error: null };
+    const missing =
+      updated.error?.code === "PGRST116" || (!updated.error && !updated.data);
+    if (!missing && updated.error && updated.error.code !== "23505") {
+      logWriteError(`${stage}:update`, updated.error);
     }
-    if (await verify(row.id)) return { error: null };
-    logWriteError(stage, first.error);
-    return { error: first.error };
+    const inserted = await insertOnce(row);
+    if (!inserted.error && inserted.data?.id) return { error: null };
+    if (inserted.error?.code === "23505" || (!inserted.error && !inserted.data)) {
+      const retry = await updateOnce(row);
+      if (!retry.error && retry.data?.id) return { error: null };
+      logWriteError(stage, retry.error ?? inserted.error ?? updated.error);
+      return { error: retry.error ?? inserted.error ?? updated.error ?? { message: "Update not confirmed" } };
+    }
+    logWriteError(stage, inserted.error ?? updated.error);
+    return { error: inserted.error ?? updated.error ?? { message: "Write not confirmed" } };
   };
 
   let result = await tryRow(payload, "insert");
@@ -529,13 +521,8 @@ async function persistViaEntityRpc(calId: string, session: CalendarSessionRow): 
     return false;
   };
 
-  if (await tryPayload(core, "entity-rpc-core")) {
-    if (payload && Object.keys(payload).length > Object.keys(core).length) {
-      await tryPayload(payload, "entity-rpc-full");
-    }
-    return true;
-  }
   if (payload && (await tryPayload(payload, "entity-rpc-full"))) return true;
+  if (await tryPayload(core, "entity-rpc-core")) return true;
   return false;
 }
 
