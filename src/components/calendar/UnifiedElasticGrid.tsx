@@ -77,6 +77,10 @@ import {
   isoWeekNumber,
   makeEventId,
   startEndMinsOnStartDay,
+  isoRangeOnDate,
+  calendarDayDelta,
+  shiftIsoRangeByDays,
+  startOfDay,
 } from "./dateUtils";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useCalendarSearchSafe } from "./CalendarSearchContext";
@@ -2924,6 +2928,34 @@ export function UnifiedElasticGrid({
               ? getEventById(popover.eventId)?.repeatRule ?? null
               : null
           }
+          onDateChange={(date, eventIds) => {
+            const ids =
+              eventIds && eventIds.length > 0
+                ? eventIds
+                : popover.eventId
+                  ? [popover.eventId]
+                  : [];
+            const primary = popover.eventId ? getEventById(popover.eventId) : null;
+            if (primary?.startISO && primary.endISO && ids.length) {
+              const delta = calendarDayDelta(fromISOLocal(primary.startISO), date);
+              for (const id of ids) {
+                const ev = getEventById(id);
+                if (!ev?.startISO || !ev.endISO) continue;
+                const range =
+                  ids.length > 1 && id !== primary.id
+                    ? shiftIsoRangeByDays(ev.startISO, ev.endISO, delta)
+                    : isoRangeOnDate(ev.startISO, ev.endISO, date);
+                if (draftEventRef.current?.id === id) {
+                  setDraftEvent({ ...draftEventRef.current, ...range });
+                } else {
+                  onMoveEvent(id, range);
+                }
+              }
+            }
+            const day = startOfDay(date);
+            onCurrentDateChange(day, { start: day, end: day });
+            setPopover((p) => (p ? { ...p, pendingDate: day } : p));
+          }}
           onColorChange={(c, eventIds) => {
             setPopover((p) => (p ? { ...p, initialColor: c } : p));
             if (!c) return;

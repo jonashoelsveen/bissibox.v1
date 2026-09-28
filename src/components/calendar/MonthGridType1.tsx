@@ -42,7 +42,7 @@ import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, CalendarEvent } from "./yearStore";
 import { makeCellId, isMembershipOverlayEvent } from "./yearStore";
 import { computePopoverPosition, weekDaySessionMenuMinTop } from "./popoverPosition";
-import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, isoWeekNumber, startOfDay, makeEventId, startEndMinsOnStartDay } from "./dateUtils";
+import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, isoWeekNumber, startOfDay, makeEventId, startEndMinsOnStartDay, isoRangeOnDate, calendarDayDelta, shiftIsoRangeByDays } from "./dateUtils";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
 import { DayNoteButton } from "./DayNoteButton";
 import { useEntityRoster, type EntityMember, isPlaceholderGroupName } from "@/hooks/useEntityRoster";
@@ -108,6 +108,8 @@ import {
   type SessionPanelFloatPosition,
 } from "./sessionPanelDockUtils";
 import { useSessionMapPanelFits } from "./useSessionMapPanelFits";
+import { useSessionAdjacentMenuFits } from "./useSessionAdjacentMenuFits";
+import { SessionDateField } from "./SessionDateField";
 import { sessionPopoverFieldClass } from "./sessionPopoverField";
 import { SessionRepeatRow } from "./SessionRepeatRow";
 import {
@@ -800,6 +802,7 @@ export function MonthGridType1({
     };
   }, []);
   const [createPreviewTime, setCreatePreviewTime] = useState<{ startMin: number; endMin: number } | null>(null);
+  const pendingMenuDateRef = useRef<Date | null>(null);
   const [repeatLivePreview, setRepeatLivePreview] = useState<RepeatLivePreview | null>(null);
   const displayEvents = useMemo(
     () => mergeEventsWithRepeatPreview(events, repeatLivePreview),
@@ -875,6 +878,45 @@ export function MonthGridType1({
     },
     [cellAnchorRect, resetSessionSidePanels],
   );
+
+  const reanchorPopoverToDate = useCallback((date: Date) => {
+    const cell = days.find((d) => d.inMonth && sameDay(d.date, date));
+    if (!cell) {
+      pendingMenuDateRef.current = date;
+      onSelectDate?.(date);
+      return;
+    }
+    const el = containerRef.current?.querySelector<HTMLElement>(
+      monthDayCellSelector({ row: cell.row, col: cell.col }),
+    );
+    if (!el) {
+      pendingMenuDateRef.current = date;
+      onSelectDate?.(date);
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    pendingMenuDateRef.current = null;
+    setPopover((prev) =>
+      prev ? { ...prev, pos: { row: cell.row, col: cell.col }, rect } : prev,
+    );
+    onSelectDate?.(date);
+  }, [days, onSelectDate]);
+
+  useEffect(() => {
+    const target = pendingMenuDateRef.current;
+    if (!target) return;
+    const cell = days.find((d) => d.inMonth && sameDay(d.date, target));
+    if (!cell) return;
+    const el = containerRef.current?.querySelector<HTMLElement>(
+      monthDayCellSelector({ row: cell.row, col: cell.col }),
+    );
+    if (!el) return;
+    pendingMenuDateRef.current = null;
+    const rect = el.getBoundingClientRect();
+    setPopover((prev) =>
+      prev ? { ...prev, pos: { row: cell.row, col: cell.col }, rect } : prev,
+    );
+  }, [days, year, month]);
 
   const closePopover = useCallback(() => {
     sessionSidePanelsRef.current = {
@@ -2732,6 +2774,30 @@ export function MonthGridType1({
                 ? events.find((e) => e.id === popover.eventId)?.repeatRule ?? null
                 : null
             }
+            onDateChange={(date, eventIds) => {
+              const ids =
+                eventIds && eventIds.length > 0
+                  ? eventIds
+                  : popover.eventId
+                    ? [popover.eventId]
+                    : [];
+              const primary = popover.eventId
+                ? events.find((e) => e.id === popover.eventId)
+                : undefined;
+              if (primary && onMoveEvent && ids.length) {
+                const delta = calendarDayDelta(fromISOLocal(primary.startISO), date);
+                for (const id of ids) {
+                  const ev = events.find((e) => e.id === id);
+                  if (!ev?.startISO || !ev.endISO) continue;
+                  const range =
+                    ids.length > 1 && id !== primary.id
+                      ? shiftIsoRangeByDays(ev.startISO, ev.endISO, delta)
+                      : isoRangeOnDate(ev.startISO, ev.endISO, date);
+                  onMoveEvent(id, range);
+                }
+              }
+              reanchorPopoverToDate(date);
+            }}
             onTimeChange={(time, eventIds) => {
               if (!popover.eventId && popover.editIdx < 0) {
                 setCreatePreviewTime(time ?? { startMin: 9 * 60, endMin: 10 * 60 });
@@ -3388,6 +3454,11 @@ export interface PopoverEditorProps {
    * reflects the selection in real time.
    */
   onColorChange?: (color: string | null, eventIds?: string[]) => void;
+  /**
+   * Fires when the user picks a day in the date calendar. The menu stays
+   * open; the parent moves the session and the visible day, week, or month.
+   */
+  onDateChange?: (date: Date, eventIds?: string[]) => void;
   onCategoryChange?: (selection: CategorySelection) => void;
   /**
    * When true, the popover renders as a view-only panel: the title input is
@@ -3809,6 +3880,7 @@ export function PopoverEditor({
   onLocationChange,
   onClearRepeat,
   onColorChange,
+  onDateChange,
   readOnly = false,
   placeholder = "Session title",
   teamId = null,
@@ -4236,6 +4308,11 @@ export function PopoverEditor({
   }, [initialTime?.startMin, initialTime?.endMin]);
   
   const ref = useRef<HTMLDivElement | null>(null);
+  const dateMenuFits = useSessionAdjacentMenuFits(sessionCardRef, ref);
+  const [menuDate, setMenuDate] = useState<Date | null>(null);
+  useEffect(() => {
+    setMenuDate(null);
+  }, [resolvedSessionDate.getTime()]);
 
   // Keep latest values for the unmount-time autosave to avoid stale captures.
   const valueRef = useRef(value);
@@ -5336,6 +5413,19 @@ export function PopoverEditor({
                 sessionPopoverFieldClass(titleFocused && !readOnly),
                 readOnly ? "cursor-default select-text caret-transparent" : "!cursor-text",
               ].join(" ")}
+            />
+
+            <SessionDateField
+              date={menuDate ?? resolvedSessionDate}
+              readOnly={readOnly}
+              visible={seriesEditScope !== "allInSeries" && dateMenuFits}
+              sessionCardRef={sessionCardRef}
+              clusterRef={ref}
+              rightOccupied={showLocationMapSide || showParticipantsSide}
+              onPick={(date) => {
+                setMenuDate(date);
+                applyWithSeriesScope((ids) => onDateChange?.(date, ids));
+              }}
             />
 
             {durationRow}

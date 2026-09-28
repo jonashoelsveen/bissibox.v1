@@ -33,6 +33,7 @@ export function SessionSideListbox({
   sessionCardRef,
   clusterRef,
   rightOccupied = false,
+  preferRight = true,
   estimatedHeight,
   onSideChange,
   children,
@@ -43,11 +44,15 @@ export function SessionSideListbox({
   sessionCardRef: RefObject<HTMLDivElement | null>;
   clusterRef: RefObject<HTMLDivElement | null>;
   rightOccupied?: boolean;
+  /** Colour and repeat open to the right. The date calendar opens to the left. */
+  preferRight?: boolean;
   estimatedHeight: number;
   onSideChange?: (side: "left" | "right" | null) => void;
   children: ReactNode;
 }) {
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const [menuPos, setMenuPos] = useState<{
     left: number;
     top: number;
@@ -70,11 +75,16 @@ export function SessionSideListbox({
       alignTop: fieldRect.top,
       menuWidth: width,
       menuHeight: height,
-      preferRight: !rightOccupied,
+      preferRight: preferRight && !rightOccupied,
       gap: SESSION_SIDE_MENU_GAP_PX,
     });
+    if (!next) {
+      setMenuPos(null);
+      onCloseRef.current();
+      return;
+    }
     setMenuPos({ ...next, width });
-  }, [clusterRef, estimatedHeight, fieldRef, rightOccupied, sessionCardRef]);
+  }, [clusterRef, estimatedHeight, fieldRef, preferRight, rightOccupied, sessionCardRef]);
 
   useLayoutEffect(() => {
     if (!open) {
@@ -111,7 +121,7 @@ export function SessionSideListbox({
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [fieldRef, onClose, open]);
 
-  if (!open) return null;
+  if (!open || !menuPos) return null;
   const host = clusterRef.current;
   if (!host) return null;
 

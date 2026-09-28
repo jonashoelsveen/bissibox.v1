@@ -80,9 +80,23 @@ export interface MiniCalendarProps {
   onSelectRange: (range: DateRange) => void;
   /** When "week", the whole week-row containing the selected day is highlighted. */
   viewMode?: MiniCalendarViewMode;
+  /** Dark charcoal shell used inside session-menu submenus. */
+  tone?: "light" | "dark";
+  /**
+   * Single-day pick. Closes drag-range behaviour and reports the clicked day
+   * (including days that belong to the previous or next month).
+   */
+  onPickDay?: (date: Date) => void;
 }
 
-export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" }: MiniCalendarProps) {
+export function MiniCalendar({
+  selectedRange,
+  onSelectRange,
+  viewMode = "month",
+  tone = "light",
+  onPickDay,
+}: MiniCalendarProps) {
+  const dark = tone === "dark";
   // Displayed month (independent from selection so user can browse)
   const [view, setView] = useState(() => ({
     year: selectedRange.start.getFullYear(),
@@ -158,7 +172,7 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
     >
       {/* Header */}
       <div className="mb-2 flex items-center justify-between px-1">
-        <span className="text-[12px] font-medium text-ink">
+        <span className={["text-[12px] font-medium", dark ? "text-white/90" : "text-ink"].join(" ")}>
           {MONTHS_FULL[view.month]} {view.year}
         </span>
         <div className="flex items-center gap-0.5">
@@ -166,7 +180,12 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
             type="button"
             onClick={prevMonth}
             aria-label="Forrige måned"
-            className="grid h-5 w-5 place-items-center rounded text-muted-foreground hover:bg-secondary hover:text-ink"
+            className={[
+              "grid h-5 w-5 place-items-center rounded",
+              dark
+                ? "text-white/55 hover:bg-white/[0.08] hover:text-white"
+                : "text-muted-foreground hover:bg-secondary hover:text-ink",
+            ].join(" ")}
           >
             <ChevronLeft className="h-3 w-3" strokeWidth={2.25} />
           </button>
@@ -174,7 +193,12 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
             type="button"
             onClick={nextMonth}
             aria-label="Neste måned"
-            className="grid h-5 w-5 place-items-center rounded text-muted-foreground hover:bg-secondary hover:text-ink"
+            className={[
+              "grid h-5 w-5 place-items-center rounded",
+              dark
+                ? "text-white/55 hover:bg-white/[0.08] hover:text-white"
+                : "text-muted-foreground hover:bg-secondary hover:text-ink",
+            ].join(" ")}
           >
             <ChevronRight className="h-3 w-3" strokeWidth={2.25} />
           </button>
@@ -186,7 +210,10 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
         {WEEKDAY_LETTERS.map((w, i) => (
           <div
             key={i}
-            className="grid h-6 place-items-center text-[10.5px] font-normal text-muted-foreground/70"
+            className={[
+              "grid h-6 place-items-center text-[10.5px] font-normal",
+              dark ? "text-white/40" : "text-muted-foreground/70",
+            ].join(" ")}
           >
             {w}
           </div>
@@ -206,7 +233,10 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
               {inSelectedWeek ? (
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-y-0 rounded-sm bg-primary/15"
+                  className={[
+                    "pointer-events-none absolute inset-y-0 rounded-sm",
+                    dark ? "bg-white/[0.08]" : "bg-primary/15",
+                  ].join(" ")}
                   style={{ left: WEEK_MARK_INSET, right: WEEK_MARK_INSET }}
                 />
               ) : null}
@@ -223,6 +253,11 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
                     key={dateKey(date)}
                     onMouseDown={(e) => {
                       e.preventDefault();
+                      e.stopPropagation();
+                      if (onPickDay) {
+                        onPickDay(date);
+                        return;
+                      }
                       if (!inMonth) {
                         setView({ year: date.getFullYear(), month: date.getMonth() });
                         onSelectRange({ start: date, end: date });
@@ -242,14 +277,22 @@ export function MiniCalendar({ selectedRange, onSelectRange, viewMode = "month" 
                       className={[
                         "grid h-7 w-7 place-items-center rounded-sm",
                         isSelected
-                          ? "bg-primary text-primary-foreground"
+                          ? dark
+                            ? "bg-white text-black"
+                            : "bg-primary text-primary-foreground"
                           : isToday
                             ? "bg-[#ED5C5C] text-white"
                             : weekBg
-                              ? "text-ink"
+                              ? dark
+                                ? "text-white/90"
+                                : "text-ink"
                               : inMonth
-                                ? "text-ink hover:bg-secondary"
-                                : "text-muted-foreground/40 hover:bg-secondary/60",
+                                ? dark
+                                  ? "text-white/90 hover:bg-white/[0.08]"
+                                  : "text-ink hover:bg-secondary"
+                                : dark
+                                  ? "text-white/35 hover:bg-white/[0.08]"
+                                  : "text-muted-foreground/40 hover:bg-secondary/60",
                       ].join(" ")}
                     >
                       {date.getDate()}

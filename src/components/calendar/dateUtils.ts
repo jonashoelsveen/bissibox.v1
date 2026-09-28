@@ -103,6 +103,39 @@ export function startOfWeekMon(d: Date): Date {
   return x;
 }
 
+/** Move a session's clock time onto `date`, keeping the same duration. */
+export function isoRangeOnDate(
+  startISO: string,
+  endISO: string,
+  date: Date,
+): { startISO: string; endISO: string } {
+  const start = fromISOLocal(startISO);
+  const end = fromISOLocal(endISO);
+  const dur = Math.max(0, end.getTime() - start.getTime());
+  const nextStart = setHM(date, start.getHours(), start.getMinutes());
+  return {
+    startISO: toISOLocal(nextStart),
+    endISO: toISOLocal(new Date(nextStart.getTime() + dur)),
+  };
+}
+
+/** Whole calendar days from `from` to `to` (negative when `to` is earlier). */
+export function calendarDayDelta(from: Date, to: Date): number {
+  const ms = startOfDay(to).getTime() - startOfDay(from).getTime();
+  return Math.round(ms / 86_400_000);
+}
+
+export function shiftIsoRangeByDays(
+  startISO: string,
+  endISO: string,
+  days: number,
+): { startISO: string; endISO: string } {
+  return {
+    startISO: toISOLocal(addDays(fromISOLocal(startISO), days)),
+    endISO: toISOLocal(addDays(fromISOLocal(endISO), days)),
+  };
+}
+
 export function addDays(d: Date, days: number): Date {
   const x = new Date(d);
   x.setDate(x.getDate() + days);

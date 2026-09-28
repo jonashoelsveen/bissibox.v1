@@ -95,7 +95,7 @@ export function computeSessionAdjacentMenuPosition(args: {
   viewportHeight?: number;
   gap?: number;
   margin?: number;
-}): SessionAdjacentMenuPlacement {
+}): SessionAdjacentMenuPlacement | null {
   const vw =
     args.viewportWidth ?? (typeof window !== "undefined" ? window.innerWidth : 1024);
   const vh =
@@ -125,15 +125,45 @@ export function computeSessionAdjacentMenuPosition(args: {
         { side: "right", left: rightOfSession },
       ];
 
-  const picked = candidates.find((c) => fits(c.left)) ?? candidates[0];
-  const left = Math.max(minLeft, Math.min(maxLeft, picked.left));
+  const picked = candidates.find((c) => fits(c.left));
+  // Never slide the menu onto the session card. If neither side has room
+  // for the full menu plus the same gap the other submenus use, do not place it.
+  if (!picked) return null;
 
   const maxTop = vh - args.menuHeight - margin;
   let top = args.alignTop;
   if (top > maxTop) top = Math.max(margin, maxTop);
   if (top < margin) top = margin;
 
-  return { left, top, side: picked.side };
+  return { left: picked.left, top, side: picked.side };
+}
+
+/** True when the submenu can sit fully on the left or the right of the session card. */
+export function sessionAdjacentMenuFits(args: {
+  sessionCard: SessionBox;
+  cluster?: SessionBox;
+  menuWidth: number;
+  preferRight?: boolean;
+  viewportWidth?: number;
+  gap?: number;
+  margin?: number;
+}): boolean {
+  const vw =
+    args.viewportWidth ?? (typeof window !== "undefined" ? window.innerWidth : 1024);
+  const gap = args.gap ?? SESSION_PANEL_GAP_PX;
+  const margin = args.margin ?? SESSION_PANEL_VIEWPORT_MARGIN;
+  const minLeft = readTopbarLeftOffset() + margin;
+  const maxLeft = vw - args.menuWidth - margin;
+  const preferRight = args.preferRight !== false;
+  const clusterRight = args.cluster?.right ?? args.sessionCard.right;
+  const rightOfSession = args.sessionCard.right + gap;
+  const rightOfCluster = clusterRight + gap;
+  const leftOfSession = args.sessionCard.left - gap - args.menuWidth;
+  const fits = (x: number) => x >= minLeft && x <= maxLeft;
+  const candidates = preferRight
+    ? [rightOfSession, leftOfSession, rightOfCluster]
+    : [leftOfSession, rightOfCluster, rightOfSession];
+  return candidates.some((left) => fits(left));
 }
 
 export function computeDockedPanelLeft(
