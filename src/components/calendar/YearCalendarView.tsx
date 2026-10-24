@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { BarChart3, Clock } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ import { MonthNavControl } from "./MonthNavControl";
 import { YearGrid } from "./YearGrid";
 import { miniCalendarViewMode, type DateRange } from "./MiniCalendar";
 import { addDays, isoWeekNumber, startOfWeekMon } from "./dateUtils";
+import { useLiveMonthFocus } from "@/lib/liveMonthFocus";
 import { useCalendarViewActions, useCalendarViewActionsOptional, CalendarViewActionsProvider } from "./CalendarViewActionsContext";
 import { CalendarInfoToast } from "./CalendarInfoToast";
 import { useShortcut } from "@/hooks/useShortcut";
@@ -36,6 +37,8 @@ import { categoryKeyFromColor, type CategoryKey } from "./CalendarSideNav";
 import { useUserCategories } from "@/hooks/useUserCategories";
 import { useCalendarSearchSafe } from "./CalendarSearchContext";
 import { useMacroProjectNavSafe } from "./MacroProjectNavContext";
+import { useHideMultiDayRow } from "./multiDayRowPref";
+import { useHideTimeScale } from "./timeScalePref";
 import type { CalendarScale } from "./CalendarSearch";
 import { GanttYearGrid } from "./GanttYearGrid";
 import { GanttMacroZoomControl } from "./GanttMacroZoomControl";
@@ -176,6 +179,20 @@ export interface YearCalendarViewProps {
   onStatsActiveChange?: (next: boolean) => void;
   /** Micro = day/week/month grid; Macro = year Gantt shell. */
   calendarScale?: CalendarScale;
+}
+
+function MonthHeaderDate({
+  active,
+  currentDate,
+  children,
+}: {
+  active: boolean;
+  currentDate: Date;
+  children: (date: Date) => React.ReactNode;
+}) {
+  const live = useLiveMonthFocus();
+  const date = active && live ? new Date(live.year, live.month, 1) : currentDate;
+  return <>{children(date)}</>;
 }
 
 export function YearCalendarView(props: YearCalendarViewProps) {
@@ -627,15 +644,16 @@ function YearCalendarViewInner({
   const showStatsToggle = appKind === "diary";
 
   /** Calendar day/week: hide the hour scale and stack sessions at equal height. */
-  const [hideTimeScale, setHideTimeScale] = useState(false);
+  const hideTimeScale = useHideTimeScale();
   const showTimeScaleToggle =
     appKind === "calendar" && (viewMode === "day" || viewMode === "week");
+  const hideMultiDayRow = useHideMultiDayRow();
+  const showEventsToggle =
+    appKind === "calendar" && !isMacro && viewMode !== "year";
   const headerClusterHostRef = useRef<HTMLDivElement | null>(null);
   const headerClusterRef = useRef<HTMLDivElement | null>(null);
-  const clockBtnRef = useRef<HTMLButtonElement | null>(null);
   const viewTypeRef = useRef<HTMLDivElement | null>(null);
   const todayBtnRef = useRef<HTMLButtonElement | null>(null);
-  const clockWidthRef = useRef(32);
   const todayWidthRef = useRef(58);
   const viewTypeWidthRef = useRef(108);
   const [hideToday, setHideToday] = useState(false);
@@ -657,16 +675,15 @@ function YearCalendarViewInner({
     if (!parent || !cluster) return;
 
     const measure = () => {
-      const clockEl = clockBtnRef.current;
       const todayEl = todayBtnRef.current;
       const viewEl = viewTypeRef.current;
-      if (clockEl) clockWidthRef.current = clockEl.offsetWidth;
       if (todayEl) todayWidthRef.current = todayEl.offsetWidth;
       if (viewEl) viewTypeWidthRef.current = viewEl.offsetWidth;
 
       const next = nextHeaderClusterHiding({
         available: parent.clientWidth,
-        clockWidth: showTimeScaleToggle ? clockWidthRef.current : 0,
+        eventsWidth: 0,
+        clockWidth: 0,
         todayWidth: todayWidthRef.current,
         viewTypeWidth: viewTypeWidthRef.current,
         hideToday: hideTodayRef.current,
@@ -689,7 +706,7 @@ function YearCalendarViewInner({
       ro.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [statsActive, isMacro, showTimeScaleToggle, showStatsToggle, viewMode, rightPanelOpen]);
+  }, [statsActive, isMacro, showStatsToggle, viewMode, rightPanelOpen]);
 
   useShortcut(
     "pasteSession",
@@ -744,24 +761,30 @@ function YearCalendarViewInner({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div data-calendar-root="" className="flex h-full min-h-0 flex-col bg-white">
       {/* Header — title + nav arrows on the left, action cluster on the right.
           z-50 + overflow-visible so header controls stay above the calendar grid. */}
       <div className="relative z-50 flex h-12 flex-none items-center justify-between gap-3 overflow-visible bg-white px-0.5 pr-4 md:pr-6">
         <div className="flex items-center gap-2 min-w-0 pl-9">
           {!statsActive && (
             <>
-              <ViewTitle
-                viewMode={isMacro ? "year" : viewMode}
-                currentDate={currentDate}
-              />
-              <MonthNavControl
-                unit={isMacro ? "year" : viewMode === "year" ? "year" : viewMode}
-                currentDate={currentDate}
-                selectedRange={currentRange}
-                onChange={(d, r) => updateCurrent(d, r)}
-                viewMode={navMiniViewMode}
-              />
+              <MonthHeaderDate active={!isMacro && viewMode === "month"} currentDate={currentDate}>
+                {(headerDate) => (
+                  <>
+                    <ViewTitle
+                      viewMode={isMacro ? "year" : viewMode}
+                      currentDate={headerDate}
+                    />
+                    <MonthNavControl
+                      unit={isMacro ? "year" : viewMode === "year" ? "year" : viewMode}
+                      currentDate={headerDate}
+                      selectedRange={currentRange}
+                      onChange={(d, r) => updateCurrent(d, r)}
+                      viewMode={navMiniViewMode}
+                    />
+                  </>
+                )}
+              </MonthHeaderDate>
             </>
           )}
         </div>
@@ -804,31 +827,6 @@ function YearCalendarViewInner({
           >
             {!statsActive && (
               <>
-                {!isMacro && showTimeScaleToggle && (
-                  <button
-                    ref={clockBtnRef}
-                    type="button"
-                    aria-label={
-                      hideTimeScale ? "Show hour scale" : "Hide hour scale"
-                    }
-                    aria-pressed={hideTimeScale}
-                    title={
-                      hideTimeScale
-                        ? "Show timed layout"
-                        : "Stack sessions without hours"
-                    }
-                    onClick={() => setHideTimeScale((v) => !v)}
-                    className="relative grid h-8 w-8 place-items-center rounded-md border border-hairline bg-background/90 text-ink shadow-sm backdrop-blur transition-colors hover:bg-secondary"
-                  >
-                    <Clock className="h-4 w-4" strokeWidth={2} />
-                    {hideTimeScale && (
-                      <span
-                        aria-hidden
-                        className="pointer-events-none absolute left-1/2 top-1/2 h-[1.5px] w-[18px] -translate-x-1/2 -translate-y-1/2 rotate-[-45deg] rounded-full bg-muted-foreground/70"
-                      />
-                    )}
-                  </button>
-                )}
                 {!isMacro && (
                   <>
                     {!hideToday && (
@@ -842,13 +840,14 @@ function YearCalendarViewInner({
                           setYearMonthHighlight(false);
                           updateCurrent(t, { start: t, end: t });
                         }}
+                        data-calendar-chrome=""
                         className="flex h-8 items-center justify-center rounded-md border border-hairline bg-background/90 px-2.5 text-xs font-medium text-ink shadow-sm backdrop-blur transition-colors hover:bg-secondary"
                       >
                         Today
                       </button>
                     )}
                     {!hideViewType && (
-                      <div ref={viewTypeRef}>
+                      <div ref={viewTypeRef} data-calendar-view-nav="">
                         <HeaderDropdown<ExtendedViewMode>
                           ariaLabel="View mode"
                           value={viewMode}
@@ -1008,6 +1007,7 @@ function YearCalendarViewInner({
             selectedDate={currentDate}
             weekHighlight={yearWeekHighlight}
             monthHighlight={yearMonthHighlight}
+            events={mergedEvents}
             onSelectDate={(d) => {
               setYearWeekHighlight(false);
               setYearMonthHighlight(false);
@@ -1116,6 +1116,7 @@ function YearCalendarViewInner({
           onViewModeChange={(v) => setViewMode(v)}
           onOpenYearView={() => setViewMode("year")}
           hideTimeScale={showTimeScaleToggle && hideTimeScale}
+          hideMultiDayRow={showEventsToggle && hideMultiDayRow}
 
           appKind={appKind}
           memberId={memberId}

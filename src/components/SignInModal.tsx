@@ -24,9 +24,9 @@ type Mode = "signin" | "signup" | "otp";
 function headerFor(ctx: SignInContext) {
   switch (ctx) {
     case "calendar":
-      return "Welcome to Aponna Cloud Calendar";
+      return "Welcome to Bissibox Cloud Calendar";
     case "entity":
-      return "Sign in before creating Aponna-entity";
+      return "Sign in before creating Bissibox-entity";
     case "account":
       return "Welcome to your Bissibox-account";
     default:
@@ -523,10 +523,10 @@ function Spinner() {
         borderRadius: "50%",
         border: "2px solid rgba(29,29,31,0.15)",
         borderTopColor: "#1d1d1f",
-        animation: "aponna-spin 0.8s linear infinite",
+        animation: "bissibox-spin 0.8s linear infinite",
       }}
     >
-      <style>{`@keyframes aponna-spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes bissibox-spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

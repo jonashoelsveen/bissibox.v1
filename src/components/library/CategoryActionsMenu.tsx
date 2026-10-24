@@ -39,6 +39,9 @@ export {
   isSessionWhiteColor,
   sessionMonthChipChrome,
   sessionTileChrome,
+  sessionWeekDayTileFill,
+  teamSessionMenuBackground,
+  withTeamSessionStripes,
   standardColorLabel,
 } from "./sessionColors";
 export { getSessionDefaultColor, setSessionDefaultColor } from "@/lib/sessionDefaultColor";

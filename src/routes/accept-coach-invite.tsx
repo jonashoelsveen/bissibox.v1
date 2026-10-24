@@ -10,7 +10,7 @@ export const Route = createFileRoute("/accept-coach-invite")({
     token: typeof search.token === "string" ? search.token : undefined,
   }),
   component: AcceptCoachInvitePage,
-  head: () => ({ meta: [{ title: "Accept coach invitation · Aponna" }] }),
+  head: () => ({ meta: [{ title: "Accept coach invitation · Bissibox" }] }),
 });
 
 function AcceptCoachInvitePage() {
@@ -70,7 +70,7 @@ function AcceptCoachInvitePage() {
   return (
     <div className="mx-auto max-w-md px-6">
       <div className="pt-6">
-        <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Aponna</p>
+        <p className="mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Bissibox</p>
         <h1 className="mt-3 text-3xl text-ink">
           {state === "loading" && "Accepting invitation…"}
           {state === "success" && "You're connected."}

@@ -23,6 +23,7 @@ export function EntitySimpleDataTable<Row extends { id: string }>({
   emptyText,
   getCell,
   renderRowEnd,
+  rowEndWidth = ENTITY_TABLE_EDIT_COLUMN_WIDTH,
 }: {
   tableId: string;
   columns: readonly EntitySimpleColumn[];
@@ -31,6 +32,7 @@ export function EntitySimpleDataTable<Row extends { id: string }>({
   emptyText: string;
   getCell: (row: Row, key: string) => ReactNode;
   renderRowEnd?: (row: Row) => ReactNode;
+  rowEndWidth?: number;
 }) {
   const widthConfigs = useMemo(() => columnWidthConfigs([...columns]), [columns]);
   const { isResizing, startResize, dataColumnsTemplate } = useTableColumnWidths(
@@ -38,7 +40,7 @@ export function EntitySimpleDataTable<Row extends { id: string }>({
     widthConfigs,
   );
   const gridTemplate = renderRowEnd
-    ? `${dataColumnsTemplate} ${ENTITY_TABLE_EDIT_COLUMN_WIDTH}px minmax(0, 1fr)`
+    ? `${dataColumnsTemplate} ${rowEndWidth}px minmax(0, 1fr)`
     : `${dataColumnsTemplate} minmax(0, 1fr)`;
 
   return (

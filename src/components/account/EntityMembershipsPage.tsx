@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { AccountSegmentIsland } from "@/components/account/AccountSegmentIsland";
 import {
   AccountFormSkeleton,
   AccountPageHeader,
@@ -23,14 +24,6 @@ import type { EntityMembershipRequest } from "@/hooks/useEntityMembershipRequest
 
 const ERROR_COLOR = "#FF3B30";
 const MUTED_STATUS_COLOR = "#6e6e73";
-
-const SUBSECTION_TITLE: CSSProperties = {
-  fontFamily: HELVETICA_STACK,
-  fontSize: 13,
-  fontWeight: 600,
-  letterSpacing: "-0.01em",
-  color: MUTED_STATUS_COLOR,
-};
 
 const ROW_SHADOW: CSSProperties = {
   backgroundColor: "rgba(255, 255, 255, 0.96)",
@@ -95,22 +88,7 @@ function BrowseEntitiesButton() {
   );
 }
 
-function MembershipSection({
-  title,
-  children,
-  className = "mt-10",
-}: {
-  title: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <section className={`max-w-xl ${className}`}>
-      <h2 style={SUBSECTION_TITLE}>{title}</h2>
-      <div className="mt-4">{children}</div>
-    </section>
-  );
-}
+type MembershipPane = "active" | "inactive" | "pending";
 
 function MembershipRow({
   name,
@@ -153,6 +131,7 @@ export function EntityMembershipsPage() {
   const [fieldError, setFieldError] = useState<FieldError>(null);
   const [sending, setSending] = useState(false);
   const [selected, setSelected] = useState<MembershipDetail | null>(null);
+  const [pane, setPane] = useState<MembershipPane>("active");
 
   const openMembership = (kind: MembershipKind, name: string, detail: string) => {
     setSelected({ kind, name, detail });
@@ -180,7 +159,7 @@ export function EntityMembershipsPage() {
       supabase
         .from("entity_membership_requests")
         .select(
-          "id, team_id, requester_id, team_name, email, first_name, last_name, date_of_birth, status, deny_expires_at, created_at",
+          "id, team_id, requester_id, team_name, email, first_name, last_name, date_of_birth, status, deny_expires_at, decided_at, created_at",
         )
         .eq("requester_id", user.id)
         .order("created_at", { ascending: false }),
@@ -302,7 +281,7 @@ export function EntityMembershipsPage() {
   if (!rows) {
     return (
       <section style={{ fontFamily: HELVETICA_STACK }}>
-        <AccountPageHeader title="Entity memberships" trailing={browseEntities} />
+        <AccountPageHeader title="Memberships" trailing={browseEntities} />
         <AccountFormSkeleton />
       </section>
     );
@@ -313,7 +292,7 @@ export function EntityMembershipsPage() {
 
   return (
     <section style={{ fontFamily: HELVETICA_STACK }}>
-      <AccountPageHeader title="Entity memberships" trailing={browseEntities} />
+      <AccountPageHeader title="Memberships" trailing={browseEntities} />
 
       <div className="mt-8 flex max-w-xl items-center gap-4">
         <input
@@ -368,60 +347,69 @@ export function EntityMembershipsPage() {
         </p>
       ) : null}
 
-      <MembershipSection title="Active memberships" className="mt-12">
-        {active.length === 0 ? (
-          <p style={accountSectionBodyStyle}>Entities you belong to will appear here.</p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {active.map((row) => {
-              const from = formatMembershipDate(row.memberFrom);
-              return (
-                <MembershipRow
-                  key={row.id}
-                  name={row.name}
-                  statusLabel="Active"
-                  statusColor={ACTIVE_STATUS_COLOR}
-                  detail={from ? `Member from ${from}` : "Member"}
-                  onOpen={() =>
-                    openMembership("active", row.name, from ? `Member from ${from}` : "Member")
-                  }
-                />
-              );
-            })}
-          </ul>
-        )}
-      </MembershipSection>
+      <div className="mt-6 max-w-xl">
+        <AccountSegmentIsland
+          ariaLabel="Membership status"
+          value={pane}
+          onChange={setPane}
+          options={[
+            { id: "active", label: "Active" },
+            { id: "inactive", label: "Inactive" },
+            { id: "pending", label: "Pending" },
+          ]}
+        />
+      </div>
 
-      <MembershipSection title="Inactive memberships">
-        {inactive.length === 0 ? (
-          <p style={accountSectionBodyStyle}>Cancelled memberships will appear here.</p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {inactive.map((row) => {
-              const cancelled = formatMembershipDate(row.cancelledAt);
-              return (
-                <MembershipRow
-                  key={row.id}
-                  name={row.name}
-                  statusLabel="Inactive"
-                  statusColor={ERROR_COLOR}
-                  detail={cancelled ? `Cancelled ${cancelled}` : "Cancelled"}
-                  onOpen={() =>
-                    openMembership(
-                      "inactive",
-                      row.name,
-                      cancelled ? `Cancelled ${cancelled}` : "Cancelled",
-                    )
-                  }
-                />
-              );
-            })}
-          </ul>
-        )}
-      </MembershipSection>
-
-      <MembershipSection title="Pending memberships">
-        {pending.length === 0 ? (
+      <div className="mt-6 max-w-xl">
+        {pane === "active" ? (
+          active.length === 0 ? (
+            <p style={accountSectionBodyStyle}>Entities you belong to will appear here.</p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {active.map((row) => {
+                const from = formatMembershipDate(row.memberFrom);
+                return (
+                  <MembershipRow
+                    key={row.id}
+                    name={row.name}
+                    statusLabel="Active"
+                    statusColor={ACTIVE_STATUS_COLOR}
+                    detail={from ? `Member from ${from}` : "Member"}
+                    onOpen={() =>
+                      openMembership("active", row.name, from ? `Member from ${from}` : "Member")
+                    }
+                  />
+                );
+              })}
+            </ul>
+          )
+        ) : pane === "inactive" ? (
+          inactive.length === 0 ? (
+            <p style={accountSectionBodyStyle}>Cancelled memberships will appear here.</p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {inactive.map((row) => {
+                const cancelled = formatMembershipDate(row.cancelledAt);
+                return (
+                  <MembershipRow
+                    key={row.id}
+                    name={row.name}
+                    statusLabel="Inactive"
+                    statusColor={ERROR_COLOR}
+                    detail={cancelled ? `Cancelled ${cancelled}` : "Cancelled"}
+                    onOpen={() =>
+                      openMembership(
+                        "inactive",
+                        row.name,
+                        cancelled ? `Cancelled ${cancelled}` : "Cancelled",
+                      )
+                    }
+                  />
+                );
+              })}
+            </ul>
+          )
+        ) : pending.length === 0 ? (
           <p style={accountSectionBodyStyle}>
             Requests you send will appear here until they are accepted.
           </p>
@@ -429,19 +417,29 @@ export function EntityMembershipsPage() {
           <ul className="flex flex-col gap-3">
             {pending.map((row) => {
               const sent = formatMembershipDate(row.created_at);
+              const cancelledOn = formatMembershipDate(row.decided_at);
               const denied = row.status === "denied";
+              const cancelled = row.status === "cancelled";
+              const statusLabel = cancelled ? "Cancelled" : denied ? "Denied" : "Pending";
+              const detail = cancelled
+                ? cancelledOn
+                  ? `Request cancelled ${cancelledOn}`
+                  : "Request cancelled"
+                : sent
+                  ? `Request sent ${sent}`
+                  : "Request sent";
               return (
                 <MembershipRow
                   key={row.id}
                   name={row.team_name}
-                  statusLabel={denied ? "Denied" : "Pending"}
-                  statusColor={denied ? ERROR_COLOR : MUTED_STATUS_COLOR}
-                  detail={sent ? `Request sent ${sent}` : "Request sent"}
+                  statusLabel={statusLabel}
+                  statusColor={denied || cancelled ? ERROR_COLOR : MUTED_STATUS_COLOR}
+                  detail={detail}
                   onOpen={() =>
                     openMembership(
-                      denied ? "denied" : "pending",
+                      cancelled ? "cancelled" : denied ? "denied" : "pending",
                       row.team_name,
-                      sent ? `Request sent ${sent}` : "Request sent",
+                      detail,
                     )
                   }
                 />
@@ -449,7 +447,7 @@ export function EntityMembershipsPage() {
             })}
           </ul>
         )}
-      </MembershipSection>
+      </div>
 
       <MembershipDetailModal
         open={selected != null}

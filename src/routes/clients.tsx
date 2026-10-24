@@ -7,5 +7,5 @@ export const Route = createFileRoute("/clients")({
     if (!isFeatureEnabled("clientsApp")) throw redirect({ to: "/calendar" });
   },
   component: ClientsPage,
-  head: () => ({ meta: [{ title: "Clients · Aponna" }] }),
+  head: () => ({ meta: [{ title: "Clients · Bissibox" }] }),
 });

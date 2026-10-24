@@ -1,15 +1,20 @@
 import type { CalendarEvent } from "@/components/calendar/yearStore";
 import type { ViewMode } from "@/components/calendar/UnifiedElasticGrid";
 import {
+  addDays,
+  calendarDayDelta,
   fromISOLocal,
   makeEventId,
   setHM,
   startOfDay,
+  startOfWeekMon,
   toISOLocal,
 } from "../components/calendar/dateUtils.ts";
+import { eventCoversDay } from "../components/calendar/multiDaySessions.ts";
 
 export type ClipboardSourceView = ViewMode;
 export type ClipboardOperation = "copy" | "cut";
+export type ClipboardSpan = "session" | "week";
 
 export type ClipboardSession = {
   dayOfWeek: number;
@@ -23,6 +28,8 @@ export type ClipboardSession = {
   location?: string | null;
   locationUrl?: string | null;
   appGroupId?: string | null;
+  /** Calendar days from the start day to the end day. 0 is a single day. */
+  spanDays?: number;
 };
 
 export type CalendarClipboardPayload = {
@@ -32,6 +39,8 @@ export type CalendarClipboardPayload = {
   operation: ClipboardOperation;
   savedAt: number;
   sessions: ClipboardSession[];
+  /** Week copies paste onto matching weekdays; omitted = session paste. */
+  span?: ClipboardSpan;
 };
 
 const STORAGE_KEY = "calendar_clipboard_v1";
@@ -65,6 +74,7 @@ function sessionFingerprint(s: ClipboardSession): string {
     s.location ?? "",
     s.locationUrl ?? "",
     s.appGroupId ?? "",
+    s.spanDays ?? 0,
   ].join("|");
 }
 
@@ -75,6 +85,7 @@ function eventToClipboardSession(event: CalendarEvent): ClipboardSession {
     dayOfWeek: start.getDay(),
     startMinutes: start.getHours() * 60 + start.getMinutes(),
     endMinutes: end.getHours() * 60 + end.getMinutes(),
+    spanDays: Math.max(0, calendarDayDelta(startOfDay(start), startOfDay(end))),
     allDay: event.allDay,
     title: event.title.trim(),
     color: event.color,
@@ -123,23 +134,38 @@ export function clearCalendarClipboard(): void {
   sessionStorage.removeItem(STORAGE_KEY);
 }
 
+export function clipboardSpan(payload: CalendarClipboardPayload): ClipboardSpan {
+  return payload.span === "week" ? "week" : "session";
+}
+
 export function canPasteClipboard(
   _targetView: ClipboardSourceView,
   targetCalId: string,
 ): boolean {
   const buffer = readCalendarClipboard();
   if (!buffer || buffer.sessions.length === 0) return false;
-  return buffer.calId === targetCalId;
+  if (buffer.calId !== targetCalId) return false;
+  return clipboardSpan(buffer) === "session";
+}
+
+export function canPasteWeekClipboard(targetCalId: string): boolean {
+  const buffer = readCalendarClipboard();
+  if (!buffer || buffer.sessions.length === 0) return false;
+  if (buffer.calId !== targetCalId) return false;
+  return clipboardSpan(buffer) === "week";
 }
 
 function buildEventOnDate(session: ClipboardSession, date: Date): CalendarEvent {
   const dayStart = startOfDay(date);
+  const endDay = addDays(dayStart, Math.max(0, session.spanDays ?? 0));
   const startH = Math.floor(session.startMinutes / 60);
   const startM = session.startMinutes % 60;
   const endH = Math.floor(session.endMinutes / 60);
   const endM = session.endMinutes % 60;
   const start = setHM(dayStart, startH, startM);
-  const end = session.allDay ? setHM(dayStart, 23, 59) : setHM(dayStart, endH, endM);
+  const end = session.allDay
+    ? setHM(endDay, 23, 59)
+    : setHM(endDay, endH, endM);
   return {
     id: makeEventId(),
     startISO: toISOLocal(start),
@@ -161,6 +187,7 @@ export function writeEventsToClipboard(
   calId: string,
   sourceView: ClipboardSourceView,
   operation: ClipboardOperation = "copy",
+  span: ClipboardSpan = "session",
 ): void {
   writeCalendarClipboard({
     version: 1,
@@ -169,6 +196,7 @@ export function writeEventsToClipboard(
     operation,
     savedAt: Date.now(),
     sessions: serializeEventsForClipboard(events),
+    ...(span === "week" ? { span } : {}),
   });
 }
 
@@ -177,6 +205,47 @@ export function buildPasteEventsAtDate(
   targetDate: Date,
 ): CalendarEvent[] {
   return payload.sessions.map((session) => buildEventOnDate(session, targetDate));
+}
+
+/** Monday-based offset for `Date#getDay` (Sun=0). */
+export function dateInWeekForDayOfWeek(weekStart: Date, jsDay: number): Date {
+  const monday = startOfWeekMon(weekStart);
+  const offset = jsDay === 0 ? 6 : jsDay - 1;
+  return addDays(monday, offset);
+}
+
+export function buildPasteEventsForWeek(
+  payload: CalendarClipboardPayload,
+  weekStart: Date,
+): CalendarEvent[] {
+  return payload.sessions.map((session) =>
+    buildEventOnDate(session, dateInWeekForDayOfWeek(weekStart, session.dayOfWeek)),
+  );
+}
+
+export function eventsCoveringWeek(
+  events: CalendarEvent[],
+  weekStart: Date,
+): CalendarEvent[] {
+  const monday = startOfWeekMon(weekStart);
+  const out: CalendarEvent[] = [];
+  const seen = new Set<string>();
+  for (const event of events) {
+    if (seen.has(event.id) || !event.startISO || !event.endISO) continue;
+    const start = fromISOLocal(event.startISO);
+    const end = fromISOLocal(event.endISO);
+    let covers = false;
+    for (let i = 0; i < 7; i++) {
+      if (eventCoversDay(start, end, addDays(monday, i))) {
+        covers = true;
+        break;
+      }
+    }
+    if (!covers) continue;
+    seen.add(event.id);
+    out.push(event);
+  }
+  return out;
 }
 
 const CALENDAR_DAY_END_MIN = 24 * 60;
@@ -207,7 +276,9 @@ export function buildPasteEventsAtDateTime(
   startMin: number,
 ): CalendarEvent[] {
   return payload.sessions.map((session) => {
-    if (session.allDay) return buildEventOnDate(session, targetDate);
+    if (session.allDay || (session.spanDays ?? 0) > 0) {
+      return buildEventOnDate(session, targetDate);
+    }
     const { startMinutes, endMinutes } = clampTimedPasteToDayEnd(
       startMin,
       clipboardDurationMin(session),
@@ -226,6 +297,10 @@ export function buildPasteEventsAtDateTime(
 export function copySessionSuccessMessage(title?: string | null): string {
   const label = title?.trim() || "Session";
   return `${label} was copied to the clipboard.`;
+}
+
+export function copyWeekSuccessMessage(): string {
+  return "Week was copied to the clipboard.";
 }
 
 export function duplicateSessionSuccessMessage(title?: string | null): string {

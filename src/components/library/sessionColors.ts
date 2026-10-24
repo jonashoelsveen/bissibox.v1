@@ -75,6 +75,64 @@ export function sessionTileChrome(
   };
 }
 
+/**
+ * Week and day tile fill. Light theme keeps the white mix above.
+ * Dark theme uses the month-chip tint over the canvas, so the same
+ * session colour reads the same in every view.
+ */
+export function sessionWeekDayTileFill(
+  color: string | null | undefined,
+  isActive = false,
+  dark = false,
+): string {
+  const fill = sessionTileChrome(color, isActive).fill;
+  if (
+    !dark ||
+    isActive ||
+    !color ||
+    isSessionWhiteColor(color) ||
+    isSessionBlackColor(color)
+  ) {
+    return fill;
+  }
+  return `linear-gradient(${color}1F, ${color}1F), var(--card)`;
+}
+
+/**
+ * Co-stripe shared by member team tiles and the member team-session menu.
+ * Lighter than the previous #e5e5ea band.
+ */
+export const TEAM_SESSION_STRIPE_GREY = "#f3f3f6";
+
+/**
+ * Member view of a team session. The colour band stays the current tint.
+ * The other band is that tint stepped toward a lighter grey. Stripes run
+ * from the top-right toward the bottom-left.
+ */
+export function withTeamSessionStripes(fill: string): string {
+  const co = `color-mix(in srgb, ${fill} 68%, ${TEAM_SESSION_STRIPE_GREY})`;
+  return `repeating-linear-gradient(135deg, ${fill} 0 6px, ${co} 6px 12px)`;
+}
+
+/** Session menu and left panel charcoal. */
+const SESSION_MENU_CHARCOAL = "#1c1c1e";
+/** One step lighter, so the dark diagonal still reads on that charcoal. */
+const SESSION_MENU_STRIPE = "#2a2a2c";
+
+/**
+ * Member team-session menu. Light theme is frosted white and a light grey.
+ * Dark theme uses the same charcoal as the normal session menu, with a
+ * slightly lifted co-stripe so the diagonal stays visible.
+ */
+export function teamSessionMenuBackground(dark = false): string {
+  if (dark) {
+    return `repeating-linear-gradient(135deg, ${SESSION_MENU_CHARCOAL} 0 6px, ${SESSION_MENU_STRIPE} 6px 12px)`;
+  }
+  const white = "color-mix(in oklch, var(--card) 70%, transparent)";
+  const grey = `color-mix(in srgb, ${TEAM_SESSION_STRIPE_GREY} 70%, transparent)`;
+  return `repeating-linear-gradient(135deg, ${white} 0 6px, ${grey} 6px 12px)`;
+}
+
 /** Month-chip fill (12% tint) with White / Black exceptions. */
 export function sessionMonthChipChrome(
   color: string | null | undefined,
@@ -85,13 +143,13 @@ export function sessionMonthChipChrome(
     return {
       backgroundColor: color ? chrome.fill : "hsl(var(--secondary))",
       color: chrome.fg,
-      boxShadow: `inset 2px 0 0 ${chrome.bar}`,
+      boxShadow: `inset 3px 0 0 ${chrome.bar}`,
     };
   }
   return {
     backgroundColor: isActive ? color : `${color}1F`,
     color: isActive ? "#ffffff" : color,
-    boxShadow: `inset 2px 0 0 ${chrome.bar}`,
+    boxShadow: `inset 3px 0 0 ${chrome.bar}`,
   };
 }
 

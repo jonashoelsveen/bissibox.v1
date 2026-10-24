@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS public.calendar_accounts (
   email text NULL,
   provider_account_id text NOT NULL,
   calendar_id text NULL,
-  calendar_name text NOT NULL DEFAULT 'Aponna Calendar',
+  calendar_name text NOT NULL DEFAULT 'Bissibox Calendar',
   access_token_enc text NULL,
   refresh_token_enc text NULL,
   caldav_password_enc text NULL,

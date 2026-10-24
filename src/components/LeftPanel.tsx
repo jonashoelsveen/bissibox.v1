@@ -46,6 +46,7 @@ export function LeftPanel({
   return (
     <>
       <aside
+        data-left-panel=""
         aria-hidden={!open}
         className="fixed left-0 top-0 bottom-0 z-[80] overflow-hidden"
         style={{
@@ -112,7 +113,9 @@ function ProfileFooter({
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
       if (!ref.current) return;
-      if (!ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target;
+      if (target instanceof Element && target.closest("[data-profile-settings-menu]")) return;
+      if (!ref.current.contains(target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -182,6 +185,7 @@ function ProfileFooter({
           onClose={() => setOpen(false)}
           onSignOut={() => void handleSignOut()}
           isLoggedIn={!!user}
+          showSettings
           className="absolute bottom-full left-2 right-2 z-50 mb-1.5 origin-bottom-left"
         />
       )}

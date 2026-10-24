@@ -66,11 +66,8 @@ function CalendarPageInner({ scale: calendarScale }: { scale: CalendarScale }) {
   /* ----- entity scope (single-calendar id) ----- */
   const [entityName, setEntityName] = useState("");
   const [entities, setEntities] = useState<SideNavEntity[]>([]);
-  const [entitiesLoaded, setEntitiesLoaded] = useState(false);
-  const entityKnown =
-    !!activeEntityId && entities.some((entity) => entity.id === activeEntityId);
-  /** Entity calendar seat — Bucket A: currently live, hidden this round. */
-  const isTeamMode = entityKnown && isEntityFeatureEnabled("entityCalendarSharing");
+  /** Active entity profile uses that entity's calendar, not the individual one. */
+  const isTeamMode = !!activeEntityId;
   const seat: "individual" | "admin" = isTeamMode ? "admin" : "individual";
 
   useEffect(() => {
@@ -79,10 +76,8 @@ function CalendarPageInner({ scale: calendarScale }: { scale: CalendarScale }) {
       if (!user) {
         setEntityName("");
         setEntities([]);
-        setEntitiesLoaded(true);
         return;
       }
-      setEntitiesLoaded(false);
       let list: Array<{ id: string; name: string }> = [];
       try {
         const res = await fetch("/api/account/entities", {
@@ -104,8 +99,7 @@ function CalendarPageInner({ scale: calendarScale }: { scale: CalendarScale }) {
         /* fall through to client */
       }
       if (cancelled) return;
-      /** Client entity list fallback — Bucket A: skip unless calendar sharing is on. */
-      if (list.length === 0 && isEntityFeatureEnabled("entityCalendarSharing")) {
+      if (list.length === 0) {
         const { data: owned } = await supabase
           .from("app_teams")
           .select("id,name")
@@ -136,7 +130,6 @@ function CalendarPageInner({ scale: calendarScale }: { scale: CalendarScale }) {
         list = [...ownedList, ...adminList];
       }
       setEntities(list.map((e) => ({ id: e.id, name: e.name })));
-      setEntitiesLoaded(true);
       const found = list.find((e) => e.id === activeEntityId);
       setEntityName(found?.name ?? "");
     })();
@@ -161,16 +154,14 @@ function CalendarPageInner({ scale: calendarScale }: { scale: CalendarScale }) {
 
   const { calId, calTitle } = useMemo(() => {
     if (user) {
-      if (!entitiesLoaded) return { calId: "", calTitle: "Calendar" };
       if (activeEntityId) {
-        if (!isTeamMode) return { calId: `user:${user.id}`, calTitle: "My calendar" };
-        return { calId: `team:${activeEntityId}`, calTitle: `${entityName || "Team"} calendar` };
+        return { calId: `team:${activeEntityId}`, calTitle: `${entityName || "Entity"} calendar` };
       }
       return { calId: `user:${user.id}`, calTitle: "My calendar" };
     }
     if (cachedScope?.calId) return { calId: cachedScope.calId, calTitle: cachedScope.calTitle };
     return { calId: "", calTitle: "Calendar" };
-  }, [user, activeEntityId, entityName, cachedScope, isTeamMode, entitiesLoaded]);
+  }, [user, activeEntityId, entityName, cachedScope]);
 
   useEffect(() => {
     if (!user || !calId) return;
@@ -364,6 +355,7 @@ function CalendarPageInner({ scale: calendarScale }: { scale: CalendarScale }) {
     >
     <div
       ref={rootRef}
+      data-calendar-root=""
       className={`h-full overflow-hidden bg-white ${searchActive ? "calendar-search-active" : ""}`}
     >
       <CalendarSearchToggle />
@@ -387,6 +379,7 @@ function CalendarPageInner({ scale: calendarScale }: { scale: CalendarScale }) {
             calendarScale={calendarScale}
             panelOpen={panelOpen}
             railViewScope={panelScopeKey}
+            calId={calId}
           />
         </div>
       </LeftPanel>

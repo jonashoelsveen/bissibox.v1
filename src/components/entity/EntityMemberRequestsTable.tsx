@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   ColumnResizeHandle,
   columnWidthConfigs,
@@ -6,6 +8,7 @@ import {
 } from "@/hooks/useTableColumnWidths";
 import type { EntityGroup } from "@/hooks/useEntityRoster";
 import type { EntityMembershipRequest } from "@/hooks/useEntityMembershipRequests";
+import { HELVETICA_STACK } from "@/lib/cloud-landing-design";
 import { cn } from "@/lib/utils";
 
 const REQUEST_COLUMNS = [
@@ -38,11 +41,13 @@ export function EntityMemberRequestsTable({
   busyIds: Set<string>;
   onDecide: (
     requestId: string,
-    action: "accept" | "deny",
+    action: "accept" | "deny" | "cancel",
     groupId: string | null,
-  ) => Promise<unknown>;
+  ) => Promise<{ ok: boolean } | void>;
 }) {
   const [groupById, setGroupById] = useState<Record<string, string>>({});
+  const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const widthConfigs = useMemo(() => columnWidthConfigs([...REQUEST_COLUMNS]), []);
   const { isResizing, startResize, dataColumnsTemplate } = useTableColumnWidths(
     "entity-member-requests",
@@ -61,7 +66,19 @@ export function EntityMemberRequestsTable({
     [requests],
   );
 
-  const gridTemplate = `${dataColumnsTemplate} minmax(148px, 1fr)`;
+  const gridTemplate = `${dataColumnsTemplate} minmax(176px, 1fr)`;
+  const deleting = deleteTarget ? busyIds.has(deleteTarget.id) : false;
+
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleting) return;
+    setDeleteError(null);
+    const result = await onDecide(deleteTarget.id, "cancel", null);
+    if (result?.ok) {
+      setDeleteTarget(null);
+      return;
+    }
+    setDeleteError("Could not delete this request.");
+  };
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-white">
@@ -136,6 +153,18 @@ export function EntityMemberRequestsTable({
                   <button
                     type="button"
                     disabled={busy}
+                    aria-label="Delete request"
+                    onClick={() => {
+                      setDeleteError(null);
+                      setDeleteTarget(row);
+                    }}
+                    className="grid h-6 w-6 cursor-pointer place-items-center text-[#FF3B30] disabled:cursor-default disabled:opacity-40"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" strokeWidth={2.25} />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
                     onClick={() => void onDecide(row.id, "deny", null)}
                     className="cursor-pointer text-[12px] font-medium text-[#FF3B30] disabled:cursor-default disabled:opacity-40"
                   >
@@ -155,6 +184,72 @@ export function EntityMemberRequestsTable({
           })
         )}
       </div>
+      <DeleteRequestModal
+        open={deleteTarget != null}
+        deleting={deleting}
+        error={deleteError}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setDeleteTarget(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={() => void confirmDelete()}
+      />
     </div>
+  );
+}
+
+function DeleteRequestModal({
+  open,
+  deleting,
+  error,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  deleting: boolean;
+  error: string | null;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[100] bg-black/40 duration-0" />
+        <DialogPrimitive.Content
+          className="fixed left-1/2 top-1/2 z-[101] w-[min(92vw,340px)] -translate-x-1/2 -translate-y-1/2 rounded-[16px] bg-white px-5 pb-5 pt-5 shadow-[0_12px_40px_rgba(0,0,0,0.18)] outline-none duration-0"
+          style={{ fontFamily: HELVETICA_STACK }}
+          onOpenAutoFocus={(event) => event.preventDefault()}
+        >
+          <DialogPrimitive.Title className="text-[15px] font-medium leading-snug text-ink">
+            Delete this request?
+          </DialogPrimitive.Title>
+          <DialogPrimitive.Description className="mt-2 text-[13px] leading-snug text-ink">
+            Are you sure you want to delete this request? The member will see that their request
+            has been cancelled.
+          </DialogPrimitive.Description>
+          {error ? <p className="mt-2 text-[13px] text-[#FF3B30]">{error}</p> : null}
+          <div className="mt-5 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={() => onOpenChange(false)}
+              className="h-8 cursor-pointer rounded-[10px] bg-[#1d1d1f] px-3.5 text-[13px] text-white transition-colors hover:bg-black disabled:cursor-default disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={onConfirm}
+              className="h-8 cursor-pointer rounded-[10px] bg-[#FF3B30] px-3.5 text-[13px] text-white transition-colors hover:bg-[#E0352B] disabled:cursor-default disabled:opacity-50"
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </button>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

@@ -1,6 +1,6 @@
 /**
- * Aponna brand mark for top tab bars (Cloud + Account).
- * Sourced from Proton Drive/Aponna/icon4.svg.
+ * Bissibox brand mark for top tab bars (Cloud + Account).
+ * Sourced from Proton Drive/Bissibox/icon4.svg.
  */
 
 import {

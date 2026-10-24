@@ -9,7 +9,7 @@ const Body = z.object({
   expires_at: z.number().optional(),
 });
 
-/** Persist an in-memory Supabase session into the HTTP-only aponna_session cookie. */
+/** Persist an in-memory Supabase session into the HTTP-only bissibox_session cookie. */
 export const Route = createFileRoute("/api/auth/activate")({
   server: {
     handlers: {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { AccountSegmentIsland } from "@/components/account/AccountSegmentIsland";
 import {
   AccountFormSkeleton,
   AccountPageHeader,
@@ -32,14 +33,19 @@ const SECTION_TITLE: CSSProperties = {
   color: "#1d1d1f",
 };
 
-const TAB_SURFACE =
-  "overflow-hidden rounded-[10px] border border-[#1d1d1f] bg-transparent";
+const TAB_SURFACE = "overflow-hidden rounded-[10px] bg-transparent";
+
+function ProfileTabChevron({ open }: { open: boolean }) {
+  const Icon = open ? ChevronDown : ChevronRight;
+  return (
+    <Icon aria-hidden className="h-4 w-4 shrink-0 text-[#6e6e73]" strokeWidth={1.75} />
+  );
+}
 
 /** Space between the tab icon/name row and the first field label. */
 const TAB_EXPAND_PAD = "px-3 pb-4 pt-[14px]";
 
-/** Collapsed individual tab + expanded name field, so Entity profiles stays put. */
-const INDIVIDUAL_SECTION_MIN_H = "min-h-[9rem]";
+type ProfilePane = "individual" | "entities";
 
 function personalInitialFromUser(
   user: { email?: string | null; user_metadata?: Record<string, unknown> } | null,
@@ -62,6 +68,7 @@ export function AccountProfilesPage() {
   const { displayName, personalName, setDisplayName } = useProfileDisplayName();
   const { groups, loading, createGroup, patchGroup, persistGroup, deleteGroup } =
     useUserGroups();
+  const [pane, setPane] = useState<ProfilePane>("individual");
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -73,6 +80,7 @@ export function AccountProfilesPage() {
   const persistTimers = useRef<Record<string, number>>({});
   const focusNameOnOpenRef = useRef(false);
   const personalInitial = personalInitialFromUser(user, displayName);
+  const showEntityPane = isEntityFeatureEnabled("entityProfiles");
   const individualOpen = openId === INDIVIDUAL_TAB;
 
   useEffect(
@@ -157,12 +165,25 @@ export function AccountProfilesPage() {
     <section style={{ fontFamily: HELVETICA_STACK }}>
       <AccountPageHeader title="Profiles" />
 
-      <div className="mt-8 max-w-lg space-y-10">
-        <section>
+      <div className="mt-8 max-w-lg">
+        {showEntityPane ? (
+          <AccountSegmentIsland
+            ariaLabel="Profile kind"
+            value={pane}
+            onChange={setPane}
+            options={[
+              { id: "individual", label: "Individual" },
+              { id: "entities", label: "Entities" },
+            ]}
+          />
+        ) : (
           <h2 className="mb-4" style={SECTION_TITLE}>
             Individual profile
           </h2>
-          <div className={INDIVIDUAL_SECTION_MIN_H}>
+        )}
+
+        {pane === "individual" || !showEntityPane ? (
+          <div className={showEntityPane ? "mt-6" : undefined}>
             <div className={TAB_SURFACE}>
             <button
               type="button"
@@ -174,10 +195,10 @@ export function AccountProfilesPage() {
                 setOpenId(INDIVIDUAL_TAB);
               }}
               aria-expanded={individualOpen}
-              className="flex h-11 w-full items-center gap-2.5 px-3 text-left"
+              className="flex h-11 w-full cursor-pointer items-center gap-2.5 px-3 text-left"
               style={{
                 fontFamily: HELVETICA_STACK,
-                fontWeight: individualOpen ? 600 : 400,
+                fontWeight: 400,
                 color: "#1d1d1f",
               }}
             >
@@ -187,6 +208,7 @@ export function AccountProfilesPage() {
               <span className="min-w-0 flex-1 truncate text-sm">
                 {personalName}
               </span>
+              <ProfileTabChevron open={individualOpen} />
             </button>
             {individualOpen ? (
               <div className={TAB_EXPAND_PAD}>
@@ -203,15 +225,9 @@ export function AccountProfilesPage() {
             ) : null}
             </div>
           </div>
-        </section>
-
-        {/** Entity profiles section — Bucket A: currently live, hidden this round. */}
-        {isEntityFeatureEnabled("entityProfiles") ? (
-        <section>
-          <div className="mb-4 flex h-8 items-center gap-2">
-            <h2 className="min-w-0 flex-1" style={SECTION_TITLE}>
-              Entity profiles
-            </h2>
+        ) : (
+        <div className="mt-6">
+          <div className="mb-4 flex h-8 items-center justify-end">
             <button
               type="button"
               onClick={() => void handleAddEntity()}
@@ -237,10 +253,10 @@ export function AccountProfilesPage() {
                       type="button"
                       onClick={() => setOpenId(open ? null : group.id)}
                       aria-expanded={open}
-                      className="flex h-11 w-full items-center gap-2.5 px-3 text-left text-sm"
+                      className="flex h-11 w-full cursor-pointer items-center gap-2.5 px-3 text-left text-sm"
                       style={{
                         fontFamily: HELVETICA_STACK,
-                        fontWeight: open ? 600 : 400,
+                        fontWeight: 400,
                         color: "#1d1d1f",
                       }}
                     >
@@ -250,6 +266,7 @@ export function AccountProfilesPage() {
                       <span className="min-w-0 flex-1 truncate">
                         {group.name.trim() || "New entity"}
                       </span>
+                      <ProfileTabChevron open={open} />
                     </button>
                     {open ? (
                       <div className={TAB_EXPAND_PAD}>
@@ -278,8 +295,8 @@ export function AccountProfilesPage() {
               })}
             </div>
           )}
-        </section>
-        ) : null}
+        </div>
+        )}
       </div>
 
       <DeleteEntityProfileModal

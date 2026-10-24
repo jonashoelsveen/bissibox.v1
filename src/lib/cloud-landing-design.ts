@@ -39,7 +39,7 @@ export const topBarBrandLabelStyle: CSSProperties = {
   whiteSpace: "nowrap",
 };
 
-/** Aponna Cloud / Account hero display width. Other heroes use this width times their scale. */
+/** Bissibox Cloud / Account hero display width. Other heroes use this width times their scale. */
 export const HERO_ILLUSTRATION_DISPLAY_PX = 576;
 export const HERO_ILLUSTRATION_DISPLAY_VW = 111.6;
 
@@ -47,7 +47,7 @@ export const HERO_ILLUSTRATION_DISPLAY_VW = 111.6;
 export const BISSIBOX_DESKTOP_MIN_PX = 640;
 
 export const BISSIBOX_COMPACT_SCREEN_NOTICE =
-  "The bissibox platform require a bigger screen size, for optimal use. Please increase the view window. If you're on mobile, switch to a larger screen.";
+  "Bissibox is an intuitive calendar that helps you organize your every day life. With an overview of future activities you are always prepared.";
 
 export const CLOUD_LANDING_CHROME_PATHS = ["/", "/cloud/individuals", "/cloud/entities"] as const;
 

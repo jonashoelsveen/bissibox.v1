@@ -39,6 +39,8 @@ function toSearchResult(e: CalendarEvent): SearchResult {
     endISO: e.endISO,
     color: e.color,
     allDay: e.allDay,
+    entityId: e.entityId,
+    signUpEnabled: e.signUpEnabled,
   };
 }
 

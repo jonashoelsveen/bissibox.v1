@@ -3,7 +3,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 interface Body {
   request_id?: string;
-  action?: "accept" | "deny";
+  action?: "accept" | "deny" | "cancel";
   group_id?: string | null;
 }
 
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     const action = body.action;
     const groupId = body.group_id?.trim() || null;
 
-    if (!requestId || (action !== "accept" && action !== "deny")) {
+    if (!requestId || (action !== "accept" && action !== "deny" && action !== "cancel")) {
       return json({ ok: false, error: "invalid_request" });
     }
 

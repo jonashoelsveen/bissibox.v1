@@ -16,7 +16,7 @@ export function canAccessTeamPlan(_plan: PlanTier | null | undefined): boolean {
 }
 
 /** Placeholder URL for Stripe checkout — replace when billing is wired */
-export const TEAM_CHECKOUT_URL = "https://aponna.com/upgrade/team";
+export const TEAM_CHECKOUT_URL = "https://bissibox.com/upgrade/team";
 
 /** Placeholder URL for plan management — replace when billing is wired */
-export const CHANGE_PLAN_URL = "https://aponna.com/upgrade/team";
+export const CHANGE_PLAN_URL = "https://bissibox.com/upgrade/team";

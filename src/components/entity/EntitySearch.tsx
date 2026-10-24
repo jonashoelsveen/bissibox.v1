@@ -24,6 +24,7 @@ import {
   type EntityMember,
 } from "@/hooks/useEntityRoster";
 import { CategoryActionsMenu } from "@/components/library/CategoryActionsMenu";
+import { GroupMembersIcon } from "@/components/entity/GroupMembersIcon";
 import { cn } from "@/lib/utils";
 
 const SEARCH_BTN_LEFT = 44;
@@ -176,20 +177,6 @@ function matchesQuery(hay: string, q: string) {
   return hay.toLowerCase().includes(q);
 }
 
-function SearchFolderIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden className="h-4 w-4 shrink-0">
-      <path
-        d="M1.5 3.25C1.5 2.56 2.06 2 2.75 2h3.05l1.2 1.2h6.25c.69 0 1.25.56 1.25 1.25v7.3c0 .69-.56 1.25-1.25 1.25H2.75c-.69 0-1.25-.56-1.25-1.25V3.25Z"
-        fill="#8E8CF0"
-      />
-      <path
-        d="M1.5 4.75h13v6.05c0 .69-.56 1.25-1.25 1.25H2.75c-.69 0-1.25-.56-1.25-1.25V4.75Z"
-        fill="#A5A3F5"
-      />
-    </svg>
-  );
-}
 
 function SearchUserIcon() {
   return (
@@ -383,7 +370,7 @@ function SearchGroupRow({
         renaming ? "ring-1 ring-inset ring-hairline" : "hover:bg-secondary/60",
       )}
     >
-      <SearchFolderIcon />
+      <GroupMembersIcon />
       {renaming ? (
         <input
           ref={inputRef}

@@ -136,7 +136,7 @@ function CloudHomePage() {
           title="Bissibox"
           description="" 
           readMoreTo="/cloud/individuals"
-          heroIllustrationSrc="/aponna-cloud-hero.png"
+          heroIllustrationSrc="/bissibox-cloud-hero.png"
           heroIllustrationAlt=""
           heroIllustrationWidth={585}
           heroIllustrationHeight={549}
@@ -147,7 +147,7 @@ function CloudHomePage() {
           paddingBottom={LANDING_DARK_BAND_GAP_ABOVE}
         />
       </div>
-      {/** Dark “Aponna Cloud for entities” band — Bucket A: currently live, hidden this round. */}
+      {/** Dark “Bissibox Cloud for entities” band — Bucket A: currently live, hidden this round. */}
       {isEntityFeatureEnabled("entityMarketing") ? (
       <div className="w-full" style={{ backgroundColor: LANDING_DARK_SECTION_BG }}>
         <div className="mx-auto flex max-w-6xl flex-col items-center px-6">
@@ -158,7 +158,7 @@ function CloudHomePage() {
             compactTop
             onDark
             paddingTop={`calc(${landingHeroPadding.paddingBottom} + ${LANDING_COMPACT_ILLUSTRATION_PAD_TOP} - ${LANDING_DARK_BAND_GAP_ABOVE})`}
-            heroIllustrationSrc="/aponna-cloud-entities-hero.png"
+            heroIllustrationSrc="/bissibox-cloud-entities-hero.png"
             heroIllustrationAlt=""
             heroIllustrationWidth={1170}
             heroIllustrationHeight={673}

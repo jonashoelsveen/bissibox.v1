@@ -162,7 +162,11 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
                   </div>
                   <div className="mt-3">
                     <MiniCalendar
-                      selectedRange={currentRange ?? { start: currentDate, end: currentDate }}
+                      selectedRange={
+                        viewMode === "week"
+                          ? (currentRange ?? { start: currentDate, end: currentDate })
+                          : { start: currentDate, end: currentDate }
+                      }
                       onSelectRange={(r) => {
                         setCurrentDate(r.start);
                         setCurrentRange(r);

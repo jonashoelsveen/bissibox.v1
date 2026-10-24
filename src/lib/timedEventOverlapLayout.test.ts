@@ -274,6 +274,34 @@ describe("layoutTimedOverlaps", () => {
     assert.equal(layout.get("__mark-preview__")?.colCount, 3);
   });
 
+  it("places a new session on the left, and to the right only when the left is taken", () => {
+    const beside = layoutTimedOverlaps([
+      { id: "early", startMin: 9 * 60, endMin: 10 * 60, sortIndex: 1 },
+      { id: "mid", startMin: 9 * 60 + 15, endMin: 10 * 60 + 45, sortIndex: 2 },
+      { id: "late", startMin: 9 * 60, endMin: 10 * 60, sortIndex: 3 },
+      {
+        id: "__mark-preview__",
+        startMin: 10 * 60,
+        endMin: 11 * 60,
+        sortIndex: Number.MAX_SAFE_INTEGER,
+      },
+    ]);
+    assert.equal(beside.get("__mark-preview__")?.col, 0);
+
+    const blocked = layoutTimedOverlaps([
+      { id: "a", startMin: 9 * 60, endMin: 11 * 60, sortIndex: 1 },
+      { id: "b", startMin: 9 * 60, endMin: 11 * 60, sortIndex: 2 },
+      {
+        id: "__mark-preview__",
+        startMin: 9 * 60 + 30,
+        endMin: 10 * 60 + 30,
+        sortIndex: Number.MAX_SAFE_INTEGER,
+      },
+    ]);
+    assert.equal(blocked.get("__mark-preview__")?.col, 2);
+    assert.equal(blocked.get("__mark-preview__")?.colCount, 3);
+  });
+
   it("maps cursor X onto overlap lanes", () => {
     assert.equal(overlapColumnAtX(1, 0.9), 0);
     assert.equal(overlapColumnAtX(2, 0.1), 0);

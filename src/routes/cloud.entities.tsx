@@ -24,7 +24,7 @@ function CloudEntitiesPage() {
     >
       <CloudReadMorePage
         title="Bissibox for entities"
-        illustrationSrc="/aponna-cloud-entities-info.png"
+        illustrationSrc="/bissibox-cloud-entities-info.png"
         illustrationWidth={810}
         illustrationHeight={926}
         illustrationScale={0.7}

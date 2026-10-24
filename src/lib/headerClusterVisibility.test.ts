@@ -78,6 +78,58 @@ test("week/day shows the view-type tab again before Today when widening", () => 
   assert.deepEqual(showToday, { hideToday: false, hideViewType: false });
 });
 
+test("events stays while Today yields on week and month", () => {
+  const events = 32;
+  const sticky = events + GAP + CLOCK;
+  const weekAll = sticky + GAP + TODAY + GAP + VIEW;
+  const weekWithoutToday = sticky + GAP + VIEW;
+
+  const dropToday = nextHeaderClusterHiding({
+    available: weekWithoutToday + 4,
+    eventsWidth: events,
+    clockWidth: CLOCK,
+    todayWidth: TODAY,
+    viewTypeWidth: VIEW,
+    hideToday: false,
+    hideViewType: false,
+  });
+  assert.deepEqual(dropToday, { hideToday: true, hideViewType: false });
+
+  const keepAll = nextHeaderClusterHiding({
+    available: weekAll + 20,
+    eventsWidth: events,
+    clockWidth: CLOCK,
+    todayWidth: TODAY,
+    viewTypeWidth: VIEW,
+    hideToday: false,
+    hideViewType: false,
+  });
+  assert.deepEqual(keepAll, { hideToday: false, hideViewType: false });
+
+  const monthNeeded = events + GAP + TODAY + GAP + VIEW;
+  const monthTight = nextHeaderClusterHiding({
+    available: events + GAP + VIEW + 4,
+    eventsWidth: events,
+    clockWidth: 0,
+    todayWidth: TODAY,
+    viewTypeWidth: VIEW,
+    hideToday: false,
+    hideViewType: false,
+  });
+  assert.deepEqual(monthTight, { hideToday: true, hideViewType: false });
+
+  const monthWide = nextHeaderClusterHiding({
+    available: monthNeeded + 20,
+    eventsWidth: events,
+    clockWidth: 0,
+    todayWidth: TODAY,
+    viewTypeWidth: VIEW,
+    hideToday: true,
+    hideViewType: false,
+  });
+  assert.deepEqual(monthWide, { hideToday: false, hideViewType: false });
+});
+
 test("month never hides the view-type tab", () => {
   const needed = TODAY + GAP + VIEW;
   const hiddenToday = nextHeaderClusterHiding({

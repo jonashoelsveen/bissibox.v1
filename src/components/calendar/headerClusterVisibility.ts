@@ -11,11 +11,13 @@ export type HeaderClusterHiding = {
 /**
  * Which header chips to drop so prev/next arrows stay uncovered.
  *
- * Week/day (clock present): Today first, then the view-type tab, clock last.
+ * Events and the clock stay. Week/day: Today first, then the view-type tab.
  * Month (no clock): only Today yields so the view-type tab stays on the right.
  */
 export function nextHeaderClusterHiding(args: {
   available: number;
+  /** Square Events toggle. Omitted on year view. */
+  eventsWidth?: number;
   clockWidth: number;
   todayWidth: number;
   viewTypeWidth: number;
@@ -26,9 +28,13 @@ export function nextHeaderClusterHiding(args: {
 }): HeaderClusterHiding {
   const gap = args.gap ?? HEADER_CLUSTER_GAP_PX;
   const slack = args.slack ?? HEADER_CLUSTER_SHOW_SLACK_PX;
+  const events = Math.max(0, args.eventsWidth ?? 0);
   const clock = Math.max(0, args.clockWidth);
   const today = Math.max(0, args.todayWidth);
   const view = Math.max(0, args.viewTypeWidth);
+  const sticky =
+    events + (events > 0 && clock > 0 ? gap : 0) + clock;
+  const stickyLead = sticky > 0 ? sticky + gap : 0;
 
   const hysteretic = (currentlyHidden: boolean, needed: number) =>
     currentlyHidden
@@ -37,16 +43,15 @@ export function nextHeaderClusterHiding(args: {
 
   if (clock <= 0) {
     return {
-      hideToday: hysteretic(args.hideToday, today + gap + view),
+      hideToday: hysteretic(args.hideToday, stickyLead + today + gap + view),
       hideViewType: false,
     };
   }
 
-  const clockAndView = clock + gap + view;
-  const hideViewType = hysteretic(args.hideViewType, clockAndView);
+  const hideViewType = hysteretic(args.hideViewType, stickyLead + view);
   const hideToday = hideViewType
     ? true
-    : hysteretic(args.hideToday, clock + gap + today + gap + view);
+    : hysteretic(args.hideToday, stickyLead + today + gap + view);
 
   return { hideToday, hideViewType };
 }

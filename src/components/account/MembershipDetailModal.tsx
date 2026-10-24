@@ -25,7 +25,7 @@ const NAME_STYLE = {
   lineHeight: 1.3,
 } as const;
 
-export type MembershipKind = "active" | "inactive" | "pending" | "denied";
+export type MembershipKind = "active" | "inactive" | "pending" | "denied" | "cancelled";
 
 export type MembershipDetail = {
   kind: MembershipKind;
@@ -36,7 +36,7 @@ export type MembershipDetail = {
 function ActionButton({
   kind,
 }: {
-  kind: Exclude<MembershipKind, "denied">;
+  kind: Exclude<MembershipKind, "denied" | "cancelled">;
 }) {
   if (kind === "active") {
     return (
@@ -155,7 +155,9 @@ export function MembershipDetailModal({
               />
             </div>
 
-            {detail && detail.kind !== "denied" ? <ActionButton kind={detail.kind} /> : null}
+            {detail && detail.kind !== "denied" && detail.kind !== "cancelled" ? (
+              <ActionButton kind={detail.kind} />
+            ) : null}
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

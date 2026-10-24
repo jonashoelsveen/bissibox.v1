@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { SessionDeleteScope } from "@/lib/sessionRepeat";
+import { useCalendarTheme } from "./calendarThemePref";
 
 const TRACK_HEIGHT = 28;
 const TRACK_PADDING = 2;
@@ -23,6 +24,7 @@ export function SessionSeriesScopeTabs({
   value: "this" | "allInSeries";
   onChange: (scope: SessionDeleteScope) => void;
 }) {
+  const dark = useCalendarTheme() === "dark";
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [indicator, setIndicator] = useState({ left: TRACK_PADDING, width: 0 });
   const activeIndex = value === "allInSeries" ? 1 : 0;
@@ -58,13 +60,14 @@ export function SessionSeriesScopeTabs({
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute bg-white transition-[left,width] duration-150 ease-out"
+        className={`pointer-events-none absolute transition-[left,width] duration-150 ease-out ${dark ? "" : "bg-white"}`}
         style={{
           left: indicator.width > 0 ? indicator.left : TRACK_PADDING,
           width: indicator.width > 0 ? indicator.width : 0,
           height: TRACK_HEIGHT - TRACK_PADDING * 2,
           top: TRACK_PADDING,
           borderRadius: TAB_RADIUS,
+          backgroundColor: dark ? "#1c1c1e" : undefined,
         }}
       />
       <div
@@ -86,7 +89,9 @@ export function SessionSeriesScopeTabs({
               className={[
                 "relative z-[1] flex h-full items-center justify-center truncate text-[12px] leading-none transition-colors",
                 selected
-                  ? "font-medium text-muted-foreground"
+                  ? dark
+                    ? "font-medium text-[#f2f2f2]"
+                    : "font-medium text-muted-foreground"
                   : "font-normal text-muted-foreground/80 hover:text-muted-foreground",
               ].join(" ")}
             >

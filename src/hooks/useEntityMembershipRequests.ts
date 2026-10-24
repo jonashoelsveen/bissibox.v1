@@ -11,7 +11,8 @@ export type EntityMembershipRequest = {
   first_name: string | null;
   last_name: string | null;
   date_of_birth: string | null;
-  status: "pending" | "denied";
+  status: "pending" | "denied" | "cancelled";
+  decided_at?: string | null;
   deny_expires_at: string | null;
   created_at: string;
 };
@@ -82,7 +83,7 @@ export function useEntityMembershipRequests(teamId: string | null) {
   const decide = useCallback(
     async (
       requestId: string,
-      action: "accept" | "deny",
+      action: "accept" | "deny" | "cancel",
       groupId?: string | null,
     ): Promise<DecideResult> => {
       if (!teamId) return { ok: false, error: "no_team" };

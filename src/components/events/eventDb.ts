@@ -96,9 +96,9 @@ function parseMeta(raw: string | null | undefined): EventUiMeta | null {
   if (!raw || !raw.trim().startsWith("{")) return null;
   try {
     const parsed = JSON.parse(raw) as Partial<EventUiMeta> & {
-      __aponna_event_ui?: boolean;
+      __bissibox_event_ui?: boolean;
     };
-    if (parsed.__aponna_event_ui !== true && parsed.v !== 1) return null;
+    if (parsed.__bissibox_event_ui !== true && parsed.v !== 1) return null;
     return {
       v: 1,
       ticketColor:
@@ -133,7 +133,7 @@ function encodeMeta(draft: EventDraft): string {
     };
   }
   const payload = {
-    __aponna_event_ui: true,
+    __bissibox_event_ui: true,
     v: 1 as const,
     ticketColor: draft.ticketColor || DEFAULT_TICKET_COLOR,
     mapboxPlaceId: draft.location.mapboxPlaceId,

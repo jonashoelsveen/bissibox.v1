@@ -48,7 +48,7 @@ export function parseCloudSignInSearch(
   return {};
 }
 
-export const CLOUD_OPEN_SIGNIN = "aponna-cloud-open-signin";
+export const CLOUD_OPEN_SIGNIN = "bissibox-cloud-open-signin";
 
 /** Open the in-page Cloud SignInModal without a `?signin=` navigation. */
 export function requestCloudSignIn() {

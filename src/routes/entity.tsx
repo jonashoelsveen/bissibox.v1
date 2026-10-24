@@ -10,7 +10,7 @@ export const Route = createFileRoute("/entity")({
   component: EntityPage,
   head: () => ({
     meta: [
-      { title: "Entity · Aponna" },
+      { title: "Entity · Bissibox" },
       { name: "description", content: "Entity workspace." },
     ],
   }),

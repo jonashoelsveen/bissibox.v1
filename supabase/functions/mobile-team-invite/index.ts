@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
       Deno.env.get("CLOUD_URL") ||
       Deno.env.get("APP_URL") ||
       req.headers.get("origin") ||
-      "https://aponnacloud.com";
+      "https://bissiboxcloud.com";
     const acceptUrl = `${cloudUrl.replace(/\/$/, "")}/accept-entity-invite?token=${token}`;
 
     const teamName = escapeHtml(team.name);
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
         </p>
         <p style="font-size: 13px; color: #666;">If you weren't expecting this invitation you can safely ignore this email.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
-        <p style="font-size: 12px; color: #999;">Aponna Cloud · Team invitation</p>
+        <p style="font-size: 12px; color: #999;">Bissibox Cloud · Team invitation</p>
       </div>
     `;
 

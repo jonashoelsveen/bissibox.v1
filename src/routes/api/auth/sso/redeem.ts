@@ -7,7 +7,7 @@ import {
 } from "@/lib/auth-cookie.server";
 import { getAccountUrlFromRequest } from "@/lib/app-surface";
 
-/** Complete cross-domain SSO — sets `aponna_session` on the account host. */
+/** Complete cross-domain SSO — sets `bissibox_session` on the account host. */
 export const Route = createFileRoute("/api/auth/sso/redeem")({
   server: {
     handlers: {

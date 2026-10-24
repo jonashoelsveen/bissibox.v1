@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Pencil } from "lucide-react";
 import {
   DEFAULT_GROUP_COLOR,
   DEFAULT_GROUP_NAME,
@@ -9,6 +9,7 @@ import {
 } from "@/hooks/useEntityRoster";
 import { countPeopleInGroup } from "@/lib/entityRosterDisplay";
 import { EntitySimpleDataTable } from "@/components/entity/EntitySimpleDataTable";
+import { GroupMembersIcon } from "@/components/entity/GroupMembersIcon";
 import { DeleteGroupMembersDialog } from "@/components/entity/DeleteGroupMembersDialog";
 import { CategoryActionsMenu } from "@/components/library/CategoryActionsMenu";
 
@@ -24,22 +25,6 @@ type GroupRow = {
   group: EntityGroup;
 };
 
-/** Same periwinkle folder as entity Table (overview) group rows. */
-function PeriwinkleFolderIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden className="h-4 w-4 shrink-0">
-      <path
-        d="M1.5 3.25C1.5 2.56 2.06 2 2.75 2h3.05l1.2 1.2h6.25c.69 0 1.25.56 1.25 1.25v7.3c0 .69-.56 1.25-1.25 1.25H2.75c-.69 0-1.25-.56-1.25-1.25V3.25Z"
-        fill="#8E8CF0"
-      />
-      <path
-        d="M1.5 4.75h13v6.05c0 .69-.56 1.25-1.25 1.25H2.75c-.69 0-1.25-.56-1.25-1.25V4.75Z"
-        fill="#A5A3F5"
-      />
-    </svg>
-  );
-}
-
 export function EntityGroupsTable({
   groups,
   admins,
@@ -48,6 +33,7 @@ export function EntityGroupsTable({
   onSaveGroup,
   onDeleteGroups,
   onRehomeGroupPeople,
+  onEditGroup,
 }: {
   groups: EntityGroup[];
   admins: EntityAdministrator[];
@@ -56,6 +42,7 @@ export function EntityGroupsTable({
   onSaveGroup: (row: EntityGroup) => Promise<EntityGroup | null>;
   onDeleteGroups: (ids: string[]) => Promise<boolean>;
   onRehomeGroupPeople: (fromGroupId: string, toGroupId: string | null) => Promise<boolean>;
+  onEditGroup: (row: EntityGroup) => void;
 }) {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -113,6 +100,7 @@ export function EntityGroupsTable({
       <EntitySimpleDataTable
         tableId="entity-groups"
         columns={GROUP_COLUMNS}
+        rowEndWidth={56}
         rows={rows}
         loading={loading}
         emptyText="No groups."
@@ -121,7 +109,7 @@ export function EntityGroupsTable({
             const renaming = renamingId === row.id;
             return (
               <span className="flex min-w-0 cursor-default items-center gap-1">
-                <PeriwinkleFolderIcon />
+                <GroupMembersIcon />
                 {renaming ? (
                   <input
                     ref={renameInputRef}
@@ -157,25 +145,39 @@ export function EntityGroupsTable({
         renderRowEnd={(row) => {
           const color = row.group.color || DEFAULT_GROUP_COLOR;
           return (
-            <CategoryActionsMenu
-              trigger={
-                <button
-                  type="button"
-                  onClick={(e) => e.stopPropagation()}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="grid h-6 w-6 cursor-pointer place-items-center text-muted-foreground hover:text-ink"
-                  aria-label="Group actions"
-                >
-                  <MoreHorizontal className="h-3.5 w-3.5" />
-                </button>
-              }
-              currentColor={color}
-              onColorChange={(hex) => {
-                void onSaveGroup({ ...row.group, color: hex });
-              }}
-              onRename={() => startRename(row.group)}
-              onDelete={() => void handleDelete(row.group)}
-            />
+            <span className="flex items-center">
+              <CategoryActionsMenu
+                trigger={
+                  <button
+                    type="button"
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="grid h-6 w-6 cursor-pointer place-items-center text-muted-foreground hover:text-ink"
+                    aria-label="Group actions"
+                  >
+                    <MoreHorizontal className="h-3.5 w-3.5" />
+                  </button>
+                }
+                currentColor={color}
+                onColorChange={(hex) => {
+                  void onSaveGroup({ ...row.group, color: hex });
+                }}
+                onRename={() => startRename(row.group)}
+                onDelete={() => void handleDelete(row.group)}
+              />
+              <button
+                type="button"
+                aria-label="Edit"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditGroup(row.group);
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="grid h-6 w-6 cursor-pointer place-items-center text-muted-foreground hover:text-ink"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            </span>
           );
         }}
       />

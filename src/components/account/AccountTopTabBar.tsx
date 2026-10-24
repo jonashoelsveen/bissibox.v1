@@ -56,7 +56,7 @@ function AccountMenuIcon() {
 }
 
 /**
- * Top bar for account.aponna.com — matches cloud landing chrome on the left.
+ * Top bar for account.bissibox.com — matches cloud landing chrome on the left.
  * Logged out: compact Log in (same pill as Cloud).
  * Logged in: brand + hamburger below 640px; Sign out lives in the nav.
  */

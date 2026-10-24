@@ -60,15 +60,13 @@ export interface DateRange {
 
 export type MiniCalendarViewMode = "day" | "week" | "month" | "monthMark";
 
-/** Week tint in week view, and in year view after a week-number click.
- *  After a year-view month click, stay on that month with no day/week mark. */
+/** Week tint only in week view. Day view marks one day. Month and year mark none. */
 export function miniCalendarViewMode(
   viewMode: "day" | "week" | "month" | "year",
-  yearWeekHighlight = false,
-  yearMonthHighlight = false,
+  _yearWeekHighlight = false,
+  _yearMonthHighlight = false,
 ): MiniCalendarViewMode {
-  if (viewMode === "week" || (viewMode === "year" && yearWeekHighlight)) return "week";
-  if (viewMode === "year" && yearMonthHighlight) return "monthMark";
+  if (viewMode === "week") return "week";
   if (viewMode === "day") return "day";
   return "month";
 }
@@ -87,6 +85,13 @@ export interface MiniCalendarProps {
    * (including days that belong to the previous or next month).
    */
   onPickDay?: (date: Date) => void;
+  /** Month to show when it differs from `selectedRange.start`. */
+  viewAnchor?: Date;
+  /**
+   * When the selected range spans more than one day, draw a continuous week-bar
+   * (same geometry as year-view week marks) instead of per-day chips.
+   */
+  rangeBar?: boolean;
 }
 
 export function MiniCalendar({
@@ -95,21 +100,27 @@ export function MiniCalendar({
   viewMode = "month",
   tone = "light",
   onPickDay,
+  viewAnchor,
+  rangeBar = false,
 }: MiniCalendarProps) {
   const dark = tone === "dark";
-  // Displayed month (independent from selection so user can browse)
-  const [view, setView] = useState(() => ({
-    year: selectedRange.start.getFullYear(),
-    month: selectedRange.start.getMonth(),
-  }));
-
-  // When external selection jumps to a different month, follow it.
-  useEffect(() => {
-    setView({
-      year: selectedRange.start.getFullYear(),
-      month: selectedRange.start.getMonth(),
-    });
-  }, [selectedRange.start.getTime()]); // eslint-disable-line react-hooks/exhaustive-deps
+  const follow = viewAnchor ?? selectedRange.start;
+  const anchorKey = follow.getFullYear() * 12 + follow.getMonth();
+  // Local browsing stays until the anchor month changes. The anchor itself
+  // is applied in this render, so a fast scroll does not paint the previous
+  // month for a frame and then replace it.
+  const [browsing, setBrowsing] = useState<{
+    fromKey: number;
+    year: number;
+    month: number;
+  } | null>(null);
+  const view =
+    browsing && browsing.fromKey === anchorKey
+      ? browsing
+      : { year: follow.getFullYear(), month: follow.getMonth() };
+  const showMonth = (year: number, month: number) => {
+    setBrowsing({ fromKey: anchorKey, year, month });
+  };
 
   const dim = daysInMonth(view.year, view.month);
   const firstDow = dowMon0(new Date(view.year, view.month, 1));
@@ -156,14 +167,14 @@ export function MiniCalendar({
     return () => window.removeEventListener("mouseup", onUp);
   }, []);
 
-  const prevMonth = () =>
-    setView((v) =>
-      v.month === 0 ? { year: v.year - 1, month: 11 } : { year: v.year, month: v.month - 1 },
-    );
-  const nextMonth = () =>
-    setView((v) =>
-      v.month === 11 ? { year: v.year + 1, month: 0 } : { year: v.year, month: v.month + 1 },
-    );
+  const prevMonth = () => {
+    if (view.month === 0) showMonth(view.year - 1, 11);
+    else showMonth(view.year, view.month - 1);
+  };
+  const nextMonth = () => {
+    if (view.month === 11) showMonth(view.year + 1, 0);
+    else showMonth(view.year, view.month + 1);
+  };
 
   return (
     <div
@@ -224,29 +235,76 @@ export function MiniCalendar({
       <div className="flex flex-col gap-y-0.5">
         {Array.from({ length: days.length / 7 }, (_, wi) => {
           const weekDays = days.slice(wi * 7, wi * 7 + 7);
+          const exactWeekSpan =
+            viewMode === "week" &&
+            ymdNum(selectedRange.start) !== ymdNum(selectedRange.end);
           const inSelectedWeek =
             viewMode === "week" &&
+            !exactWeekSpan &&
             ymdNum(startOfWeekMon(weekDays[0].date)) ===
               ymdNum(startOfWeekMon(selectedRange.start));
+          const spanRange =
+            rangeBar &&
+            ymdNum(selectedRange.start) !== ymdNum(selectedRange.end);
+          let spanFirst = -1;
+          let spanLast = -1;
+          if (exactWeekSpan) {
+            weekDays.forEach(({ date }, i) => {
+              if (!inSelectedRange(date)) return;
+              if (spanFirst < 0) spanFirst = i;
+              spanLast = i;
+            });
+          }
+          const hasSpanBar = spanFirst >= 0;
+          let rangeFirst = -1;
+          let rangeLast = -1;
+          if (spanRange) {
+            weekDays.forEach(({ date }, i) => {
+              if (!inSelectedRange(date)) return;
+              if (rangeFirst < 0) rangeFirst = i;
+              rangeLast = i;
+            });
+          }
+          const hasRangeBar = rangeFirst >= 0;
           return (
             <div key={wi} className="relative grid grid-cols-7">
-              {inSelectedWeek ? (
+              {inSelectedWeek || hasRangeBar || hasSpanBar ? (
                 <span
                   aria-hidden
                   className={[
                     "pointer-events-none absolute inset-y-0 rounded-sm",
-                    dark ? "bg-white/[0.08]" : "bg-primary/15",
+                    hasRangeBar
+                      ? dark
+                        ? "bg-white"
+                        : "bg-primary"
+                      : dark
+                        ? "bg-white/[0.08]"
+                        : "bg-primary/15",
                   ].join(" ")}
-                  style={{ left: WEEK_MARK_INSET, right: WEEK_MARK_INSET }}
+                  style={
+                    hasRangeBar
+                      ? {
+                          left: `calc(${rangeFirst} * 100% / 7 + ${WEEK_MARK_INSET})`,
+                          right: `calc(${6 - rangeLast} * 100% / 7 + ${WEEK_MARK_INSET})`,
+                        }
+                      : hasSpanBar
+                        ? {
+                            left: `calc(${spanFirst} * 100% / 7 + ${WEEK_MARK_INSET})`,
+                            right: `calc(${6 - spanLast} * 100% / 7 + ${WEEK_MARK_INSET})`,
+                          }
+                        : { left: WEEK_MARK_INSET, right: WEEK_MARK_INSET }
+                  }
                 />
               ) : null}
               {weekDays.map(({ date, inMonth }) => {
                 const isToday = sameDay(date, today);
+                const inBar = hasRangeBar && inSelectedRange(date);
+                const inSpan = hasSpanBar && inSelectedRange(date);
                 const isSelected =
-                  viewMode !== "week" &&
-                  viewMode !== "monthMark" &&
+                  viewMode === "day" &&
+                  !spanRange &&
                   inSelectedRange(date);
-                const weekBg = inSelectedWeek && !isSelected;
+                const weekBg = (inSelectedWeek || inBar || inSpan) && !isSelected;
                 return (
                   <button
                     type="button"
@@ -259,7 +317,7 @@ export function MiniCalendar({
                         return;
                       }
                       if (!inMonth) {
-                        setView({ year: date.getFullYear(), month: date.getMonth() });
+                        showMonth(date.getFullYear(), date.getMonth());
                         onSelectRange({ start: date, end: date });
                         return;
                       }
@@ -284,8 +342,12 @@ export function MiniCalendar({
                             ? "bg-[#ED5C5C] text-white"
                             : weekBg
                               ? dark
-                                ? "text-white/90"
-                                : "text-ink"
+                                ? hasRangeBar
+                                  ? "text-black"
+                                  : "text-white/90"
+                                : hasRangeBar
+                                  ? "text-primary-foreground"
+                                  : "text-ink"
                               : inMonth
                                 ? dark
                                   ? "text-white/90 hover:bg-white/[0.08]"

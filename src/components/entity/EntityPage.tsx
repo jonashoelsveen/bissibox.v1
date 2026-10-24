@@ -35,6 +35,8 @@ import {
   type EntityMember,
   type EntityMemberGroupRow,
 } from "@/hooks/useEntityRoster";
+import { AccountSegmentIsland } from "@/components/account/AccountSegmentIsland";
+import { GroupMembersIcon } from "@/components/entity/GroupMembersIcon";
 import { CategoryActionsMenu } from "@/components/library/CategoryActionsMenu";
 import { useUserGroups } from "@/hooks/useUserGroups";
 import {
@@ -50,7 +52,6 @@ import { EntityOverviewTable, type OverviewSelectionSummary } from "@/components
 import { EntityOrgChart } from "@/components/entity/EntityOrgChart";
 import { EntityMemberRequestsTable } from "@/components/entity/EntityMemberRequestsTable";
 import { EntityGroupsTable } from "@/components/entity/EntityGroupsTable";
-import { EntityMembersTable } from "@/components/entity/EntityMembersTable";
 import {
   EntitySearchInput,
   EntitySearchProvider,
@@ -77,7 +78,7 @@ function useEntityGroups() {
   return ctx;
 }
 
-type SectionKey = "overview" | "groups" | "members" | "chart" | "requests";
+type SectionKey = "groups" | "members" | "chart" | "requests";
 
 /** Row checkbox: opaque fill so row hover does not bleed into the square. */
 const ENTITY_ROW_CHECKBOX_CLASS =
@@ -105,7 +106,7 @@ export function EntityPage() {
     `entity:panel:open:${scope}`,
     true,
   );
-  const [section, setSection] = useState<SectionKey>("overview");
+  const [section, setSection] = useState<SectionKey>("members");
   const [searchEditingAdmin, setSearchEditingAdmin] = useState<EntityAdministrator | null>(null);
   const [searchEditingMember, setSearchEditingMember] = useState<EntityMember | null>(null);
 
@@ -202,7 +203,6 @@ export function EntityPage() {
 /* ---------------- Side nav ---------------- */
 
 const SECTIONS: { key: SectionKey; label: string }[] = [
-  { key: "overview", label: "Table" },
   { key: "groups", label: "Groups" },
   { key: "members", label: "Members" },
   { key: "chart", label: "Chart" },
@@ -351,7 +351,7 @@ function EntitySideNav({
         />
       ) : (
         <>
-      <ul className="flex flex-col">
+      <ul className="flex flex-col gap-0.5">
         {SECTIONS.map((s) => {
           const isActive = active === s.key;
           return (
@@ -573,9 +573,34 @@ function EntityMain({
   entityName: string;
   membershipRequests: ReturnType<typeof useEntityMembershipRequests>;
 }) {
+  const [editingGroup, setEditingGroup] = useState<EntityGroup | null>(null);
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {section === "overview" ? (
+      {section === "groups" ? (
+        <>
+          <EntityGroupsTable
+            groups={roster.groups}
+            admins={roster.admins}
+            members={roster.members}
+            loading={roster.loading}
+            onSaveGroup={roster.saveGroup}
+            onDeleteGroups={roster.deleteGroups}
+            onRehomeGroupPeople={roster.rehomeGroupPeople}
+            onEditGroup={setEditingGroup}
+          />
+          <GroupModal
+            open={!!editingGroup}
+            onOpenChange={(open) => {
+              if (!open) setEditingGroup(null);
+            }}
+            initial={editingGroup}
+            onSave={async (row) => {
+              const ok = await roster.saveGroup(row);
+              if (ok) setEditingGroup(null);
+            }}
+          />
+        </>
+      ) : section === "members" ? (
         <OverviewTable
           groups={roster.groups}
           admins={roster.admins}
@@ -591,23 +616,6 @@ function EntityMain({
           onDeleteMembers={roster.deleteMembers}
           onReorderGroups={roster.reorderGroups}
           onMovePeopleToGroup={roster.movePeopleToGroup}
-        />
-      ) : section === "groups" ? (
-        <EntityGroupsTable
-          groups={roster.groups}
-          admins={roster.admins}
-          members={roster.members}
-          loading={roster.loading}
-          onSaveGroup={roster.saveGroup}
-          onDeleteGroups={roster.deleteGroups}
-          onRehomeGroupPeople={roster.rehomeGroupPeople}
-        />
-      ) : section === "members" ? (
-        <EntityMembersTable
-          groups={roster.groups}
-          admins={roster.admins}
-          members={roster.members}
-          loading={roster.loading}
         />
       ) : section === "requests" ? (
         <EntityMemberRequestsTable
@@ -629,6 +637,7 @@ function EntityMain({
             if (result.ok && action === "accept") {
               await roster.reload();
             }
+            return result;
           }}
         />
       ) : (
@@ -868,6 +877,7 @@ function buildInviteMemberRow(
   const groups = defaultGroup ? [memberGroupRowFromEntityGroup(defaultGroup)] : [];
   return {
     id: crypto.randomUUID(),
+    userId: null,
     name: "",
     surname: "",
     sex: "",
@@ -1357,6 +1367,7 @@ function SharpModal({
   saveLabel = "Save",
   saveDisabled,
   allowClickWhenDisabled = false,
+  dirty,
   size = "md",
   variant = "default",
   subheader,
@@ -1372,6 +1383,8 @@ function SharpModal({
   saveLabel?: string;
   saveDisabled?: boolean;
   allowClickWhenDisabled?: boolean;
+  /** When false, the macOS Save button stays grey until the form changes. */
+  dirty?: boolean;
   size?: "md" | "lg";
   variant?: ModalChromeVariant;
   /** Optional strip directly under the title (e.g. About / Groups tabs). */
@@ -1381,6 +1394,7 @@ function SharpModal({
 }) {
   const native = variant === "native";
   const macos = variant === "macos";
+  const saveIdle = dirty === false;
 
   return (
     <ModalChromeContext.Provider value={variant}>
@@ -1416,7 +1430,7 @@ function SharpModal({
               "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
               size === "lg" ? "w-[640px] max-w-[92vw]" : "w-[520px] max-w-[92vw]",
               macos
-                ? "overflow-hidden rounded-[20px] border border-black/8 bg-[#F2F2F7] shadow-[0_24px_80px_rgba(0,0,0,0.28)]"
+                ? "overflow-hidden rounded-[20px] border border-black/8 bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)]"
                 : native
                   ? "overflow-hidden rounded-[14px] border border-black/10 bg-[#F5F5F7] shadow-[0_20px_50px_rgba(0,0,0,0.22)]"
                   : "border border-hairline bg-white shadow-xl",
@@ -1426,7 +1440,7 @@ function SharpModal({
               className={cn(
                 "flex items-center justify-between gap-3 px-5",
                 macos
-                  ? cn("bg-[#F2F2F7] py-3.5", !subheader && "border-b border-black/6")
+                  ? "bg-white py-3.5"
                   : native
                     ? "border-b border-black/8 py-4"
                     : "border-b border-hairline py-3",
@@ -1449,14 +1463,14 @@ function SharpModal({
                 className={cn(
                   "grid shrink-0 place-items-center transition-colors",
                   macos
-                    ? "h-7 w-7 rounded-full bg-black/[0.06] text-[#3C3C43] hover:bg-black/[0.1]"
+                    ? "h-8 w-8 text-[#3C3C43] hover:text-ink"
                     : native
                       ? "h-7 w-7 rounded-lg text-muted-foreground hover:bg-black/[0.05] hover:text-ink"
                       : "h-6 w-6 text-muted-foreground hover:text-ink",
                 )}
                 aria-label="Close"
               >
-                <X className={macos ? "h-3.5 w-3.5" : "h-4 w-4"} strokeWidth={macos ? 2.5 : 2} />
+                <X className={macos ? "h-6 w-6" : "h-4 w-4"} strokeWidth={macos ? 2.25 : 2} />
               </DialogPrimitive.Close>
             </div>
             {subheader ?? null}
@@ -1464,7 +1478,7 @@ function SharpModal({
               className={cn(
                 "px-5",
                 macos
-                  ? cn("bg-white", subheader ? "pb-5 pt-4" : "py-5")
+                  ? "bg-white py-5"
                   : native
                     ? "py-4"
                     : "py-4",
@@ -1478,7 +1492,7 @@ function SharpModal({
               className={cn(
                 "flex items-center justify-end gap-2 px-4 py-3",
                 macos
-                  ? "border-t border-black/6 bg-[#F2F2F7]"
+                  ? "bg-white"
                   : native
                     ? "border-t border-black/8 bg-[#F5F5F7]"
                     : "border-t border-hairline",
@@ -1502,11 +1516,14 @@ function SharpModal({
               <button
                 type="button"
                 onClick={onSave}
-                disabled={!!saveDisabled && !allowClickWhenDisabled}
+                disabled={(saveIdle || !!saveDisabled) && !allowClickWhenDisabled}
                 className={cn(
-                  "h-8 px-3.5 text-sm transition-colors disabled:opacity-40",
+                  "h-8 px-3.5 text-sm transition-colors",
+                  saveIdle ? "disabled:opacity-100" : "disabled:opacity-40",
                   macos
-                    ? "rounded-[9px] bg-ink font-semibold text-white hover:bg-ink/90"
+                    ? saveIdle
+                      ? "rounded-[9px] bg-[#c7c7cc] font-semibold text-white"
+                      : "rounded-[9px] bg-ink font-semibold text-white hover:bg-ink/90"
                     : native
                       ? "rounded-lg bg-ink text-white hover:bg-ink/90"
                       : "bg-ink text-white hover:bg-ink/90",
@@ -1615,9 +1632,8 @@ function AppleModalInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={cn(
-        "h-9 w-full rounded-[10px] border-0 bg-[#F2F2F7] px-3 text-[14px] text-ink",
+        "account-field h-9 w-full rounded-[10px] border-0 bg-[#e5e5ea] px-3 text-[15px] text-ink",
         "placeholder:text-[#8E8E93] outline-none",
-        "focus:bg-[#EBEBF0] focus:ring-0",
         props.className,
       )}
       style={{ fontFamily: HELVETICA_STACK, ...props.style }}
@@ -1633,8 +1649,7 @@ function AppleModalSelect(
     <select
       {...rest}
       className={cn(
-        "h-9 w-full appearance-none rounded-[10px] border-0 bg-[#F2F2F7] px-3 text-[14px] text-ink outline-none",
-        "focus:bg-[#EBEBF0] focus:ring-0",
+        "account-field h-9 w-full appearance-none rounded-[10px] border-0 bg-[#e5e5ea] px-3 text-[15px] text-ink outline-none",
         className,
       )}
       style={{ fontFamily: HELVETICA_STACK }}
@@ -1657,7 +1672,7 @@ function EntityContactFields({
 }) {
   const macos = useModalChrome() === "macos";
   return (
-    <div className={macos ? "h-full overflow-y-auto [scrollbar-width:thin]" : undefined}>
+    <div className={macos ? "h-full overflow-y-auto p-1 [scrollbar-width:thin]" : undefined}>
       {!macos ? (
         <>
           <div className="my-4 border-t border-hairline" />
@@ -1790,84 +1805,50 @@ function agentDebugLog(
 
 type PersonModalTab = "about" | "groups" | "contact";
 
-/** Chrome-style tab ears — same geometry as ClientsPage top tabs. */
-function ChromeTabEars() {
-  return (
-    <>
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-[15px] bottom-[-1px] top-0 z-0 bg-white"
-      />
-      <svg
-        aria-hidden
-        width="32"
-        height="39"
-        viewBox="0 0 32 39"
-        className="pointer-events-none absolute left-[-16px] top-0 z-0 block overflow-visible"
-      >
-        <path
-          d="M 0 39 L 0 38 A 16 16 0 0 0 16 22 L 16 8 A 8 8 0 0 1 24 0 L 32 0 L 32 39 Z"
-          fill="#FFFFFF"
-          shapeRendering="geometricPrecision"
-        />
-      </svg>
-      <svg
-        aria-hidden
-        width="32"
-        height="39"
-        viewBox="0 0 32 39"
-        className="pointer-events-none absolute right-[-16px] top-0 z-0 block overflow-visible"
-      >
-        <path
-          d="M 32 39 L 32 38 A 16 16 0 0 1 16 22 L 16 8 A 8 8 0 0 0 8 0 L 0 0 L 0 39 Z"
-          fill="#FFFFFF"
-          shapeRendering="geometricPrecision"
-        />
-      </svg>
-    </>
-  );
+function assignedGroupIds(rows: EntityMemberGroupRow[]): string[] {
+  return rows
+    .map((row) => row.groupId)
+    .filter((id): id is string => !!id)
+    .sort();
 }
 
-function PersonModalTabBar({
-  active,
-  onChange,
-}: {
-  active: PersonModalTab;
-  onChange: (tab: PersonModalTab) => void;
-}) {
-  const tabs: Array<{ key: PersonModalTab; label: string }> = [
-    { key: "about", label: "About" },
-    { key: "groups", label: "Groups" },
-    { key: "contact", label: "Contact" },
-  ];
-
-  return (
-    <div className="bg-[#E8E8ED] px-4 pt-1.5">
-      <div className="flex items-end gap-1" style={{ marginBottom: -1 }}>
-        {tabs.map((tab) => {
-          const isActive = active === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => onChange(tab.key)}
-              className={cn(
-                "relative inline-flex h-[38px] shrink-0 select-none items-center px-5 text-[13px] transition-colors",
-                isActive
-                  ? "z-[1] font-semibold text-ink"
-                  : "rounded-t-[10px] text-ink/65 hover:bg-black/[0.06] hover:text-ink",
-              )}
-              style={{ fontFamily: HELVETICA_STACK, marginBottom: -1, paddingBottom: 1 }}
-            >
-              {isActive ? <ChromeTabEars /> : null}
-              <span className="relative z-[1]">{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
+function personDraftDirty(
+  draft: {
+    name: string;
+    surname: string;
+    sex: string;
+    born: string;
+    email: string;
+    phone: string;
+    groups: EntityMemberGroupRow[];
+  },
+  initial: {
+    name: string;
+    surname: string;
+    sex: string;
+    born: string;
+    email: string;
+    phone: string;
+    groups?: EntityMemberGroupRow[];
+  },
+): boolean {
+  if (draft.name !== initial.name) return true;
+  if (draft.surname !== initial.surname) return true;
+  if (draft.sex !== initial.sex) return true;
+  if (draft.born !== initial.born) return true;
+  if (draft.email !== initial.email) return true;
+  if (draft.phone !== initial.phone) return true;
+  const nextIds = assignedGroupIds(draft.groups);
+  const initialIds = assignedGroupIds(initial.groups ?? []);
+  if (nextIds.length !== initialIds.length) return true;
+  return nextIds.some((id, index) => id !== initialIds[index]);
 }
+
+const PERSON_MODAL_TABS: { id: PersonModalTab; label: string }[] = [
+  { id: "about", label: "About" },
+  { id: "groups", label: "Groups" },
+  { id: "contact", label: "Contact" },
+];
 
 function PersonAboutForm({
   name,
@@ -1891,7 +1872,7 @@ function PersonAboutForm({
   firstNameLabel?: string;
 }) {
   return (
-    <div className="h-full overflow-y-auto [scrollbar-width:thin]">
+    <div className="h-full overflow-y-auto p-1 [scrollbar-width:thin]">
       <div className="grid grid-cols-2 gap-3">
         <div>
           <FieldLabel>{firstNameLabel}</FieldLabel>
@@ -1925,34 +1906,34 @@ function PersonAboutForm({
 
 function PersonModalTabPanel({
   tab,
+  onTabChange,
   about,
   groups,
   contact,
 }: {
   tab: PersonModalTab;
+  onTabChange: (tab: PersonModalTab) => void;
   about: ReactNode;
   groups: ReactNode;
   contact: ReactNode;
 }) {
   return (
-    <div className="h-full min-h-0">
-      {tab === "about" ? about : null}
-      {tab === "groups" ? groups : null}
-      {tab === "contact" ? contact : null}
+    <div className="flex h-full min-h-0 flex-col">
+      <AccountSegmentIsland
+        ariaLabel="Person details"
+        value={tab}
+        onChange={onTabChange}
+        options={PERSON_MODAL_TABS}
+      />
+      <div className="mt-5 min-h-0 flex-1">
+        {tab === "about" ? about : null}
+        {tab === "groups" ? groups : null}
+        {tab === "contact" ? contact : null}
+      </div>
     </div>
   );
 }
 
-function ModalFolderIcon() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden className="h-4 w-4 shrink-0">
-      <path
-        d="M1.5 3.25C1.5 2.56 2.06 2 2.75 2h3.05l1.2 1.2h6.25c.69 0 1.25.56 1.25 1.25v7.3c0 .69-.56 1.25-1.25 1.25H2.75c-.69 0-1.25-.56-1.25-1.25V3.25Z"
-        fill="#8E8CF0"
-      />
-    </svg>
-  );
-}
 
 function AdministratorModal({
   open,
@@ -2031,7 +2012,10 @@ function AdministratorModal({
       onCancel={() => onOpenChange(false)}
       onSave={() => onSave?.(buildRow())}
       saveDisabled={!name.trim() && !surname.trim()}
-      subheader={<PersonModalTabBar active={tab} onChange={setTab} />}
+      dirty={personDraftDirty(
+        { name, surname, sex, born, email, phone, groups },
+        initial,
+      )}
       bodyClassName="shrink-0 overflow-hidden"
       bodyStyle={{
         height: PERSON_MODAL_BODY_HEIGHT,
@@ -2041,6 +2025,7 @@ function AdministratorModal({
     >
       <PersonModalTabPanel
         tab={tab}
+        onTabChange={setTab}
         about={
           <PersonAboutForm
             name={name}
@@ -2197,6 +2182,7 @@ function MemberModal({
 
   const buildRow = (): EntityMember => ({
     id: initial.id,
+    userId: initial.userId,
     name,
     surname,
     sex,
@@ -2223,7 +2209,10 @@ function MemberModal({
       onCancel={() => onOpenChange(false)}
       onSave={() => onSave?.(buildRow())}
       saveDisabled={!name.trim() && !surname.trim()}
-      subheader={<PersonModalTabBar active={tab} onChange={setTab} />}
+      dirty={personDraftDirty(
+        { name, surname, sex, born, email, phone, groups },
+        initial,
+      )}
       bodyClassName="shrink-0 overflow-hidden"
       bodyStyle={{
         height: PERSON_MODAL_BODY_HEIGHT,
@@ -2233,6 +2222,7 @@ function MemberModal({
     >
       <PersonModalTabPanel
         tab={tab}
+        onTabChange={setTab}
         about={
           <PersonAboutForm
             name={name}
@@ -2366,7 +2356,7 @@ function MemberGroupsChecklist({
           className="flex min-h-0 flex-1 items-center justify-center px-4 text-center text-[13px] text-[#8E8E93]"
           style={{ fontFamily: HELVETICA_STACK }}
         >
-          No groups yet. Create a group from the Table page to assign this person.
+          No groups yet. Create a group from the Groups page to assign this person.
         </div>
       </div>
     );
@@ -2410,7 +2400,7 @@ function MemberGroupsChecklist({
                   className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded-none"
                   style={{ accentColor: PERSON_GROUP_CHECK_PURPLE }}
                 />
-                <ModalFolderIcon />
+                <GroupMembersIcon />
                 <span className="min-w-0 truncate font-medium">{label}</span>
               </label>
             );

@@ -1,12 +1,12 @@
-// Server-only HMAC-signed cookie helpers for the aponna_session cookie.
+// Server-only HMAC-signed cookie helpers for the bissibox_session cookie.
 // Holds the Supabase refresh token (and minimal user metadata) sealed with
 // BISSIBOX_SESSION_SECRET. Not encrypted — Supabase refresh tokens are already
 // opaque and HTTPS-only; HMAC prevents tampering.
 
 import { createHmac, timingSafeEqual } from "crypto";
 
-export const SESSION_COOKIE_NAME = "aponna_session";
-export const EMAIL_CHANGE_COOKIE_NAME = "aponna_email_change";
+export const SESSION_COOKIE_NAME = "bissibox_session";
+export const EMAIL_CHANGE_COOKIE_NAME = "bissibox_email_change";
 
 export interface SessionPayload {
   refresh_token: string;
@@ -51,7 +51,7 @@ function getSecret(): string {
   const s = process.env.BISSIBOX_SESSION_SECRET;
   if (s && s.length >= 16) return s;
   if (process.env.NODE_ENV !== "production") {
-    return "local-dev-aponna-session-secret";
+    return "local-dev-bissibox-session-secret";
   }
   throw new Error("BISSIBOX_SESSION_SECRET is missing or too short");
 }
@@ -81,11 +81,11 @@ export function resolveSessionCookieDomain(requestHost: string | null | undefine
     return null;
   }
 
-  if (hostname === "aponna.com" || hostname.endsWith(".aponna.com")) {
-    return ".aponna.com";
+  if (hostname === "bissibox.com" || hostname.endsWith(".bissibox.com")) {
+    return ".bissibox.com";
   }
 
-  const domain = process.env.APONNA_COOKIE_DOMAIN;
+  const domain = process.env.BISSIBOX_COOKIE_DOMAIN;
   if (domain && domain.length > 0) {
     const bare = domain.replace(/^\./, "").toLowerCase();
     if (hostname === bare || hostname.endsWith("." + bare)) {
@@ -138,7 +138,7 @@ export function unsealSession(cookie: string | undefined | null): SessionPayload
   return parsed;
 }
 
-/** Short-lived signed token to hand a session to account.aponna.com from another origin. */
+/** Short-lived signed token to hand a session to account.bissibox.com from another origin. */
 export interface SsoTransferPayload {
   purpose: "sso";
   refresh_token: string;

@@ -1,5 +1,5 @@
 /**
- * Entity Overview — macOS Finder-style hierarchical table: groups as folders,
+ * Entity Overview — macOS Finder-style hierarchical table: groups,
  * administrators and members nested inside each group.
  */
 
@@ -41,6 +41,7 @@ import {
 } from "@/lib/entityMemberMove";
 import { useEntityPeoplePointerDrag } from "@/lib/useEntityPeoplePointerDrag";
 import { cn } from "@/lib/utils";
+import { GroupMembersIcon } from "@/components/entity/GroupMembersIcon";
 
 const SELECTION_PURPLE = "#AF52DE";
 /** Finder-style hairline between consecutive selected rows — inset only, no layout shift. */
@@ -105,25 +106,6 @@ interface OverviewRow {
   groupRef?: EntityGroup;
   adminRef?: EntityAdministrator;
   memberRef?: EntityMember;
-}
-
-function PeriwinkleFolderIcon() {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      aria-hidden
-      className="h-4 w-4 shrink-0"
-    >
-      <path
-        d="M1.5 3.25C1.5 2.56 2.06 2 2.75 2h3.05l1.2 1.2h6.25c.69 0 1.25.56 1.25 1.25v7.3c0 .69-.56 1.25-1.25 1.25H2.75c-.69 0-1.25-.56-1.25-1.25V3.25Z"
-        fill="#8E8CF0"
-      />
-      <path
-        d="M1.5 4.75h13v6.05c0 .69-.56 1.25-1.25 1.25H2.75c-.69 0-1.25-.56-1.25-1.25V4.75Z"
-        fill="#A5A3F5"
-      />
-    </svg>
-  );
 }
 
 /** Filled user silhouette: circle head + semicircle upper body. */
@@ -929,7 +911,7 @@ function SortableOverviewGroupRow({
               <ChevronRight className="h-3.5 w-3.5" />
             )}
           </button>
-          <PeriwinkleFolderIcon />
+          <GroupMembersIcon />
           <span className="truncate">{row.name}</span>
         </div>
       </div>
@@ -1011,7 +993,7 @@ function OverviewChildRow({
         <div
           className={cn(
             "flex min-w-0 flex-1 items-center gap-1",
-            nested && "pl-5",
+            nested && "pl-7",
           )}
         >
           <OverviewUserIcon

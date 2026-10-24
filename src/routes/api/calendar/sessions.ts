@@ -12,7 +12,6 @@ import {
 import { getSupabaseAdminOrNull } from "@/lib/supabase-admin.server";
 import { loadVisibleCalendar } from "@/lib/calendarMemberOverlay.server";
 import { jsonSafeStringify } from "@/lib/calendarVisiblePayload";
-import { entityFeatureAllowedForActor } from "@/lib/entity-feature.server";
 import {
   entityCalendarSessionCorePayload,
   entityCalendarSessionRpcPayload,
@@ -235,14 +234,6 @@ async function handleUpsertRequest(request: Request): Promise<Response> {
   const scope = parseImportCalId(calId);
   if (!scope) return json({ error: "Invalid calId" }, 400);
 
-  /** Entity calendar writes — Bucket A+C: blocked unless entityCalendarSharing. */
-  if (
-    scope.kind === "team" &&
-    !(await entityFeatureAllowedForActor("entityCalendarSharing", auth.ctx))
-  ) {
-    return json({ error: "Not found" }, 404);
-  }
-
   const userClient = await createUserSupabaseClient(
     auth.ctx.accessToken,
     auth.ctx.refreshToken,
@@ -427,14 +418,6 @@ export const Route = createFileRoute("/api/calendar/sessions")({
         );
         const access = await assertCanImportToScope(userClient, auth.ctx.user.id, scope);
         if (!access.ok) return json({ error: access.error }, access.status);
-
-        /** Entity calendar list — Bucket A+C: blocked unless entityCalendarSharing. */
-        if (
-          scope.kind === "team" &&
-          !(await entityFeatureAllowedForActor("entityCalendarSharing", auth.ctx))
-        ) {
-          return json({ error: "Not found" }, 404);
-        }
 
         if (scope.kind === "user" && scope.userId === auth.ctx.user.id) {
           const visible = await loadVisibleCalendar(auth.ctx);

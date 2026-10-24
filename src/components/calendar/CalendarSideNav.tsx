@@ -15,6 +15,9 @@
 
 import { useEffect, useRef } from "react";
 import { MiniCalendar, type DateRange } from "./MiniCalendar";
+import { miniMonthAnchorForSpan } from "@/lib/weekHorizontalScroll";
+import { useLiveWeekSpan } from "@/lib/liveWeekSpan";
+import { useLiveMonthFocus } from "@/lib/liveMonthFocus";
 import {
   INDIVIDUAL_CATEGORIES,
 } from "./MonthGridType1";
@@ -96,6 +99,8 @@ export interface CalendarSideNavProps {
   panelOpen?: boolean;
   /** Scope for persisting mini vs upcoming (account / entity id). */
   railViewScope?: string;
+  /** Active calendar id, so member team sessions keep their stripe. */
+  calId?: string;
 }
 
 export function CalendarSideNav({
@@ -108,8 +113,25 @@ export function CalendarSideNav({
   calendarScale = "micro",
   panelOpen = true,
   railViewScope = "anon",
+  calId,
 }: CalendarSideNavProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const liveWeekSpan = useLiveWeekSpan();
+  const liveMonth = useLiveMonthFocus();
+  const miniRange =
+    viewMode === "week"
+      ? (liveWeekSpan ?? currentRange ?? { start: currentDate, end: currentDate })
+      : { start: currentDate, end: currentDate };
+  const miniSpanDays =
+    miniRange.start.getFullYear() !== miniRange.end.getFullYear() ||
+    miniRange.start.getMonth() !== miniRange.end.getMonth() ||
+    miniRange.start.getDate() !== miniRange.end.getDate();
+  const miniMonthAnchor =
+    viewMode === "month" && liveMonth
+      ? new Date(liveMonth.year, liveMonth.month, 1)
+      : viewMode === "week" && miniSpanDays
+        ? miniMonthAnchorForSpan(miniRange.start, miniRange.end)
+        : undefined;
   const hideTimerRef = useRef<number | null>(null);
   useEffect(() => {
     const el = scrollRef.current;
@@ -157,7 +179,7 @@ export function CalendarSideNav({
               "linear-gradient(to bottom, black 0, black calc(100% - 28px), transparent 100%)",
           }}
         >
-          <CalendarSearchResults />
+          <CalendarSearchResults calId={calId} />
         </div>
       ) : isMacro ? (
         <div
@@ -184,7 +206,8 @@ export function CalendarSideNav({
         <>
           <div className="shrink-0 pr-1.5">
             <MiniCalendar
-              selectedRange={currentRange ?? { start: currentDate, end: currentDate }}
+              selectedRange={miniRange}
+              viewAnchor={miniMonthAnchor}
               onSelectRange={(r) => onCurrentDateChange(r.start, r)}
               viewMode={viewMode}
             />

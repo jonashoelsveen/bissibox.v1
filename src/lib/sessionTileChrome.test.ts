@@ -10,6 +10,7 @@ import {
   SESSION_WHITE_INK,
   STANDARD_COLORS_NAMED,
   sessionTileChrome,
+  sessionWeekDayTileFill,
   standardColorLabel,
 } from "../components/library/sessionColors.ts";
 
@@ -50,5 +51,17 @@ describe("session colour palette", () => {
     assert.equal(rest.bar, "#ffffff");
     assert.equal(active.fg, "#ffffff");
     assert.equal(active.bar, "#ffffff");
+  });
+
+  it("paints dark week and day tiles with the month-chip tint", () => {
+    const light = sessionWeekDayTileFill("#3b82f6", false, false);
+    const dark = sessionWeekDayTileFill("#3b82f6", false, true);
+    assert.equal(light, sessionTileChrome("#3b82f6", false).fill);
+    assert.equal(dark, "linear-gradient(#3b82f61F, #3b82f61F), var(--card)");
+    assert.equal(sessionWeekDayTileFill("#3b82f6", true, true), "#3b82f6");
+    assert.equal(
+      sessionWeekDayTileFill(SESSION_COLOR_WHITE, false, true),
+      SESSION_COLOR_WHITE,
+    );
   });
 });

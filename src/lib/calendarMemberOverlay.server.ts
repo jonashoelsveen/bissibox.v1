@@ -4,6 +4,7 @@ import {
 } from "@/lib/account-auth.server";
 import { getSupabaseAdminOrNull } from "@/lib/supabase-admin.server";
 import {
+  entitySessionVisibleToMember,
   mergeSessionLists,
   parseVisibleCalendar,
   sessionEntityId,
@@ -11,7 +12,6 @@ import {
   type MemberEntityMembership,
   type VisibleCalendarPayload,
 } from "@/lib/calendarVisiblePayload";
-import { entityFeatureAllowedForActor } from "@/lib/entity-feature.server";
 
 export type { CalendarSessionRecord, MemberEntityMembership, VisibleCalendarPayload };
 export { parseVisibleCalendar };
@@ -44,9 +44,7 @@ function sessionVisibleToMember(
 ): boolean {
   const entityId = asUuid(row.entity_id);
   if (!entityId || !groupsByTeam.has(entityId)) return false;
-  const groupId = asUuid(row.app_group_id);
-  if (!groupId) return true;
-  return groupsByTeam.get(entityId)!.has(groupId);
+  return entitySessionVisibleToMember(asUuid(row.app_group_id), groupsByTeam.get(entityId)!, true);
 }
 
 /**
@@ -162,7 +160,7 @@ export async function loadSessionsByEntityMembership(
     for (const row of data ?? []) {
       const parsed = asSessionRow(row);
       if (!parsed) continue;
-      if (admin && !sessionVisibleToMember(parsed, groupsByTeam)) continue;
+      if (!sessionVisibleToMember(parsed, groupsByTeam)) continue;
       entitySessions.push(parsed);
     }
   }
@@ -184,44 +182,28 @@ export async function loadSessionsByEntityMembership(
   return { memberships, sessions: mergeSessionLists(personal, entitySessions) };
 }
 
-async function loadPersonalCalendarOnly(
-  ctx: AuthenticatedContext,
-): Promise<VisibleCalendarPayload> {
-  const userClient = await createUserSupabaseClient(ctx.accessToken, ctx.refreshToken);
-  const admin = await getSupabaseAdminOrNull();
-  const reader = admin ?? userClient;
-  const sessions: CalendarSessionRecord[] = [];
-  const { data, error } = await reader
-    .from("calendar_sessions")
-    .select("*")
-    .eq("user_id", ctx.user.id)
-    .is("entity_id", null);
-  if (error) console.error("[calendar visible] personal-only sessions", error.message);
-  for (const row of data ?? []) {
-    const parsed = asSessionRow(row);
-    if (parsed) sessions.push(parsed);
-  }
-  return { memberships: [], sessions };
-}
-
 function mergeVisible(
   fromTables: VisibleCalendarPayload,
   parsed: VisibleCalendarPayload,
 ): VisibleCalendarPayload {
-  return {
-    memberships: parsed.memberships.length > 0 ? parsed.memberships : fromTables.memberships,
-    sessions: mergeSessionLists(fromTables.sessions, parsed.sessions),
-  };
+  const memberships = fromTables.memberships.length > 0 ? fromTables.memberships : parsed.memberships;
+  const groupsByTeam = new Map(memberships.map((row) => [row.teamId, row.groupIds]));
+  const sessions = mergeSessionLists(fromTables.sessions, parsed.sessions).filter((row) => {
+    const entityId = sessionEntityId(row);
+    if (!entityId) return true;
+    const groups = groupsByTeam.get(entityId);
+    if (!groups) return false;
+    const rawGroup = row.app_group_id ?? row.appGroupId;
+    const groupId = typeof rawGroup === "string" ? rawGroup : null;
+    return entitySessionVisibleToMember(groupId, groups, true);
+  });
+  return { memberships, sessions };
 }
 
-/** Personal sessions plus All/group-visible entity sessions for the cookie user. */
+/** Personal sessions plus team sessions this member is meant to see. */
 export async function loadVisibleCalendar(
   ctx: AuthenticatedContext,
 ): Promise<VisibleCalendarPayload> {
-  /** Entity membership overlay — Bucket A+C: hidden unless entityCalendarSharing. */
-  if (!(await entityFeatureAllowedForActor("entityCalendarSharing", ctx))) {
-    return loadPersonalCalendarOnly(ctx);
-  }
   const email = typeof ctx.user.email === "string" ? ctx.user.email : "";
   const fromTables = await loadSessionsByEntityMembership(ctx);
   const rpcArgs = { p_user_id: ctx.user.id, p_email: email };
@@ -250,10 +232,6 @@ export async function loadEntitySessionsForMember(
   ctx: AuthenticatedContext,
   entityId: string,
 ): Promise<VisibleCalendarPayload> {
-  /** Entity-sessions-by-team — Bucket A+C: empty unless entityCalendarSharing. */
-  if (!(await entityFeatureAllowedForActor("entityCalendarSharing", ctx))) {
-    return { memberships: [], sessions: [] };
-  }
   const visible = await loadVisibleCalendar(ctx);
   const memberships = visible.memberships.filter((row) => row.teamId === entityId);
   const sessions = visible.sessions.filter((row) => sessionEntityId(row) === entityId);

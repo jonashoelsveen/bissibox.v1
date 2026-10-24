@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   // Fresh Worker under our Cloudflare account. Do not reuse
   // "tanstack-start-app" — that is Lovable's live production name.
-  "name": "aponna-cloud",
+  "name": "bissibox-cloud",
   "account_id": "73215b9f1aa9d1fcff098d521c87b5bc",
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],

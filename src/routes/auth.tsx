@@ -13,7 +13,7 @@ export const Route = createFileRoute("/auth")({
 
 /**
  * The old /auth UI has been replaced by the in-page SignInModal on the
- * Aponna Cloud home. Any legacy link to /auth simply forwards to "/" so
+ * Bissibox Cloud home. Any legacy link to /auth simply forwards to "/" so
  * the user lands on the landing page and can sign in there.
  */
 function AuthRedirect() {

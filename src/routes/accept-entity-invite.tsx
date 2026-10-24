@@ -18,7 +18,7 @@ export const Route = createFileRoute("/accept-entity-invite")({
     entityFeatureRouteGuard("entityInviteFlow", "/calendar");
   },
   component: AcceptEntityInviteLanding,
-  head: () => ({ meta: [{ title: "Accept invitation · Aponna Cloud" }] }),
+  head: () => ({ meta: [{ title: "Accept invitation · Bissibox Cloud" }] }),
 });
 
 /** Stores invite token and routes unauthenticated users to cloud sign-in. */

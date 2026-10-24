@@ -1,4 +1,4 @@
--- Audit trail for account.aponna.com profile and security changes.
+-- Audit trail for account.bissibox.com profile and security changes.
 -- Inserts are server-only (service role); users may read their own history.
 
 CREATE TABLE IF NOT EXISTS public.account_change_log (

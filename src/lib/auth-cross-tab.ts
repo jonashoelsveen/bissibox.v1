@@ -5,9 +5,9 @@ import {
 } from "@/lib/app-surface";
 import { markCalendarSignedOut } from "@/lib/calendarSessionPersist";
 
-const FORCED_LOGOUT_KEY = "aponna:forced-logout";
-const CHANNEL_NAME = "aponna-auth";
-const SESSION_COOKIE = "aponna_session";
+const FORCED_LOGOUT_KEY = "bissibox:forced-logout";
+const CHANNEL_NAME = "bissibox-auth";
+const SESSION_COOKIE = "bissibox_session";
 
 function isAlreadyOnLoggedOutHome(): boolean {
   if (typeof window === "undefined") return true;
@@ -47,7 +47,7 @@ export function broadcastForcedLogout(): void {
 /**
  * Run `onLogout` in other tabs when this browser signs out or deletes the
  * account. Same-origin uses BroadcastChannel + storage. Cookie Store covers
- * shared `.aponna.com` session cookies across Cloud / Account hosts when
+ * shared `.bissibox.com` session cookies across Cloud / Account hosts when
  * the browser supports it.
  */
 export function subscribeForcedLogout(onLogout: () => void): () => void {

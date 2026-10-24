@@ -43,7 +43,7 @@ export const FEATURES = {
   entityProfileSwitcher: false,
   /** Apps launcher when the user owns at least one entity. */
   entityAppsLauncher: false,
-  /** Calendar left-rail entity tabs + membership overlay. */
+  /** Calendar left-rail entity tabs. Member visibility of team sessions is separate. */
   entityCalendarSharing: false,
   /** `/entity` workspace. */
   entityWorkspace: false,
@@ -66,6 +66,29 @@ const ENTITY_SUB_FLAGS: readonly FeatureFlag[] = [
   "entityInviteFlow",
 ];
 
+/**
+ * Team surfaces on the Vite dev server only. Production builds ignore this
+ * because `import.meta.env.DEV` is false. Set to false to hide them in dev.
+ */
+const DEV_ENTITY_PREVIEW = false;
+
+const DEV_ENTITY_PREVIEW_FLAGS: ReadonlySet<FeatureFlag> = new Set([
+  "entityProfileSwitcher",
+  "entityAppsLauncher",
+  "entityProfiles",
+  "entityMembershipManagement",
+  "entityWorkspace",
+]);
+
+function isViteDev(): boolean {
+  const env = (import.meta as { env?: { DEV?: boolean } }).env;
+  return env?.DEV === true;
+}
+
+function devEntityPreviewEnabled(flag: FeatureFlag): boolean {
+  return DEV_ENTITY_PREVIEW && isViteDev() && DEV_ENTITY_PREVIEW_FLAGS.has(flag);
+}
+
 export function isFeatureEnabled(flag: FeatureFlag): boolean {
   if (flag === "entityFlag") return FEATURES.entityFlag;
   if ((ENTITY_SUB_FLAGS as readonly string[]).includes(flag)) {
@@ -74,11 +97,12 @@ export function isFeatureEnabled(flag: FeatureFlag): boolean {
   return FEATURES[flag];
 }
 
-/** Compile-time launch, or an internal tester account. */
+/** Compile-time launch, an internal tester account, or the Vite dev preview. */
 export function isFeatureEnabledForUser(
   flag: FeatureFlag,
   user: { isBetaTester?: boolean } | null,
 ): boolean {
+  if (devEntityPreviewEnabled(flag)) return true;
   if (isFeatureEnabled(flag)) return true;
   if (user?.isBetaTester && flag.startsWith("entity")) return true;
   return false;

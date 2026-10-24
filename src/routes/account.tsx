@@ -20,7 +20,7 @@ export const Route = createFileRoute("/account")({
 
 function AccountReadMorePage() {
   return (
-    <CloudPageWithFooter style={{ fontFamily: HELVETICA_STACK }}>
+    <CloudPageWithFooter showLegalLinks={false} style={{ fontFamily: HELVETICA_STACK }}>
       <CloudReadMorePage title="Bissibox-account">
         <p>
           Bissibox-account is your key to the Bissibox platform. Here, you can

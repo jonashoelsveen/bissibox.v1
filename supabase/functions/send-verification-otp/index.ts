@@ -40,10 +40,10 @@ async function sendOtpEmail(to: string, code: string, kind: Body["target_kind"])
   const deletion = kind === "account_deletion";
   const title = deletion ? "Confirm account deletion" : "Verify it's you";
   const lead = deletion
-    ? "Enter this 6-digit code to permanently delete your Aponna-account:"
+    ? "Enter this 6-digit code to permanently delete your Bissibox-account:"
     : "Enter this 6-digit code to complete verification:";
   const subject = deletion
-    ? `Your Aponna-account deletion code: ${code}`
+    ? `Your Bissibox-account deletion code: ${code}`
     : `Your verification code: ${code}`;
   const text = [
     title,

@@ -87,7 +87,11 @@ export function MonthNavControl({
           className="absolute right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-ink/15 bg-card shadow-lg"
         >
           <MiniCalendar
-            selectedRange={selectedRange ?? { start: currentDate, end: currentDate }}
+            selectedRange={
+              viewMode === "week"
+                ? (selectedRange ?? { start: currentDate, end: currentDate })
+                : { start: currentDate, end: currentDate }
+            }
             onSelectRange={(r) => onChange(r.start, r)}
             viewMode={viewMode}
           />

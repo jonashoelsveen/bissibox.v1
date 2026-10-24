@@ -5,8 +5,9 @@
  * grids, 12px day numbers, selected/today chips. Click a day to select it
  * (mini-cal syncs). Double-click a day → day view. Click a week number to
  * highlight that week (same grey as the mini calendar in week view).
- * Hovering a week number uses that same week mark and also tints the week
- * number square, with a gap between the two. Double-click the week
+ * Hovering a week number uses the light day-hover grey on the number and
+ * the week mark, with a gap between the two. A clicked week keeps the
+ * darker mark. Double-click the week
  * number → week view. Click a month header to mark that month;
  * double-click the header → month view. Hovering an unmarked header tints
  * the whole month.
@@ -16,8 +17,18 @@
  * window) so 6-wide stays in use on typical large monitors.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { isoWeekNumber, sameDay, startOfWeekMon } from "./dateUtils";
+import type { CalendarEvent } from "./yearStore";
+import { useCalendarTheme } from "./calendarThemePref";
+import {
+  yearBusyDarkShadeForMinutes,
+  yearBusyGrade,
+  yearBusyMinutesByDay,
+  yearBusyShadeForMinutes,
+  yearBusyShadeUsesLightText,
+  yearDayKey,
+} from "./yearDayLoad";
 
 const MONTHS_EN = [
   "January",
@@ -47,6 +58,14 @@ function daysInMonth(y: number, m: number) {
 
 function dateKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function formatBusyMinutes(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h} h`;
+  return `${h} h ${m} min`;
 }
 
 /** Inset so a week bar’s ends line up with the 1.75rem today/day chips. */
@@ -94,6 +113,8 @@ export interface YearGridProps {
   onMonthDoubleClick: (monthIndex: number) => void;
   /** When true, tint the month containing selectedDate instead of a day chip. */
   monthHighlight?: boolean;
+  /** Sessions used to shade each in-month day by timed load. */
+  events?: CalendarEvent[];
 }
 
 export function YearGrid({
@@ -107,12 +128,27 @@ export function YearGrid({
   onMonthClick,
   onMonthDoubleClick,
   monthHighlight = false,
+  events = [],
 }: YearGridProps) {
   const today = new Date();
+  const dark = useCalendarTheme() === "dark";
+  // The same date is drawn twice where months overlap. The mark follows the
+  // cell that was clicked, not the other copy. A day that belongs to the
+  // previous or next year stays a mark in this year; it does not open that year.
+  const [pickedCell, setPickedCell] = useState<{ hostMonth: number; key: string } | null>(
+    null,
+  );
+  const selectedKey = dateKey(selectedDate);
+  const [pickedAgainst, setPickedAgainst] = useState(selectedKey);
+  if (selectedKey !== pickedAgainst) {
+    setPickedAgainst(selectedKey);
+    if (pickedCell && pickedCell.key !== selectedKey) setPickedCell(null);
+  }
   const months = useMemo(
     () => Array.from({ length: 12 }, (_, m) => buildMonth(year, m)),
     [year],
   );
+  const busyMinutes = useMemo(() => yearBusyMinutesByDay(events), [events]);
 
   return (
     <div
@@ -131,8 +167,8 @@ export function YearGrid({
             className={[
               "min-w-0 rounded-sm p-1.5 -mx-1.5 text-[12px] transition-colors",
               monthSelected
-                ? "bg-primary/15"
-                : "has-[.year-month-title:hover]:bg-secondary",
+                ? "bg-muted-foreground/15"
+                : "has-[.year-month-title:hover]:bg-secondary/40",
             ].join(" ")}
           >
             <button
@@ -179,7 +215,10 @@ export function YearGrid({
                       aria-pressed={inSelectedWeek}
                       onClick={() => onWeekClick(week.firstDate)}
                       onDoubleClick={() => onWeekDoubleClick(week.firstDate)}
-                      className="year-week-number grid h-7 w-full place-items-center rounded-sm text-[12px] font-extrabold tabular-nums text-ink hover:bg-primary/15"
+                      className={[
+                        "year-week-number grid h-7 w-full place-items-center rounded-sm text-[12px] font-extrabold tabular-nums text-ink",
+                        inSelectedWeek ? "bg-muted-foreground/15" : "hover:bg-secondary/40",
+                      ].join(" ")}
                     >
                       {week.weekNo}
                     </button>
@@ -187,40 +226,88 @@ export function YearGrid({
                       <span
                         aria-hidden
                         className={[
-                          "year-week-mark pointer-events-none absolute inset-y-0 rounded-sm bg-primary/15",
-                          inSelectedWeek ? "" : "invisible",
+                          "year-week-mark pointer-events-none absolute inset-y-0 z-[1] rounded-sm",
+                          inSelectedWeek
+                            ? "bg-muted-foreground/15"
+                            : "invisible bg-secondary/40",
                         ].join(" ")}
                         style={{ left: WEEK_MARK_INSET, right: WEEK_MARK_INSET }}
                       />
                       {week.days.map((d) => {
                         const isToday = d.inMonth && sameDay(d.date, today);
                         const isSelected =
-                          d.inMonth &&
                           !weekHighlight &&
                           !monthHighlight &&
-                          sameDay(d.date, selectedDate);
-                        const weekBg = inSelectedWeek && !isSelected;
+                          (pickedCell
+                            ? pickedCell.hostMonth === month &&
+                              pickedCell.key === dateKey(d.date)
+                            : d.inMonth && sameDay(d.date, selectedDate));
+                        const minutes = busyMinutes.get(yearDayKey(d.date)) ?? 0;
+                        const grade = yearBusyGrade(minutes);
+                        const shade = dark
+                          ? yearBusyDarkShadeForMinutes(minutes)
+                          : yearBusyShadeForMinutes(minutes);
+                        const showShade = shade != null && !isSelected && !isToday;
+                        const lightText = yearBusyShadeUsesLightText(grade);
+                        const shadeText = !showShade
+                          ? null
+                          : dark
+                            ? lightText
+                              ? d.inMonth
+                                ? "text-[#141414]"
+                                : "text-[#141414]/70"
+                              : d.inMonth
+                                ? "text-[#f2f2f2]"
+                                : "text-[#f2f2f2]/55"
+                            : lightText
+                              ? d.inMonth
+                                ? "text-white"
+                                : "text-white/75"
+                              : d.inMonth
+                                ? "text-ink"
+                                : "text-muted-foreground";
                         return (
                           <button
                             key={dateKey(d.date)}
                             type="button"
-                            onClick={() => onSelectDate(d.date)}
+                            title={
+                              minutes <= 0 ? "No timed sessions" : formatBusyMinutes(minutes)
+                            }
+                            onClick={() => {
+                              setPickedCell({ hostMonth: month, key: dateKey(d.date) });
+                              if (d.date.getFullYear() !== year) return;
+                              onSelectDate(d.date);
+                            }}
                             onDoubleClick={() => onDayDoubleClick(d.date)}
-                            className="relative z-10 grid h-7 w-full place-items-center text-[12px] tabular-nums"
+                            className="group relative grid h-7 w-full place-items-center text-[12px] tabular-nums"
                           >
+                            {showShade && (
+                              <span
+                                aria-hidden
+                                className="pointer-events-none absolute inset-0 z-0 m-auto h-7 w-7 max-w-full rounded-sm transition-[filter] group-hover:brightness-95"
+                                style={{ backgroundColor: shade }}
+                              />
+                            )}
                             <span
                               className={[
-                                "grid h-7 w-7 max-w-full place-items-center rounded-sm",
+                                "relative z-10 grid h-7 w-7 max-w-full place-items-center rounded-sm",
                                 isSelected
-                                  ? "bg-primary text-primary-foreground"
+                                  ? dark
+                                    ? "text-[#141414]"
+                                    : "bg-primary text-primary-foreground"
                                   : isToday
                                     ? "bg-[#ED5C5C] text-white"
-                                    : weekBg
-                                      ? "text-ink"
-                                      : d.inMonth
+                                    : !showShade
+                                      ? d.inMonth
                                         ? "text-ink hover:bg-secondary"
-                                        : "text-muted-foreground/40 hover:bg-secondary/60",
+                                        : "text-muted-foreground/40 hover:bg-secondary/60"
+                                      : shadeText,
                               ].join(" ")}
+                              style={
+                                isSelected && dark
+                                  ? { backgroundColor: "#ffffff", color: "#141414" }
+                                  : undefined
+                              }
                             >
                               {d.date.getDate()}
                             </span>

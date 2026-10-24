@@ -13,7 +13,7 @@ export type TimedLayoutEvent = {
   endMin: number;
   sortIndex?: number;
   /**
-   * Hold-and-drag create: prefer this overlap column while it stays free.
+   * Prefer this overlap column while it stays free.
    * If it is blocked, use the rightmost remaining hole (or a new column).
    */
   preferCol?: number;

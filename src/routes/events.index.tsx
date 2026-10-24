@@ -5,7 +5,7 @@ export const Route = createFileRoute("/events/")({
   component: EventsPage,
   head: () => ({
     meta: [
-      { title: "Events · Aponna" },
+      { title: "Events · Bissibox" },
       { name: "description", content: "Events workspace." },
     ],
   }),

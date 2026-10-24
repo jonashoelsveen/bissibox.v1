@@ -1,5 +1,5 @@
 # Copy to .dev.vars for local `wrangler dev` / vite preview against Worker bindings.
-# Production values go in `wrangler secret put` on the aponna-cloud Worker.
+# Production values go in `wrangler secret put` on the bissibox-cloud Worker.
 # Never commit .dev.vars.
 
 # Required on the Worker (runtime)

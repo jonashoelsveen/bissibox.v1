@@ -19,6 +19,10 @@ import {
   isCloudLandingChromePath,
   MINIMAL_TOP_TAB_BAR_HEIGHT,
 } from "@/lib/cloud-landing-design";
+import {
+  CALENDAR_THEME_BOOT_SCRIPT,
+  useCalendarTheme,
+} from "@/components/calendar/calendarThemePref";
 
 export type RouterAppContext = {
   appSurface: "cloud" | "account";
@@ -115,8 +119,9 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: CALENDAR_THEME_BOOT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
@@ -128,6 +133,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  useCalendarTheme();
   const [isEmbedded, setIsEmbedded] = useState(false);
   const { appSurface: initialSurface } = Route.useRouteContext();
   const surface = useAppSurface(initialSurface);

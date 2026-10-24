@@ -30,6 +30,8 @@ export interface SearchResult {
   endISO: string;
   color: string | null;
   allDay: boolean;
+  entityId?: string | null;
+  signUpEnabled?: boolean;
 }
 
 function parseSessionMs(iso: string): number {
@@ -139,6 +141,8 @@ export function CalendarSearchProvider({ children }: { children: ReactNode }) {
         endISO: e.endISO,
         color: e.color,
         allDay: e.allDay,
+        entityId: e.entityId,
+        signUpEnabled: e.signUpEnabled,
       });
     }
     // Chronological: past above, future below. The results list scrolls so the

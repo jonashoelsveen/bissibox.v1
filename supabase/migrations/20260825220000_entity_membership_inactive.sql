@@ -1,4 +1,4 @@
--- Soft-cancel linked memberships so account.aponna.com can list
+-- Soft-cancel linked memberships so account.bissibox.com can list
 -- inactive rows ("Cancelled …") without losing the person record.
 
 ALTER TABLE public.entity_members

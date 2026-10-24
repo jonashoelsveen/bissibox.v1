@@ -16,7 +16,7 @@ import {
   landingReadMoreClassName,
 } from "@/lib/cloud-landing-design";
 
-const ACCOUNT_OPEN_SIGNIN = "aponna-account-open-signin";
+const ACCOUNT_OPEN_SIGNIN = "bissibox-account-open-signin";
 
 export function requestAccountSignIn() {
   if (typeof window === "undefined") return;
@@ -79,7 +79,7 @@ export function AccountLandingPage() {
         >
           <div className="mb-7 flex w-full justify-center overflow-visible sm:mb-9">
             <img
-              src="/aponna-account-hero.png"
+              src="/bissibox-account-hero.png"
               alt=""
               width={585}
               height={549}

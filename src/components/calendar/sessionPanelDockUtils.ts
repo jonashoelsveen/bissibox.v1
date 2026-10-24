@@ -12,9 +12,10 @@ export const SESSION_PANEL_DOCK_TRANSITION =
 export const SESSION_PANEL_SHELL_CLASS =
   "rounded-xl border border-hairline shadow-lg backdrop-blur-md";
 
-/** White card at 70% opacity with frosted blur. */
+/** White card at 70% opacity with frosted blur. Dark theme swaps in the charcoal chrome. */
 export const SESSION_PANEL_SHELL_STYLE = {
-  backgroundColor: "color-mix(in oklch, var(--card) 70%, transparent)",
+  backgroundColor:
+    "var(--session-card-bg, color-mix(in oklch, var(--card) 70%, transparent))",
 } as const;
 
 /** Gap between the session card and map / sign-up panels. */

@@ -5,8 +5,8 @@ import { useRouterState } from "@tanstack/react-router";
 export const ACCOUNT_URL_PRODUCTION = "https://account.bissibox.com";
 
 /** Cookie + session flag for same-origin account surface (`?surface=account`). */
-export const ACCOUNT_SURFACE_COOKIE = "aponna_surface";
-const ACCOUNT_SURFACE_STORAGE_KEY = "aponna_app_surface";
+export const ACCOUNT_SURFACE_COOKIE = "bissibox_surface";
+const ACCOUNT_SURFACE_STORAGE_KEY = "bissibox_app_surface";
 
 const ACCOUNT_HOSTS = new Set(["account.bissibox.com", "account.localhost"]);
 
@@ -184,7 +184,7 @@ export function isAccountApp(): boolean {
 
 /**
  * URL for the account apps-menu link.
- * - Explicit VITE_ACCOUNT_URL / ACCOUNT_URL when set (e.g. https://account.aponna.com)
+ * - Explicit VITE_ACCOUNT_URL / ACCOUNT_URL when set (e.g. https://account.bissibox.com)
  * - Otherwise same-origin `?surface=account` so the link works before account DNS exists
  *   and avoids cross-subdomain local-dev issues
  */
@@ -212,7 +212,7 @@ export function getCloudUrl(): string {
   if (isAccountHost(hostname)) {
     const cloudOverride = import.meta.env.VITE_CLOUD_URL;
     if (cloudOverride) return cloudOverride;
-    return "https://aponnacloud.com/";
+    return "https://bissiboxcloud.com/";
   }
   return `${protocol}//${hostname}${portSuffix}/`;
 }
@@ -221,8 +221,8 @@ export function getCloudUrl(): string {
 export const ACCOUNT_URL = ACCOUNT_URL_PRODUCTION;
 
 /**
- * True when the account surface reads the same `aponna_session` cookie as the
- * current host (localhost ↔ account.localhost, or *.aponna.com siblings).
+ * True when the account surface reads the same `bissibox_session` cookie as the
+ * current host (localhost ↔ account.localhost, or *.bissibox.com siblings).
  */
 export function accountSessionSharesCookie(hostname?: string): boolean {
   const h = (
@@ -230,7 +230,7 @@ export function accountSessionSharesCookie(hostname?: string): boolean {
   ).toLowerCase();
   if (!h) return false;
   if (h === "localhost" || h.endsWith(".localhost")) return true;
-  if (h === "aponna.com" || h.endsWith(".aponna.com")) return true;
+  if (h === "bissibox.com" || h.endsWith(".bissibox.com")) return true;
   // Same-origin account mode shares the host cookie automatically.
   if (!import.meta.env.VITE_ACCOUNT_URL) return true;
   return false;
@@ -312,7 +312,7 @@ function accountUrlFromParts(protocol: string, hostname: string, port: string): 
   }
 
   // Same-origin account surface. Works in local/dev and in production before
-  // account.aponna.com DNS is configured. Set VITE_ACCOUNT_URL to force the
+  // account.bissibox.com DNS is configured. Set VITE_ACCOUNT_URL to force the
   // dedicated account host when it is live.
   return `${protocol}//${hostname}${portSuffix}/?surface=account`;
 }

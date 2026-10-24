@@ -276,7 +276,7 @@ export function AccountDeleteAccount() {
                       className="text-center"
                       style={{ ...TITLE_STYLE, fontSize: 20 }}
                     >
-                      Delete Aponna-account
+                      Delete Bissibox-account
                     </h2>
                     <div
                       id="delete-account-desc"
@@ -284,7 +284,7 @@ export function AccountDeleteAccount() {
                       style={{ color: MUTED }}
                     >
                       <p>
-                        This permanently deletes your Aponna-account and all data
+                        This permanently deletes your Bissibox-account and all data
                         associated with it, including your profile and all
                         activities in your calendar.
                       </p>
@@ -380,7 +380,7 @@ export function AccountDeleteAccount() {
                       style={{ color: MUTED }}
                     >
                       We sent a 6-digit code to {masked || "your email"}. Enter it
-                      below, then confirm to permanently delete your Aponna-account.
+                      below, then confirm to permanently delete your Bissibox-account.
                     </p>
                     <div className="mt-6 flex justify-between gap-2">
                       {digits.map((d, i) => (

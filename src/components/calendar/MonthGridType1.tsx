@@ -18,7 +18,9 @@
  *   - Single-click selects a cell (Excel focus).
  *   - Double-click on empty area opens an inline popover to add a session.
  *   - Arrow keys move focus; Enter opens the popover on the focused day.
- *   - Mouse-drag across cells creates a range selection (light-blue overlay).
+ *   - Hold and drag across days creates a multi-day session. The pressed
+ *     cell keeps its click colour, and the spanned days are marked in the
+ *     default session colour. The session tile appears once a title is typed.
  *   - Items can be dragged from one day to another with framer-motion layout
  *     animations smoothing the receiving cell's reflow.
  */
@@ -37,15 +39,78 @@ import {
   type RefObject,
 } from "react";
 import { createPortal, flushSync } from "react-dom";
-import { PersonStanding, GraduationCap, Briefcase, Sparkles, Clock, Bike, Waves, Dumbbell, Snowflake, Footprints, ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { PersonStanding, GraduationCap, Briefcase, Sparkles, Bike, Waves, Dumbbell, Snowflake, Footprints, ChevronLeft, ChevronRight, Check, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, CalendarEvent } from "./yearStore";
-import { makeCellId, isMembershipOverlayEvent } from "./yearStore";
+import { makeCellId, isMembershipOverlayEvent, useTeamName } from "./yearStore";
+import { useUserGroups } from "@/hooks/useUserGroups";
+import { useAuth } from "@/lib/auth";
+import { sessionAudienceMembers, signupTabForRosterMember } from "@/lib/sessionSignupAudience";
+import {
+  setTeamSessionResponse,
+  signupResponse,
+  teamMemberMonthChip,
+  useSessionAudienceResponses,
+  useSyncOwnTeamSessionResponses,
+  useTeamSessionResponses,
+  type TeamSessionResponse,
+} from "@/lib/teamSessionResponse";
 import { computePopoverPosition, weekDaySessionMenuMinTop } from "./popoverPosition";
-import { sameDay, setHM, addMinutes, toISOLocal, fromISOLocal, isoWeekNumber, startOfDay, makeEventId, startEndMinsOnStartDay, isoRangeOnDate, calendarDayDelta, shiftIsoRangeByDays } from "./dateUtils";
+import { sameDay, setHM, addMinutes, addDays, toISOLocal, fromISOLocal, isoWeekNumber, startOfDay, startOfWeekMon, makeEventId, startEndMinsOnStartDay, calendarDayDelta, shiftIsoRangeByDays } from "./dateUtils";
+import { clearLiveMonthFocus, setLiveMonthFocus, useLiveMonthFocus } from "@/lib/liveMonthFocus";
+import {
+  CALENDAR_MONTH_ROW_HEIGHT,
+  MONTH_PAN_EDGE_WEEKS,
+  MONTH_PAN_GROW,
+  MONTH_ROW_HEIGHT,
+  buildMonthPan,
+  focusedMonthAtMidpoint,
+  monthBufferExtension,
+  monthFromIndex,
+  monthCoastScrollTop,
+  monthCreatePulseDuration,
+  monthCreatePulseScroll,
+  monthPredictiveBrake,
+  monthReleasePlan,
+  monthCreateEdgeZone,
+  MONTH_CREATE_PULSE_HOLD_MS,
+  MONTH_CREATE_PULSE_INTERVAL_MS,
+  MONTH_RENDER_OVERSCAN,
+  nextMonthOriginScroll,
+  monthWheelDecaying,
+  monthIndex,
+  monthMountCovers,
+  monthPanSpanAround,
+  monthRenderRange,
+  scrollTopForMonthWeek,
+  snapScrollTop,
+  visibleWeekRows,
+  weeksBetweenMonthStarts,
+} from "@/lib/monthVerticalScroll";
+import {
+  bandWidthResizeResult,
+  eventCoversDay,
+  isAllDayBandEvent,
+  isMultiDayDateRange,
+  isMultiDaySession,
+  isoFromMenuClocks,
+  isoRangeOnDates,
+  continuousDragStartCol,
+  contiguousColumnsWhere,
+  layoutMonthWeekSpans,
+  monthCellTileBudget,
+  monthCreatePlaceholderLane,
+  monthDragWeekPieces,
+  orderedDates,
+  previewSpanForGrabbedDay,
+  sessionDayCount,
+  sessionInclusiveEndDay,
+  sessionMenuClockRange,
+} from "./multiDaySessions";
 import { GROUP_COLOR_PALETTE } from "../GroupColorPicker";
 import { DayNoteButton } from "./DayNoteButton";
-import { useEntityRoster, type EntityMember, isPlaceholderGroupName } from "@/hooks/useEntityRoster";
+import { useCalendarTheme } from "./calendarThemePref";
+import { useEntityRoster, isPlaceholderGroupName } from "@/hooks/useEntityRoster";
 import {
   ColorsPanel,
   DEFAULT_SESSION_COLOR,
@@ -54,6 +119,7 @@ import {
   isSessionWhiteColor,
   sessionMonthChipChrome,
   sessionTileChrome,
+  teamSessionMenuBackground,
   standardColorLabel,
 } from "@/components/library/CategoryActionsMenu";
 import { useMonthTileDesign } from "@/lib/month-tile-design";
@@ -121,12 +187,13 @@ import { CalendarInfoToast } from "./CalendarInfoToast";
 import { useCalendarSearchSafe } from "./CalendarSearchContext";
 import { useCalendarViewActions } from "./CalendarViewActionsContext";
 import { useCalendarPasteContextMenu } from "./CalendarPasteContextMenu";
-import { useCalendarSessionContextMenu } from "./CalendarSessionContextMenu";
+import { useCalendarSessionContextMenu, SESSION_SHIFT_MARK_EVENT } from "./CalendarSessionContextMenu";
+import { useCalendarWeekContextMenu } from "./CalendarWeekContextMenu";
 import { SessionHoverMenu } from "./SessionHoverMenu";
 import { useHoverLock } from "./hoverLock";
 import { SessionDetailsContainer } from "./SessionDetailsContainer";
 import { useClosePanelsForDeletedEvents } from "./useClosePanelsForDeletedEvents";
-import { TimeWheelPicker } from "./TimeWheelPicker";
+import { SessionTimeField } from "./SessionTimeField";
 import { ReorderConfirmDialog } from "./ReorderConfirmDialog";
 import type { ViewMode } from "./UnifiedElasticGrid";
 import { copySessionSuccessMessage, duplicateSessionSuccessMessage } from "@/lib/calendarClipboard";
@@ -234,9 +301,6 @@ function dowMon0(date: Date) {
   const d = date.getDay();
   return d === 0 ? 6 : d - 1;
 }
-function daysInMonth(y: number, m: number) {
-  return new Date(y, m + 1, 0).getDate();
-}
 
 export type CalendarSeat = "admin" | "individual";
 
@@ -250,6 +314,8 @@ export interface MonthGridType1Props {
   appKind?: "calendar" | "diary";
   onPrevMonth: () => void;
   onNextMonth: () => void;
+  /** Month view settled on this month. The scroll position stays where it is. */
+  onCommitFocusedMonth?: (date: Date) => void;
   onCommitText: (k: CellKey, text: string) => void;
   /** Unified event store — events created here will appear in week view too. */
   events?: CalendarEvent[];
@@ -274,12 +340,19 @@ export interface MonthGridType1Props {
   selectedDate?: Date | null;
   /** Notify parent when a day cell is clicked. */
   onSelectDate?: (date: Date) => void;
+  /** Sessions shift-marked across month, week, and day. */
+  markedEventIds?: ReadonlySet<string>;
+  onDeleteMarked?: (ids: string[]) => void;
+  onClearMarks?: () => void;
+  onShiftMark?: (id: string) => void;
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
   /** Default color for newly-created sessions (no initial color). Blue. */
   defaultNewColor?: string | null;
   /** Active team id (admin seat only). Scopes the category dropdown list. */
   teamId?: string | null;
+  /** Hide spanning multi-day bars. Single-day chips stay in the cells. */
+  hideMultiDayRow?: boolean;
 }
 
 interface DayItem {
@@ -350,7 +423,7 @@ function DiaryMonthReorderTile({
       title={ev.title}
       data-coach-pending={ev.coachPending ? "1" : undefined}
     >
-      <span className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: accent }} />
+      <span className="pointer-events-none absolute left-0 top-0 bottom-0 w-[4px]" style={{ background: accent }} />
       {tileDesign === "stacked" ? (
         <div className="absolute inset-0 flex items-stretch overflow-hidden rounded-[3px]">
           <div className="flex w-1/2 items-center justify-center" style={{ background: iconHalfBg }}>
@@ -602,6 +675,59 @@ interface CellPos {
   col: number;
 }
 
+function paintMonthFocus(root: HTMLElement, year: number, month: number) {
+  const cells = root.querySelectorAll<HTMLElement>("[data-month-cell]");
+  for (const cell of cells) {
+    const focused =
+      Number(cell.dataset.calYear) === year && Number(cell.dataset.calMonth) === month;
+    const selected = cell.dataset.selected === "1";
+    const weekend = cell.dataset.weekend === "1";
+    if (!selected) {
+      cell.classList.toggle("bg-muted/40", !focused);
+      cell.classList.toggle("text-muted-foreground/60", !focused);
+      cell.classList.toggle("bg-muted/20", focused && weekend);
+      cell.classList.toggle("bg-card", focused && !weekend);
+    }
+    const label = cell.querySelector<HTMLElement>("[data-month-label]");
+    if (label) {
+      label.classList.toggle("text-ink/70", focused);
+      label.classList.toggle("text-muted-foreground/50", !focused);
+    }
+    const num = cell.querySelector<HTMLElement>("[data-month-num]");
+    if (!num) continue;
+    const showToday = num.dataset.today === "1" && focused;
+    num.classList.toggle("bg-[#ED5C5C]", showToday);
+    num.classList.toggle("text-white", showToday);
+    num.classList.toggle("text-ink/70", !showToday && focused);
+    num.classList.toggle("text-muted-foreground/50", !showToday && !focused);
+  }
+  const today = new Date();
+  const todayFocused = today.getFullYear() === year && today.getMonth() === month;
+  const todayDow = dowMon0(today);
+  const columns = root.querySelectorAll<HTMLElement>("[data-dow]");
+  for (const column of columns) {
+    const on = todayFocused && Number(column.dataset.dow) === todayDow;
+    column.classList.toggle("bg-secondary", on);
+    column.classList.toggle("text-ink", on);
+    column.classList.toggle("text-muted-foreground", !on);
+    column.style.boxShadow = on ? "-1px 0 0 0 var(--secondary)" : "";
+  }
+  const yearHi = root.querySelector<HTMLElement>("[data-month-year-hi]");
+  const yearLo = root.querySelector<HTMLElement>("[data-month-year-lo]");
+  if (yearHi) yearHi.textContent = String(year).slice(0, 2);
+  if (yearLo) yearLo.textContent = String(year).slice(2);
+}
+
+function MonthFocusPaint({ rootRef }: { rootRef: { current: HTMLElement | null } }) {
+  const live = useLiveMonthFocus();
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root || !live) return;
+    paintMonthFocus(root, live.year, live.month);
+  });
+  return null;
+}
+
 export function MonthGridType1({
   calId,
   year,
@@ -609,8 +735,7 @@ export function MonthGridType1({
   data,
   seat = "individual",
   appKind = "calendar",
-  onPrevMonth,
-  onNextMonth,
+  onCommitFocusedMonth,
   onCommitText,
   events = [],
   onUpsertEvent,
@@ -623,40 +748,104 @@ export function MonthGridType1({
   onOpenYearView,
   selectedDate,
   onSelectDate,
+  markedEventIds,
+  onDeleteMarked,
+  onClearMarks,
+  onShiftMark,
   memberId,
   viewerRole = "owner",
   defaultNewColor = DEFAULT_SESSION_COLOR,
   teamId = null,
+  hideMultiDayRow = false,
 }: MonthGridType1Props) {
   const searchSelectedId = useCalendarSearchSafe()?.selectedId ?? null;
+  const darkTiles = useCalendarTheme() === "dark";
+  const teamResponses = useTeamSessionResponses();
+  const signupSessionIds = useMemo(
+    () =>
+      events
+        .filter((ev) => isMembershipOverlayEvent(ev, calId) && ev.signUpEnabled)
+        .map((ev) => ev.id),
+    [events, calId],
+  );
+  useSyncOwnTeamSessionResponses(signupSessionIds);
   const { setPasteAnchorDate } = useCalendarViewActions();
   const { onContextMenu: onPasteContextMenu, overlay: pasteOverlay, toastNode: pasteToastNode } =
     useCalendarPasteContextMenu("month");
-  const dim = daysInMonth(year, month);
+  const { onContextMenu: onWeekContextMenu, overlay: weekOverlay, toastNode: weekToastNode } =
+    useCalendarWeekContextMenu("month");
   const [monthTileDesign] = useMonthTileDesign();
   const [distanceUnit] = useDistanceUnit();
-  const firstDow = dowMon0(new Date(year, month, 1));
-  const totalCells = Math.ceil((firstDow + dim) / 7) * 7;
-  const rows = totalCells / 7;
-
+  const focusYear = year;
+  const focusMonth = month;
+  const anchorIndex = monthIndex(year, month);
+  const [span, setSpan] = useState(() => monthPanSpanAround(anchorIndex));
+  const pan = useMemo(
+    () => buildMonthPan(span.first, span.last),
+    [span.first, span.last],
+  );
+  const rows = pan.weekCount;
   const days = useMemo(() => {
-    return Array.from({ length: totalCells }, (_, i) => {
-      const dayNumber = i - firstDow + 1;
-      const inMonth = dayNumber >= 1 && dayNumber <= dim;
-      let date: Date;
-      if (inMonth) date = new Date(year, month, dayNumber);
-      else if (dayNumber < 1) date = new Date(year, month, dayNumber); // negative rolls back
-      else date = new Date(year, month, dayNumber); // overflow rolls forward
+    const total = pan.weekCount * 7;
+    return Array.from({ length: total }, (_, i) => {
+      const date = addDays(pan.start, i);
       return {
         idx: i,
         row: Math.floor(i / 7),
         col: i % 7,
         date,
         dayNumber: date.getDate(),
-        inMonth,
+        inMonth: true,
       };
     });
-  }, [year, month, dim, firstDow, totalCells]);
+  }, [pan]);
+  const [mount, setMount] = useState(() => {
+    const week = pan.monthStarts.find((item) => item.index === anchorIndex)?.week ?? 0;
+    return monthRenderRange(week, Math.min(pan.weekCount - 1, week + 5), pan.weekCount, 0);
+  });
+  const spanRef = useRef(span);
+  spanRef.current = span;
+  const panRef = useRef(pan);
+  panRef.current = pan;
+  const daysRef = useRef(days);
+  daysRef.current = days;
+  const mountRef = useRef(mount);
+  mountRef.current = mount;
+  const focusedKeyRef = useRef(anchorIndex);
+  const dateInLiveMonth = (date: Date) => {
+    const focused = monthFromIndex(focusedKeyRef.current);
+    return date.getFullYear() === focused.year && date.getMonth() === focused.month;
+  };
+  const pendingPrependWeeksRef = useRef(0);
+  const aligningRef = useRef(false);
+  const cancelSnapRef = useRef<() => void>(() => {});
+  const resumeSettleRef = useRef<() => void>(() => {});
+  /** True while a month multi-day create drag owns the scroller, so week-snap stays out of the gesture. */
+  const monthCreateDragActiveRef = useRef(false);
+  /** True during a month pulse, so scroll events do not rebuild the grid mid-glide. */
+  const monthPulseLockRef = useRef(false);
+  const suppressChipLayoutRef = useRef(false);
+  const syncMonthScrollRef = useRef<() => void>(() => {});
+  const monthRowHeightRef = useRef(CALENDAR_MONTH_ROW_HEIGHT);
+  const detachMonthSpanDragRef = useRef<(() => void) | null>(null);
+  const animateMonthJumpRef = useRef<(week: number, index: number) => void>(() => {});
+  const pendingMonthJumpRef = useRef<number | null>(null);
+  const extendingRef = useRef(false);
+  const alignedRef = useRef(false);
+  const panTokenRef = useRef(0);
+  const prevPropsKeyRef = useRef(`${year}-${month}`);
+  const skipFocusResetRef = useRef(false);
+  const skipScrollRef = useRef(false);
+  const suppressMonthScrollRef = useRef(false);
+  const prevSelectedTimeRef = useRef(selectedDate?.getTime() ?? 0);
+  const appliedNavRef = useRef("");
+  const lastScrollTopRef = useRef(0);
+  const yearRef = useRef(year);
+  yearRef.current = year;
+  const monthRef = useRef(month);
+  monthRef.current = month;
+  const onCommitFocusedMonthRef = useRef(onCommitFocusedMonth);
+  onCommitFocusedMonthRef.current = onCommitFocusedMonth;
 
   const today = new Date();
   const isToday = (d: Date) =>
@@ -667,26 +856,37 @@ export function MonthGridType1({
   // ───────────────────────── Focus / selection ─────────────────────────
 
   const [focus, setFocus] = useState<CellPos>(() => {
-    // Default to today if visible, else first in-month cell
-    const t = days.find((d) => isToday(d.date) && d.inMonth);
+    const inView = (d: (typeof days)[number]) =>
+      d.date.getFullYear() === year && d.date.getMonth() === month;
+    const t = days.find((d) => isToday(d.date) && inView(d));
     if (t) return { row: t.row, col: t.col };
-    const first = days.find((d) => d.inMonth)!;
+    const first = days.find((d) => inView(d) && d.date.getDate() === 1) ?? days[0]!;
     return { row: first.row, col: first.col };
   });
 
-  // Re-focus on month change to the first in-month cell
+  // Arrow and mini-calendar jumps land on the 1st. A scroll commit keeps the cell the user is on.
   useEffect(() => {
-    const first = days.find((d) => d.inMonth);
-    if (first) setFocus({ row: first.row, col: first.col });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month]);
+    const navKey = `${year}-${month}`;
+    if (skipFocusResetRef.current) {
+      skipFocusResetRef.current = false;
+      appliedNavRef.current = navKey;
+      return;
+    }
+    if (appliedNavRef.current === navKey) return;
+    const first = days.find(
+      (d) => d.date.getFullYear() === year && d.date.getMonth() === month && d.date.getDate() === 1,
+    );
+    if (!first) return;
+    appliedNavRef.current = navKey;
+    setFocus({ row: first.row, col: first.col });
+  }, [year, month, days]);
 
   // Mirror externally-controlled selected date (e.g. mini-calendar click).
   useEffect(() => {
     if (!selectedDate) return;
-    if (selectedDate.getFullYear() !== year || selectedDate.getMonth() !== month) return;
-    const match = days.find((d) => d.inMonth && d.date.getDate() === selectedDate.getDate());
+    const match = days.find((d) => sameDay(d.date, selectedDate));
     if (match) setFocus({ row: match.row, col: match.col });
+    // Buffer growth rebuilds `days` and would pull focus back to this date mid-pan.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, year, month]);
 
@@ -701,6 +901,9 @@ export function MonthGridType1({
   // Drag-selection (mouse range across cells)
   const dragAnchorRef = useRef<CellPos | null>(null);
   const [range, setRange] = useState<{ a: CellPos; b: CellPos } | null>(null);
+  /** Live span while the pointer is dragging across a second day. The open create menu takes over after release. */
+  const [spanPreview, setSpanPreview] = useState<{ start: Date; end: Date } | null>(null);
+  const [spanDragActive, setSpanDragActive] = useState(false);
 
   const inRange = useCallback(
     (pos: CellPos) => {
@@ -721,6 +924,8 @@ export function MonthGridType1({
     window.addEventListener("mouseup", onUp);
     return () => window.removeEventListener("mouseup", onUp);
   }, []);
+
+  useEffect(() => () => detachMonthSpanDragRef.current?.(), []);
 
   // ───────────────────── Diary hover menu (mirrors week view) ──────────────
   const [hoverId, setHoverId] = useState<string | null>(null);
@@ -776,6 +981,8 @@ export function MonthGridType1({
     initialDescription?: string | null;
     /** Snapshot of entity roster group when the editor opened. */
     appGroupId?: string | null;
+    pendingStart?: Date;
+    pendingEnd?: Date;
   } | null>(null);
   /** Survives PopoverEditor unmount so side panels can restore after drag-drop reopen. */
   const sessionSidePanelsRef = useRef<{
@@ -891,6 +1098,7 @@ export function MonthGridType1({
     );
     if (!el) {
       pendingMenuDateRef.current = date;
+      suppressMonthScrollRef.current = true;
       onSelectDate?.(date);
       return;
     }
@@ -899,6 +1107,7 @@ export function MonthGridType1({
     setPopover((prev) =>
       prev ? { ...prev, pos: { row: cell.row, col: cell.col }, rect } : prev,
     );
+    suppressMonthScrollRef.current = true;
     onSelectDate?.(date);
   }, [days, onSelectDate]);
 
@@ -940,8 +1149,23 @@ export function MonthGridType1({
       closePopover();
     },
     onDelete: (id) => onDeleteEvent?.(id),
+    getMarkedIds: () => [...(markedEventIds ?? [])],
+    onDeleteMany: (ids) => onDeleteMarked?.(ids),
+    onClearMarks: () => onClearMarks?.(),
   });
   closeSessionContextMenuRef.current = closeSessionContextMenu;
+
+  useEffect(() => {
+    if (appKind === "diary") return;
+    const onShift = () => {
+      const id = popover?.eventId ?? sessionContextEventId ?? null;
+      if (id && !isRepeatPreviewEventId(id)) onShiftMark?.(id);
+      if (popover) closePopover();
+      closeSessionContextMenu();
+    };
+    window.addEventListener(SESSION_SHIFT_MARK_EVENT, onShift);
+    return () => window.removeEventListener(SESSION_SHIFT_MARK_EVENT, onShift);
+  }, [appKind, closePopover, closeSessionContextMenu, onShiftMark, popover, sessionContextEventId]);
 
   // Guarded close — only nulls the popover if it still points at the
   // same target (eventId for edits, or row/col for new-cell drafts).
@@ -1001,6 +1225,562 @@ export function MonthGridType1({
     return () => ro.disconnect();
   }, []);
 
+  // Calendar days fit four tiles. Diary keeps the taller row for its tiles.
+  const monthRowHeight = appKind === "diary" ? MONTH_ROW_HEIGHT : CALENDAR_MONTH_ROW_HEIGHT;
+  monthRowHeightRef.current = monthRowHeight;
+
+  useLayoutEffect(() => {
+    const el = monthScrollerRef.current;
+    if (!el) return;
+    extendingRef.current = false;
+    const startPendingMonthJump = () => {
+      const jump = pendingMonthJumpRef.current;
+      if (jump == null) return false;
+      const week = pan.monthStarts.find((item) => item.index === jump)?.week;
+      if (week == null) return false;
+      pendingMonthJumpRef.current = null;
+      animateMonthJumpRef.current(week, jump);
+      return true;
+    };
+
+    if (pendingPrependWeeksRef.current) {
+      const added = pendingPrependWeeksRef.current;
+      pendingPrependWeeksRef.current = 0;
+      cancelSnapRef.current();
+      aligningRef.current = true;
+      el.scrollTop += added * monthRowHeight;
+      aligningRef.current = false;
+      lastScrollTopRef.current = el.scrollTop;
+      const shifted = {
+        start: mountRef.current.start + added,
+        end: mountRef.current.end + added,
+      };
+      mountRef.current = shifted;
+      setMount(shifted);
+      setFocus((f) => ({ row: f.row + added, col: f.col }));
+      if (!startPendingMonthJump()) resumeSettleRef.current();
+      return;
+    }
+
+    if (startPendingMonthJump()) return;
+
+    const target = monthIndex(year, month);
+    if (target < span.first || target > span.last) {
+      const next = monthPanSpanAround(target);
+      spanRef.current = next;
+      setSpan(next);
+      return;
+    }
+
+    const propsKey = `${year}-${month}`;
+    const propsChanged = prevPropsKeyRef.current !== propsKey;
+    const selectedTime = selectedDate?.getTime() ?? 0;
+    const selectedChanged = prevSelectedTimeRef.current !== selectedTime;
+    if (skipScrollRef.current || suppressMonthScrollRef.current) {
+      skipScrollRef.current = false;
+      suppressMonthScrollRef.current = false;
+      prevPropsKeyRef.current = propsKey;
+      prevSelectedTimeRef.current = selectedTime;
+      return;
+    }
+    if (alignedRef.current && !propsChanged && !selectedChanged) return;
+
+    const week = pan.monthStarts.find((item) => item.index === target)?.week ?? 0;
+    panTokenRef.current += 1;
+    cancelSnapRef.current();
+    aligningRef.current = true;
+    el.scrollTop = scrollTopForMonthWeek(week, monthRowHeight);
+    aligningRef.current = false;
+    resumeSettleRef.current();
+    lastScrollTopRef.current = el.scrollTop;
+    focusedKeyRef.current = target;
+    alignedRef.current = true;
+    prevPropsKeyRef.current = propsKey;
+    prevSelectedTimeRef.current = selectedTime;
+    const nextMonth = monthFromIndex(target);
+    setLiveMonthFocus(nextMonth.year, nextMonth.month);
+    const vis = visibleWeekRows(el.scrollTop, el.clientHeight, monthRowHeight, pan.weekCount);
+    const nextMount = monthRenderRange(vis.start, vis.end, pan.weekCount, 0);
+    if (nextMount.start !== mountRef.current.start || nextMount.end !== mountRef.current.end) {
+      mountRef.current = nextMount;
+      setMount(nextMount);
+    }
+  }, [year, month, selectedDate, span.first, span.last, pan, monthRowHeight]);
+
+  useEffect(() => {
+    const el = monthScrollerRef.current;
+    if (!el) return;
+    const commit = () => {
+      const settled = monthFromIndex(focusedKeyRef.current);
+      if (settled.year === yearRef.current && settled.month === monthRef.current) return;
+      skipFocusResetRef.current = true;
+      skipScrollRef.current = true;
+      onCommitFocusedMonthRef.current?.(new Date(settled.year, settled.month, 1));
+    };
+    let watchRaf = 0;
+    let snapRaf = 0;
+    let releaseTimer = 0;
+    let brakeRaf = 0;
+    let watching = false;
+    let snapping = false;
+    let written = -1;
+    let authoritative = false;
+    let lockFocus: number | null = null;
+    const stopMotion = () => {
+      watching = false;
+      snapping = false;
+      brakeActive = false;
+      authoritative = false;
+      lockFocus = null;
+      written = -1;
+      if (watchRaf) cancelAnimationFrame(watchRaf);
+      if (snapRaf) cancelAnimationFrame(snapRaf);
+      if (releaseTimer) window.clearTimeout(releaseTimer);
+      if (brakeRaf) cancelAnimationFrame(brakeRaf);
+      watchRaf = 0;
+      snapRaf = 0;
+      releaseTimer = 0;
+      brakeRaf = 0;
+    };
+    cancelSnapRef.current = stopMotion;
+    const publishFocus = (scrollTop: number, viewH: number) => {
+      const focused = focusedMonthAtMidpoint(
+        scrollTop,
+        viewH,
+        monthRowHeight,
+        panRef.current.monthStarts,
+      );
+      if (focused === focusedKeyRef.current) return;
+      focusedKeyRef.current = focused;
+      const next = monthFromIndex(focused);
+      setLiveMonthFocus(next.year, next.month);
+    };
+    const finishSnap = () => {
+      snapping = false;
+      brakeActive = false;
+      authoritative = false;
+      written = -1;
+      snapRaf = 0;
+      suppressUntil = performance.now() + 80;
+      if (lockFocus != null) {
+        const index = lockFocus;
+        lockFocus = null;
+        focusedKeyRef.current = index;
+        const landed = monthFromIndex(index);
+        setLiveMonthFocus(landed.year, landed.month);
+      } else {
+        publishFocus(el.scrollTop, el.clientHeight);
+      }
+      commit();
+    };
+    // The trackpad pans natively until the finger lifts. At that moment the
+    // release speed picks the week line, and one slowdown glides onto it.
+    let endTimer = 0;
+    let suppressUntil = 0;
+    let rowPx = monthRowHeight;
+    let velocity = 0;
+    let lastSampleTs = 0;
+    let lastWheelTs = 0;
+    let wheelCount = 0;
+    let releaseTop = 0;
+    let releaseVelocity = 0;
+    let coastLockUntil = 0;
+    let brakeActive = false;
+    let brakePeak = 0;
+    let brakeDir: -1 | 1 = 1;
+    let decaying = false;
+    const wheelDeltas: number[] = [];
+    const readRowHeight = () => {
+      const probe = el.querySelector<HTMLElement>("[data-month-week]");
+      const measured = probe?.getBoundingClientRect().height ?? 0;
+      if (measured > 40) rowPx = measured;
+      return rowPx;
+    };
+    const animateTo = (target: number, glide: "row" | "month", durationMs?: number) => {
+      window.clearTimeout(endTimer);
+      if (snapRaf) cancelAnimationFrame(snapRaf);
+      const from = el.scrollTop;
+      const dist = target - from;
+      if (Math.abs(dist) <= 0.5) {
+        if (Math.abs(dist) > 0.05) el.scrollTop = target;
+        finishSnap();
+        return;
+      }
+      const t0 = performance.now();
+      // Week view: min(240, max(110, distance * 1.05)). The row snap is a
+      // little shorter so it lands sooner. The pan itself is untouched.
+      const dur =
+        durationMs ??
+        (glide === "month"
+          ? Math.min(420, Math.max(160, Math.abs(dist) * 0.42))
+          : Math.min(210, Math.max(96, Math.abs(dist) * 0.9)));
+      snapping = true;
+      written = from;
+      const step = (now: number) => {
+        if (!snapping) return;
+        if (!authoritative && written >= 0 && Math.abs(el.scrollTop - written) > 1.5) {
+          snapping = false;
+          brakeActive = false;
+          written = -1;
+          snapRaf = 0;
+          window.clearTimeout(endTimer);
+          endTimer = window.setTimeout(settle, 180);
+          return;
+        }
+        const t = Math.min(1, (now - t0) / dur);
+        const ease = 0.5 - 0.5 * Math.cos(Math.PI * t);
+        const next = t < 1 ? from + dist * ease : target;
+        written = next;
+        el.scrollTop = next;
+        if (lockFocus == null) publishFocus(next, el.clientHeight);
+        if (t < 1) snapRaf = requestAnimationFrame(step);
+        else finishSnap();
+      };
+      snapRaf = requestAnimationFrame(step);
+    };
+    const animateCoast = (plan: { target: number; durationMs: number }) => {
+      window.clearTimeout(endTimer);
+      if (snapRaf) cancelAnimationFrame(snapRaf);
+      const from = el.scrollTop;
+      const dist = plan.target - from;
+      if (plan.durationMs <= 0 || Math.abs(dist) <= 0.5) {
+        if (Math.abs(dist) > 0.05) el.scrollTop = plan.target;
+        finishSnap();
+        return;
+      }
+      const t0 = performance.now();
+      const dur = plan.durationMs;
+      snapping = true;
+      written = from;
+      const step = (now: number) => {
+        if (!snapping) return;
+        if (
+          !authoritative &&
+          now > coastLockUntil &&
+          written >= 0 &&
+          Math.abs(el.scrollTop - written) > 1.5
+        ) {
+          snapping = false;
+          brakeActive = false;
+          written = -1;
+          snapRaf = 0;
+          window.clearTimeout(endTimer);
+          endTimer = window.setTimeout(settle, 180);
+          return;
+        }
+        const elapsed = now - t0;
+        const next = monthCoastScrollTop(from, plan.target, elapsed, dur);
+        written = next;
+        el.scrollTop = next;
+        if (lockFocus == null) publishFocus(next, el.clientHeight);
+        if (elapsed >= dur) finishSnap();
+        else snapRaf = requestAnimationFrame(step);
+      };
+      snapRaf = requestAnimationFrame(step);
+    };
+    const travelDir = (): -1 | 1 => (scrollDir < 0 ? -1 : 1);
+    const releasePlan = (from: number, sampledVelocity: number) => {
+      const max = Math.max(0, el.scrollHeight - el.clientHeight);
+      return monthReleasePlan(from, sampledVelocity, from, readRowHeight(), max, travelDir());
+    };
+    const playPlan = (
+      plan: { target: number; durationMs: number; velocity: number; curve?: "coast" | "ease" } | null,
+    ) => {
+      if (!plan || plan.durationMs <= 0) return;
+      if (plan.curve === "ease") {
+        animateTo(plan.target, "row", plan.durationMs);
+        return;
+      }
+      coastLockUntil = performance.now() + 100;
+      animateCoast(plan);
+    };
+    const beginRelease = (count: number) => {
+      if (aligningRef.current || brakeActive || (snapping && authoritative)) return;
+      if (snapping) {
+        snapping = false;
+        brakeActive = false;
+        written = -1;
+        if (snapRaf) cancelAnimationFrame(snapRaf);
+        snapRaf = 0;
+      }
+      const from = el.scrollTop;
+      const plan = count >= 2
+        ? monthReleasePlan(releaseTop, releaseVelocity, from, readRowHeight(), Math.max(0, el.scrollHeight - el.clientHeight), travelDir())
+        : releasePlan(from, 0);
+      playPlan(plan);
+    };
+    const settle = () => {
+      if (snapping || aligningRef.current || brakeActive) return;
+      const sampled = performance.now() - lastSampleTs < 80 ? velocity : 0;
+      playPlan(releasePlan(el.scrollTop, sampled));
+    };
+    const markScrolling = () => {
+      window.clearTimeout(endTimer);
+      endTimer = window.setTimeout(settle, 180);
+    };
+    resumeSettleRef.current = markScrolling;
+    const jumpToWeek = (week: number, index: number) => {
+      stopMotion();
+      authoritative = true;
+      lockFocus = index;
+      focusedKeyRef.current = index;
+      const landed = monthFromIndex(index);
+      setLiveMonthFocus(landed.year, landed.month);
+      const targetTop = scrollTopForMonthWeek(week, monthRowHeight);
+      const built = panRef.current;
+      const vis = visibleWeekRows(el.scrollTop, el.clientHeight, monthRowHeight, built.weekCount);
+      const dest = visibleWeekRows(targetTop, el.clientHeight, monthRowHeight, built.weekCount);
+      const cover = {
+        start: Math.max(0, Math.min(vis.start, dest.start) - 2),
+        end: Math.min(built.weekCount - 1, Math.max(vis.end, dest.end) + 2),
+      };
+      if (cover.start !== mountRef.current.start || cover.end !== mountRef.current.end) {
+        mountRef.current = cover;
+        setMount(cover);
+      }
+      animateTo(targetTop, "month");
+    };
+    animateMonthJumpRef.current = jumpToWeek;
+    let syncRaf = 0;
+    let scrollDir: -1 | 0 | 1 = 0;
+    const syncFromScroll = () => {
+      if (aligningRef.current || snapping) return;
+      const scrollTop = el.scrollTop;
+      const viewH = el.clientHeight;
+      publishFocus(scrollTop, viewH);
+      const built = panRef.current;
+      const vis = visibleWeekRows(scrollTop, viewH, monthRowHeight, built.weekCount);
+      const current = mountRef.current;
+      if (!monthMountCovers(vis.start, vis.end, current.start, current.end)) {
+        const nextMount = monthRenderRange(vis.start, vis.end, built.weekCount, scrollDir);
+        if (nextMount.start !== current.start || nextMount.end !== current.end) {
+          mountRef.current = nextMount;
+          setMount(nextMount);
+        }
+      }
+      const ext = monthBufferExtension(
+        scrollTop,
+        viewH,
+        built.weekCount,
+        monthRowHeight,
+        MONTH_PAN_EDGE_WEEKS,
+      );
+      if (!extendingRef.current && (ext.prepend || ext.append)) {
+        extendingRef.current = true;
+        const cur = spanRef.current;
+        const nextSpan = {
+          first: cur.first - (ext.prepend ? MONTH_PAN_GROW : 0),
+          last: cur.last + (ext.append ? MONTH_PAN_GROW : 0),
+        };
+        if (ext.prepend) {
+          pendingPrependWeeksRef.current += weeksBetweenMonthStarts(
+            monthFromIndex(nextSpan.first),
+            monthFromIndex(cur.first),
+          );
+        }
+        spanRef.current = nextSpan;
+        setSpan(nextSpan);
+      }
+      lastScrollTopRef.current = scrollTop;
+    };
+    syncMonthScrollRef.current = () => {
+      if (monthPulseLockRef.current) return;
+      syncFromScroll();
+    };
+    const onScroll = () => {
+      if (aligningRef.current) return;
+      const scrollTop = el.scrollTop;
+      // The title and the side calendar follow the month under the viewport,
+      // including while a glide is running. Publishing the glide's destination
+      // early makes them jump ahead and then flash back.
+      if (monthCreateDragActiveRef.current && monthPulseLockRef.current) return;
+      publishFocus(scrollTop, el.clientHeight);
+      if (monthCreateDragActiveRef.current) {
+        if (Math.abs(scrollTop - lastScrollTopRef.current) >= 0.5) {
+          scrollDir =
+            scrollTop > lastScrollTopRef.current
+              ? 1
+              : scrollTop < lastScrollTopRef.current
+                ? -1
+                : scrollDir;
+          lastScrollTopRef.current = scrollTop;
+          if (!syncRaf) {
+            syncRaf = requestAnimationFrame(() => {
+              syncRaf = 0;
+              syncFromScroll();
+            });
+          }
+        }
+        return;
+      }
+      if (snapping) {
+        scrollDir = scrollTop > lastScrollTopRef.current ? 1 : scrollTop < lastScrollTopRef.current ? -1 : scrollDir;
+        lastScrollTopRef.current = scrollTop;
+        return;
+      }
+      if (Math.abs(scrollTop - lastScrollTopRef.current) < 0.5) return;
+      const now = performance.now();
+      const dt = now - lastSampleTs;
+      const instant = (scrollTop - lastScrollTopRef.current) / (dt > 0 && dt < 80 ? dt : 16);
+      velocity = lastSampleTs === 0 || dt >= 80 ? instant : velocity * 0.4 + instant * 0.6;
+      lastSampleTs = now;
+      if (wheelCount > 0 && now - lastWheelTs < 24) {
+        releaseTop = scrollTop;
+        releaseVelocity = velocity;
+      }
+      scrollDir = scrollTop > lastScrollTopRef.current ? 1 : scrollTop < lastScrollTopRef.current ? -1 : scrollDir;
+      lastScrollTopRef.current = scrollTop;
+      markScrolling();
+      if (decaying && wheelCount >= 1) tryBrakeBeforeUpper();
+      if (syncRaf) return;
+      syncRaf = requestAnimationFrame(() => {
+        syncRaf = 0;
+        syncFromScroll();
+      });
+    };
+    // While a coast is slowing, and its rest would fall in the upper part of
+    // a row, glide onto the line before that part. The line is still ahead,
+    // so the glide only decelerates — it does not turn around.
+    const startPredictiveBrake = (plan: { target: number; durationMs: number }) => {
+      const latest = wheelDeltas[wheelDeltas.length - 1] ?? 1;
+      brakePeak = Math.max(1, Math.abs(latest));
+      brakeDir = plan.target >= el.scrollTop ? 1 : -1;
+      brakeActive = true;
+      window.clearTimeout(endTimer);
+      if (releaseTimer) window.clearTimeout(releaseTimer);
+      releaseTimer = 0;
+      if (brakeRaf) cancelAnimationFrame(brakeRaf);
+      brakeRaf = 0;
+      wheelCount = 0;
+      coastLockUntil = performance.now() + 180;
+      animateCoast(plan);
+    };
+    const tryBrakeBeforeUpper = () => {
+      if (snapping || aligningRef.current || !decaying || Math.abs(velocity) < 0.05) return false;
+      const plan = monthPredictiveBrake(
+        el.scrollTop,
+        velocity,
+        readRowHeight(),
+        Math.max(0, el.scrollHeight - el.clientHeight),
+      );
+      if (!plan) return false;
+      startPredictiveBrake(plan);
+      return true;
+    };
+    const armBrakeWatch = () => {
+      if (brakeRaf) cancelAnimationFrame(brakeRaf);
+      const tick = () => {
+        brakeRaf = 0;
+        if (snapping || wheelCount < 1) return;
+        const since = performance.now() - lastWheelTs;
+        if (since < 16) {
+          brakeRaf = requestAnimationFrame(tick);
+          return;
+        }
+        if (!tryBrakeBeforeUpper() && since < 140) brakeRaf = requestAnimationFrame(tick);
+      };
+      brakeRaf = requestAnimationFrame(tick);
+    };
+    const onScrollEnd = () => {
+      if (snapping || releaseTimer || aligningRef.current || performance.now() < suppressUntil) return;
+      window.clearTimeout(endTimer);
+      endTimer = window.setTimeout(settle, 48);
+    };
+    // A new finger gesture drops the snap so the browser can track it.
+    // Inertia left over from a brake is swallowed, so the glide can finish
+    // on the week line without the trackpad pushing past it and back.
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      const node = e.target;
+      if (!(node instanceof Node) || !el.contains(node)) return;
+      if (node instanceof Element && node.closest("textarea, input, [contenteditable='true']")) return;
+      if (e.deltaY === 0) return;
+      const now = performance.now();
+      if (brakeActive && snapping) {
+        const sameDir = e.deltaY * brakeDir > 0;
+        if (sameDir && Math.abs(e.deltaY) < brakePeak * 0.75) {
+          if (e.cancelable) e.preventDefault();
+          return;
+        }
+        brakeActive = false;
+        snapping = false;
+        authoritative = false;
+        lockFocus = null;
+        written = -1;
+        if (snapRaf) cancelAnimationFrame(snapRaf);
+        snapRaf = 0;
+      } else if (snapping) {
+        snapping = false;
+        brakeActive = false;
+        authoritative = false;
+        lockFocus = null;
+        written = -1;
+        if (snapRaf) cancelAnimationFrame(snapRaf);
+        snapRaf = 0;
+      }
+      if (wheelCount === 0 || now - lastWheelTs > 220) {
+        wheelCount = 0;
+        wheelDeltas.length = 0;
+      }
+      wheelCount += 1;
+      wheelDeltas.push(e.deltaY);
+      if (wheelDeltas.length > 14) wheelDeltas.shift();
+      decaying = monthWheelDecaying(wheelDeltas);
+      lastWheelTs = now;
+      releaseTop = el.scrollTop;
+      releaseVelocity = velocity;
+      if (decaying && !aligningRef.current && !snapping) {
+        const plan = monthPredictiveBrake(
+          el.scrollTop,
+          velocity,
+          readRowHeight(),
+          Math.max(0, el.scrollHeight - el.clientHeight),
+        );
+        if (plan && e.cancelable) {
+          e.preventDefault();
+          startPredictiveBrake(plan);
+          return;
+        }
+      }
+      if (releaseTimer) window.clearTimeout(releaseTimer);
+      armBrakeWatch();
+      releaseTimer = window.setTimeout(() => {
+        releaseTimer = 0;
+        const count = wheelCount;
+        wheelCount = 0;
+        beginRelease(count);
+      }, 40);
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    el.addEventListener("scrollend", onScrollEnd);
+    el.addEventListener("wheel", onWheel, { passive: false });
+    const ro = new ResizeObserver(() => {
+      const next = readRowHeight();
+      const max = Math.max(0, el.scrollHeight - el.clientHeight);
+      if (!snapping && Math.abs(el.scrollTop - snapScrollTop(el.scrollTop, next, max)) > 0.5) {
+        animateTo(snapScrollTop(el.scrollTop, next, max), "row");
+        return;
+      }
+      onScroll();
+    });
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      el.removeEventListener("scrollend", onScrollEnd);
+      el.removeEventListener("wheel", onWheel);
+      ro.disconnect();
+      window.clearTimeout(endTimer);
+      if (syncRaf) cancelAnimationFrame(syncRaf);
+      stopMotion();
+      cancelSnapRef.current = () => {};
+      resumeSettleRef.current = () => {};
+      animateMonthJumpRef.current = () => {};
+      syncMonthScrollRef.current = () => {};
+      monthPulseLockRef.current = false;
+      clearLiveMonthFocus();
+    };
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -1031,7 +1811,15 @@ export function MonthGridType1({
         setFocus(next);
         const day = days.find((cell) => cell.row === next.row && cell.col === next.col);
         if (day) setPasteAnchorDate(day.date);
-        if (day?.inMonth) onSelectDate?.(day.date);
+        const focused = monthFromIndex(focusedKeyRef.current);
+        if (
+          day &&
+          day.date.getFullYear() === focused.year &&
+          day.date.getMonth() === focused.month
+        ) {
+          suppressMonthScrollRef.current = true;
+          onSelectDate?.(day.date);
+        }
       };
 
       if (e.key === "ArrowDown") move(1, 0);
@@ -1089,6 +1877,33 @@ export function MonthGridType1({
   const ghostElRef = useRef<HTMLDivElement | null>(null);
   const dragPointerRef = useRef({ x: 0, y: 0 });
   const dragHitRafRef = useRef<number | null>(null);
+  const sessionEdgePulseRef = useRef<MonthEdgePulse | null>(null);
+  const sessionPulseFrameRef = useRef<(hit: { row: number; col: number } | null) => void>(() => {});
+  const sessionPulseEndRef = useRef<() => void>(() => {});
+  const sessionDropPendingRef = useRef<(() => void) | null>(null);
+  const sessionEdgePulse = () => {
+    if (!sessionEdgePulseRef.current) {
+      sessionEdgePulseRef.current = createMonthEdgePulse({
+        scroller: () => monthScrollerRef.current,
+        rowHeight: () => monthRowHeightRef.current,
+        weekCount: () => panRef.current.weekCount,
+        monthStarts: () => panRef.current.monthStarts,
+        getMount: () => mountRef.current,
+        setMount: (next) => {
+          mountRef.current = next;
+          suppressChipLayoutRef.current = true;
+          flushSync(() => setMount(next));
+          suppressChipLayoutRef.current = false;
+        },
+        lock: monthPulseLockRef,
+        sync: () => syncMonthScrollRef.current(),
+        onFrame: (hit) => sessionPulseFrameRef.current(hit),
+        onPulseEnd: () => sessionPulseEndRef.current(),
+      });
+    }
+    return sessionEdgePulseRef.current;
+  };
+  useEffect(() => () => sessionEdgePulseRef.current?.stop(), []);
   const suppressClickAfterDragRef = useRef(false);
   /** Set on pointerdown when switching from another open session so the trailing click does not toggle the new menu closed. */
   const switchedSessionOnPointerRef = useRef(false);
@@ -1224,6 +2039,14 @@ export function MonthGridType1({
         if (ev) {
           const start = fromISOLocal(ev.startISO);
           const end = fromISOLocal(ev.endISO);
+          if (isMultiDaySession(start, end)) {
+            const fromDate = new Date(from.year, from.month, from.day);
+            const toDate = new Date(toKey.year, toKey.month, toKey.day);
+            const delta = calendarDayDelta(fromDate, toDate);
+            if (delta === 0) return;
+            onMoveEvent(ev.id, shiftIsoRangeByDays(ev.startISO, ev.endISO, delta));
+            return;
+          }
           const durMin = Math.max(30, Math.round((end.getTime() - start.getTime()) / 60000));
           const newStart = setHM(
             new Date(toKey.year, toKey.month, toKey.day),
@@ -1260,10 +2083,28 @@ export function MonthGridType1({
       let targetDate: Date | null = null;
       let dayKey: string | null = null;
       let insertIndex = 0;
-      const node = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
-      const cell = node?.closest<HTMLElement>("[data-cell-pos]");
+      const cell = monthCellFromPoint(clientX, clientY);
       dayKey = cell?.getAttribute("data-day-key") ?? null;
       const posStr = cell?.getAttribute("data-cell-pos") ?? null;
+      // Past Sunday, or left of Monday, still belongs to this week row:
+      // the next columns are the following Monday, the previous column is Sunday.
+      const overflowDate = (() => {
+        if (cell) return null;
+        const grid = containerRef.current?.querySelector<HTMLElement>("[data-month-grid]");
+        const probe = grid?.querySelector<HTMLElement>('[data-cell-pos="0-0"]');
+        if (!grid || !probe) return null;
+        const gridRect = grid.getBoundingClientRect();
+        const cellRect = probe.getBoundingClientRect();
+        if (clientY < gridRect.top || clientY >= gridRect.bottom) return null;
+        if (cellRect.width <= 0 || cellRect.height <= 0) return null;
+        const row = Math.floor((clientY - gridRect.top) / cellRect.height);
+        const monday = days[row * 7]?.date;
+        if (!monday) return null;
+        const col = Math.floor((clientX - cellRect.left) / cellRect.width);
+        if (col >= 0 && col <= 6) return null;
+        if (col < -7 || col > 13) return null;
+        return addDays(startOfDay(monday), col);
+      })();
       if (cell && posStr) {
         const [rowS, colS] = posStr.split("-");
         const r = Number(rowS);
@@ -1295,6 +2136,14 @@ export function MonthGridType1({
         } else {
           targetDate = null;
         }
+      } else if (overflowDate) {
+        targetDate = overflowDate;
+        dayKey = makeCellId(calId, {
+          year: overflowDate.getFullYear(),
+          month: overflowDate.getMonth(),
+          day: overflowDate.getDate(),
+          session: 0,
+        });
       }
       return { targetDate, dayKey, insertIndex };
     };
@@ -1331,6 +2180,46 @@ export function MonthGridType1({
             : prev,
         );
       });
+    };
+
+    sessionPulseFrameRef.current = (hit) => {
+      if (!hit) return;
+      const dragged = dragStartRef.current;
+      const active = dragSessionRef.current;
+      if (!dragged || !active) return;
+      const day = daysRef.current[hit.row * 7 + hit.col];
+      if (!day) return;
+      const targetDate = day.date;
+      const dayKey = makeCellId(calId, {
+        year: targetDate.getFullYear(),
+        month: targetDate.getMonth(),
+        day: targetDate.getDate(),
+        session: 0,
+      });
+      const movedKey = Date.parse(dragged.originalStartISO);
+      const sorted = eventsRef
+        .filter((ev) => ev.id !== dragged.eventId && sameDay(fromISOLocal(ev.startISO), targetDate))
+        .slice()
+        .sort((a, b) => Date.parse(a.startISO) - Date.parse(b.startISO));
+      let insertIndex = sorted.length;
+      for (let i = 0; i < sorted.length; i++) {
+        if (movedKey < Date.parse(sorted[i]!.startISO)) {
+          insertIndex = i;
+          break;
+        }
+      }
+      if (active.targetDayKey === dayKey && active.insertIndex === insertIndex) return;
+      dragSessionRef.current = { ...active, targetDayKey: dayKey, targetDate, insertIndex };
+    };
+    sessionPulseEndRef.current = () => {
+      const pending = sessionDropPendingRef.current;
+      sessionDropPendingRef.current = null;
+      if (pending) {
+        pending();
+        return;
+      }
+      const active = dragSessionRef.current;
+      if (active) setDragSession(active);
     };
 
     const onMove = (e: PointerEvent) => {
@@ -1373,6 +2262,7 @@ export function MonthGridType1({
         if (popoverEventIdRef.current && popoverEventIdRef.current !== start.eventId) {
           closePopover();
         }
+        monthCreateDragActiveRef.current = true;
         setDragSession({
           eventId: start.eventId,
           fromKey: start.fromKey,
@@ -1389,13 +2279,20 @@ export function MonthGridType1({
           chipWidth: start.chipWidth,
           chipHeight: start.chipHeight,
         });
+        sessionEdgePulse().over(e.clientX, e.clientY);
         return;
       }
 
-      scheduleDropTargetUpdate();
+      sessionEdgePulse().over(e.clientX, e.clientY);
+      if (!sessionEdgePulse().isPulsing()) scheduleDropTargetUpdate();
     };
 
     const onUp = () => {
+      const sessionOwned = dragStartRef.current != null || dragSessionRef.current != null;
+      const pulseCtrl = sessionOwned ? sessionEdgePulseRef.current : null;
+      pulseCtrl?.leave();
+      const finishDrop = () => {
+      if (sessionOwned) monthCreateDragActiveRef.current = false;
       const drag = dragSessionRef.current;
       dragStartRef.current = null;
       if (dragHitRafRef.current != null) {
@@ -1562,6 +2459,13 @@ export function MonthGridType1({
           restoreSidePanels: true,
         });
       });
+      };
+
+      if (pulseCtrl?.isPulsing()) {
+        sessionDropPendingRef.current = finishDrop;
+        return;
+      }
+      finishDrop();
     };
 
     window.addEventListener("pointermove", onMove);
@@ -1584,8 +2488,7 @@ export function MonthGridType1({
         const active = creatingDragRef.current;
         if (!start || !active?.moved) return;
         const { x, y } = creatingPointerRef.current;
-        const node = document.elementFromPoint(x, y) as HTMLElement | null;
-        const cell = node?.closest<HTMLElement>("[data-cell-pos]");
+        const cell = monthCellFromPoint(x, y);
         const posStr = cell?.getAttribute("data-cell-pos") ?? null;
         let targetPos: CellPos | null = null;
         if (posStr) {
@@ -1623,8 +2526,7 @@ export function MonthGridType1({
       }
 
       if (!active?.moved) {
-        const node = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-        const cell = node?.closest<HTMLElement>("[data-cell-pos]");
+        const cell = monthCellFromPoint(e.clientX, e.clientY);
         const posStr = cell?.getAttribute("data-cell-pos") ?? null;
         let targetPos: CellPos | null = null;
         if (posStr) {
@@ -1697,10 +2599,10 @@ export function MonthGridType1({
   // Layout animation is only for in-cell drag (ghost insert / reorder).
   // Leaving it on for every chip makes the whole month morph when the
   // visible month changes (search pick, title arrows) or a tile is clicked.
-  const chipLayoutActive = !!dragSession || !!creatingDrag;
+  const chipLayoutActive = (!!dragSession || !!creatingDrag) && !suppressChipLayoutRef.current;
 
   // Standard row-height target so all weeks stay perfectly aligned.
-  const rowMinHeight = 168;
+  const rowMinHeight = monthRowHeight;
 
   // 28px leading column for week numbers; remaining 7 day columns share the
   // rest of the width equally. Mirrors Week-view layout exactly so a zoom
@@ -1717,10 +2619,642 @@ export function MonthGridType1({
     return out;
   }, [days, rows]);
 
+  const MONTH_CHIP_H = 22;
+  const MONTH_CHIP_GAP = 2;
+  const MONTH_SPAN_TOP = 32;
+
+  const monthSpanEvents = useMemo(() => {
+    if (appKind === "diary" || hideMultiDayRow) return [];
+    const out: Array<{ id: string; start: Date; end: Date; event: CalendarEvent }> = [];
+    for (const e of displayEvents) {
+      const start = fromISOLocal(e.startISO);
+      const end = fromISOLocal(e.endISO);
+      if (!isMultiDaySession(start, end)) continue;
+      out.push({ id: e.id, start, end, event: e });
+    }
+    return out;
+  }, [appKind, displayEvents, hideMultiDayRow]);
+
+  const weekSpanLayouts = useMemo(() => {
+    return weekRows.map((wr) => {
+      const { spans, laneCount } = layoutMonthWeekSpans(
+        monthSpanEvents.map(({ id, start, end, event }) => ({
+          id,
+          start,
+          end,
+          sortIndex: event.sortIndex,
+        })),
+        wr.firstDate,
+      );
+      return { row: wr.row, spans, laneCount };
+    });
+  }, [weekRows, monthSpanEvents]);
+
+  const monthSpanById = useMemo(
+    () => new Map(monthSpanEvents.map((e) => [e.id, e.event])),
+    [monthSpanEvents],
+  );
+
+  // Drop outline for a multi-day drag. Inside one week it is one continuous
+  // bar. When the span crosses Sunday into Monday, each week keeps its own
+  // piece so that drop is possible.
+  const multiDragGhost = useMemo(() => {
+    if (appKind === "diary" || !dragSession || dragSession.landing || !dragSession.targetDate) {
+      return null;
+    }
+    const start = fromISOLocal(dragSession.originalStartISO);
+    const end = fromISOLocal(dragSession.originalEndISO);
+    if (!isMultiDaySession(start, end)) return null;
+    const grabDate = new Date(
+      dragSession.fromKey.year,
+      dragSession.fromKey.month,
+      dragSession.fromKey.day,
+    );
+    const range = previewSpanForGrabbedDay(start, end, grabDate, dragSession.targetDate);
+    const color = dragSession.event.color ?? null;
+    const crossesWeek =
+      startOfWeekMon(range.start).getTime() !== startOfWeekMon(range.end).getTime();
+    if (crossesWeek) {
+      const previewEvent = {
+        id: "drag-preview",
+        start: setHM(range.start, 12, 0),
+        end: setHM(range.end, 18, 0),
+      };
+      const spans: Array<{
+        row: number;
+        startCol: number;
+        endCol: number;
+        lane: number;
+      }> = [];
+      for (const wr of weekRows) {
+        const existing = weekSpanLayouts.find((layout) => layout.row === wr.row);
+        const { spans: previewSpans } = layoutMonthWeekSpans([previewEvent], wr.firstDate);
+        for (const span of previewSpans) {
+          let lane = 0;
+          for (const other of existing?.spans ?? []) {
+            if (other.id === dragSession.eventId) continue;
+            if (other.endCol < span.startCol || other.startCol > span.endCol) continue;
+            lane = Math.max(lane, other.lane + 1);
+          }
+          spans.push({
+            row: wr.row,
+            startCol: span.startCol,
+            endCol: span.endCol,
+            lane,
+          });
+        }
+      }
+      if (spans.length === 0) return null;
+      return { color, wrap: true as const, spans };
+    }
+    const target = days.find((d) => sameDay(d.date, dragSession.targetDate!));
+    if (!target) return null;
+    const dayCount = sessionDayCount(start, end);
+    const grabIndex = calendarDayDelta(startOfDay(start), grabDate);
+    const startCol = continuousDragStartCol(target.col, grabIndex, dayCount);
+    const endCol = startCol + dayCount - 1;
+    if (startCol < 0 || endCol > 6) return null;
+    const columnWidth = (dragSession.chipWidth + 12) / dayCount;
+    const existing = weekSpanLayouts.find((layout) => layout.row === target.row);
+    let lane = 0;
+    for (const other of existing?.spans ?? []) {
+      if (other.id === dragSession.eventId) continue;
+      if (other.endCol < startCol || other.startCol > endCol) continue;
+      lane = Math.max(lane, other.lane + 1);
+    }
+    return {
+      color,
+      wrap: false as const,
+      row: target.row,
+      startCol,
+      endCol,
+      lane,
+      left: 28 + startCol * columnWidth + 6,
+      width: Math.max(8, dayCount * columnWidth - 12),
+    };
+  }, [appKind, dragSession, days, weekRows, weekSpanLayouts]);
+
+  const createSpanRange = useMemo(() => {
+    if (appKind === "diary") return null;
+    if (spanPreview) return spanPreview;
+    if (
+      popover &&
+      !popover.eventId &&
+      popover.editIdx < 0 &&
+      popover.pendingStart &&
+      popover.pendingEnd &&
+      !sameDay(startOfDay(popover.pendingStart), startOfDay(popover.pendingEnd))
+    ) {
+      return {
+        start: startOfDay(popover.pendingStart),
+        end: startOfDay(popover.pendingEnd),
+      };
+    }
+    return null;
+  }, [appKind, spanPreview, popover]);
+
+  const createSpanPieces = useMemo(() => {
+    if (!createSpanRange) return [];
+    // The drag stores calendar days at midnight. Midnight on a later day is
+    // 24:00 of the day before, so the bar would stop one cell short of the pointer.
+    const pieces = monthDragWeekPieces(
+      createSpanRange.start,
+      setHM(createSpanRange.end, 12, 0),
+    );
+    const out: Array<{ row: number; startCol: number; endCol: number; lane: number }> = [];
+    for (const piece of pieces) {
+      const monday = startOfWeekMon(piece.start);
+      const row = weekRows.find((wr) => sameDay(startOfWeekMon(wr.firstDate), monday));
+      if (!row) continue;
+      const startCol = piece.startCol;
+      const endCol = piece.startCol + piece.days - 1;
+      let occupied = 0;
+      for (let col = startCol; col <= endCol; col++) {
+        const day = days[row.row * 7 + col];
+        if (!day) continue;
+        const spans = (weekSpanLayouts[row.row]?.spans ?? []).filter(
+          (span) => span.startCol <= col && col <= span.endCol,
+        );
+        const spanDepth =
+          spans.length === 0 ? 0 : Math.max(...spans.map((span) => span.lane)) + 1;
+        occupied = Math.max(occupied, spanDepth);
+      }
+      out.push({
+        row: row.row,
+        startCol,
+        endCol,
+        lane: monthCreatePlaceholderLane(occupied, appKind === "diary" ? 5 : 4),
+      });
+    }
+    return out;
+  }, [appKind, createSpanRange, days, weekRows, weekSpanLayouts]);
+
+  const createSpanOverlaps = (
+    row: number,
+    startCol: number,
+    endCol: number,
+  ) =>
+    createSpanPieces.some(
+      (piece) =>
+        piece.row === row && !(endCol < piece.startCol || startCol > piece.endCol),
+    );
+
+  const beginMonthSpanCreate = (
+    e: React.PointerEvent<HTMLDivElement>,
+    pos: CellPos,
+    date: Date,
+  ) => {
+    if (appKind === "diary" || viewerRole !== "owner") return;
+    if (e.button !== 0 || e.detail >= 2) return;
+    if ((e.target as HTMLElement).closest('[data-role="item"]')) return;
+    e.stopPropagation();
+
+    setFocus(pos);
+    setPasteAnchorDate(date);
+    if (dateInLiveMonth(date)) {
+      suppressMonthScrollRef.current = true;
+      onSelectDate?.(date);
+    }
+
+    detachMonthSpanDragRef.current?.();
+    setSpanPreview(null);
+    setSpanDragActive(false);
+    cancelSnapRef.current();
+    monthCreateDragActiveRef.current = true;
+    const anchorDate = startOfDay(date);
+    const drag = {
+      spanning: false,
+      start: anchorDate,
+      end: anchorDate,
+    };
+    const hadPopover = !!popover;
+    const prevUserSelect = document.body.style.userSelect;
+    const prevWebkitUserSelect = document.body.style.getPropertyValue("-webkit-user-select");
+    document.body.style.setProperty("user-select", "none");
+    document.body.style.setProperty("-webkit-user-select", "none");
+    containerRef.current?.classList.add("select-none");
+    const blockSelect = (ev: Event) => {
+      ev.preventDefault();
+    };
+    document.addEventListener("selectstart", blockSelect);
+    window.getSelection()?.removeAllRanges();
+
+    let pointerX = e.clientX;
+    let pointerY = e.clientY;
+    let raf = 0;
+    let holdTimer = 0;
+    let intervalTimer = 0;
+    let removed = false;
+    /** -1 top edge, 1 bottom edge, 0 outside the band. */
+    let edge: -1 | 0 | 1 = 0;
+    let openAfterPulse = false;
+    let abortCreate = false;
+    /** True after the first pulse is armed, so the next month needs the tighter rim. */
+    let paging = false;
+    let finishMenu: (() => void) | null = null;
+    let paintedStart = -2;
+    let paintedEnd = -2;
+    let committedStart = anchorDate.getTime();
+    let committedEnd = anchorDate.getTime();
+    let pulse: { from: number; target: number; t0: number; dur: number } | null = null;
+    let pulseGrid: HTMLElement | null = null;
+    let viewTop = 0;
+    let viewBottom = 0;
+    let pulseGeom: {
+      viewTop: number;
+      viewBottom: number;
+      gridLeft: number;
+      gridWidth: number;
+      gridTopAt0: number;
+    } | null = null;
+
+    const cellAt = (clientX: number, clientY: number) => {
+      const scroller = monthScrollerRef.current;
+      const grid = scroller?.querySelector<HTMLElement>("[data-month-grid]");
+      if (!scroller || !grid) return null;
+      const view = scroller.getBoundingClientRect();
+      const gridRect = grid.getBoundingClientRect();
+      const y = Math.max(view.top, Math.min(view.bottom - 0.01, clientY));
+      const x = Math.max(gridRect.left + 28, Math.min(gridRect.right - 0.01, clientX));
+      const rowHeight = monthRowHeightRef.current;
+      const row = Math.floor((y - gridRect.top) / rowHeight);
+      const colWidth = (gridRect.width - 28) / 7;
+      if (colWidth <= 0) return null;
+      const col = Math.floor((x - (gridRect.left + 28)) / colWidth);
+      if (row < 0 || col < 0 || col > 6) return null;
+      const day = daysRef.current[row * 7 + col];
+      if (!day) return null;
+      return day;
+    };
+
+    const paintDragMarks = (scrollTop: number) => {
+      const grid = pulseGrid;
+      if (!grid || !pulseGeom) return;
+      const rowHeight = monthRowHeightRef.current;
+      const y = Math.max(pulseGeom.viewTop, Math.min(pulseGeom.viewBottom - 0.01, pointerY));
+      const x = Math.max(
+        pulseGeom.gridLeft,
+        Math.min(pulseGeom.gridLeft + pulseGeom.gridWidth - 0.01, pointerX),
+      );
+      const row = Math.floor((y - (pulseGeom.gridTopAt0 - scrollTop)) / rowHeight);
+      const colWidth = pulseGeom.gridWidth / 7;
+      const col = colWidth > 0 ? Math.floor((x - pulseGeom.gridLeft) / colWidth) : -1;
+      const day = col >= 0 && col <= 6 ? daysRef.current[row * 7 + col] : undefined;
+      if (day) {
+        const pointed = startOfDay(day.date);
+        if (pointed.getTime() === anchorDate.getTime()) {
+          if (drag.spanning) {
+            drag.spanning = false;
+            drag.start = anchorDate;
+            drag.end = anchorDate;
+          }
+        } else {
+          const next = orderedDates(anchorDate, pointed);
+          drag.spanning = true;
+          drag.start = next.start;
+          drag.end = next.end;
+        }
+      }
+      const startMs = drag.spanning ? drag.start.getTime() : -1;
+      const endMs = drag.spanning ? drag.end.getTime() : -1;
+      if (startMs === paintedStart && endMs === paintedEnd) return;
+      paintedStart = startMs;
+      paintedEnd = endMs;
+      const cells = grid.querySelectorAll<HTMLElement>("[data-month-cell]");
+      for (const cell of cells) {
+        const ms = Number(cell.dataset.calMs);
+        if (drag.spanning && ms >= startMs && ms <= endMs) cell.setAttribute("data-create-mark", "1");
+        else cell.removeAttribute("data-create-mark");
+      }
+    };
+
+    const publish = (clientX: number, clientY: number) => {
+      const day = cellAt(clientX, clientY);
+      if (!day) return;
+      const pointed = startOfDay(day.date);
+      if (pointed.getTime() === anchorDate.getTime()) {
+        drag.spanning = false;
+        drag.start = anchorDate;
+        drag.end = anchorDate;
+        if (committedStart === anchorDate.getTime() && committedEnd === anchorDate.getTime()) return;
+        committedStart = anchorDate.getTime();
+        committedEnd = anchorDate.getTime();
+        setSpanDragActive(false);
+        setSpanPreview(null);
+        return;
+      }
+      const next = orderedDates(anchorDate, pointed);
+      if (!drag.spanning) {
+        drag.spanning = true;
+        setSpanDragActive(true);
+        setRange(null);
+        dragAnchorRef.current = null;
+        if (hadPopover) closePopover();
+      }
+      drag.start = next.start;
+      drag.end = next.end;
+      if (committedStart === next.start.getTime() && committedEnd === next.end.getTime()) return;
+      committedStart = next.start.getTime();
+      committedEnd = next.end.getTime();
+      setSpanPreview(next);
+    };
+
+    const edgeAt = (el: HTMLElement, clientY: number): -1 | 0 | 1 => {
+      if (!pulse) {
+        const rect = el.getBoundingClientRect();
+        viewTop = rect.top;
+        viewBottom = rect.bottom;
+      }
+      return monthCreateEdgeZone(clientY, viewTop, viewBottom, paging);
+    };
+
+    const stillAtRim = (repeat: boolean): boolean => {
+      const el = monthScrollerRef.current;
+      if (!el) return false;
+      if (!pulse) {
+        const rect = el.getBoundingClientRect();
+        viewTop = rect.top;
+        viewBottom = rect.bottom;
+      }
+      const zone = monthCreateEdgeZone(pointerY, viewTop, viewBottom, repeat);
+      edge = zone;
+      return zone !== 0;
+    };
+
+    const clearPulseTimers = () => {
+      if (holdTimer) window.clearTimeout(holdTimer);
+      if (intervalTimer) window.clearTimeout(intervalTimer);
+      holdTimer = 0;
+      intervalTimer = 0;
+    };
+
+    const coverPulseWeeks = (el: HTMLElement, target: number) => {
+      const row = monthRowHeightRef.current;
+      const built = panRef.current;
+      const from = visibleWeekRows(el.scrollTop, el.clientHeight, row, built.weekCount);
+      const dest = visibleWeekRows(target, el.clientHeight, row, built.weekCount);
+      const next = {
+        start: Math.max(0, Math.min(from.start, dest.start) - MONTH_RENDER_OVERSCAN),
+        end: Math.min(built.weekCount - 1, Math.max(from.end, dest.end) + MONTH_RENDER_OVERSCAN),
+      };
+      const current = mountRef.current;
+      if (next.start === current.start && next.end === current.end) return;
+      mountRef.current = next;
+      suppressChipLayoutRef.current = true;
+      flushSync(() => setMount(next));
+      suppressChipLayoutRef.current = false;
+    };
+
+    const finishPulse = () => {
+      const el = monthScrollerRef.current;
+      if (el) el.style.willChange = "";
+      monthPulseLockRef.current = false;
+      pulse = null;
+      pulseGrid = null;
+      pulseGeom = null;
+      if (!abortCreate) publish(pointerX, pointerY);
+      syncMonthScrollRef.current();
+      if (openAfterPulse || removed) {
+        finishMenu?.();
+        return;
+      }
+      if (edge === 0) return;
+      const wait = Math.max(0, MONTH_CREATE_PULSE_INTERVAL_MS - monthCreatePulseDuration());
+      intervalTimer = window.setTimeout(() => {
+        intervalTimer = 0;
+        if (removed || !stillAtRim(true)) return;
+        runPulse();
+      }, wait);
+    };
+
+    const tick = (ts: number) => {
+      raf = 0;
+      if (removed || !pulse) return;
+      const el = monthScrollerRef.current;
+      if (!el) {
+        finishPulse();
+        return;
+      }
+      if (pulse.t0 === 0) pulse.t0 = ts;
+      const elapsed = ts - pulse.t0;
+      el.scrollTop = monthCreatePulseScroll(pulse.from, pulse.target, elapsed, pulse.dur);
+      paintDragMarks(el.scrollTop);
+      if (elapsed < pulse.dur) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      el.scrollTop = pulse.target;
+      finishPulse();
+    };
+
+    const runPulse = () => {
+      if (pulse || edge === 0 || removed) return;
+      const el = monthScrollerRef.current;
+      if (!el) return;
+      const max = Math.max(0, el.scrollHeight - el.clientHeight);
+      const target = nextMonthOriginScroll(
+        el.scrollTop,
+        edge,
+        monthRowHeightRef.current,
+        panRef.current.monthStarts,
+        max,
+      );
+      if (target == null || Math.abs(target - el.scrollTop) < 0.5) return;
+      coverPulseWeeks(el, target);
+      const view = el.getBoundingClientRect();
+      const grid = el.querySelector<HTMLElement>("[data-month-grid]");
+      const gridRect = grid?.getBoundingClientRect();
+      if (gridRect) {
+        pulseGrid = grid;
+        pulseGeom = {
+          viewTop: view.top,
+          viewBottom: view.bottom,
+          gridLeft: gridRect.left + 28,
+          gridWidth: gridRect.width - 28,
+          gridTopAt0: gridRect.top + el.scrollTop,
+        };
+      }
+      viewTop = view.top;
+      viewBottom = view.bottom;
+      el.style.willChange = "scroll-position";
+      monthPulseLockRef.current = true;
+      pulse = {
+        from: el.scrollTop,
+        target,
+        t0: 0,
+        dur: monthCreatePulseDuration(),
+      };
+      raf = requestAnimationFrame(tick);
+    };
+
+    const onDragLeaveEdge = () => {
+      edge = 0;
+      clearPulseTimers();
+    };
+
+    const onDragOverEdge = (clientY: number) => {
+      const el = monthScrollerRef.current;
+      if (!el) return;
+      const next = edgeAt(el, clientY);
+      if (next === edge) return;
+      edge = next;
+      clearPulseTimers();
+      if (next === 0 || pulse) return;
+      holdTimer = window.setTimeout(() => {
+        holdTimer = 0;
+        if (removed || !stillAtRim(paging)) return;
+        paging = true;
+        runPulse();
+      }, MONTH_CREATE_PULSE_HOLD_MS);
+    };
+
+    const onMove = (ev: PointerEvent) => {
+      if (!monthCreateDragActiveRef.current) return;
+      if (ev.cancelable) ev.preventDefault();
+      window.getSelection()?.removeAllRanges();
+      pointerX = ev.clientX;
+      pointerY = ev.clientY;
+      onDragOverEdge(ev.clientY);
+      if (!pulse) publish(pointerX, pointerY);
+    };
+
+    let listenersStopped = false;
+    const stopListeners = () => {
+      if (listenersStopped) return;
+      listenersStopped = true;
+      window.removeEventListener("pointermove", onMove, true);
+      window.removeEventListener("pointerup", finish, true);
+      window.removeEventListener("pointercancel", finish, true);
+      document.removeEventListener("selectstart", blockSelect);
+      if (prevUserSelect) document.body.style.setProperty("user-select", prevUserSelect);
+      else document.body.style.removeProperty("user-select");
+      if (prevWebkitUserSelect) {
+        document.body.style.setProperty("-webkit-user-select", prevWebkitUserSelect);
+      } else {
+        document.body.style.removeProperty("-webkit-user-select");
+      }
+      containerRef.current?.classList.remove("select-none");
+      window.getSelection()?.removeAllRanges();
+    };
+    const detach = () => {
+      if (removed) return;
+      removed = true;
+      onDragLeaveEdge();
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      const scroller = monthScrollerRef.current;
+      if (scroller) scroller.style.willChange = "";
+      monthPulseLockRef.current = false;
+      stopListeners();
+      monthCreateDragActiveRef.current = false;
+      if (detachMonthSpanDragRef.current === detach) detachMonthSpanDragRef.current = null;
+    };
+
+    const finish = (ev: PointerEvent) => {
+      if (removed) return;
+      abortCreate = ev.type === "pointercancel";
+      if (abortCreate) drag.spanning = false;
+      onDragLeaveEdge();
+      stopListeners();
+
+      const openMenu = () => {
+        if (removed) return;
+        removed = true;
+        monthCreateDragActiveRef.current = false;
+        if (detachMonthSpanDragRef.current === detach) detachMonthSpanDragRef.current = null;
+        setSpanDragActive(false);
+        setRange(null);
+        dragAnchorRef.current = null;
+        if (abortCreate || !drag.spanning) {
+          setSpanPreview(null);
+          return;
+        }
+        const start = drag.start;
+        const end = drag.end;
+        const endCell = daysRef.current.find((d) => sameDay(d.date, end));
+        if (endCell) {
+          const mounted = mountRef.current;
+          if (endCell.row < mounted.start || endCell.row > mounted.end) {
+            const nextMount = {
+              start: Math.min(mounted.start, endCell.row),
+              end: Math.max(mounted.end, endCell.row),
+            };
+            mountRef.current = nextMount;
+            flushSync(() => setMount(nextMount));
+          }
+        }
+        const anchorEl = endCell
+          ? containerRef.current?.querySelector(
+              monthDayCellSelector({ row: endCell.row, col: endCell.col }),
+            )
+          : null;
+        const rect =
+          anchorEl instanceof HTMLElement
+            ? anchorEl.getBoundingClientRect()
+            : new DOMRect(ev.clientX, ev.clientY, 0, 0);
+        if (endCell) {
+          setFocus({ row: endCell.row, col: endCell.col });
+          setPasteAnchorDate(endCell.date);
+        }
+        setSpanPreview(null);
+        resetSessionSidePanels(null);
+        closeSessionContextMenuRef.current();
+        setCreatePreviewTime({ startMin: 9 * 60, endMin: 10 * 60 });
+        setPopover({
+          pos: endCell ? { row: endCell.row, col: endCell.col } : pos,
+          rect,
+          editIdx: -1,
+          initialText: "",
+          initialColor: getSessionDefaultColor(),
+          categoryId: null,
+          pendingStart: start,
+          pendingEnd: end,
+        });
+      };
+
+      finishMenu = openMenu;
+      if (pulse) {
+        openAfterPulse = true;
+        return;
+      }
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      monthPulseLockRef.current = false;
+      openMenu();
+    };
+
+    detachMonthSpanDragRef.current = detach;
+    window.addEventListener("pointermove", onMove, { capture: true, passive: false });
+    window.addEventListener("pointerup", finish, true);
+    window.addEventListener("pointercancel", finish, true);
+  };
+
+  const createSpanMenu =
+    !spanPreview && popover && !popover.eventId && popover.editIdx < 0 ? popover : null;
+  const createSpanTitleText = createSpanMenu?.initialText?.trim() ?? "";
+  const showCreateSpanTile = createSpanTitleText.length > 0;
+  const createSpanTitle = createSpanTitleText || "New session";
+  const createMarkColor = createSpanMenu?.initialColor ?? getSessionDefaultColor();
+  const showCreateDayMarks = !!createSpanRange && !showCreateSpanTile;
+  const createSpanChrome = sessionMonthChipChrome(
+    createSpanMenu?.initialColor ?? getSessionDefaultColor(),
+    true,
+  );
+
+  const renderStart = Math.min(mount.start, focus.row);
+  const renderEnd = Math.max(mount.end, focus.row);
+  const mountedWeekRows = weekRows.filter((wr) => wr.row >= renderStart && wr.row <= renderEnd);
+  const mountedDays = days.filter((d) => d.row >= renderStart && d.row <= renderEnd);
+  const todayDate = new Date();
+  const todayInFocused =
+    todayDate.getFullYear() === focusYear && todayDate.getMonth() === focusMonth;
+  const todayCol = dowMon0(todayDate);
+  const spanLaneLimitByCell = new Map<string, number>();
+
   return (
     <div
       ref={containerRef}
-      className="relative flex h-full min-h-0 w-full flex-col"
+      className="relative flex h-full min-h-0 w-full flex-col outline-none focus:outline-none focus-visible:outline-none"
       tabIndex={0}
     >
       {/* Weekday strip — mirrors the Week view: 28px week-number gutter + 7
@@ -1734,24 +3268,23 @@ export function MonthGridType1({
         {onOpenYearView ? (
           <button
             type="button"
-            aria-label={`Open year ${year}`}
+            data-calendar-view-nav=""
+            aria-label={`Open year ${focusYear}`}
             onClick={() => onOpenYearView()}
             className="flex h-full flex-col items-center justify-center border-r border-hairline text-[9px] font-semibold leading-[1.05] tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
           >
-            <span>{String(year).slice(0, 2)}</span>
-            <span>{String(year).slice(2)}</span>
+            <span data-month-year-hi="">{String(focusYear).slice(0, 2)}</span>
+            <span data-month-year-lo="">{String(focusYear).slice(2)}</span>
           </button>
         ) : (
           <div className="border-r border-hairline" />
         )}
         {WEEKDAYS.map((w, idx) => {
-          // The first row of `days` represents this week's Mon..Sun, so we
-          // can read each column's date from row 0.
-          const colDate = days[idx]?.date;
-          const isTodayCol = colDate && isToday(colDate);
+          const isTodayCol = todayInFocused && idx === todayCol;
           return (
             <div
               key={w}
+              data-dow={idx}
               className={`px-3 py-2 text-center text-[11px] font-medium uppercase tracking-[0.08em] ${
                 isTodayCol ? "bg-secondary text-ink" : "text-muted-foreground"
               }`}
@@ -1771,36 +3304,47 @@ export function MonthGridType1({
       <div
         ref={monthScrollerRef}
         className="mini-dur-scroll relative flex-1 min-h-0 overflow-y-auto"
-        style={{ scrollbarGutter: "stable" }}
+        style={{ scrollbarGutter: "stable", overflowAnchor: "none" }}
       >
-        <LayoutGroup key={`${year}-${month}`}>
+        <MonthFocusPaint rootRef={containerRef} />
+        <LayoutGroup key="month-pan">
           <div
-            className="grid w-full"
+            data-month-grid=""
+            className="relative grid w-full"
             style={
               {
                 gridTemplateColumns: GRID_TEMPLATE,
-                gridAutoRows: `${rowMinHeight}px`,
+                gridTemplateRows: `repeat(${rows}, ${rowMinHeight}px)`,
+                ["--month-create-mark" as string]: createMarkColor,
               } as CSSProperties
             }
           >
-            {weekRows.map((wr) => (
+            {mountedWeekRows.map((wr) => (
               <button
-                key={`wn-${wr.row}`}
+                key={`wn-${wr.firstDate.getTime()}`}
                 type="button"
+                data-calendar-view-nav=""
+                data-month-week=""
                 onClick={() => onWeekClick?.(wr.firstDate)}
+                onContextMenu={(e) => {
+                  if (viewerRole !== "owner") return;
+                  onWeekContextMenu(e, wr.firstDate);
+                }}
                 title={`Uke ${wr.weekNo} — klikk for å zoome inn`}
                 style={{ gridColumn: 1, gridRow: wr.row + 1 }}
-                className="flex items-start justify-center border-b border-r border-hairline pt-2 text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
+                className="flex items-start justify-center overflow-hidden border-b border-r border-hairline pt-2 text-[10px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-secondary hover:text-ink"
               >
                 {wr.weekNo}
               </button>
             ))}
-            {days.map((d) => {
+            {mountedDays.map((d) => {
               const pos: CellPos = { row: d.row, col: d.col };
               const focused = focus.row === d.row && focus.col === d.col;
               const isInRange = inRange(pos);
               const isWeekend = d.col >= 5;
-              const todayCell = isToday(d.date) && d.inMonth;
+              const inFocused =
+                d.date.getFullYear() === focusYear && d.date.getMonth() === focusMonth;
+              const todayCell = isToday(d.date) && inFocused;
 
               const k: CellKey = {
                 year: d.date.getFullYear(),
@@ -1811,7 +3355,13 @@ export function MonthGridType1({
               const id = makeCellId(calId, k);
               const legacyItems = parseItems(data[id]?.text);
               // Events whose start day is this calendar cell.
-              const dayEvents = displayEvents.filter((e) => sameDay(fromISOLocal(e.startISO), d.date));
+              const dayEvents = displayEvents.filter((e) => {
+                const start = fromISOLocal(e.startISO);
+                if (appKind !== "diary" && isMultiDaySession(start, fromISOLocal(e.endISO))) {
+                  return false;
+                }
+                return sameDay(start, d.date);
+              });
               const pendingOrderIndex = pendingOrder && pendingOrder.length === dayEvents.length
                 ? new Map(pendingOrder.map((eventId, index) => [eventId, index]))
                 : null;
@@ -1846,13 +3396,13 @@ export function MonthGridType1({
                 })),
               ];
 
-              // Strict row alignment: at most 5 rows total in a day cell.
-              // If everything fits in 5, show all 5 chips. Otherwise show 4
-              // chips and reserve the 5th row for the "+N more" button.
-              // Drop-preview ghosts occupy a row too, so they count toward
-              // overflow — the last row becomes / stays "+N more" instead of
-              // pushing a 6th chip below the cell.
-              const MAX_ROWS = 5;
+              // Strict row alignment. Calendar days hold four rows: four
+              // tiles, or three tiles and the "+N more" line. Diary keeps
+              // five rows in its taller cells. Drop-preview ghosts occupy a
+              // row too, so they count toward overflow — the last row
+              // becomes / stays "+N more" instead of pushing another chip
+              // below the cell.
+              const MAX_ROWS = appKind === "diary" ? 5 : 4;
               const isSourceDay =
                 !!dragSession &&
                 dragSession.fromKey.year === d.date.getFullYear() &&
@@ -1863,7 +3413,11 @@ export function MonthGridType1({
                   ? isSourceDay
                   : !!dragSession && dragSession.targetDayKey === id && !isSourceDay;
               const hasRepeatPreviewOnDay = repeatLivePreview?.events.some((e) =>
-                sameDay(fromISOLocal(e.startISO), d.date),
+                eventCoversDay(
+                  fromISOLocal(e.startISO),
+                  fromISOLocal(e.endISO),
+                  d.date,
+                ),
               );
               const isCreatingHere =
                 !!popover &&
@@ -1871,43 +3425,84 @@ export function MonthGridType1({
                 popover.editIdx < 0 &&
                 popover.pos.row === pos.row &&
                 popover.pos.col === pos.col &&
-                (appKind === "diary" || !hasRepeatPreviewOnDay);
+                (appKind === "diary" || !hasRepeatPreviewOnDay) &&
+                !createSpanOverlaps(pos.row, pos.col, pos.col);
               const isCreatingDragTarget =
                 !!creatingDrag &&
                 !!creatingDrag.targetPos &&
                 creatingDrag.targetPos.row === pos.row &&
                 creatingDrag.targetPos.col === pos.col &&
                 !isCreatingHere;
-              const showMoveGhost = isTargetDay && !!dragSession && !dragSession.landing;
+              const draggingMulti =
+                !!dragSession &&
+                isMultiDaySession(
+                  fromISOLocal(dragSession.originalStartISO),
+                  fromISOLocal(dragSession.originalEndISO),
+                );
+              const showMoveGhost =
+                isTargetDay && !!dragSession && !dragSession.landing && !draggingMulti;
               const previewSlots =
                 appKind === "diary"
                   ? 0
                   : (showMoveGhost ? 1 : 0) +
                     (isCreatingHere ? 1 : 0) +
                     (isCreatingDragTarget ? 1 : 0);
-              const occupancy = allItems.length + previewSlots;
-              const willOverflow = occupancy > MAX_ROWS;
-              const MAX_VISIBLE = Math.max(
-                0,
-                willOverflow ? MAX_ROWS - 1 - previewSlots : MAX_ROWS - previewSlots,
+              const spansHere =
+                appKind === "diary"
+                  ? []
+                  : (weekSpanLayouts[d.row]?.spans ?? []).filter(
+                      (span) => span.startCol <= d.col && d.col <= span.endCol,
+                    );
+              const ghostSpan = multiDragGhost?.wrap
+                ? multiDragGhost.spans.find(
+                    (span) =>
+                      span.row === d.row && span.startCol <= d.col && d.col <= span.endCol,
+                  )
+                : multiDragGhost &&
+                    multiDragGhost.row === d.row &&
+                    d.col >= multiDragGhost.startCol &&
+                    d.col <= multiDragGhost.endCol
+                  ? multiDragGhost
+                  : null;
+              const previewPiece = createSpanPieces.find(
+                (piece) =>
+                  piece.row === d.row && piece.startCol <= d.col && d.col <= piece.endCol,
               );
+              const spanLanes = spansHere.map((span) => span.lane);
+              if (ghostSpan) spanLanes.push(ghostSpan.lane);
+              const tileBudget = monthCellTileBudget({
+                maxRows: MAX_ROWS,
+                spanLanes,
+                itemCount: allItems.length,
+                previewSlots,
+                placeholderLane: showCreateSpanTile ? (previewPiece?.lane ?? null) : null,
+              });
+              spanLaneLimitByCell.set(`${d.row}-${d.col}`, tileBudget.spanLaneLimit);
+              const spanLaneCount = tileBudget.visibleSpanLanes;
+              const MAX_VISIBLE = tileBudget.maxChips;
               const visible = allItems.slice(0, MAX_VISIBLE);
-              const overflow = Math.max(0, allItems.length - MAX_VISIBLE);
+              const overflow = tileBudget.overflow;
 
               return (
                 <div
-                  key={d.idx}
+                  key={`${d.date.getFullYear()}-${d.date.getMonth()}-${d.date.getDate()}`}
                   data-cell-pos={`${d.row}-${d.col}`}
+                  onPointerDown={(e) => beginMonthSpanCreate(e, pos, d.date)}
                   onMouseDown={(e) => {
+                    if (monthCreateDragActiveRef.current) return;
                     setFocus(pos);
                     setPasteAnchorDate(d.date);
-                    if (d.inMonth) onSelectDate?.(d.date);
+                    if (dateInLiveMonth(d.date)) {
+                      suppressMonthScrollRef.current = true;
+                      onSelectDate?.(d.date);
+                    }
                     if ((e.target as HTMLElement).closest('[data-role="item"]')) return;
                     if (e.button !== 0) return;
                     dragAnchorRef.current = pos;
                     setRange({ a: pos, b: pos });
                   }}
                   onMouseEnter={() => {
+                    if (monthCreateDragActiveRef.current) return;
                     if (dragAnchorRef.current) {
                       setRange({ a: dragAnchorRef.current, b: pos });
                     }
@@ -1939,43 +3534,82 @@ export function MonthGridType1({
                     onPasteContextMenu(e, d.date);
                   }}
                   className={[
-                    "group/cell group/daynote-anchor relative flex flex-col border-b border-r border-hairline transition-colors",
+                    "group/cell group/daynote-anchor relative isolate flex flex-col border-b border-r border-hairline",
                     "first:border-l-0", // first column has no left border (parent supplies)
                     isInRange || focused
                       ? "bg-muted-foreground/15"
-                      : !d.inMonth
+                      : !inFocused
                         ? "bg-muted/40 text-muted-foreground/60"
                         : isWeekend
                           ? "bg-muted/20"
                           : "bg-card",
                     // Suppress per-cell hover tint while dragging a session,
                     // so only the ghost-preview indicates the drop target.
-                    dragSession ? "select-none" : "hover:bg-secondary/40",
+                    // Keep the clicked/ranged fill even while the pointer is
+                    // over that cell; hover only applies to unselected days.
+                    dragSession || spanDragActive
+                      ? "select-none"
+                      : isInRange || focused
+                        ? ""
+                        : "hover:bg-secondary/40",
                   ].join(" ")}
+                  data-month-cell=""
+                  data-cal-year={d.date.getFullYear()}
+                  data-cal-month={d.date.getMonth()}
+                  data-cal-ms={d.date.getTime()}
+                  data-create-mark={
+                    showCreateDayMarks &&
+                    createSpanRange &&
+                    d.date.getTime() >= createSpanRange.start.getTime() &&
+                    d.date.getTime() <= createSpanRange.end.getTime()
+                      ? "1"
+                      : undefined
+                  }
+                  data-weekend={isWeekend ? "1" : "0"}
+                  data-selected={isInRange || focused ? "1" : "0"}
                   data-day-anchor=""
                   data-day-key={id}
-                  style={{ cursor: "default" }}
+                  style={{ cursor: "default", gridColumn: d.col + 2, gridRow: d.row + 1 }}
 
                 >
-                  {/* Day number — small, top-right, muted */}
-                  <div className="flex items-start justify-between px-2 pt-1.5">
-                    <span className="invisible text-[11px]">·</span>
-                    <span
-                      className={[
-                        "grid h-[22px] w-[22px] place-items-center rounded-sm text-[11px] font-medium tabular-nums",
-                        todayCell
-                          ? "bg-[#ED5C5C] text-white"
-                          : d.inMonth
-                            ? "text-ink/70"
-                            : "text-muted-foreground/50",
-                      ].join(" ")}
-                    >
-                      {d.dayNumber}
+                  {/* Day number — top-right. The 1st carries the month name. */}
+                  <div className="flex items-start justify-end px-2 pt-1.5">
+                    <span className="inline-flex max-w-full items-center justify-end gap-1">
+                      {d.date.getDate() === 1 && (
+                        <span
+                          data-month-label=""
+                          className={[
+                            "truncate text-[11px] font-medium",
+                            inFocused ? "text-ink/70" : "text-muted-foreground/50",
+                          ].join(" ")}
+                        >
+                          {MONTHS_FULL[d.date.getMonth()]}
+                        </span>
+                      )}
+                      <span
+                        data-month-num=""
+                        data-today={isToday(d.date) ? "1" : "0"}
+                        className={[
+                          "grid h-[22px] min-w-[22px] place-items-center rounded-sm text-[11px] font-medium tabular-nums",
+                          todayCell
+                            ? "bg-[#ED5C5C] text-white"
+                            : inFocused
+                              ? "text-ink/70"
+                              : "text-muted-foreground/50",
+                        ].join(" ")}
+                      >
+                        {d.dayNumber}
+                      </span>
                     </span>
                   </div>
 
                   {/* Items list */}
-                  <div className="flex-1 space-y-0.5 px-1.5 pb-1.5 pt-1">
+                  <div
+                    className="relative z-0 flex-1 space-y-0.5 px-1.5 pb-1.5"
+                    style={{
+                      paddingTop: 4 + spanLaneCount * (MONTH_CHIP_H + MONTH_CHIP_GAP),
+                    }}
+                  >
                     {(appKind as string) === "diary" ? (() => {
                       const realEvents = sortedDayEvents;
                       const tall = monthTileDesign === "split" || monthTileDesign === "stacked";
@@ -2052,7 +3686,7 @@ export function MonthGridType1({
                         renderList.splice(0, 0, { kind: "creating-ghost" });
                       }
                       // `visible` already reserved rows for preview chips and
-                      // the "+N more" slot, so this list fits in 5 rows.
+                      // the "+N more" slot, so this list fits in MAX_ROWS.
                       const renderVisible = renderList;
 
 
@@ -2230,7 +3864,8 @@ export function MonthGridType1({
                                 popover?.eventId === evId ||
                                 sessionContextEventId === evId ||
                                 pressedEventId === evId ||
-                                searchSelectedId === evId);
+                                searchSelectedId === evId ||
+                                (evId != null && !!markedEventIds?.has(evId)));
                             return (
                           <motion.div
                             key={`${id}-${itemKey}`}
@@ -2274,7 +3909,10 @@ export function MonthGridType1({
                               if (e.button !== 0) return;
                               setFocus(pos);
                               setPasteAnchorDate(d.date);
-                              if (d.inMonth) onSelectDate?.(d.date);
+                              if (dateInLiveMonth(d.date)) {
+                                suppressMonthScrollRef.current = true;
+                                onSelectDate?.(d.date);
+                              }
                               if (it.kind === "legacy") return;
                               if (isRepeatPreview) return;
                               // Another session's menu is open (or a new untitled
@@ -2436,13 +4074,25 @@ export function MonthGridType1({
                                     itemColor ? "" : "bg-secondary/70",
                                   ].join(" ")
                                 : [
-                                    "relative flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink",
+                                    "relative z-0 flex items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px] text-ink",
                                     "transition-all hover:-translate-y-px hover:shadow-[0_2px_6px_rgba(15,23,42,0.10)]",
                                     itemColor ? "" : "bg-secondary/70",
                                     itemColor ? "" : "hover:bg-secondary",
                                   ].join(" ")}
                             style={(() => {
                               if (isDiaryEvent) return undefined;
+                              const teamSession =
+                                it.kind === "event" &&
+                                isMembershipOverlayEvent(it.event, calId);
+                              if (teamSession && it.kind === "event") {
+                                const chip = teamMemberMonthChip(
+                                  it.event.color,
+                                  isActive,
+                                  signupResponse(it.event.signUpEnabled, teamResponses, it.event.id),
+                                  darkTiles,
+                                );
+                                return tall ? { height: 44, ...chip } : { height: 22, ...chip };
+                              }
                               const isDragOrigin =
                                 !!dragSession &&
                                 !dragSession.landing &&
@@ -2454,9 +4104,7 @@ export function MonthGridType1({
                               // preserved consistently with week/day views.
                               if (isActive && itemColor) {
                                 const chip = sessionMonthChipChrome(itemColor, true);
-                                return tall
-                                  ? { height: 44, ...chip }
-                                  : chip;
+                                return tall ? { height: 44, ...chip } : chip;
                               }
                               const chip = itemColor
                                 ? sessionMonthChipChrome(itemColor, false)
@@ -2515,6 +4163,7 @@ export function MonthGridType1({
                     {overflow > 0 && (
                       <button
                         type="button"
+                        data-calendar-view-nav=""
                         data-role="item"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -2537,6 +4186,277 @@ export function MonthGridType1({
                 </div>
               );
             })}
+            {appKind !== "diary" &&
+              weekSpanLayouts
+                .filter((layout) => layout.row >= renderStart && layout.row <= renderEnd)
+                .flatMap((layout) =>
+                layout.spans.flatMap((span) => {
+                  const ev = monthSpanById.get(span.id);
+                  if (!ev) return [];
+                  const isRepeatPreview = isRepeatPreviewEventId(ev.id);
+                  const isCoachPending = !!ev.coachPending;
+                  const isDraggingBar =
+                    !!dragSession &&
+                    !dragSession.landing &&
+                    dragSession.eventId === ev.id;
+                  const isActive =
+                    !isCoachPending &&
+                    ((lockedId ?? forceEditId) === ev.id ||
+                      popover?.eventId === ev.id ||
+                      sessionContextEventId === ev.id ||
+                      pressedEventId === ev.id ||
+                      searchSelectedId === ev.id ||
+                      !!markedEventIds?.has(ev.id));
+                  const chip = sessionMonthChipChrome(ev.color, isActive);
+                  const lane = span.lane;
+                  const runs = contiguousColumnsWhere(span.startCol, span.endCol, (col) => {
+                    const limit = spanLaneLimitByCell.get(`${layout.row}-${col}`);
+                    return lane < (limit ?? 4);
+                  });
+                  if (runs.length === 0) return [];
+                  const teamChip = isMembershipOverlayEvent(ev, calId)
+                    ? teamMemberMonthChip(
+                        ev.color,
+                        isActive,
+                        signupResponse(ev.signUpEnabled, teamResponses, ev.id),
+                        darkTiles,
+                      )
+                    : null;
+                  const anchorFor = (clientX: number, clientY: number) => {
+                    const cell = monthCellFromPoint(clientX, clientY);
+                    const pos =
+                      monthCellPos(cell) ?? { row: layout.row, col: span.startCol };
+                    return { cell, pos, day: days[pos.row * 7 + pos.col] };
+                  };
+                  return runs.map((run) => (
+                    <button
+                      key={`span-${layout.row}-${span.id}-${run.startCol}`}
+                      type="button"
+                      data-role="item"
+                      data-event-id={ev.id}
+                      data-session-active={isActive ? "1" : undefined}
+                      data-coach-pending={isCoachPending ? "1" : undefined}
+                      draggable={false}
+                      className="z-30 flex min-w-0 items-center overflow-hidden rounded-[3px] px-1.5 text-left text-[11.5px] leading-none select-none"
+                      style={{
+                        gridColumn: `${run.startCol + 2} / ${run.endCol + 3}`,
+                        gridRow: layout.row + 1,
+                        position: "absolute",
+                        top:
+                          MONTH_SPAN_TOP +
+                          lane * (MONTH_CHIP_H + MONTH_CHIP_GAP),
+                        height: MONTH_CHIP_H,
+                        // Same cell inset as a session that starts or ends on this day,
+                        // including the Sunday and Monday pieces of a week-wrapping span.
+                        left: 6,
+                        right: 6,
+                        minWidth: 0,
+                        // Opaque card under the tint so day borders sit behind the bar.
+                        backgroundColor: "var(--card)",
+                        backgroundImage: teamChip?.background
+                          ? teamChip.background
+                          : `linear-gradient(${teamChip?.backgroundColor ?? chip.backgroundColor}, ${teamChip?.backgroundColor ?? chip.backgroundColor})`,
+                        color: teamChip?.color ?? chip.color,
+                        boxShadow: teamChip?.boxShadow ?? chip.boxShadow,
+                        opacity: isRepeatPreview ? 0.72 : isDraggingBar ? 0.35 : 1,
+                        pointerEvents: isDraggingBar ? "none" : "auto",
+                      }}
+                      title={ev.title}
+                      onDragStart={(e) => e.preventDefault()}
+                      onPointerDown={(e) => {
+                        if (e.button !== 0) return;
+                        const { cell, pos, day } = anchorFor(e.clientX, e.clientY);
+                        if (day) {
+                          setFocus(pos);
+                          setPasteAnchorDate(day.date);
+                          if (dateInLiveMonth(day.date)) {
+                            suppressMonthScrollRef.current = true;
+                            onSelectDate?.(day.date);
+                          }
+                        }
+                        if (isRepeatPreview) return;
+                        const anchor = cell ?? (e.currentTarget as HTMLElement);
+                        if (popover && popover.eventId !== ev.id) {
+                          openEventEditor(pos, ev, anchor);
+                          switchedSessionOnPointerRef.current = true;
+                        }
+                        setPressedEventId(ev.id);
+                        if (viewerRole !== "owner" || isMembershipOverlayEvent(ev, calId)) {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          return;
+                        }
+                        if (!day) return;
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        suppressClickAfterDragRef.current = false;
+                        const sessionStart = startOfDay(fromISOLocal(ev.startISO));
+                        const grabDay = startOfDay(day.date);
+                        const pieces = monthDragWeekPieces(sessionStart, fromISOLocal(ev.endISO));
+                        const grabbedPiece = pieces.find((piece) => {
+                          const pieceEnd = addDays(piece.start, piece.days - 1);
+                          return (
+                            grabDay.getTime() >= piece.start.getTime() &&
+                            grabDay.getTime() <= pieceEnd.getTime()
+                          );
+                        });
+                        const dayCount = sessionDayCount(sessionStart, fromISOLocal(ev.endISO));
+                        let offsetX = e.clientX - rect.left;
+                        let chipWidth = rect.width;
+                        if (
+                          grabbedPiece &&
+                          grabbedPiece.days > 0 &&
+                          dayCount > grabbedPiece.days
+                        ) {
+                          const columnWidth = (rect.width + 12) / grabbedPiece.days;
+                          const pieceStartIndex = calendarDayDelta(sessionStart, grabbedPiece.start);
+                          offsetX += pieceStartIndex * columnWidth;
+                          chipWidth = dayCount * columnWidth - 12;
+                        }
+                        dragStartRef.current = {
+                          x: e.clientX,
+                          y: e.clientY,
+                          eventId: ev.id,
+                          fromKey: {
+                            year: day.date.getFullYear(),
+                            month: day.date.getMonth(),
+                            day: day.date.getDate(),
+                            session: 0,
+                          },
+                          originalStartISO: ev.startISO,
+                          originalEndISO: ev.endISO,
+                          event: ev,
+                          offsetX,
+                          offsetY: e.clientY - rect.top,
+                          chipWidth,
+                          chipHeight: rect.height,
+                        };
+                        if (popover?.eventId === ev.id) e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const switchedOnPress = switchedSessionOnPointerRef.current;
+                        switchedSessionOnPointerRef.current = false;
+                        if (suppressClickAfterDragRef.current) {
+                          suppressClickAfterDragRef.current = false;
+                          return;
+                        }
+                        if (switchedOnPress) return;
+                        if (dragSessionRef.current) return;
+                        if (isRepeatPreview) return;
+                        const { cell, pos } = anchorFor(e.clientX, e.clientY);
+                        const anchor = cell ?? (e.currentTarget as HTMLElement);
+                        if (popover?.eventId === ev.id) {
+                          closePopover();
+                          return;
+                        }
+                        openEventEditor(pos, ev, anchor);
+                      }}
+                      onContextMenu={(e) => {
+                        if (isRepeatPreview) return;
+                        const { cell } = anchorFor(e.clientX, e.clientY);
+                        onSessionContextMenu(e, ev, cell ?? (e.currentTarget as HTMLElement));
+                      }}
+                    >
+                      <span className="truncate">{ev.title}</span>
+                    </button>
+                  ));
+                }),
+              )}
+            {showCreateSpanTile
+              ? createSpanPieces
+              .filter((piece) => piece.row >= renderStart && piece.row <= renderEnd)
+              .map((piece) => (
+                <div
+                  key={`create-span-${piece.row}-${piece.startCol}`}
+                  data-role="mark-create-preview"
+                  aria-hidden
+                  className="pointer-events-none z-40 flex min-w-0 items-center overflow-hidden rounded-[3px] px-1.5 text-left text-[11.5px] leading-none select-none"
+                  style={{
+                    gridColumn: `${piece.startCol + 2} / ${piece.endCol + 3}`,
+                    gridRow: piece.row + 1,
+                    position: "absolute",
+                    top: MONTH_SPAN_TOP + piece.lane * (MONTH_CHIP_H + MONTH_CHIP_GAP),
+                    height: MONTH_CHIP_H,
+                    left: 6,
+                    right: 6,
+                    minWidth: 0,
+                    backgroundColor: "var(--card)",
+                    backgroundImage: `linear-gradient(${createSpanChrome.backgroundColor}, ${createSpanChrome.backgroundColor})`,
+                    color: createSpanChrome.color,
+                    boxShadow: createSpanChrome.boxShadow,
+                  }}
+                >
+                  <span className="truncate">{createSpanTitle}</span>
+                </div>
+              ))
+              : null}
+            {multiDragGhost?.wrap
+              ? multiDragGhost.spans.flatMap((span) => {
+                  const runs = contiguousColumnsWhere(span.startCol, span.endCol, (col) => {
+                    const limit = spanLaneLimitByCell.get(`${span.row}-${col}`);
+                    return span.lane < (limit ?? 4);
+                  });
+                  return runs.map((run) => (
+                  <div
+                    key={`drag-ghost-${span.row}-${run.startCol}`}
+                    data-role="ghost-move"
+                    aria-hidden
+                    className="pointer-events-none z-40 rounded-[3px] border-2 border-solid border-primary/70 bg-primary/10"
+                    style={{
+                      gridColumn: `${run.startCol + 2} / ${run.endCol + 3}`,
+                      gridRow: span.row + 1,
+                      position: "absolute",
+                      top: MONTH_SPAN_TOP + span.lane * (MONTH_CHIP_H + MONTH_CHIP_GAP),
+                      height: MONTH_CHIP_H,
+                      left: 6,
+                      right: 6,
+                      borderColor: multiDragGhost.color
+                        ? `${multiDragGhost.color}CC`
+                        : undefined,
+                      backgroundColor: multiDragGhost.color ? "var(--card)" : undefined,
+                      backgroundImage: multiDragGhost.color
+                        ? `linear-gradient(${multiDragGhost.color}1F, ${multiDragGhost.color}1F)`
+                        : undefined,
+                      }}
+                    />
+                  ));
+                })
+              : multiDragGhost
+                ? (
+                    <div
+                      className="pointer-events-none z-40"
+                      style={{
+                        gridColumn: "1 / -1",
+                        gridRow: "1 / -1",
+                        position: "absolute",
+                        inset: 0,
+                      }}
+                    >
+                      <div
+                        data-role="ghost-move"
+                        aria-hidden
+                        className="pointer-events-none absolute rounded-[3px] border-2 border-solid border-primary/70 bg-primary/10"
+                        style={{
+                          left: multiDragGhost.left,
+                          top:
+                            multiDragGhost.row * rowMinHeight +
+                            MONTH_SPAN_TOP +
+                            multiDragGhost.lane * (MONTH_CHIP_H + MONTH_CHIP_GAP),
+                          width: multiDragGhost.width,
+                          height: MONTH_CHIP_H,
+                          borderColor: multiDragGhost.color
+                            ? `${multiDragGhost.color}CC`
+                            : undefined,
+                          backgroundColor: multiDragGhost.color ? "var(--card)" : undefined,
+                          backgroundImage: multiDragGhost.color
+                            ? `linear-gradient(${multiDragGhost.color}1F, ${multiDragGhost.color}1F)`
+                            : undefined,
+                        }}
+                      />
+                    </div>
+                  )
+                : null}
           </div>
         </LayoutGroup>
 
@@ -2671,7 +4591,16 @@ export function MonthGridType1({
             anchor={popover.rect}
             enableDuration={!!onUpsertEvent}
             readOnly={viewerRole !== "owner" || isMembershipOverlayEvent(events.find((e) => e.id === popover.eventId), calId)}
+            memberTeamMenu={isMembershipOverlayEvent(events.find((e) => e.id === popover.eventId), calId)}
+            memberTeamId={events.find((e) => e.id === popover.eventId)?.entityId ?? null}
             categoryOwnerId={seat === "individual" ? memberId ?? null : null}
+            onTitleChange={(title) => {
+              setPopover((prev) =>
+                prev && !prev.eventId && prev.editIdx < 0
+                  ? { ...prev, initialText: title }
+                  : prev,
+              );
+            }}
             onColorChange={(c, eventIds) => {
               setPopover((prev) => (prev ? { ...prev, initialColor: c } : prev));
               if (!c) return;
@@ -2716,7 +4645,7 @@ export function MonthGridType1({
                   const e = fromISOLocal(ev.endISO);
                   // Only show as a duration if it isn't an all-day event.
                   if (!ev.allDay) {
-                    return startEndMinsOnStartDay(s, e);
+                    return sessionMenuClockRange(s, e);
                   }
                 }
               }
@@ -2768,13 +4697,29 @@ export function MonthGridType1({
                 ? events.find((e) => e.id === popover.eventId) ?? null
                 : null
             }
-            sessionDate={days.find((d) => d.row === popover.pos.row && d.col === popover.pos.col)?.date}
+            sessionDate={
+              popover.pendingStart
+              ?? days.find((d) => d.row === popover.pos.row && d.col === popover.pos.col)?.date
+            }
+            sessionEndDate={
+              popover.pendingEnd
+              ?? (popover.eventId
+                ? (() => {
+                    const ev = events.find((e) => e.id === popover.eventId);
+                    if (!ev) return undefined;
+                    return sessionInclusiveEndDay(
+                      fromISOLocal(ev.startISO),
+                      fromISOLocal(ev.endISO),
+                    );
+                  })()
+                : undefined)
+            }
             initialRepeatRule={
               popover.eventId
                 ? events.find((e) => e.id === popover.eventId)?.repeatRule ?? null
                 : null
             }
-            onDateChange={(date, eventIds) => {
+            onDateChange={({ start, end }, eventIds) => {
               const ids =
                 eventIds && eventIds.length > 0
                   ? eventIds
@@ -2785,18 +4730,29 @@ export function MonthGridType1({
                 ? events.find((e) => e.id === popover.eventId)
                 : undefined;
               if (primary && onMoveEvent && ids.length) {
-                const delta = calendarDayDelta(fromISOLocal(primary.startISO), date);
+                const delta = calendarDayDelta(fromISOLocal(primary.startISO), start);
                 for (const id of ids) {
                   const ev = events.find((e) => e.id === id);
                   if (!ev?.startISO || !ev.endISO) continue;
                   const range =
                     ids.length > 1 && id !== primary.id
                       ? shiftIsoRangeByDays(ev.startISO, ev.endISO, delta)
-                      : isoRangeOnDate(ev.startISO, ev.endISO, date);
+                      : isAllDayBandEvent(ev)
+                        ? bandWidthResizeResult(
+                            ev.startISO,
+                            ev.endISO,
+                            !!ev.allDay,
+                            start,
+                            end,
+                          )
+                        : isoRangeOnDates(ev.startISO, ev.endISO, start, end);
                   onMoveEvent(id, range);
                 }
               }
-              reanchorPopoverToDate(date);
+              setPopover((prev) =>
+                prev ? { ...prev, pendingStart: start, pendingEnd: end } : prev,
+              );
+              reanchorPopoverToDate(start);
             }}
             onTimeChange={(time, eventIds) => {
               if (!popover.eventId && popover.editIdx < 0) {
@@ -2813,15 +4769,9 @@ export function MonthGridType1({
               for (const id of ids) {
                 const ev = events.find((e) => e.id === id);
                 if (!ev || ev.allDay) continue;
-                const date = fromISOLocal(ev.startISO);
-                onMoveEvent(id, {
-                  startISO: toISOLocal(
-                    setHM(date, Math.floor(time.startMin / 60), time.startMin % 60),
-                  ),
-                  endISO: toISOLocal(
-                    setHM(date, Math.floor(time.endMin / 60), time.endMin % 60),
-                  ),
-                });
+                const start = fromISOLocal(ev.startISO);
+                const endDay = sessionInclusiveEndDay(start, fromISOLocal(ev.endISO));
+                onMoveEvent(id, isoFromMenuClocks(start, endDay, time.startMin, time.endMin));
               }
             }}
             onAllDayChange={(nextAllDay, t, eventIds) => {
@@ -2836,6 +4786,14 @@ export function MonthGridType1({
               for (const id of ids) {
                 const ev = events.find((e) => e.id === id);
                 if (!ev) continue;
+                if (
+                  !nextAllDay &&
+                  isMultiDaySession(fromISOLocal(ev.startISO), fromISOLocal(ev.endISO))
+                ) {
+                  onMoveEvent(id, { allDay: false });
+                  continue;
+                }
+                if (t == null) continue;
                 const date = fromISOLocal(ev.startISO);
                 const startISO = toISOLocal(
                   setHM(date, Math.floor(time.startMin / 60), time.startMin % 60),
@@ -2939,7 +4897,6 @@ export function MonthGridType1({
                     const existingEv = events.find((e) => e.id === id);
                     if (!existingEv) continue;
                     const repeatSeriesId = sharedSeriesId;
-                    const day = fromISOLocal(existingEv.startISO);
                     const patch: Parameters<NonNullable<typeof onUpsertEvent>>[0] = {
                       id,
                       title: t,
@@ -2961,19 +4918,24 @@ export function MonthGridType1({
                       repeatDetached: !repeatRule,
                     };
                     if (time) {
-                      const start = setHM(
-                        day,
-                        Math.floor(time.startMin / 60),
-                        time.startMin % 60,
-                      );
-                      const end = setHM(
-                        day,
-                        Math.floor(time.endMin / 60),
-                        time.endMin % 60,
-                      );
+                      const startDay =
+                        id === popover.eventId && popover.pendingStart
+                          ? popover.pendingStart
+                          : fromISOLocal(existingEv.startISO);
+                      const endDay =
+                        id === popover.eventId && popover.pendingEnd
+                          ? popover.pendingEnd
+                          : sessionInclusiveEndDay(
+                              fromISOLocal(existingEv.startISO),
+                              fromISOLocal(existingEv.endISO),
+                            );
                       Object.assign(patch, {
-                        startISO: toISOLocal(start),
-                        endISO: toISOLocal(end),
+                        ...isoFromMenuClocks(
+                          startDay,
+                          endDay,
+                          time.startMin,
+                          time.endMin,
+                        ),
                         allDay: !!allDay,
                       });
                     } else if (allDay !== undefined) {
@@ -3076,22 +5038,26 @@ export function MonthGridType1({
               if (popover.editIdx < 0 && onUpsertEvent) {
                 if (t) {
                   const effectiveTime = time ?? { startMin: 8 * 60, endMin: 9 * 60 };
-                  const startH = Math.floor(effectiveTime.startMin / 60);
-                  const startM = effectiveTime.startMin % 60;
-                  const endH = Math.floor(effectiveTime.endMin / 60);
-                  const endM = effectiveTime.endMin % 60;
-                  const start = setHM(cell.date, startH, startM);
-                  const end = setHM(cell.date, endH, endM);
+                  const startDay = popover.pendingStart ?? cell.date;
+                  const endDay = popover.pendingEnd ?? startDay;
+                  const { startISO, endISO } = isoFromMenuClocks(
+                    startDay,
+                    endDay,
+                    effectiveTime.startMin,
+                    effectiveTime.endMin,
+                  );
+                  const createdAt = Date.now();
                   const template = {
                     title: t,
                     color: effectiveColor,
                     categoryId: effectiveCategoryId ?? undefined,
                     location: effectiveLocation,
                     locationUrl: effectiveLocationUrl,
-                    startISO: toISOLocal(start),
-                    endISO: toISOLocal(end),
+                    startISO,
+                    endISO,
                     allDay: !!allDay,
                     category: categoryFromColor(effectiveColor),
+                    sortIndex: createdAt,
                     ...(description !== undefined
                       ? { description: description ?? undefined }
                       : {}),
@@ -3106,7 +5072,7 @@ export function MonthGridType1({
                   };
                   if (repeatRule) {
                     for (const inst of expandRepeatingEvents(template, repeatRule, cell.date)) {
-                      onUpsertEvent(inst);
+                      onUpsertEvent({ ...inst, sortIndex: createdAt });
                     }
                   } else {
                     onUpsertEvent(template);
@@ -3151,6 +5117,34 @@ export function MonthGridType1({
           const landing = dragSession.landing;
           const left = landing ? landing.left : dragSession.pointerX - dragSession.offsetX;
           const top = landing ? landing.top : dragSession.pointerY - dragSession.offsetY;
+          const tileStyle = (() => {
+            const base = ev.coachPending
+              ? ev.color
+                ? sessionMonthChipChrome(ev.color, false)
+                : {
+                    backgroundColor: "hsl(var(--secondary))",
+                    color: "hsl(var(--ink))",
+                  }
+              : ev.color
+                ? sessionMonthChipChrome(ev.color, true)
+                : {
+                    backgroundColor: "hsl(var(--secondary))",
+                    color: "#fff",
+                  };
+            if (!isMembershipOverlayEvent(ev, calId)) return base;
+            const teamChip = teamMemberMonthChip(
+              ev.color,
+              true,
+              signupResponse(ev.signUpEnabled, teamResponses, ev.id),
+              darkTiles,
+            );
+            return {
+              background: teamChip.background,
+              backgroundColor: teamChip.backgroundColor,
+              color: teamChip.color,
+              boxShadow: teamChip.boxShadow,
+            };
+          })();
           return (
             <div
               ref={ghostElRef}
@@ -3160,6 +5154,7 @@ export function MonthGridType1({
                 top,
                 width: dragSession.chipWidth,
                 height: dragSession.chipHeight,
+                overflow: "visible",
                 willChange: landing ? undefined : "left, top",
                 // Smoothly snap the floating clone into the destination slot
                 // on release. The real chip is already mounted at the same
@@ -3182,21 +5177,7 @@ export function MonthGridType1({
               ) : (
                 <div
                   className="relative flex h-full w-full items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px]"
-                  style={
-                    ev.coachPending
-                      ? ev.color
-                        ? sessionMonthChipChrome(ev.color, false)
-                        : {
-                            backgroundColor: "hsl(var(--secondary))",
-                            color: "hsl(var(--ink))",
-                          }
-                      : ev.color
-                        ? sessionMonthChipChrome(ev.color, true)
-                        : {
-                            backgroundColor: "hsl(var(--secondary))",
-                            color: "#fff",
-                          }
-                  }
+                  style={tileStyle}
                   data-coach-pending={ev.coachPending ? "1" : undefined}
                   title={ev.title}
                 >
@@ -3340,8 +5321,10 @@ export function MonthGridType1({
           }}
         />
         {pasteOverlay}
+        {weekOverlay}
         {sessionContextOverlay}
         {pasteToastNode}
+        {weekToastNode}
         {sessionContextToastNode}
       </div>
     </div>
@@ -3455,10 +5438,15 @@ export interface PopoverEditorProps {
    */
   onColorChange?: (color: string | null, eventIds?: string[]) => void;
   /**
-   * Fires when the user picks a day in the date calendar. The menu stays
-   * open; the parent moves the session and the visible day, week, or month.
+   * Fires on each title keystroke so a session that is still being created
+   * can show the text on its tile immediately.
    */
-  onDateChange?: (date: Date, eventIds?: string[]) => void;
+  onTitleChange?: (title: string) => void;
+  /**
+   * Fires when the user picks a from/to range in the date calendar. The menu
+   * stays open; the parent moves the session onto those days.
+   */
+  onDateChange?: (range: { start: Date; end: Date }, eventIds?: string[]) => void;
   onCategoryChange?: (selection: CategorySelection) => void;
   /**
    * When true, the popover renders as a view-only panel: the title input is
@@ -3467,6 +5455,13 @@ export interface PopoverEditorProps {
    * session — they can see the details but cannot change them.
    */
   readOnly?: boolean;
+  /**
+   * Team session opened from a member's own calendar. Timed sessions show
+   * only the from-date. Repeat and description stay out of this menu.
+   */
+  memberTeamMenu?: boolean;
+  /** Entity that owns this session, when the menu is the member view. */
+  memberTeamId?: string | null;
   /** Optional override for the title input's placeholder. */
   placeholder?: string;
   /** Active team id (admin seat only). Scopes the category dropdown list. */
@@ -3481,6 +5476,8 @@ export interface PopoverEditorProps {
   eventForCopy?: CalendarEvent | null;
   /** Wall-clock date the session is anchored on (repeat + weekday/weekend options). */
   sessionDate?: Date;
+  /** Inclusive last calendar day when the session spans more than one day. */
+  sessionEndDate?: Date;
   /**
    * Month-view day cell the panel is bound to (`data-cell-pos`). Live
    * re-anchor uses this cell instead of the first matching tile in the DOM.
@@ -3779,8 +5776,6 @@ function fitTextToFixedTextarea(
   return fitted || previous;
 }
 
-const EMPTY_SESSION_SIGNUPS: EntityMember[] = [];
-
 function escapeAttrSelector(value: string): string {
   return typeof CSS !== "undefined" && typeof CSS.escape === "function"
     ? CSS.escape(value)
@@ -3789,6 +5784,244 @@ function escapeAttrSelector(value: string): string {
 
 function monthDayCellSelector(pos: { row: number; col: number }): string {
   return `[data-cell-pos="${pos.row}-${pos.col}"][data-day-anchor]`;
+}
+
+/** Day cell under the pointer, including cells covered by a spanning session bar. */
+type MonthEdgePulse = {
+  over: (clientX: number, clientY: number) => void;
+  leave: () => void;
+  stop: () => void;
+  isPulsing: () => boolean;
+};
+
+/**
+ * One-month edge pulse shared by multi-day create and moving an existing tile.
+ * The first month arms in the outer band. After that, the pointer has to stay
+ * on the rim or the next month is cancelled.
+ */
+function createMonthEdgePulse(host: {
+  scroller: () => HTMLElement | null;
+  rowHeight: () => number;
+  weekCount: () => number;
+  monthStarts: () => { week: number }[];
+  getMount: () => { start: number; end: number };
+  setMount: (next: { start: number; end: number }) => void;
+  lock: { current: boolean };
+  sync: () => void;
+  onFrame: (hit: { row: number; col: number } | null) => void;
+  onPulseEnd: () => void;
+}): MonthEdgePulse {
+  let raf = 0;
+  let holdTimer = 0;
+  let intervalTimer = 0;
+  let removed = false;
+  let edge: -1 | 0 | 1 = 0;
+  let paging = false;
+  let pointerX = 0;
+  let pointerY = 0;
+  let viewTop = 0;
+  let viewBottom = 0;
+  let pulse: { from: number; target: number; t0: number; dur: number } | null = null;
+  let geom: {
+    viewTop: number;
+    viewBottom: number;
+    gridLeft: number;
+    gridWidth: number;
+    gridTopAt0: number;
+  } | null = null;
+
+  const clearPulseTimers = () => {
+    if (holdTimer) window.clearTimeout(holdTimer);
+    if (intervalTimer) window.clearTimeout(intervalTimer);
+    holdTimer = 0;
+    intervalTimer = 0;
+  };
+
+  const edgeAt = (el: HTMLElement, clientY: number): -1 | 0 | 1 => {
+    if (!pulse) {
+      const rect = el.getBoundingClientRect();
+      viewTop = rect.top;
+      viewBottom = rect.bottom;
+    }
+    return monthCreateEdgeZone(clientY, viewTop, viewBottom, paging);
+  };
+
+  const stillAtRim = (repeat: boolean): boolean => {
+    const el = host.scroller();
+    if (!el) return false;
+    if (!pulse) {
+      const rect = el.getBoundingClientRect();
+      viewTop = rect.top;
+      viewBottom = rect.bottom;
+    }
+    const zone = monthCreateEdgeZone(pointerY, viewTop, viewBottom, repeat);
+    edge = zone;
+    return zone !== 0;
+  };
+
+  const hitAt = (scrollTop: number): { row: number; col: number } | null => {
+    if (!geom) return null;
+    const rowHeight = host.rowHeight();
+    if (rowHeight <= 0) return null;
+    const y = Math.max(geom.viewTop, Math.min(geom.viewBottom - 0.01, pointerY));
+    const x = Math.max(geom.gridLeft, Math.min(geom.gridLeft + geom.gridWidth - 0.01, pointerX));
+    const row = Math.floor((y - (geom.gridTopAt0 - scrollTop)) / rowHeight);
+    const colWidth = geom.gridWidth / 7;
+    if (colWidth <= 0) return null;
+    const col = Math.floor((x - geom.gridLeft) / colWidth);
+    if (row < 0 || col < 0 || col > 6) return null;
+    return { row, col };
+  };
+
+  const coverPulseWeeks = (el: HTMLElement, target: number) => {
+    const row = host.rowHeight();
+    const weekCount = host.weekCount();
+    const from = visibleWeekRows(el.scrollTop, el.clientHeight, row, weekCount);
+    const dest = visibleWeekRows(target, el.clientHeight, row, weekCount);
+    const next = {
+      start: Math.max(0, Math.min(from.start, dest.start) - MONTH_RENDER_OVERSCAN),
+      end: Math.min(weekCount - 1, Math.max(from.end, dest.end) + MONTH_RENDER_OVERSCAN),
+    };
+    const current = host.getMount();
+    if (next.start === current.start && next.end === current.end) return;
+    host.setMount(next);
+  };
+
+  const finishPulse = () => {
+    const el = host.scroller();
+    if (el) el.style.willChange = "";
+    host.lock.current = false;
+    pulse = null;
+    geom = null;
+    host.sync();
+    host.onPulseEnd();
+    if (removed || edge === 0) return;
+    const wait = Math.max(0, MONTH_CREATE_PULSE_INTERVAL_MS - monthCreatePulseDuration());
+    intervalTimer = window.setTimeout(() => {
+      intervalTimer = 0;
+      if (removed || !stillAtRim(true)) return;
+      runPulse();
+    }, wait);
+  };
+
+  const tick = (ts: number) => {
+    raf = 0;
+    if (removed || !pulse) return;
+    const el = host.scroller();
+    if (!el) {
+      finishPulse();
+      return;
+    }
+    if (pulse.t0 === 0) pulse.t0 = ts;
+    const elapsed = ts - pulse.t0;
+    el.scrollTop = monthCreatePulseScroll(pulse.from, pulse.target, elapsed, pulse.dur);
+    host.onFrame(hitAt(el.scrollTop));
+    if (elapsed < pulse.dur) {
+      raf = requestAnimationFrame(tick);
+      return;
+    }
+    el.scrollTop = pulse.target;
+    host.onFrame(hitAt(el.scrollTop));
+    finishPulse();
+  };
+
+  const runPulse = () => {
+    if (pulse || edge === 0 || removed) return;
+    const el = host.scroller();
+    if (!el) return;
+    const max = Math.max(0, el.scrollHeight - el.clientHeight);
+    const target = nextMonthOriginScroll(
+      el.scrollTop,
+      edge,
+      host.rowHeight(),
+      host.monthStarts(),
+      max,
+    );
+    if (target == null || Math.abs(target - el.scrollTop) < 0.5) return;
+    coverPulseWeeks(el, target);
+    const view = el.getBoundingClientRect();
+    const grid = el.querySelector<HTMLElement>("[data-month-grid]");
+    const gridRect = grid?.getBoundingClientRect();
+    if (gridRect) {
+      geom = {
+        viewTop: view.top,
+        viewBottom: view.bottom,
+        gridLeft: gridRect.left + 28,
+        gridWidth: gridRect.width - 28,
+        gridTopAt0: gridRect.top + el.scrollTop,
+      };
+    }
+    viewTop = view.top;
+    viewBottom = view.bottom;
+    el.style.willChange = "scroll-position";
+    host.lock.current = true;
+    pulse = {
+      from: el.scrollTop,
+      target,
+      t0: 0,
+      dur: monthCreatePulseDuration(),
+    };
+    raf = requestAnimationFrame(tick);
+  };
+
+  return {
+    over(clientX: number, clientY: number) {
+      pointerX = clientX;
+      pointerY = clientY;
+      if (removed) return;
+      const el = host.scroller();
+      if (!el) return;
+      const next = edgeAt(el, clientY);
+      if (next === edge) return;
+      edge = next;
+      clearPulseTimers();
+      if (next === 0 || pulse) return;
+      holdTimer = window.setTimeout(() => {
+        holdTimer = 0;
+        if (removed || !stillAtRim(paging)) return;
+        paging = true;
+        runPulse();
+      }, MONTH_CREATE_PULSE_HOLD_MS);
+    },
+    leave() {
+      edge = 0;
+      paging = false;
+      clearPulseTimers();
+    },
+    stop() {
+      removed = true;
+      edge = 0;
+      paging = false;
+      clearPulseTimers();
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      pulse = null;
+      geom = null;
+      const el = host.scroller();
+      if (el) el.style.willChange = "";
+      host.lock.current = false;
+    },
+    isPulsing: () => pulse != null,
+  };
+}
+
+function monthCellFromPoint(x: number, y: number): HTMLElement | null {
+  for (const node of document.elementsFromPoint(x, y)) {
+    if (!(node instanceof Element)) continue;
+    const cell = node.closest<HTMLElement>("[data-cell-pos][data-day-anchor]");
+    if (cell) return cell;
+  }
+  return null;
+}
+
+function monthCellPos(cell: HTMLElement | null): { row: number; col: number } | null {
+  const posStr = cell?.getAttribute("data-cell-pos");
+  if (!posStr) return null;
+  const [rowS, colS] = posStr.split("-");
+  const row = Number(rowS);
+  const col = Number(colS);
+  if (!Number.isFinite(row) || !Number.isFinite(col)) return null;
+  return { row, col };
 }
 
 function isLaidOut(el: HTMLElement): boolean {
@@ -3862,6 +6095,84 @@ function readLiveSessionAnchorRect(args: {
   return r;
 }
 
+function MemberTeamResponseButtons({ eventId }: { eventId: string }) {
+  const { user } = useAuth();
+  const responses = useTeamSessionResponses();
+  const current = responses[eventId] ?? null;
+  const choose = (next: TeamSessionResponse) => {
+    if (!user?.id) return;
+    setTeamSessionResponse(user.id, eventId, current === next ? null : next);
+  };
+  const button = (
+    kind: TeamSessionResponse,
+    label: string,
+    color: string,
+    icon: ReactNode,
+  ) => (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={current === kind}
+      title={label}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        choose(kind);
+      }}
+      className="grid h-7 w-7 shrink-0 place-items-center rounded-md transition-colors hover:bg-secondary/60"
+      style={{
+        color,
+        backgroundColor: current === kind ? `${color}22` : undefined,
+      }}
+    >
+      {icon}
+    </button>
+  );
+  return (
+    <span className="flex items-center gap-0.5">
+      {button("accepted", "Accept session", "#34c759", <Check className="h-4 w-4" strokeWidth={2.25} />)}
+      {button("declined", "Cancel session", "#ff3b30", <X className="h-4 w-4" strokeWidth={2.25} />)}
+    </span>
+  );
+}
+
+function MemberTeamNameField({ name }: { name: string }) {
+  const textRef = useRef<HTMLSpanElement | null>(null);
+  const [overflows, setOverflows] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    const measure = () => setOverflows(el.scrollWidth > el.clientWidth + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [name]);
+
+  return (
+    <div className="flex min-h-[40px] min-w-0 items-center px-3 py-3 text-[13px] text-ink">
+      <span
+        ref={textRef}
+        title={name}
+        className="block min-w-0 flex-1 overflow-hidden whitespace-nowrap"
+        style={
+          overflows
+            ? {
+                WebkitMaskImage:
+                  "linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent)",
+                maskImage:
+                  "linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent)",
+              }
+            : undefined
+        }
+      >
+        {name}
+      </span>
+    </div>
+  );
+}
+
 export function PopoverEditor({
   seat,
   initialText,
@@ -3873,6 +6184,8 @@ export function PopoverEditor({
   initialAllDay = false,
   enableDuration = false,
   onClose,
+  memberTeamMenu = false,
+  memberTeamId = null,
   onCommit,
   onTimeChange,
   onAllDayChange,
@@ -3880,6 +6193,7 @@ export function PopoverEditor({
   onLocationChange,
   onClearRepeat,
   onColorChange,
+  onTitleChange,
   onDateChange,
   readOnly = false,
   placeholder = "Session title",
@@ -3892,6 +6206,7 @@ export function PopoverEditor({
   viewMode = "month",
   eventForCopy = null,
   sessionDate,
+  sessionEndDate,
   anchorCellPos = null,
   initialRepeatRule = null,
   onRepeatPreviewChange,
@@ -3904,7 +6219,14 @@ export function PopoverEditor({
   hidden = false,
   externalTimeCommitNonce: _externalTimeCommitNonce = 0,
 }: PopoverEditorProps) {
+  const darkMenu = useCalendarTheme() === "dark";
   const isEntity = seat === "admin";
+  const rememberedTeamName = useTeamName(memberTeamMenu ? memberTeamId : null);
+  const { groups: ownedTeams } = useUserGroups();
+  const ownedTeamName = memberTeamId
+    ? ownedTeams.find((team) => team.id === memberTeamId)?.name?.trim() ?? ""
+    : "";
+  const memberTeamName = (rememberedTeamName || ownedTeamName).trim();
   const hiddenRef = useRef(hidden);
   hiddenRef.current = hidden;
   const resolvedSessionDate = useMemo(() => {
@@ -3912,6 +6234,16 @@ export function PopoverEditor({
     if (eventForCopy?.startISO) return startOfDay(fromISOLocal(eventForCopy.startISO));
     return startOfDay(new Date());
   }, [sessionDate, eventForCopy?.startISO]);
+  const resolvedEndDate = useMemo(() => {
+    if (sessionEndDate) return startOfDay(sessionEndDate);
+    if (eventForCopy?.startISO && eventForCopy.endISO) {
+      return sessionInclusiveEndDay(
+        fromISOLocal(eventForCopy.startISO),
+        fromISOLocal(eventForCopy.endISO),
+      );
+    }
+    return resolvedSessionDate;
+  }, [sessionEndDate, eventForCopy?.startISO, eventForCopy?.endISO, resolvedSessionDate]);
   const { copyEventsToClipboard, duplicateEvent } = useCalendarViewActions();
   const [copyToast, setCopyToast] = useState<string | null>(null);
   const resolvedRepeat = useMemo(() => {
@@ -3991,10 +6323,6 @@ export function PopoverEditor({
       locationMapOpen,
     });
   }, [signUpEnabled, participantsPanelOpen, locationMapOpen]);
-  /** Signed-up participants for this session — empty until signup attaches. */
-  const signedUpParticipants = EMPTY_SESSION_SIGNUPS;
-  const signedUpCount = signedUpParticipants.length;
-
   useLayoutEffect(() => {
     if (mapPanelFits || !locationMapOpen) return;
     setLocationMapOpen(false);
@@ -4002,6 +6330,23 @@ export function PopoverEditor({
   const [repeatEnabled, setRepeatEnabled] = useState(() => resolvedRepeat.enabled);
   const [repeatRule, setRepeatRule] = useState<SessionRepeatRule>(() => resolvedRepeat.rule);
   const [appGroupId, setAppGroupId] = useState<string | null>(initialAppGroupId ?? null);
+  const { members: rosterMembers, loading: rosterLoading } = useEntityRoster(
+    isEntity ? teamId : null,
+  );
+  const audienceResponses = useSessionAudienceResponses(
+    isEntity && signUpEnabled ? eventForCopy?.id ?? null : null,
+  );
+  const signedUpCount = useMemo(() => {
+    if (!isEntity || !signUpEnabled) return 0;
+    return sessionAudienceMembers(rosterMembers, appGroupId).filter(
+      (member) =>
+        signupTabForRosterMember(
+          member,
+          audienceResponses.byMember,
+          audienceResponses.byUser,
+        ) === "accepted",
+    ).length;
+  }, [isEntity, signUpEnabled, rosterMembers, appGroupId, audienceResponses]);
   type LocationScopeValue = { location: string; locationUrl: string };
   const [seriesEditScope, setSeriesEditScope] = useState<"this" | "allInSeries">("this");
   const seriesEditScopeRef = useRef<"this" | "allInSeries">("this");
@@ -4272,10 +6617,16 @@ export function PopoverEditor({
   };
 
   const handleTimeChange = (t: { startMin: number; endMin: number }) => {
-    if (readOnly || allDay) return;
-    setTime(t);
-    previousTimedRangeRef.current = t;
-    applyWithSeriesScope((ids) => onTimeChange?.(t, ids));
+    if (readOnly) return;
+    applyWithSeriesScope((ids) => {
+      if (allDay) {
+        setAllDay(false);
+        onAllDayChange?.(false, t, ids);
+      }
+      setTime(t);
+      previousTimedRangeRef.current = t;
+      onTimeChange?.(t, ids);
+    });
   };
 
   const handleLocationChange = (next: LocationScopeValue) => {
@@ -4291,12 +6642,27 @@ export function PopoverEditor({
     applyWithSeriesScope((ids) => applyLocationChange(next, ids));
   };
 
-  const displayAllDay = allDay;
+  const [menuDate, setMenuDate] = useState<Date | null>(null);
+  const [menuEndDate, setMenuEndDate] = useState<Date | null>(null);
+  useEffect(() => {
+    setMenuDate(null);
+    setMenuEndDate(null);
+  }, [resolvedSessionDate.getTime(), resolvedEndDate.getTime()]);
+  const displayStartDate = menuDate ?? resolvedSessionDate;
+  const displayEndDate = menuEndDate ?? resolvedEndDate;
+  const multiDay = isMultiDayDateRange(displayStartDate, displayEndDate);
+
+  const displayAllDay = allDay && !multiDay;
   const displaySignUpEnabled = signUpEnabled;
   const displayRepeatEnabled = repeatEnabled;
   const displayRepeatRule = repeatRule;
   // Sync the wheel when the parent pushes a new initialTime (e.g. while the
   // user is dragging a tile's top/bottom edge to resize it in the week-view).
+  useEffect(() => {
+    if (!initialAllDay || multiDay) return;
+    setAllDay(true);
+  }, [initialAllDay, multiDay]);
+
   useEffect(() => {
     if (!initialTime) return;
     previousTimedRangeRef.current = initialTime;
@@ -4306,13 +6672,18 @@ export function PopoverEditor({
         : initialTime,
     );
   }, [initialTime?.startMin, initialTime?.endMin]);
-  
+
   const ref = useRef<HTMLDivElement | null>(null);
   const dateMenuFits = useSessionAdjacentMenuFits(sessionCardRef, ref);
-  const [menuDate, setMenuDate] = useState<Date | null>(null);
+
   useEffect(() => {
-    setMenuDate(null);
-  }, [resolvedSessionDate.getTime()]);
+    if (!multiDay || !allDay) return;
+    // The all-day switch is hidden for a multi-day span. Clear the flag only.
+    // applyAllDayChange(false) would rewrite both ends onto the start day and
+    // drop a widened top-row session into the hour grid.
+    setAllDay(false);
+    onAllDayChange?.(false, null);
+  }, [multiDay, allDay, onAllDayChange]);
 
   // Keep latest values for the unmount-time autosave to avoid stale captures.
   const valueRef = useRef(value);
@@ -4354,26 +6725,20 @@ export function PopoverEditor({
     }
     const title = (value ?? "").trim() || "New session";
     const effectiveTime = allDay ? { startMin: 0, endMin: 0 } : (time ?? { startMin: 8 * 60, endMin: 9 * 60 });
-    const start = setHM(
-      resolvedSessionDate,
-      Math.floor(effectiveTime.startMin / 60),
-      effectiveTime.startMin % 60,
+    const range = isoFromMenuClocks(
+      displayStartDate,
+      displayEndDate,
+      effectiveTime.startMin,
+      effectiveTime.endMin,
     );
-    const end = allDay
-      ? setHM(resolvedSessionDate, 23, 59)
-      : setHM(
-          resolvedSessionDate,
-          Math.floor(effectiveTime.endMin / 60),
-          effectiveTime.endMin % 60,
-        );
     const nextDescription = (description ?? "").trim() || undefined;
     const template = {
       title,
       color,
       categoryId: liveCategoryId ?? null,
       category: categoryFromColor(color),
-      startISO: toISOLocal(start),
-      endISO: toISOLocal(end),
+      startISO: range.startISO,
+      endISO: allDay ? toISOLocal(setHM(displayStartDate, 23, 59)) : range.endISO,
       allDay,
       location: (location ?? "").trim() || undefined,
       locationUrl: (locationUrl ?? "").trim() || undefined,
@@ -4439,18 +6804,21 @@ export function PopoverEditor({
 
   const buildCopySnapshot = useCallback((): CalendarEvent | null => {
     if (!eventForCopy) return null;
-    const day = startOfDay(fromISOLocal(eventForCopy.startISO));
     const timed = timeRef.current;
     const allDayNow = allDayRef.current;
     let startISO = eventForCopy.startISO;
     let endISO = eventForCopy.endISO;
     if (timed) {
-      const start = setHM(day, Math.floor(timed.startMin / 60), timed.startMin % 60);
-      const end = allDayNow
-        ? setHM(day, 23, 59)
-        : setHM(day, Math.floor(timed.endMin / 60), timed.endMin % 60);
-      startISO = toISOLocal(start);
-      endISO = toISOLocal(end);
+      const range = isoFromMenuClocks(
+        displayStartDate,
+        displayEndDate,
+        timed.startMin,
+        timed.endMin,
+      );
+      startISO = range.startISO;
+      endISO = allDayNow
+        ? toISOLocal(setHM(displayStartDate, 23, 59))
+        : range.endISO;
     }
     return {
       ...eventForCopy,
@@ -4465,7 +6833,7 @@ export function PopoverEditor({
       appGroupId: isEntity ? appGroupIdRef.current ?? null : eventForCopy.appGroupId,
       signUpEnabled: isEntity ? !!signUpEnabledRef.current : eventForCopy.signUpEnabled,
     };
-  }, [eventForCopy, isEntity]);
+  }, [eventForCopy, isEntity, displayStartDate, displayEndDate]);
 
   const isExistingSession =
     !!eventForCopy && calendarEvents.some((e) => e.id === eventForCopy.id);
@@ -4738,7 +7106,7 @@ export function PopoverEditor({
         ? { startMin: 0, endMin: 0 }
         : timeRef.current;
       if (!allDayRef.current && ev && !ev.allDay && ev.startISO && ev.endISO) {
-        const actual = startEndMinsOnStartDay(
+        const actual = sessionMenuClockRange(
           fromISOLocal(ev.startISO),
           fromISOLocal(ev.endISO),
         );
@@ -4855,7 +7223,10 @@ export function PopoverEditor({
 
   const POPOVER_W = 280;
   const showParticipantsSide = isEntity && signUpEnabled && participantsPanelOpen;
-  const showLocationMapSide = locationMapOpen && mapPanelFits;
+  const memberTeamLocation =
+    location.trim().length > 0 || locationUrl.trim().length > 0;
+  const showLocationMapSide =
+    locationMapOpen && mapPanelFits && (!memberTeamMenu || memberTeamLocation);
   const sidePanelCount =
     (showLocationMapSide ? 1 : 0) + (showParticipantsSide ? 1 : 0);
   const panelClusterWidth =
@@ -5182,7 +7553,24 @@ export function PopoverEditor({
   // existing time set on the session.
   const effectiveTime = displayAllDay ? { startMin: 0, endMin: 0 } : time ?? defaultTimedRange;
 
-  const durationRow = (
+  const durationRow = enableDuration ? (
+    <SessionTimeField
+      value={effectiveTime}
+      muted={displayAllDay}
+      readOnly={readOnly}
+      independentClocks={multiDay}
+      showAllDay={!multiDay}
+      allDay={displayAllDay}
+      onAllDayChange={handleAllDaySwitch}
+      sessionCardRef={sessionCardRef}
+      clusterRef={ref}
+      rightOccupied={showLocationMapSide || showParticipantsSide}
+      onChange={(t) => {
+        if (readOnly) return;
+        handleTimeChange(t);
+      }}
+    />
+  ) : (
     <div
       ref={durationRowRef}
       className={[
@@ -5190,60 +7578,31 @@ export function PopoverEditor({
         sessionPopoverFieldClass(false),
       ].join(" ")}
     >
-      {enableDuration ? (
-        <>
-          <Clock
-            className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
-            strokeWidth={2}
-            aria-hidden
-          />
-          <div
-            className={[
-              "min-w-0 flex-1 pl-7",
-              readOnly ? "pointer-events-none pr-3 opacity-90" : "",
-            ].join(" ")}
-          >
-            <TimeWheelPicker
-              value={effectiveTime}
-              muted={displayAllDay}
-              disabled={displayAllDay || readOnly}
-              onChange={(t) => {
-                if (readOnly || displayAllDay) return;
-                handleTimeChange(t);
-              }}
-            />
-          </div>
-          {!readOnly && (
-            <label
-              ref={allDaySwitchRef}
-              className="mr-2.5 flex shrink-0 cursor-default select-none items-center gap-1.5"
-            >
-              <span className="text-[11px] text-ink/80">All day</span>
-              <IOSSwitch checked={displayAllDay} onChange={handleAllDaySwitch} />
-            </label>
-          )}
-        </>
-      ) : (
-        <span className="pl-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-          {isEdit ? "Rediger økt" : "Legg til økt"}
-        </span>
-      )}
+      <span className="pl-3 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+        {isEdit ? "Rediger økt" : "Legg til økt"}
+      </span>
     </div>
   );
+
+  const visibleDescription = readOnly
+    ? (initialDescription ?? "").trim()
+      ? (initialDescription ?? "")
+      : description
+    : description;
 
   const descriptionSection = (
     <div className="relative min-h-0 flex-1" style={{ minHeight: SESSION_DESCRIPTION_FIELD_H }}>
       {readOnly ? (
         <div
           className={[
-            "h-full cursor-text overflow-hidden px-3 py-2 whitespace-pre-wrap",
+            "h-full cursor-text overflow-y-auto px-3 py-2 whitespace-pre-wrap select-text",
             POPOVER_ACTIVITY_TEXT,
             sessionPopoverFieldClass(false),
-            description.trim() ? "" : "text-muted-foreground/60",
+            visibleDescription.trim() ? "" : "text-muted-foreground/60",
           ].join(" ")}
           style={{ minHeight: SESSION_DESCRIPTION_FIELD_H }}
         >
-          {description.trim() || "Description"}
+          {visibleDescription.trim() || "Description"}
         </div>
       ) : (
         <>
@@ -5337,7 +7696,12 @@ export function PopoverEditor({
             "[&_button]:cursor-default [&_label]:cursor-default [&_input]:cursor-default [&_textarea]:cursor-default",
             SESSION_PANEL_SHELL_CLASS,
           ].join(" ")}
-          style={{ ...SESSION_PANEL_SHELL_STYLE, width: POPOVER_W }}
+          style={{
+            ...(memberTeamMenu
+              ? { background: teamSessionMenuBackground(darkMenu) }
+              : SESSION_PANEL_SHELL_STYLE),
+            width: POPOVER_W,
+          }}
         >
           <div className="px-3 pt-2">
             <SessionPanelHeaderRow
@@ -5345,7 +7709,9 @@ export function PopoverEditor({
               onDockHoverChange={setDockIconHover}
               onDockToggle={togglePanelDock}
               afterDock={
-                isEntity && signUpEnabled ? (
+                memberTeamMenu && eventForCopy?.id && eventForCopy.signUpEnabled ? (
+                  <MemberTeamResponseButtons eventId={eventForCopy.id} />
+                ) : isEntity && signUpEnabled ? (
                   <SessionSignupCountBadge
                     count={signedUpCount}
                     active={participantsPanelOpen}
@@ -5379,10 +7745,17 @@ export function PopoverEditor({
                 }
               />
             ) : null}
+            {memberTeamMenu && memberTeamName ? (
+              <MemberTeamNameField name={memberTeamName} />
+            ) : null}
             <input
               ref={titleInputRef}
               value={value}
-              onChange={(e) => setValue(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setValue(next);
+                onTitleChange?.(next);
+              }}
               placeholder={placeholder}
               readOnly={readOnly}
               tabIndex={readOnly ? -1 : 0}
@@ -5416,20 +7789,24 @@ export function PopoverEditor({
             />
 
             <SessionDateField
-              date={menuDate ?? resolvedSessionDate}
+              date={displayStartDate}
+              endDate={displayEndDate}
               readOnly={readOnly}
+              hideEndDate={memberTeamMenu && !displayAllDay && !multiDay}
               visible={seriesEditScope !== "allInSeries" && dateMenuFits}
               sessionCardRef={sessionCardRef}
               clusterRef={ref}
               rightOccupied={showLocationMapSide || showParticipantsSide}
-              onPick={(date) => {
-                setMenuDate(date);
-                applyWithSeriesScope((ids) => onDateChange?.(date, ids));
+              onPickRange={(start, end) => {
+                setMenuDate(start);
+                setMenuEndDate(end);
+                applyWithSeriesScope((ids) => onDateChange?.({ start, end }, ids));
               }}
             />
 
             {durationRow}
 
+            {memberTeamMenu && !memberTeamLocation ? null : (
             <div ref={locationFieldRef} data-session-location-field="">
             <SessionLocationField
               value={location}
@@ -5464,7 +7841,9 @@ export function PopoverEditor({
               onSearchHandoffConsumed={() => setLocationSearchHandoff(null)}
             />
             </div>
+            )}
 
+            {memberTeamMenu ? null : (
             <div ref={repeatRowRef}>
               <SessionRepeatRow
                 sessionDate={resolvedSessionDate}
@@ -5478,6 +7857,7 @@ export function PopoverEditor({
                 rightOccupied={showLocationMapSide || showParticipantsSide}
               />
             </div>
+            )}
 
             {isEntity && teamId ? (
               <div className={readOnly ? "pointer-events-none" : undefined}>
@@ -5506,7 +7886,7 @@ export function PopoverEditor({
             </div>
 
             {signUpSection}
-            {descriptionSection}
+            {memberTeamMenu ? null : descriptionSection}
           </div>
         </div>
 
@@ -5538,7 +7918,11 @@ export function PopoverEditor({
         {showParticipantsSide ? (
           <div className="min-h-0 shrink-0 self-stretch" style={{ width: POPOVER_W }}>
             <SessionSignupParticipantsPanel
-              members={signedUpParticipants}
+              members={rosterMembers}
+              loading={rosterLoading}
+              responsesByMember={audienceResponses.byMember}
+              responsesByUser={audienceResponses.byUser}
+              appGroupId={appGroupId}
               onClose={() => setParticipantsPanelOpen(false)}
             />
           </div>

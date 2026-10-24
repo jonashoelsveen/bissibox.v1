@@ -4,11 +4,14 @@ import { useEventStore, type CalendarEvent } from "@/components/calendar/yearSto
 import {
   buildPasteEventsAtDate,
   buildPasteEventsAtDateTime,
+  buildPasteEventsForWeek,
   canPasteClipboard,
+  canPasteWeekClipboard,
   eventToDuplicatePatch,
   oneOffRepeatFields,
   readCalendarClipboard,
   writeEventsToClipboard,
+  type ClipboardSpan,
 } from "@/lib/calendarClipboard";
 
 type EventStore = ReturnType<typeof useEventStore>;
@@ -26,10 +29,16 @@ type CalendarViewActionsValue = {
   refreshEvents: EventStore["refreshEvents"];
   clipboardTick: number;
   bumpClipboard: () => void;
-  copyEventsToClipboard: (events: CalendarEvent[], viewMode: ViewMode) => void;
+  copyEventsToClipboard: (
+    events: CalendarEvent[],
+    viewMode: ViewMode,
+    span?: ClipboardSpan,
+  ) => void;
   duplicateEvent: (event: CalendarEvent) => CalendarEvent | null;
   canPaste: (viewMode: ViewMode) => boolean;
+  canPasteWeek: () => boolean;
   pasteAtDate: (targetDate: Date, viewMode: ViewMode, startMin?: number) => boolean;
+  pasteWeekAt: (weekStart: Date, viewMode: ViewMode) => boolean;
   /** Month-grid focused cell, including previous/next-month overflow days. */
   setPasteAnchorDate: (date: Date) => void;
   peekPasteAnchorDate: () => Date | null;
@@ -39,6 +48,28 @@ const CalendarViewActionsContext = createContext<CalendarViewActionsValue | null
 
 export function useCalendarViewActionsOptional(): CalendarViewActionsValue | null {
   return useContext(CalendarViewActionsContext);
+}
+
+function pastedEventPatch(event: CalendarEvent) {
+  return {
+    startISO: event.startISO,
+    endISO: event.endISO,
+    title: event.title,
+    allDay: event.allDay,
+    color: event.color,
+    categoryId: event.categoryId,
+    ...(event.description != null && event.description !== ""
+      ? { description: event.description }
+      : {}),
+    ...(event.location != null && event.location !== ""
+      ? { location: event.location }
+      : {}),
+    ...(event.locationUrl != null && event.locationUrl !== ""
+      ? { locationUrl: event.locationUrl }
+      : {}),
+    ...(event.appGroupId != null ? { appGroupId: event.appGroupId } : {}),
+    ...oneOffRepeatFields(),
+  };
 }
 
 export function CalendarViewActionsProvider({
@@ -69,8 +100,8 @@ export function CalendarViewActionsProvider({
   const peekPasteAnchorDate = useCallback(() => pasteAnchorDateRef.current, []);
 
   const copyEventsToClipboard = useCallback(
-    (copyEvents: CalendarEvent[], viewMode: ViewMode) => {
-      writeEventsToClipboard(copyEvents, calId, viewMode, "copy");
+    (copyEvents: CalendarEvent[], viewMode: ViewMode, span: ClipboardSpan = "session") => {
+      writeEventsToClipboard(copyEvents, calId, viewMode, "copy", span);
       bumpClipboard();
     },
     [bumpClipboard, calId],
@@ -92,6 +123,11 @@ export function CalendarViewActionsProvider({
     [calId, clipboardTick],
   );
 
+  const canPasteWeek = useCallback(() => {
+    void clipboardTick;
+    return canPasteWeekClipboard(calId);
+  }, [calId, clipboardTick]);
+
   const pasteAtDate = useCallback(
     (targetDate: Date, viewMode: ViewMode, startMin?: number) => {
       const buffer = readCalendarClipboard();
@@ -100,27 +136,20 @@ export function CalendarViewActionsProvider({
         startMin != null && (viewMode === "week" || viewMode === "day")
           ? buildPasteEventsAtDateTime(buffer, targetDate, startMin)
           : buildPasteEventsAtDate(buffer, targetDate);
-      for (const event of pasted) {
-        upsertEvent({
-          startISO: event.startISO,
-          endISO: event.endISO,
-          title: event.title,
-          allDay: event.allDay,
-          color: event.color,
-          categoryId: event.categoryId,
-          ...(event.description != null && event.description !== ""
-            ? { description: event.description }
-            : {}),
-          ...(event.location != null && event.location !== ""
-            ? { location: event.location }
-            : {}),
-          ...(event.locationUrl != null && event.locationUrl !== ""
-            ? { locationUrl: event.locationUrl }
-            : {}),
-          ...(event.appGroupId != null ? { appGroupId: event.appGroupId } : {}),
-          ...oneOffRepeatFields(),
-        });
-      }
+      for (const event of pasted) upsertEvent(pastedEventPatch(event));
+      bumpClipboard();
+      return pasted.length > 0;
+    },
+    [bumpClipboard, calId, upsertEvent],
+  );
+
+  const pasteWeekAt = useCallback(
+    (weekStart: Date, viewMode: ViewMode) => {
+      void viewMode;
+      const buffer = readCalendarClipboard();
+      if (!buffer || !canPasteWeekClipboard(calId)) return false;
+      const pasted = buildPasteEventsForWeek(buffer, weekStart);
+      for (const event of pasted) upsertEvent(pastedEventPatch(event));
       bumpClipboard();
       return pasted.length > 0;
     },
@@ -145,7 +174,9 @@ export function CalendarViewActionsProvider({
         copyEventsToClipboard,
         duplicateEvent,
         canPaste,
+        canPasteWeek,
         pasteAtDate,
+        pasteWeekAt,
         setPasteAnchorDate,
         peekPasteAnchorDate,
       }}

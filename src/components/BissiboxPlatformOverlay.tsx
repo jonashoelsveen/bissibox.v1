@@ -47,7 +47,7 @@ export function BissiboxPlatformOverlay() {
       >
         <div className="mb-7 flex w-full justify-center overflow-visible sm:mb-9">
           <img
-            src="/aponna-cloud-hero.png"
+            src="/bissibox-cloud-hero.png"
             alt=""
             width={585}
             height={549}

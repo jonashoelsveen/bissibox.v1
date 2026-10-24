@@ -84,8 +84,15 @@ Deno.serve(async (req) => {
     if (memberRow?.status === "active") {
       return json({ ok: false, error: "already_member" });
     }
-    if (existingReq) {
+    if (existingReq && existingReq.status !== "cancelled") {
       return json({ ok: false, error: "already_sent" });
+    }
+    if (existingReq?.status === "cancelled") {
+      const { error: clearErr } = await admin
+        .from("entity_membership_requests")
+        .delete()
+        .eq("id", existingReq.id);
+      if (clearErr) return json({ ok: false, error: clearErr.message }, 500);
     }
 
     const { data: profile } = await admin

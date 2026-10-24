@@ -1,7 +1,7 @@
 project_id = "ifskkkjimvyyzpqliwjo"
 
 [auth]
-site_url = "exp+aponna://"
+site_url = "exp+bissibox://"
 enable_signup = true
 
 [auth.email]

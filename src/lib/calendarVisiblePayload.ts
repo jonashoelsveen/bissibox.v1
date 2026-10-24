@@ -125,6 +125,22 @@ export function sessionEntityId(row: CalendarSessionRecord): string | null {
   return asUuid(row.entity_id ?? row.entityId);
 }
 
+/**
+ * Team session audience:
+ * - no group (`null`) means every member of that team
+ * - a group id means only members assigned to that group
+ */
+export function entitySessionVisibleToMember(
+  appGroupId: string | null | undefined,
+  memberGroupIds: ReadonlySet<string> | readonly string[],
+  isMember: boolean,
+): boolean {
+  if (!isMember) return false;
+  if (typeof appGroupId !== "string" || appGroupId.length === 0) return true;
+  if (memberGroupIds instanceof Set) return memberGroupIds.has(appGroupId);
+  return memberGroupIds.includes(appGroupId);
+}
+
 export function jsonSafeStringify(data: unknown): string {
   return JSON.stringify(data, (_key, value) => (typeof value === "bigint" ? value.toString() : value));
 }

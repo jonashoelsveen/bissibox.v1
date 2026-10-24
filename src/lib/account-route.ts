@@ -47,9 +47,9 @@ export const ACCOUNT_SECTIONS: Array<{
   },
   {
     id: "family",
-    label: "Entity memberships",
+    label: "Memberships",
     path: "/family",
-    title: "Entity memberships",
-    description: "Entities you belong to in the Aponna ecosystem.",
+    title: "Memberships",
+    description: "Entities you belong to in the Bissibox ecosystem.",
   },
 ];

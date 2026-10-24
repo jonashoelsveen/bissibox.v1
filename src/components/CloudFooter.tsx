@@ -67,7 +67,7 @@ export function CloudFooter({
             <Link to="/cloud/individuals" className="footer-link" style={linkStyle}>
               Bissibox
             </Link>
-            {/** Footer “Aponna cloud for entities” link — Bucket A: currently live, hidden this round. */}
+            {/** Footer “Bissibox cloud for entities” link — Bucket A: currently live, hidden this round. */}
             {isEntityFeatureEnabled("entityMarketing") ? (
             <Link to="/cloud/entities" className="footer-link" style={linkStyle}>
               Bissibox for entities

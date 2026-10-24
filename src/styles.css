@@ -74,6 +74,8 @@
   --border: oklch(0.9 0.005 90);
   --input: oklch(0.92 0.005 90);
   --ring: oklch(0.22 0.04 260);
+  /* Light left panel. Dark theme replaces this with the panel charcoal. */
+  --calendar-panel: rgba(245, 245, 247, 0.80);
 
   --chart-1: oklch(0.22 0.04 260);
   --chart-2: oklch(0.78 0.16 70);
@@ -211,6 +213,30 @@
       color-mix(in oklab, var(--ink) 32%, transparent)
     );
     transition: background-image 0s linear 0.2s;
+  }
+
+  /* Month create-drag: same full-cell wash as a clicked day, in the session colour. */
+  [data-month-cell][data-create-mark="1"] {
+    background-color: color-mix(in oklab, var(--month-create-mark, #3b82f6) 15%, transparent);
+  }
+
+  /* Dark session submenu: always-visible thin white thumb. */
+  .session-side-menu-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+  }
+  .session-side-menu-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .session-side-menu-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .session-side-menu-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.35);
+    border-radius: 999px;
+  }
+  .session-side-menu-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.5);
   }
 
   /* Calendar side-nav: thin scrollbar that fades out shortly after scrolling.
@@ -465,4 +491,98 @@ body[style*="cursor:grabbing"] {
   .account-menu-toggle {
     display: none !important;
   }
+}
+
+/*
+ * Calendar dark theme. Light paint is unchanged.
+ * The canvas is darker than the charcoal used by the left panel,
+ * the session card, Today, and the view switch. Flyout menus keep
+ * their own #1c1c1e shell.
+ */
+:root {
+  --session-field-hover-outline: rgba(0, 0, 0, 0.14);
+}
+
+html[data-calendar-theme="dark"] {
+  --session-card-bg: #1c1c1e;
+  --calendar-panel: #1c1c1e;
+}
+
+html[data-calendar-theme="dark"] [data-calendar-root] {
+  --background: #0c0c0c;
+  --foreground: #f2f2f2;
+  --ink: #f2f2f2;
+  --card: #0c0c0c;
+  --card-foreground: #f2f2f2;
+  --subtle: #141414;
+  --hairline: rgba(255, 255, 255, 0.14);
+  --border: rgba(255, 255, 255, 0.14);
+  --input: rgba(255, 255, 255, 0.16);
+  --secondary: #2c2c2e;
+  --secondary-foreground: #f2f2f2;
+  --muted: #161616;
+  --muted-foreground: #aeaeb2;
+  background-color: #0c0c0c;
+  color: #f2f2f2;
+}
+
+html[data-calendar-theme="dark"] [data-calendar-root] .bg-white {
+  background-color: #0c0c0c;
+}
+
+html[data-calendar-theme="dark"] [data-calendar-root] .mac-panel {
+  background-color: #0c0c0c;
+  color: #f2f2f2;
+}
+
+html[data-calendar-theme="dark"] [data-calendar-root] .bg-muted-foreground\/15 {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+html[data-calendar-theme="dark"] [data-left-panel] {
+  --background: #1c1c1e;
+  --foreground: #f2f2f2;
+  --ink: #f2f2f2;
+  --card: #1c1c1e;
+  --card-foreground: #f2f2f2;
+  --hairline: rgba(255, 255, 255, 0.12);
+  --border: rgba(255, 255, 255, 0.12);
+  --secondary: rgba(255, 255, 255, 0.08);
+  --secondary-foreground: #f2f2f2;
+  --muted: #2a2a2c;
+  --muted-foreground: #aeaeb2;
+  color: #f2f2f2;
+}
+
+html[data-calendar-theme="dark"] [data-left-panel] .mac-panel,
+html[data-calendar-theme="dark"] [data-left-panel] .bg-white {
+  background-color: var(--calendar-panel);
+  color: #f2f2f2;
+}
+
+html[data-calendar-theme="dark"] [data-calendar-chrome] {
+  background-color: #1c1c1e;
+  color: #f2f2f2;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+html[data-calendar-theme="dark"] [data-calendar-chrome]:hover {
+  background-color: #2c2c2e;
+}
+
+html[data-calendar-theme="dark"] [data-role="popover"] {
+  --session-field-hover-outline: rgba(255, 255, 255, 0.62);
+  --background: #1c1c1e;
+  --foreground: #f2f2f2;
+  --ink: #f2f2f2;
+  --card: #1c1c1e;
+  --card-foreground: #f2f2f2;
+  --hairline: rgba(255, 255, 255, 0.14);
+  --border: rgba(255, 255, 255, 0.14);
+  --input: rgba(255, 255, 255, 0.16);
+  --secondary: #2a2a2c;
+  --secondary-foreground: #f2f2f2;
+  --muted: #2a2a2c;
+  --muted-foreground: #aeaeb2;
+  color: #f2f2f2;
 }

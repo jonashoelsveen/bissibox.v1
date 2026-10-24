@@ -49,6 +49,8 @@ export interface EntityMemberGroupRow {
 
 export interface EntityMember {
   id: string;
+  /** Auth user id, when this roster row is linked to an account. */
+  userId: string | null;
   name: string;
   surname: string;
   sex: string;
@@ -102,6 +104,7 @@ const GROUP_SELECT =
 
 type DbMember = {
   id: string;
+  user_id?: string | null;
   team_id: string;
   email: string | null;
   phone: string | null;
@@ -178,9 +181,9 @@ const ADMIN_SELECT_WITH_PHONE =
 const ADMIN_SELECT =
   "id, team_id, email, first_name, last_name, sex, date_of_birth, status";
 const MEMBER_SELECT_WITH_PHONE =
-  "id, team_id, email, phone, first_name, last_name, sex, date_of_birth, payment_status, app_group_id, status";
+  "id, user_id, team_id, email, phone, first_name, last_name, sex, date_of_birth, payment_status, app_group_id, status";
 const MEMBER_SELECT =
-  "id, team_id, email, first_name, last_name, sex, date_of_birth, payment_status, app_group_id, status";
+  "id, user_id, team_id, email, first_name, last_name, sex, date_of_birth, payment_status, app_group_id, status";
 
 function parseRosterStatus(value: string | null | undefined): EntityRosterStatus {
   if (value === "pending" || value === "active") return value;
@@ -338,6 +341,7 @@ function buildMember(
   }
   return {
     id: row.id,
+    userId: row.user_id ?? null,
     name: row.first_name ?? "",
     surname: row.last_name ?? "",
     sex: row.sex ?? "",

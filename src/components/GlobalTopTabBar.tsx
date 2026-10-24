@@ -15,6 +15,7 @@ import {
   clearAccountSurfacePreference,
 } from "@/lib/app-surface";
 import { isEntityFeatureEnabled } from "@/lib/features";
+import { useCalendarTheme } from "@/components/calendar/calendarThemePref";
 
 /**
  * Universal top tab bar fixed under the colored TopBar. Shown on every page.
@@ -56,7 +57,13 @@ export function GlobalTopTabBar() {
     };
   }, [appsOpen]);
 
+  const calendarTheme = useCalendarTheme();
   const isCloudLandingChrome = isCloudLandingChromePath(path);
+  const calendarCanvas =
+    path === "/calendar" ||
+    path.startsWith("/calendar/") ||
+    path === "/projects" ||
+    path.startsWith("/projects/");
   const recede = isCloudLandingChrome && signInOpen && transition !== "fading-out" && transition !== "hidden";
 
   // While the modal dim covers the page, drop the bar's own plate so its
@@ -176,7 +183,8 @@ export function GlobalTopTabBar() {
       className="global-topbar-dark fixed right-0 top-0 z-[90]"
       style={{
         left: "var(--topbar-left-offset, 0px)",
-        backgroundColor: "#ffffff",
+        backgroundColor:
+          calendarTheme === "dark" && calendarCanvas ? "#0c0c0c" : "#ffffff",
         height: MINIMAL_TOP_TAB_BAR_HEIGHT,
         opacity: revealing ? 0 : authReady ? 1 : 0.5,
         pointerEvents: revealing || !authReady ? "none" : "auto",

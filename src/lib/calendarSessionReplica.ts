@@ -28,7 +28,7 @@ export type OutboxMutation = MergeMutation & {
   createdAt: number;
 };
 
-const DB_NAME = "aponna-calendar-sessions";
+const DB_NAME = "bissibox-calendar-sessions";
 const WAL_KEY = "calendar:outbox-wal:v1";
 const MIGRATED_KEY = "calendar:replica-migrated:v1";
 const LEGACY_PENDING_KEY = "calendar:pending-writes:v1";

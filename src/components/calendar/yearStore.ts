@@ -10,7 +10,7 @@
  * Supabase-backed version will expose later.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@/lib/auth";
 import {
   isSessionRepeatRule,
@@ -355,7 +355,10 @@ import {
   saveLocalCalendar,
   stageCalendarSessionDelete,
   stageCalendarSessionUpsert,
+  type MembershipSessionTeam,
 } from "@/lib/calendarSessionPersist";
+import { listReplicaEvents } from "@/lib/calendarSessionReplica";
+import { entitySessionVisibleToMember } from "@/lib/calendarVisiblePayload";
 import { mergeRemoteSessions } from "@/lib/calendarSessionMerge";
 import { listMutations, replaceReplicaCalendar } from "@/lib/calendarSessionReplica";
 
@@ -413,6 +416,35 @@ export interface CalendarEvent {
   repeatSeriesId?: string | null;
   /** True when this row was split out of a series (“This session”). */
   repeatDetached?: boolean;
+}
+
+const teamNameById = new Map<string, string>();
+const teamNameListeners = new Set<() => void>();
+
+function publishTeamNames(memberships: Array<{ teamId: string; name: string }>) {
+  let changed = false;
+  for (const row of memberships) {
+    const name = row.name.trim();
+    if (!row.teamId || !name || name === "Entity") continue;
+    if (teamNameById.get(row.teamId) === name) continue;
+    teamNameById.set(row.teamId, name);
+    changed = true;
+  }
+  if (!changed) return;
+  teamNameListeners.forEach((listener) => listener());
+}
+
+/** Team name for a member's team-session menu. Empty until the membership is known. */
+export function useTeamName(teamId: string | null | undefined): string {
+  const id = teamId ?? "";
+  return useSyncExternalStore(
+    (listener) => {
+      teamNameListeners.add(listener);
+      return () => teamNameListeners.delete(listener);
+    },
+    () => (id ? (teamNameById.get(id) ?? "") : ""),
+    () => "",
+  );
 }
 
 export function isMembershipOverlayEvent(
@@ -657,6 +689,150 @@ function parseStoredRepeat(r: Row | Record<string, unknown>): {
   };
 }
 
+function memberGroupIds(membership: MembershipSessionTeam): string[] {
+  if (membership.groupIds.length > 0) return membership.groupIds;
+  return membership.appGroupId ? [membership.appGroupId] : [];
+}
+
+const replicaPersistAttempted = new Set<string>();
+
+function sessionDescriptionText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/** A team description replaces an empty member copy. A later team edit replaces the previous text. */
+function mergeMemberSessionDescription<T extends { description?: string | null }>(
+  existing: T,
+  incomingDescription: unknown,
+): T {
+  const next = sessionDescriptionText(incomingDescription);
+  if (!next || sessionDescriptionText(existing.description) === next) return existing;
+  return { ...existing, description: typeof incomingDescription === "string" ? incomingDescription : next };
+}
+
+function keepTeamDescriptions<T extends { id: string; entityId?: string | null; description?: string | null }>(
+  merged: T[],
+  remote: T[],
+): T[] {
+  const byId = new Map(remote.map((row) => [row.id, row]));
+  return merged.map((event) => {
+    if (!event.entityId) return event;
+    const incoming = byId.get(event.id);
+    return incoming ? mergeMemberSessionDescription(event, incoming.description) : event;
+  });
+}
+
+/** The person who created the team is still a member of that profile's calendar. */
+async function withOwnedTeams(
+  userId: string,
+  memberships: MembershipSessionTeam[],
+): Promise<MembershipSessionTeam[]> {
+  const { data, error } = await supabase.from("app_teams").select("id, name").eq("owner_id", userId);
+  if (error || !data) return memberships;
+  const next = [...memberships];
+  const known = new Set(memberships.map((row) => row.teamId));
+  for (const team of data) {
+    const teamId = team && typeof team.id === "string" ? team.id : "";
+    if (!teamId || known.has(teamId)) continue;
+    const name = typeof team.name === "string" && team.name.trim() ? team.name : "Entity";
+    next.push({ teamId, name, appGroupId: null, groupIds: [] });
+    known.add(teamId);
+  }
+  return next;
+}
+
+/**
+ * Team-profile sessions live in that profile's replica. A member's own
+ * calendar, including the person who created the team and the session,
+ * also shows the ones meant for them: All, or a group they belong to.
+ */
+async function memberTeamReplicaRows(
+  memberships: MembershipSessionTeam[],
+  alreadyLoaded: { get(id: string): { description?: string | null } | undefined },
+): Promise<Row[]> {
+  const out: Row[] = [];
+  for (const membership of memberships) {
+    const events = await listReplicaEvents(`team:${membership.teamId}`);
+    const groups = memberGroupIds(membership);
+    for (const event of events) {
+      if (!event.id) continue;
+      const title = typeof event.title === "string" ? event.title : "";
+      const startISO = typeof event.startISO === "string" ? event.startISO : "";
+      const endISO = typeof event.endISO === "string" ? event.endISO : "";
+      if (!hasRenderableTitle(title) || !startISO || !endISO) continue;
+      const rawGroup = event.appGroupId ?? (event as { app_group_id?: unknown }).app_group_id;
+      const groupId = typeof rawGroup === "string" && rawGroup.length > 0 ? rawGroup : null;
+      if (!entitySessionVisibleToMember(groupId, groups, true)) continue;
+      const row = {
+        id: event.id,
+        user_id: "",
+        entity_id: membership.teamId,
+        starts_at: startISO,
+        ends_at: endISO,
+        all_day: event.allDay === true,
+        title,
+        color: typeof event.color === "string" ? event.color : null,
+        category: null,
+        category_id: typeof event.categoryId === "string" ? event.categoryId : null,
+        description: typeof event.description === "string" ? event.description : null,
+        location: typeof event.location === "string" ? event.location : null,
+        location_url: typeof event.locationUrl === "string" ? event.locationUrl : null,
+        activity: null,
+        distance_km: null,
+        pace_sec_per_km: null,
+        diary_type: null,
+        diary_group: null,
+        diary_sub: null,
+        session_note: null,
+        session_note_updated_at: null,
+        activities: null,
+        strava_activity_id: null,
+        summary_polyline: null,
+        total_elevation_gain_m: null,
+        average_heartrate: null,
+        sport_type: null,
+        sub_type: null,
+        sort_index: null,
+        created_by_coach_id: null,
+        coach_pending: false,
+        app_group_id: groupId,
+        signup_enabled: event.signUpEnabled === true,
+        repeat_rule: null,
+        repeat_series_id: null,
+      } satisfies Row;
+      const loaded = alreadyLoaded.get(event.id);
+      const description = sessionDescriptionText(row.description);
+      const loadedDescription = sessionDescriptionText(loaded?.description);
+      const needsDescription = !!description && !loadedDescription;
+      if (!loaded || needsDescription) out.push(row);
+      const persistKey = description ? `${event.id}:${description}` : event.id;
+      if (
+        (!loaded || needsDescription) &&
+        !replicaPersistAttempted.has(persistKey) &&
+        !isCalendarSessionWritePending(event.id)
+      ) {
+        replicaPersistAttempted.add(persistKey);
+        void persistCalendarSession(`team:${membership.teamId}`, {
+          ...row,
+          starts_at: isoToDb(startISO),
+          ends_at: isoToDb(endISO),
+        });
+      }
+    }
+  }
+  return out;
+}
+
+function placeMemberReplicaRow(rowById: Map<string, Row>, row: Row) {
+  const existing = rowById.get(row.id);
+  if (!existing) {
+    rowById.set(row.id, row);
+    return;
+  }
+  const merged = mergeMemberSessionDescription(existing, row.description);
+  if (merged !== existing) rowById.set(row.id, merged);
+}
+
 function rowToEvent(r: Row): CalendarEvent {
   const startRaw =
     (r as { starts_at?: unknown }).starts_at ?? (r as { startISO?: unknown }).startISO;
@@ -860,6 +1036,13 @@ export function useEventStore(calId: string) {
     setEvents(seed);
 
     const memberTeamIdsRef = { current: new Set<string>() };
+    const membershipsRef = { current: [] as MembershipSessionTeam[] };
+    const refreshMemberships = async () => {
+      if (scope.kind !== "user") return;
+      membershipsRef.current = await withOwnedTeams(scope.userId, membershipsRef.current);
+      memberTeamIdsRef.current = new Set(membershipsRef.current.map((row) => row.teamId));
+      publishTeamNames(membershipsRef.current);
+    };
     let memberBroadcastUnsubs: Array<() => void> = [];
     let memberSessionChannels: Array<ReturnType<typeof supabase.channel>> = [];
     let subscribedMemberTeamIds: string[] = [];
@@ -987,6 +1170,23 @@ export function useEventStore(calId: string) {
       if (cancelled) return;
 
       if (!remote.ok) {
+        await refreshMemberships();
+        if (cancelled) return;
+        if (scope.kind === "user" && membershipsRef.current.length > 0) {
+          const extra = await memberTeamReplicaRows(
+            membershipsRef.current,
+            new Map(local.map((event) => [event.id, event])),
+          );
+          if (cancelled) return;
+          for (const event of materializeRows(extra)) {
+            const idx = local.findIndex((row) => row.id === event.id);
+            if (idx < 0) {
+              local.push({ ...event, synced: true as const });
+              continue;
+            }
+            local[idx] = mergeMemberSessionDescription(local[idx], event.description);
+          }
+        }
         const merged = mergeRemoteSessions({
           remoteOk: false,
           remote: [],
@@ -1013,8 +1213,11 @@ export function useEventStore(calId: string) {
 
       const rows = remote.rows as unknown as Row[];
       if (remote.memberships) {
+        membershipsRef.current = remote.memberships;
         memberTeamIdsRef.current = new Set(remote.memberships.map((row) => row.teamId));
       }
+      await refreshMemberships();
+      if (cancelled) return;
       for (const row of rows) {
         const entityId = rowEntityId(row);
         if (entityId) memberTeamIdsRef.current.add(entityId);
@@ -1025,6 +1228,11 @@ export function useEventStore(calId: string) {
       const rowById = new Map<string, Row>();
       for (const row of rows) rowById.set(row.id, row);
       for (const row of overlayRows) rowById.set(row.id, row);
+      if (scope.kind === "user" && membershipsRef.current.length > 0) {
+        const replicaRows = await memberTeamReplicaRows(membershipsRef.current, rowById);
+        if (cancelled) return;
+        for (const row of replicaRows) placeMemberReplicaRow(rowById, row);
+      }
       const combined = [...rowById.values()];
       cleanupUntitledRows(combined);
       const visible = filterRows(combined);
@@ -1045,6 +1253,9 @@ export function useEventStore(calId: string) {
         mutations,
         retainIds,
       });
+      if (scope.kind === "user") {
+        merged = { ...merged, next: keepTeamDescriptions(merged.next, remoteEvents) };
+      }
 
       if (opts?.reconcile) {
         const unsynced = unsyncedEventsToRetry(merged.next, pendingDeleteIdsRef.current, calId);
@@ -1063,18 +1274,33 @@ export function useEventStore(calId: string) {
           const retryRows = retry.rows as unknown as Row[];
           const retryOverlay = await pullEntityOverlayRows();
           if (cancelled) return;
+          if (retry.memberships) membershipsRef.current = retry.memberships;
+          await refreshMemberships();
+          if (cancelled) return;
           const retryById = new Map<string, Row>();
           for (const row of retryRows) retryById.set(row.id, row);
           for (const row of retryOverlay) retryById.set(row.id, row);
+          if (scope.kind === "user" && membershipsRef.current.length > 0) {
+            const replicaRows = await memberTeamReplicaRows(membershipsRef.current, retryById);
+            if (cancelled) return;
+            for (const row of replicaRows) placeMemberReplicaRow(retryById, row);
+          }
           const retryCombined = [...retryById.values()];
           cleanupUntitledRows(retryCombined);
+          const retryRemote = materializeRows(filterRows(retryCombined)).map((event) => ({
+            ...event,
+            synced: true as const,
+          }));
           merged = mergeRemoteSessions({
             remoteOk: true,
-            remote: materializeRows(filterRows(retryCombined)).map((event) => ({ ...event, synced: true as const })),
+            remote: retryRemote,
             local: merged.next,
             mutations: retryMutations,
             retainIds,
           });
+          if (scope.kind === "user") {
+            merged = { ...merged, next: keepTeamDescriptions(merged.next, retryRemote) };
+          }
         }
       }
 
@@ -1100,7 +1326,9 @@ export function useEventStore(calId: string) {
         const overlay = await fetchMembershipSessions();
         if (cancelled) return;
         if (overlay.ok) {
-          memberTeamIdsRef.current = new Set(overlay.memberships.map((row) => row.teamId));
+          membershipsRef.current = overlay.memberships;
+          await refreshMemberships();
+          if (cancelled) return;
           const overlayRows = overlay.rows as unknown as Row[];
           for (const row of overlayRows) {
             const entityId = rowEntityId(row);
@@ -1227,6 +1455,9 @@ export function useEventStore(calId: string) {
               startISO: incoming.startISO || existing.startISO,
               endISO: incoming.endISO || existing.endISO,
               entityId: incoming.entityId ?? existing.entityId,
+              description: sessionDescriptionText(incoming.description)
+                ? incoming.description
+                : existing.description,
             }
           : incoming;
       persistedIdsRef.current.add(event.id);
@@ -1451,13 +1682,17 @@ export function useEventStore(calId: string) {
         if (cancelled) return;
         if (memberTeamIdsRef.current.size === 0) {
           const overlay = await fetchMembershipSessions();
-          if (cancelled || !overlay.ok) return;
-          memberTeamIdsRef.current = new Set(overlay.memberships.map((row) => row.teamId));
-          for (const row of overlay.rows as unknown as Row[]) {
-            const entityId = rowEntityId(row);
-            if (entityId) memberTeamIdsRef.current.add(entityId);
-            applyRowToEvents(row);
+          if (cancelled) return;
+          if (overlay.ok) {
+            membershipsRef.current = overlay.memberships;
+            for (const row of overlay.rows as unknown as Row[]) {
+              const entityId = rowEntityId(row);
+              if (entityId) memberTeamIdsRef.current.add(entityId);
+              applyRowToEvents(row);
+            }
           }
+          await refreshMemberships();
+          if (cancelled) return;
           syncMemberEntityRealtime();
         }
         const overlayRows = await pullEntityOverlayRows();
@@ -1468,6 +1703,24 @@ export function useEventStore(calId: string) {
         }
         syncMemberEntityRealtime();
         for (const row of overlayRows) applyRowToEvents(row);
+        const replicaRows = await memberTeamReplicaRows(
+          membershipsRef.current,
+          new Map(eventsRef.current.map((event) => [event.id, event])),
+        );
+        if (cancelled) return;
+        for (const row of replicaRows) {
+          const existing = eventsRef.current.find((event) => event.id === row.id);
+          if (!existing) {
+            applyRowToEvents(row);
+            continue;
+          }
+          const merged = mergeMemberSessionDescription(existing, row.description);
+          if (merged === existing) continue;
+          const next = eventsRef.current.map((event) => (event.id === row.id ? merged : event));
+          eventsRef.current = next;
+          eventsByCalId.set(calId, next);
+          setEvents(next);
+        }
       })();
     };
 

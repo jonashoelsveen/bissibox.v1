@@ -696,11 +696,7 @@ export async function fetchCalendarSessions(
   if (!sessionData.session?.access_token) return { ok: false };
 
   try {
-    /** Visible-sessions RPC includes overlay — Bucket A: skip unless entityCalendarSharing. */
-    if (
-      (calId.startsWith("user:") || calId.startsWith("diary:user:")) &&
-      isEntityFeatureEnabled("entityCalendarSharing")
-    ) {
+    if (calId.startsWith("user:") || calId.startsWith("diary:user:")) {
       const sendRpc = () => supabase.rpc("list_visible_calendar_sessions");
       let { data, error } = await sendRpc();
       if (error) {
@@ -761,8 +757,6 @@ export async function fetchCalendarSessions(
 
 /** Cookie API: sessions for one entity the signed-in user belongs to. */
 export async function fetchEntityCalendarSessions(entityId: string): Promise<CalendarSessionRow[]> {
-  /** Entity-sessions fetch — Bucket A: empty unless entityCalendarSharing. */
-  if (!isEntityFeatureEnabled("entityCalendarSharing")) return [];
   if (!UUID_RE.test(entityId)) return [];
   try {
     const send = async () =>
@@ -857,29 +851,61 @@ async function fetchOwnMembershipTeams(): Promise<MembershipSessionTeam[]> {
   }));
 }
 
+function sessionGroupId(row: CalendarSessionRow): string | null {
+  return typeof row.app_group_id === "string" && row.app_group_id.length > 0 ? row.app_group_id : null;
+}
+
+/** Keep a team session on a member calendar only when All or their group matches. */
+function memberCanSeeSession(
+  row: CalendarSessionRow,
+  memberships: MembershipSessionTeam[],
+): boolean {
+  const entityId = typeof row.entity_id === "string" && row.entity_id.length > 0 ? row.entity_id : null;
+  if (!entityId) return true;
+  if (memberships.length === 0) return true;
+  const membership = memberships.find((item) => item.teamId === entityId);
+  if (!membership) return false;
+  const groupId = sessionGroupId(row);
+  if (!groupId) return true;
+  const groups =
+    membership.groupIds.length > 0
+      ? membership.groupIds
+      : membership.appGroupId
+        ? [membership.appGroupId]
+        : [];
+  return groups.includes(groupId);
+}
+
 async function attachMemberOverlay(
   calId: string,
   rows: CalendarSessionRow[],
   memberships: MembershipSessionTeam[],
 ): Promise<{ rows: CalendarSessionRow[]; memberships: MembershipSessionTeam[] }> {
-  /** Member overlay merge — Bucket A+C: skip unless entityCalendarSharing. */
-  if (!isEntityFeatureEnabled("entityCalendarSharing")) {
+  const ownEntityId = teamIdFromCalId(calId);
+  if (ownEntityId) {
     return {
-      rows: rows.filter((row) => !row.entity_id),
+      rows: rows.filter((row) => row.entity_id === ownEntityId),
       memberships: [],
     };
   }
   if (!calId.startsWith("user:") && !calId.startsWith("diary:user:")) {
     return { rows, memberships };
   }
+  if (!isEntityFeatureEnabled("entityCalendarSharing")) {
+    return {
+      rows: rows.filter((row) => memberCanSeeSession(row, memberships)),
+      memberships,
+    };
+  }
   let nextMemberships = memberships;
   if (nextMemberships.length === 0) {
     nextMemberships = await fetchOwnMembershipTeams();
   }
   const overlayRows = await fetchEntitySessionsByTeamIds(nextMemberships.map((row) => row.teamId));
+  const knownMemberships = nextMemberships.length > 0 ? nextMemberships : memberships;
   return {
-    rows: mergeSessionRows(rows, overlayRows),
-    memberships: nextMemberships.length > 0 ? nextMemberships : memberships,
+    rows: mergeSessionRows(rows, overlayRows).filter((row) => memberCanSeeSession(row, knownMemberships)),
+    memberships: knownMemberships,
   };
 }
 
@@ -908,11 +934,6 @@ export async function fetchMembershipSessions(): Promise<
     }
   } catch (error) {
     console.error("[calendar_sessions membership fetch]", error);
-  }
-
-  /** Membership overlay RPC fallback — Bucket A+C: skip unless entityCalendarSharing. */
-  if (!isEntityFeatureEnabled("entityCalendarSharing")) {
-    return { ok: false };
   }
 
   try {

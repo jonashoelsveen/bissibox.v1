@@ -97,13 +97,13 @@ Deno.serve(async (req) => {
     const appUrl =
       Deno.env.get("APP_URL") ||
       req.headers.get("origin") ||
-      "https://aponna.com";
+      "https://bissibox.com";
     const acceptUrl = `${appUrl}/accept-coach-invite?token=${token}`;
 
     const html = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #111;">
         <h1 style="font-size: 22px; margin: 0 0 16px;">You've been invited as a coach</h1>
-        <p><strong>${escapeHtml(inviterName)}</strong> has invited you to be their coach on Aponna.</p>
+        <p><strong>${escapeHtml(inviterName)}</strong> has invited you to be their coach on Bissibox.</p>
         <p>Accepting will connect you with them so you can view (and optionally edit) their calendar, diary and photos according to the access level they grant.</p>
         <p style="margin: 28px 0;">
           <a href="${acceptUrl}"
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
         </p>
         <p style="font-size: 13px; color: #666;">If you weren't expecting this invitation you can safely ignore this email.</p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
-        <p style="font-size: 12px; color: #999;">Aponna · Coach invitation</p>
+        <p style="font-size: 12px; color: #999;">Bissibox · Coach invitation</p>
       </div>
     `;
 
@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
         from: FROM_EMAIL,
         to: [email],
         reply_to: inviterProfile?.email || userData.user.email || undefined,
-        subject: `${inviterName} invited you to coach them on Aponna`,
+        subject: `${inviterName} invited you to coach them on Bissibox`,
         html,
       }),
     });

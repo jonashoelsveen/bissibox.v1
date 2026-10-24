@@ -14,6 +14,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef, forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { Search, X } from "lucide-react";
 import { DEFAULT_SESSION_COLOR, sessionTileChrome } from "@/components/library/CategoryActionsMenu";
+import { signupResponse, teamMemberTilePaint, useTeamSessionResponses } from "@/lib/teamSessionResponse";
+import { isMembershipOverlayEvent } from "./yearStore";
+import { useCalendarTheme } from "./calendarThemePref";
 import { useCalendarSearch, type SearchResult } from "./CalendarSearchContext";
 import { fromISOLocal, startEndMinsOnStartDay } from "./dateUtils";
 import { groupByDay } from "./sessionDayGroups";
@@ -142,11 +145,21 @@ const ResultTab = forwardRef<
   {
     result: SearchResult;
     selected: boolean;
+    calId?: string;
     onClick: () => void;
   }
->(function ResultTab({ result, selected, onClick }, ref) {
+>(function ResultTab({ result, selected, calId, onClick }, ref) {
+  const teamResponses = useTeamSessionResponses();
+  const darkTiles = useCalendarTheme() === "dark";
   const accent = result.color || DEFAULT_SESSION_COLOR;
-  const chrome = sessionTileChrome(accent, selected);
+  const chrome = isMembershipOverlayEvent(result, calId)
+    ? teamMemberTilePaint(
+        result.color,
+        selected,
+        signupResponse(result.signUpEnabled, teamResponses, result.id),
+        darkTiles,
+      )
+    : sessionTileChrome(accent, selected);
   const bg = chrome.fill;
   const fg = chrome.fg;
   return (
@@ -171,7 +184,7 @@ const ResultTab = forwardRef<
     >
       <span
         aria-hidden
-        className="pointer-events-none absolute left-0 top-0 bottom-0 w-[3px]"
+        className="pointer-events-none absolute left-0 top-0 bottom-0 w-[4px]"
         style={{ background: chrome.bar }}
       />
       <div className="flex min-w-0 flex-1 flex-col justify-center py-0.5 pl-3 pr-2">
@@ -187,7 +200,7 @@ const ResultTab = forwardRef<
 /** Shared session tile used by search results and the mini-cal day list. */
 export { ResultTab as SessionResultTab };
 
-export function CalendarSearchResults() {
+export function CalendarSearchResults({ calId }: { calId?: string }) {
   const { query, results, selectedId, setSelectedId, onPickResult, anchorResult } =
     useCalendarSearch();
   const trimmed = query.trim();
@@ -216,9 +229,16 @@ export function CalendarSearchResults() {
         ? `${Math.max(0, scroller.clientHeight - pin.offsetHeight)}px`
         : "0px";
     }
-    const delta =
-      pin.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
-    scroller.scrollTop += delta;
+    // Pin from the tile's layout position, not a sticky header's visual
+    // top. A stuck header reports the clip edge, so aligning to it scrolls
+    // the upcoming session under the pane's top. Leave a gap so the day
+    // label and the full tile, including its ring and shadow, stay visible.
+    const TOP_INSET = 12;
+    const scrollerTop = scroller.getBoundingClientRect().top;
+    const tileLayoutTop =
+      tile.getBoundingClientRect().top - scrollerTop + scroller.scrollTop;
+    const headerHeight = header?.offsetHeight ?? 0;
+    scroller.scrollTop = Math.max(0, tileLayoutTop - headerHeight - TOP_INSET);
     // results[0] is covered by resultIdsKey; omit the array to avoid
     // re-anchoring on every event-object republish.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -259,6 +279,7 @@ export function CalendarSearchResults() {
                 key={r.id}
                 ref={r.id === anchorResult?.id ? anchorRef : undefined}
                 result={r}
+                calId={calId}
                 selected={selectedId === r.id}
                 onClick={() => {
                   setSelectedId(r.id);

@@ -25,7 +25,7 @@ import { useEntityPeoplePointerDrag } from "@/lib/useEntityPeoplePointerDrag";
 import { HELVETICA_STACK } from "@/lib/cloud-landing-design";
 import { cn } from "@/lib/utils";
 
-/** Same periwinkle as Overview folder icons. */
+/** Same periwinkle as organization group icons. */
 const GROUP_PURPLE = "#8E8CF0";
 const GROUP_PURPLE_DEEP = "#7B79E8";
 

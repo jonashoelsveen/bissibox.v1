@@ -7,7 +7,7 @@
  * account profile editor stay in sync while typing.
  *
  * Mutations go through cookie-authenticated `/api/account/entities` so they
- * work on account.aponna.com (HTTP-only session cookie), with a client RLS
+ * work on account.bissibox.com (HTTP-only session cookie), with a client RLS
  * fallback for the cloud app.
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";

@@ -37,6 +37,13 @@ interface TimeWheelPickerProps {
   minuteStep?: number;
   muted?: boolean;
   disabled?: boolean;
+  /**
+   * Multi-day sessions: from/to clocks live on different days, so 22:00→08:00
+   * is valid and must not shift the other endpoint.
+   */
+  independentClocks?: boolean;
+  /** From on the left, to on the right, dash centered. */
+  split?: boolean;
 }
 
 const twoDigit = (n: number) => String(n).padStart(2, "0");
@@ -49,6 +56,8 @@ export function TimeWheelPicker({
   minuteStep = 5,
   muted = false,
   disabled = false,
+  independentClocks = false,
+  split = false,
 }: TimeWheelPickerProps) {
   const fromH = Math.floor(value.startMin / 60);
   const fromM = value.startMin % 60;
@@ -63,6 +72,10 @@ export function TimeWheelPicker({
     const durationMins = prevTo - prevFrom;
     const newFrom = clamp(h, 0, 23) * 60 + clamp(m, 0, 59);
 
+    if (independentClocks) {
+      onChange({ startMin: newFrom, endMin: prevTo });
+      return;
+    }
     if (newFrom >= prevTo) {
       const newTo = Math.min(DAY_MINUTES, newFrom + durationMins);
       onChange({ startMin: newFrom, endMin: newTo });
@@ -77,6 +90,10 @@ export function TimeWheelPicker({
     const durationMins = prevTo - prevFrom;
     const newTo = h >= 24 ? DAY_MINUTES : clamp(h, 0, 23) * 60 + clamp(m, 0, 59);
 
+    if (independentClocks) {
+      onChange({ startMin: prevFrom, endMin: newTo });
+      return;
+    }
     if (newTo <= prevFrom) {
       const newFrom = Math.max(0, newTo - durationMins);
       onChange({ startMin: newFrom, endMin: newTo });
@@ -104,8 +121,8 @@ export function TimeWheelPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return (
-    <div className="flex items-center select-none">
+  const fromGroup = (
+    <div className="flex items-center">
       <Cell
         ref={refs[0]}
         ariaLabel="Fra time"
@@ -131,7 +148,10 @@ export function TimeWheelPicker({
         onAutoAdvance={() => focusSibling(1, 1)}
         onArrowH={(d) => focusSibling(1, d)}
       />
-      <span className={["mx-1.5 text-[12px] font-medium", muted ? "text-ink/30" : "text-ink/60"].join(" ")}>–</span>
+    </div>
+  );
+  const toGroup = (
+    <div className="flex items-center">
       <Cell
         ref={refs[2]}
         ariaLabel="Til time"
@@ -157,6 +177,29 @@ export function TimeWheelPicker({
         onAutoAdvance={() => focusSibling(3, 1)}
         onArrowH={(d) => focusSibling(3, d)}
       />
+    </div>
+  );
+  const dash = (
+    <span className={["text-[12px] font-medium", muted ? "text-ink/30" : "text-ink/60", split ? "" : "mx-1.5"].join(" ")}>
+      –
+    </span>
+  );
+
+  if (split) {
+    return (
+      <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center select-none">
+        <div className="justify-self-start">{fromGroup}</div>
+        <div className="justify-self-center">{dash}</div>
+        <div className="justify-self-end">{toGroup}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center select-none">
+      {fromGroup}
+      {dash}
+      {toGroup}
     </div>
   );
 }
