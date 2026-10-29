@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { isEntityFeatureEnabled, setBetaTesterSnapshot } from "@/lib/features";
-import { clearFeatureFlagSnapshot, loadAcceptedFeatureFlags } from "@/lib/featureFlags.client";
+import { clearFeatureFlagSnapshot, loadAcceptedFeatureFlags } from "@/lib/featureFlagSnapshot";
 import {
   broadcastForcedLogout,
   redirectToLoggedOutHome,

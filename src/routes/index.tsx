@@ -2,7 +2,7 @@ import { createFileRoute, useSearch, useNavigate, Navigate } from "@tanstack/rea
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { loadAcceptedFeatureFlags } from "@/lib/featureFlags.client";
+import { loadAcceptedFeatureFlags } from "@/lib/featureFlagSnapshot";
 import { SignInModal, type SignInContext } from "@/components/SignInModal";
 import { CloudPageWithFooter } from "@/components/CloudFooter";
 import { CloudLandingSection, CLOUD_OPEN_SIGNIN, restoreCloudHomeScroll } from "@/components/CloudLandingSection";
