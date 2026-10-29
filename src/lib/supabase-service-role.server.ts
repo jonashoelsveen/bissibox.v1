@@ -3,8 +3,29 @@ import { resolve } from "node:path";
 
 let loaded = false;
 
+function unquote(value: string): string {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'") && trimmed.length >= 2)
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
+/** The production host stored the service role under this misspelled name. */
+function adoptMisspelledServiceRoleKey() {
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return;
+  const aliased = process.env.SUPABSE_SERVICE_ROLE_KEY;
+  if (!aliased?.trim()) return;
+  const value = unquote(aliased);
+  if (value) process.env.SUPABASE_SERVICE_ROLE_KEY = value;
+}
+
 /** Wrangler keeps SUPABASE_SERVICE_ROLE_KEY in gitignored `.dev.vars`. Vite `npm run dev` only loads `.env`. */
 export function ensureServiceRoleKeyFromDevVars() {
+  adoptMisspelledServiceRoleKey();
   if (loaded) return;
   loaded = true;
   if (process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return;
@@ -30,4 +51,5 @@ export function ensureServiceRoleKeyFromDevVars() {
   } catch {
     /* local .dev.vars is optional */
   }
+  adoptMisspelledServiceRoleKey();
 }

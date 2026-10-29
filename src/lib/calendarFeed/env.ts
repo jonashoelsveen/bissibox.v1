@@ -31,43 +31,49 @@ function envValue(name: string): string {
   return "";
 }
 
-const FEED_KEY_ENV = [
-  ["CALENDAR_FEED_ENC_KEY", "calendar_feed_enc_key"],
-  ["CALENDAR_FEED_HMAC_KEY", "calendar_feed_hmac_key"],
-  ["CALENDAR_FEED_KEY_VERSION", "calendar_feed_key_version"],
-] as const;
-
-/** Fills empty feed key env from the vault when the host has no CALENDAR_FEED_* vars. */
-export async function hydrateFeedKeys(
-  readSecret: (name: string) => Promise<string | null>,
-): Promise<void> {
-  if (loadFeedKeys()) return;
-  for (const [envName, vaultName] of FEED_KEY_ENV) {
-    if (process.env[envName]?.trim()) continue;
-    let value: string | null = null;
-    try {
-      value = await readSecret(vaultName);
-    } catch {
-      value = null;
-    }
-    const trimmed = value?.trim();
-    if (trimmed) process.env[envName] = unquote(trimmed);
-  }
-}
-
-export function loadFeedKeys(): FeedKeyMaterial | null {
-  const enc = envValue("CALENDAR_FEED_ENC_KEY");
-  const hmac = envValue("CALENDAR_FEED_HMAC_KEY");
+function materialFrom(encRaw: string, hmacRaw: string, versionRaw: string): FeedKeyMaterial | null {
+  const enc = unquote(encRaw);
+  const hmac = unquote(hmacRaw);
   if (!enc || !hmac) return null;
   const encKey = Buffer.from(enc, "base64");
   const hmacKey = Buffer.from(hmac, "base64");
   if (encKey.length !== 32 || hmacKey.length < 16) return null;
-  const version = Number(envValue("CALENDAR_FEED_KEY_VERSION") || "1");
+  const version = Number(unquote(versionRaw) || "1");
   return {
     encKey,
     hmacKey,
     keyVersion: Number.isInteger(version) && version > 0 ? version : 1,
   };
+}
+
+export function loadFeedKeys(): FeedKeyMaterial | null {
+  return materialFrom(
+    envValue("CALENDAR_FEED_ENC_KEY"),
+    envValue("CALENDAR_FEED_HMAC_KEY"),
+    envValue("CALENDAR_FEED_KEY_VERSION"),
+  );
+}
+
+/** Env keys when the host has them, otherwise the vault values just read. */
+export async function resolveFeedKeys(
+  readSecret: (name: string) => Promise<string | null>,
+): Promise<FeedKeyMaterial | null> {
+  const fromEnv = loadFeedKeys();
+  if (fromEnv) return fromEnv;
+  const read = async (envName: string, vaultName: string) => {
+    const current = envValue(envName);
+    if (current) return current;
+    try {
+      const value = await readSecret(vaultName);
+      return value?.trim() ? unquote(value.trim()) : "";
+    } catch {
+      return "";
+    }
+  };
+  const enc = await read("CALENDAR_FEED_ENC_KEY", "calendar_feed_enc_key");
+  const hmac = await read("CALENDAR_FEED_HMAC_KEY", "calendar_feed_hmac_key");
+  const version = await read("CALENDAR_FEED_KEY_VERSION", "calendar_feed_key_version");
+  return materialFrom(enc, hmac, version);
 }
 
 export function strictFeedHosts(): boolean {

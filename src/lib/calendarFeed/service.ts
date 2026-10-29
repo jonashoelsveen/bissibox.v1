@@ -18,7 +18,7 @@ import {
   normalizeFeedUrl,
   type FeedKeyMaterial,
 } from "./crypto.ts";
-import { hydrateFeedKeys, loadFeedKeys, strictFeedHosts } from "./env.ts";
+import { resolveFeedKeys, strictFeedHosts } from "./env.ts";
 import { expandFeed } from "./expand.ts";
 import { parseFeed } from "./parse.ts";
 import { assertRate } from "./rateLimit.ts";
@@ -69,20 +69,23 @@ function logFeed(calendarId: string, hostname: string, code: string): void {
 
 async function adminOrThrow(): Promise<Admin> {
   const admin = await getSupabaseAdminOrNull();
-  if (!admin) throw new FeedError("unreachable", "Calendar subscriptions are not configured.");
+  if (!admin) {
+    console.error("[calendar feed] service role unavailable");
+    throw new FeedError("unreachable", "Calendar subscriptions are not configured.");
+  }
   return admin;
 }
 
 async function keysOrThrow(admin: Admin): Promise<FeedKeyMaterial> {
-  if (!loadFeedKeys()) {
-    await hydrateFeedKeys(async (name) => {
-      const { data, error } = await admin.rpc("calendar_feed_runtime_secret", { p_name: name });
-      if (error || typeof data !== "string") return null;
-      return data;
-    });
+  const keys = await resolveFeedKeys(async (name) => {
+    const { data, error } = await admin.rpc("calendar_feed_runtime_secret", { p_name: name });
+    if (error || typeof data !== "string") return null;
+    return data;
+  });
+  if (!keys) {
+    console.error("[calendar feed] feed keys unavailable");
+    throw new FeedError("unreachable", "Calendar subscriptions are not configured.");
   }
-  const keys = loadFeedKeys();
-  if (!keys) throw new FeedError("unreachable", "Calendar subscriptions are not configured.");
   return keys;
 }
 
