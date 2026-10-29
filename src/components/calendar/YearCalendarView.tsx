@@ -618,7 +618,18 @@ function YearCalendarViewInner({
   const [internalViewMode, setInternalViewMode] = useState<ExtendedViewMode>("month");
   const viewMode = viewModeProp ?? internalViewMode;
   const feedEvents = useSubscriptionFeedEvents(userCalendars?.calendars ?? [], currentDate, viewMode);
-  const displayEvents = useMemo(() => [...mergedEvents, ...feedEvents], [mergedEvents, feedEvents]);
+  const displayEvents = useMemo(() => {
+    const hiddenIds = new Set(
+      (userCalendars?.calendars ?? [])
+        .filter((calendar) => calendar.hidden)
+        .map((calendar) => calendar.id),
+    );
+    const visibleFeed =
+      hiddenIds.size === 0
+        ? feedEvents
+        : feedEvents.filter((event) => !event.userCalendarId || !hiddenIds.has(event.userCalendarId));
+    return [...mergedEvents, ...visibleFeed];
+  }, [mergedEvents, feedEvents, userCalendars?.calendars]);
   useEffect(() => {
     if (!publishSearchEvents) return;
     publishSearchEvents([...events, ...feedEvents]);

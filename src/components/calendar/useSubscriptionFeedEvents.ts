@@ -39,6 +39,17 @@ export function useSubscriptionFeedEvents(
     () => subscriptions.map((calendar) => calendar.id).sort().join("|"),
     [subscriptions],
   );
+  // Read hidden as a primitive so a memo of subscription rows cannot keep the
+  // previous calendar objects after the eye toggles.
+  const visibilityKey = useMemo(
+    () =>
+      calendars
+        .filter((calendar) => calendar.source === "subscription")
+        .map((calendar) => `${calendar.id}:${calendar.hidden ? "1" : "0"}:${calendar.color}`)
+        .sort()
+        .join("|"),
+    [calendars],
+  );
   const window = useMemo(
     () => feedWindow(effectiveAnchor, viewMode),
     [effectiveAnchor, viewMode],
@@ -85,13 +96,14 @@ export function useSubscriptionFeedEvents(
 
   return useMemo(() => {
     void cacheVersion;
+    void visibilityKey;
     const events: CalendarEvent[] = [];
-    for (const calendar of subscriptions) {
-      if (calendar.hidden) continue;
+    for (const calendar of calendars) {
+      if (calendar.source !== "subscription" || calendar.hidden) continue;
       for (const event of cachedSubscriptionEvents(calendar.id)) {
         events.push(subscriptionToCalendarEvent(event, calendar.color));
       }
     }
     return events;
-  }, [cacheVersion, subscriptions]);
+  }, [cacheVersion, calendars, visibilityKey]);
 }
