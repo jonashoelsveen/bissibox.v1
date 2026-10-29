@@ -164,7 +164,7 @@ export function GlobalTopTabBar() {
             onClick={() => {
               requestCloudSignIn();
             }}
-            className="bissibox-desktop-only text-white transition active:scale-[0.98]"
+            className="text-white transition active:scale-[0.98]"
             style={landingPrimaryButtonCompactStyle}
           >
             Log in

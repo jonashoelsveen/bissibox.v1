@@ -8555,6 +8555,9 @@ function CalendarDropdownRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuSide, setMenuSide] = useState<"left" | "right" | null>(null);
   const fieldRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const thumbRef = useRef<HTMLDivElement | null>(null);
+  const thumbTimer = useRef<number | null>(null);
   const selected = calendars.find((calendar) => calendar.id === selectedId) ?? null;
   const label = selected?.name ?? "No calendar";
   const Chevron = menuOpen && menuSide === "left" ? ChevronLeft : ChevronRight;
@@ -8571,6 +8574,46 @@ function CalendarDropdownRow({
   const menuHeight = listMaxHeight == null
     ? fullMenuHeight
     : Math.min(fullMenuHeight, listMaxHeight + SESSION_SIDE_MENU_INSET_PX * 2);
+
+  const syncThumb = useCallback(() => {
+    const el = scrollRef.current;
+    const thumb = thumbRef.current;
+    if (!el || !thumb) return;
+    const canScroll = el.scrollHeight > el.clientHeight + 1;
+    if (!canScroll) {
+      thumb.dataset.on = "0";
+      thumb.style.height = "0px";
+      return;
+    }
+    const ratio = el.clientHeight / el.scrollHeight;
+    const height = Math.max(18, Math.round(el.clientHeight * ratio));
+    const travel = Math.max(0, el.clientHeight - height - 4);
+    const maxScroll = el.scrollHeight - el.clientHeight;
+    const top = 2 + (maxScroll > 0 ? (el.scrollTop / maxScroll) * travel : 0);
+    thumb.style.height = `${height}px`;
+    thumb.style.transform = `translateY(${top}px)`;
+  }, []);
+
+  const revealThumb = useCallback(() => {
+    syncThumb();
+    const el = scrollRef.current;
+    const thumb = thumbRef.current;
+    if (!el || !thumb || el.scrollHeight <= el.clientHeight + 1) return;
+    thumb.dataset.on = "1";
+    if (thumbTimer.current) window.clearTimeout(thumbTimer.current);
+    thumbTimer.current = window.setTimeout(() => {
+      if (thumbRef.current) thumbRef.current.dataset.on = "0";
+    }, 700);
+  }, [syncThumb]);
+
+  useEffect(() => () => {
+    if (thumbTimer.current) window.clearTimeout(thumbTimer.current);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!menuOpen) return;
+    syncThumb();
+  }, [menuOpen, options.length, listMaxHeight, syncThumb]);
 
   return (
     <>
@@ -8646,8 +8689,14 @@ function CalendarDropdownRow({
         onSideChange={setMenuSide}
       >
         <div
+          className="relative min-h-0"
+          style={listMaxHeight == null ? undefined : { maxHeight: listMaxHeight }}
+        >
+        <div
+          ref={scrollRef}
           role="presentation"
-          className="session-side-menu-scroll flex flex-col gap-1 overflow-y-auto"
+          onScroll={revealThumb}
+          className="session-calendar-menu-scroll flex flex-col gap-1 overflow-y-auto"
           style={listMaxHeight == null ? undefined : { maxHeight: listMaxHeight }}
         >
           {options.map((option) => {
@@ -8675,6 +8724,8 @@ function CalendarDropdownRow({
               </button>
             );
           })}
+        </div>
+        <div ref={thumbRef} data-on="0" aria-hidden className="session-calendar-menu-thumb" />
         </div>
       </SessionSideListbox>
     </>

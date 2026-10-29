@@ -17,6 +17,44 @@ import { VerificationCodeExpiredPanel } from "@/components/account/VerificationC
 const HELVETICA =
   '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
+type SignInViewport = {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  keyboard: boolean;
+};
+
+/** Visible screen, including the area left above the phone keyboard. */
+function useSignInViewport(active: boolean): SignInViewport | null {
+  const [frame, setFrame] = useState<SignInViewport | null>(null);
+  useEffect(() => {
+    if (!active || typeof window === "undefined") return;
+    const read = () => {
+      const viewport = window.visualViewport;
+      const height = viewport?.height ?? window.innerHeight;
+      setFrame({
+        top: viewport?.offsetTop ?? 0,
+        left: viewport?.offsetLeft ?? 0,
+        width: viewport?.width ?? window.innerWidth,
+        height,
+        keyboard: window.innerHeight - height > 80,
+      });
+    };
+    read();
+    const viewport = window.visualViewport;
+    viewport?.addEventListener("resize", read);
+    viewport?.addEventListener("scroll", read);
+    window.addEventListener("resize", read);
+    return () => {
+      viewport?.removeEventListener("resize", read);
+      viewport?.removeEventListener("scroll", read);
+      window.removeEventListener("resize", read);
+    };
+  }, [active]);
+  return frame;
+}
+
 export type SignInContext = "cloud" | "calendar" | "entity" | "account";
 
 type Mode = "signin" | "signup" | "otp";
@@ -83,6 +121,7 @@ export function SignInModal({
   const [pendingRefreshToken, setPendingRefreshToken] = useState<string | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [portalReady, setPortalReady] = useState(false);
+  const viewport = useSignInViewport(open);
 
   useEffect(() => {
     setPortalReady(true);
@@ -361,10 +400,18 @@ export function SignInModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto"
+          className="fixed z-[120] flex items-start justify-center overflow-x-hidden overflow-y-auto"
           style={{
-            paddingTop: "min(10vh, 110px)",
-            paddingBottom: "min(10vh, 110px)",
+            top: viewport?.top ?? 0,
+            left: viewport?.left ?? 0,
+            width: viewport?.width ?? "100%",
+            height: viewport?.height ?? "100%",
+            boxSizing: "border-box",
+            paddingTop: viewport?.keyboard ? 12 : "min(10vh, 110px)",
+            paddingBottom: viewport?.keyboard ? 16 : "min(10vh, 110px)",
+            paddingLeft: 16,
+            paddingRight: 16,
+            overscrollBehavior: "contain",
             fontFamily: HELVETICA,
           }}
         >
@@ -380,7 +427,18 @@ export function SignInModal({
             }}
           />
 
-          {/* the modal — animates size between signin/signup */}
+          {/* Radius lives on a box with no transform, so a focused field cannot
+              scale the window or clip the corners at the screen edge. */}
+          <div
+            className="relative w-full max-w-[480px] shrink-0"
+            style={{
+              background: "#ffffff",
+              borderRadius: 18,
+              boxShadow:
+                "0 30px 60px -20px rgba(0,0,0,0.25), 0 12px 24px -12px rgba(0,0,0,0.18)",
+              overflow: "hidden",
+            }}
+          >
           <motion.div
             key="signin-card"
             layout
@@ -401,16 +459,7 @@ export function SignInModal({
               ease: [0.2, 0.8, 0.2, 1],
             }}
             className="relative flex flex-col"
-            style={{
-              width: "min(480px, 94vw)",
-              maxHeight: "88vh",
-              background: "#ffffff",
-              borderRadius: 18,
-              boxShadow:
-                "0 30px 60px -20px rgba(0,0,0,0.25), 0 12px 24px -12px rgba(0,0,0,0.18)",
-              overflow: "hidden",
-              transformOrigin: "top center",
-            }}
+            style={{ transformOrigin: "top center" }}
           >
             <motion.div
               layout
@@ -502,6 +551,7 @@ export function SignInModal({
               )}
             </AnimatePresence>
           </motion.div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

@@ -346,6 +346,33 @@
     opacity: 1;
     transition: opacity 80ms linear;
   }
+  /* Calendars submenu: same 3px thumb, on the menu's right edge. */
+  .session-calendar-menu-scroll {
+    scrollbar-width: none;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
+  .session-calendar-menu-scroll::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  .session-calendar-menu-thumb {
+    position: absolute;
+    top: 0;
+    right: -4px;
+    width: 3px;
+    border-radius: 999px;
+    background: color-mix(in oklab, white 50%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 2;
+    transition: opacity 480ms ease;
+  }
+  .session-calendar-menu-thumb[data-on="1"] {
+    opacity: 1;
+    transition: opacity 80ms linear;
+  }
   /* Same 3px thumb, light so it reads on the dark web-address field. */
   .web-address-url-thumb {
     background: color-mix(in oklab, white 50%, transparent);
@@ -410,6 +437,14 @@
   outline-width: 0 !important;
   border-color: #0066cc !important;
   box-shadow: 0 0 0 1px #0066cc !important;
+}
+
+/* Phones zoom the page when a field is under 16px, which blows the modal
+   past the screen and clips its corners. 16px keeps the window still. */
+@media (max-width: 639px) {
+  .signin-field {
+    font-size: 16px !important;
+  }
 }
 
 .account-membership-row {
