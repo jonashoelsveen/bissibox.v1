@@ -3518,6 +3518,10 @@ export type Database = {
         Returns: Json
       }
       accept_feature_flags: { Args: never; Returns: undefined }
+      calendar_feed_runtime_secret: {
+        Args: { p_name: string }
+        Returns: string
+      }
       feature_flag_launched: {
         Args: { p_flag: string }
         Returns: boolean

@@ -18,7 +18,7 @@ import {
   normalizeFeedUrl,
   type FeedKeyMaterial,
 } from "./crypto.ts";
-import { loadFeedKeys, strictFeedHosts } from "./env.ts";
+import { hydrateFeedKeys, loadFeedKeys, strictFeedHosts } from "./env.ts";
 import { expandFeed } from "./expand.ts";
 import { parseFeed } from "./parse.ts";
 import { assertRate } from "./rateLimit.ts";
@@ -73,7 +73,14 @@ async function adminOrThrow(): Promise<Admin> {
   return admin;
 }
 
-function keysOrThrow(): FeedKeyMaterial {
+async function keysOrThrow(admin: Admin): Promise<FeedKeyMaterial> {
+  if (!loadFeedKeys()) {
+    await hydrateFeedKeys(async (name) => {
+      const { data, error } = await admin.rpc("calendar_feed_runtime_secret", { p_name: name });
+      if (error || typeof data !== "string") return null;
+      return data;
+    });
+  }
   const keys = loadFeedKeys();
   if (!keys) throw new FeedError("unreachable", "Calendar subscriptions are not configured.");
   return keys;
@@ -283,7 +290,7 @@ export async function createSubscription(
   if (!(await calendarTabsGranted(admin, userId))) {
     throw new FeedError("forbidden");
   }
-  const keys = keysOrThrow();
+  const keys = await keysOrThrow(admin);
   const fetched = await fetchCalendarFeed({ url: input.url, strict: strictFeedHosts() });
   const parsed = parseFeed(fetched.body);
   const typedLabel = input.label?.trim().slice(0, 120) ?? "";
@@ -356,8 +363,8 @@ export async function subscriptionEvents(
 ): Promise<SubscriptionEvent[]> {
   assertRate(`feed:events:${userId}`, 120, MINUTE);
   if (!rangeIsValid(from, to)) throw new FeedError("too_large", "That date range is too long.");
-  const keys = keysOrThrow();
   const admin = await adminOrThrow();
+  const keys = await keysOrThrow(admin);
   const calendar = await ownedCalendar(admin, userId, calendarId);
   if (!calendar || calendar.source !== "subscription") throw new FeedError("forbidden_host", "Calendar not found.");
   const secret = await secretRow(admin, calendarId);
@@ -369,8 +376,8 @@ export async function subscriptionEvents(
 export async function refreshSubscription(userId: string, calendarId: string): Promise<{ syncStatus: "ok" | "error" }> {
   assertRate(`feed:refresh:${userId}`, 6, HOUR);
   assertRate(`feed:refresh:${userId}:${calendarId}`, 1, MINUTE);
-  const keys = keysOrThrow();
   const admin = await adminOrThrow();
+  const keys = await keysOrThrow(admin);
   const calendar = await ownedCalendar(admin, userId, calendarId);
   if (!calendar || calendar.source !== "subscription") throw new FeedError("forbidden_host", "Calendar not found.");
   const secret = await secretRow(admin, calendarId);
