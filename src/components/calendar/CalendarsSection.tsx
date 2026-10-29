@@ -1069,7 +1069,7 @@ function CalendarRow({
       {...(renaming ? {} : listeners)}
       data-calendar-tab=""
       data-calendar-id={calendar.id}
-      className={`group flex cursor-default items-center gap-2 rounded-md px-2 py-1 text-xs text-ink hover:bg-secondary/60 [&_button]:cursor-default ${leading ? "is-first" : ""} ${calendar.hidden ? "text-muted-foreground" : ""} ${renaming ? "ring-1 ring-inset ring-hairline" : ""}`}
+      className={`group flex cursor-default items-center gap-2 rounded-sm px-2 py-1 text-xs text-ink hover:bg-secondary/60 [&_button]:cursor-default ${leading ? "is-first" : ""} ${calendar.hidden ? "text-muted-foreground" : ""} ${renaming ? "ring-1 ring-inset ring-hairline" : ""}`}
     >
       <span aria-hidden className="inline-block h-3.5 w-3.5 shrink-0 rounded-[3px] border border-hairline" style={{ background: calendar.color }} />
       {renaming ? (

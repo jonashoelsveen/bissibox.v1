@@ -6074,6 +6074,8 @@ const SESSION_DESCRIPTION_MAX_LENGTH = 500;
 /** Fixed well — similar to Notion Calendar’s description box; not user-resizable. */
 const SESSION_DESCRIPTION_FIELD_H = 88;
 const SESSION_DESCRIPTION_FIELD_MAX_H = SESSION_DESCRIPTION_FIELD_H * 2;
+/** Matches the description field's rounded-[10px], so the thumb stays on the straight edge. */
+const SESSION_DESCRIPTION_SCROLL_CORNER_PX = 10;
 
 function escapeAttrSelector(value: string): string {
   return typeof CSS !== "undefined" && typeof CSS.escape === "function"
@@ -6737,10 +6739,12 @@ export function PopoverEditor({
       return;
     }
     const ratio = el.clientHeight / el.scrollHeight;
-    const height = Math.max(18, Math.round(el.clientHeight * ratio));
-    const travel = Math.max(0, el.clientHeight - height - 4);
+    const corner = SESSION_DESCRIPTION_SCROLL_CORNER_PX;
+    const track = Math.max(0, el.clientHeight - corner * 2);
+    const height = Math.min(track, Math.max(18, Math.round(el.clientHeight * ratio)));
+    const travel = Math.max(0, track - height);
     const maxScroll = el.scrollHeight - el.clientHeight;
-    const top = 2 + (maxScroll > 0 ? (el.scrollTop / maxScroll) * travel : 0);
+    const top = corner + (maxScroll > 0 ? (el.scrollTop / maxScroll) * travel : 0);
     thumb.style.height = `${height}px`;
     thumb.style.transform = `translateY(${top}px)`;
   }, []);
@@ -8080,7 +8084,7 @@ export function PopoverEditor({
           ) : null}
         </>
       )}
-      <div ref={descriptionThumbRef} data-on="0" aria-hidden className="session-description-thumb" />
+      <div ref={descriptionThumbRef} data-on="0" aria-hidden className="session-description-thumb session-menu-description-thumb" />
     </div>
   );
 

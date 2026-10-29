@@ -346,6 +346,16 @@
     opacity: 1;
     transition: opacity 80ms linear;
   }
+  /* Session description: 3px thumb just inside the 1px field outline, clear of the
+     10px corners. Dark card uses the calendar submenu's white thumb. */
+  .session-menu-description-thumb {
+    right: 1px;
+    width: 3px;
+    background: color-mix(in oklab, var(--ink) 32%, transparent);
+  }
+  html[data-calendar-theme="dark"] .session-menu-description-thumb {
+    background: color-mix(in oklab, white 50%, transparent);
+  }
   /* Calendars submenu: same 3px thumb, on the menu's right edge. */
   .session-calendar-menu-scroll {
     scrollbar-width: none;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
@@ -122,6 +122,67 @@ export function SignInModal({
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [portalReady, setPortalReady] = useState(false);
   const viewport = useSignInViewport(open);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  /** Screen position of the email field after it is focused. */
+  const preferredFieldTop = useRef<number | null>(null);
+  const alignTimers = useRef<number[]>([]);
+
+  const alignSignInField = useCallback((field: HTMLElement) => {
+    const scroller = scrollRef.current;
+    if (!scroller || !scroller.contains(field)) return;
+    const anchor = scroller.querySelector<HTMLElement>("[data-signin-anchor]");
+    if (!anchor) return;
+    if (field === anchor) {
+      preferredFieldTop.current = anchor.getBoundingClientRect().top;
+      return;
+    }
+    const target = preferredFieldTop.current
+      ?? anchor.getBoundingClientRect().top + scroller.scrollTop;
+    const delta = field.getBoundingClientRect().top - target;
+    if (Math.abs(delta) < 1) return;
+    scroller.scrollTop += delta;
+  }, []);
+
+  const scheduleAlign = useCallback((field: HTMLElement) => {
+    alignTimers.current.forEach((id) => window.clearTimeout(id));
+    const run = () => {
+      if (!field.isConnected) return;
+      alignSignInField(field);
+    };
+    run();
+    alignTimers.current = [60, 180, 360].map((ms) => window.setTimeout(run, ms));
+  }, [alignSignInField]);
+
+  useEffect(() => () => {
+    alignTimers.current.forEach((id) => window.clearTimeout(id));
+  }, []);
+
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    if (!open || !portalReady || !scroller) return;
+    const onFocusIn = (event: FocusEvent) => {
+      const field = event.target;
+      if (!(field instanceof HTMLElement)) return;
+      if (!field.hasAttribute("data-signin-align")) return;
+      scheduleAlign(field);
+    };
+    scroller.addEventListener("focusin", onFocusIn);
+    return () => scroller.removeEventListener("focusin", onFocusIn);
+  }, [open, portalReady, scheduleAlign]);
+
+  useEffect(() => {
+    if (!open) return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtml = html.style.overflow;
+    const prevBody = body.style.overflow;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = prevHtml;
+      body.style.overflow = prevBody;
+    };
+  }, [open]);
 
   useEffect(() => {
     setPortalReady(true);
@@ -161,6 +222,7 @@ export function SignInModal({
       setPendingAccessToken(null);
       setPendingRefreshToken(null);
       setPendingUserId(null);
+      preferredFieldTop.current = null;
       return;
     }
     setFieldsReady(false);
@@ -400,22 +462,16 @@ export function SignInModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed z-[120] flex items-start justify-center overflow-x-hidden overflow-y-auto"
+          className="fixed z-[120] overflow-hidden"
           style={{
-            top: viewport?.top ?? 0,
-            left: viewport?.left ?? 0,
-            width: viewport?.width ?? "100%",
-            height: viewport?.height ?? "100%",
-            boxSizing: "border-box",
-            paddingTop: viewport?.keyboard ? 12 : "min(10vh, 110px)",
-            paddingBottom: viewport?.keyboard ? 16 : "min(10vh, 110px)",
-            paddingLeft: 16,
-            paddingRight: 16,
-            overscrollBehavior: "contain",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100lvh",
             fontFamily: HELVETICA,
           }}
         >
-          {/* dim backdrop */}
+          {/* Dim stays fixed to the screen. The card scrolls in the layer above it. */}
           <motion.div
             className="absolute inset-0"
             initial={{ opacity: 0 }}
@@ -426,6 +482,26 @@ export function SignInModal({
               if (!submitting && !exiting && !otpVerifying && !otpSending) onClose();
             }}
           />
+          <div
+            ref={scrollRef}
+            className="absolute flex items-start justify-center overflow-x-hidden overflow-y-auto"
+            style={{
+              top: viewport?.top ?? 0,
+              left: viewport?.left ?? 0,
+              width: viewport?.width ?? "100%",
+              height: viewport?.height ?? "100%",
+              boxSizing: "border-box",
+              paddingTop: viewport?.keyboard ? 12 : "min(10vh, 110px)",
+              paddingBottom: viewport?.keyboard ? 16 : "min(10vh, 110px)",
+              paddingLeft: 16,
+              paddingRight: 16,
+              overscrollBehavior: "contain",
+            }}
+            onClick={(e) => {
+              if (e.target !== e.currentTarget) return;
+              if (!submitting && !exiting && !otpVerifying && !otpSending) onClose();
+            }}
+          >
 
           {/* Radius lives on a box with no transform, so a focused field cannot
               scale the window or clip the corners at the screen edge. */}
@@ -552,6 +628,7 @@ export function SignInModal({
             </AnimatePresence>
           </motion.div>
           </div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
@@ -607,6 +684,7 @@ function SignInForm(props: {
         lockAutofillUntilPointer
         autofillAllowed={allowCredentialAutofill}
         onAutofillUnlock={unlockCredentialAutofill}
+        signinRole="anchor"
         required
       />
       <LabeledField
@@ -618,6 +696,7 @@ function SignInForm(props: {
         lockAutofillUntilPointer
         autofillAllowed={allowCredentialAutofill}
         onAutofillUnlock={unlockCredentialAutofill}
+        signinRole="field"
         required
       />
       {error && <ErrorLine error={error} />}
@@ -854,7 +933,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 
 function LabeledField({
   label, value, onChange, type = "text", required, autoComplete, autoFocus,
-  lockAutofillUntilPointer, autofillAllowed, onAutofillUnlock,
+  lockAutofillUntilPointer, autofillAllowed, onAutofillUnlock, signinRole,
 }: {
   label: string;
   value: string;
@@ -866,6 +945,8 @@ function LabeledField({
   lockAutofillUntilPointer?: boolean;
   autofillAllowed?: boolean;
   onAutofillUnlock?: () => void;
+  /** Email is the anchor. Password scrolls to that same screen position. */
+  signinRole?: "anchor" | "field";
 }) {
   return (
     <label className="block">
@@ -880,6 +961,7 @@ function LabeledField({
         lockAutofillUntilPointer={lockAutofillUntilPointer}
         autofillAllowed={autofillAllowed}
         onAutofillUnlock={onAutofillUnlock}
+        signinRole={signinRole}
       />
     </label>
   );
@@ -945,6 +1027,7 @@ const inputStyle: React.CSSProperties = {
 function RawInput({
   type = "text", value, onChange, required, autoComplete, autoFocus,
   lockAutofillUntilPointer = false, autofillAllowed = false, onAutofillUnlock,
+  signinRole,
 }: {
   type?: string;
   value: string;
@@ -955,6 +1038,7 @@ function RawInput({
   lockAutofillUntilPointer?: boolean;
   autofillAllowed?: boolean;
   onAutofillUnlock?: () => void;
+  signinRole?: "anchor" | "field";
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const unbindRef = useRef<(() => void) | null>(null);
@@ -1026,6 +1110,8 @@ function RawInput({
       spellCheck={false}
       style={inputStyle}
       className="account-field signin-field"
+      data-signin-align={signinRole ? "" : undefined}
+      data-signin-anchor={signinRole === "anchor" ? "" : undefined}
       onPointerDown={(e) => {
         const target = e.currentTarget;
         document.querySelectorAll(".account-field.is-focused").forEach((node) => {
