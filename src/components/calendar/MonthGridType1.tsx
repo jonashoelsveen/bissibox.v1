@@ -45,7 +45,7 @@ import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, CalendarEvent } from "./yearStore";
 import { makeCellId, isMembershipOverlayEvent, isSharedCalendarReadOnly, isSubscriptionCalendar, useTeamName } from "./yearStore";
 import { useUserCalendarsSafe } from "./UserCalendarsContext";
-import { isFeatureEnabled } from "@/lib/features";
+import { useFeatureEnabled } from "@/lib/featureFlagSnapshot";
 import { useUserGroups } from "@/hooks/useUserGroups";
 import { useAuth } from "@/lib/auth";
 import { sessionAudienceMembers, signupTabForRosterMember } from "@/lib/sessionSignupAudience";
@@ -6522,6 +6522,7 @@ export function PopoverEditor({
   externalTimeCommitNonce: _externalTimeCommitNonce = 0,
 }: PopoverEditorProps) {
   const { user } = useAuth();
+  const calendarTabsOn = useFeatureEnabled("calendarTabsFlag", user?.id);
   const darkMenu = useCalendarTheme() === "dark";
   const isEntity = seat === "admin";
   const rememberedTeamName = useTeamName(memberTeamMenu ? memberTeamId : null);
@@ -8320,7 +8321,7 @@ export function PopoverEditor({
               </div>
             ) : null}
 
-            {!memberTeamMenu && (!isEntity || appGroupId) && isFeatureEnabled("calendarTabsFlag", user?.id) ? (
+            {!memberTeamMenu && (!isEntity || appGroupId) && calendarTabsOn ? (
               <div className={lockReadOnlyField ? "pointer-events-none" : undefined}>
                 <CalendarDropdownRow
                   calendars={(userCalendars?.calendars ?? []).filter((calendar) => {

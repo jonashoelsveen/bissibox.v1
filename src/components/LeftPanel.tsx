@@ -72,7 +72,7 @@ export function LeftPanel({
             onClick={() => onOpenChange(!open)}
             aria-label={open ? "Hide panel" : "Show panel"}
             title={open ? "Hide panel" : "Show panel"}
-            className="fixed left-3 top-[6px] z-[200] grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-ink"
+            className="bissibox-desktop-only fixed left-3 top-[6px] z-[200] grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-ink"
           >
             <PanelLeft className="h-4 w-4" />
           </button>,

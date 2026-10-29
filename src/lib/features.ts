@@ -105,6 +105,24 @@ type FeatureFlagSnapshot =
   | { status: "failed"; userId: string };
 
 let featureFlagSnapshot: FeatureFlagSnapshot = { status: "empty" };
+let featureFlagVersion = 0;
+const featureFlagListeners = new Set<() => void>();
+
+export function subscribeFeatureFlags(onStoreChange: () => void): () => void {
+  featureFlagListeners.add(onStoreChange);
+  return () => {
+    featureFlagListeners.delete(onStoreChange);
+  };
+}
+
+export function getFeatureFlagVersion(): number {
+  return featureFlagVersion;
+}
+
+function publishFeatureFlags(): void {
+  featureFlagVersion += 1;
+  featureFlagListeners.forEach((listener) => listener());
+}
 
 /**
  * Accepted flag keys for one user. `flags === null` records a failed lookup,
@@ -116,13 +134,12 @@ export function setFeatureFlagSnapshot(
 ): void {
   if (!userId) {
     featureFlagSnapshot = { status: "empty" };
-    return;
-  }
-  if (flags === null) {
+  } else if (flags === null) {
     featureFlagSnapshot = { status: "failed", userId };
-    return;
+  } else {
+    featureFlagSnapshot = { status: "ready", userId, flags };
   }
-  featureFlagSnapshot = { status: "ready", userId, flags };
+  publishFeatureFlags();
 }
 
 /** Compile-time launch bit. Pass `userId` to also honor an accepted grant. */

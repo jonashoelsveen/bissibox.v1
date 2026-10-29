@@ -1,8 +1,7 @@
 import { createFileRoute, useSearch, useNavigate, Navigate } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { supabase } from "@/integrations/supabase/client";
-import { loadAcceptedFeatureFlags } from "@/lib/featureFlagSnapshot";
+import { acceptSignedInFeatureFlags } from "@/lib/featureFlagSnapshot";
 import { SignInModal, type SignInContext } from "@/components/SignInModal";
 import { CloudPageWithFooter } from "@/components/CloudFooter";
 import { CloudLandingSection, CLOUD_OPEN_SIGNIN, restoreCloudHomeScroll } from "@/components/CloudLandingSection";
@@ -76,6 +75,7 @@ function CloudHomePage() {
   const [signInOpen, setSignInOpen] = useState(false);
   const [signInContext, setSignInContext] = useState<SignInContext>("cloud");
   const acceptStarted = useRef<string | null>(null);
+  const [acceptFailed, setAcceptFailed] = useState(false);
 
   // Cloud home is never the account surface — drop sticky same-origin account mode.
   useEffect(() => {
@@ -108,12 +108,19 @@ function CloudHomePage() {
     if (!authReady || !user || search.signin !== "calendar") return;
     if (acceptStarted.current === user.id) return;
     acceptStarted.current = user.id;
+    const userId = user.id;
     void (async () => {
+      let accepted = false;
       try {
-        await supabase.rpc("accept_feature_flags");
-        await loadAcceptedFeatureFlags(user.id);
+        accepted = await acceptSignedInFeatureFlags(userId);
+        if (!accepted) accepted = await acceptSignedInFeatureFlags(userId);
       } catch {
-        /* a failed accept leaves the flag off */
+        accepted = false;
+      }
+      if (!accepted) {
+        acceptStarted.current = null;
+        setAcceptFailed(true);
+        return;
       }
       void navigate({ to: "/calendar", replace: true });
     })();
@@ -130,6 +137,7 @@ function CloudHomePage() {
 
   const closeSignIn = () => {
     setSignInOpen(false);
+    if (search.signin === "calendar" && user) return;
     if (search.signin) {
       void navigate({
         to: "/",
@@ -139,11 +147,11 @@ function CloudHomePage() {
     }
   };
 
-  if (!authReady || (user && search.signin === "calendar")) {
+  if (!authReady || (user && search.signin === "calendar" && !acceptFailed)) {
     return <div className="min-h-full w-full" style={{ backgroundColor: CLOUD_PAGE_BG }} />;
   }
 
-  if (user) {
+  if (user && !(search.signin === "calendar" && acceptFailed)) {
     return <Navigate to="/calendar" replace />;
   }
 

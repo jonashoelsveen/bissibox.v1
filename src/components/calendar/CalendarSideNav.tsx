@@ -28,6 +28,7 @@ import { EntityGroupTabs } from "./EntityGroupTabs";
 import { ProjectsSection } from "./ProjectsSection";
 import type { CalendarScale } from "./CalendarSearch";
 import { isEntityFeatureEnabled, isFeatureEnabled } from "@/lib/features";
+import { useFeatureEnabled } from "@/lib/featureFlagSnapshot";
 import { useAuth } from "@/lib/auth";
 import { useLibrarySetting } from "@/lib/library-settings";
 import {
@@ -161,7 +162,7 @@ export function CalendarSideNav({
   );
   const { user } = useAuth();
   const threeDotOn = isFeatureEnabled("calendarThreeDotFlag");
-  const calendarTabsOn = isFeatureEnabled("calendarTabsFlag", user?.id);
+  const calendarTabsOn = useFeatureEnabled("calendarTabsFlag", user?.id);
   const showRailMenu = threeDotOn && panelOpen && !isMacro && !searchActive;
   const upcoming = threeDotOn && !isMacro && !searchActive && railView === "upcoming";
 

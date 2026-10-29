@@ -1,5 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { FROM_EMAIL, sendEmail } from "../_shared/resend.ts";
+import { sendEmail } from "../_shared/resend.ts";
+
+/**
+ * Same verified domain and display name as the other product mail.
+ * A noreply mailbox is scored as bulk mail and lands in junk.
+ */
+const INVITE_FROM = "Bissibox <notifications@bissibox.com>";
 
 const ACCEPT_URL = "https://bissibox.com/?signin=calendar";
 const FLAG_KEY = "calendarTabsFlag";
@@ -14,7 +20,7 @@ const BUTTON_STYLE = [
   "font-weight:500",
   "letter-spacing:-0.01em",
   "text-decoration:none",
-  'font-family:-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif',
+  "font-family:-apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif",
 ].join(";");
 
 function json(body: unknown, status = 200): Response {
@@ -56,10 +62,10 @@ function authorized(req: Request): boolean {
 }
 
 function betaEmail(): { subject: string; html: string; text: string } {
-  const subject = "You are chosen as a beta user";
+  const subject = "We invite you as a beta user";
   const html = `
     <div style="font-family:-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif;max-width:560px;margin:0 auto;padding:32px;color:#1d1d1f;">
-      <p style="font-size:17px;line-height:1.4;">You are chosen as a beta user for the following new features:</p>
+      <p style="font-size:17px;line-height:1.4;">We invite you as a beta user for the following new features:</p>
       <ul style="font-size:17px;line-height:1.4;padding-left:20px;">
         <li>Create calendars</li>
         <li>Import calendars from web-adresses</li>
@@ -69,7 +75,7 @@ function betaEmail(): { subject: string; html: string; text: string } {
       </p>
     </div>`;
   const text = [
-    "You are chosen as a beta user for the following new features:",
+    "We invite you as a beta user for the following new features:",
     "- Create calendars",
     "- Import calendars from web-adresses",
     `Accept: ${ACCEPT_URL}`,
@@ -117,7 +123,7 @@ Deno.serve(async (req) => {
   try {
     await sendEmail({
       to: email,
-      from: FROM_EMAIL,
+      from: INVITE_FROM,
       subject: message.subject,
       html: message.html,
       text: message.text,

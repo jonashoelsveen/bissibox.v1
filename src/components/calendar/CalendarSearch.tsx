@@ -40,7 +40,7 @@ export function CalendarSearchToggle() {
       onClick={() => setActive(true)}
       aria-label="Search sessions"
       title="Search sessions"
-      className="fixed top-[6px] z-[200] grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-ink"
+      className="bissibox-desktop-only fixed top-[6px] z-[200] grid h-7 w-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-ink"
       style={{ left: SEARCH_BTN_LEFT }}
     >
       <Search className="h-4 w-4" />
@@ -76,7 +76,7 @@ export function CalendarSearchInput() {
   return createPortal(
     <div
       data-left-panel-search=""
-      className="fixed top-[6px] z-[200] flex h-7 items-center rounded-md bg-secondary pr-1 text-ink"
+      className="bissibox-desktop-only fixed top-[6px] z-[200] flex h-7 items-center rounded-md bg-secondary pr-1 text-ink"
       style={{ left: SEARCH_BTN_LEFT, width: SEARCH_INPUT_WIDTH }}
     >
       <button

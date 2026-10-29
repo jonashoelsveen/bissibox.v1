@@ -14,7 +14,7 @@ import { useViewerRole } from "@/hooks/useViewerRole";
 import { useCoachAccess } from "@/hooks/useCoachAccess";
 import { useLibrarySetting } from "@/lib/library-settings";
 import { CalendarsSection } from "@/components/calendar/CalendarsSection";
-import { isFeatureEnabled } from "@/lib/features";
+import { useFeatureEnabled } from "@/lib/featureFlagSnapshot";
 import { UserCalendarsProvider } from "@/components/calendar/UserCalendarsContext";
 
 
@@ -48,6 +48,7 @@ interface Props {
  */
 export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) {
   const { user } = useAuth();
+  const calendarTabsOn = useFeatureEnabled("calendarTabsFlag", user?.id);
   const [subTab, setSubTab] = useState<MemberSubTab>("calendar");
   const viewerRole = useViewerRole(userId, { context: "leader" });
   const coachAccess = useCoachAccess(userId);
@@ -180,7 +181,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
                   </div>
                 </div>
 
-                {subTab === "calendar" && isFeatureEnabled("calendarTabsFlag", user?.id) ? (
+                {subTab === "calendar" && calendarTabsOn ? (
                   <CalendarsSection seat="individual" />
                 ) : null}
 
