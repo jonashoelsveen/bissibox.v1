@@ -273,3 +273,23 @@ export function nextWeekOriginScroll(
 export function mondayIndexInBuffer(origin: Date, anchor: Date): number {
   return calendarDayDelta(origin, startOfWeekMon(anchor));
 }
+
+/**
+ * Day to keep when the view menu switches week → day.
+ * Prefers the current day when it is already on screen, otherwise the same
+ * weekday inside the visible week so the week does not jump.
+ */
+export function dateForWeekDayViewToggle(
+  currentDate: Date,
+  liveWeek: { start: Date; end: Date } | null,
+): Date {
+  const day = startOfDay(currentDate);
+  if (!liveWeek) return day;
+  const t = day.getTime();
+  const start = startOfDay(liveWeek.start);
+  const end = startOfDay(liveWeek.end);
+  if (t >= start.getTime() && t <= end.getTime()) return day;
+  const offset = calendarDayDelta(startOfWeekMon(day), day);
+  const pinned = addDays(start, Math.max(0, Math.min(6, offset)));
+  return pinned.getTime() <= end.getTime() ? pinned : start;
+}

@@ -13,6 +13,7 @@ import {
   weekPanWheelShouldStep,
   weekRenderRange,
   wheelDeltaPixels,
+  dateForWeekDayViewToggle,
 } from "./weekHorizontalScroll.ts";
 
 const day = (y: number, m: number, d: number) => new Date(y, m, d);
@@ -202,5 +203,24 @@ describe("snapScrollLeft", () => {
     assert.equal(snapScrollLeft(160, 100, 1000), 200);
     assert.equal(snapScrollLeft(990, 100, 950), 950);
     assert.equal(snapScrollLeft(-20, 100, 950), 0);
+  });
+});
+
+describe("dateForWeekDayViewToggle", () => {
+  it("keeps the current day when it is already in the visible week", () => {
+    const live = { start: day(2026, 9, 26), end: day(2026, 10, 1) };
+    const next = dateForWeekDayViewToggle(day(2026, 9, 28), live);
+    assert.equal(next.getTime(), day(2026, 9, 28).getTime());
+  });
+
+  it("keeps the same weekday inside the visible week when the anchor lagged", () => {
+    const live = { start: day(2026, 9, 26), end: day(2026, 10, 1) };
+    const next = dateForWeekDayViewToggle(day(2026, 9, 22), live);
+    assert.equal(next.getTime(), day(2026, 9, 29).getTime());
+  });
+
+  it("keeps the current day when there is no live week", () => {
+    const next = dateForWeekDayViewToggle(day(2026, 9, 28), null);
+    assert.equal(next.getTime(), day(2026, 9, 28).getTime());
   });
 });

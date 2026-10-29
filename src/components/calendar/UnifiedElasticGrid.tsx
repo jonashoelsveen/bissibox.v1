@@ -694,8 +694,19 @@ export function UnifiedElasticGrid({
   const handleViewModeChange = (v: ViewMode) => {
     if (!isControlled) setViewModeInternal(v);
     onViewModeChange?.(v);
-    if (v === "week" || v === "day") setWeekAnchorEpoch((n) => n + 1);
+    if ((v === "week" || v === "day") && viewMode !== "week" && viewMode !== "day") {
+      setWeekAnchorEpoch((n) => n + 1);
+    }
   };
+  const prevViewModeRef = useRef(viewMode);
+  useLayoutEffect(() => {
+    const prev = prevViewModeRef.current;
+    prevViewModeRef.current = viewMode;
+    if (prev === viewMode) return;
+    if ((prev === "week" && viewMode === "day") || (prev === "day" && viewMode === "week")) {
+      setWeekAnchorEpoch((n) => n + 1);
+    }
+  }, [viewMode]);
 
   // Both spreadsheet sub-views are always implemented; "month" routes to
   // MonthGridType1. There are no other combinations to gate on.

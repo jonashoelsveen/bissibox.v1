@@ -28,8 +28,10 @@ import { UnifiedElasticGrid, HeaderDropdown, type ViewMode, type ExtendedViewMod
 import { MonthNavControl } from "./MonthNavControl";
 import { YearGrid } from "./YearGrid";
 import { miniCalendarViewMode, type DateRange } from "./MiniCalendar";
-import { addDays, isoWeekNumber, startOfWeekMon } from "./dateUtils";
+import { addDays, isoWeekNumber, startOfDay, startOfWeekMon } from "./dateUtils";
 import { useLiveMonthFocus } from "@/lib/liveMonthFocus";
+import { getLiveWeekSpan } from "@/lib/liveWeekSpan";
+import { dateForWeekDayViewToggle } from "@/lib/weekHorizontalScroll";
 import { useCalendarViewActions, useCalendarViewActionsOptional, CalendarViewActionsProvider } from "./CalendarViewActionsContext";
 import { CalendarInfoToast } from "./CalendarInfoToast";
 import { useShortcut } from "@/hooks/useShortcut";
@@ -638,6 +640,16 @@ function YearCalendarViewInner({
     if (onViewModeChange) onViewModeChange(v);
     else setInternalViewMode(v);
   };
+  const onViewMenuChange = (v: ExtendedViewMode) => {
+    if (viewMode === "week" && v === "day") {
+      const pin = dateForWeekDayViewToggle(currentDate, getLiveWeekSpan());
+      updateCurrent(pin, { start: pin, end: pin });
+    } else if (viewMode === "day" && v === "week") {
+      const pin = startOfDay(currentDate);
+      updateCurrent(pin, { start: pin, end: pin });
+    }
+    setViewMode(v);
+  };
   const [internalYearWeekHighlight, setInternalYearWeekHighlight] = useState(false);
   const yearWeekHighlight = yearWeekHighlightProp ?? internalYearWeekHighlight;
   const setYearWeekHighlight = (active: boolean) => {
@@ -892,7 +904,7 @@ function YearCalendarViewInner({
                         <HeaderDropdown<ExtendedViewMode>
                           ariaLabel="View mode"
                           value={viewMode}
-                          onChange={setViewMode}
+                          onChange={onViewMenuChange}
                           width={108}
                           options={
                             appKind === "diary"
