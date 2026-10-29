@@ -24,16 +24,35 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-function authorized(req: Request): boolean {
-  const header = req.headers.get("Authorization") ?? "";
-  const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : "";
-  const expected = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+function sameSecret(token: string, expected: string): boolean {
   if (!token || !expected || token.length !== expected.length) return false;
   let diff = 0;
   for (let i = 0; i < token.length; i += 1) {
     diff |= token.charCodeAt(i) ^ expected.charCodeAt(i);
   }
   return diff === 0;
+}
+
+/** Gateway already verified the signature. The legacy service-role JWT is enough. */
+function isServiceRoleJwt(token: string): boolean {
+  const part = token.split(".")[1];
+  if (!part) return false;
+  try {
+    const padded = part.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = padded.length % 4 === 0 ? "" : "=".repeat(4 - (padded.length % 4));
+    const payload = JSON.parse(atob(padded + pad)) as { role?: string };
+    return payload.role === "service_role";
+  } catch {
+    return false;
+  }
+}
+
+function authorized(req: Request): boolean {
+  const header = req.headers.get("Authorization") ?? "";
+  const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : "";
+  if (!token) return false;
+  if (sameSecret(token, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "")) return true;
+  return isServiceRoleJwt(token);
 }
 
 function betaEmail(): { subject: string; html: string; text: string } {
