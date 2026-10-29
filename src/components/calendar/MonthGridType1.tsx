@@ -18,9 +18,10 @@
  *   - Single-click selects a cell (Excel focus).
  *   - Double-click on empty area opens an inline popover to add a session.
  *   - Arrow keys move focus; Enter opens the popover on the focused day.
- *   - Hold and drag across days creates a multi-day session. The pressed
+ *   - Hold and drag across days creates a multi-day event. The pressed
  *     cell keeps its click colour, and the spanned days are marked in the
- *     default session colour. The session tile appears once a title is typed.
+ *     default session colour. On release the span tile reads "New event"
+ *     until a title is typed.
  *   - Items can be dragged from one day to another with framer-motion layout
  *     animations smoothing the receiving cell's reflow.
  */
@@ -42,7 +43,9 @@ import { createPortal, flushSync } from "react-dom";
 import { PersonStanding, GraduationCap, Briefcase, Sparkles, Bike, Waves, Dumbbell, Snowflake, Footprints, ChevronLeft, ChevronRight, Check, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, CalendarEvent } from "./yearStore";
-import { makeCellId, isMembershipOverlayEvent, useTeamName } from "./yearStore";
+import { makeCellId, isMembershipOverlayEvent, isSharedCalendarReadOnly, isSubscriptionCalendar, useTeamName } from "./yearStore";
+import { useUserCalendarsSafe } from "./UserCalendarsContext";
+import { isFeatureEnabled } from "@/lib/features";
 import { useUserGroups } from "@/hooks/useUserGroups";
 import { useAuth } from "@/lib/auth";
 import { sessionAudienceMembers, signupTabForRosterMember } from "@/lib/sessionSignupAudience";
@@ -87,10 +90,12 @@ import {
   visibleWeekRows,
   weeksBetweenMonthStarts,
 } from "@/lib/monthVerticalScroll";
+import { compareMonthDayEvents, effectiveSortIndex, implicitSortIndexes } from "@/lib/duplicatePlacement";
 import {
   bandWidthResizeResult,
   eventCoversDay,
   isAllDayBandEvent,
+  untitledCalendarTitle,
   isMultiDayDateRange,
   isMultiDaySession,
   isoFromMenuClocks,
@@ -103,6 +108,8 @@ import {
   monthDragWeekPieces,
   orderedDates,
   previewSpanForGrabbedDay,
+  multiDayDragBackHome,
+  resizedMonthSpan,
   sessionDayCount,
   sessionInclusiveEndDay,
   sessionMenuClockRange,
@@ -112,6 +119,7 @@ import { DayNoteButton } from "./DayNoteButton";
 import { useCalendarTheme } from "./calendarThemePref";
 import { useEntityRoster, isPlaceholderGroupName } from "@/hooks/useEntityRoster";
 import {
+  ColorSwatch,
   ColorsPanel,
   DEFAULT_SESSION_COLOR,
   getSessionDefaultColor,
@@ -180,6 +188,7 @@ import { sessionPopoverFieldClass } from "./sessionPopoverField";
 import { SessionRepeatRow } from "./SessionRepeatRow";
 import {
   estimateSessionSideMenuHeight,
+  SESSION_SIDE_MENU_INSET_PX,
   SESSION_SIDE_MENU_ITEM_CLASS,
   SessionSideListbox,
 } from "./SessionSideListbox";
@@ -997,6 +1006,8 @@ export function MonthGridType1({
     locationMapOpen: false,
   });
   const closeSessionContextMenuRef = useRef<() => void>(() => {});
+  const visibleEventsRef = useRef(events);
+  visibleEventsRef.current = events;
   const resetSessionSidePanels = useCallback((
     eventId: string | null = null,
     seed?: { signUpEnabled?: boolean },
@@ -1009,18 +1020,33 @@ export function MonthGridType1({
     };
   }, []);
   const [createPreviewTime, setCreatePreviewTime] = useState<{ startMin: number; endMin: number } | null>(null);
+  const [creatingAllDay, setCreatingAllDay] = useState(false);
   const pendingMenuDateRef = useRef<Date | null>(null);
   const [repeatLivePreview, setRepeatLivePreview] = useState<RepeatLivePreview | null>(null);
   const displayEvents = useMemo(
     () => mergeEventsWithRepeatPreview(events, repeatLivePreview),
     [events, repeatLivePreview],
   );
+  const overlapOrder = useMemo(() => implicitSortIndexes(events), [events]);
+  const eventsByStartDay = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    for (const event of displayEvents) {
+      const start = fromISOLocal(event.startISO);
+      if (appKind !== "diary" && isMultiDaySession(start, fromISOLocal(event.endISO))) continue;
+      const key = `${start.getFullYear()}-${start.getMonth()}-${start.getDate()}`;
+      const list = map.get(key);
+      if (list) list.push(event);
+      else map.set(key, [event]);
+    }
+    return map;
+  }, [displayEvents, appKind]);
   const openPopoverAt = useCallback(
     (pos: CellPos, anchor: HTMLElement) => {
       const cell = days.find((d) => d.row === pos.row && d.col === pos.col);
       if (!cell) return;
       resetSessionSidePanels(null);
       closeSessionContextMenuRef.current();
+      setCreatingAllDay(false);
       setCreatePreviewTime({ startMin: 9 * 60, endMin: 10 * 60 });
       setPopover({
         pos,
@@ -1134,6 +1160,7 @@ export function MonthGridType1({
       locationMapOpen: false,
     };
     setCreatePreviewTime(null);
+    setCreatingAllDay(false);
     setRepeatLivePreview(null);
     setPopover(null);
   }, []);
@@ -1150,6 +1177,7 @@ export function MonthGridType1({
     },
     onDelete: (id) => onDeleteEvent?.(id),
     getMarkedIds: () => [...(markedEventIds ?? [])],
+    getVisibleEvents: () => visibleEventsRef.current,
     onDeleteMany: (ids) => onDeleteMarked?.(ids),
     onClearMarks: () => onClearMarks?.(),
   });
@@ -1879,6 +1907,18 @@ export function MonthGridType1({
   const dragHitRafRef = useRef<number | null>(null);
   const sessionEdgePulseRef = useRef<MonthEdgePulse | null>(null);
   const sessionPulseFrameRef = useRef<(hit: { row: number; col: number } | null) => void>(() => {});
+  const spanResizeFrameRef = useRef<
+    ((hit: { row: number; col: number } | null) => boolean) | null
+  >(null);
+  const [spanResize, setSpanResize] = useState<{
+    id: string;
+    create: boolean;
+    start: Date;
+    end: Date;
+  } | null>(null);
+  const [spanEdgeResizing, setSpanEdgeResizing] = useState(false);
+  const onMoveEventRef = useRef(onMoveEvent);
+  onMoveEventRef.current = onMoveEvent;
   const sessionPulseEndRef = useRef<() => void>(() => {});
   const sessionDropPendingRef = useRef<(() => void) | null>(null);
   const sessionEdgePulse = () => {
@@ -2183,6 +2223,7 @@ export function MonthGridType1({
     };
 
     sessionPulseFrameRef.current = (hit) => {
+      if (spanResizeFrameRef.current?.(hit)) return;
       if (!hit) return;
       const dragged = dragStartRef.current;
       const active = dragSessionRef.current;
@@ -2627,13 +2668,14 @@ export function MonthGridType1({
     if (appKind === "diary" || hideMultiDayRow) return [];
     const out: Array<{ id: string; start: Date; end: Date; event: CalendarEvent }> = [];
     for (const e of displayEvents) {
-      const start = fromISOLocal(e.startISO);
-      const end = fromISOLocal(e.endISO);
-      if (!isMultiDaySession(start, end)) continue;
+      const preview = spanResize && !spanResize.create && spanResize.id === e.id ? spanResize : null;
+      const start = preview ? startOfDay(preview.start) : fromISOLocal(e.startISO);
+      const end = preview ? setHM(startOfDay(preview.end), 12, 0) : fromISOLocal(e.endISO);
+      if (!preview && !isMultiDaySession(start, end)) continue;
       out.push({ id: e.id, start, end, event: e });
     }
     return out;
-  }, [appKind, displayEvents, hideMultiDayRow]);
+  }, [appKind, displayEvents, hideMultiDayRow, spanResize]);
 
   const weekSpanLayouts = useMemo(() => {
     return weekRows.map((wr) => {
@@ -2642,16 +2684,16 @@ export function MonthGridType1({
           id,
           start,
           end,
-          sortIndex: event.sortIndex,
+          sortIndex: effectiveSortIndex(event, overlapOrder),
         })),
         wr.firstDate,
       );
       return { row: wr.row, spans, laneCount };
     });
-  }, [weekRows, monthSpanEvents]);
+  }, [weekRows, monthSpanEvents, overlapOrder]);
 
   const monthSpanById = useMemo(
-    () => new Map(monthSpanEvents.map((e) => [e.id, e.event])),
+    () => new Map(monthSpanEvents.map((e) => [e.id, e])),
     [monthSpanEvents],
   );
 
@@ -2671,6 +2713,9 @@ export function MonthGridType1({
       dragSession.fromKey.day,
     );
     const range = previewSpanForGrabbedDay(start, end, grabDate, dragSession.targetDate);
+    // The faded bar already marks the days the session started on. A second
+    // drop outline there is only for a move onto different days.
+    if (multiDayDragBackHome(start, end, grabDate, dragSession.targetDate)) return null;
     const color = dragSession.event.color ?? null;
     const crossesWeek =
       startOfWeekMon(range.start).getTime() !== startOfWeekMon(range.end).getTime();
@@ -2736,6 +2781,9 @@ export function MonthGridType1({
 
   const createSpanRange = useMemo(() => {
     if (appKind === "diary") return null;
+    if (spanResize?.create) {
+      return { start: startOfDay(spanResize.start), end: startOfDay(spanResize.end) };
+    }
     if (spanPreview) return spanPreview;
     if (
       popover &&
@@ -2751,7 +2799,7 @@ export function MonthGridType1({
       };
     }
     return null;
-  }, [appKind, spanPreview, popover]);
+  }, [appKind, spanPreview, spanResize, popover]);
 
   const createSpanPieces = useMemo(() => {
     if (!createSpanRange) return [];
@@ -2798,6 +2846,119 @@ export function MonthGridType1({
       (piece) =>
         piece.row === row && !(endCol < piece.startCol || startCol > piece.endCol),
     );
+
+  const beginMonthSpanEdgeResize = (
+    edge: "start" | "end",
+    e: React.PointerEvent<HTMLElement>,
+    source: { id: string | null; start: Date; end: Date; event?: CalendarEvent },
+  ) => {
+    if (appKind === "diary" || viewerRole !== "owner") return;
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const originStart = startOfDay(source.start);
+    const originEnd = startOfDay(source.end);
+    const pointerStart = { x: e.clientX, y: e.clientY };
+    let moved = false;
+    let latest = { start: originStart, end: originEnd };
+    const applyDay = (day: Date) => {
+      const next = resizedMonthSpan(edge, originStart, originEnd, day);
+      if (sameDay(next.start, latest.start) && sameDay(next.end, latest.end)) return;
+      latest = next;
+      setSpanResize({
+        id: source.id ?? "",
+        create: !source.id,
+        start: next.start,
+        end: next.end,
+      });
+    };
+    const dayFromPointer = (clientX: number, clientY: number): Date | null => {
+      const pos = monthCellPos(monthCellFromPoint(clientX, clientY));
+      if (!pos) return null;
+      return daysRef.current[pos.row * 7 + pos.col]?.date ?? null;
+    };
+    spanResizeFrameRef.current = (hit) => {
+      if (!hit) return true;
+      const day = daysRef.current[hit.row * 7 + hit.col];
+      if (day) applyDay(day.date);
+      return true;
+    };
+    const finish = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", onMove, true);
+      window.removeEventListener("pointerup", finish, true);
+      window.removeEventListener("pointercancel", finish, true);
+      spanResizeFrameRef.current = null;
+      sessionEdgePulse().leave();
+      if (moved && ev.type !== "pointercancel") {
+        if (source.id && source.event) {
+          onMoveEventRef.current?.(
+            source.id,
+            bandWidthResizeResult(
+              source.event.startISO,
+              source.event.endISO,
+              !!source.event.allDay,
+              latest.start,
+              latest.end,
+            ),
+          );
+        }
+        const cell = daysRef.current.find((d) => sameDay(d.date, latest.start));
+        setPopover((prev) => {
+          if (!prev) return prev;
+          if (source.id && prev.eventId !== source.id) return prev;
+          if (!source.id && prev.eventId) return prev;
+          return {
+            ...prev,
+            pendingStart: latest.start,
+            pendingEnd: latest.end,
+            ...(cell ? { pos: { row: cell.row, col: cell.col } } : {}),
+          };
+        });
+        const resizeId = source.id;
+        requestAnimationFrame(() => {
+          const el = resizeId
+            ? document.querySelector<HTMLElement>(
+                `[data-event-id="${resizeId.replace(/"/g, '\\"')}"]`,
+              )
+            : document.querySelector<HTMLElement>("[data-role='mark-create-preview']");
+          const rect = el?.getBoundingClientRect();
+          if (!rect || rect.width <= 0 || rect.height <= 0) return;
+          setPopover((prev) => {
+            if (!prev) return prev;
+            if (resizeId && prev.eventId !== resizeId) return prev;
+            if (!resizeId && prev.eventId) return prev;
+            return { ...prev, rect };
+          });
+        });
+      }
+      setSpanResize(null);
+      setSpanEdgeResizing(false);
+      if (moved) {
+        suppressClickAfterDragRef.current = true;
+        window.setTimeout(() => {
+          suppressClickAfterDragRef.current = false;
+        }, 100);
+      }
+    };
+    const onMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - pointerStart.x;
+      const dy = ev.clientY - pointerStart.y;
+      if (!moved && Math.hypot(dx, dy) <= 4) return;
+      if (ev.cancelable) ev.preventDefault();
+      if (!moved) {
+        moved = true;
+        setSpanEdgeResizing(true);
+        suppressClickAfterDragRef.current = true;
+      }
+      sessionEdgePulse().over(ev.clientX, ev.clientY);
+      if (sessionEdgePulse().isPulsing()) return;
+      const day = dayFromPointer(ev.clientX, ev.clientY);
+      if (day) applyDay(day);
+    };
+    window.addEventListener("pointermove", onMove, { capture: true, passive: false });
+    window.addEventListener("pointerup", finish, true);
+    window.addEventListener("pointercancel", finish, true);
+  };
 
   const beginMonthSpanCreate = (
     e: React.PointerEvent<HTMLDivElement>,
@@ -2965,7 +3126,7 @@ export function MonthGridType1({
         viewTop = rect.top;
         viewBottom = rect.bottom;
       }
-      return monthCreateEdgeZone(clientY, viewTop, viewBottom, paging);
+      return monthCreateEdgeZone(clientY, viewTop, viewBottom, paging, true);
     };
 
     const stillAtRim = (repeat: boolean): boolean => {
@@ -2976,7 +3137,7 @@ export function MonthGridType1({
         viewTop = rect.top;
         viewBottom = rect.bottom;
       }
-      const zone = monthCreateEdgeZone(pointerY, viewTop, viewBottom, repeat);
+      const zone = monthCreateEdgeZone(pointerY, viewTop, viewBottom, repeat, true);
       edge = zone;
       return zone !== 0;
     };
@@ -3197,6 +3358,7 @@ export function MonthGridType1({
           setPasteAnchorDate(endCell.date);
         }
         setSpanPreview(null);
+        setCreatingAllDay(false);
         resetSessionSidePanels(null);
         closeSessionContextMenuRef.current();
         setCreatePreviewTime({ startMin: 9 * 60, endMin: 10 * 60 });
@@ -3232,8 +3394,8 @@ export function MonthGridType1({
   const createSpanMenu =
     !spanPreview && popover && !popover.eventId && popover.editIdx < 0 ? popover : null;
   const createSpanTitleText = createSpanMenu?.initialText?.trim() ?? "";
-  const showCreateSpanTile = createSpanTitleText.length > 0;
-  const createSpanTitle = createSpanTitleText || "New session";
+  const showCreateSpanTile = !!createSpanMenu && !!createSpanRange;
+  const createSpanTitle = createSpanTitleText || untitledCalendarTitle(true);
   const createMarkColor = createSpanMenu?.initialColor ?? getSessionDefaultColor();
   const showCreateDayMarks = !!createSpanRange && !showCreateSpanTile;
   const createSpanChrome = sessionMonthChipChrome(
@@ -3354,14 +3516,10 @@ export function MonthGridType1({
               };
               const id = makeCellId(calId, k);
               const legacyItems = parseItems(data[id]?.text);
-              // Events whose start day is this calendar cell.
-              const dayEvents = displayEvents.filter((e) => {
-                const start = fromISOLocal(e.startISO);
-                if (appKind !== "diary" && isMultiDaySession(start, fromISOLocal(e.endISO))) {
-                  return false;
-                }
-                return sameDay(start, d.date);
-              });
+              const dayEvents =
+                eventsByStartDay.get(
+                  `${d.date.getFullYear()}-${d.date.getMonth()}-${d.date.getDate()}`,
+                ) ?? [];
               const pendingOrderIndex = pendingOrder && pendingOrder.length === dayEvents.length
                 ? new Map(pendingOrder.map((eventId, index) => [eventId, index]))
                 : null;
@@ -3369,12 +3527,11 @@ export function MonthGridType1({
               const sortedDayEvents = dayEvents
                 .slice()
                 .sort((a, b) => {
-                  // Calendar mode: always order strictly by session start
-                  // time so the chips read top→bottom in chronological
-                  // order. Only diary mode honors manual reorder via
-                  // pendingOrder / sortIndex.
+                  // Calendar mode reads top→bottom by start time. Sessions that
+                  // start together keep sort order, so a duplicate sits
+                  // directly under the session it was copied from.
                   if (appKind !== "diary") {
-                    return Date.parse(a.startISO) - Date.parse(b.startISO);
+                    return compareMonthDayEvents(a, b, overlapOrder);
                   }
                   if (shouldUsePendingOrder) {
                     return pendingOrderIndex!.get(a.id)! - pendingOrderIndex!.get(b.id)!;
@@ -3752,7 +3909,9 @@ export function MonthGridType1({
                                 appKind === "diary" &&
                                 (monthTileDesign === "split" || monthTileDesign === "stacked");
                               const createColor = popover?.initialColor ?? (appKind === "diary" ? defaultNewColor : getSessionDefaultColor());
-                              const createTitle = popover?.initialText?.trim() || "New session";
+                              const createTitle =
+                                popover?.initialText?.trim() ||
+                                untitledCalendarTitle(creatingAllDay);
                               const heightCreate = tallCreate ? 44 : 22;
                               const isDragging =
                                 !!creatingDrag &&
@@ -3847,7 +4006,13 @@ export function MonthGridType1({
 
                             const raw = it.kind === "legacy" ? it.raw : it.event.title;
                             const itemColor = it.kind === "legacy" ? splitColor(it.raw).color : it.event.color;
-                            const displayText = it.kind === "legacy" ? splitColor(it.raw).text : it.event.title;
+                            const displayText =
+                              it.kind === "legacy"
+                                ? splitColor(it.raw).text
+                                : it.event.title.trim() ||
+                                  (appKind !== "diary" && isAllDayBandEvent(it.event)
+                                    ? untitledCalendarTitle(true)
+                                    : it.event.title);
                             const itemKey = it.kind === "legacy" ? `legacy-${it.idx}` : `event-${it.event.id}`;
                             const isDiaryEvent = appKind === "diary" && it.kind === "event";
                             const tall = isDiaryEvent && (monthTileDesign === "split" || monthTileDesign === "stacked");
@@ -3943,7 +4108,7 @@ export function MonthGridType1({
                               // or diary cannot move anything — but the
                               // pressed state above stays until pointerup
                               // (cleared by the window pointerup listener).
-                              if (viewerRole !== "owner" || isMembershipOverlayEvent(it.event, calId)) {
+                              if (viewerRole !== "owner" || isMembershipOverlayEvent(it.event, calId) || isSharedCalendarReadOnly(it.event.userCalendarId)) {
                                 // Prevent cell-level range selection from
                                 // starting, which would otherwise re-render
                                 // and steal the active chip styling when the
@@ -4191,8 +4356,10 @@ export function MonthGridType1({
                 .filter((layout) => layout.row >= renderStart && layout.row <= renderEnd)
                 .flatMap((layout) =>
                 layout.spans.flatMap((span) => {
-                  const ev = monthSpanById.get(span.id);
-                  if (!ev) return [];
+                  const record = monthSpanById.get(span.id);
+                  if (!record) return [];
+                  const ev = record.event;
+                  const spanTitle = ev.title.trim() || untitledCalendarTitle(true);
                   const isRepeatPreview = isRepeatPreviewEventId(ev.id);
                   const isCoachPending = !!ev.coachPending;
                   const isDraggingBar =
@@ -4206,7 +4373,8 @@ export function MonthGridType1({
                       sessionContextEventId === ev.id ||
                       pressedEventId === ev.id ||
                       searchSelectedId === ev.id ||
-                      !!markedEventIds?.has(ev.id));
+                      !!markedEventIds?.has(ev.id) ||
+                      (!!spanResize && !spanResize.create && spanResize.id === ev.id));
                   const chip = sessionMonthChipChrome(ev.color, isActive);
                   const lane = span.lane;
                   const runs = contiguousColumnsWhere(span.startCol, span.endCol, (col) => {
@@ -4228,7 +4396,22 @@ export function MonthGridType1({
                       monthCellPos(cell) ?? { row: layout.row, col: span.startCol };
                     return { cell, pos, day: days[pos.row * 7 + pos.col] };
                   };
-                  return runs.map((run) => (
+                  const eventStart = startOfDay(record.start);
+                  const eventEnd = sessionInclusiveEndDay(record.start, record.end);
+                  const weekStart = startOfWeekMon(
+                    weekRows.find((wr) => wr.row === layout.row)?.firstDate ?? record.start,
+                  );
+                  const canResizeEdge =
+                    viewerRole === "owner" &&
+                    !isMembershipOverlayEvent(ev, calId) &&
+                    !isSharedCalendarReadOnly(ev.userCalendarId) &&
+                    !isRepeatPreview;
+                  return runs.map((run) => {
+                    const pieceStart = addDays(weekStart, run.startCol);
+                    const pieceEnd = addDays(weekStart, run.endCol);
+                    const atStart = sameDay(pieceStart, eventStart);
+                    const atEnd = sameDay(pieceEnd, eventEnd);
+                    return (
                     <button
                       key={`span-${layout.row}-${span.id}-${run.startCol}`}
                       type="button"
@@ -4237,7 +4420,7 @@ export function MonthGridType1({
                       data-session-active={isActive ? "1" : undefined}
                       data-coach-pending={isCoachPending ? "1" : undefined}
                       draggable={false}
-                      className="z-30 flex min-w-0 items-center overflow-hidden rounded-[3px] px-1.5 text-left text-[11.5px] leading-none select-none"
+                      className="relative z-30 flex min-w-0 items-center overflow-hidden rounded-[3px] px-1.5 text-left text-[11.5px] leading-none select-none"
                       style={{
                         gridColumn: `${run.startCol + 2} / ${run.endCol + 3}`,
                         gridRow: layout.row + 1,
@@ -4261,7 +4444,7 @@ export function MonthGridType1({
                         opacity: isRepeatPreview ? 0.72 : isDraggingBar ? 0.35 : 1,
                         pointerEvents: isDraggingBar ? "none" : "auto",
                       }}
-                      title={ev.title}
+                      title={spanTitle}
                       onDragStart={(e) => e.preventDefault()}
                       onPointerDown={(e) => {
                         if (e.button !== 0) return;
@@ -4281,7 +4464,7 @@ export function MonthGridType1({
                           switchedSessionOnPointerRef.current = true;
                         }
                         setPressedEventId(ev.id);
-                        if (viewerRole !== "owner" || isMembershipOverlayEvent(ev, calId)) {
+                        if (viewerRole !== "owner" || isMembershipOverlayEvent(ev, calId) || isSharedCalendarReadOnly(ev.userCalendarId)) {
                           e.stopPropagation();
                           e.preventDefault();
                           return;
@@ -4358,20 +4541,71 @@ export function MonthGridType1({
                         onSessionContextMenu(e, ev, cell ?? (e.currentTarget as HTMLElement));
                       }}
                     >
-                      <span className="truncate">{ev.title}</span>
+                      {canResizeEdge && atStart && (
+                        <div
+                          role="separator"
+                          aria-label="Juster startdag"
+                          data-resize-handle="start"
+                          className="absolute bottom-0 left-0 top-0 z-[3] w-3 cursor-ew-resize touch-none"
+                          onPointerDown={(handleEvent) => {
+                            if (handleEvent.button !== 0) return;
+                            beginMonthSpanEdgeResize("start", handleEvent, {
+                              id: ev.id,
+                              start: eventStart,
+                              end: eventEnd,
+                              event: ev,
+                            });
+                          }}
+                          onClick={(handleEvent) => {
+                            handleEvent.stopPropagation();
+                            handleEvent.preventDefault();
+                          }}
+                        />
+                      )}
+                      {canResizeEdge && atEnd && (
+                        <div
+                          role="separator"
+                          aria-label="Juster sluttdag"
+                          data-resize-handle="end"
+                          className="absolute bottom-0 right-0 top-0 z-[3] w-3 cursor-ew-resize touch-none"
+                          onPointerDown={(handleEvent) => {
+                            if (handleEvent.button !== 0) return;
+                            beginMonthSpanEdgeResize("end", handleEvent, {
+                              id: ev.id,
+                              start: eventStart,
+                              end: eventEnd,
+                              event: ev,
+                            });
+                          }}
+                          onClick={(handleEvent) => {
+                            handleEvent.stopPropagation();
+                            handleEvent.preventDefault();
+                          }}
+                        />
+                      )}
+                      <span className="pointer-events-none truncate">{spanTitle}</span>
                     </button>
-                  ));
+                    );
+                  });
                 }),
               )}
             {showCreateSpanTile
               ? createSpanPieces
               .filter((piece) => piece.row >= renderStart && piece.row <= renderEnd)
-              .map((piece) => (
+              .map((piece) => {
+                const weekStart = startOfWeekMon(
+                  weekRows.find((wr) => wr.row === piece.row)?.firstDate ?? createSpanRange!.start,
+                );
+                const pieceStart = addDays(weekStart, piece.startCol);
+                const pieceEnd = addDays(weekStart, piece.endCol);
+                const atStart = sameDay(pieceStart, createSpanRange!.start);
+                const atEnd = sameDay(pieceEnd, createSpanRange!.end);
+                return (
                 <div
                   key={`create-span-${piece.row}-${piece.startCol}`}
                   data-role="mark-create-preview"
                   aria-hidden
-                  className="pointer-events-none z-40 flex min-w-0 items-center overflow-hidden rounded-[3px] px-1.5 text-left text-[11.5px] leading-none select-none"
+                  className="pointer-events-none relative z-40 flex min-w-0 items-center overflow-hidden rounded-[3px] px-1.5 text-left text-[11.5px] leading-none select-none"
                   style={{
                     gridColumn: `${piece.startCol + 2} / ${piece.endCol + 3}`,
                     gridRow: piece.row + 1,
@@ -4387,9 +4621,42 @@ export function MonthGridType1({
                     boxShadow: createSpanChrome.boxShadow,
                   }}
                 >
+                  {viewerRole === "owner" && atStart && (
+                    <div
+                      role="separator"
+                      aria-label="Juster startdag"
+                      data-resize-handle="start"
+                      className="pointer-events-auto absolute bottom-0 left-0 top-0 z-[3] w-3 cursor-ew-resize touch-none"
+                      onPointerDown={(handleEvent) => {
+                        if (handleEvent.button !== 0 || !createSpanRange) return;
+                        beginMonthSpanEdgeResize("start", handleEvent, {
+                          id: null,
+                          start: createSpanRange.start,
+                          end: createSpanRange.end,
+                        });
+                      }}
+                    />
+                  )}
+                  {viewerRole === "owner" && atEnd && (
+                    <div
+                      role="separator"
+                      aria-label="Juster sluttdag"
+                      data-resize-handle="end"
+                      className="pointer-events-auto absolute bottom-0 right-0 top-0 z-[3] w-3 cursor-ew-resize touch-none"
+                      onPointerDown={(handleEvent) => {
+                        if (handleEvent.button !== 0 || !createSpanRange) return;
+                        beginMonthSpanEdgeResize("end", handleEvent, {
+                          id: null,
+                          start: createSpanRange.start,
+                          end: createSpanRange.end,
+                        });
+                      }}
+                    />
+                  )}
                   <span className="truncate">{createSpanTitle}</span>
                 </div>
-              ))
+                );
+              })
               : null}
             {multiDragGhost?.wrap
               ? multiDragGhost.spans.flatMap((span) => {
@@ -4569,7 +4836,7 @@ export function MonthGridType1({
             // Keep the editor mounted during create-chip drag, same as existing
             // sessions. Unmounting remounts without an eventId, so the map
             // panel would come back closed after drop.
-            hidden={!!dragSession || !!creatingDrag?.moved}
+            hidden={!!dragSession || !!creatingDrag?.moved || spanEdgeResizing}
             calId={calId}
             seat={seat}
             teamId={seat === "admin" ? teamId : null}
@@ -4590,7 +4857,29 @@ export function MonthGridType1({
             isEdit={popover.editIdx >= 0 || !!popover.eventId}
             anchor={popover.rect}
             enableDuration={!!onUpsertEvent}
-            readOnly={viewerRole !== "owner" || isMembershipOverlayEvent(events.find((e) => e.id === popover.eventId), calId)}
+            readOnly={
+              viewerRole !== "owner" ||
+              isMembershipOverlayEvent(events.find((e) => e.id === popover.eventId), calId) ||
+              isSharedCalendarReadOnly(events.find((e) => e.id === popover.eventId)?.userCalendarId)
+            }
+            initialUserCalendarId={events.find((e) => e.id === popover.eventId)?.userCalendarId ?? null}
+            initialFollowsCalendarColor={!!events.find((e) => e.id === popover.eventId)?.followsCalendarColor}
+            onCalendarChange={(patch, eventIds) => {
+              const ids =
+                eventIds && eventIds.length > 0
+                  ? eventIds
+                  : popover.eventId
+                    ? [popover.eventId]
+                    : [];
+              for (const id of ids) {
+                onUpsertEvent?.({
+                  id,
+                  userCalendarId: patch.userCalendarId,
+                  followsCalendarColor: patch.followsCalendarColor,
+                  color: patch.color,
+                });
+              }
+            }}
             memberTeamMenu={isMembershipOverlayEvent(events.find((e) => e.id === popover.eventId), calId)}
             memberTeamId={events.find((e) => e.id === popover.eventId)?.entityId ?? null}
             categoryOwnerId={seat === "individual" ? memberId ?? null : null}
@@ -4775,6 +5064,9 @@ export function MonthGridType1({
               }
             }}
             onAllDayChange={(nextAllDay, t, eventIds) => {
+              if (!popover.eventId && popover.editIdx < 0) {
+                setCreatingAllDay(!!nextAllDay);
+              }
               const ids =
                 eventIds && eventIds.length > 0
                   ? eventIds
@@ -4855,7 +5147,13 @@ export function MonthGridType1({
               }
               if (options?.close !== false) closePopover();
             }}
-            onCommit={(text, color, time, accept, allDay, description, appGroupId, repeatRule, categoryId, location, locationUrl, signUpEnabled, eventIds) => {
+            onCommit={(text, color, time, accept, allDay, description, appGroupId, repeatRule, categoryId, location, locationUrl, signUpEnabled, eventIds, calendar) => {
+              const calendarFields = calendar
+                ? {
+                    userCalendarId: calendar.userCalendarId,
+                    followsCalendarColor: calendar.followsCalendarColor,
+                  }
+                : {};
               const cell = days.find(
                 (d) => d.row === popover.pos.row && d.col === popover.pos.col,
               );
@@ -4916,6 +5214,7 @@ export function MonthGridType1({
                       repeatRule: repeatRule ?? null,
                       repeatSeriesId,
                       repeatDetached: !repeatRule,
+                      ...calendarFields,
                     };
                     if (time) {
                       const startDay =
@@ -5006,6 +5305,7 @@ export function MonthGridType1({
                       ...(seat === "admin" && signUpEnabled !== undefined
                         ? { signUpEnabled: !!signUpEnabled }
                         : {}),
+                      ...calendarFields,
                     };
                     const plan = planRepeatSeriesSave(
                       existingEv,
@@ -5069,6 +5369,7 @@ export function MonthGridType1({
                       : {}),
                     repeatRule: repeatRule ?? null,
                     repeatDetached: !repeatRule,
+                    ...calendarFields,
                   };
                   if (repeatRule) {
                     for (const inst of expandRepeatingEvents(template, repeatRule, cell.date)) {
@@ -5145,6 +5446,9 @@ export function MonthGridType1({
               boxShadow: teamChip.boxShadow,
             };
           })();
+          const ghostTitle =
+            ev.title.trim() ||
+            (isAllDayBandEvent(ev) ? untitledCalendarTitle(true) : ev.title);
           return (
             <div
               ref={ghostElRef}
@@ -5179,9 +5483,9 @@ export function MonthGridType1({
                   className="relative flex h-full w-full items-center gap-1.5 truncate rounded-[3px] px-1.5 py-0.5 text-[11.5px]"
                   style={tileStyle}
                   data-coach-pending={ev.coachPending ? "1" : undefined}
-                  title={ev.title}
+                  title={ghostTitle}
                 >
-                  <span className="truncate">{ev.title}</span>
+                  <span className="truncate">{ghostTitle}</span>
                 </div>
               )}
             </div>
@@ -5375,6 +5679,11 @@ export interface PopoverEditorProps {
      * apply the full commit patch to these event ids.
      */
     eventIds?: string[],
+    /** Calendar chosen in the menu, including before the title is saved. */
+    calendar?: {
+      userCalendarId: string | null;
+      followsCalendarColor: boolean;
+    } | null,
   ) => void;
   /** Entity mode only — initial roster group id. */
   initialAppGroupId?: string | null;
@@ -5437,6 +5746,17 @@ export interface PopoverEditorProps {
    * reflects the selection in real time.
    */
   onColorChange?: (color: string | null, eventIds?: string[]) => void;
+  /** Shared calendar this session belongs to. Null means no calendar. */
+  initialUserCalendarId?: string | null;
+  initialFollowsCalendarColor?: boolean;
+  onCalendarChange?: (
+    patch: {
+      userCalendarId: string | null;
+      followsCalendarColor: boolean;
+      color: string | null;
+    },
+    eventIds?: string[],
+  ) => void;
   /**
    * Fires on each title keystroke so a session that is still being created
    * can show the text on its tile immediately.
@@ -5753,28 +6073,7 @@ const POPOVER_ROW_INDENT = "pl-3";
 const SESSION_DESCRIPTION_MAX_LENGTH = 500;
 /** Fixed well — similar to Notion Calendar’s description box; not user-resizable. */
 const SESSION_DESCRIPTION_FIELD_H = 88;
-
-function fitTextToFixedTextarea(
-  el: HTMLTextAreaElement | null,
-  next: string,
-  previous: string,
-): string {
-  const clipped = next.slice(0, SESSION_DESCRIPTION_MAX_LENGTH);
-  if (!el || el.clientHeight < 8) return clipped;
-  el.value = clipped;
-  if (el.scrollHeight <= el.clientHeight + 1) return clipped;
-  let lo = 0;
-  let hi = clipped.length;
-  while (lo < hi) {
-    const mid = Math.ceil((lo + hi) / 2);
-    el.value = clipped.slice(0, mid);
-    if (el.scrollHeight <= el.clientHeight + 1) lo = mid;
-    else hi = mid - 1;
-  }
-  const fitted = clipped.slice(0, lo);
-  el.value = fitted || previous;
-  return fitted || previous;
-}
+const SESSION_DESCRIPTION_FIELD_MAX_H = SESSION_DESCRIPTION_FIELD_H * 2;
 
 function escapeAttrSelector(value: string): string {
   return typeof CSS !== "undefined" && typeof CSS.escape === "function"
@@ -5843,7 +6142,7 @@ function createMonthEdgePulse(host: {
       viewTop = rect.top;
       viewBottom = rect.bottom;
     }
-    return monthCreateEdgeZone(clientY, viewTop, viewBottom, paging);
+    return monthCreateEdgeZone(clientY, viewTop, viewBottom, paging, true);
   };
 
   const stillAtRim = (repeat: boolean): boolean => {
@@ -5854,7 +6153,7 @@ function createMonthEdgePulse(host: {
       viewTop = rect.top;
       viewBottom = rect.bottom;
     }
-    const zone = monthCreateEdgeZone(pointerY, viewTop, viewBottom, repeat);
+    const zone = monthCreateEdgeZone(pointerY, viewTop, viewBottom, repeat, true);
     edge = zone;
     return zone !== 0;
   };
@@ -6193,6 +6492,9 @@ export function PopoverEditor({
   onLocationChange,
   onClearRepeat,
   onColorChange,
+  initialUserCalendarId = null,
+  initialFollowsCalendarColor = false,
+  onCalendarChange,
   onTitleChange,
   onDateChange,
   readOnly = false,
@@ -6219,6 +6521,7 @@ export function PopoverEditor({
   hidden = false,
   externalTimeCommitNonce: _externalTimeCommitNonce = 0,
 }: PopoverEditorProps) {
+  const { user } = useAuth();
   const darkMenu = useCalendarTheme() === "dark";
   const isEntity = seat === "admin";
   const rememberedTeamName = useTeamName(memberTeamMenu ? memberTeamId : null);
@@ -6268,6 +6571,15 @@ export function PopoverEditor({
     if (initialColor == null) return;
     setColorState((cur) => (cur === initialColor ? cur : initialColor));
   }, [initialColor]);
+  const userCalendars = useUserCalendarsSafe();
+  const [userCalendarId, setUserCalendarId] = useState<string | null>(initialUserCalendarId ?? null);
+  const [followsCalendarColor, setFollowsCalendarColor] = useState(!!initialFollowsCalendarColor);
+  useEffect(() => {
+    setUserCalendarId(initialUserCalendarId ?? null);
+    setFollowsCalendarColor(!!initialFollowsCalendarColor);
+  }, [initialUserCalendarId, initialFollowsCalendarColor]);
+  const chosenCalendar =
+    userCalendars?.calendars.find((calendar) => calendar.id === userCalendarId) ?? null;
   const [liveCategoryId, setLiveCategoryId] = useState(initialCategoryId ?? null);
   useEffect(() => {
     setLiveCategoryId(initialCategoryId ?? null);
@@ -6366,6 +6678,9 @@ export function PopoverEditor({
   const colorRowRef = useRef<HTMLDivElement | null>(null);
   const headerActionsRef = useRef<HTMLDivElement | null>(null);
   const descriptionInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const descriptionScrollRef = useRef<HTMLElement | null>(null);
+  const descriptionThumbRef = useRef<HTMLDivElement | null>(null);
+  const descriptionThumbTimer = useRef<number | null>(null);
   const descriptionDirtyRef = useRef(false);
   const lastDescriptionWriteRef = useRef<string | null>(
     (initialDescription ?? "").trim() || null,
@@ -6410,11 +6725,75 @@ export function PopoverEditor({
     setDescription(initialDescription ?? "");
   }, [initialDescription, savedDescriptionText]);
 
+  const syncDescriptionThumb = useCallback(() => {
+    const el = descriptionScrollRef.current;
+    const thumb = descriptionThumbRef.current;
+    if (!el || !thumb) return;
+    const canScroll = el.scrollHeight > el.clientHeight + 1;
+    if (!canScroll) {
+      thumb.dataset.on = "0";
+      thumb.style.height = "0px";
+      return;
+    }
+    const ratio = el.clientHeight / el.scrollHeight;
+    const height = Math.max(18, Math.round(el.clientHeight * ratio));
+    const travel = Math.max(0, el.clientHeight - height - 4);
+    const maxScroll = el.scrollHeight - el.clientHeight;
+    const top = 2 + (maxScroll > 0 ? (el.scrollTop / maxScroll) * travel : 0);
+    thumb.style.height = `${height}px`;
+    thumb.style.transform = `translateY(${top}px)`;
+  }, []);
+
+  const revealDescriptionThumb = useCallback(() => {
+    syncDescriptionThumb();
+    const el = descriptionScrollRef.current;
+    const thumb = descriptionThumbRef.current;
+    if (!el || !thumb || el.scrollHeight <= el.clientHeight + 1) return;
+    thumb.dataset.on = "1";
+    if (descriptionThumbTimer.current) window.clearTimeout(descriptionThumbTimer.current);
+    descriptionThumbTimer.current = window.setTimeout(() => {
+      if (descriptionThumbRef.current) descriptionThumbRef.current.dataset.on = "0";
+    }, 700);
+  }, [syncDescriptionThumb]);
+
+  useEffect(() => () => {
+    if (descriptionThumbTimer.current) window.clearTimeout(descriptionThumbTimer.current);
+  }, []);
+
+  useLayoutEffect(() => {
+    syncDescriptionThumb();
+  }, [description, initialDescription, readOnly, syncDescriptionThumb]);
+
+  const [descriptionFieldH, setDescriptionFieldH] = useState(SESSION_DESCRIPTION_FIELD_H);
+
+  const fitDescriptionField = useCallback(() => {
+    const el = descriptionScrollRef.current;
+    if (!el) return;
+    const previousHeight = el.style.height;
+    const previousMax = el.style.maxHeight;
+    el.style.height = "auto";
+    el.style.maxHeight = "none";
+    const natural = el.scrollHeight;
+    el.style.height = previousHeight;
+    el.style.maxHeight = previousMax;
+    const next = Math.min(
+      SESSION_DESCRIPTION_FIELD_MAX_H,
+      Math.max(SESSION_DESCRIPTION_FIELD_H, natural),
+    );
+    setDescriptionFieldH((prev) => (prev === next ? prev : next));
+  }, []);
+
+  useLayoutEffect(() => {
+    fitDescriptionField();
+  }, [description, initialDescription, readOnly, fitDescriptionField]);
+
+  useLayoutEffect(() => {
+    syncDescriptionThumb();
+  }, [descriptionFieldH, syncDescriptionThumb]);
+
   const handleDescriptionInput = (text: string) => {
     descriptionDirtyRef.current = true;
-    setDescription(
-      fitTextToFixedTextarea(descriptionInputRef.current, text, descriptionRef.current),
-    );
+    setDescription(text.slice(0, SESSION_DESCRIPTION_MAX_LENGTH));
   };
 
   const commitDescription = (): string | null => {
@@ -6571,16 +6950,54 @@ export function PopoverEditor({
     (accept?: boolean, eventIds?: string[]) => void
   >(() => {});
 
-  const handleColorPick = (c: string | null) => {
+  const handleColorPick = (c: string | null, followsCalendar = false) => {
     if (readOnly) return;
+    const follows = followsCalendar && !!userCalendarId;
+    setFollowsCalendarColor(follows);
     setColorState(c);
-    applyWithSeriesScope((ids) => onColorChange?.(c, ids));
+    applyWithSeriesScope((ids) => {
+      onColorChange?.(c, ids);
+      onCalendarChange?.(
+        {
+          userCalendarId,
+          followsCalendarColor: follows,
+          color: c,
+        },
+        ids,
+      );
+    });
+  };
+
+  const handleCalendarPick = (nextId: string | null) => {
+    if (readOnly) return;
+    const next = userCalendars?.calendars.find((calendar) => calendar.id === nextId) ?? null;
+    setUserCalendarId(nextId);
+    if (next) {
+      setFollowsCalendarColor(true);
+      setColorState(next.color);
+      applyWithSeriesScope((ids) => {
+        onColorChange?.(next.color, ids);
+        onCalendarChange?.(
+          { userCalendarId: next.id, followsCalendarColor: true, color: next.color },
+          ids,
+        );
+      });
+      return;
+    }
+    setFollowsCalendarColor(false);
+    applyWithSeriesScope((ids) =>
+      onCalendarChange?.(
+        { userCalendarId: null, followsCalendarColor: false, color },
+        ids,
+      ),
+    );
   };
 
   const handleGroupPick = (nextGroupId: string | null) => {
     if (readOnly) return;
     setAppGroupId(nextGroupId);
     applyWithSeriesScope((ids) => onAppGroupChange?.(nextGroupId, ids));
+    if (!nextGroupId && userCalendarId) handleCalendarPick(null);
   };
 
   const handleAllDaySwitch = (next: boolean) => {
@@ -6688,6 +7105,8 @@ export function PopoverEditor({
   // Keep latest values for the unmount-time autosave to avoid stale captures.
   const valueRef = useRef(value);
   const colorRef = useRef(color);
+  const userCalendarIdRef = useRef(userCalendarId);
+  const followsCalendarColorRef = useRef(followsCalendarColor);
   const timeRef = useRef(time);
   const allDayRef = useRef(allDay);
   const descriptionRef = useRef(description);
@@ -6699,6 +7118,8 @@ export function PopoverEditor({
   useEffect(() => {
     valueRef.current = value;
     colorRef.current = color;
+    userCalendarIdRef.current = userCalendarId;
+    followsCalendarColorRef.current = followsCalendarColor;
     timeRef.current = time;
     allDayRef.current = allDay;
     descriptionRef.current = description;
@@ -6709,7 +7130,7 @@ export function PopoverEditor({
     liveCategoryIdRef.current = liveCategoryId;
     appGroupIdRef.current = appGroupId;
     signUpEnabledRef.current = signUpEnabled;
-  }, [value, color, time, allDay, description, location, locationUrl, repeatEnabled, repeatRule, liveCategoryId, appGroupId, signUpEnabled]);
+  }, [value, color, time, allDay, description, location, locationUrl, repeatEnabled, repeatRule, liveCategoryId, appGroupId, signUpEnabled, userCalendarId, followsCalendarColor]);
 
   // Live repeat chips on the calendar while repeat is configured (create flow
   // or after the user changes repeat settings — not when merely viewing an
@@ -6723,7 +7144,7 @@ export function PopoverEditor({
       onRepeatPreviewChange(null);
       return;
     }
-    const title = (value ?? "").trim() || "New session";
+    const title = (value ?? "").trim() || untitledCalendarTitle(displayAllDay || multiDay);
     const effectiveTime = allDay ? { startMin: 0, endMin: 0 } : (time ?? { startMin: 8 * 60, endMin: 9 * 60 });
     const range = isoFromMenuClocks(
       displayStartDate,
@@ -6848,7 +7269,7 @@ export function PopoverEditor({
   const handleDuplicateSession = useCallback(() => {
     const snapshot = buildCopySnapshot();
     if (!snapshot) return;
-    const created = duplicateEvent(snapshot);
+    const created = duplicateEvent(snapshot, calendarEventsRef.current);
     if (created) setCopyToast(duplicateSessionSuccessMessage(created.title));
   }, [buildCopySnapshot, duplicateEvent]);
 
@@ -6906,7 +7327,7 @@ export function PopoverEditor({
         return;
       }
       if (matchesShortcut(e, SHORTCUTS.duplicateSession)) {
-        if (readOnly) return;
+        if (readOnly && !isSubscriptionCalendar(userCalendarId)) return;
         if (isEditableTarget(e.target) && !inPopoverField()) return;
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -6931,6 +7352,7 @@ export function PopoverEditor({
     handleDeleteSession,
     isEdit,
     readOnly,
+    userCalendarId,
   ]);
 
   const handleHeaderClose = useCallback(() => {
@@ -7013,6 +7435,10 @@ export function PopoverEditor({
       commitLocationUrl(),
       commitSignUpEnabled(),
       eventIds,
+      {
+        userCalendarId: userCalendarIdRef.current,
+        followsCalendarColor: followsCalendarColorRef.current,
+      },
     );
   };
 
@@ -7141,6 +7567,10 @@ export function PopoverEditor({
         commitLocationUrl(),
         commitSignUpEnabled(),
         seriesIds,
+        {
+          userCalendarId: userCalendarIdRef.current,
+          followsCalendarColor: followsCalendarColorRef.current,
+        },
       );
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -7591,25 +8021,34 @@ export function PopoverEditor({
     : description;
 
   const descriptionSection = (
-    <div className="relative min-h-0 flex-1" style={{ minHeight: SESSION_DESCRIPTION_FIELD_H }}>
+    <div
+      className="relative shrink-0"
+      style={{ height: descriptionFieldH, maxHeight: SESSION_DESCRIPTION_FIELD_MAX_H }}
+    >
       {readOnly ? (
         <div
+          ref={descriptionScrollRef}
+          onScroll={revealDescriptionThumb}
           className={[
-            "h-full cursor-text overflow-y-auto px-3 py-2 whitespace-pre-wrap select-text",
+            "session-description-scroll h-full cursor-text px-3 py-2 select-text",
             POPOVER_ACTIVITY_TEXT,
             sessionPopoverFieldClass(false),
             visibleDescription.trim() ? "" : "text-muted-foreground/60",
           ].join(" ")}
-          style={{ minHeight: SESSION_DESCRIPTION_FIELD_H }}
+          style={{ height: descriptionFieldH, maxHeight: SESSION_DESCRIPTION_FIELD_MAX_H }}
         >
           {visibleDescription.trim() || "Description"}
         </div>
       ) : (
         <>
           <textarea
-            ref={descriptionInputRef}
+            ref={(node) => {
+              descriptionInputRef.current = node;
+              descriptionScrollRef.current = node;
+            }}
             value={description}
             onChange={(e) => handleDescriptionInput(e.target.value)}
+            onScroll={revealDescriptionThumb}
             onKeyDown={(e) => {
               // Enter saves the session (window handler). Shift+Enter inserts a line.
               if (e.key === "Enter" && !e.shiftKey) e.preventDefault();
@@ -7620,13 +8059,12 @@ export function PopoverEditor({
               setDescriptionFocused(false);
             }}
             maxLength={SESSION_DESCRIPTION_MAX_LENGTH}
-            rows={4}
             className={[
-              "block h-full w-full !cursor-text resize-none overflow-hidden px-3 py-2 outline-none",
+              "session-description-scroll block h-full w-full !cursor-text resize-none px-3 py-2 outline-none",
               sessionPopoverFieldClass(descriptionFocused),
               POPOVER_ACTIVITY_TEXT,
             ].join(" ")}
-            style={{ minHeight: SESSION_DESCRIPTION_FIELD_H }}
+            style={{ height: descriptionFieldH, maxHeight: SESSION_DESCRIPTION_FIELD_MAX_H }}
           />
           {!description ? (
             <span
@@ -7641,6 +8079,7 @@ export function PopoverEditor({
           ) : null}
         </>
       )}
+      <div ref={descriptionThumbRef} data-on="0" aria-hidden className="session-description-thumb" />
     </div>
   );
 
@@ -7663,6 +8102,9 @@ export function PopoverEditor({
       )}
     </div>
   ) : null;
+
+  const webAddressSession = isSubscriptionCalendar(userCalendarId);
+  const lockReadOnlyField = readOnly && !webAddressSession;
 
   return createPortal(
   <>
@@ -7726,10 +8168,14 @@ export function PopoverEditor({
                   onClose={handleHeaderClose}
                   onCopySession={isExistingSession ? handleCopySession : undefined}
                   onDuplicateSession={
-                    isExistingSession && !readOnly ? handleDuplicateSession : undefined
+                    isExistingSession && (!readOnly || webAddressSession)
+                      ? handleDuplicateSession
+                      : undefined
                   }
                   onDeleteSession={
-                    isExistingSession && !readOnly ? handleDeleteSession : undefined
+                    isExistingSession && !readOnly && !webAddressSession
+                      ? handleDeleteSession
+                      : undefined
                   }
                 />
                 </div>
@@ -7756,7 +8202,7 @@ export function PopoverEditor({
                 setValue(next);
                 onTitleChange?.(next);
               }}
-              placeholder={placeholder}
+              placeholder={displayAllDay || multiDay ? "Event title" : placeholder}
               readOnly={readOnly}
               tabIndex={readOnly ? -1 : 0}
               onFocus={() => {
@@ -7874,9 +8320,29 @@ export function PopoverEditor({
               </div>
             ) : null}
 
-            <div className={readOnly ? "pointer-events-none" : undefined} ref={colorRowRef}>
+            {!memberTeamMenu && (!isEntity || appGroupId) && isFeatureEnabled("calendarTabsFlag", user?.id) ? (
+              <div className={lockReadOnlyField ? "pointer-events-none" : undefined}>
+                <CalendarDropdownRow
+                  calendars={(userCalendars?.calendars ?? []).filter((calendar) => {
+                    if (calendar.myRole !== "admin" && calendar.id !== userCalendarId) return false;
+                    if (isEntity) {
+                      return calendar.entityId === teamId && calendar.appGroupId === appGroupId;
+                    }
+                    return !calendar.entityId;
+                  })}
+                  selectedId={userCalendarId}
+                  onSelect={handleCalendarPick}
+                  readOnly={readOnly}
+                  sessionCardRef={sessionCardRef}
+                  clusterRef={ref}
+                  rightOccupied={showLocationMapSide || showParticipantsSide}
+                />
+              </div>
+            ) : null}
+
+            <div className={lockReadOnlyField ? "pointer-events-none" : undefined} ref={colorRowRef}>
               <ColorDropdownRow
-                color={color}
+                color={followsCalendarColor && chosenCalendar ? chosenCalendar.color : color}
                 onSetColor={handleColorPick}
                 readOnly={readOnly}
                 sessionCardRef={sessionCardRef}
@@ -8068,6 +8534,152 @@ function GroupDropdownRow({
   );
 }
 
+function CalendarDropdownRow({
+  calendars,
+  selectedId,
+  onSelect,
+  readOnly = false,
+  sessionCardRef,
+  clusterRef,
+  rightOccupied = false,
+}: {
+  calendars: { id: string; name: string; color: string }[];
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
+  readOnly?: boolean;
+  sessionCardRef: RefObject<HTMLDivElement | null>;
+  clusterRef: RefObject<HTMLDivElement | null>;
+  rightOccupied?: boolean;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuSide, setMenuSide] = useState<"left" | "right" | null>(null);
+  const fieldRef = useRef<HTMLDivElement | null>(null);
+  const selected = calendars.find((calendar) => calendar.id === selectedId) ?? null;
+  const label = selected?.name ?? "No calendar";
+  const Chevron = menuOpen && menuSide === "left" ? ChevronLeft : ChevronRight;
+  const options = [{ id: null as string | null, label: "No calendar", color: null as string | null }, ...calendars.map((calendar) => ({
+    id: calendar.id as string | null,
+    label: calendar.name,
+    color: calendar.color,
+  }))];
+  const cardHeight = sessionCardRef.current?.offsetHeight ?? 0;
+  const listMaxHeight = cardHeight > SESSION_SIDE_MENU_INSET_PX * 2
+    ? cardHeight - SESSION_SIDE_MENU_INSET_PX * 2
+    : undefined;
+  const fullMenuHeight = estimateSessionSideMenuHeight(options.length);
+  const menuHeight = listMaxHeight == null
+    ? fullMenuHeight
+    : Math.min(fullMenuHeight, listMaxHeight + SESSION_SIDE_MENU_INSET_PX * 2);
+
+  return (
+    <>
+      <div ref={fieldRef} className="relative">
+        <div className={["relative flex min-h-[40px] items-center", sessionPopoverFieldClass(menuOpen && !readOnly)].join(" ")}>
+          {readOnly ? (
+            <div
+              className={[
+                "flex min-h-[40px] w-full items-center py-0 pl-3 pr-3",
+                POPOVER_ACTIVITY_TEXT,
+              ].join(" ")}
+            >
+              {selected ? (
+                <span className="mr-2 inline-flex">
+                  <ColorSwatch fill={selected.color} />
+                </span>
+              ) : null}
+              <span
+                className={[
+                  "min-w-0 flex-1 truncate leading-none",
+                  selected ? "" : "text-muted-foreground/60",
+                ].join(" ")}
+              >
+                {label}
+              </span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              aria-haspopup="listbox"
+              aria-expanded={menuOpen}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen((v) => !v);
+              }}
+              className={[
+                "flex min-h-[40px] w-full cursor-default items-center bg-transparent py-0 pl-3 pr-8 text-left outline-none",
+                POPOVER_ACTIVITY_TEXT,
+              ].join(" ")}
+            >
+              {selected ? (
+                <span className="mr-2 inline-flex">
+                  <ColorSwatch fill={selected.color} />
+                </span>
+              ) : null}
+              <span
+                className={[
+                  "min-w-0 flex-1 truncate leading-none",
+                  selected ? "" : "text-muted-foreground/60",
+                ].join(" ")}
+              >
+                {label}
+              </span>
+            </button>
+          )}
+          {!readOnly ? (
+            <Chevron
+              className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+              strokeWidth={2}
+              aria-hidden
+            />
+          ) : null}
+        </div>
+      </div>
+      <SessionSideListbox
+        open={menuOpen && !readOnly}
+        onClose={() => setMenuOpen(false)}
+        fieldRef={fieldRef}
+        sessionCardRef={sessionCardRef}
+        clusterRef={clusterRef}
+        rightOccupied={rightOccupied}
+        estimatedHeight={menuHeight}
+        onSideChange={setMenuSide}
+      >
+        <div
+          role="presentation"
+          className="session-side-menu-scroll flex flex-col gap-1 overflow-y-auto"
+          style={listMaxHeight == null ? undefined : { maxHeight: listMaxHeight }}
+        >
+          {options.map((option) => {
+            const active = (option.id ?? null) === (selectedId ?? null);
+            return (
+              <button
+                key={option.id ?? "__none__"}
+                type="button"
+                role="option"
+                aria-selected={active}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect(option.id);
+                  setMenuOpen(false);
+                }}
+                className={SESSION_SIDE_MENU_ITEM_CLASS}
+              >
+                {option.color ? (
+                  <ColorSwatch fill={option.color} dark />
+                ) : (
+                  <span className="inline-block h-3.5 w-3.5 shrink-0" />
+                )}
+                <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                {active ? <Check className="h-3.5 w-3.5 shrink-0 text-white" /> : null}
+              </button>
+            );
+          })}
+        </div>
+      </SessionSideListbox>
+    </>
+  );
+}
+
 function ColorDropdownRow({
   color,
   onSetColor,
@@ -8077,7 +8689,7 @@ function ColorDropdownRow({
   rightOccupied = false,
 }: {
   color: string | null;
-  onSetColor: (c: string | null) => void;
+  onSetColor: (c: string | null, followsCalendar?: boolean) => void;
   readOnly?: boolean;
   sessionCardRef: RefObject<HTMLDivElement | null>;
   clusterRef: RefObject<HTMLDivElement | null>;
@@ -8155,7 +8767,7 @@ function ColorDropdownRow({
         <ColorsPanel
           currentColor={hex}
           onPick={(next) => {
-            onSetColor(next);
+            onSetColor(next, false);
             setMenuOpen(false);
           }}
           tone="dark"

@@ -102,9 +102,11 @@ export function DurationRow({
 export function IOSSwitch({
   checked,
   onChange,
+  uncheckedClassName = "bg-[#E9E9EA]",
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
+  uncheckedClassName?: string;
 }) {
   return (
     <button
@@ -118,7 +120,7 @@ export function IOSSwitch({
       className={[
         "relative inline-flex h-[18px] w-[30px] shrink-0 items-center rounded-full transition-colors duration-200 ease-out",
         "shadow-[inset_0_0_0_0.5px_rgba(0,0,0,0.04)]",
-        checked ? "bg-[#34C759]" : "bg-[#E9E9EA]",
+        checked ? "bg-[#34C759]" : uncheckedClassName,
       ].join(" ")}
     >
       <span

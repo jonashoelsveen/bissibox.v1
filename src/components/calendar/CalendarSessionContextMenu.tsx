@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { Copy, CopyPlus, Trash2 } from "lucide-react";
-import type { CalendarEvent } from "@/components/calendar/yearStore";
+import {
+  isStandardWebAddressSession,
+  type CalendarEvent,
+} from "@/components/calendar/yearStore";
 import type { ViewMode } from "@/components/calendar/UnifiedElasticGrid";
 import { CalendarInfoToast } from "@/components/calendar/CalendarInfoToast";
 import { useCalendarViewActions } from "@/components/calendar/CalendarViewActionsContext";
@@ -13,9 +16,10 @@ import {
   shortcutAriaKeyshortcuts,
 } from "@/lib/shortcuts";
 import {
-  copySessionSuccessMessage,
+  copySessionsSuccessMessage,
   duplicateSessionSuccessMessage,
 } from "@/lib/calendarClipboard";
+import { sessionCopyMenu } from "@/lib/sessionCopyMenu";
 import { isRepeatPreviewEventId } from "@/lib/sessionRepeat";
 import { computePopoverPosition } from "./popoverPosition";
 import { estimateSessionSideMenuHeight } from "./SessionSideListbox";
@@ -43,14 +47,14 @@ export function sessionDeleteActionClass(enabled: boolean): string {
 export const SESSION_DELETE_SHORTCUT_CLASS = "text-[#ED5C5C]/70 group-hover:text-white";
 
 const MENU_WIDTH = 220;
-const MENU_ROWS = 3;
 
 type MenuState = {
   event: CalendarEvent;
   left: number;
   top: number;
-  /** When set, the menu is only Delete and it removes every id. */
+  /** When set, the menu acts on every id (shift-marked set). */
   bulkIds: string[] | null;
+  targets: CalendarEvent[];
 };
 
 export const SESSION_SHIFT_MARK_EVENT = "bissibox:session-shift-mark";
@@ -80,8 +84,13 @@ export function useCalendarSessionContextMenu(
     /** Right-click should cancel this session instead of opening the menu. */
     shouldDismiss?: (event: CalendarEvent) => boolean;
     onDismiss?: (event: CalendarEvent) => void;
-    /** Ids currently shift-marked. Right-clicking one of them deletes the set. */
+    /** Ids currently shift-marked. Right-clicking one of them acts on the set. */
     getMarkedIds?: () => string[];
+    /**
+     * Sessions on screen, including web-address feed rows that are not in the
+     * saved event store. Copy resolves titles and times from this list.
+     */
+    getVisibleEvents?: () => CalendarEvent[];
     onDeleteMany?: (ids: string[]) => void;
     /** A normal menu replaces the shift-mark set. */
     onClearMarks?: () => void;
@@ -106,12 +115,27 @@ export function useCalendarSessionContextMenu(
   onDismissRef.current = opts?.onDismiss;
   const getMarkedIdsRef = useRef(opts?.getMarkedIds);
   getMarkedIdsRef.current = opts?.getMarkedIds;
+  const getVisibleEventsRef = useRef(opts?.getVisibleEvents);
+  getVisibleEventsRef.current = opts?.getVisibleEvents;
+  const eventsRef = useRef(events);
+  eventsRef.current = events;
+  const canMutateRef = useRef(canMutateEvent);
+  canMutateRef.current = canMutateEvent;
   const onDeleteManyRef = useRef(opts?.onDeleteMany);
   onDeleteManyRef.current = opts?.onDeleteMany;
   const onClearMarksRef = useRef(opts?.onClearMarks);
   onClearMarksRef.current = opts?.onClearMarks;
 
   const closeMenu = useCallback(() => setMenu(null), []);
+
+  const resolveEvent = useCallback((id: string, clicked?: CalendarEvent) => {
+    const visible = getVisibleEventsRef.current?.() ?? [];
+    return (
+      visible.find((item) => item.id === id) ??
+      eventsRef.current.find((item) => item.id === id) ??
+      (clicked?.id === id ? clicked : undefined)
+    );
+  }, []);
 
   const onSessionContextMenu = useCallback(
     (e: ReactMouseEvent, event: CalendarEvent, anchor: HTMLElement) => {
@@ -129,63 +153,94 @@ export function useCalendarSessionContextMenu(
       );
       const bulkIds = marked.includes(event.id) ? marked : null;
       if (!bulkIds) onClearMarksRef.current?.();
-      const rect = anchor.getBoundingClientRect();
-      const pos = computePopoverPosition(
-        rect,
-        MENU_WIDTH,
-        estimateSessionSideMenuHeight(bulkIds ? 1 : MENU_ROWS),
+      const ids = bulkIds ?? [event.id];
+      const targets: CalendarEvent[] = [];
+      const seen = new Set<string>();
+      for (const id of ids) {
+        const resolved = resolveEvent(id, event);
+        if (!resolved || seen.has(resolved.id)) continue;
+        seen.add(resolved.id);
+        targets.push(resolved);
+      }
+      if (targets.length === 0) targets.push(event);
+      const subscriptionOnly = targets.every((item) => isStandardWebAddressSession(item));
+      const anyDeletable = targets.some(
+        (item) => canMutateRef.current(item) && !isStandardWebAddressSession(item),
       );
-      setMenu({ event, left: pos.left, top: pos.top, bulkIds });
+      const singleCanDuplicate =
+        targets.length === 1 &&
+        (isStandardWebAddressSession(targets[0]!) || canMutateRef.current(targets[0]!));
+      const rows = sessionCopyMenu({
+        count: targets.length,
+        subscriptionOnly,
+        anyDeletable,
+        singleCanDuplicate,
+      }).rowCount;
+      const rect = anchor.getBoundingClientRect();
+      const pos = computePopoverPosition(rect, MENU_WIDTH, estimateSessionSideMenuHeight(rows));
+      setMenu({ event, left: pos.left, top: pos.top, bulkIds, targets });
     },
-    [],
+    [resolveEvent],
   );
 
-  const canAct = menu
-    ? menu.bulkIds
-      ? menu.bulkIds.some((id) => {
-          const ev = events.find((item) => item.id === id);
-          return ev ? canMutateEvent(ev) : false;
-        })
-      : canMutateEvent(menu.event)
-    : false;
+  const menuModel = menu
+    ? sessionCopyMenu({
+        count: menu.targets.length,
+        subscriptionOnly: menu.targets.every((item) => isStandardWebAddressSession(item)),
+        anyDeletable: menu.targets.some(
+          (item) => canMutateEvent(item) && !isStandardWebAddressSession(item),
+        ),
+        singleCanDuplicate:
+          menu.targets.length === 1 &&
+          (isStandardWebAddressSession(menu.targets[0]!) || canMutateEvent(menu.targets[0]!)),
+      })
+    : null;
 
   const handleCopy = useCallback(() => {
-    if (!menu) return;
-    copyEventsToClipboard([menu.event], viewMode);
+    if (!menu || menu.targets.length === 0) return;
+    copyEventsToClipboard(menu.targets, viewMode);
     setMenu(null);
-    setToast(copySessionSuccessMessage(menu.event.title));
+    setToast(copySessionsSuccessMessage(menu.targets.length, menu.targets[0]?.title));
   }, [copyEventsToClipboard, menu, viewMode]);
 
   const handleDuplicate = useCallback(() => {
-    if (!menu || !canMutateEvent(menu.event)) return;
-    const created = duplicateEvent(menu.event);
+    if (!menu || menu.targets.length !== 1) return;
+    const target = menu.targets[0]!;
+    if (!isStandardWebAddressSession(target) && !canMutateEvent(target)) return;
+    const visible = getVisibleEventsRef.current?.() ?? [];
+    const created = duplicateEvent(target, visible);
     setMenu(null);
     if (created) setToast(duplicateSessionSuccessMessage(created.title));
   }, [canMutateEvent, duplicateEvent, menu]);
 
   const handleDelete = useCallback(() => {
     if (!menu) return;
+    const ids = menu.targets
+      .filter((item) => canMutateEvent(item) && !isStandardWebAddressSession(item))
+      .map((item) => item.id);
+    if (ids.length === 0) return;
+    setMenu(null);
     if (menu.bulkIds && menu.bulkIds.length > 0) {
-      const ids = menu.bulkIds;
-      setMenu(null);
       if (onDeleteManyRef.current) onDeleteManyRef.current(ids);
       else ids.forEach((id) => deleteEvent(id));
       return;
     }
-    if (!canMutateEvent(menu.event)) return;
-    const id = menu.event.id;
-    setMenu(null);
+    const id = ids[0]!;
     if (onDeleteRef.current) onDeleteRef.current(id);
     else deleteEvent(id);
   }, [canMutateEvent, deleteEvent, menu]);
 
   useEffect(() => {
     if (!menu) return;
-    if (!events.some((e) => e.id === menu.event.id)) setMenu(null);
+    const visible = getVisibleEventsRef.current?.() ?? [];
+    const known =
+      visible.some((item) => item.id === menu.event.id) ||
+      events.some((item) => item.id === menu.event.id);
+    if (!known) setMenu(null);
   }, [events, menu]);
 
   useEffect(() => {
-    if (!menu) return;
+    if (!menu || !menuModel) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -193,22 +248,21 @@ export function useCalendarSessionContextMenu(
         return;
       }
       if (matchesShortcut(e, SHORTCUTS.copySession)) {
-        if (menu.bulkIds) return;
+        if (!menuModel.showCopy) return;
         e.preventDefault();
         e.stopImmediatePropagation();
         handleCopy();
         return;
       }
       if (matchesShortcut(e, SHORTCUTS.duplicateSession)) {
-        if (menu.bulkIds) return;
-        if (!canAct) return;
+        if (!menuModel.duplicateEnabled) return;
         e.preventDefault();
         e.stopImmediatePropagation();
         handleDuplicate();
         return;
       }
       if (matchesShortcut(e, SHORTCUTS.deleteSession)) {
-        if (!canAct) return;
+        if (!menuModel.deleteEnabled) return;
         if (isEditableTarget(e.target)) return;
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -236,10 +290,10 @@ export function useCalendarSessionContextMenu(
       document.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("contextmenu", onDocContextMenu, true);
     };
-  }, [menu, canAct, handleCopy, handleDuplicate, handleDelete]);
+  }, [menu, menuModel, handleCopy, handleDuplicate, handleDelete]);
 
   const overlay =
-    menu && typeof document !== "undefined"
+    menu && menuModel && typeof document !== "undefined"
       ? createPortal(
           <div
             role="menu"
@@ -248,7 +302,7 @@ export function useCalendarSessionContextMenu(
             style={{ ...SESSION_SIDE_MENU_SHELL_STYLE, left: menu.left, top: menu.top }}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            {!menu.bulkIds ? (
+            {menuModel.showCopy ? (
             <button
               type="button"
               role="menuitem"
@@ -261,7 +315,7 @@ export function useCalendarSessionContextMenu(
             >
               <span className="flex items-center gap-2">
                 <Copy className="h-3.5 w-3.5 shrink-0" strokeWidth={2.25} />
-                <span>Copy session</span>
+                <span>{menuModel.copyLabel}</span>
               </span>
               <MenuShortcut
                 shortcut={SHORTCUTS.copySession}
@@ -269,21 +323,21 @@ export function useCalendarSessionContextMenu(
               />
             </button>
             ) : null}
-            {!menu.bulkIds ? (
+            {menuModel.showDuplicate ? (
             <button
               type="button"
               role="menuitem"
-              disabled={!canAct}
-              aria-disabled={!canAct}
+              disabled={!menuModel.duplicateEnabled}
+              aria-disabled={!menuModel.duplicateEnabled}
               aria-keyshortcuts={shortcutAriaKeyshortcuts(SHORTCUTS.duplicateSession)}
               onClick={(e) => {
                 e.stopPropagation();
-                if (!canAct) return;
+                if (!menuModel.duplicateEnabled) return;
                 handleDuplicate();
               }}
               className={[
                 SESSION_ACTION_ITEM_CLASS,
-                canAct
+                menuModel.duplicateEnabled
                   ? "text-white/90 hover:bg-white/[0.08] hover:text-white"
                   : "text-white/40",
               ].join(" ")}
@@ -295,37 +349,39 @@ export function useCalendarSessionContextMenu(
               <MenuShortcut
                 shortcut={SHORTCUTS.duplicateSession}
                 className={
-                  canAct
+                  menuModel.duplicateEnabled
                     ? "text-white/45 group-hover:text-white"
                     : "text-white/25"
                 }
               />
             </button>
             ) : null}
+            {menuModel.showDelete ? (
             <button
               type="button"
               role="menuitem"
-              disabled={!canAct}
-              aria-disabled={!canAct}
+              disabled={!menuModel.deleteEnabled}
+              aria-disabled={!menuModel.deleteEnabled}
               aria-keyshortcuts={shortcutAriaKeyshortcuts(SHORTCUTS.deleteSession)}
               onClick={(e) => {
                 e.stopPropagation();
-                if (!canAct) return;
+                if (!menuModel.deleteEnabled) return;
                 handleDelete();
               }}
-              className={sessionDeleteActionClass(canAct)}
+              className={sessionDeleteActionClass(menuModel.deleteEnabled)}
             >
               <span className="flex items-center gap-2">
                 <Trash2 className="h-3.5 w-3.5 shrink-0" strokeWidth={2.25} />
-                <span>{menu.bulkIds && menu.bulkIds.length > 1 ? "Delete sessions" : "Delete session"}</span>
+                <span>{menuModel.deleteLabel}</span>
               </span>
               <MenuShortcut
                 shortcut={SHORTCUTS.deleteSession}
                 className={
-                  canAct ? SESSION_DELETE_SHORTCUT_CLASS : "text-[#ED5C5C]/30"
+                  menuModel.deleteEnabled ? SESSION_DELETE_SHORTCUT_CLASS : "text-[#ED5C5C]/30"
                 }
               />
             </button>
+            ) : null}
           </div>,
           document.body,
         )

@@ -11,6 +11,7 @@ import { TopBarSlotProvider } from "@/components/TopBarSlot";
 import { ProfileModal } from "@/components/ProfileModal";
 import { ProfileRouteMemory } from "@/components/ProfileRouteMemory";
 import { EntityInviteGate } from "@/components/entity/EntityInviteGate";
+import { CalendarInviteGate } from "@/components/calendar/CalendarInviteGate";
 import { Toaster } from "@/components/ui/sonner";
 import { BissiboxPlatformOverlay } from "@/components/BissiboxPlatformOverlay";
 import {
@@ -203,6 +204,7 @@ function RootComponent() {
         </main>
         {!isEmbedded && <Toaster />}
         {!isEmbedded && <EntityInviteGate />}
+        {!isEmbedded && <CalendarInviteGate />}
         {!isEmbedded && !isAccount && <GlobalCreateOverlay />}
         {!isEmbedded && !isAccount && <ProfileModal />}
         {!isEmbedded && !isAccount && <BissiboxPlatformOverlay />}

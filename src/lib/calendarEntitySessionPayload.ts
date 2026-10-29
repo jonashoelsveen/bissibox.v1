@@ -76,6 +76,12 @@ export function entityCalendarSessionRpcPayload(
   put(payload, "session_note_updated_at", timestamptz(row.session_note_updated_at));
   put(payload, "sort_index", text(row.sort_index));
   put(payload, "app_group_id", isCalendarUuid(row.app_group_id) ? row.app_group_id : null);
+  if ("user_calendar_id" in row) {
+    payload.user_calendar_id = isCalendarUuid(row.user_calendar_id) ? row.user_calendar_id : "";
+  }
+  if ("follows_calendar_color" in row) {
+    payload.follows_calendar_color = row.follows_calendar_color === true ? "true" : "false";
+  }
   if (row.signup_enabled === true) payload.signup_enabled = true;
   const repeatRuleRaw = row.repeat_rule ?? row.repeatRule;
   const repeatRule =

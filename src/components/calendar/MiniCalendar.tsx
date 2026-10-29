@@ -17,6 +17,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useCalendarTheme } from "./calendarThemePref";
 
 const MONTHS_FULL = [
   "Januar","Februar","Mars","April","Mai","Juni",
@@ -60,13 +61,14 @@ export interface DateRange {
 
 export type MiniCalendarViewMode = "day" | "week" | "month" | "monthMark";
 
-/** Week tint only in week view. Day view marks one day. Month and year mark none. */
+/** Week tint in week view, and in year view after a week-number click.
+ *  Day view marks one day. Month view, and year view otherwise, mark none. */
 export function miniCalendarViewMode(
   viewMode: "day" | "week" | "month" | "year",
-  _yearWeekHighlight = false,
+  yearWeekHighlight = false,
   _yearMonthHighlight = false,
 ): MiniCalendarViewMode {
-  if (viewMode === "week") return "week";
+  if (viewMode === "week" || (viewMode === "year" && yearWeekHighlight)) return "week";
   if (viewMode === "day") return "day";
   return "month";
 }
@@ -103,7 +105,7 @@ export function MiniCalendar({
   viewAnchor,
   rangeBar = false,
 }: MiniCalendarProps) {
-  const dark = tone === "dark";
+  const dark = tone === "dark" || useCalendarTheme() === "dark";
   const follow = viewAnchor ?? selectedRange.start;
   const anchorKey = follow.getFullYear() * 12 + follow.getMonth();
   // Local browsing stays until the anchor month changes. The anchor itself

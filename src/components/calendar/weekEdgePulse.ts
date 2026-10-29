@@ -4,6 +4,7 @@ import {
   monthCreateEdgeZone,
 } from "@/lib/monthVerticalScroll";
 import { nextWeekOriginScroll } from "@/lib/weekHorizontalScroll";
+import { tileMajorityPastPane } from "./edgeScroll";
 
 /** One week glide. Short enough to feel immediate, long enough to read. */
 const WEEK_EDGE_PULSE_MS = 360;
@@ -21,7 +22,7 @@ function weekEdgePulseScroll(from: number, target: number, elapsedMs: number, du
 }
 
 export type WeekEdgePulse = {
-  over: (clientX: number) => void;
+  over: (clientX: number, tile?: { left: number; right: number }) => void;
   leave: () => void;
   stop: () => void;
   isPulsing: () => boolean;
@@ -59,6 +60,7 @@ export function createWeekEdgePulse(host: {
   let edge: -1 | 0 | 1 = 0;
   let paging = false;
   let pointerX = 0;
+  let tile: { left: number; right: number } | null = null;
   let paneCache: { left: number; right: number } | null = null;
   let pulse: { from: number; target: number; t0: number; dur: number } | null = null;
 
@@ -78,13 +80,16 @@ export function createWeekEdgePulse(host: {
   const edgeAt = (clientX: number): -1 | 0 | 1 => {
     const pane = paneNow();
     if (!pane) return 0;
+    if (tile) return tileMajorityPastPane(tile, pane);
     return monthCreateEdgeZone(clientX, pane.left, pane.right, paging);
   };
 
   const stillAtRim = (repeat: boolean): boolean => {
     const pane = paneNow();
     if (!pane) return false;
-    const zone = monthCreateEdgeZone(pointerX, pane.left, pane.right, repeat);
+    const zone = tile
+      ? tileMajorityPastPane(tile, pane)
+      : monthCreateEdgeZone(pointerX, pane.left, pane.right, repeat);
     edge = zone;
     return zone !== 0;
   };
@@ -147,8 +152,9 @@ export function createWeekEdgePulse(host: {
   };
 
   return {
-    over(clientX: number) {
+    over(clientX: number, nextTile?: { left: number; right: number }) {
       pointerX = clientX;
+      tile = nextTile && nextTile.right > nextTile.left ? nextTile : null;
       if (removed) return;
       const next = edgeAt(clientX);
       if (next === edge) return;
@@ -165,6 +171,7 @@ export function createWeekEdgePulse(host: {
     leave() {
       edge = 0;
       paging = false;
+      tile = null;
       clearPulseTimers();
     },
     stop() {

@@ -51,6 +51,7 @@ export function EventSearchInput() {
 
   return createPortal(
     <div
+      data-left-panel-search=""
       className="fixed top-[6px] z-[200] flex h-7 items-center rounded-md bg-secondary pr-1 text-ink"
       style={{ left: SEARCH_BTN_LEFT, width: SEARCH_INPUT_WIDTH }}
     >

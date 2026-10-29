@@ -23,6 +23,7 @@ import {
 import { useDiaryVisibilitySafe } from "./DiaryVisibilityContext";
 
 import { useYearStore, type CellKey, type CalendarEvent } from "./yearStore";
+import { useSubscriptionFeedEvents } from "./useSubscriptionFeedEvents";
 import { UnifiedElasticGrid, HeaderDropdown, type ViewMode, type ExtendedViewMode } from "./UnifiedElasticGrid";
 import { MonthNavControl } from "./MonthNavControl";
 import { YearGrid } from "./YearGrid";
@@ -38,6 +39,7 @@ import { useUserCategories } from "@/hooks/useUserCategories";
 import { useCalendarSearchSafe } from "./CalendarSearchContext";
 import { useMacroProjectNavSafe } from "./MacroProjectNavContext";
 import { useHideMultiDayRow } from "./multiDayRowPref";
+import { calendarAdminIds, useUserCalendarsSafe } from "./UserCalendarsContext";
 import { useHideTimeScale } from "./timeScalePref";
 import type { CalendarScale } from "./CalendarSearch";
 import { GanttYearGrid } from "./GanttYearGrid";
@@ -417,6 +419,12 @@ function YearCalendarViewInner({
     [],
   );
 
+  const userCalendars = useUserCalendarsSafe();
+  const calendarById = useMemo(() => {
+    const map = new Map((userCalendars?.calendars ?? []).map((calendar) => [calendar.id, calendar]));
+    return map;
+  }, [userCalendars?.calendars]);
+
   const mergedEvents = useMemo(() => {
     const stravaForDiary = appKind === "diary" ? stravaEvents : [];
     const localById = new Map(events.map((e) => [e.id, e]));
@@ -480,10 +488,29 @@ function YearCalendarViewInner({
       return until != null && now < until;
     };
 
+    const passesSharedCalendar = (e: CalendarEvent) => {
+      if (!e.userCalendarId) return true;
+      const calendar = calendarById.get(e.userCalendarId);
+      if (!calendar) return true;
+      if (calendar.hidden) return false;
+      if (calendar.myRole !== "member") return true;
+      return !!e.authorUserId && calendarAdminIds(calendar).includes(e.authorUserId);
+    };
+
+    const paintCalendarColour = (e: CalendarEvent): CalendarEvent => {
+      if (!e.userCalendarId || !e.followsCalendarColor) return e;
+      const calendar = calendarById.get(e.userCalendarId);
+      if (!calendar || e.color === calendar.color) return e;
+      return { ...e, color: calendar.color };
+    };
+
     if (!visibleCategories) {
-      return base.filter((e) => passesGroupHide(e) && (e.entityId || filterChain(e)));
+      return base
+        .filter((e) => passesSharedCalendar(e) && passesGroupHide(e) && (e.entityId || filterChain(e)))
+        .map(paintCalendarColour);
     }
     return base.filter((e) => {
+      if (!passesSharedCalendar(e)) return false;
       if (!passesGroupHide(e)) return false;
       if (e.entityId) return true;
       if (!filterChain(e)) return false;
@@ -506,7 +533,7 @@ function YearCalendarViewInner({
       }
       if (visibleCategories.has(key)) return true;
       return isLingeringHidden(e);
-    });
+    }).map(paintCalendarColour);
   }, [
     events,
     stravaEvents,
@@ -522,16 +549,13 @@ function YearCalendarViewInner({
     membershipCalendar,
     entityGroupVisibility,
     seat,
+    calendarById,
   ]);
 
   // Publish the (pre-filter) event list to the side-panel search so it can
   // surface matches regardless of which categories are currently hidden.
   const search = useCalendarSearchSafe();
   const publishSearchEvents = search?.publishEvents;
-  useEffect(() => {
-    if (!publishSearchEvents) return;
-    publishSearchEvents(events);
-  }, [events, publishSearchEvents]);
 
 
   const [selected, setSelected] = useState<CellKey | null>(null);
@@ -593,6 +617,12 @@ function YearCalendarViewInner({
   };
   const [internalViewMode, setInternalViewMode] = useState<ExtendedViewMode>("month");
   const viewMode = viewModeProp ?? internalViewMode;
+  const feedEvents = useSubscriptionFeedEvents(userCalendars?.calendars ?? [], currentDate, viewMode);
+  const displayEvents = useMemo(() => [...mergedEvents, ...feedEvents], [mergedEvents, feedEvents]);
+  useEffect(() => {
+    if (!publishSearchEvents) return;
+    publishSearchEvents([...events, ...feedEvents]);
+  }, [events, feedEvents, publishSearchEvents]);
   const setViewMode = (v: ExtendedViewMode) => {
     if (onViewModeChange) onViewModeChange(v);
     else setInternalViewMode(v);
@@ -734,13 +764,13 @@ function YearCalendarViewInner({
   /** Earliest event date across the merged feed — gates Nordnet buttons. */
   const earliestDataDate = useMemo<Date | null>(() => {
     let earliest: number | null = null;
-    for (const e of mergedEvents) {
+    for (const e of displayEvents) {
       const t = new Date(e.startISO).getTime();
       if (!Number.isFinite(t)) continue;
       if (earliest === null || t < earliest) earliest = t;
     }
     return earliest === null ? null : new Date(earliest);
-  }, [mergedEvents]);
+  }, [displayEvents]);
 
   // Clamp x-bucket to options allowed by the active timeframe.
   useEffect(() => {
@@ -902,7 +932,7 @@ function YearCalendarViewInner({
       <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
         {statsActive ? (
           <StatsChartView
-            events={mergedEvents}
+            events={displayEvents}
             xBucket={statsXBucket}
             timeframe={statsTimeframe}
             onTimeframeChange={setStatsTimeframe}
@@ -1007,7 +1037,7 @@ function YearCalendarViewInner({
             selectedDate={currentDate}
             weekHighlight={yearWeekHighlight}
             monthHighlight={yearMonthHighlight}
-            events={mergedEvents}
+            events={displayEvents}
             onSelectDate={(d) => {
               setYearWeekHighlight(false);
               setYearMonthHighlight(false);
@@ -1053,7 +1083,7 @@ function YearCalendarViewInner({
           onCommitDuration={(k, duration) => upsertCell(k, { duration })}
           onFill={fillRange}
           seat={seat}
-          events={mergedEvents}
+          events={displayEvents}
           onUpsertEvent={(patch) => {
             const patchId = (patch as { id?: string }).id;
             if (patchId && overlayIdSet.has(patchId)) {

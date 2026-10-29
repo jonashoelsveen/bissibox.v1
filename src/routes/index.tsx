@@ -1,6 +1,8 @@
 import { createFileRoute, useSearch, useNavigate, Navigate } from "@tanstack/react-router";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
+import { loadAcceptedFeatureFlags } from "@/lib/featureFlags.client";
 import { SignInModal, type SignInContext } from "@/components/SignInModal";
 import { CloudPageWithFooter } from "@/components/CloudFooter";
 import { CloudLandingSection, CLOUD_OPEN_SIGNIN, restoreCloudHomeScroll } from "@/components/CloudLandingSection";
@@ -73,6 +75,7 @@ function CloudHomePage() {
   const navigate = useNavigate();
   const [signInOpen, setSignInOpen] = useState(false);
   const [signInContext, setSignInContext] = useState<SignInContext>("cloud");
+  const acceptStarted = useRef<string | null>(null);
 
   // Cloud home is never the account surface — drop sticky same-origin account mode.
   useEffect(() => {
@@ -102,6 +105,21 @@ function CloudHomePage() {
   }, [search.signin, search.invite, user]);
 
   useEffect(() => {
+    if (!authReady || !user || search.signin !== "calendar") return;
+    if (acceptStarted.current === user.id) return;
+    acceptStarted.current = user.id;
+    void (async () => {
+      try {
+        await supabase.rpc("accept_feature_flags");
+        await loadAcceptedFeatureFlags(user.id);
+      } catch {
+        /* a failed accept leaves the flag off */
+      }
+      void navigate({ to: "/calendar", replace: true });
+    })();
+  }, [authReady, user, search.signin, navigate]);
+
+  useEffect(() => {
     const open = () => {
       setSignInContext("cloud");
       setSignInOpen(true);
@@ -121,7 +139,7 @@ function CloudHomePage() {
     }
   };
 
-  if (!authReady) {
+  if (!authReady || (user && search.signin === "calendar")) {
     return <div className="min-h-full w-full" style={{ backgroundColor: CLOUD_PAGE_BG }} />;
   }
 

@@ -25,6 +25,100 @@ type MemberEntityCalendar = {
   sessions?: Array<Record<string, unknown>>;
 };
 
+const STORED_SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isStoredSessionId(id: string): boolean {
+  return STORED_SESSION_ID.test(id);
+}
+
+function pad(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function utcToLocalIso(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+function appOrigin(): string {
+  const configured = process.env.EXPO_PUBLIC_APP_URL?.trim();
+  return (configured || "https://bissibox.com").replace(/\/$/, "");
+}
+
+async function subscriptionSessions(from: string, to: string): Promise<CalendarSession[]> {
+  const { data: calendars, error } = await supabase
+    .from("user_calendars")
+    .select("id, color")
+    .eq("source", "subscription");
+  if (error || !calendars?.length) return [];
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) return [];
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const end = new Date(`${to}T00:00:00`);
+  end.setDate(end.getDate() + 1);
+  const params = new URLSearchParams({
+    from: new Date(`${from}T00:00:00`).toISOString(),
+    to: end.toISOString(),
+    timeZone,
+  });
+  const batches = await Promise.all(
+    calendars.map(async (calendar) => {
+      try {
+        const response = await fetch(
+          `${appOrigin()}/api/calendar/subscriptions/${calendar.id}/events?${params}`,
+          { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } },
+        );
+        if (!response.ok) return [];
+        const body = (await response.json()) as {
+          events?: Array<{
+            id: string;
+            title: string;
+            allDay: boolean;
+            start: string;
+            end: string;
+            description: string | null;
+          }>;
+        };
+        return (body.events ?? []).flatMap((event) => {
+          const title = event.title.trim() || (event.allDay ? "New event" : "New session");
+          const starts_at = event.allDay ? `${event.start}T00:00:00` : utcToLocalIso(event.start);
+          const ends_at = event.allDay ? `${event.end}T00:00:00` : utcToLocalIso(event.end);
+          if (!event.id || !starts_at || !ends_at) return [];
+          const session: CalendarSession = {
+            id: event.id,
+            title,
+            starts_at,
+            ends_at,
+            color: typeof calendar.color === "string" ? calendar.color : null,
+            description: event.description,
+            category: null,
+            category_id: null,
+            sport_type: null,
+            distance_km: null,
+            all_day: event.allDay,
+          };
+          return [session];
+        });
+      } catch {
+        return [];
+      }
+    }),
+  );
+  return batches.flat();
+}
+
+async function withSubscriptions(sessions: CalendarSession[], from: string, to: string): Promise<CalendarSession[]> {
+  try {
+    const extra = await subscriptionSessions(from, to);
+    if (extra.length === 0) return sessions;
+    return [...sessions, ...extra].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  } catch {
+    return sessions;
+  }
+}
+
 function asCalendarSession(row: Record<string, unknown>): CalendarSession | null {
   const id = typeof row.id === "string" ? row.id : "";
   const title = typeof row.title === "string" ? row.title : "";
@@ -126,14 +220,14 @@ export function useCalendarSessions(
             const day = mapped.starts_at.slice(0, 10);
             if (day >= from && day <= to) sessions.push(mapped);
           }
-          return sessions.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+          return withSubscriptions(sessions.sort((a, b) => a.starts_at.localeCompare(b.starts_at)), from, to);
         }
         q = q.eq("user_id", userId!).is("entity_id", null);
       }
 
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as CalendarSession[];
+      return withSubscriptions((data ?? []) as CalendarSession[], from, to);
     },
   });
 }
@@ -206,6 +300,7 @@ export function useUpdateSession(userId: string | null, teamId: string | null = 
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: SessionUpdateInput) => {
+      if (!isStoredSessionId(input.id)) return;
       let q = supabase
         .from("calendar_sessions")
         .update({
@@ -233,6 +328,7 @@ export function useUpdateSession(userId: string | null, teamId: string | null = 
       }
     },
     onMutate: async (input) => {
+      if (!isStoredSessionId(input.id)) return;
       await qc.cancelQueries({ queryKey: ["calendar-sessions", userId, teamId] });
       const previous = qc.getQueriesData<CalendarSession[]>({
         queryKey: ["calendar-sessions", userId, teamId],
@@ -268,6 +364,7 @@ export function useDeleteSession(userId: string | null, teamId: string | null = 
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      if (!isStoredSessionId(id)) return;
       let q = supabase.from("calendar_sessions").delete().eq("id", id);
       if (teamId) {
         q = q.eq("entity_id", teamId);

@@ -773,6 +773,8 @@ export type Database = {
           total_elevation_gain_m: number | null
           updated_at: string
           user_id: string
+          user_calendar_id: string | null
+          follows_calendar_color: boolean
         }
         Insert: {
           activities?: Json | null
@@ -818,6 +820,8 @@ export type Database = {
           total_elevation_gain_m?: number | null
           updated_at?: string
           user_id: string
+          user_calendar_id?: string | null
+          follows_calendar_color?: boolean
         }
         Update: {
           activities?: Json | null
@@ -863,6 +867,8 @@ export type Database = {
           total_elevation_gain_m?: number | null
           updated_at?: string
           user_id?: string
+          user_calendar_id?: string | null
+          follows_calendar_color?: boolean
         }
         Relationships: [
           {
@@ -894,6 +900,165 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_calendars: {
+        Row: {
+          app_group_id: string | null
+          color: string
+          created_at: string
+          deleted_at: string | null
+          entity_id: string | null
+          id: string
+          name: string
+          owner_id: string
+          sort_order: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          app_group_id?: string | null
+          color: string
+          created_at?: string
+          deleted_at?: string | null
+          entity_id?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          sort_order?: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          app_group_id?: string | null
+          color?: string
+          created_at?: string
+          deleted_at?: string | null
+          entity_id?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          sort_order?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_calendar_subscriptions: {
+        Row: {
+          calendar_id: string
+          created_at: string
+          etag: string | null
+          key_version: number
+          label_source: string
+          last_attempt_at: string | null
+          last_error: string | null
+          last_modified: string | null
+          last_success_at: string | null
+          owner_id: string
+          refresh_interval_seconds: number
+          sync_status: string
+          updated_at: string
+          url_ciphertext: string
+          url_hmac: string
+          url_iv: string
+        }
+        Insert: {
+          calendar_id: string
+          created_at?: string
+          etag?: string | null
+          key_version: number
+          label_source: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          last_modified?: string | null
+          last_success_at?: string | null
+          owner_id: string
+          refresh_interval_seconds?: number
+          sync_status?: string
+          updated_at?: string
+          url_ciphertext: string
+          url_hmac: string
+          url_iv: string
+        }
+        Update: {
+          calendar_id?: string
+          created_at?: string
+          etag?: string | null
+          key_version?: number
+          label_source?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          last_modified?: string | null
+          last_success_at?: string | null
+          owner_id?: string
+          refresh_interval_seconds?: number
+          sync_status?: string
+          updated_at?: string
+          url_ciphertext?: string
+          url_hmac?: string
+          url_iv?: string
+        }
+        Relationships: []
+      }
+      user_calendar_members: {
+        Row: {
+          calendar_id: string
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          invite_token: string | null
+          invited_by: string | null
+          role: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          calendar_id: string
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id?: string
+          invite_token?: string | null
+          invited_by?: string | null
+          role: string
+          status: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          calendar_id?: string
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          invite_token?: string | null
+          invited_by?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_calendar_visibility: {
+        Row: {
+          calendar_id: string
+          hidden: boolean
+          user_id: string
+        }
+        Insert: {
+          calendar_id: string
+          hidden?: boolean
+          user_id: string
+        }
+        Update: {
+          calendar_id?: string
+          hidden?: boolean
+          user_id?: string
+        }
+        Relationships: []
       }
       calendar_accounts: {
         Row: {
@@ -2016,6 +2181,33 @@ export type Database = {
           updated_at?: string
           user_id?: string
           venue?: string | null
+        }
+        Relationships: []
+      }
+      feature_flag_users: {
+        Row: {
+          flag_key: string
+          user_id: string
+          added_at: string
+          added_by: string | null
+          invited_at: string | null
+          accepted_at: string | null
+        }
+        Insert: {
+          flag_key: string
+          user_id: string
+          added_at?: string
+          added_by?: string | null
+          invited_at?: string | null
+          accepted_at?: string | null
+        }
+        Update: {
+          flag_key?: string
+          user_id?: string
+          added_at?: string
+          added_by?: string | null
+          invited_at?: string | null
+          accepted_at?: string | null
         }
         Relationships: []
       }
@@ -3320,6 +3512,23 @@ export type Database = {
       list_visible_calendar_sessions_for: {
         Args: { p_user_id: string; p_email?: string | null }
         Returns: Json
+      }
+      accept_user_calendar_invite: {
+        Args: { p_token: string }
+        Returns: Json
+      }
+      accept_feature_flags: { Args: never; Returns: undefined }
+      feature_flag_launched: {
+        Args: { p_flag: string }
+        Returns: boolean
+      }
+      soft_delete_user_calendar: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
+      enqueue_email: {
+        Args: { queue_name: string; payload: Json }
+        Returns: number
       }
       decide_entity_membership_request: {
         Args: {

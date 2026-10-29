@@ -537,7 +537,7 @@ export const SessionLocationMapPanel = forwardRef<
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-3 pt-1">
         <div className="relative shrink-0">
-          <div className="flex h-7 items-center rounded-md bg-secondary pl-0 pr-0.5 text-ink">
+          <div className="flex h-7 items-center rounded-md bg-secondary pr-1 text-ink">
             <span className="grid h-7 w-7 shrink-0 place-items-center text-ink" aria-hidden>
               {searchLoading || geocodeBusy ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
@@ -595,7 +595,8 @@ export const SessionLocationMapPanel = forwardRef<
                   onClear?.();
                 }}
                 aria-label="Clear location"
-                className="ml-0.5 grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground hover:bg-white/60 hover:text-ink"
+                data-map-search-clear=""
+                className="ml-1 grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground transition-colors hover:bg-white/60 hover:text-ink"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -616,6 +617,7 @@ export const SessionLocationMapPanel = forwardRef<
               ref={bindSidenavScroll}
               role="listbox"
               className="sidenav-scroll absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-[220px] overflow-y-auto rounded-[10px] border border-black/8 bg-white/95 py-1 shadow-[0_8px_28px_rgba(0,0,0,0.18)] backdrop-blur-xl"
+              data-location-results=""
             >
               {suggestions.map((s) => (
                 <li key={s.id} role="option">
@@ -649,7 +651,10 @@ export const SessionLocationMapPanel = forwardRef<
           !searchLoading &&
           inputText.trim().length >= 2 &&
           suggestions.length === 0 ? (
-            <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 rounded-[10px] border border-black/8 bg-white/95 px-3 py-2 text-[12px] text-muted-foreground shadow-[0_8px_28px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+            <div
+              data-location-results=""
+              className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 rounded-[10px] border border-black/8 bg-white/95 px-3 py-2 text-[12px] text-muted-foreground shadow-[0_8px_28px_rgba(0,0,0,0.18)] backdrop-blur-xl"
+            >
               No places found
             </div>
           ) : null}

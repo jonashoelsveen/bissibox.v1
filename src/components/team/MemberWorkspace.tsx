@@ -13,6 +13,9 @@ import { useAuth } from "@/lib/auth";
 import { useViewerRole } from "@/hooks/useViewerRole";
 import { useCoachAccess } from "@/hooks/useCoachAccess";
 import { useLibrarySetting } from "@/lib/library-settings";
+import { CalendarsSection } from "@/components/calendar/CalendarsSection";
+import { isFeatureEnabled } from "@/lib/features";
+import { UserCalendarsProvider } from "@/components/calendar/UserCalendarsContext";
 
 
 export type MemberSubTab = "calendar" | "diary";
@@ -128,6 +131,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
   const gridViewerRole = canEditCalendar ? "owner" : viewerRole;
 
   return (
+    <UserCalendarsProvider>
     <DiaryVisibilityProvider>
       <div
         className="relative grid h-full overflow-hidden transition-[grid-template-columns] duration-300 ease-out"
@@ -175,6 +179,10 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
                     />
                   </div>
                 </div>
+
+                {subTab === "calendar" && isFeatureEnabled("calendarTabsFlag", user?.id) ? (
+                  <CalendarsSection seat="individual" />
+                ) : null}
 
                 {subTab === "calendar" && isCoach && (
                   <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-ink/15 hover:[&::-webkit-scrollbar-thumb]:bg-ink/30">
@@ -252,6 +260,7 @@ export function MemberWorkspace({ userId, name, rightPanelOpen = true }: Props) 
         </div>
       </div>
     </DiaryVisibilityProvider>
+    </UserCalendarsProvider>
   );
 }
 

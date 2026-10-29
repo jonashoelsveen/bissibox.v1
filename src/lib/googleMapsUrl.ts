@@ -1,3 +1,6 @@
+import { isMazemapHttpUrl } from "./calendarFeed/mapHosts.ts";
+import { refineMazemapHref } from "./mazemapLink.ts";
+
 /** Google Maps search / pin URLs for calendar locations. */
 
 const COORD_QUERY = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/;
@@ -92,9 +95,10 @@ export function googleMapsHrefForLocation(
   storedUrl: string | null | undefined,
 ): string {
   const stored = (storedUrl ?? "").trim();
-  if (!stored) return "";
-  const coords = parseLatLngFromMapsUrl(stored);
   const query = (name ?? "").trim();
+  if (!stored) return "";
+  if (isMazemapHttpUrl(stored)) return refineMazemapHref(stored, query);
+  const coords = parseLatLngFromMapsUrl(stored);
   if (query) {
     return googleMapsSearchUrl({
       query,

@@ -41,6 +41,7 @@ import {
   writeLastCalendarScope,
 } from "@/lib/calendarSessionPersist";
 import { MembershipCalendarProvider } from "./MembershipCalendarContext";
+import { UserCalendarsProvider } from "./UserCalendarsContext";
 import { EntityGroupVisibilityProvider } from "./EntityGroupVisibilityContext";
 
 
@@ -348,6 +349,7 @@ function CalendarPageInner({ scale: calendarScale }: { scale: CalendarScale }) {
 
   /** Membership overlay provider — Bucket A: currently live, hidden this round. */
   return (
+    <UserCalendarsProvider>
     <MembershipCalendarProvider enabled={seat === "individual" && authReady && !!user && isEntityFeatureEnabled("entityCalendarSharing")}>
     <EntityGroupVisibilityProvider
       enabled={seat === "admin" && authReady && !!user && !!teamId}
@@ -416,6 +418,7 @@ function CalendarPageInner({ scale: calendarScale }: { scale: CalendarScale }) {
     </div>
     </EntityGroupVisibilityProvider>
     </MembershipCalendarProvider>
+    </UserCalendarsProvider>
   );
 }
 

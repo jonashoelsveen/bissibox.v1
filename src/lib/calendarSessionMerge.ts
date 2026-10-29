@@ -63,6 +63,8 @@ function sessionRevisionKey(row: MergeableSession): string {
     field(row, "location"),
     field(row, "locationUrl", "location_url"),
     field(row, "appGroupId", "app_group_id"),
+    field(row, "userCalendarId", "user_calendar_id"),
+    field(row, "followsCalendarColor", "follows_calendar_color"),
     field(row, "signUpEnabled", "signup_enabled"),
     field(row, "sessionNote", "session_note"),
     field(row, "repeatRule", "repeat_rule"),

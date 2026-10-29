@@ -17,11 +17,14 @@ export function noteEdgeScrollMovementAlong(
   start: number,
   end: number,
   edge: number,
+  startZone?: { pointer: number; edge: number },
 ): void {
   if (Math.abs(movement) >= EDGE_SCROLL_INTENT_PX) {
     state.intentY = Math.sign(movement);
   }
-  const inStart = pointer < start + edge;
+  const startPointer = startZone?.pointer ?? pointer;
+  const startEdge = startZone?.edge ?? edge;
+  const inStart = startPointer < start + startEdge;
   const inEnd = pointer > end - edge;
   if (inStart && movement < 0) state.engagePx += -movement;
   else if (inEnd && movement > 0) state.engagePx += movement;
@@ -44,10 +47,19 @@ export function noteEdgeScrollMovement(
   pointerY: number,
   el: HTMLElement,
   rowHeight: number,
+  tileTop?: number,
 ): void {
   const rect = el.getBoundingClientRect();
   const top = rect.top + stickyHeaderInset(el);
-  noteEdgeScrollMovementAlong(state, movementY, pointerY, top, rect.bottom, rowHeight);
+  noteEdgeScrollMovementAlong(
+    state,
+    movementY,
+    pointerY,
+    top,
+    rect.bottom,
+    rowHeight,
+    tileTop == null ? undefined : { pointer: tileTop, edge: 0 },
+  );
 }
 
 export function engagedEdgeScrollIntent(state: EdgeScrollGesture): number {
@@ -70,37 +82,71 @@ export function applyEdgeScroll(opts: {
   end: number;
   maxScroll: number;
   intent: number;
+  /**
+   * Pointer used only for the start edge. Week session drags pass the tile
+   * top so scrolling waits until the tile itself crosses the line.
+   */
+  startPointer?: number;
+  /**
+   * How far inside the start edge the gesture may be and still scroll.
+   * Defaults to `edge`. `0` means the start pointer must be strictly past
+   * the line. The end edge always uses `edge`. Speed still caps at `edge`.
+   */
+  startArm?: number;
 }): number {
   const { scroll, pointer, movement, dt, edge, start, end, maxScroll, intent } = opts;
   if (intent === 0) return scroll;
-  const startDist = pointer - start;
+  const startPointer = opts.startPointer ?? pointer;
+  const startArm = opts.startArm ?? edge;
+  const startDist = startPointer - start;
   const endDist = end - pointer;
   const atStart = scroll <= 0;
   const atEnd = scroll >= maxScroll - 0.5;
+  const tileTop = opts.startPointer != null;
   let delta = 0;
-  if (startDist < 0) {
+  if (!tileTop && startDist < 0) {
     if (intent < 0 && !atStart) {
       delta =
         movement < 0
           ? movement
           : -Math.min(edge, Math.max(0, -startDist) * 0.02 * dt);
     }
-  } else if (endDist < 0) {
+  } else if (!tileTop && endDist < 0) {
     if (intent > 0 && !atEnd) {
       delta =
         movement > 0
           ? movement
           : Math.min(edge, Math.max(0, -endDist) * 0.02 * dt);
     }
-  } else if (startDist < edge && intent < 0) {
+  } else if (!tileTop && startDist < edge && intent < 0) {
     if (!(atStart && movement === 0)) {
       const t = 1 - startDist / edge;
       delta = movement < 0 ? movement * t : -t * t * 0.45 * dt;
     }
-  } else if (endDist < edge && intent > 0) {
+  } else if (!tileTop && endDist < edge && intent > 0) {
     if (!(atEnd && movement === 0)) {
       const t = 1 - endDist / edge;
       delta = movement > 0 ? movement * t : t * t * 0.45 * dt;
+    }
+  } else if (tileTop && intent > 0 && endDist < 0 && !atEnd) {
+    delta =
+      movement > 0
+        ? movement
+        : Math.min(edge, Math.max(0, -endDist) * 0.02 * dt);
+  } else if (tileTop && intent > 0 && endDist < edge) {
+    if (!(atEnd && movement === 0)) {
+      const t = 1 - endDist / edge;
+      delta = movement > 0 ? movement * t : t * t * 0.45 * dt;
+    }
+  } else if (tileTop && intent < 0 && startDist < 0 && !atStart) {
+    delta =
+      movement < 0
+        ? movement
+        : -Math.min(edge, Math.max(0, -startDist) * 0.02 * dt);
+  } else if (tileTop && intent < 0 && startDist < startArm) {
+    if (!(atStart && movement === 0)) {
+      const t = 1 - startDist / edge;
+      delta = movement < 0 ? movement * t : -t * t * 0.45 * dt;
     }
   }
   if (delta === 0) return scroll;
@@ -115,6 +161,7 @@ export function applyTimedGridEdgeScroll(
   rowHeight: number,
   maxScroll: number,
   intentY: number,
+  tileTop?: number,
 ): void {
   const rect = el.getBoundingClientRect();
   const next = applyEdgeScroll({
@@ -127,6 +174,8 @@ export function applyTimedGridEdgeScroll(
     end: rect.bottom,
     maxScroll,
     intent: intentY,
+    startPointer: tileTop,
+    startArm: tileTop == null ? undefined : 0,
   });
   if (next !== el.scrollTop) el.scrollTop = next;
 }
@@ -135,11 +184,38 @@ export function pointerInTimedGridScrollEdge(
   el: HTMLElement,
   pointerY: number,
   rowHeight: number,
+  tileTop?: number,
 ): boolean {
   const rect = el.getBoundingClientRect();
   const edge = rowHeight;
   const top = rect.top + stickyHeaderInset(el);
-  return pointerY < top + edge || pointerY > rect.bottom - edge;
+  const startPointer = tileTop ?? pointerY;
+  const startArm = tileTop == null ? edge : 0;
+  return startPointer < top + startArm || pointerY > rect.bottom - edge;
+}
+
+/**
+ * The point on a session tile that must cross the top line before week
+ * upward autoscroll starts: the tile's midpoint, so more than half the tile
+ * is past the line.
+ */
+export function upwardTileScrollPoint(tile: { top: number; height: number }): number {
+  return tile.top + Math.max(0, tile.height) / 2;
+}
+
+/**
+ * Horizontal autoscroll for a session tile. Scrolling starts only once more
+ * than half the tile is past the pane.
+ */
+export function tileMajorityPastPane(
+  tile: { left: number; right: number },
+  pane: { left: number; right: number },
+): -1 | 0 | 1 {
+  const width = tile.right - tile.left;
+  if (!(width > 0)) return 0;
+  if (pane.left - tile.left > width * 0.5) return -1;
+  if (tile.right - pane.right > width * 0.5) return 1;
+  return 0;
 }
 
 /**

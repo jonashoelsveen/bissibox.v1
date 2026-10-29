@@ -28,12 +28,14 @@ import { EntityGroupTabs } from "./EntityGroupTabs";
 import { ProjectsSection } from "./ProjectsSection";
 import type { CalendarScale } from "./CalendarSearch";
 import { isEntityFeatureEnabled, isFeatureEnabled } from "@/lib/features";
+import { useAuth } from "@/lib/auth";
 import { useLibrarySetting } from "@/lib/library-settings";
 import {
   CalendarRailViewMenu,
   type CalendarLeftRailView,
 } from "./CalendarRailViewMenu";
 import { CalendarUpcomingSessions } from "./CalendarUpcomingSessions";
+import { CalendarsSection } from "./CalendarsSection";
 
 /* ---------- Category keys (still used by CalendarPage filtering) ---------- */
 
@@ -157,12 +159,14 @@ export function CalendarSideNav({
     `calendar:left-rail:view:${railViewScope}`,
     "mini",
   );
+  const { user } = useAuth();
   const threeDotOn = isFeatureEnabled("calendarThreeDotFlag");
+  const calendarTabsOn = isFeatureEnabled("calendarTabsFlag", user?.id);
   const showRailMenu = threeDotOn && panelOpen && !isMacro && !searchActive;
   const upcoming = threeDotOn && !isMacro && !searchActive && railView === "upcoming";
 
   return (
-    <nav className="flex h-full flex-col gap-3 overflow-hidden">
+    <nav className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
       <CalendarRailViewMenu
         visible={showRailMenu}
         view={railView === "upcoming" ? "upcoming" : "mini"}
@@ -212,6 +216,8 @@ export function CalendarSideNav({
               viewMode={viewMode}
             />
           </div>
+
+          {calendarTabsOn ? <CalendarsSection seat={seat} teamId={teamId} /> : null}
 
           {/** Calendar left-rail entity/membership tabs — Bucket A: currently live, hidden this round. */}
           {isEntityFeatureEnabled("entityCalendarSharing") ? (

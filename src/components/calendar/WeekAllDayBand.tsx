@@ -11,7 +11,7 @@ import {
   useSyncOwnTeamSessionResponses,
   useTeamSessionResponses,
 } from "@/lib/teamSessionResponse";
-import { isMembershipOverlayEvent, type CalendarEvent } from "./yearStore";
+import { isMembershipOverlayEvent, isSharedCalendarReadOnly, type CalendarEvent } from "./yearStore";
 import { fromISOLocal } from "./dateUtils";
 import {
   allDayBandLaneAtCursor,
@@ -20,12 +20,14 @@ import {
   bandDragWantsTimeDrop,
   bandEventColumns,
   isAllDayBandEvent,
+  untitledCalendarTitle,
   compactAllDayBandLanes,
   isMultiDaySession,
   layoutAllDayBand,
   resizedBandSpan,
   shiftedBandColumns,
 } from "./multiDaySessions";
+import { effectiveSortIndex } from "@/lib/duplicatePlacement";
 import { isRepeatPreviewEventId } from "@/lib/sessionRepeat";
 import { snapScrollLeft } from "@/lib/weekHorizontalScroll";
 import { inertWeekEdgePulse, type WeekEdgePulse } from "./weekEdgePulse";
@@ -41,6 +43,7 @@ import React, {
 } from "react";
 
 const TILE_DRAG_THRESHOLD_PX = 12;
+const EMPTY_OVERLAP_ORDER = new Map<string, number>();
 const BAND_EDGE_PX = 12;
 const BAND_DURATION_MIN = 30;
 const CHIP_INSET_X = 2;
@@ -49,6 +52,7 @@ const CHIP_INSET_Y = 1;
 export function WeekAllDayBand({
   calId,
   events,
+  overlapOrder,
   weekDates,
   rowHeight,
   gridTemplateColumns,
@@ -71,6 +75,8 @@ export function WeekAllDayBand({
   onDropPreviewChange,
   onShiftDays,
   onResizeSpan,
+  onResizeStart,
+  onResizeEnd,
   onEmptyDoubleClick,
   onCreateSpan,
   expandPortalEl = null,
@@ -86,6 +92,8 @@ export function WeekAllDayBand({
 }: {
   calId: string;
   events: CalendarEvent[];
+  /** Order of sessions with no stored sort index. Shared with duplicate placement. */
+  overlapOrder?: Map<string, number>;
   weekDates: Date[];
   rowHeight: number;
   gridTemplateColumns: string;
@@ -115,6 +123,9 @@ export function WeekAllDayBand({
   onShiftDays?: (id: string, dayDelta: number) => void;
   /** Drag the left or right edge to change how many days the session covers. */
   onResizeSpan?: (id: string, next: { start: Date; end: Date }) => void;
+  /** Hide the session menu while an edge is dragged, without unmounting it. */
+  onResizeStart?: () => void;
+  onResizeEnd?: () => void;
   /** Double-click an empty all-day cell — same create path as a timed cell. */
   onEmptyDoubleClick?: (colIdx: number, anchor: HTMLElement) => void;
   /**
@@ -303,7 +314,7 @@ export function WeekAllDayBand({
         id: ev.id,
         startCol: live?.startCol ?? startCol,
         endCol: live?.endCol ?? endCol,
-        sortIndex: typeof ev.sortIndex === "number" ? ev.sortIndex : 0,
+        sortIndex: effectiveSortIndex(ev, overlapOrder ?? EMPTY_OVERLAP_ORDER),
         fresh: !ev.title.trim(),
       };
     });
@@ -349,7 +360,7 @@ export function WeekAllDayBand({
       return { spans, laneCount };
     }
     return compactAllDayBandLanes(spans);
-  }, [bandItems, resizePreview, visibleColStart, visibleColEnd]);
+  }, [bandItems, overlapOrder, resizePreview, visibleColStart, visibleColEnd]);
   bandSpansRef.current = bandLayout.spans;
   const laneById = useMemo(() => {
     const lanes = new Map<string, number>();
@@ -483,6 +494,10 @@ export function WeekAllDayBand({
   onShiftDaysRef.current = onShiftDays;
   const onResizeSpanRef = useRef(onResizeSpan);
   onResizeSpanRef.current = onResizeSpan;
+  const onResizeStartRef = useRef(onResizeStart);
+  onResizeStartRef.current = onResizeStart;
+  const onResizeEndRef = useRef(onResizeEnd);
+  onResizeEndRef.current = onResizeEnd;
   const onCreateSpanRef = useRef(onCreateSpan);
   onCreateSpanRef.current = onCreateSpan;
   const onEventDragStartRef = useRef(onEventDragStart);
@@ -821,7 +836,7 @@ export function WeekAllDayBand({
       if (!d.moved) {
         d.moved = true;
         suppressClickRef.current = true;
-        onEventDragStartRef.current?.(d.id);
+        onResizeStartRef.current?.();
       }
       const span = spanAt(evMove.clientX);
       if (!span) return;
@@ -832,6 +847,7 @@ export function WeekAllDayBand({
       if (d?.moved && evUp.type !== "pointercancel") {
         const span = spanAt(evUp.clientX);
         if (span) onResizeSpanRef.current?.(d.id, { start: span.start, end: span.end });
+        onResizeEndRef.current?.();
       }
       endDrag();
       window.setTimeout(() => {
@@ -860,7 +876,7 @@ export function WeekAllDayBand({
     const start = fromISOLocal(ev.startISO);
     const end = fromISOLocal(ev.endISO);
     const owned =
-      viewerRole === "owner" && !isMembershipOverlayEvent(ev, calId);
+      viewerRole === "owner" && !isMembershipOverlayEvent(ev, calId) && !isSharedCalendarReadOnly(ev.userCalendarId);
     const canDragOut = owned && !!ev.allDay && !isMultiDaySession(start, end);
     const canShift = owned && !isDayView;
     e.stopPropagation();
@@ -1014,7 +1030,12 @@ export function WeekAllDayBand({
       pointerY = evMove.clientY;
       d.pointerX = pointerX;
       d.pointerY = pointerY;
-      if (d.canShift) pulse.over(evMove.clientX);
+      if (d.canShift) {
+        pulse.over(evMove.clientX, {
+          left: evMove.clientX - d.offsetX,
+          right: evMove.clientX - d.offsetX + d.chipWidth,
+        });
+      }
       if (pulse.isPulsing()) {
         const ghostEl = document.querySelector<HTMLElement>("[data-role='band-drag-ghost']");
         if (ghostEl) {
@@ -1230,6 +1251,7 @@ export function WeekAllDayBand({
               appKind !== "diary" &&
               viewerRole === "owner" &&
               !isMembershipOverlayEvent(ev, calId) &&
+              !isSharedCalendarReadOnly(ev.userCalendarId) &&
               !isRepeatPreviewEventId(ev.id);
             const canResizeEdge = owned && !isDayView;
             const chipWidth = Math.max(0, spanW - CHIP_INSET_X * 2);
@@ -1280,7 +1302,7 @@ export function WeekAllDayBand({
                   />
                   <div className="pointer-events-none flex h-full min-w-0 flex-col justify-start pl-1 pt-0.5 leading-tight">
                     <span className="truncate text-[12px] font-semibold leading-tight">
-                      {ev.title || "New session"}
+                      {ev.title.trim() || untitledCalendarTitle(true)}
                     </span>
                   </div>
                   {canResizeEdge && (
@@ -1371,7 +1393,7 @@ export function WeekAllDayBand({
                   style={{ background: previewChrome.bar }}
                 />
                 <div className="flex h-full min-w-0 flex-col justify-start pl-1 pt-0.5 leading-tight">
-                  <span className="truncate text-[12px] font-semibold leading-tight">New session</span>
+                  <span className="truncate text-[12px] font-semibold leading-tight">{untitledCalendarTitle(true)}</span>
                 </div>
               </div>
             )}
@@ -1445,7 +1467,7 @@ export function WeekAllDayBand({
             />
             <div className="flex h-full min-w-0 flex-col justify-start pl-1 pt-0.5 leading-tight">
               <span className="truncate text-[12px] font-semibold leading-tight">
-                {ghost.event.title || "New session"}
+                {ghost.event.title.trim() || untitledCalendarTitle(true)}
               </span>
             </div>
           </div>,

@@ -121,6 +121,8 @@ function sessionFromBody(
     signup_enabled: asBool(incoming.signup_enabled, false),
     repeat_rule: asString(incoming.repeat_rule),
     repeat_series_id: asUuid(incoming.repeat_series_id),
+    user_calendar_id: asUuid(incoming.user_calendar_id),
+    follows_calendar_color: asBool(incoming.follows_calendar_color, false),
   };
 
   return applyScopeOwnership(row, scope, actingUserId, incoming);
@@ -135,6 +137,8 @@ function stripFailingColumns(row: CalendarSessionInsert, message: string): Calen
   if (/signup_enabled/i.test(message)) delete next.signup_enabled;
   if (/repeat_rule/i.test(message)) delete next.repeat_rule;
   if (/repeat_series_id/i.test(message)) delete next.repeat_series_id;
+  if (/user_calendar_id/i.test(message)) delete next.user_calendar_id;
+  if (/follows_calendar_color/i.test(message)) delete next.follows_calendar_color;
   return next as CalendarSessionInsert;
 }
 

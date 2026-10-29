@@ -75,6 +75,7 @@ export function CalendarSearchInput() {
 
   return createPortal(
     <div
+      data-left-panel-search=""
       className="fixed top-[6px] z-[200] flex h-7 items-center rounded-md bg-secondary pr-1 text-ink"
       style={{ left: SEARCH_BTN_LEFT, width: SEARCH_INPUT_WIDTH }}
     >
@@ -105,6 +106,7 @@ export function CalendarSearchInput() {
           setActive(false);
         }}
         aria-label="Close search"
+        data-search-clear=""
         className="ml-1 grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground hover:bg-white/60 hover:text-ink"
       >
         <X className="h-3 w-3" />

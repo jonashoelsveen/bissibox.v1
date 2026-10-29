@@ -299,6 +299,11 @@ export function copySessionSuccessMessage(title?: string | null): string {
   return `${label} was copied to the clipboard.`;
 }
 
+export function copySessionsSuccessMessage(count: number, title?: string | null): string {
+  if (count > 1) return "Sessions were copied to the clipboard.";
+  return copySessionSuccessMessage(title);
+}
+
 export function copyWeekSuccessMessage(): string {
   return "Week was copied to the clipboard.";
 }

@@ -25,6 +25,8 @@ export const FEATURES = {
   clientsApp: false,
   /** Calendar left-rail ⋯ menu + upcoming-sessions list. */
   calendarThreeDotFlag: false,
+  /** Left-panel calendar list and the session-menu calendar row. */
+  calendarTabsFlag: false,
 
   /** Master switch for entity mode. Turning this on is the "launch" action. */
   entityFlag: false,
@@ -89,12 +91,50 @@ function devEntityPreviewEnabled(flag: FeatureFlag): boolean {
   return DEV_ENTITY_PREVIEW && isViteDev() && DEV_ENTITY_PREVIEW_FLAGS.has(flag);
 }
 
-export function isFeatureEnabled(flag: FeatureFlag): boolean {
+function compileTimeEnabled(flag: FeatureFlag): boolean {
   if (flag === "entityFlag") return FEATURES.entityFlag;
   if ((ENTITY_SUB_FLAGS as readonly string[]).includes(flag)) {
     return FEATURES.entityFlag && FEATURES[flag];
   }
   return FEATURES[flag];
+}
+
+type FeatureFlagSnapshot =
+  | { status: "empty" }
+  | { status: "ready"; userId: string; flags: ReadonlySet<string> }
+  | { status: "failed"; userId: string };
+
+let featureFlagSnapshot: FeatureFlagSnapshot = { status: "empty" };
+
+/**
+ * Accepted flag keys for one user. `flags === null` records a failed lookup,
+ * which stays off. Tests set this directly.
+ */
+export function setFeatureFlagSnapshot(
+  userId: string | null,
+  flags: ReadonlySet<string> | null,
+): void {
+  if (!userId) {
+    featureFlagSnapshot = { status: "empty" };
+    return;
+  }
+  if (flags === null) {
+    featureFlagSnapshot = { status: "failed", userId };
+    return;
+  }
+  featureFlagSnapshot = { status: "ready", userId, flags };
+}
+
+/** Compile-time launch bit. Pass `userId` to also honor an accepted grant. */
+export function isFeatureEnabled(flag: FeatureFlag): boolean;
+export function isFeatureEnabled(flag: FeatureFlag, userId: string | null | undefined): boolean;
+export function isFeatureEnabled(flag: FeatureFlag, userId?: string | null): boolean {
+  if (compileTimeEnabled(flag)) return true;
+  if (arguments.length < 2 || !userId) return false;
+  if (featureFlagSnapshot.status !== "ready" || featureFlagSnapshot.userId !== userId) {
+    return false;
+  }
+  return featureFlagSnapshot.flags.has(flag);
 }
 
 /** Compile-time launch, an internal tester account, or the Vite dev preview. */

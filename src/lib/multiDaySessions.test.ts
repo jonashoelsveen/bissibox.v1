@@ -6,6 +6,7 @@ import {
   eventCoversDay,
   isoFromMenuClocks,
   isAllDayBandEvent,
+  untitledCalendarTitle,
   isFullDayTimedSpan,
   isMultiDaySession,
   promoteFullDayTimedSpan,
@@ -27,12 +28,14 @@ import {
   monthDragWeekPieces,
   monthSpanSort,
   previewSpanForGrabbedDay,
+  multiDayDragBackHome,
   segmentTimedEventForDay,
   sessionDayCount,
   sessionInclusiveEndDay,
   sessionMenuClockRange,
   resizedBandColumns,
   resizedBandSpan,
+  resizedMonthSpan,
   shiftedBandColumns,
 } from "../components/calendar/multiDaySessions.ts";
 
@@ -168,6 +171,14 @@ describe("month span lanes", () => {
       calendarDayDelta(preview.start, preview.end) + 1,
       sessionDayCount(start, end),
     );
+  });
+
+  it("treats a drop back on the grabbed day as the original span", () => {
+    const start = at(2026, 8, 26, 9, 0);
+    const end = at(2026, 8, 29, 11, 0);
+    const grabbed = at(2026, 8, 27);
+    assert.equal(multiDayDragBackHome(start, end, grabbed, grabbed), true);
+    assert.equal(multiDayDragBackHome(start, end, grabbed, at(2026, 8, 28)), false);
   });
 
   it("packs non-overlapping equal spans into one lane", () => {
@@ -424,7 +435,7 @@ describe("band horizontal drag", () => {
         targetCol: 6,
         columnCount: 7,
       }),
-      { startCol: 2, endCol: 2 },
+      { startCol: 2, endCol: 6 },
     );
     const grown = resizedBandSpan({
       edge: "end",
@@ -459,6 +470,36 @@ describe("band horizontal drag", () => {
     });
     assert.equal(kept.start.getDate(), 2);
     assert.equal(kept.end.getDate(), 7);
+    const flipped = resizedBandSpan({
+      edge: "start",
+      start: at(2026, 9, 5, 0, 0),
+      end: at(2026, 9, 7, 23, 59),
+      weekDates: week,
+      visibleStart: 0,
+      visibleEnd: 2,
+      targetCol: 4,
+    });
+    assert.equal(flipped.start.getDate(), 7);
+    assert.equal(flipped.end.getDate(), 9);
+    assert.equal(flipped.startCol, 2);
+    assert.equal(flipped.endCol, 4);
+  });
+
+  it("drags a month span edge past the other end and keeps going", () => {
+    const start = at(2026, 9, 5);
+    const end = at(2026, 9, 8);
+    const grown = resizedMonthSpan("end", start, end, at(2026, 9, 11));
+    assert.equal(grown.start.getDate(), 5);
+    assert.equal(grown.end.getDate(), 11);
+    const shrunk = resizedMonthSpan("start", start, end, at(2026, 9, 7));
+    assert.equal(shrunk.start.getDate(), 7);
+    assert.equal(shrunk.end.getDate(), 8);
+    const flipped = resizedMonthSpan("start", start, end, at(2026, 9, 20));
+    assert.equal(flipped.start.getDate(), 8);
+    assert.equal(flipped.end.getDate(), 20);
+    const flippedBack = resizedMonthSpan("end", start, end, at(2026, 9, 2));
+    assert.equal(flippedBack.start.getDate(), 2);
+    assert.equal(flippedBack.end.getDate(), 5);
   });
 
   it("shifts a multi-day span with the grabbed day and clips it to the week", () => {
@@ -466,6 +507,13 @@ describe("band horizontal drag", () => {
     assert.deepEqual(shiftedBandColumns(0, 2, -2, 7), { startCol: 0, endCol: 0 });
     assert.deepEqual(shiftedBandColumns(4, 6, 2, 7), { startCol: 6, endCol: 6 });
     assert.equal(shiftedBandColumns(4, 6, 3, 7), null);
+  });
+});
+
+describe("untitledCalendarTitle", () => {
+  it("names an empty all-day or multi-day title as an event", () => {
+    assert.equal(untitledCalendarTitle(true), "New event");
+    assert.equal(untitledCalendarTitle(false), "New session");
   });
 });
 

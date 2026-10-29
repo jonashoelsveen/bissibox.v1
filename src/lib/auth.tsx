@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { isEntityFeatureEnabled, setBetaTesterSnapshot } from "@/lib/features";
+import { clearFeatureFlagSnapshot, loadAcceptedFeatureFlags } from "@/lib/featureFlags.client";
 import {
   broadcastForcedLogout,
   redirectToLoggedOutHome,
@@ -272,6 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setActiveEntityIdState(null);
       setIsBetaTester(false);
       setBetaTesterSnapshot(false);
+      clearFeatureFlagSnapshot();
       setModeState("participant");
       void supabase.auth.signOut({ scope: "local" }).catch(() => {});
       redirectToLoggedOutHome();
@@ -360,6 +362,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user) {
+      clearFeatureFlagSnapshot();
+      return;
+    }
+    void loadAcceptedFeatureFlags(user.id);
   }, [user?.id]);
 
   useEffect(() => {
@@ -483,6 +493,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setActiveEntityIdState(null);
     setIsBetaTester(false);
     setBetaTesterSnapshot(false);
+    clearFeatureFlagSnapshot();
     setModeState("participant");
 
     broadcastForcedLogout();

@@ -58,6 +58,8 @@ const WRITE_COLUMNS = [
   "repeat_series_id",
   "created_by_coach_id",
   "coach_pending",
+  "user_calendar_id",
+  "follows_calendar_color",
 ] as const;
 
 export type LocalCalendarSession = {
@@ -238,7 +240,12 @@ function compactSession(session: CalendarSessionRow): CalendarSessionRow {
     if (key === "id") continue;
     const value = session[key];
     if (value === undefined) continue;
-    if (key === "category_id" || key === "app_group_id" || key === "repeat_series_id") {
+    if (
+      key === "category_id" ||
+      key === "app_group_id" ||
+      key === "repeat_series_id" ||
+      key === "user_calendar_id"
+    ) {
       row[key] = uuidOrNull(value);
       continue;
     }
@@ -661,6 +668,34 @@ export async function deleteCalendarSessions(ids: string[]): Promise<boolean> {
   return (await deleteViaApi(ids)) || (await deleteViaClient(ids));
 }
 
+/** Sessions on a shared calendar that belong to someone else. RLS hides the rest. */
+async function mergeSharedCalendarRows(
+  calId: string,
+  rows: CalendarSessionRow[],
+): Promise<CalendarSessionRow[]> {
+  const personal = calId.startsWith("user:");
+  const teamId = calId.startsWith("team:") ? calId.slice(5) : null;
+  if (!personal && !teamId) return rows;
+  const { data, error } = await supabase
+    .from("calendar_sessions")
+    .select("*")
+    .not("user_calendar_id", "is", null);
+  if (error || !data) return rows;
+  const seen = new Set(rows.map((row) => row.id));
+  const next = rows.slice();
+  for (const row of data) {
+    if (!row || typeof row !== "object") continue;
+    const id = (row as { id?: unknown }).id;
+    if (typeof id !== "string" || seen.has(id)) continue;
+    const entityId = (row as { entity_id?: unknown }).entity_id;
+    if (personal && entityId) continue;
+    if (teamId && entityId !== teamId) continue;
+    next.push(row as CalendarSessionRow);
+    seen.add(id);
+  }
+  return next;
+}
+
 export async function fetchCalendarSessions(
   calId: string,
 ): Promise<
@@ -686,7 +721,11 @@ export async function fetchCalendarSessions(
     if (res.ok) {
       const parsed = parseMembershipPayload(await res.json());
       const attached = await attachMemberOverlay(calId, parsed.rows, parsed.memberships);
-      return { ok: true, rows: attached.rows, memberships: attached.memberships };
+      return {
+        ok: true,
+        rows: await mergeSharedCalendarRows(calId, attached.rows),
+        memberships: attached.memberships,
+      };
     }
   } catch (error) {
     console.error("[calendar_sessions fetch]", error);
@@ -706,7 +745,11 @@ export async function fetchCalendarSessions(
       if (!error && data != null) {
         const parsed = parseMembershipPayload(data);
         const attached = await attachMemberOverlay(calId, parsed.rows, parsed.memberships);
-        return { ok: true, rows: attached.rows, memberships: attached.memberships };
+        return {
+          ok: true,
+          rows: await mergeSharedCalendarRows(calId, attached.rows),
+          memberships: attached.memberships,
+        };
       }
     }
     const isPersonal = calId.startsWith("user:") || calId.startsWith("diary:user:");
@@ -749,7 +792,11 @@ export async function fetchCalendarSessions(
       }
     }
     const attached = await attachMemberOverlay(calId, rows, []);
-    return { ok: true, rows: attached.rows, memberships: attached.memberships };
+    return {
+      ok: true,
+      rows: await mergeSharedCalendarRows(calId, attached.rows),
+      memberships: attached.memberships,
+    };
   } catch {
     return { ok: false };
   }

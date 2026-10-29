@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   MONTH_CREATE_EDGE_PX,
+  applyEdgeScroll,
   monthCreateEdgeSnapGain,
   stepMonthCreateEdgeScroll,
+  tileMajorityPastPane,
+  upwardTileScrollPoint,
 } from "./edgeScroll.ts";
 
 describe("month create edge scroll", () => {
@@ -153,5 +156,85 @@ describe("month create edge scroll", () => {
       velocity = next.velocity;
     }
     assert.ok(Math.abs(scroll - row * 2) < 1);
+  });
+});
+
+describe("session edge autoscroll start", () => {
+  it("scrolls up only once the session tile is past the top line", () => {
+    const shared = {
+      scroll: 200,
+      pointer: 30,
+      movement: 0,
+      dt: 16,
+      edge: 40,
+      start: 0,
+      end: 800,
+      maxScroll: 2000,
+      intent: -1 as const,
+    };
+    const heldInside = applyEdgeScroll({ ...shared, startPointer: 12, startArm: 0 });
+    assert.equal(heldInside, 200);
+    const crossed = applyEdgeScroll({ ...shared, startPointer: -8, startArm: 0 });
+    assert.ok(crossed < 200);
+  });
+
+  it("keeps the bottom edge on the pointer band", () => {
+    const next = applyEdgeScroll({
+      scroll: 200,
+      pointer: 790,
+      startPointer: -20,
+      startArm: 0,
+      movement: 0,
+      dt: 16,
+      edge: 40,
+      start: 0,
+      end: 800,
+      maxScroll: 2000,
+      intent: 1,
+    });
+    assert.ok(next > 200);
+  });
+
+  it("starts an upward week scroll once half the session is past the top line", () => {
+    const line = 100;
+    const tile = { top: 80, height: 40 };
+    const point = upwardTileScrollPoint(tile);
+    assert.equal(point, 100);
+    const waiting = applyEdgeScroll({
+      scroll: 200,
+      pointer: 90,
+      startPointer: point,
+      startArm: 0,
+      movement: 0,
+      dt: 16,
+      edge: 40,
+      start: line,
+      end: 800,
+      maxScroll: 2000,
+      intent: -1,
+    });
+    assert.equal(waiting, 200);
+    const crossed = applyEdgeScroll({
+      scroll: 200,
+      pointer: 70,
+      startPointer: upwardTileScrollPoint({ top: 59, height: 40 }),
+      startArm: 0,
+      movement: 0,
+      dt: 16,
+      edge: 40,
+      start: line,
+      end: 800,
+      maxScroll: 2000,
+      intent: -1,
+    });
+    assert.ok(crossed < 200);
+  });
+
+  it("starts a horizontal week scroll once half the session is past the pane", () => {
+    const pane = { left: 80, right: 800 };
+    assert.equal(tileMajorityPastPane({ left: 30, right: 130 }, pane), 0);
+    assert.equal(tileMajorityPastPane({ left: 29, right: 129 }, pane), -1);
+    assert.equal(tileMajorityPastPane({ left: 750, right: 850 }, pane), 0);
+    assert.equal(tileMajorityPastPane({ left: 751, right: 851 }, pane), 1);
   });
 });

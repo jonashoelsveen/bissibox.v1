@@ -172,7 +172,11 @@ export function SessionTimeField({
         {showAllDay && !readOnly ? (
           <label className="mr-2.5 flex shrink-0 cursor-default select-none items-center gap-1.5">
             <span className="text-[11px] text-ink/80">All day</span>
-            <IOSSwitch checked={allDay} onChange={(next) => onAllDayChange?.(next)} />
+            <IOSSwitch
+              checked={allDay}
+              onChange={(next) => onAllDayChange?.(next)}
+              uncheckedClassName="bg-muted/70"
+            />
           </label>
         ) : null}
       </div>

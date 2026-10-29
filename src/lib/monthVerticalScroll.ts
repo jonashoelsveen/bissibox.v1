@@ -264,16 +264,28 @@ export const MONTH_CREATE_EDGE_PX = 50;
  */
 export const MONTH_CREATE_EDGE_RELEASE_PX = 20;
 
-/** Which edge the pointer is in. Once paging, only the tighter release band counts. */
+/**
+ * Which edge the pointer is in. Once paging, only the tighter release band counts.
+ * `startPastLine` waits to arm the top edge until the pointer is above `top`.
+ * The bottom edge is unchanged. After the first pulse, the top release band
+ * is measured from that same line.
+ */
 export function monthCreateEdgeZone(
   clientY: number,
   top: number,
   bottom: number,
   paging: boolean,
+  startPastLine = false,
 ): -1 | 0 | 1 {
-  const band = paging ? MONTH_CREATE_EDGE_RELEASE_PX : MONTH_CREATE_EDGE_PX;
-  if (clientY < top + band) return -1;
-  if (clientY > bottom - band) return 1;
+  const bottomBand = paging ? MONTH_CREATE_EDGE_RELEASE_PX : MONTH_CREATE_EDGE_PX;
+  if (startPastLine) {
+    const topBand = paging ? MONTH_CREATE_EDGE_RELEASE_PX : 0;
+    if (clientY < top + topBand) return -1;
+  } else {
+    const band = paging ? MONTH_CREATE_EDGE_RELEASE_PX : MONTH_CREATE_EDGE_PX;
+    if (clientY < top + band) return -1;
+  }
+  if (clientY > bottom - bottomBand) return 1;
   return 0;
 }
 

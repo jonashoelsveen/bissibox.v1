@@ -275,6 +275,7 @@ export function SessionLocationField({
             ref={bindSidenavScroll}
             role="listbox"
             className="sidenav-scroll max-h-[220px] overflow-y-auto rounded-[10px] border border-black/8 bg-white/95 py-1 shadow-[0_8px_28px_rgba(0,0,0,0.18)] backdrop-blur-xl"
+            data-location-results=""
           >
             {suggestions.map((s) => (
               <li key={s.id} role="option">
@@ -304,7 +305,10 @@ export function SessionLocationField({
             ))}
           </ul>
         ) : (
-          <div className="rounded-[10px] border border-black/8 bg-white/95 px-3 py-2 text-[12px] text-muted-foreground shadow-[0_8px_28px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+          <div
+            data-location-results=""
+            className="rounded-[10px] border border-black/8 bg-white/95 px-3 py-2 text-[12px] text-muted-foreground shadow-[0_8px_28px_rgba(0,0,0,0.18)] backdrop-blur-xl"
+          >
             No places found
           </div>
         )}

@@ -133,6 +133,16 @@ describe("month create pulse", () => {
     assert.equal(monthCreateEdgeZone(top + 30, top, bottom, true), 0);
     assert.equal(monthCreateEdgeZone(top + 8, top, bottom, true), -1);
   });
+
+  it("waits for the pointer to pass the top line when that edge is strict", () => {
+    const top = 100;
+    const bottom = 800;
+    assert.equal(monthCreateEdgeZone(top + 30, top, bottom, false, true), 0);
+    assert.equal(monthCreateEdgeZone(top, top, bottom, false, true), 0);
+    assert.equal(monthCreateEdgeZone(top - 1, top, bottom, false, true), -1);
+    assert.equal(monthCreateEdgeZone(top + 8, top, bottom, true, true), -1);
+    assert.equal(monthCreateEdgeZone(bottom - 40, top, bottom, false, true), 1);
+  });
 });
 
 describe("snapScrollTop", () => {

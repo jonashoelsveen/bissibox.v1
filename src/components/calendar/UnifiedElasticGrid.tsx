@@ -39,7 +39,7 @@ import { Check, ChevronDown, Footprints, Bike, Dumbbell, Snowflake, Waves } from
 import type { LucideIcon } from "lucide-react";
 import { useCalendarTheme } from "./calendarThemePref";
 import type { CellData, CellKey, Session, CalendarEvent } from "./yearStore";
-import { makeCellId, isMembershipOverlayEvent } from "./yearStore";
+import { makeCellId, isMembershipOverlayEvent, isSharedCalendarReadOnly } from "./yearStore";
 import {
   MonthGridType1,
   PopoverEditor,
@@ -59,6 +59,7 @@ import {
 import { DiaryPopoverEditor, type DiaryPopoverValue } from "./DiaryPopoverEditor";
 import { useCalendarPasteContextMenu } from "./CalendarPasteContextMenu";
 import { useCalendarSessionContextMenu, sessionTileFromTarget, SESSION_SHIFT_MARK_EVENT } from "./CalendarSessionContextMenu";
+import { effectiveSortIndex, implicitSortIndexes } from "@/lib/duplicatePlacement";
 import {
   layoutTimedOverlaps,
   NEWCOMER_SORT_INDEX,
@@ -114,6 +115,7 @@ import {
   engagedEdgeScrollIntent,
   noteEdgeScrollMovement,
   pointerInTimedGridScrollEdge,
+  upwardTileScrollPoint,
 } from "./edgeScroll";
 import {
   eventCoversDay,
@@ -1066,6 +1068,7 @@ export function UnifiedElasticGrid({
     popoverRef.current = popover;
   }, [popover]);
   const eventsRef = useRef(events);
+  eventsRef.current = events;
   useEffect(() => {
     eventsRef.current = events;
   }, [events]);
@@ -1157,6 +1160,7 @@ export function UnifiedElasticGrid({
       closePopover({ discardEmpty: false });
     },
     getMarkedIds: () => [...markedIdsRef.current],
+    getVisibleEvents: () => eventsRef.current,
     onDeleteMany: (ids) => {
       const own = ids.filter((id) => draftEventRef.current?.id !== id);
       if (ids.some((id) => draftEventRef.current?.id === id)) {
@@ -2740,6 +2744,11 @@ export function UnifiedElasticGrid({
     );
     weekMarkPulseRef.current = pulse;
 
+    const markTileTop = () =>
+      document
+        .querySelector<HTMLElement>("[data-role='mark-create-preview']")
+        ?.getBoundingClientRect().top;
+
     const applyScrollFromPointer = (movementY: number, dt: number) => {
       const el = weekScrollerRef.current;
       if (!el || !lastPtr.has) return;
@@ -2751,6 +2760,7 @@ export function UnifiedElasticGrid({
         rowHeight,
         syncWeekScrollerBounds(el),
         engagedEdgeScrollIntent(edgeGesture),
+        markTileTop(),
       );
     };
 
@@ -2767,7 +2777,8 @@ export function UnifiedElasticGrid({
       if (!spansDays) applyScrollFromPointer(0, dt);
       spansDays = mapPointerToRange(pulse.isPulsing() ? (weekScrollerRef.current?.scrollLeft ?? 0) : null);
       const el = weekScrollerRef.current;
-      const needY = !spansDays && !!el && pointerInTimedGridScrollEdge(el, lastPtr.y, rowHeight);
+      const needY =
+        !spansDays && !!el && pointerInTimedGridScrollEdge(el, lastPtr.y, rowHeight, markTileTop());
       if (needY) raf = requestAnimationFrame(tick);
     };
 
@@ -2785,14 +2796,14 @@ export function UnifiedElasticGrid({
       spansDays = mapPointerToRange(null);
       const el = weekScrollerRef.current;
       if (el && !first && !spansDays) {
-        noteEdgeScrollMovement(edgeGesture, e.movementY, lastPtr.y, el, rowHeight);
+        noteEdgeScrollMovement(edgeGesture, e.movementY, lastPtr.y, el, rowHeight, markTileTop());
       }
       if (!first) {
         if (!spansDays) applyScrollFromPointer(e.movementY, 16);
         applyHorizontalFromPointer();
       }
       if (!el) return;
-      const needY = !spansDays && pointerInTimedGridScrollEdge(el, lastPtr.y, rowHeight);
+      const needY = !spansDays && pointerInTimedGridScrollEdge(el, lastPtr.y, rowHeight, markTileTop());
       if (!raf && needY) {
         lastTs = 0;
         raf = requestAnimationFrame(tick);
@@ -2908,6 +2919,10 @@ export function UnifiedElasticGrid({
     },
     [mode, weekDates],
   );
+
+  // Same order used when a duplicate is placed, including web-address rows
+  // that have no stored sort index. The week slice alone would renumber them.
+  const overlapOrder = useMemo(() => implicitSortIndexes(events), [events]);
 
   // Events visible in the current week (week view) or month (month view).
   const weekEvents = useMemo(() => {
@@ -3318,8 +3333,9 @@ export function UnifiedElasticGrid({
                     )}
                   </div>
                   {showAllDayBand && (
-                    <WeekAllDayBand
+                      <WeekAllDayBand
                       calId={calId}
+                      overlapOrder={overlapOrder}
                       events={
                         hideMultiDayRow
                           ? weekEvents.filter((e) => e.id === draftEvent?.id)
@@ -3434,6 +3450,8 @@ export function UnifiedElasticGrid({
                         });
                         reopenPopoverAtEventTile(id, getEventById(id) ?? { ...ev, ...patch });
                       }}
+                      onResizeStart={() => setSessionEdgeResizing(true)}
+                      onResizeEnd={() => setSessionEdgeResizing(false)}
                       onResizeSpan={(id, next) => {
                         const ev = getEventById(id);
                         if (!ev) return;
@@ -3449,14 +3467,24 @@ export function UnifiedElasticGrid({
                           ev.endISO === shifted.endISO &&
                           !!ev.allDay === shifted.allDay;
                         if (unchanged) return;
-                        flushSync(() => {
-                          if (draftEventRef.current?.id === id) {
-                            setDraftEvent({ ...ev, ...shifted });
-                          } else {
-                            onMoveEvent(id, shifted);
-                          }
+                        if (draftEventRef.current?.id === id) {
+                          setDraftEvent({ ...ev, ...shifted });
+                        } else {
+                          onMoveEvent(id, shifted);
+                        }
+                        const resizeId = id;
+                        requestAnimationFrame(() => {
+                          const el = document.querySelector<HTMLElement>(
+                            `[data-event-id="${resizeId.replace(/"/g, '\\"')}"]`,
+                          );
+                          const rect = el?.getBoundingClientRect();
+                          if (!rect || rect.width <= 0 || rect.height <= 0) return;
+                          setPopover((current) =>
+                            current && current.eventId === resizeId
+                              ? { ...current, rect }
+                              : current,
+                          );
                         });
-                        reopenPopoverAtEventTile(id, getEventById(id) ?? { ...ev, ...shifted });
                       }}
                       onDropToTime={(id, newDate, newStartMin, durationMin) => {
                         const ev = getEventById(id);
@@ -3735,6 +3763,7 @@ export function UnifiedElasticGrid({
                           dayColumnWidth={weekPan ? dayColPx : 0}
                           calId={calId}
                           events={weekEvents}
+                          overlapOrder={overlapOrder}
                           weekDates={weekDates}
                           startHour={WEEK_START_HOUR}
                           spanHours={WEEK_SPAN_HOURS}
@@ -4126,7 +4155,40 @@ export function UnifiedElasticGrid({
           isEdit={popover.isEdit}
           anchor={popover.rect}
           enableDuration={mode.kind === "year"}
-          readOnly={viewerRole !== "owner" || isMembershipOverlayEvent(getEventById(popover.eventId), calId)}
+          readOnly={
+            viewerRole !== "owner" ||
+            isMembershipOverlayEvent(getEventById(popover.eventId), calId) ||
+            isSharedCalendarReadOnly(getEventById(popover.eventId)?.userCalendarId)
+          }
+          initialUserCalendarId={getEventById(popover.eventId)?.userCalendarId ?? null}
+          initialFollowsCalendarColor={!!getEventById(popover.eventId)?.followsCalendarColor}
+          onCalendarChange={(patch, eventIds) => {
+            const ids =
+              eventIds && eventIds.length > 0
+                ? eventIds
+                : popover.eventId
+                  ? [popover.eventId]
+                  : [];
+            for (const id of ids) {
+              if (draftEventRef.current?.id === id) {
+                const next = {
+                  ...draftEventRef.current,
+                  userCalendarId: patch.userCalendarId,
+                  followsCalendarColor: patch.followsCalendarColor,
+                  color: patch.color,
+                };
+                draftEventRef.current = next;
+                setDraftEvent(next);
+                continue;
+              }
+              onUpsertEvent?.({
+                id,
+                userCalendarId: patch.userCalendarId,
+                followsCalendarColor: patch.followsCalendarColor,
+                color: patch.color,
+              });
+            }
+          }}
           memberTeamMenu={isMembershipOverlayEvent(getEventById(popover.eventId), calId)}
           memberTeamId={getEventById(popover.eventId)?.entityId ?? null}
           placeholder={popover.placeholder}
@@ -4477,7 +4539,13 @@ export function UnifiedElasticGrid({
             setMarkReleased(false);
             closePopover();
           }}
-          onCommit={(text, color, time, accept, allDay, description, appGroupId, repeatRule, categoryId, location, locationUrl, signUpEnabled, eventIds) => {
+          onCommit={(text, color, time, accept, allDay, description, appGroupId, repeatRule, categoryId, location, locationUrl, signUpEnabled, eventIds, calendar) => {
+            const calendarFields = calendar
+              ? {
+                  userCalendarId: calendar.userCalendarId,
+                  followsCalendarColor: calendar.followsCalendarColor,
+                }
+              : {};
             const t = text.trim();
             const effectiveColor = color ?? popover.initialColor ?? null;
             const effectiveCategoryId = categoryId ?? popover.categoryId ?? null;
@@ -4605,6 +4673,7 @@ export function UnifiedElasticGrid({
                         repeatRule: repeatRule ?? null,
                         repeatSeriesId: sharedSeriesId,
                         repeatDetached: !repeatRule,
+                        ...calendarFields,
                       };
                       if (draftEventRef.current?.id === id) {
                         onUpsertEvent({
@@ -4646,6 +4715,7 @@ export function UnifiedElasticGrid({
                         ...(seat === "admin" && signUpEnabled !== undefined
                           ? { signUpEnabled: !!signUpEnabled }
                           : {}),
+                        ...calendarFields,
                       };
                       const plan = planRepeatSeriesSave(
                         existing,
@@ -4698,6 +4768,7 @@ export function UnifiedElasticGrid({
                       : {}),
                     repeatRule: repeatRule ?? null,
                     repeatDetached: !repeatRule,
+                    ...calendarFields,
                   };
                   if (repeatRule) {
                     for (const inst of expandRepeatingEvents(template, repeatRule, date)) {
@@ -5471,9 +5542,12 @@ function WeekEventsOverlay({
   renderColStart = 0,
   renderColEnd = Number.POSITIVE_INFINITY,
   dayColumnWidth = 0,
+  overlapOrder,
 }: {
   calId: string;
   events: CalendarEvent[];
+  /** Order of sessions with no stored sort index. Shared with duplicate placement. */
+  overlapOrder: Map<string, number>;
   weekDates: Date[];
   startHour: number;
   spanHours?: number;
@@ -5949,11 +6023,32 @@ function WeekEventsOverlay({
     const weekTileEndRef = { current: null as (() => void) | null };
 
     const horizontalPan = () => dayColumnWidthRef.current > 0 && !stackMode;
+    const sessionTileRect = () => {
+      const el =
+        dragFloatRef.current ??
+        (gestureKindRef.current === "resize" ? resizeElRef.current : dragElRef.current);
+      if (!el) return null;
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return null;
+      return rect;
+    };
+
+    const upwardScrollPoint = () => {
+      const rect = sessionTileRect();
+      if (!rect) return undefined;
+      if (gestureKindRef.current === "drag") return upwardTileScrollPoint(rect);
+      return rect.top;
+    };
+
     const applyHorizontalFromLastPtr = () => {
       if (!horizontalPan() || gestureKindRef.current !== "drag") return;
       const d = dragRef.current;
       if (!d?.moved || d.endpoint || !lastPtr.has) return;
-      weekPulse.over(lastPtr.x);
+      const rect = sessionTileRect();
+      weekPulse.over(
+        lastPtr.x,
+        rect ? { left: rect.left, right: rect.right } : undefined,
+      );
     };
 
     let pulsePane: DOMRect | null = null;
@@ -5979,6 +6074,7 @@ function WeekEventsOverlay({
         edgeScrollRowHeight,
         syncScrollerBounds(scroller),
         engagedEdgeScrollIntent(edgeGesture),
+        upwardScrollPoint(),
       );
     };
 
@@ -6145,7 +6241,12 @@ function WeekEventsOverlay({
       const needY =
         !!scroller &&
         lastPtr.has &&
-        pointerInTimedGridScrollEdge(scroller, lastPtr.y, edgeScrollRowHeight);
+        pointerInTimedGridScrollEdge(
+          scroller,
+          lastPtr.y,
+          edgeScrollRowHeight,
+          upwardScrollPoint(),
+        );
       if (needY) edgeRaf = requestAnimationFrame(tickEdge);
     };
 
@@ -6178,6 +6279,7 @@ function WeekEventsOverlay({
           lastPtr.y,
           scroller,
           edgeScrollRowHeight,
+          upwardScrollPoint(),
         );
       }
       if (!first) {
@@ -6185,7 +6287,13 @@ function WeekEventsOverlay({
         applyHorizontalFromLastPtr();
       }
       const needY =
-        !!scroller && pointerInTimedGridScrollEdge(scroller, lastPtr.y, edgeScrollRowHeight);
+        !!scroller &&
+        pointerInTimedGridScrollEdge(
+          scroller,
+          lastPtr.y,
+          edgeScrollRowHeight,
+          upwardScrollPoint(),
+        );
       if (scroller && !edgeRaf && needY) {
         lastTs = 0;
         edgeRaf = requestAnimationFrame(tickEdge);
@@ -6754,7 +6862,7 @@ function WeekEventsOverlay({
             id: ev.id,
             startMin,
             endMin,
-            sortIndex: overlapRecency(ev.sortIndex),
+            sortIndex: effectiveSortIndex(ev, overlapOrder),
           }));
         const dragSnapInCol =
           !stackMode && dragSnap && drag?.moved && dragSnap.colIdx === colIdx ? dragSnap : null;
@@ -6995,6 +7103,7 @@ function WeekEventsOverlay({
               viewerRole === "owner" &&
               isEditing &&
               !isMembershipOverlayEvent(ev, calId) &&
+              !isSharedCalendarReadOnly(ev.userCalendarId) &&
               sameDay(fromISOLocal(ev.startISO), weekDates[colIdx]) &&
               !isMultiDaySession(
                 fromISOLocal(ev.startISO),
@@ -7155,7 +7264,7 @@ function WeekEventsOverlay({
                       onEventClick(ev, e.currentTarget as HTMLElement);
                       switchedSessionOnPointerRef.current = true;
                     }
-                    if (viewerRole !== "owner" || isMembershipOverlayEvent(ev, calId)) {
+                    if (viewerRole !== "owner" || isMembershipOverlayEvent(ev, calId) || isSharedCalendarReadOnly(ev.userCalendarId)) {
                       e.preventDefault();
                       setReadOnlyPressedId(ev.id);
                       return;
@@ -7219,7 +7328,7 @@ function WeekEventsOverlay({
                   }
                   // Only the owner can drag sessions in calendar week view.
                   // Coaches / group leaders viewing someone else cannot move.
-                  if (viewerRole !== "owner" || isMembershipOverlayEvent(ev, calId)) {
+                  if (viewerRole !== "owner" || isMembershipOverlayEvent(ev, calId) || isSharedCalendarReadOnly(ev.userCalendarId)) {
                     // Stop the mousedown from bubbling to the window-level
                     // outside-click listener of any open session edit panel,
                     // so the previously-clicked session's panel stays open
@@ -7613,7 +7722,7 @@ function WeekEventsOverlay({
               id: ev.id,
               startMin: resizing ? resize!.currentStartMin : startMin,
               endMin: resizing ? resize!.currentEndMin : endMin,
-              sortIndex: overlapRecency(ev.sortIndex),
+              sortIndex: effectiveSortIndex(ev, overlapOrder),
             };
           });
         const place = layoutTimedOverlaps([
@@ -7937,7 +8046,7 @@ function DiarySimpleStack({
             activeSessionId={lockedId ?? forceEditId}
             onEventClick={(ev, anchor) => {
               cancelClose();
-              if (viewerRole === "owner" && !isMembershipOverlayEvent(ev, calId)) {
+              if (viewerRole === "owner" && !isMembershipOverlayEvent(ev, calId) && !isSharedCalendarReadOnly(ev.userCalendarId)) {
                 // Owner click extends the hover menu into edit mode in-place.
                 const r = anchor.getBoundingClientRect();
                 setHoverId(ev.id);

@@ -279,6 +279,78 @@
     transition: background-color 0s linear, background-image 0s linear;
   }
 
+  /* Calendar tabs under the mini calendar. Native bar is hidden so the
+     overlay thumb does not shift the rows. The thumb only shows while
+     scrolling, then fades. */
+  .calendar-tabs-scroll {
+    scrollbar-width: none;
+    overscroll-behavior: contain;
+    scroll-snap-type: y mandatory;
+  }
+  .calendar-tabs-scroll[data-calendar-dragging="1"] {
+    scroll-snap-type: none;
+  }
+  .calendar-tabs-scroll::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  [data-calendar-tab] {
+    scroll-snap-align: start;
+  }
+  .calendar-tabs-thumb {
+    position: absolute;
+    top: 0;
+    /* Cancel CalendarsSection's px-1.5 so the thumb sits on the panel edge. */
+    right: -0.375rem;
+    width: 3px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--ink) 32%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 480ms ease;
+  }
+  .calendar-tabs-thumb[data-on="1"] {
+    opacity: 1;
+    transition: opacity 80ms linear;
+  }
+
+  /* Session description: same 3px thumb as the calendar list, inside the field. */
+  .session-description-scroll {
+    scrollbar-width: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+  .session-description-scroll::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  .session-description-thumb {
+    position: absolute;
+    top: 0;
+    right: 4px;
+    width: 3px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--ink) 32%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 2;
+    transition: opacity 480ms ease;
+  }
+  .session-description-thumb[data-on="1"] {
+    opacity: 1;
+    transition: opacity 80ms linear;
+  }
+  /* Same 3px thumb, light so it reads on the dark web-address field. */
+  .web-address-url-thumb {
+    background: color-mix(in oklab, white 50%, transparent);
+  }
+
   /* Time-wheel picker: hide native scrollbar so only the focus band is visible. */
   .no-scrollbar {
     scrollbar-width: none;
@@ -560,6 +632,20 @@ html[data-calendar-theme="dark"] [data-left-panel] .bg-white {
   color: #f2f2f2;
 }
 
+/* The search field is portaled to <body>, outside the panel's token scope. */
+html[data-calendar-theme="dark"] [data-left-panel-search] {
+  --ink: #f2f2f2;
+  --secondary: rgba(255, 255, 255, 0.08);
+  --secondary-foreground: #f2f2f2;
+  --muted-foreground: #aeaeb2;
+  color: #f2f2f2;
+  color-scheme: dark;
+}
+
+html[data-calendar-theme="dark"] [data-left-panel-search] [data-search-clear]:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
 html[data-calendar-theme="dark"] [data-calendar-chrome] {
   background-color: #1c1c1e;
   color: #f2f2f2;
@@ -568,6 +654,21 @@ html[data-calendar-theme="dark"] [data-calendar-chrome] {
 
 html[data-calendar-theme="dark"] [data-calendar-chrome]:hover {
   background-color: #2c2c2e;
+}
+
+html[data-calendar-theme="dark"] [data-session-location-map] [data-map-search-clear] {
+  color: #aeaeb2;
+}
+
+html[data-calendar-theme="dark"] [data-session-location-map] [data-map-search-clear]:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #f2f2f2;
+}
+
+html[data-calendar-theme="dark"] [data-role="popover"] [data-location-results] {
+  background-color: #1c1c1e;
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #f2f2f2;
 }
 
 html[data-calendar-theme="dark"] [data-role="popover"] {

@@ -612,7 +612,7 @@ function MenuItem({
  * 14×14 rounded colour chip. Fill is clipped inside the rim so a translucent
  * stroke does not composite over the colour and blur the corners.
  */
-function ColorSwatch({
+export function ColorSwatch({
   fill,
   dark = false,
   hatch = false,

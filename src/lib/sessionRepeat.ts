@@ -120,6 +120,8 @@ export type RepeatEventTemplate = Pick<
   | "signUpEnabled"
   | "repeatRule"
   | "repeatSeriesId"
+  | "userCalendarId"
+  | "followsCalendarColor"
 > & {
   startISO: string;
   endISO: string;
@@ -379,6 +381,14 @@ export function planRepeatSeriesSave(
           template.signUpEnabled !== undefined
             ? !!template.signUpEnabled
             : !!existing.signUpEnabled,
+        userCalendarId:
+          template.userCalendarId !== undefined
+            ? template.userCalendarId
+            : existing.userCalendarId ?? null,
+        followsCalendarColor:
+          template.followsCalendarColor !== undefined
+            ? !!template.followsCalendarColor
+            : !!existing.followsCalendarColor,
         startISO: inst.startISO,
         endISO: inst.endISO,
         repeatRule: nextRule,
@@ -652,6 +662,8 @@ export function expandRepeatingEvents(
         locationUrl: template.locationUrl,
         appGroupId: template.appGroupId ?? null,
         signUpEnabled: !!template.signUpEnabled,
+        userCalendarId: template.userCalendarId ?? null,
+        followsCalendarColor: !!template.followsCalendarColor,
         repeatRule: rule,
         repeatSeriesId: seriesId,
         startISO: toISOLocal(start),

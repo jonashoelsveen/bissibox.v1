@@ -88,6 +88,11 @@ export function isAllDayBandEvent(ev: {
   return isMultiDaySession(fromISOLocal(ev.startISO), fromISOLocal(ev.endISO));
 }
 
+/** Empty-title label. All-day and multi-day spans are events; timed stays a session. */
+export function untitledCalendarTitle(allDayOrMultiDay: boolean): string {
+  return allDayOrMultiDay ? "New event" : "New session";
+}
+
 /** Visible day-column span for a session in week (7) or day (1) view. */
 export function bandEventColumns(
   start: Date,
@@ -668,7 +673,8 @@ export function continuousDragStartCol(
 
 /**
  * Visible columns after dragging one edge of an all-day / multi-day bar.
- * The other edge stays put, and the span cannot invert.
+ * The undragged edge stays put until the pointer passes it. Past that edge
+ * the span flips and the pointer keeps extending the other side.
  */
 export function resizedBandColumns(input: {
   edge: "start" | "end";
@@ -679,22 +685,18 @@ export function resizedBandColumns(input: {
 }): { startCol: number; endCol: number } {
   const last = Math.max(0, input.columnCount - 1);
   const target = Math.max(0, Math.min(last, input.targetCol));
-  if (input.edge === "start") {
-    return {
-      startCol: Math.min(target, input.visibleEnd),
-      endCol: input.visibleEnd,
-    };
+  const anchor = input.edge === "start" ? input.visibleEnd : input.visibleStart;
+  if (target <= anchor) {
+    return { startCol: target, endCol: anchor };
   }
-  return {
-    startCol: input.visibleStart,
-    endCol: Math.max(target, input.visibleStart),
-  };
+  return { startCol: anchor, endCol: target };
 }
 
 /**
  * Inclusive start/end days after dragging one edge onto `targetCol`.
- * Days outside this week stay put when that edge is released on the same
- * visible column it started on.
+ * The other edge stays put until the pointer passes it, then the span flips
+ * and that edge follows the pointer. Days outside this week stay put when
+ * the dragged edge is released on the same visible column it started on.
  */
 export function resizedBandSpan(input: {
   edge: "start" | "end";
@@ -707,31 +709,61 @@ export function resizedBandSpan(input: {
 }): { startCol: number; endCol: number; start: Date; end: Date } {
   const count = input.weekDates.length;
   const last = Math.max(0, count - 1);
-  const cols = resizedBandColumns({
-    edge: input.edge,
-    visibleStart: input.visibleStart,
-    visibleEnd: input.visibleEnd,
-    targetCol: input.targetCol,
-    columnCount: count,
-  });
+  const targetCol = Math.max(0, Math.min(last, input.targetCol));
   const trueStart = startOfDay(input.start);
   const trueEnd = sessionInclusiveEndDay(input.start, input.end);
   const weekStart = startOfDay(input.weekDates[0]);
   const weekEnd = startOfDay(input.weekDates[last]);
-  if (input.edge === "start") {
-    if (cols.startCol === input.visibleStart && trueStart.getTime() < weekStart.getTime()) {
-      return { ...cols, start: trueStart, end: trueEnd };
+  const pinnedOutside =
+    (input.edge === "start" &&
+      targetCol === input.visibleStart &&
+      trueStart.getTime() < weekStart.getTime()) ||
+    (input.edge === "end" &&
+      targetCol === input.visibleEnd &&
+      trueEnd.getTime() > weekEnd.getTime());
+  let start = trueStart;
+  let end = trueEnd;
+  if (!pinnedOutside) {
+    const anchor = input.edge === "start" ? trueEnd : trueStart;
+    const targetDay = startOfDay(input.weekDates[targetCol]);
+    if (targetDay.getTime() <= anchor.getTime()) {
+      start = targetDay;
+      end = anchor;
+    } else {
+      start = anchor;
+      end = targetDay;
     }
-    let start = startOfDay(input.weekDates[cols.startCol]);
-    if (start.getTime() > trueEnd.getTime()) start = trueEnd;
-    return { ...cols, start, end: trueEnd };
   }
-  if (cols.endCol === input.visibleEnd && trueEnd.getTime() > weekEnd.getTime()) {
-    return { ...cols, start: trueStart, end: trueEnd };
+  const lo = start.getTime() < weekStart.getTime() ? weekStart : start;
+  const hi = end.getTime() > weekEnd.getTime() ? weekEnd : end;
+  return {
+    startCol: Math.max(0, Math.min(last, calendarDayDelta(weekStart, lo))),
+    endCol: Math.max(0, Math.min(last, calendarDayDelta(weekStart, hi))),
+    start,
+    end,
+  };
+}
+
+/**
+ * Inclusive calendar days after dragging one edge of a month multi-day bar
+ * onto `targetDay`. `start` and `end` are already inclusive days. The other
+ * edge stays put until the pointer passes it, then the span flips and the
+ * pointer keeps extending that side.
+ */
+export function resizedMonthSpan(
+  edge: "start" | "end",
+  start: Date,
+  end: Date,
+  targetDay: Date,
+): { start: Date; end: Date } {
+  const originStart = startOfDay(start);
+  const originEnd = startOfDay(end);
+  const target = startOfDay(targetDay);
+  const anchor = edge === "start" ? originEnd : originStart;
+  if (target.getTime() <= anchor.getTime()) {
+    return { start: target, end: anchor };
   }
-  let end = startOfDay(input.weekDates[cols.endCol]);
-  if (end.getTime() < trueStart.getTime()) end = trueStart;
-  return { ...cols, start: trueStart, end };
+  return { start: anchor, end: target };
 }
 
 /**
@@ -749,4 +781,18 @@ export function previewSpanForGrabbedDay(
   const previewStart = addDays(startOfDay(dropDay), -offset);
   const span = calendarDayDelta(origin, sessionInclusiveEndDay(start, end));
   return { start: previewStart, end: addDays(previewStart, span) };
+}
+
+/** True when a rigid multi-day drag would cover the same days it started on. */
+export function multiDayDragBackHome(
+  start: Date,
+  end: Date,
+  grabbedDay: Date,
+  dropDay: Date,
+): boolean {
+  const preview = previewSpanForGrabbedDay(start, end, grabbedDay, dropDay);
+  return (
+    sameDay(preview.start, start) &&
+    sameDay(preview.end, sessionInclusiveEndDay(start, end))
+  );
 }

@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "node --experimental-strip-types --test src/lib/*.test.ts src/lib/*.regression.test.ts",
+    "test": "node --experimental-strip-types --test src/lib/*.test.ts src/lib/*.regression.test.ts src/lib/calendarFeed/*.test.ts",
     "cf:whoami": "wrangler whoami",
     "cf:deploy": "vite build && wrangler deploy",
     "mobile:start": "npm --prefix mobile run start",

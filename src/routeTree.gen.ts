@@ -9,143 +9,70 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SubscriptionsRouteImport } from './routes/subscriptions'
-import { Route as StorageRouteImport } from './routes/storage'
-import { Route as ProjectsRouteImport } from './routes/projects'
-import { Route as ProfilesRouteImport } from './routes/profiles'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as MediaRouteImport } from './routes/media'
-import { Route as MeRouteImport } from './routes/me'
-import { Route as LoginSecurityContactRouteImport } from './routes/login-security-contact'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as FamilyRouteImport } from './routes/family'
-import { Route as EventsRouteImport } from './routes/events'
-import { Route as EntityRouteImport } from './routes/entity'
-import { Route as ClientsRouteImport } from './routes/clients'
-import { Route as CalendarRouteImport } from './routes/calendar'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AccountRouteImport } from './routes/account'
-import { Route as AcceptLeaderInviteRouteImport } from './routes/accept-leader-invite'
-import { Route as AcceptEntityInviteRouteImport } from './routes/accept-entity-invite'
-import { Route as AcceptCoachInviteRouteImport } from './routes/accept-coach-invite'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as EventsIndexRouteImport } from './routes/events.index'
-import { Route as UUserIdRouteImport } from './routes/u.$userId'
-import { Route as TeamBoardRouteImport } from './routes/team.board'
-import { Route as TTeamIdRouteImport } from './routes/t.$teamId'
-import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
-import { Route as CloudIndividualsRouteImport } from './routes/cloud.individuals'
-import { Route as CloudEntitiesRouteImport } from './routes/cloud.entities'
+import { Route as AcceptCalendarInviteRouteImport } from './routes/accept-calendar-invite'
+import { Route as AcceptCoachInviteRouteImport } from './routes/accept-coach-invite'
+import { Route as AcceptEntityInviteRouteImport } from './routes/accept-entity-invite'
+import { Route as AcceptLeaderInviteRouteImport } from './routes/accept-leader-invite'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as ClientsRouteImport } from './routes/clients'
+import { Route as EntityRouteImport } from './routes/entity'
+import { Route as EventsRouteImport } from './routes/events'
+import { Route as FamilyRouteImport } from './routes/family'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as LoginSecurityContactRouteImport } from './routes/login-security-contact'
+import { Route as MeRouteImport } from './routes/me'
+import { Route as MediaRouteImport } from './routes/media'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ProfilesRouteImport } from './routes/profiles'
+import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as StorageRouteImport } from './routes/storage'
+import { Route as SubscriptionsRouteImport } from './routes/subscriptions'
 import { Route as CCompanyIdRouteImport } from './routes/c.$companyId'
-import { Route as ApiCalendarSessionsRouteImport } from './routes/api/calendar/sessions'
-import { Route as ApiCalendarMembershipSessionsRouteImport } from './routes/api/calendar/membership-sessions'
-import { Route as ApiCalendarImportPreviewRouteImport } from './routes/api/calendar/import-preview'
-import { Route as ApiCalendarImportConfirmRouteImport } from './routes/api/calendar/import-confirm'
-import { Route as ApiCalendarEntitySessionsRouteImport } from './routes/api/calendar/entity-sessions'
-import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
-import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
-import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
-import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
-import { Route as ApiAuthDeleteAccountRouteImport } from './routes/api/auth/delete-account'
-import { Route as ApiAuthActivateRouteImport } from './routes/api/auth/activate'
-import { Route as ApiAccountProfileRouteImport } from './routes/api/account/profile'
-import { Route as ApiAccountPasswordRouteImport } from './routes/api/account/password'
-import { Route as ApiAccountEntitiesRouteImport } from './routes/api/account/entities'
+import { Route as CloudEntitiesRouteImport } from './routes/cloud.entities'
+import { Route as CloudIndividualsRouteImport } from './routes/cloud.individuals'
+import { Route as EventsIndexRouteImport } from './routes/events.index'
+import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
+import { Route as TTeamIdRouteImport } from './routes/t.$teamId'
+import { Route as TeamBoardRouteImport } from './routes/team.board'
+import { Route as UUserIdRouteImport } from './routes/u.$userId'
 import { Route as ApiAccountEmailRouteImport } from './routes/api/account/email'
-import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
-import { Route as ApiTicketsIdControlRouteImport } from './routes/api/tickets/$id/control'
-import { Route as ApiAuthSsoRedirectRouteImport } from './routes/api/auth/sso/redirect'
-import { Route as ApiAuthSsoRedeemRouteImport } from './routes/api/auth/sso/redeem'
+import { Route as ApiAccountEntitiesRouteImport } from './routes/api/account/entities'
+import { Route as ApiAccountPasswordRouteImport } from './routes/api/account/password'
+import { Route as ApiAccountProfileRouteImport } from './routes/api/account/profile'
+import { Route as ApiAuthActivateRouteImport } from './routes/api/auth/activate'
+import { Route as ApiAuthDeleteAccountRouteImport } from './routes/api/auth/delete-account'
+import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
+import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
+import { Route as ApiAuthRegisterRouteImport } from './routes/api/auth/register'
+import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
+import { Route as ApiCalendarEntitySessionsRouteImport } from './routes/api/calendar/entity-sessions'
+import { Route as ApiCalendarImportConfirmRouteImport } from './routes/api/calendar/import-confirm'
+import { Route as ApiCalendarImportPreviewRouteImport } from './routes/api/calendar/import-preview'
+import { Route as ApiCalendarInviteRouteImport } from './routes/api/calendar/invite'
+import { Route as ApiCalendarLookupUserRouteImport } from './routes/api/calendar/lookup-user'
+import { Route as ApiCalendarMembershipSessionsRouteImport } from './routes/api/calendar/membership-sessions'
+import { Route as ApiCalendarSessionsRouteImport } from './routes/api/calendar/sessions'
+import { Route as ApiCalendarSubscriptionsRouteImport } from './routes/api/calendar/subscriptions'
 import { Route as ApiAccountEntitiesIdRouteImport } from './routes/api/account/entities.$id'
+import { Route as ApiAuthSsoRedeemRouteImport } from './routes/api/auth/sso/redeem'
+import { Route as ApiAuthSsoRedirectRouteImport } from './routes/api/auth/sso/redirect'
+import { Route as ApiCalendarSubscriptionsIdRouteImport } from './routes/api/calendar/subscriptions.$id'
+import { Route as ApiTicketsIdControlRouteImport } from './routes/api/tickets/$id/control'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as ApiCalendarSubscriptionsIdEventsRouteImport } from './routes/api/calendar/subscriptions.$id.events'
+import { Route as ApiCalendarSubscriptionsIdRefreshRouteImport } from './routes/api/calendar/subscriptions.$id.refresh'
 
-const SubscriptionsRoute = SubscriptionsRouteImport.update({
-  id: '/subscriptions',
-  path: '/subscriptions',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StorageRoute = StorageRouteImport.update({
-  id: '/storage',
-  path: '/storage',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProjectsRoute = ProjectsRouteImport.update({
-  id: '/projects',
-  path: '/projects',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfilesRoute = ProfilesRouteImport.update({
-  id: '/profiles',
-  path: '/profiles',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MediaRoute = MediaRouteImport.update({
-  id: '/media',
-  path: '/media',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MeRoute = MeRouteImport.update({
-  id: '/me',
-  path: '/me',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginSecurityContactRoute = LoginSecurityContactRouteImport.update({
-  id: '/login-security-contact',
-  path: '/login-security-contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FamilyRoute = FamilyRouteImport.update({
-  id: '/family',
-  path: '/family',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EventsRoute = EventsRouteImport.update({
-  id: '/events',
-  path: '/events',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EntityRoute = EntityRouteImport.update({
-  id: '/entity',
-  path: '/entity',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ClientsRoute = ClientsRouteImport.update({
-  id: '/clients',
-  path: '/clients',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CalendarRoute = CalendarRouteImport.update({
-  id: '/calendar',
-  path: '/calendar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AccountRoute = AccountRouteImport.update({
-  id: '/account',
-  path: '/account',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AcceptLeaderInviteRoute = AcceptLeaderInviteRouteImport.update({
-  id: '/accept-leader-invite',
-  path: '/accept-leader-invite',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AcceptEntityInviteRoute = AcceptEntityInviteRouteImport.update({
-  id: '/accept-entity-invite',
-  path: '/accept-entity-invite',
+const AcceptCalendarInviteRoute = AcceptCalendarInviteRouteImport.update({
+  id: '/accept-calendar-invite',
+  path: '/accept-calendar-invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcceptCoachInviteRoute = AcceptCoachInviteRouteImport.update({
@@ -153,44 +80,94 @@ const AcceptCoachInviteRoute = AcceptCoachInviteRouteImport.update({
   path: '/accept-coach-invite',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AcceptEntityInviteRoute = AcceptEntityInviteRouteImport.update({
+  id: '/accept-entity-invite',
+  path: '/accept-entity-invite',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EventsIndexRoute = EventsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => EventsRoute,
-} as any)
-const UUserIdRoute = UUserIdRouteImport.update({
-  id: '/u/$userId',
-  path: '/u/$userId',
+const AcceptLeaderInviteRoute = AcceptLeaderInviteRouteImport.update({
+  id: '/accept-leader-invite',
+  path: '/accept-leader-invite',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TeamBoardRoute = TeamBoardRouteImport.update({
-  id: '/team/board',
-  path: '/team/board',
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TTeamIdRoute = TTeamIdRouteImport.update({
-  id: '/t/$teamId',
-  path: '/t/$teamId',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EventsEventIdRoute = EventsEventIdRouteImport.update({
-  id: '/$eventId',
-  path: '/$eventId',
-  getParentRoute: () => EventsRoute,
-} as any)
-const CloudIndividualsRoute = CloudIndividualsRouteImport.update({
-  id: '/cloud/individuals',
-  path: '/cloud/individuals',
+const CalendarRoute = CalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CloudEntitiesRoute = CloudEntitiesRouteImport.update({
-  id: '/cloud/entities',
-  path: '/cloud/entities',
+const ClientsRoute = ClientsRouteImport.update({
+  id: '/clients',
+  path: '/clients',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntityRoute = EntityRouteImport.update({
+  id: '/entity',
+  path: '/entity',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsRoute = EventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FamilyRoute = FamilyRouteImport.update({
+  id: '/family',
+  path: '/family',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginSecurityContactRoute = LoginSecurityContactRouteImport.update({
+  id: '/login-security-contact',
+  path: '/login-security-contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeRoute = MeRouteImport.update({
+  id: '/me',
+  path: '/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MediaRoute = MediaRouteImport.update({
+  id: '/media',
+  path: '/media',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfilesRoute = ProfilesRouteImport.update({
+  id: '/profiles',
+  path: '/profiles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsRoute = ProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StorageRoute = StorageRouteImport.update({
+  id: '/storage',
+  path: '/storage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubscriptionsRoute = SubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CCompanyIdRoute = CCompanyIdRouteImport.update({
@@ -198,21 +175,95 @@ const CCompanyIdRoute = CCompanyIdRouteImport.update({
   path: '/c/$companyId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiCalendarSessionsRoute = ApiCalendarSessionsRouteImport.update({
-  id: '/api/calendar/sessions',
-  path: '/api/calendar/sessions',
+const CloudEntitiesRoute = CloudEntitiesRouteImport.update({
+  id: '/cloud/entities',
+  path: '/cloud/entities',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiCalendarMembershipSessionsRoute =
-  ApiCalendarMembershipSessionsRouteImport.update({
-    id: '/api/calendar/membership-sessions',
-    path: '/api/calendar/membership-sessions',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiCalendarImportPreviewRoute =
-  ApiCalendarImportPreviewRouteImport.update({
-    id: '/api/calendar/import-preview',
-    path: '/api/calendar/import-preview',
+const CloudIndividualsRoute = CloudIndividualsRouteImport.update({
+  id: '/cloud/individuals',
+  path: '/cloud/individuals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsIndexRoute = EventsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => EventsRoute,
+} as any)
+const EventsEventIdRoute = EventsEventIdRouteImport.update({
+  id: '/$eventId',
+  path: '/$eventId',
+  getParentRoute: () => EventsRoute,
+} as any)
+const TTeamIdRoute = TTeamIdRouteImport.update({
+  id: '/t/$teamId',
+  path: '/t/$teamId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamBoardRoute = TeamBoardRouteImport.update({
+  id: '/team/board',
+  path: '/team/board',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UUserIdRoute = UUserIdRouteImport.update({
+  id: '/u/$userId',
+  path: '/u/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAccountEmailRoute = ApiAccountEmailRouteImport.update({
+  id: '/api/account/email',
+  path: '/api/account/email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAccountEntitiesRoute = ApiAccountEntitiesRouteImport.update({
+  id: '/api/account/entities',
+  path: '/api/account/entities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAccountPasswordRoute = ApiAccountPasswordRouteImport.update({
+  id: '/api/account/password',
+  path: '/api/account/password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAccountProfileRoute = ApiAccountProfileRouteImport.update({
+  id: '/api/account/profile',
+  path: '/api/account/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthActivateRoute = ApiAuthActivateRouteImport.update({
+  id: '/api/auth/activate',
+  path: '/api/auth/activate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthDeleteAccountRoute = ApiAuthDeleteAccountRouteImport.update({
+  id: '/api/auth/delete-account',
+  path: '/api/auth/delete-account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
+  id: '/api/auth/login',
+  path: '/api/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
+  id: '/api/auth/logout',
+  path: '/api/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthRegisterRoute = ApiAuthRegisterRouteImport.update({
+  id: '/api/auth/register',
+  path: '/api/auth/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
+  id: '/api/auth/session',
+  path: '/api/auth/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCalendarEntitySessionsRoute =
+  ApiCalendarEntitySessionsRouteImport.update({
+    id: '/api/calendar/entity-sessions',
+    path: '/api/calendar/entity-sessions',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiCalendarImportConfirmRoute =
@@ -221,60 +272,63 @@ const ApiCalendarImportConfirmRoute =
     path: '/api/calendar/import-confirm',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiCalendarEntitySessionsRoute =
-  ApiCalendarEntitySessionsRouteImport.update({
-    id: '/api/calendar/entity-sessions',
-    path: '/api/calendar/entity-sessions',
+const ApiCalendarImportPreviewRoute =
+  ApiCalendarImportPreviewRouteImport.update({
+    id: '/api/calendar/import-preview',
+    path: '/api/calendar/import-preview',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
-  id: '/api/auth/session',
-  path: '/api/auth/session',
+const ApiCalendarInviteRoute = ApiCalendarInviteRouteImport.update({
+  id: '/api/calendar/invite',
+  path: '/api/calendar/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthRegisterRoute = ApiAuthRegisterRouteImport.update({
-  id: '/api/auth/register',
-  path: '/api/auth/register',
+const ApiCalendarLookupUserRoute = ApiCalendarLookupUserRouteImport.update({
+  id: '/api/calendar/lookup-user',
+  path: '/api/calendar/lookup-user',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
-  id: '/api/auth/logout',
-  path: '/api/auth/logout',
+const ApiCalendarMembershipSessionsRoute =
+  ApiCalendarMembershipSessionsRouteImport.update({
+    id: '/api/calendar/membership-sessions',
+    path: '/api/calendar/membership-sessions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiCalendarSessionsRoute = ApiCalendarSessionsRouteImport.update({
+  id: '/api/calendar/sessions',
+  path: '/api/calendar/sessions',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
-  id: '/api/auth/login',
-  path: '/api/auth/login',
+const ApiCalendarSubscriptionsRoute =
+  ApiCalendarSubscriptionsRouteImport.update({
+    id: '/api/calendar/subscriptions',
+    path: '/api/calendar/subscriptions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAccountEntitiesIdRoute = ApiAccountEntitiesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiAccountEntitiesRoute,
+} as any)
+const ApiAuthSsoRedeemRoute = ApiAuthSsoRedeemRouteImport.update({
+  id: '/api/auth/sso/redeem',
+  path: '/api/auth/sso/redeem',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthDeleteAccountRoute = ApiAuthDeleteAccountRouteImport.update({
-  id: '/api/auth/delete-account',
-  path: '/api/auth/delete-account',
+const ApiAuthSsoRedirectRoute = ApiAuthSsoRedirectRouteImport.update({
+  id: '/api/auth/sso/redirect',
+  path: '/api/auth/sso/redirect',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthActivateRoute = ApiAuthActivateRouteImport.update({
-  id: '/api/auth/activate',
-  path: '/api/auth/activate',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAccountProfileRoute = ApiAccountProfileRouteImport.update({
-  id: '/api/account/profile',
-  path: '/api/account/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAccountPasswordRoute = ApiAccountPasswordRouteImport.update({
-  id: '/api/account/password',
-  path: '/api/account/password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAccountEntitiesRoute = ApiAccountEntitiesRouteImport.update({
-  id: '/api/account/entities',
-  path: '/api/account/entities',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAccountEmailRoute = ApiAccountEmailRouteImport.update({
-  id: '/api/account/email',
-  path: '/api/account/email',
+const ApiCalendarSubscriptionsIdRoute =
+  ApiCalendarSubscriptionsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiCalendarSubscriptionsRoute,
+  } as any)
+const ApiTicketsIdControlRoute = ApiTicketsIdControlRouteImport.update({
+  id: '/api/tickets/$id/control',
+  path: '/api/tickets/$id/control',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LovableEmailQueueProcessRoute =
@@ -283,29 +337,22 @@ const LovableEmailQueueProcessRoute =
     path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiTicketsIdControlRoute = ApiTicketsIdControlRouteImport.update({
-  id: '/api/tickets/$id/control',
-  path: '/api/tickets/$id/control',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthSsoRedirectRoute = ApiAuthSsoRedirectRouteImport.update({
-  id: '/api/auth/sso/redirect',
-  path: '/api/auth/sso/redirect',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthSsoRedeemRoute = ApiAuthSsoRedeemRouteImport.update({
-  id: '/api/auth/sso/redeem',
-  path: '/api/auth/sso/redeem',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAccountEntitiesIdRoute = ApiAccountEntitiesIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ApiAccountEntitiesRoute,
-} as any)
+const ApiCalendarSubscriptionsIdEventsRoute =
+  ApiCalendarSubscriptionsIdEventsRouteImport.update({
+    id: '/events',
+    path: '/events',
+    getParentRoute: () => ApiCalendarSubscriptionsIdRoute,
+  } as any)
+const ApiCalendarSubscriptionsIdRefreshRoute =
+  ApiCalendarSubscriptionsIdRefreshRouteImport.update({
+    id: '/refresh',
+    path: '/refresh',
+    getParentRoute: () => ApiCalendarSubscriptionsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/accept-calendar-invite': typeof AcceptCalendarInviteRoute
   '/accept-coach-invite': typeof AcceptCoachInviteRoute
   '/accept-entity-invite': typeof AcceptEntityInviteRoute
   '/accept-leader-invite': typeof AcceptLeaderInviteRoute
@@ -346,16 +393,23 @@ export interface FileRoutesByFullPath {
   '/api/calendar/entity-sessions': typeof ApiCalendarEntitySessionsRoute
   '/api/calendar/import-confirm': typeof ApiCalendarImportConfirmRoute
   '/api/calendar/import-preview': typeof ApiCalendarImportPreviewRoute
+  '/api/calendar/invite': typeof ApiCalendarInviteRoute
+  '/api/calendar/lookup-user': typeof ApiCalendarLookupUserRoute
   '/api/calendar/membership-sessions': typeof ApiCalendarMembershipSessionsRoute
   '/api/calendar/sessions': typeof ApiCalendarSessionsRoute
+  '/api/calendar/subscriptions': typeof ApiCalendarSubscriptionsRouteWithChildren
   '/api/account/entities/$id': typeof ApiAccountEntitiesIdRoute
   '/api/auth/sso/redeem': typeof ApiAuthSsoRedeemRoute
   '/api/auth/sso/redirect': typeof ApiAuthSsoRedirectRoute
+  '/api/calendar/subscriptions/$id': typeof ApiCalendarSubscriptionsIdRouteWithChildren
   '/api/tickets/$id/control': typeof ApiTicketsIdControlRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/api/calendar/subscriptions/$id/events': typeof ApiCalendarSubscriptionsIdEventsRoute
+  '/api/calendar/subscriptions/$id/refresh': typeof ApiCalendarSubscriptionsIdRefreshRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/accept-calendar-invite': typeof AcceptCalendarInviteRoute
   '/accept-coach-invite': typeof AcceptCoachInviteRoute
   '/accept-entity-invite': typeof AcceptEntityInviteRoute
   '/accept-leader-invite': typeof AcceptLeaderInviteRoute
@@ -395,17 +449,24 @@ export interface FileRoutesByTo {
   '/api/calendar/entity-sessions': typeof ApiCalendarEntitySessionsRoute
   '/api/calendar/import-confirm': typeof ApiCalendarImportConfirmRoute
   '/api/calendar/import-preview': typeof ApiCalendarImportPreviewRoute
+  '/api/calendar/invite': typeof ApiCalendarInviteRoute
+  '/api/calendar/lookup-user': typeof ApiCalendarLookupUserRoute
   '/api/calendar/membership-sessions': typeof ApiCalendarMembershipSessionsRoute
   '/api/calendar/sessions': typeof ApiCalendarSessionsRoute
+  '/api/calendar/subscriptions': typeof ApiCalendarSubscriptionsRouteWithChildren
   '/api/account/entities/$id': typeof ApiAccountEntitiesIdRoute
   '/api/auth/sso/redeem': typeof ApiAuthSsoRedeemRoute
   '/api/auth/sso/redirect': typeof ApiAuthSsoRedirectRoute
+  '/api/calendar/subscriptions/$id': typeof ApiCalendarSubscriptionsIdRouteWithChildren
   '/api/tickets/$id/control': typeof ApiTicketsIdControlRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/api/calendar/subscriptions/$id/events': typeof ApiCalendarSubscriptionsIdEventsRoute
+  '/api/calendar/subscriptions/$id/refresh': typeof ApiCalendarSubscriptionsIdRefreshRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/accept-calendar-invite': typeof AcceptCalendarInviteRoute
   '/accept-coach-invite': typeof AcceptCoachInviteRoute
   '/accept-entity-invite': typeof AcceptEntityInviteRoute
   '/accept-leader-invite': typeof AcceptLeaderInviteRoute
@@ -446,18 +507,25 @@ export interface FileRoutesById {
   '/api/calendar/entity-sessions': typeof ApiCalendarEntitySessionsRoute
   '/api/calendar/import-confirm': typeof ApiCalendarImportConfirmRoute
   '/api/calendar/import-preview': typeof ApiCalendarImportPreviewRoute
+  '/api/calendar/invite': typeof ApiCalendarInviteRoute
+  '/api/calendar/lookup-user': typeof ApiCalendarLookupUserRoute
   '/api/calendar/membership-sessions': typeof ApiCalendarMembershipSessionsRoute
   '/api/calendar/sessions': typeof ApiCalendarSessionsRoute
+  '/api/calendar/subscriptions': typeof ApiCalendarSubscriptionsRouteWithChildren
   '/api/account/entities/$id': typeof ApiAccountEntitiesIdRoute
   '/api/auth/sso/redeem': typeof ApiAuthSsoRedeemRoute
   '/api/auth/sso/redirect': typeof ApiAuthSsoRedirectRoute
+  '/api/calendar/subscriptions/$id': typeof ApiCalendarSubscriptionsIdRouteWithChildren
   '/api/tickets/$id/control': typeof ApiTicketsIdControlRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/api/calendar/subscriptions/$id/events': typeof ApiCalendarSubscriptionsIdEventsRoute
+  '/api/calendar/subscriptions/$id/refresh': typeof ApiCalendarSubscriptionsIdRefreshRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/accept-calendar-invite'
     | '/accept-coach-invite'
     | '/accept-entity-invite'
     | '/accept-leader-invite'
@@ -498,16 +566,23 @@ export interface FileRouteTypes {
     | '/api/calendar/entity-sessions'
     | '/api/calendar/import-confirm'
     | '/api/calendar/import-preview'
+    | '/api/calendar/invite'
+    | '/api/calendar/lookup-user'
     | '/api/calendar/membership-sessions'
     | '/api/calendar/sessions'
+    | '/api/calendar/subscriptions'
     | '/api/account/entities/$id'
     | '/api/auth/sso/redeem'
     | '/api/auth/sso/redirect'
+    | '/api/calendar/subscriptions/$id'
     | '/api/tickets/$id/control'
     | '/lovable/email/queue/process'
+    | '/api/calendar/subscriptions/$id/events'
+    | '/api/calendar/subscriptions/$id/refresh'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/accept-calendar-invite'
     | '/accept-coach-invite'
     | '/accept-entity-invite'
     | '/accept-leader-invite'
@@ -547,16 +622,23 @@ export interface FileRouteTypes {
     | '/api/calendar/entity-sessions'
     | '/api/calendar/import-confirm'
     | '/api/calendar/import-preview'
+    | '/api/calendar/invite'
+    | '/api/calendar/lookup-user'
     | '/api/calendar/membership-sessions'
     | '/api/calendar/sessions'
+    | '/api/calendar/subscriptions'
     | '/api/account/entities/$id'
     | '/api/auth/sso/redeem'
     | '/api/auth/sso/redirect'
+    | '/api/calendar/subscriptions/$id'
     | '/api/tickets/$id/control'
     | '/lovable/email/queue/process'
+    | '/api/calendar/subscriptions/$id/events'
+    | '/api/calendar/subscriptions/$id/refresh'
   id:
     | '__root__'
     | '/'
+    | '/accept-calendar-invite'
     | '/accept-coach-invite'
     | '/accept-entity-invite'
     | '/accept-leader-invite'
@@ -597,17 +679,24 @@ export interface FileRouteTypes {
     | '/api/calendar/entity-sessions'
     | '/api/calendar/import-confirm'
     | '/api/calendar/import-preview'
+    | '/api/calendar/invite'
+    | '/api/calendar/lookup-user'
     | '/api/calendar/membership-sessions'
     | '/api/calendar/sessions'
+    | '/api/calendar/subscriptions'
     | '/api/account/entities/$id'
     | '/api/auth/sso/redeem'
     | '/api/auth/sso/redirect'
+    | '/api/calendar/subscriptions/$id'
     | '/api/tickets/$id/control'
     | '/lovable/email/queue/process'
+    | '/api/calendar/subscriptions/$id/events'
+    | '/api/calendar/subscriptions/$id/refresh'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AcceptCalendarInviteRoute: typeof AcceptCalendarInviteRoute
   AcceptCoachInviteRoute: typeof AcceptCoachInviteRoute
   AcceptEntityInviteRoute: typeof AcceptEntityInviteRoute
   AcceptLeaderInviteRoute: typeof AcceptLeaderInviteRoute
@@ -646,8 +735,11 @@ export interface RootRouteChildren {
   ApiCalendarEntitySessionsRoute: typeof ApiCalendarEntitySessionsRoute
   ApiCalendarImportConfirmRoute: typeof ApiCalendarImportConfirmRoute
   ApiCalendarImportPreviewRoute: typeof ApiCalendarImportPreviewRoute
+  ApiCalendarInviteRoute: typeof ApiCalendarInviteRoute
+  ApiCalendarLookupUserRoute: typeof ApiCalendarLookupUserRoute
   ApiCalendarMembershipSessionsRoute: typeof ApiCalendarMembershipSessionsRoute
   ApiCalendarSessionsRoute: typeof ApiCalendarSessionsRoute
+  ApiCalendarSubscriptionsRoute: typeof ApiCalendarSubscriptionsRouteWithChildren
   ApiAuthSsoRedeemRoute: typeof ApiAuthSsoRedeemRoute
   ApiAuthSsoRedirectRoute: typeof ApiAuthSsoRedirectRoute
   ApiTicketsIdControlRoute: typeof ApiTicketsIdControlRoute
@@ -656,130 +748,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/subscriptions': {
-      id: '/subscriptions'
-      path: '/subscriptions'
-      fullPath: '/subscriptions'
-      preLoaderRoute: typeof SubscriptionsRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/storage': {
-      id: '/storage'
-      path: '/storage'
-      fullPath: '/storage'
-      preLoaderRoute: typeof StorageRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/projects': {
-      id: '/projects'
-      path: '/projects'
-      fullPath: '/projects'
-      preLoaderRoute: typeof ProjectsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profiles': {
-      id: '/profiles'
-      path: '/profiles'
-      fullPath: '/profiles'
-      preLoaderRoute: typeof ProfilesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/media': {
-      id: '/media'
-      path: '/media'
-      fullPath: '/media'
-      preLoaderRoute: typeof MediaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/me': {
-      id: '/me'
-      path: '/me'
-      fullPath: '/me'
-      preLoaderRoute: typeof MeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login-security-contact': {
-      id: '/login-security-contact'
-      path: '/login-security-contact'
-      fullPath: '/login-security-contact'
-      preLoaderRoute: typeof LoginSecurityContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/family': {
-      id: '/family'
-      path: '/family'
-      fullPath: '/family'
-      preLoaderRoute: typeof FamilyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/events': {
-      id: '/events'
-      path: '/events'
-      fullPath: '/events'
-      preLoaderRoute: typeof EventsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/entity': {
-      id: '/entity'
-      path: '/entity'
-      fullPath: '/entity'
-      preLoaderRoute: typeof EntityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/clients': {
-      id: '/clients'
-      path: '/clients'
-      fullPath: '/clients'
-      preLoaderRoute: typeof ClientsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/calendar': {
-      id: '/calendar'
-      path: '/calendar'
-      fullPath: '/calendar'
-      preLoaderRoute: typeof CalendarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/account': {
-      id: '/account'
-      path: '/account'
-      fullPath: '/account'
-      preLoaderRoute: typeof AccountRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/accept-leader-invite': {
-      id: '/accept-leader-invite'
-      path: '/accept-leader-invite'
-      fullPath: '/accept-leader-invite'
-      preLoaderRoute: typeof AcceptLeaderInviteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/accept-entity-invite': {
-      id: '/accept-entity-invite'
-      path: '/accept-entity-invite'
-      fullPath: '/accept-entity-invite'
-      preLoaderRoute: typeof AcceptEntityInviteRouteImport
+    '/accept-calendar-invite': {
+      id: '/accept-calendar-invite'
+      path: '/accept-calendar-invite'
+      fullPath: '/accept-calendar-invite'
+      preLoaderRoute: typeof AcceptCalendarInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accept-coach-invite': {
@@ -789,60 +769,130 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AcceptCoachInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/accept-entity-invite': {
+      id: '/accept-entity-invite'
+      path: '/accept-entity-invite'
+      fullPath: '/accept-entity-invite'
+      preLoaderRoute: typeof AcceptEntityInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/events/': {
-      id: '/events/'
-      path: '/'
-      fullPath: '/events/'
-      preLoaderRoute: typeof EventsIndexRouteImport
-      parentRoute: typeof EventsRoute
-    }
-    '/u/$userId': {
-      id: '/u/$userId'
-      path: '/u/$userId'
-      fullPath: '/u/$userId'
-      preLoaderRoute: typeof UUserIdRouteImport
+    '/accept-leader-invite': {
+      id: '/accept-leader-invite'
+      path: '/accept-leader-invite'
+      fullPath: '/accept-leader-invite'
+      preLoaderRoute: typeof AcceptLeaderInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/team/board': {
-      id: '/team/board'
-      path: '/team/board'
-      fullPath: '/team/board'
-      preLoaderRoute: typeof TeamBoardRouteImport
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/t/$teamId': {
-      id: '/t/$teamId'
-      path: '/t/$teamId'
-      fullPath: '/t/$teamId'
-      preLoaderRoute: typeof TTeamIdRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/events/$eventId': {
-      id: '/events/$eventId'
-      path: '/$eventId'
-      fullPath: '/events/$eventId'
-      preLoaderRoute: typeof EventsEventIdRouteImport
-      parentRoute: typeof EventsRoute
-    }
-    '/cloud/individuals': {
-      id: '/cloud/individuals'
-      path: '/cloud/individuals'
-      fullPath: '/cloud/individuals'
-      preLoaderRoute: typeof CloudIndividualsRouteImport
+    '/calendar': {
+      id: '/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof CalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/cloud/entities': {
-      id: '/cloud/entities'
-      path: '/cloud/entities'
-      fullPath: '/cloud/entities'
-      preLoaderRoute: typeof CloudEntitiesRouteImport
+    '/clients': {
+      id: '/clients'
+      path: '/clients'
+      fullPath: '/clients'
+      preLoaderRoute: typeof ClientsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entity': {
+      id: '/entity'
+      path: '/entity'
+      fullPath: '/entity'
+      preLoaderRoute: typeof EntityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events': {
+      id: '/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof EventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/family': {
+      id: '/family'
+      path: '/family'
+      fullPath: '/family'
+      preLoaderRoute: typeof FamilyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login-security-contact': {
+      id: '/login-security-contact'
+      path: '/login-security-contact'
+      fullPath: '/login-security-contact'
+      preLoaderRoute: typeof LoginSecurityContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/me': {
+      id: '/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof MeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/media': {
+      id: '/media'
+      path: '/media'
+      fullPath: '/media'
+      preLoaderRoute: typeof MediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profiles': {
+      id: '/profiles'
+      path: '/profiles'
+      fullPath: '/profiles'
+      preLoaderRoute: typeof ProfilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects': {
+      id: '/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof ProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/storage': {
+      id: '/storage'
+      path: '/storage'
+      fullPath: '/storage'
+      preLoaderRoute: typeof StorageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/subscriptions': {
+      id: '/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/subscriptions'
+      preLoaderRoute: typeof SubscriptionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/c/$companyId': {
@@ -852,102 +902,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CCompanyIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/calendar/sessions': {
-      id: '/api/calendar/sessions'
-      path: '/api/calendar/sessions'
-      fullPath: '/api/calendar/sessions'
-      preLoaderRoute: typeof ApiCalendarSessionsRouteImport
+    '/cloud/entities': {
+      id: '/cloud/entities'
+      path: '/cloud/entities'
+      fullPath: '/cloud/entities'
+      preLoaderRoute: typeof CloudEntitiesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/calendar/membership-sessions': {
-      id: '/api/calendar/membership-sessions'
-      path: '/api/calendar/membership-sessions'
-      fullPath: '/api/calendar/membership-sessions'
-      preLoaderRoute: typeof ApiCalendarMembershipSessionsRouteImport
+    '/cloud/individuals': {
+      id: '/cloud/individuals'
+      path: '/cloud/individuals'
+      fullPath: '/cloud/individuals'
+      preLoaderRoute: typeof CloudIndividualsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/calendar/import-preview': {
-      id: '/api/calendar/import-preview'
-      path: '/api/calendar/import-preview'
-      fullPath: '/api/calendar/import-preview'
-      preLoaderRoute: typeof ApiCalendarImportPreviewRouteImport
+    '/events/': {
+      id: '/events/'
+      path: '/'
+      fullPath: '/events/'
+      preLoaderRoute: typeof EventsIndexRouteImport
+      parentRoute: typeof EventsRoute
+    }
+    '/events/$eventId': {
+      id: '/events/$eventId'
+      path: '/$eventId'
+      fullPath: '/events/$eventId'
+      preLoaderRoute: typeof EventsEventIdRouteImport
+      parentRoute: typeof EventsRoute
+    }
+    '/t/$teamId': {
+      id: '/t/$teamId'
+      path: '/t/$teamId'
+      fullPath: '/t/$teamId'
+      preLoaderRoute: typeof TTeamIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/calendar/import-confirm': {
-      id: '/api/calendar/import-confirm'
-      path: '/api/calendar/import-confirm'
-      fullPath: '/api/calendar/import-confirm'
-      preLoaderRoute: typeof ApiCalendarImportConfirmRouteImport
+    '/team/board': {
+      id: '/team/board'
+      path: '/team/board'
+      fullPath: '/team/board'
+      preLoaderRoute: typeof TeamBoardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/calendar/entity-sessions': {
-      id: '/api/calendar/entity-sessions'
-      path: '/api/calendar/entity-sessions'
-      fullPath: '/api/calendar/entity-sessions'
-      preLoaderRoute: typeof ApiCalendarEntitySessionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/session': {
-      id: '/api/auth/session'
-      path: '/api/auth/session'
-      fullPath: '/api/auth/session'
-      preLoaderRoute: typeof ApiAuthSessionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/register': {
-      id: '/api/auth/register'
-      path: '/api/auth/register'
-      fullPath: '/api/auth/register'
-      preLoaderRoute: typeof ApiAuthRegisterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/logout': {
-      id: '/api/auth/logout'
-      path: '/api/auth/logout'
-      fullPath: '/api/auth/logout'
-      preLoaderRoute: typeof ApiAuthLogoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/login': {
-      id: '/api/auth/login'
-      path: '/api/auth/login'
-      fullPath: '/api/auth/login'
-      preLoaderRoute: typeof ApiAuthLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/delete-account': {
-      id: '/api/auth/delete-account'
-      path: '/api/auth/delete-account'
-      fullPath: '/api/auth/delete-account'
-      preLoaderRoute: typeof ApiAuthDeleteAccountRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/activate': {
-      id: '/api/auth/activate'
-      path: '/api/auth/activate'
-      fullPath: '/api/auth/activate'
-      preLoaderRoute: typeof ApiAuthActivateRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/account/profile': {
-      id: '/api/account/profile'
-      path: '/api/account/profile'
-      fullPath: '/api/account/profile'
-      preLoaderRoute: typeof ApiAccountProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/account/password': {
-      id: '/api/account/password'
-      path: '/api/account/password'
-      fullPath: '/api/account/password'
-      preLoaderRoute: typeof ApiAccountPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/account/entities': {
-      id: '/api/account/entities'
-      path: '/api/account/entities'
-      fullPath: '/api/account/entities'
-      preLoaderRoute: typeof ApiAccountEntitiesRouteImport
+    '/u/$userId': {
+      id: '/u/$userId'
+      path: '/u/$userId'
+      fullPath: '/u/$userId'
+      preLoaderRoute: typeof UUserIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/account/email': {
@@ -957,18 +958,137 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAccountEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/queue/process': {
-      id: '/lovable/email/queue/process'
-      path: '/lovable/email/queue/process'
-      fullPath: '/lovable/email/queue/process'
-      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+    '/api/account/entities': {
+      id: '/api/account/entities'
+      path: '/api/account/entities'
+      fullPath: '/api/account/entities'
+      preLoaderRoute: typeof ApiAccountEntitiesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/tickets/$id/control': {
-      id: '/api/tickets/$id/control'
-      path: '/api/tickets/$id/control'
-      fullPath: '/api/tickets/$id/control'
-      preLoaderRoute: typeof ApiTicketsIdControlRouteImport
+    '/api/account/password': {
+      id: '/api/account/password'
+      path: '/api/account/password'
+      fullPath: '/api/account/password'
+      preLoaderRoute: typeof ApiAccountPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/account/profile': {
+      id: '/api/account/profile'
+      path: '/api/account/profile'
+      fullPath: '/api/account/profile'
+      preLoaderRoute: typeof ApiAccountProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/activate': {
+      id: '/api/auth/activate'
+      path: '/api/auth/activate'
+      fullPath: '/api/auth/activate'
+      preLoaderRoute: typeof ApiAuthActivateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/delete-account': {
+      id: '/api/auth/delete-account'
+      path: '/api/auth/delete-account'
+      fullPath: '/api/auth/delete-account'
+      preLoaderRoute: typeof ApiAuthDeleteAccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/login': {
+      id: '/api/auth/login'
+      path: '/api/auth/login'
+      fullPath: '/api/auth/login'
+      preLoaderRoute: typeof ApiAuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/logout': {
+      id: '/api/auth/logout'
+      path: '/api/auth/logout'
+      fullPath: '/api/auth/logout'
+      preLoaderRoute: typeof ApiAuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/register': {
+      id: '/api/auth/register'
+      path: '/api/auth/register'
+      fullPath: '/api/auth/register'
+      preLoaderRoute: typeof ApiAuthRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/session': {
+      id: '/api/auth/session'
+      path: '/api/auth/session'
+      fullPath: '/api/auth/session'
+      preLoaderRoute: typeof ApiAuthSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/entity-sessions': {
+      id: '/api/calendar/entity-sessions'
+      path: '/api/calendar/entity-sessions'
+      fullPath: '/api/calendar/entity-sessions'
+      preLoaderRoute: typeof ApiCalendarEntitySessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/import-confirm': {
+      id: '/api/calendar/import-confirm'
+      path: '/api/calendar/import-confirm'
+      fullPath: '/api/calendar/import-confirm'
+      preLoaderRoute: typeof ApiCalendarImportConfirmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/import-preview': {
+      id: '/api/calendar/import-preview'
+      path: '/api/calendar/import-preview'
+      fullPath: '/api/calendar/import-preview'
+      preLoaderRoute: typeof ApiCalendarImportPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/invite': {
+      id: '/api/calendar/invite'
+      path: '/api/calendar/invite'
+      fullPath: '/api/calendar/invite'
+      preLoaderRoute: typeof ApiCalendarInviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/lookup-user': {
+      id: '/api/calendar/lookup-user'
+      path: '/api/calendar/lookup-user'
+      fullPath: '/api/calendar/lookup-user'
+      preLoaderRoute: typeof ApiCalendarLookupUserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/membership-sessions': {
+      id: '/api/calendar/membership-sessions'
+      path: '/api/calendar/membership-sessions'
+      fullPath: '/api/calendar/membership-sessions'
+      preLoaderRoute: typeof ApiCalendarMembershipSessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/sessions': {
+      id: '/api/calendar/sessions'
+      path: '/api/calendar/sessions'
+      fullPath: '/api/calendar/sessions'
+      preLoaderRoute: typeof ApiCalendarSessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/subscriptions': {
+      id: '/api/calendar/subscriptions'
+      path: '/api/calendar/subscriptions'
+      fullPath: '/api/calendar/subscriptions'
+      preLoaderRoute: typeof ApiCalendarSubscriptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/account/entities/$id': {
+      id: '/api/account/entities/$id'
+      path: '/$id'
+      fullPath: '/api/account/entities/$id'
+      preLoaderRoute: typeof ApiAccountEntitiesIdRouteImport
+      parentRoute: typeof ApiAccountEntitiesRoute
+    }
+    '/api/auth/sso/redeem': {
+      id: '/api/auth/sso/redeem'
+      path: '/api/auth/sso/redeem'
+      fullPath: '/api/auth/sso/redeem'
+      preLoaderRoute: typeof ApiAuthSsoRedeemRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/sso/redirect': {
@@ -978,19 +1098,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSsoRedirectRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/auth/sso/redeem': {
-      id: '/api/auth/sso/redeem'
-      path: '/api/auth/sso/redeem'
-      fullPath: '/api/auth/sso/redeem'
-      preLoaderRoute: typeof ApiAuthSsoRedeemRouteImport
+    '/api/calendar/subscriptions/$id': {
+      id: '/api/calendar/subscriptions/$id'
+      path: '/$id'
+      fullPath: '/api/calendar/subscriptions/$id'
+      preLoaderRoute: typeof ApiCalendarSubscriptionsIdRouteImport
+      parentRoute: typeof ApiCalendarSubscriptionsRoute
+    }
+    '/api/tickets/$id/control': {
+      id: '/api/tickets/$id/control'
+      path: '/api/tickets/$id/control'
+      fullPath: '/api/tickets/$id/control'
+      preLoaderRoute: typeof ApiTicketsIdControlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/account/entities/$id': {
-      id: '/api/account/entities/$id'
-      path: '/$id'
-      fullPath: '/api/account/entities/$id'
-      preLoaderRoute: typeof ApiAccountEntitiesIdRouteImport
-      parentRoute: typeof ApiAccountEntitiesRoute
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/subscriptions/$id/events': {
+      id: '/api/calendar/subscriptions/$id/events'
+      path: '/events'
+      fullPath: '/api/calendar/subscriptions/$id/events'
+      preLoaderRoute: typeof ApiCalendarSubscriptionsIdEventsRouteImport
+      parentRoute: typeof ApiCalendarSubscriptionsIdRoute
+    }
+    '/api/calendar/subscriptions/$id/refresh': {
+      id: '/api/calendar/subscriptions/$id/refresh'
+      path: '/refresh'
+      fullPath: '/api/calendar/subscriptions/$id/refresh'
+      preLoaderRoute: typeof ApiCalendarSubscriptionsIdRefreshRouteImport
+      parentRoute: typeof ApiCalendarSubscriptionsIdRoute
     }
   }
 }
@@ -1019,8 +1160,42 @@ const ApiAccountEntitiesRouteChildren: ApiAccountEntitiesRouteChildren = {
 const ApiAccountEntitiesRouteWithChildren =
   ApiAccountEntitiesRoute._addFileChildren(ApiAccountEntitiesRouteChildren)
 
+interface ApiCalendarSubscriptionsIdRouteChildren {
+  ApiCalendarSubscriptionsIdEventsRoute: typeof ApiCalendarSubscriptionsIdEventsRoute
+  ApiCalendarSubscriptionsIdRefreshRoute: typeof ApiCalendarSubscriptionsIdRefreshRoute
+}
+
+const ApiCalendarSubscriptionsIdRouteChildren: ApiCalendarSubscriptionsIdRouteChildren =
+  {
+    ApiCalendarSubscriptionsIdEventsRoute:
+      ApiCalendarSubscriptionsIdEventsRoute,
+    ApiCalendarSubscriptionsIdRefreshRoute:
+      ApiCalendarSubscriptionsIdRefreshRoute,
+  }
+
+const ApiCalendarSubscriptionsIdRouteWithChildren =
+  ApiCalendarSubscriptionsIdRoute._addFileChildren(
+    ApiCalendarSubscriptionsIdRouteChildren,
+  )
+
+interface ApiCalendarSubscriptionsRouteChildren {
+  ApiCalendarSubscriptionsIdRoute: typeof ApiCalendarSubscriptionsIdRouteWithChildren
+}
+
+const ApiCalendarSubscriptionsRouteChildren: ApiCalendarSubscriptionsRouteChildren =
+  {
+    ApiCalendarSubscriptionsIdRoute:
+      ApiCalendarSubscriptionsIdRouteWithChildren,
+  }
+
+const ApiCalendarSubscriptionsRouteWithChildren =
+  ApiCalendarSubscriptionsRoute._addFileChildren(
+    ApiCalendarSubscriptionsRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AcceptCalendarInviteRoute: AcceptCalendarInviteRoute,
   AcceptCoachInviteRoute: AcceptCoachInviteRoute,
   AcceptEntityInviteRoute: AcceptEntityInviteRoute,
   AcceptLeaderInviteRoute: AcceptLeaderInviteRoute,
@@ -1059,8 +1234,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCalendarEntitySessionsRoute: ApiCalendarEntitySessionsRoute,
   ApiCalendarImportConfirmRoute: ApiCalendarImportConfirmRoute,
   ApiCalendarImportPreviewRoute: ApiCalendarImportPreviewRoute,
+  ApiCalendarInviteRoute: ApiCalendarInviteRoute,
+  ApiCalendarLookupUserRoute: ApiCalendarLookupUserRoute,
   ApiCalendarMembershipSessionsRoute: ApiCalendarMembershipSessionsRoute,
   ApiCalendarSessionsRoute: ApiCalendarSessionsRoute,
+  ApiCalendarSubscriptionsRoute: ApiCalendarSubscriptionsRouteWithChildren,
   ApiAuthSsoRedeemRoute: ApiAuthSsoRedeemRoute,
   ApiAuthSsoRedirectRoute: ApiAuthSsoRedirectRoute,
   ApiTicketsIdControlRoute: ApiTicketsIdControlRoute,

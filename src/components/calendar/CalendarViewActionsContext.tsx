@@ -1,6 +1,11 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import type { ViewMode } from "@/components/calendar/UnifiedElasticGrid";
-import { useEventStore, type CalendarEvent } from "@/components/calendar/yearStore";
+import {
+  isSubscriptionCalendar,
+  useEventStore,
+  type CalendarEvent,
+} from "@/components/calendar/yearStore";
+import { duplicateSortIndex } from "@/lib/duplicatePlacement";
 import {
   buildPasteEventsAtDate,
   buildPasteEventsAtDateTime,
@@ -34,7 +39,7 @@ type CalendarViewActionsValue = {
     viewMode: ViewMode,
     span?: ClipboardSpan,
   ) => void;
-  duplicateEvent: (event: CalendarEvent) => CalendarEvent | null;
+  duplicateEvent: (event: CalendarEvent, peers?: CalendarEvent[]) => CalendarEvent | null;
   canPaste: (viewMode: ViewMode) => boolean;
   canPasteWeek: () => boolean;
   pasteAtDate: (targetDate: Date, viewMode: ViewMode, startMin?: number) => boolean;
@@ -51,6 +56,8 @@ export function useCalendarViewActionsOptional(): CalendarViewActionsValue | nul
 }
 
 function pastedEventPatch(event: CalendarEvent) {
+  // Clipboard clones are local sessions. A web-address paste must not keep the
+  // subscription calendar, or it would stay undeletable like the feed row.
   return {
     startISO: event.startISO,
     endISO: event.endISO,
@@ -108,11 +115,32 @@ export function CalendarViewActionsProvider({
   );
 
   const duplicateEvent = useCallback(
-    (event: CalendarEvent) => {
-      if (!canMutateEvent(event)) return null;
-      return upsertEvent(eventToDuplicatePatch(event));
+    (event: CalendarEvent, peers?: CalendarEvent[]) => {
+      const webAddress = isSubscriptionCalendar(event.userCalendarId);
+      // Feed rows cannot be edited, but duplicating one creates a local session.
+      if (!webAddress && !canMutateEvent(event)) return null;
+      // Peers include web-address rows, which are not in the session store.
+      // Their order is what places the copy beside the session that was duplicated.
+      const base = peers && peers.length > 0 ? peers : events;
+      const pool = base.some((item) => item.id === event.id) ? base : [...base, event];
+      const place = duplicateSortIndex(event, pool);
+      for (const bump of place.bumps) {
+        const target = events.find((item) => item.id === bump.id);
+        if (!target || !canMutateEvent(target)) continue;
+        moveEvent(bump.id, { sortIndex: bump.sortIndex });
+      }
+      const patch = {
+        ...eventToDuplicatePatch(event),
+        sortIndex: place.sortIndex,
+      };
+      if (!webAddress) return upsertEvent(patch);
+      return upsertEvent({
+        ...patch,
+        userCalendarId: null,
+        followsCalendarColor: false,
+      });
     },
-    [canMutateEvent, upsertEvent],
+    [canMutateEvent, events, moveEvent, upsertEvent],
   );
 
   const canPaste = useCallback(

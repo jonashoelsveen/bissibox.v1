@@ -410,6 +410,12 @@ export interface CalendarEvent {
   entityId?: string | null;
   /** Entity mode — when true, participant signup is enabled for this session. */
   signUpEnabled?: boolean;
+  /** Shared calendar this session belongs to. */
+  userCalendarId?: string | null;
+  /** When true, the session colour tracks the calendar colour. */
+  followsCalendarColor?: boolean;
+  /** Author of the row. Used so members only see sessions admins added. */
+  authorUserId?: string | null;
   /** Recurrence rule when repeat is enabled (`null` = one-off). */
   repeatRule?: SessionRepeatRule | null;
   /** Shared id for instances materialised from one repeat create/edit. */
@@ -521,6 +527,54 @@ function parseScope(calId: string): Scope {
  * known set immediately while in-flight writes flush, then the DB reload
  * confirms. Survives hook remounts within the same tab session. */
 const eventsByCalId = new Map<string, CalendarEvent[]>();
+const calendarDetachListeners = new Set<(calendarId: string) => void>();
+const memberReadOnlyCalendarIds = new Set<string>();
+const subscriptionReadOnlyCalendarIds = new Set<string>();
+
+/** Calendars the signed-in user may only read. */
+export function setMemberReadOnlyCalendars(ids: Iterable<string>): void {
+  memberReadOnlyCalendarIds.clear();
+  for (const id of ids) memberReadOnlyCalendarIds.add(id);
+}
+
+/** Subscribed feeds stay read-only for the owner as well. */
+export function setSubscriptionReadOnlyCalendars(ids: Iterable<string>): void {
+  subscriptionReadOnlyCalendarIds.clear();
+  for (const id of ids) subscriptionReadOnlyCalendarIds.add(id);
+}
+
+export function isSubscriptionCalendar(calendarId: string | null | undefined): boolean {
+  return !!calendarId && subscriptionReadOnlyCalendarIds.has(calendarId);
+}
+
+/**
+ * A feed instance on a web-address calendar. Pasted and duplicated copies are
+ * ordinary local sessions: they do not keep this calendar id, so they can be deleted.
+ */
+export function isStandardWebAddressSession(
+  event: Pick<CalendarEvent, "userCalendarId"> | null | undefined,
+): boolean {
+  return isSubscriptionCalendar(event?.userCalendarId);
+}
+
+export function isSharedCalendarReadOnly(calendarId: string | null | undefined): boolean {
+  return (
+    !!calendarId &&
+    (memberReadOnlyCalendarIds.has(calendarId) || subscriptionReadOnlyCalendarIds.has(calendarId))
+  );
+}
+
+/** Drop a deleted calendar from in-memory sessions without waiting for realtime. */
+export function detachUserCalendarLocally(calendarId: string): void {
+  const strip = (event: CalendarEvent): CalendarEvent =>
+    event.userCalendarId === calendarId
+      ? { ...event, userCalendarId: null, followsCalendarColor: false }
+      : event;
+  for (const [calId, events] of eventsByCalId) {
+    eventsByCalId.set(calId, events.map(strip));
+  }
+  for (const listener of calendarDetachListeners) listener(calendarId);
+}
 
 function replicaToCalendarEvents(
   rows: Array<{
@@ -624,7 +678,9 @@ function sessionSnapshotEqual(a: CalendarEvent, b: CalendarEvent): boolean {
     (a.repeatRule ?? null) === (b.repeatRule ?? null) &&
     (a.repeatSeriesId ?? null) === (b.repeatSeriesId ?? null) &&
     !!a.repeatDetached === !!b.repeatDetached &&
-    (a.sortIndex ?? null) === (b.sortIndex ?? null)
+    (a.sortIndex ?? null) === (b.sortIndex ?? null) &&
+    (a.userCalendarId ?? null) === (b.userCalendarId ?? null) &&
+    !!a.followsCalendarColor === !!b.followsCalendarColor
   );
 }
 
@@ -664,6 +720,8 @@ interface Row {
   signup_enabled: boolean;
   repeat_rule: string | null;
   repeat_series_id: string | null;
+  user_calendar_id?: string | null;
+  follows_calendar_color?: boolean | null;
 }
 
 function parseStoredRepeat(r: Row | Record<string, unknown>): {
@@ -870,6 +928,9 @@ function rowToEvent(r: Row): CalendarEvent {
     appGroupId: r.app_group_id,
     entityId: rowEntityId(r),
     signUpEnabled: !!r.signup_enabled,
+    userCalendarId: r.user_calendar_id ?? null,
+    followsCalendarColor: !!r.follows_calendar_color,
+    authorUserId: r.user_id || null,
     ...parseStoredRepeat(r),
   };
 }
@@ -905,6 +966,8 @@ function eventToRow(e: CalendarEvent, scope: Scope, coachUserId: string | null):
     sort_index: e.sortIndex ?? null,
     app_group_id: e.appGroupId ?? null,
     signup_enabled: !!e.signUpEnabled,
+    user_calendar_id: e.userCalendarId ?? null,
+    follows_calendar_color: !!e.followsCalendarColor,
     repeat_rule: e.repeatRule ?? (e.repeatDetached ? SESSION_REPEAT_DETACHED_VALUE : null),
     repeat_series_id: e.repeatSeriesId ?? null,
   };
@@ -938,6 +1001,22 @@ export function useEventStore(calId: string) {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [realtimeEpoch, setRealtimeEpoch] = useState(0);
   const eventsRef = useRef<CalendarEvent[]>([]);
+  useEffect(() => {
+    const onDetach = (calendarId: string) => {
+      const next = eventsRef.current.map((event) =>
+        event.userCalendarId === calendarId
+          ? { ...event, userCalendarId: null, followsCalendarColor: false }
+          : event,
+      );
+      eventsRef.current = next;
+      eventsByCalId.set(calId, next);
+      setEvents(next);
+    };
+    calendarDetachListeners.add(onDetach);
+    return () => {
+      calendarDetachListeners.delete(onDetach);
+    };
+  }, [calId]);
   const pendingDeleteIdsRef = useRef<Map<string, number>>(new Map());
   const persistedIdsRef = useRef<Set<string>>(new Set());
   const recentWriteAtRef = useRef<Map<string, number>>(new Map());
@@ -1768,6 +1847,9 @@ export function useEventStore(calId: string) {
     (event: CalendarEvent | undefined | null) => {
       if (!event) return false;
       if (event.entityId && scope?.kind === "user") return false;
+      // Web-address feed rows stay read-only. A clipboard paste does not keep
+      // that calendar id, so the copy deletes like any other local session.
+      if (event.userCalendarId && isSharedCalendarReadOnly(event.userCalendarId)) return false;
       if (scope?.kind !== "client") return true;
       const coachId = coachUserIdRef.current;
       return !!coachId && event.coachPending === true && event.createdByCoachId === coachId;
