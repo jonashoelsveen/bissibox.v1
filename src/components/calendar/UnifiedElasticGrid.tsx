@@ -39,7 +39,7 @@ import { Check, ChevronDown, Footprints, Bike, Dumbbell, Snowflake, Waves } from
 import type { LucideIcon } from "lucide-react";
 import { useCalendarTheme } from "./calendarThemePref";
 import type { CellData, CellKey, Session, CalendarEvent } from "./yearStore";
-import { makeCellId, isMembershipOverlayEvent, isSharedCalendarReadOnly } from "./yearStore";
+import { makeCellId, isMembershipOverlayEvent, isSharedCalendarReadOnly, useCalendarAccessRevision } from "./yearStore";
 import {
   MonthGridType1,
   PopoverEditor,
@@ -573,6 +573,7 @@ export function UnifiedElasticGrid({
   viewerRole = "owner",
   teamId = null,
 }: UnifiedElasticGridProps) {
+  useCalendarAccessRevision();
   // viewMode is the only user-facing toggle now. There are no "types".
   //   - "day"   → 7-column rich spreadsheet (one row per 30-min slot)
   //   - "week"  → 7-column compact spreadsheet (hourly time labels)
@@ -4171,8 +4172,7 @@ export function UnifiedElasticGrid({
           enableDuration={mode.kind === "year"}
           readOnly={
             viewerRole !== "owner" ||
-            isMembershipOverlayEvent(getEventById(popover.eventId), calId) ||
-            isSharedCalendarReadOnly(getEventById(popover.eventId)?.userCalendarId)
+            isMembershipOverlayEvent(getEventById(popover.eventId), calId)
           }
           initialUserCalendarId={getEventById(popover.eventId)?.userCalendarId ?? null}
           initialFollowsCalendarColor={!!getEventById(popover.eventId)?.followsCalendarColor}

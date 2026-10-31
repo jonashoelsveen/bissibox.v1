@@ -530,17 +530,83 @@ const eventsByCalId = new Map<string, CalendarEvent[]>();
 const calendarDetachListeners = new Set<(calendarId: string) => void>();
 const memberReadOnlyCalendarIds = new Set<string>();
 const subscriptionReadOnlyCalendarIds = new Set<string>();
+/** Latest role for each calendar. Admin wins over a stale member id. */
+const calendarRoleById = new Map<string, "admin" | "member">();
+const calendarAccessListeners = new Set<() => void>();
+let calendarAccessRevision = 0;
+
+function sameIdSet(current: Set<string>, next: readonly string[]): boolean {
+  if (current.size !== next.length) return false;
+  for (const id of next) if (!current.has(id)) return false;
+  return true;
+}
+
+function replaceIdSet(current: Set<string>, next: readonly string[]): void {
+  current.clear();
+  for (const id of next) current.add(id);
+}
 
 /** Calendars the signed-in user may only read. */
 export function setMemberReadOnlyCalendars(ids: Iterable<string>): void {
-  memberReadOnlyCalendarIds.clear();
-  for (const id of ids) memberReadOnlyCalendarIds.add(id);
+  replaceIdSet(memberReadOnlyCalendarIds, [...ids]);
 }
 
 /** Subscribed feeds stay read-only for the owner as well. */
 export function setSubscriptionReadOnlyCalendars(ids: Iterable<string>): void {
-  subscriptionReadOnlyCalendarIds.clear();
-  for (const id of ids) subscriptionReadOnlyCalendarIds.add(id);
+  replaceIdSet(subscriptionReadOnlyCalendarIds, [...ids]);
+}
+
+export type CalendarAccessSnapshot = {
+  id: string;
+  myRole: "admin" | "member";
+  source: "local" | "subscription";
+};
+
+/** Publish member and subscription locks from the same calendar list the UI shows. */
+export function publishCalendarAccess(calendars: Iterable<CalendarAccessSnapshot>): void {
+  const memberIds: string[] = [];
+  const subscriptionIds: string[] = [];
+  const nextRoles = new Map<string, "admin" | "member">();
+  for (const calendar of calendars) {
+    if (calendar.source === "subscription") {
+      subscriptionIds.push(calendar.id);
+      continue;
+    }
+    nextRoles.set(calendar.id, calendar.myRole);
+    if (calendar.myRole === "member") memberIds.push(calendar.id);
+  }
+  let rolesSame = calendarRoleById.size === nextRoles.size;
+  if (rolesSame) {
+    for (const [id, role] of nextRoles) {
+      if (calendarRoleById.get(id) !== role) {
+        rolesSame = false;
+        break;
+      }
+    }
+  }
+  const same =
+    rolesSame &&
+    sameIdSet(memberReadOnlyCalendarIds, memberIds) &&
+    sameIdSet(subscriptionReadOnlyCalendarIds, subscriptionIds);
+  calendarRoleById.clear();
+  for (const [id, role] of nextRoles) calendarRoleById.set(id, role);
+  replaceIdSet(memberReadOnlyCalendarIds, memberIds);
+  replaceIdSet(subscriptionReadOnlyCalendarIds, subscriptionIds);
+  if (same) return;
+  calendarAccessRevision += 1;
+  for (const listener of calendarAccessListeners) listener();
+}
+
+/** Re-render when shared-calendar edit access changes. */
+export function useCalendarAccessRevision(): number {
+  return useSyncExternalStore(
+    (listener) => {
+      calendarAccessListeners.add(listener);
+      return () => calendarAccessListeners.delete(listener);
+    },
+    () => calendarAccessRevision,
+    () => 0,
+  );
 }
 
 export function isSubscriptionCalendar(calendarId: string | null | undefined): boolean {
@@ -565,10 +631,12 @@ export function isCopyOnlyCalendarSession(
 }
 
 export function isSharedCalendarReadOnly(calendarId: string | null | undefined): boolean {
-  return (
-    !!calendarId &&
-    (memberReadOnlyCalendarIds.has(calendarId) || subscriptionReadOnlyCalendarIds.has(calendarId))
-  );
+  if (!calendarId) return false;
+  if (subscriptionReadOnlyCalendarIds.has(calendarId)) return true;
+  const role = calendarRoleById.get(calendarId);
+  if (role === "admin") return false;
+  if (role === "member") return true;
+  return memberReadOnlyCalendarIds.has(calendarId);
 }
 
 /** Drop a deleted calendar from in-memory sessions without waiting for realtime. */

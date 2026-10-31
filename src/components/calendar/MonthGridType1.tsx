@@ -43,7 +43,7 @@ import { createPortal, flushSync } from "react-dom";
 import { PersonStanding, GraduationCap, Briefcase, Sparkles, Bike, Waves, Dumbbell, Snowflake, Footprints, ChevronLeft, ChevronRight, Check, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, CalendarEvent } from "./yearStore";
-import { makeCellId, isMembershipOverlayEvent, isSharedCalendarReadOnly, useTeamName } from "./yearStore";
+import { makeCellId, isMembershipOverlayEvent, isSharedCalendarReadOnly, useCalendarAccessRevision, useTeamName } from "./yearStore";
 import { useUserCalendarsSafe } from "./UserCalendarsContext";
 import { useFeatureEnabled } from "@/lib/featureFlagSnapshot";
 import { useUserGroups } from "@/hooks/useUserGroups";
@@ -767,6 +767,7 @@ export function MonthGridType1({
   teamId = null,
   hideMultiDayRow = false,
 }: MonthGridType1Props) {
+  useCalendarAccessRevision();
   const searchSelectedId = useCalendarSearchSafe()?.selectedId ?? null;
   const darkTiles = useCalendarTheme() === "dark";
   const teamResponses = useTeamSessionResponses();
@@ -4859,8 +4860,7 @@ export function MonthGridType1({
             enableDuration={!!onUpsertEvent}
             readOnly={
               viewerRole !== "owner" ||
-              isMembershipOverlayEvent(events.find((e) => e.id === popover.eventId), calId) ||
-              isSharedCalendarReadOnly(events.find((e) => e.id === popover.eventId)?.userCalendarId)
+              isMembershipOverlayEvent(events.find((e) => e.id === popover.eventId), calId)
             }
             initialUserCalendarId={events.find((e) => e.id === popover.eventId)?.userCalendarId ?? null}
             initialFollowsCalendarColor={!!events.find((e) => e.id === popover.eventId)?.followsCalendarColor}
@@ -6499,7 +6499,7 @@ export function PopoverEditor({
   onCalendarChange,
   onTitleChange,
   onDateChange,
-  readOnly = false,
+  readOnly: readOnlyProp = false,
   placeholder = "Session title",
   teamId = null,
   initialDescription = null,
@@ -6583,6 +6583,12 @@ export function PopoverEditor({
   }, [initialUserCalendarId, initialFollowsCalendarColor]);
   const chosenCalendar =
     userCalendars?.calendars.find((calendar) => calendar.id === userCalendarId) ?? null;
+  const sharedCalendarReadOnly =
+    !!userCalendarId &&
+    (chosenCalendar
+      ? chosenCalendar.source === "subscription" || chosenCalendar.myRole !== "admin"
+      : isSharedCalendarReadOnly(userCalendarId));
+  const readOnly = readOnlyProp || sharedCalendarReadOnly;
   const [liveCategoryId, setLiveCategoryId] = useState(initialCategoryId ?? null);
   useEffect(() => {
     setLiveCategoryId(initialCategoryId ?? null);
@@ -7332,7 +7338,7 @@ export function PopoverEditor({
         return;
       }
       if (matchesShortcut(e, SHORTCUTS.duplicateSession)) {
-        if (readOnly && !isSharedCalendarReadOnly(userCalendarId)) return;
+        if (readOnly && !sharedCalendarReadOnly) return;
         if (isEditableTarget(e.target) && !inPopoverField()) return;
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -7357,6 +7363,7 @@ export function PopoverEditor({
     handleDeleteSession,
     isEdit,
     readOnly,
+    sharedCalendarReadOnly,
     userCalendarId,
   ]);
 
@@ -8108,7 +8115,7 @@ export function PopoverEditor({
     </div>
   ) : null;
 
-  const copyOnlySession = isSharedCalendarReadOnly(userCalendarId);
+  const copyOnlySession = sharedCalendarReadOnly;
   const lockReadOnlyField = readOnly && !copyOnlySession;
 
   return createPortal(

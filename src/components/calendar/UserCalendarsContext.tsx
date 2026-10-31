@@ -11,7 +11,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { authHeaders } from "@/lib/calendarSessionPersist";
-import { detachUserCalendarLocally, setMemberReadOnlyCalendars, setSubscriptionReadOnlyCalendars } from "./yearStore";
+import { detachUserCalendarLocally, publishCalendarAccess } from "./yearStore";
 
 export type CalendarAccessRole = "admin" | "member";
 export type CalendarMemberStatus = "pending" | "accepted";
@@ -101,14 +101,16 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
   const removedIds = useRef(new Set<string>());
   const orderRevision = useRef(0);
   const pendingOrder = useRef<Map<string, number> | null>(null);
+  const refreshGen = useRef(0);
 
   const refresh = useCallback(async () => {
     if (!user) {
+      refreshGen.current += 1;
       setCalendars([]);
-      setMemberReadOnlyCalendars([]);
-      setSubscriptionReadOnlyCalendars([]);
+      publishCalendarAccess([]);
       return;
     }
+    const gen = ++refreshGen.current;
     const seen = orderRevision.current;
     setLoading(true);
     const [calRes, memberRes, visRes] = await Promise.all([
@@ -123,6 +125,7 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
         .select("id, calendar_id, user_id, email, display_name, role, status"),
       supabase.from("user_calendar_visibility").select("calendar_id, hidden").eq("user_id", user.id),
     ]);
+    if (gen !== refreshGen.current) return;
     setLoading(false);
     if (seen !== orderRevision.current) return;
     if (calRes.error || memberRes.error) return;
@@ -167,14 +170,17 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
         source: row.source === "subscription" ? "subscription" : "local",
       });
     }
-    setMemberReadOnlyCalendars(
-      next.filter((calendar) => calendar.myRole === "member").map((calendar) => calendar.id),
+    const visible = applyCalendarOrder(
+      next.filter((calendar) => !removedIds.current.has(calendar.id)),
+      pendingOrder.current,
     );
-    setSubscriptionReadOnlyCalendars(
-      next.filter((calendar) => calendar.source === "subscription").map((calendar) => calendar.id),
-    );
-    setCalendars(applyCalendarOrder(next.filter((calendar) => !removedIds.current.has(calendar.id)), pendingOrder.current));
+    publishCalendarAccess(visible);
+    setCalendars(visible);
   }, [user]);
+
+  useEffect(() => {
+    publishCalendarAccess(calendars);
+  }, [calendars]);
 
   useEffect(() => {
     void refresh();
@@ -334,12 +340,22 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
 
   const updateMemberRole = useCallback(async (memberId: string, role: CalendarAccessRole) => {
     setCalendars((prev) =>
-      prev.map((calendar) => ({
-        ...calendar,
-        members: calendar.members.map((member) =>
-          member.id === memberId ? { ...member, role } : member,
-        ),
-      })),
+      prev.map((calendar) => {
+        let touched = false;
+        const members = calendar.members.map((member) => {
+          if (member.id !== memberId) return member;
+          touched = true;
+          return { ...member, role };
+        });
+        if (!touched) return calendar;
+        const mine = members.find((member) => member.userId === user?.id && member.status === "accepted");
+        const myRole: CalendarAccessRole = !user?.id
+          ? calendar.myRole
+          : calendar.ownerId === user.id || mine?.role === "admin"
+            ? "admin"
+            : "member";
+        return { ...calendar, members, myRole };
+      }),
     );
     const { error } = await supabase.rpc("set_user_calendar_member_role", {
       p_member_id: memberId,
@@ -347,7 +363,7 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
     });
     if (error) console.error("[calendars] role change failed", error.message);
     void refresh();
-  }, [refresh]);
+  }, [refresh, user?.id]);
 
   const removeMember = useCallback(async (memberId: string) => {
     setCalendars((prev) =>

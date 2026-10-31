@@ -11,7 +11,7 @@ import {
   useSyncOwnTeamSessionResponses,
   useTeamSessionResponses,
 } from "@/lib/teamSessionResponse";
-import { isMembershipOverlayEvent, isSharedCalendarReadOnly, type CalendarEvent } from "./yearStore";
+import { isMembershipOverlayEvent, isSharedCalendarReadOnly, useCalendarAccessRevision, type CalendarEvent } from "./yearStore";
 import { fromISOLocal } from "./dateUtils";
 import {
   allDayBandLaneAtCursor,
@@ -152,6 +152,7 @@ export function WeekAllDayBand({
 }) {
   const teamResponses = useTeamSessionResponses();
   const darkTiles = useCalendarTheme() === "dark";
+  useCalendarAccessRevision();
   const [bandOpen, setBandOpen] = useState(true);
   const signupSessionIds = useMemo(
     () =>
