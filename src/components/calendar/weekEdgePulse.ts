@@ -4,7 +4,14 @@ import {
   monthCreateEdgeZone,
 } from "@/lib/monthVerticalScroll";
 import { nextWeekOriginScroll } from "@/lib/weekHorizontalScroll";
-import { tileMajorityPastPane } from "./edgeScroll";
+import { pointerTouchesLeftEdge, pointerTouchesRightEdge, tileMajorityPastPane } from "./edgeScroll";
+
+/**
+ * After the pointer has touched an edge line, keep that edge armed across a
+ * few pixels of hand jitter. The week pulse waits before it moves; a 1px line
+ * would otherwise drop the hold on the next sample.
+ */
+const EDGE_LINE_HOLD_PX = 8;
 
 /** One week glide. Short enough to feel immediate, long enough to read. */
 const WEEK_EDGE_PULSE_MS = 360;
@@ -61,6 +68,8 @@ export function createWeekEdgePulse(host: {
   let paging = false;
   let pointerX = 0;
   let tile: { left: number; right: number } | null = null;
+  let rightHeld = false;
+  let leftHeld = false;
   let paneCache: { left: number; right: number } | null = null;
   let pulse: { from: number; target: number; t0: number; dur: number } | null = null;
 
@@ -77,19 +86,46 @@ export function createWeekEdgePulse(host: {
     intervalTimer = 0;
   };
 
-  const edgeAt = (clientX: number): -1 | 0 | 1 => {
+  const zoneAt = (clientX: number, repeat: boolean): -1 | 0 | 1 => {
     const pane = paneNow();
     if (!pane) return 0;
-    if (tile) return tileMajorityPastPane(tile, pane);
-    return monthCreateEdgeZone(clientX, pane.left, pane.right, paging);
+    if (!tile) {
+      rightHeld = false;
+      leftHeld = false;
+      return monthCreateEdgeZone(clientX, pane.left, pane.right, repeat);
+    }
+    const majority = tileMajorityPastPane(tile, pane);
+    if (majority === -1) {
+      rightHeld = false;
+      return -1;
+    }
+    if (majority === 1) {
+      leftHeld = false;
+      return 1;
+    }
+    const onRight = pointerTouchesRightEdge(clientX, pane.right);
+    const onLeft = pointerTouchesLeftEdge(clientX, pane.left);
+    if (onRight) {
+      rightHeld = true;
+      leftHeld = false;
+    } else if (rightHeld && clientX < Math.floor(pane.right) - EDGE_LINE_HOLD_PX) {
+      rightHeld = false;
+    }
+    if (onLeft) {
+      leftHeld = true;
+      rightHeld = false;
+    } else if (leftHeld && clientX > Math.floor(pane.left) + EDGE_LINE_HOLD_PX) {
+      leftHeld = false;
+    }
+    if (rightHeld) return 1;
+    if (leftHeld) return -1;
+    return 0;
   };
 
+  const edgeAt = (clientX: number): -1 | 0 | 1 => zoneAt(clientX, paging);
+
   const stillAtRim = (repeat: boolean): boolean => {
-    const pane = paneNow();
-    if (!pane) return false;
-    const zone = tile
-      ? tileMajorityPastPane(tile, pane)
-      : monthCreateEdgeZone(pointerX, pane.left, pane.right, repeat);
+    const zone = zoneAt(pointerX, repeat);
     edge = zone;
     return zone !== 0;
   };
@@ -171,6 +207,8 @@ export function createWeekEdgePulse(host: {
     leave() {
       edge = 0;
       paging = false;
+      rightHeld = false;
+      leftHeld = false;
       tile = null;
       clearPulseTimers();
     },
@@ -178,6 +216,8 @@ export function createWeekEdgePulse(host: {
       removed = true;
       edge = 0;
       paging = false;
+      rightHeld = false;
+      leftHeld = false;
       clearPulseTimers();
       if (raf) cancelAnimationFrame(raf);
       raf = 0;

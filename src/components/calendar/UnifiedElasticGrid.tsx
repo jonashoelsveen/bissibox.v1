@@ -2262,7 +2262,10 @@ export function UnifiedElasticGrid({
         const el = weekHScrollRef.current;
         if (!el) return null;
         const rect = el.getBoundingClientRect();
-        return { left: rect.left + WEEKNUM_GUTTER_PX, right: rect.right };
+        // Content edge, not the border box. The right column line is clipped
+        // here; a scrollbar or border would put rect.right past that line.
+        const clipRight = rect.left + el.clientLeft + el.clientWidth;
+        return { left: rect.left + WEEKNUM_GUTTER_PX, right: Math.min(rect.right, clipRight) };
       },
       dayWidth: () => dayColPxRef.current,
       lock: weekDragPulseRef,
@@ -6293,10 +6296,7 @@ function WeekEventsOverlay({
           upwardScrollPoint(),
         );
       }
-      if (!first) {
-        applyEdgeFromLastPtr(e.movementY, 16);
-        applyHorizontalFromLastPtr();
-      }
+      if (!first) applyEdgeFromLastPtr(e.movementY, 16);
       const needY =
         !!scroller &&
         pointerInTimedGridScrollEdge(
@@ -6364,6 +6364,7 @@ function WeekEventsOverlay({
       const scrollDeltaX =
         (scrollerRef?.current?.scrollLeft ?? 0) - gestureScrollLeftOriginRef.current;
       placeDragTile(d, el, dx, dy, scrollDeltaX, scrollDelta);
+      applyHorizontalFromLastPtr();
     };
 
     const onUp = () => {

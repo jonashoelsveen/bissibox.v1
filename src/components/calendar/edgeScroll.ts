@@ -204,14 +204,37 @@ export function upwardTileScrollPoint(tile: { top: number; height: number }): nu
 }
 
 /**
- * Horizontal autoscroll for a session tile. Scrolling starts only once more
- * than half the tile is past the pane.
+ * The right column line is the pane's last pixel. `getBoundingClientRect().right`
+ * sits on the outside of that pixel and is often fractional, while the cursor
+ * hard against the line reports a whole pixel below it — especially when the
+ * week view meets the window edge and the pointer cannot travel any farther.
+ */
+export function pointerTouchesRightEdge(pointerX: number, paneRight: number): boolean {
+  return pointerX >= Math.floor(paneRight) - 1;
+}
+
+/**
+ * The divider between the time column and the first day. Same pixel rule as
+ * the right line: the boundary is often fractional, and the cursor on that
+ * divider sits on the pixel just inside the day column.
+ */
+export function pointerTouchesLeftEdge(pointerX: number, paneLeft: number): boolean {
+  return pointerX <= Math.floor(paneLeft) + 1;
+}
+
+/**
+ * Horizontal autoscroll for a session tile. Scrolling starts once more than
+ * half the tile is past the pane. Either edge also starts when the pointer
+ * is on that line, before half the tile has crossed.
  */
 export function tileMajorityPastPane(
   tile: { left: number; right: number },
   pane: { left: number; right: number },
+  pointerX?: number,
 ): -1 | 0 | 1 {
   const width = tile.right - tile.left;
+  if (pointerX != null && pointerTouchesRightEdge(pointerX, pane.right)) return 1;
+  if (pointerX != null && pointerTouchesLeftEdge(pointerX, pane.left)) return -1;
   if (!(width > 0)) return 0;
   if (pane.left - tile.left > width * 0.5) return -1;
   if (tile.right - pane.right > width * 0.5) return 1;

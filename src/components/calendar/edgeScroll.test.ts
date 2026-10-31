@@ -237,4 +237,33 @@ describe("session edge autoscroll start", () => {
     assert.equal(tileMajorityPastPane({ left: 750, right: 850 }, pane), 0);
     assert.equal(tileMajorityPastPane({ left: 751, right: 851 }, pane), 1);
   });
+
+  it("also starts a rightward week scroll when the pointer is on the pane's right line", () => {
+    const pane = { left: 80, right: 800 };
+    // Grabbed on the right: the tile is only 20px past the line, not half over.
+    const tile = { left: 720, right: 820 };
+    assert.equal(tileMajorityPastPane(tile, pane), 0);
+    assert.equal(tileMajorityPastPane(tile, pane, 798), 0);
+    assert.equal(tileMajorityPastPane(tile, pane, 799), 1);
+    assert.equal(tileMajorityPastPane(tile, pane, pane.right), 1);
+    assert.equal(tileMajorityPastPane(tile, pane, pane.right + 24), 1);
+    // The border box is often fractional, and the cursor stops on the last whole pixel.
+    const fractional = { left: 80, right: 800.8 };
+    assert.equal(tileMajorityPastPane(tile, fractional, 798), 0);
+    assert.equal(tileMajorityPastPane(tile, fractional, 799), 1);
+  });
+
+  it("also starts a leftward week scroll when the pointer is on the time-column divider", () => {
+    const pane = { left: 80, right: 800 };
+    // Grabbed on the left: the tile is only 20px past the divider, not half over.
+    const tile = { left: 60, right: 160 };
+    assert.equal(tileMajorityPastPane(tile, pane), 0);
+    assert.equal(tileMajorityPastPane(tile, pane, 82), 0);
+    assert.equal(tileMajorityPastPane(tile, pane, 81), -1);
+    assert.equal(tileMajorityPastPane(tile, pane, pane.left), -1);
+    assert.equal(tileMajorityPastPane(tile, pane, pane.left - 24), -1);
+    const fractional = { left: 80.8, right: 800 };
+    assert.equal(tileMajorityPastPane(tile, fractional, 82), 0);
+    assert.equal(tileMajorityPastPane(tile, fractional, 81), -1);
+  });
 });
