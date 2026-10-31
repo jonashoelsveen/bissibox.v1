@@ -3530,6 +3530,18 @@ export type Database = {
         Args: { p_id: string }
         Returns: undefined
       }
+      leave_user_calendar: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
+      set_user_calendar_member_role: {
+        Args: { p_member_id: string; p_role: string }
+        Returns: undefined
+      }
+      remove_user_calendar_member: {
+        Args: { p_member_id: string }
+        Returns: undefined
+      }
       enqueue_email: {
         Args: { queue_name: string; payload: Json }
         Returns: number

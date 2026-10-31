@@ -109,6 +109,30 @@ export function rangeIsValid(from: Date, to: Date): boolean {
   return to.getTime() - from.getTime() <= MAX_RANGE_DAYS * 24 * 60 * 60 * 1000;
 }
 
+async function acceptedMember(admin: Admin, userId: string, calendarId: string): Promise<boolean> {
+  const { data, error } = await admin
+    .from("user_calendar_members")
+    .select("status")
+    .eq("calendar_id", calendarId)
+    .eq("user_id", userId)
+    .eq("status", "accepted")
+    .maybeSingle();
+  return !error && !!data;
+}
+
+/** Owner, or someone who has accepted an invite to this calendar. */
+async function readableCalendar(admin: Admin, userId: string, calendarId: string): Promise<CalendarRow | null> {
+  const { data, error } = await admin
+    .from("user_calendars")
+    .select("id, owner_id, name, color, source, deleted_at")
+    .eq("id", calendarId)
+    .maybeSingle();
+  if (error || !data || data.deleted_at) return null;
+  if (data.owner_id === userId) return data;
+  if (!(await acceptedMember(admin, userId, calendarId))) return null;
+  return data;
+}
+
 async function ownedCalendar(admin: Admin, userId: string, calendarId: string): Promise<CalendarRow | null> {
   const { data, error } = await admin
     .from("user_calendars")
@@ -368,10 +392,10 @@ export async function subscriptionEvents(
   if (!rangeIsValid(from, to)) throw new FeedError("too_large", "That date range is too long.");
   const admin = await adminOrThrow();
   const keys = await keysOrThrow(admin);
-  const calendar = await ownedCalendar(admin, userId, calendarId);
+  const calendar = await readableCalendar(admin, userId, calendarId);
   if (!calendar || calendar.source !== "subscription") throw new FeedError("forbidden_host", "Calendar not found.");
   const secret = await secretRow(admin, calendarId);
-  if (!secret || secret.owner_id !== userId) throw new FeedError("forbidden_host", "Calendar not found.");
+  if (!secret) throw new FeedError("forbidden_host", "Calendar not found.");
   const entry = await refetch(admin, calendar, secret, keys, false);
   return expandFeed(entry.model, { calendarId, from, to, timeZone: timeZone || "UTC" });
 }

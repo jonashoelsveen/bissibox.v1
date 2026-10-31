@@ -67,6 +67,25 @@ function envValue(name: string): string {
   return "";
 }
 
+/** Login email lives on the auth user. Profiles sometimes omit it. */
+async function findAuthUserId(email: string): Promise<string | null> {
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/$/, "");
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key) return null;
+  try {
+    const res = await fetch(
+      `${url}/auth/v1/admin/users?page=1&per_page=20&filter=${encodeURIComponent(email)}`,
+      { headers: { Authorization: `Bearer ${key}`, apikey: key } },
+    );
+    if (!res.ok) return null;
+    const body = (await res.json()) as { users?: { id?: string; email?: string | null }[] };
+    const match = (body.users ?? []).find((user) => (user.email ?? "").toLowerCase() === email);
+    return match?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function appOrigin(request: Request) {
   const origin = request.headers.get("origin")?.replace(/\/$/, "");
   if (origin) return origin;
@@ -125,7 +144,7 @@ export const Route = createFileRoute("/api/calendar/invite")({
 
         const email = parsed.email.toLowerCase();
         if (email === (auth.ctx.user.email ?? "").toLowerCase()) {
-          return json({ error: "You cannot invite yourself." }, 400);
+          return json({ error: "You can't invite the email you're logged in with." }, 400);
         }
 
         const userClient = await createUserSupabaseClient(
@@ -170,12 +189,13 @@ export const Route = createFileRoute("/api/calendar/invite")({
 
         const admin = await getSupabaseAdminOrNull();
         let displayName: string | null = null;
+        let inviteeId: string | null = null;
         let inviterName = auth.ctx.user.email ?? "Someone";
         if (admin) {
           const [{ data: profile }, { data: inviter }] = await Promise.all([
             admin
               .from("profiles")
-              .select("first_name, last_name, display_name")
+              .select("id, first_name, last_name, display_name")
               .ilike("email", email)
               .maybeSingle(),
             admin
@@ -185,22 +205,46 @@ export const Route = createFileRoute("/api/calendar/invite")({
               .maybeSingle(),
           ]);
           displayName = profileName(profile);
+          inviteeId = profile?.id ?? null;
+          if (!inviteeId) inviteeId = await findAuthUserId(email);
+          if (inviteeId && !displayName) {
+            const { data: named } = await admin
+              .from("profiles")
+              .select("first_name, last_name, display_name")
+              .eq("id", inviteeId)
+              .maybeSingle();
+            displayName = profileName(named);
+          }
           inviterName = profileName(inviter) || inviterName;
         }
 
-        const token = randomBytes(24).toString("hex");
+        if (inviteeId && inviteeId === calendar.owner_id) {
+          return jsonWithSessionCookie(
+            { error: "That person already has this calendar" },
+            400,
+            auth.sessionSetCookie,
+          );
+        }
+
+        // An existing account is added at once. The signed-in client can only
+        // insert a pending row, so the accepted membership is written with the
+        // service role. Member stays read-only; admin matches the creator.
+        const granted = Boolean(inviteeId);
+        const token = granted ? null : randomBytes(24).toString("hex");
         const row = {
           email,
           role: parsed.role,
-          status: "pending" as const,
+          status: granted ? ("accepted" as const) : ("pending" as const),
+          user_id: inviteeId,
           invite_token: token,
           invited_by: auth.ctx.user.id,
           display_name: displayName,
           updated_at: new Date().toISOString(),
         };
+        const writer = granted && admin ? admin : userClient;
         const write = existing
-          ? await userClient.from("user_calendar_members").update(row).eq("id", existing.id)
-          : await userClient.from("user_calendar_members").insert({
+          ? await writer.from("user_calendar_members").update(row).eq("id", existing.id)
+          : await writer.from("user_calendar_members").insert({
               ...row,
               calendar_id: calendar.id,
             });
@@ -208,26 +252,45 @@ export const Route = createFileRoute("/api/calendar/invite")({
           return jsonWithSessionCookie({ error: write.error.message }, 400, auth.sessionSetCookie);
         }
 
-        const acceptUrl = `${appOrigin(request)}/accept-calendar-invite?token=${token}`;
+        const origin = appOrigin(request);
         const button = landingPrimaryButtonStyle;
-        const html = `
+        const calendarName = escapeHtml(calendar.name);
+        const who = escapeHtml(inviterName);
+        const acceptUrl = token ? `${origin}/accept-calendar-invite?token=${token}` : origin;
+        const html = granted
+          ? `
           <div style="font-family:${button.fontFamily};max-width:560px;margin:0 auto;padding:32px;color:#1d1d1f;">
-            <p style="font-size:17px;line-height:1.4;"><strong>${escapeHtml(inviterName)}</strong> invited you to the calendar “${escapeHtml(calendar.name)}”.</p>
+            <p style="font-size:17px;line-height:1.4;"><strong>${who}</strong> added you to the calendar “${calendarName}”.</p>
+            <p style="font-size:17px;line-height:1.4;">Open Bissibox and the calendar is in your list.</p>
+            <p style="margin:28px 0;">
+              <a href="${origin}" style="display:inline-block;background:${button.backgroundColor};color:${button.color};border-radius:980px;padding:14px 36px;font-size:17px;font-weight:500;text-decoration:none;">Open calendar</a>
+            </p>
+          </div>`
+          : `
+          <div style="font-family:${button.fontFamily};max-width:560px;margin:0 auto;padding:32px;color:#1d1d1f;">
+            <p style="font-size:17px;line-height:1.4;"><strong>${who}</strong> invited you to the calendar “${calendarName}”.</p>
             <p style="font-size:17px;line-height:1.4;">To accept, click the accept button.</p>
             <p style="margin:28px 0;">
               <a href="${acceptUrl}" style="display:inline-block;background:${button.backgroundColor};color:${button.color};border-radius:980px;padding:14px 36px;font-size:17px;font-weight:500;text-decoration:none;">Accept</a>
             </p>
           </div>`;
-
-        const subject = `${inviterName} invited you to the calendar “${calendar.name}”`;
-        const sent = await sendInviteEmail({
-          to: email,
-          subject,
-          html,
-          text: `${inviterName} invited you to the calendar "${calendar.name}". Accept: ${acceptUrl}`,
-        });
-        if (!sent.ok) {
-          return jsonWithSessionCookie({ error: sent.error }, 502, auth.sessionSetCookie);
+        const subject = granted
+          ? `${inviterName} added you to the calendar “${calendar.name}”`
+          : `${inviterName} invited you to the calendar “${calendar.name}”`;
+        try {
+          const sent = await sendInviteEmail({
+            to: email,
+            subject,
+            html,
+            text: granted
+              ? `${inviterName} added you to the calendar "${calendar.name}". Open ${origin}`
+              : `${inviterName} invited you to the calendar "${calendar.name}". Accept: ${acceptUrl}`,
+          });
+          if (!sent.ok) {
+            console.error("[calendar invite] membership saved, email not sent");
+          }
+        } catch (error) {
+          console.error("[calendar invite] membership saved, email not sent", error);
         }
 
         return jsonWithSessionCookie({ ok: true }, 200, auth.sessionSetCookie);

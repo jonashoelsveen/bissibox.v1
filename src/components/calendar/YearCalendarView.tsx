@@ -41,7 +41,7 @@ import { useUserCategories } from "@/hooks/useUserCategories";
 import { useCalendarSearchSafe } from "./CalendarSearchContext";
 import { useMacroProjectNavSafe } from "./MacroProjectNavContext";
 import { useHideMultiDayRow } from "./multiDayRowPref";
-import { calendarAdminIds, useUserCalendarsSafe } from "./UserCalendarsContext";
+import { useUserCalendarsSafe } from "./UserCalendarsContext";
 import { useHideTimeScale } from "./timeScalePref";
 import type { CalendarScale } from "./CalendarSearch";
 import { GanttYearGrid } from "./GanttYearGrid";
@@ -490,13 +490,17 @@ function YearCalendarViewInner({
       return until != null && now < until;
     };
 
+    const onMemberCalendar = (e: CalendarEvent) => {
+      if (!e.userCalendarId) return false;
+      const calendar = calendarById.get(e.userCalendarId);
+      return !!calendar && calendar.myRole === "member" && !calendar.hidden;
+    };
+
     const passesSharedCalendar = (e: CalendarEvent) => {
       if (!e.userCalendarId) return true;
       const calendar = calendarById.get(e.userCalendarId);
       if (!calendar) return true;
-      if (calendar.hidden) return false;
-      if (calendar.myRole !== "member") return true;
-      return !!e.authorUserId && calendarAdminIds(calendar).includes(e.authorUserId);
+      return !calendar.hidden;
     };
 
     const paintCalendarColour = (e: CalendarEvent): CalendarEvent => {
@@ -508,13 +512,13 @@ function YearCalendarViewInner({
 
     if (!visibleCategories) {
       return base
-        .filter((e) => passesSharedCalendar(e) && passesGroupHide(e) && (e.entityId || filterChain(e)))
+        .filter((e) => passesSharedCalendar(e) && passesGroupHide(e) && (onMemberCalendar(e) || e.entityId || filterChain(e)))
         .map(paintCalendarColour);
     }
     return base.filter((e) => {
       if (!passesSharedCalendar(e)) return false;
       if (!passesGroupHide(e)) return false;
-      if (e.entityId) return true;
+      if (onMemberCalendar(e) || e.entityId) return true;
       if (!filterChain(e)) return false;
       if (e.diaryType === "training") {
         return visibleCategories.has("ind:training") || isLingeringHidden(e);

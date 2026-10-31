@@ -293,16 +293,19 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
   );
 
   const deleteCalendar = useCallback(async (id: string) => {
+    const leaving = calendars.some((calendar) => calendar.id === id && calendar.myRole === "member");
     removedIds.current.add(id);
     setCalendars((prev) => prev.filter((calendar) => calendar.id !== id));
     detachUserCalendarLocally(id);
-    const { error } = await supabase.rpc("soft_delete_user_calendar", { p_id: id });
+    const { error } = leaving
+      ? await supabase.rpc("leave_user_calendar", { p_id: id })
+      : await supabase.rpc("soft_delete_user_calendar", { p_id: id });
     if (error) {
       removedIds.current.delete(id);
       console.error("[calendars] delete failed", error.message);
       void refresh();
     }
-  }, [refresh]);
+  }, [calendars, refresh]);
 
   const lookupUserName = useCallback(async (email: string) => {
     const trimmed = email.trim();
@@ -324,7 +327,7 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify(input),
     });
     const body = (await res.json().catch(() => ({}))) as { error?: string };
-    if (!res.ok) return { ok: false, error: body.error || "Could not send the invite" };
+    if (!res.ok) return { ok: false, error: body.error || "Could not add this person" };
     await refresh();
     return { ok: true };
   }, [refresh]);
@@ -338,11 +341,13 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
         ),
       })),
     );
-    await supabase
-      .from("user_calendar_members")
-      .update({ role, updated_at: new Date().toISOString() })
-      .eq("id", memberId);
-  }, []);
+    const { error } = await supabase.rpc("set_user_calendar_member_role", {
+      p_member_id: memberId,
+      p_role: role,
+    });
+    if (error) console.error("[calendars] role change failed", error.message);
+    void refresh();
+  }, [refresh]);
 
   const removeMember = useCallback(async (memberId: string) => {
     setCalendars((prev) =>
@@ -351,8 +356,10 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
         members: calendar.members.filter((member) => member.id !== memberId),
       })),
     );
-    await supabase.from("user_calendar_members").delete().eq("id", memberId);
-  }, []);
+    const { error } = await supabase.rpc("remove_user_calendar_member", { p_member_id: memberId });
+    if (error) console.error("[calendars] remove person failed", error.message);
+    void refresh();
+  }, [refresh]);
 
   const value = useMemo<UserCalendarsValue>(
     () => ({

@@ -255,11 +255,13 @@ function peopleListRank(member: UserCalendarMember, self: boolean, searching: bo
 
 function PeoplePanel({
   calendar,
+  canManage,
   onInviteSent,
   onEditingChange,
   onEditorDismissed,
 }: {
   calendar: UserCalendar;
+  canManage: boolean;
   onInviteSent: (email: string) => void;
   onEditingChange?: (editing: boolean) => void;
   onEditorDismissed?: () => void;
@@ -458,18 +460,20 @@ function PeoplePanel({
       </div>
       {searching ? null : (
         <>
-          <button
-            type="button"
-            onClick={(e) => {
-              const row = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              const parent = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
-              openInvite(row.top - parent.top);
-            }}
-            className={SESSION_SIDE_MENU_ITEM_CLASS}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Add user</span>
-          </button>
+          {canManage ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                const row = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                const parent = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
+                openInvite(row.top - parent.top);
+              }}
+              className={SESSION_SIDE_MENU_ITEM_CLASS}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add user</span>
+            </button>
+          ) : null}
           <RoleIsland value={tab} onChange={setTab} />
         </>
       )}
@@ -481,8 +485,8 @@ function PeoplePanel({
         }}
       >
         {people.map((member) => {
-          const isOwner = member.userId === calendar.ownerId;
           const self = isCurrentUser(member, user);
+          const manageable = canManage && !self;
           return (
             <div key={member.id} className="group/person flex shrink-0 items-center gap-1 rounded-sm px-2 py-1.5 text-[12px] text-white/90 hover:bg-white/[0.08]">
               <span className="min-w-0 flex-1 truncate">
@@ -490,8 +494,8 @@ function PeoplePanel({
                 {member.status === "pending" ? <span className="text-white/40"> Pending</span> : null}
                 {self && member.status !== "pending" ? <span className="text-white/40"> Me</span> : null}
               </span>
-              {isOwner || member.userId === user?.id ? (
-                <span aria-hidden className="h-5 w-5 shrink-0" />
+              {!manageable ? (
+                canManage ? <span aria-hidden className="h-5 w-5 shrink-0" /> : null
               ) : (
                 <button
                   type="button"
@@ -559,11 +563,13 @@ function PeoplePanel({
 
 function CalendarActionsMenu({
   calendar,
+  limited = false,
   onRename,
   onDeleted,
   onInviteSent,
 }: {
   calendar: UserCalendar;
+  limited?: boolean;
   onRename: () => void;
   onDeleted: () => void;
   onInviteSent: (email: string) => void;
@@ -900,10 +906,13 @@ function CalendarActionsMenu({
               }}
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <button type="button" className={SESSION_SIDE_MENU_ITEM_CLASS} onClick={() => { close(); onRename(); }}>
-                <Pencil className="h-3.5 w-3.5" />
-                <span className="flex-1">Edit title</span>
-              </button>
+              {limited ? null : (
+                <button type="button" className={SESSION_SIDE_MENU_ITEM_CLASS} onClick={() => { close(); onRename(); }}>
+                  <Pencil className="h-3.5 w-3.5" />
+                  <span className="flex-1">Edit title</span>
+                </button>
+              )}
+              {limited ? null : (
               <div
                 ref={colorRowRef}
                 onPointerEnter={(e) => {
@@ -921,6 +930,7 @@ function CalendarActionsMenu({
                   <ChevronRight className="h-3 w-3 text-white/50" />
                 )}
               </div>
+              )}
               <div
                 ref={peopleRowRef}
                 onPointerEnter={(e) => {
@@ -984,6 +994,7 @@ function CalendarActionsMenu({
               ) : (
                 <PeoplePanel
                   calendar={calendar}
+                  canManage={!limited}
                   onInviteSent={onInviteSent}
                   onEditingChange={onPeopleEditing}
                   onEditorDismissed={onEditorDismissed}
@@ -996,6 +1007,7 @@ function CalendarActionsMenu({
       <DeleteCalendarModal
         open={confirmDelete}
         name={calendar.name}
+        leaving={limited}
         onOpenChange={setConfirmDelete}
         onConfirm={() => {
           setConfirmDelete(false);
@@ -1112,9 +1124,13 @@ function CalendarRow({
           <Eye className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100" />
         )}
       </button>
-      {calendar.myRole === "admin" ? (
-        <CalendarActionsMenu calendar={calendar} onRename={onStartRename} onDeleted={() => {}} onInviteSent={onInviteSent} />
-      ) : null}
+      <CalendarActionsMenu
+        calendar={calendar}
+        limited={calendar.myRole !== "admin"}
+        onRename={onStartRename}
+        onDeleted={() => {}}
+        onInviteSent={onInviteSent}
+      />
     </div>
   );
 }

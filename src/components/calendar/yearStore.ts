@@ -557,6 +557,13 @@ export function isStandardWebAddressSession(
   return isSubscriptionCalendar(event?.userCalendarId);
 }
 
+/** Open, copy, and duplicate. No edit or delete. Feeds and member calendars. */
+export function isCopyOnlyCalendarSession(
+  event: Pick<CalendarEvent, "userCalendarId"> | null | undefined,
+): boolean {
+  return isSharedCalendarReadOnly(event?.userCalendarId);
+}
+
 export function isSharedCalendarReadOnly(calendarId: string | null | undefined): boolean {
   return (
     !!calendarId &&
@@ -1053,7 +1060,7 @@ export function useEventStore(calId: string) {
 
   const cleanupUntitledRows = useCallback((rows: Row[]) => {
     const invalidIds = rows
-      .filter((row) => !row.entity_id && !hasRenderableTitle(row.title))
+      .filter((row) => !row.entity_id && !row.user_calendar_id && !hasRenderableTitle(row.title))
       .map((row) => row.id);
     if (invalidIds.length === 0) return;
     for (const id of invalidIds) {
@@ -1466,6 +1473,7 @@ export function useEventStore(calId: string) {
       if (scope.kind === "team") return entityId === scope.entityId;
       if (scope.kind === "user") {
         if (row.user_id === scope.userId && !entityId) return true;
+        if (!entityId && row.user_calendar_id) return true;
         if (typeof entityId !== "string" || !entityId) return false;
         if (memberTeamIdsRef.current.has(entityId)) return true;
         if (subscribedMemberTeamIds.includes(entityId)) {

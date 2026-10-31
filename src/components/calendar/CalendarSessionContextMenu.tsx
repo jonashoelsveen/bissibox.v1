@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouse
 import { createPortal } from "react-dom";
 import { Copy, CopyPlus, Trash2 } from "lucide-react";
 import {
-  isStandardWebAddressSession,
+  isCopyOnlyCalendarSession,
   type CalendarEvent,
 } from "@/components/calendar/yearStore";
 import type { ViewMode } from "@/components/calendar/UnifiedElasticGrid";
@@ -163,13 +163,13 @@ export function useCalendarSessionContextMenu(
         targets.push(resolved);
       }
       if (targets.length === 0) targets.push(event);
-      const subscriptionOnly = targets.every((item) => isStandardWebAddressSession(item));
+      const subscriptionOnly = targets.every((item) => isCopyOnlyCalendarSession(item));
       const anyDeletable = targets.some(
-        (item) => canMutateRef.current(item) && !isStandardWebAddressSession(item),
+        (item) => canMutateRef.current(item) && !isCopyOnlyCalendarSession(item),
       );
       const singleCanDuplicate =
         targets.length === 1 &&
-        (isStandardWebAddressSession(targets[0]!) || canMutateRef.current(targets[0]!));
+        (isCopyOnlyCalendarSession(targets[0]!) || canMutateRef.current(targets[0]!));
       const rows = sessionCopyMenu({
         count: targets.length,
         subscriptionOnly,
@@ -186,13 +186,13 @@ export function useCalendarSessionContextMenu(
   const menuModel = menu
     ? sessionCopyMenu({
         count: menu.targets.length,
-        subscriptionOnly: menu.targets.every((item) => isStandardWebAddressSession(item)),
+        subscriptionOnly: menu.targets.every((item) => isCopyOnlyCalendarSession(item)),
         anyDeletable: menu.targets.some(
-          (item) => canMutateEvent(item) && !isStandardWebAddressSession(item),
+          (item) => canMutateEvent(item) && !isCopyOnlyCalendarSession(item),
         ),
         singleCanDuplicate:
           menu.targets.length === 1 &&
-          (isStandardWebAddressSession(menu.targets[0]!) || canMutateEvent(menu.targets[0]!)),
+          (isCopyOnlyCalendarSession(menu.targets[0]!) || canMutateEvent(menu.targets[0]!)),
       })
     : null;
 
@@ -206,7 +206,7 @@ export function useCalendarSessionContextMenu(
   const handleDuplicate = useCallback(() => {
     if (!menu || menu.targets.length !== 1) return;
     const target = menu.targets[0]!;
-    if (!isStandardWebAddressSession(target) && !canMutateEvent(target)) return;
+    if (!isCopyOnlyCalendarSession(target) && !canMutateEvent(target)) return;
     const visible = getVisibleEventsRef.current?.() ?? [];
     const created = duplicateEvent(target, visible);
     setMenu(null);
@@ -216,7 +216,7 @@ export function useCalendarSessionContextMenu(
   const handleDelete = useCallback(() => {
     if (!menu) return;
     const ids = menu.targets
-      .filter((item) => canMutateEvent(item) && !isStandardWebAddressSession(item))
+      .filter((item) => canMutateEvent(item) && !isCopyOnlyCalendarSession(item))
       .map((item) => item.id);
     if (ids.length === 0) return;
     setMenu(null);

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import type { ViewMode } from "@/components/calendar/UnifiedElasticGrid";
 import {
-  isSubscriptionCalendar,
+  isSharedCalendarReadOnly,
   useEventStore,
   type CalendarEvent,
 } from "@/components/calendar/yearStore";
@@ -116,9 +116,9 @@ export function CalendarViewActionsProvider({
 
   const duplicateEvent = useCallback(
     (event: CalendarEvent, peers?: CalendarEvent[]) => {
-      const webAddress = isSubscriptionCalendar(event.userCalendarId);
-      // Feed rows cannot be edited, but duplicating one creates a local session.
-      if (!webAddress && !canMutateEvent(event)) return null;
+      const copyOnly = isSharedCalendarReadOnly(event.userCalendarId);
+      // Feed rows and member calendars cannot be edited. Duplicating one creates a local session.
+      if (!copyOnly && !canMutateEvent(event)) return null;
       // Peers include web-address rows, which are not in the session store.
       // Their order is what places the copy beside the session that was duplicated.
       const base = peers && peers.length > 0 ? peers : events;
@@ -133,7 +133,7 @@ export function CalendarViewActionsProvider({
         ...eventToDuplicatePatch(event),
         sortIndex: place.sortIndex,
       };
-      if (!webAddress) return upsertEvent(patch);
+      if (!copyOnly) return upsertEvent(patch);
       return upsertEvent({
         ...patch,
         userCalendarId: null,

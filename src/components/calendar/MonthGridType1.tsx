@@ -43,7 +43,7 @@ import { createPortal, flushSync } from "react-dom";
 import { PersonStanding, GraduationCap, Briefcase, Sparkles, Bike, Waves, Dumbbell, Snowflake, Footprints, ChevronLeft, ChevronRight, Check, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CellData, CellKey, CalendarEvent } from "./yearStore";
-import { makeCellId, isMembershipOverlayEvent, isSharedCalendarReadOnly, isSubscriptionCalendar, useTeamName } from "./yearStore";
+import { makeCellId, isMembershipOverlayEvent, isSharedCalendarReadOnly, useTeamName } from "./yearStore";
 import { useUserCalendarsSafe } from "./UserCalendarsContext";
 import { useFeatureEnabled } from "@/lib/featureFlagSnapshot";
 import { useUserGroups } from "@/hooks/useUserGroups";
@@ -7332,7 +7332,7 @@ export function PopoverEditor({
         return;
       }
       if (matchesShortcut(e, SHORTCUTS.duplicateSession)) {
-        if (readOnly && !isSubscriptionCalendar(userCalendarId)) return;
+        if (readOnly && !isSharedCalendarReadOnly(userCalendarId)) return;
         if (isEditableTarget(e.target) && !inPopoverField()) return;
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -8108,8 +8108,8 @@ export function PopoverEditor({
     </div>
   ) : null;
 
-  const webAddressSession = isSubscriptionCalendar(userCalendarId);
-  const lockReadOnlyField = readOnly && !webAddressSession;
+  const copyOnlySession = isSharedCalendarReadOnly(userCalendarId);
+  const lockReadOnlyField = readOnly && !copyOnlySession;
 
   return createPortal(
   <>
@@ -8173,12 +8173,12 @@ export function PopoverEditor({
                   onClose={handleHeaderClose}
                   onCopySession={isExistingSession ? handleCopySession : undefined}
                   onDuplicateSession={
-                    isExistingSession && (!readOnly || webAddressSession)
+                    isExistingSession && (!readOnly || copyOnlySession)
                       ? handleDuplicateSession
                       : undefined
                   }
                   onDeleteSession={
-                    isExistingSession && !readOnly && !webAddressSession
+                    isExistingSession && !readOnly && !copyOnlySession
                       ? handleDeleteSession
                       : undefined
                   }

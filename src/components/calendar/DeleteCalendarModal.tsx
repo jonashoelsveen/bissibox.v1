@@ -12,12 +12,14 @@ export function DeleteCalendarModal({
   open,
   name,
   deleting = false,
+  leaving = false,
   onOpenChange,
   onConfirm,
 }: {
   open: boolean;
   name: string;
   deleting?: boolean;
+  leaving?: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
 }) {
@@ -62,7 +64,9 @@ export function DeleteCalendarModal({
             className="mt-2 text-center text-[13px] leading-snug"
             style={{ color: muted }}
           >
-            Everyone will lose this calendar. Sessions stay, but they will no longer belong to it.
+            {leaving
+              ? "This removes the calendar from your list. Other people keep it, and its sessions stay."
+              : "Everyone will lose this calendar. Sessions stay, but they will no longer belong to it."}
           </DialogPrimitive.Description>
           <div className="mt-8 flex items-center justify-between gap-4">
             <button
