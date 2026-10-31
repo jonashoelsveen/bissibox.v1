@@ -1,6 +1,6 @@
 # Bissibox
 
-Calendar and diary app (web + mobile).
+Calendar and team management app (web + mobile).
 
 ## Setup
 
