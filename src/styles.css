@@ -599,7 +599,7 @@ body[style*="cursor:grabbing"] {
   }
   .bissibox-landing-hero,
   .bissibox-platform-overlay .bissibox-platform-copy {
-    padding-top: calc(clamp(56px, 10vh, 120px) - 35px) !important;
+    padding-top: calc(clamp(56px, 10vh, 120px) - 45px) !important;
   }
   .account-nav-panel {
     display: block;
@@ -626,10 +626,10 @@ body[style*="cursor:grabbing"] {
     font-size: 40px !important;
   }
   .bissibox-landing-hero {
-    padding-top: calc(clamp(56px, 10vh, 120px) - 35px) !important;
+    padding-top: calc(clamp(56px, 10vh, 120px) - 45px) !important;
   }
   .bissibox-platform-overlay .bissibox-platform-copy {
-    margin-top: -15px;
+    margin-top: -25px;
     padding-top: 0 !important;
     padding-bottom: 16px !important;
   }
