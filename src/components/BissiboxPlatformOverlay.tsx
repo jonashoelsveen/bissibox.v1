@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { HomeIcon } from "@/components/HomeIcon";
 import {
@@ -8,6 +9,7 @@ import {
   landingHeroBodyStyle,
   landingHeroSectionPadding,
   landingHeroTitleStyle,
+  landingPrimaryButtonStyle,
   MINIMAL_TOP_TAB_BAR_HEIGHT,
   MINIMAL_TOP_TAB_BAR_PADDING_X,
 } from "@/lib/cloud-landing-design";
@@ -17,8 +19,15 @@ import {
  * unmounting the app. Visibility is CSS (`bissibox-platform-overlay`).
  */
 export function BissiboxPlatformOverlay() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   if (!user) return null;
+
+  const logOut = () => {
+    void signOut().then(() => {
+      void navigate({ to: "/", resetScroll: true });
+    });
+  };
 
   const illustrationWidth = `min(${HERO_ILLUSTRATION_DISPLAY_PX}px, ${HERO_ILLUSTRATION_DISPLAY_VW}vw)`;
 
@@ -42,7 +51,7 @@ export function BissiboxPlatformOverlay() {
         <HomeIcon />
       </div>
       <div
-        className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-6 text-center"
+        className="bissibox-platform-copy mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-6 text-center"
         style={landingHeroSectionPadding(false, true)}
       >
         <div className="mb-7 flex w-full justify-center overflow-visible sm:mb-9">
@@ -68,6 +77,14 @@ export function BissiboxPlatformOverlay() {
         <p id="bissibox-compact-notice" className="mt-5" style={landingHeroBodyStyle}>
           {BISSIBOX_SIGNED_IN_SCREEN_NOTICE}
         </p>
+        <button
+          type="button"
+          onClick={logOut}
+          className="mt-10 text-white transition active:scale-[0.98]"
+          style={landingPrimaryButtonStyle}
+        >
+          Log out
+        </button>
       </div>
     </div>
   );

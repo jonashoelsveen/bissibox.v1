@@ -621,6 +621,10 @@ body[style*="cursor:grabbing"] {
   .bissibox-platform-overlay h1 {
     font-size: 40px !important;
   }
+  .bissibox-platform-overlay .bissibox-platform-copy {
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+  }
 }
 
 @media (min-width: 640px) {
