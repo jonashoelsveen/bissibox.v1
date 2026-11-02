@@ -607,6 +607,9 @@ body[style*="cursor:grabbing"] {
  * the calendar. A short landscape viewport keeps the same signed-in screen.
  */
 @media (orientation: landscape) and (max-height: 500px) and (max-width: 1024px) {
+  .bissibox-panel-chrome {
+    display: none !important;
+  }
   .bissibox-platform-overlay {
     display: flex !important;
     flex-direction: column;
