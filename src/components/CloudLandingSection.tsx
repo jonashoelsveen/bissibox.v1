@@ -159,7 +159,7 @@ export function CloudLandingSection({
 
   return (
     <div
-      className="flex w-full flex-col items-center text-center"
+      className={`flex w-full flex-col items-center text-center${hasHeroArt && !paddingTop ? " bissibox-landing-hero" : ""}`}
       style={sectionPadding}
     >
       {heroIllustrationSrc ? (

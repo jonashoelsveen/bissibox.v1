@@ -597,6 +597,10 @@ body[style*="cursor:grabbing"] {
     display: flex !important;
     flex-direction: column;
   }
+  .bissibox-landing-hero,
+  .bissibox-platform-overlay .bissibox-platform-copy {
+    padding-top: calc(clamp(56px, 10vh, 120px) - 20px) !important;
+  }
   .account-nav-panel {
     display: block;
   }
@@ -621,8 +625,11 @@ body[style*="cursor:grabbing"] {
   .bissibox-platform-overlay h1 {
     font-size: 40px !important;
   }
+  .bissibox-landing-hero {
+    padding-top: calc(clamp(56px, 10vh, 120px) - 20px) !important;
+  }
   .bissibox-platform-overlay .bissibox-platform-copy {
-    padding-top: 16px !important;
+    padding-top: 0 !important;
     padding-bottom: 16px !important;
   }
 }
