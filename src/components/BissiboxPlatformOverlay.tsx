@@ -1,7 +1,7 @@
 import { useAuth } from "@/lib/auth";
 import { HomeIcon } from "@/components/HomeIcon";
 import {
-  BISSIBOX_COMPACT_SCREEN_NOTICE,
+  BISSIBOX_SIGNED_IN_SCREEN_NOTICE,
   CLOUD_PAGE_BG,
   HERO_ILLUSTRATION_DISPLAY_PX,
   HERO_ILLUSTRATION_DISPLAY_VW,
@@ -13,8 +13,8 @@ import {
 } from "@/lib/cloud-landing-design";
 
 /**
- * Covers the signed-in platform below 640px without unmounting the app.
- * Visibility is CSS (`bissibox-platform-overlay`); session and route stay put.
+ * Covers the signed-in platform on a phone, portrait and landscape, without
+ * unmounting the app. Visibility is CSS (`bissibox-platform-overlay`).
  */
 export function BissiboxPlatformOverlay() {
   const { user } = useAuth();
@@ -53,7 +53,7 @@ export function BissiboxPlatformOverlay() {
             height={549}
             decoding="async"
             draggable={false}
-            className="pointer-events-none max-w-full select-none object-contain"
+            className="bissibox-platform-hero pointer-events-none max-w-full select-none object-contain"
             style={{
               width: illustrationWidth,
               maxWidth: "100%",
@@ -66,7 +66,7 @@ export function BissiboxPlatformOverlay() {
           Bissibox
         </h1>
         <p id="bissibox-compact-notice" className="mt-5" style={landingHeroBodyStyle}>
-          {BISSIBOX_COMPACT_SCREEN_NOTICE}
+          {BISSIBOX_SIGNED_IN_SCREEN_NOTICE}
         </p>
       </div>
     </div>

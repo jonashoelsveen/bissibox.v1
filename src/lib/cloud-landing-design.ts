@@ -49,6 +49,10 @@ export const BISSIBOX_DESKTOP_MIN_PX = 640;
 export const BISSIBOX_COMPACT_SCREEN_NOTICE =
   "Bissibox is an intuitive calendar that helps you organize your every day life. With an overview of future activities you are always prepared.";
 
+/** Shown on the signed-in phone screen, portrait and landscape. */
+export const BISSIBOX_SIGNED_IN_SCREEN_NOTICE =
+  "To access your calendar, switch to a larger screen.";
+
 export const CLOUD_LANDING_CHROME_PATHS = ["/", "/cloud/individuals", "/cloud/entities"] as const;
 
 export function isCloudLandingChromePath(path: string) {

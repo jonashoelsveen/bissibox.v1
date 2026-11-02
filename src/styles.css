@@ -602,6 +602,24 @@ body[style*="cursor:grabbing"] {
   }
 }
 
+/*
+ * A phone on its side is wider than 640px, so the rule above would uncover
+ * the calendar. A short landscape viewport keeps the same signed-in screen.
+ */
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 1024px) {
+  .bissibox-platform-overlay {
+    display: flex !important;
+    flex-direction: column;
+  }
+  .bissibox-platform-overlay .bissibox-platform-hero {
+    max-height: 22vh;
+    width: auto !important;
+  }
+  .bissibox-platform-overlay h1 {
+    font-size: 40px !important;
+  }
+}
+
 @media (min-width: 640px) {
   .account-nav-panel,
   .account-nav-dim,
