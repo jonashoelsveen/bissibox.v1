@@ -618,20 +618,13 @@ body[style*="cursor:grabbing"] {
     display: flex !important;
     flex-direction: column;
   }
-  .bissibox-platform-overlay .bissibox-platform-hero {
-    max-height: 22vh;
-    width: auto !important;
+  .bissibox-hero-art {
+    display: none !important;
   }
-  .bissibox-platform-overlay h1 {
-    font-size: 40px !important;
-  }
-  .bissibox-landing-hero {
-    padding-top: calc(clamp(56px, 10vh, 120px) - 45px) !important;
-  }
+  .bissibox-landing-hero,
   .bissibox-platform-overlay .bissibox-platform-copy {
-    margin-top: -25px;
-    padding-top: 0 !important;
-    padding-bottom: 16px !important;
+    margin-top: 0;
+    padding-top: calc(clamp(56px, 10vh, 120px) - 45px) !important;
   }
 }
 

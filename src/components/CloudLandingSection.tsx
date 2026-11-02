@@ -163,7 +163,7 @@ export function CloudLandingSection({
       style={sectionPadding}
     >
       {heroIllustrationSrc ? (
-        <div className="mb-7 flex w-full justify-center overflow-visible sm:mb-9">
+        <div className="bissibox-hero-art mb-7 flex w-full justify-center overflow-visible sm:mb-9">
           <img
             src={heroIllustrationSrc}
             alt={heroIllustrationAlt}

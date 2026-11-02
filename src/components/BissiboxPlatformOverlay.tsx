@@ -54,7 +54,7 @@ export function BissiboxPlatformOverlay() {
         className="bissibox-platform-copy mx-auto flex w-full max-w-6xl flex-1 flex-col items-center px-6 text-center"
         style={landingHeroSectionPadding(false, true)}
       >
-        <div className="mb-7 flex w-full justify-center overflow-visible sm:mb-9">
+        <div className="bissibox-hero-art mb-7 flex w-full justify-center overflow-visible sm:mb-9">
           <img
             src="/bissibox-cloud-hero.png"
             alt=""
