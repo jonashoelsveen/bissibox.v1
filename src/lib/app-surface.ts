@@ -9,9 +9,15 @@ export const ACCOUNT_SURFACE_COOKIE = "bissibox_surface";
 const ACCOUNT_SURFACE_STORAGE_KEY = "bissibox_app_surface";
 
 const ACCOUNT_HOSTS = new Set(["account.bissibox.com", "account.localhost"]);
+const PRODUCTION_CLOUD_HOSTS = new Set(["bissibox.com", "www.bissibox.com"]);
 
 function hostnameFromHost(host: string): string {
   return host.toLowerCase().split(":")[0] ?? "";
+}
+
+/** The public cloud site. Account pages on this host belong on the account subdomain. */
+export function isProductionCloudHost(host: string): boolean {
+  return PRODUCTION_CLOUD_HOSTS.has(hostnameFromHost(host));
 }
 
 /** Production + local dev hostnames for the account surface. */
@@ -184,9 +190,9 @@ export function isAccountApp(): boolean {
 
 /**
  * URL for the account apps-menu link.
- * - Explicit VITE_ACCOUNT_URL / ACCOUNT_URL when set (e.g. https://account.bissibox.com)
- * - Otherwise same-origin `?surface=account` so the link works before account DNS exists
- *   and avoids cross-subdomain local-dev issues
+ * - Explicit VITE_ACCOUNT_URL / ACCOUNT_URL when set
+ * - bissibox.com sends people to https://account.bissibox.com
+ * - Local dev stays on the same origin (`?surface=account`)
  */
 export function getAccountUrl(): string {
   if (typeof window !== "undefined") {
@@ -311,10 +317,32 @@ function accountUrlFromParts(protocol: string, hostname: string, port: string): 
     return `${protocol}//${hostname}${portSuffix}/`;
   }
 
-  // Same-origin account surface. Works in local/dev and in production before
-  // account.bissibox.com DNS is configured. Set VITE_ACCOUNT_URL to force the
-  // dedicated account host when it is live.
+  if (isProductionCloudHost(hostname)) return ACCOUNT_URL_PRODUCTION;
+
+  // Local and preview hosts keep account on the same origin.
   return `${protocol}//${hostname}${portSuffix}/?surface=account`;
+}
+
+/**
+ * On bissibox.com, account routes and `?surface=account` belong on
+ * account.bissibox.com. Returns the full URL to open, or null to stay.
+ */
+export function productionAccountRedirectHref(
+  host: string,
+  pathname: string,
+  search = "",
+): string | null {
+  if (!isProductionCloudHost(host)) return null;
+  const path = normalizePathname(pathname);
+  const query = search.startsWith("?") || search === "" ? search : `?${search}`;
+  if (isAccountSectionPath(path)) {
+    const params = new URLSearchParams(query.startsWith("?") ? query.slice(1) : query);
+    params.delete("surface");
+    const rest = params.toString();
+    return `https://account.bissibox.com${path}${rest ? `?${rest}` : ""}`;
+  }
+  if (hasAccountSurfaceQuery(query)) return `${ACCOUNT_URL_PRODUCTION}/`;
+  return null;
 }
 
 /** Resolve account URL on the server from an incoming request (SSO redirects). */

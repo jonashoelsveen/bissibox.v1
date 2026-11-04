@@ -1,11 +1,11 @@
-import { Outlet, createRootRouteWithContext, HeadContent, Scripts, Link, useRouterState } from "@tanstack/react-router";
+import { Outlet, createRootRouteWithContext, HeadContent, Scripts, Link, redirect, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TopBar } from "@/components/TopBar";
 import { GlobalTopTabBar } from "@/components/GlobalTopTabBar";
 import { AccountTopTabBar } from "@/components/account/AccountTopTabBar";
-import { resolveAppSurface, useAppSurface } from "@/lib/app-surface";
+import { productionAccountRedirectHref, resolveAppSurface, useAppSurface } from "@/lib/app-surface";
 import { GlobalCreateOverlay } from "@/components/GlobalCreateOverlay";
 import { TopBarSlotProvider } from "@/components/TopBarSlot";
 import { ProfileModal } from "@/components/ProfileModal";
@@ -86,10 +86,40 @@ function surfaceFromLocation(location: {
   return resolveAppSurface({ host, search, pathname, surfaceCookie: false });
 }
 
+function locationHostSearch(location: {
+  href: string;
+  pathname: string;
+  search: unknown;
+  url?: string;
+}): { host: string; search: string; pathname: string } {
+  let host = typeof window !== "undefined" ? window.location.hostname : "";
+  let search = typeof window !== "undefined" ? window.location.search : "";
+  let pathname = location.pathname || "/";
+  if (!host) {
+    try {
+      const raw = location.url ?? location.href;
+      const url = new URL(raw, "http://localhost");
+      host = url.hostname;
+      search = url.search;
+      if (url.pathname) pathname = url.pathname;
+    } catch {
+      /* ignore */
+    }
+  }
+  if (!search && location.search && typeof location.search === "object") {
+    const params = new URLSearchParams(location.search as Record<string, string>);
+    search = params.toString() ? `?${params.toString()}` : "";
+  }
+  return { host, search, pathname };
+}
+
 export const Route = createRootRouteWithContext<RouterAppContext>()({
-  beforeLoad: ({ location }): RouterAppContext => ({
-    appSurface: surfaceFromLocation(location),
-  }),
+  beforeLoad: ({ location }): RouterAppContext => {
+    const parts = locationHostSearch(location);
+    const accountHref = productionAccountRedirectHref(parts.host, parts.pathname, parts.search);
+    if (accountHref) throw redirect({ href: accountHref });
+    return { appSurface: surfaceFromLocation(location) };
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
