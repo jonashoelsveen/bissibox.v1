@@ -95,7 +95,7 @@ function applyCalendarOrder(prev: UserCalendar[], ranks: Map<string, number> | n
 }
 
 export function UserCalendarsProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, session, authReady } = useAuth();
   const [calendars, setCalendars] = useState<UserCalendar[]>([]);
   const [loading, setLoading] = useState(false);
   const removedIds = useRef(new Set<string>());
@@ -176,15 +176,16 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
     );
     publishCalendarAccess(visible);
     setCalendars(visible);
-  }, [user]);
+  }, [user, session?.access_token]);
 
   useEffect(() => {
     publishCalendarAccess(calendars);
   }, [calendars]);
 
   useEffect(() => {
+    if (!authReady) return;
     void refresh();
-  }, [refresh]);
+  }, [authReady, refresh]);
 
   useEffect(() => {
     const onFocus = () => {

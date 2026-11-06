@@ -365,12 +365,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user?.id]);
 
   useEffect(() => {
+    if (!authReady) return;
     if (!user) {
       clearFeatureFlagSnapshot();
       return;
     }
+    // Wait for the cookie restore, then load again if that restore replaces
+    // the access token. A lookup against the expired local session would
+    // otherwise stay empty for this user id and hide calendar tabs.
     void loadAcceptedFeatureFlags(user.id);
-  }, [user?.id]);
+  }, [authReady, user?.id, session?.access_token]);
 
   useEffect(() => {
     if (!user || !betaReady) return;
