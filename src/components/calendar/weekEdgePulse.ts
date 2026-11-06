@@ -1,10 +1,14 @@
 import {
   MONTH_CREATE_PULSE_HOLD_MS,
   MONTH_CREATE_PULSE_INTERVAL_MS,
-  monthCreateEdgeZone,
 } from "@/lib/monthVerticalScroll";
 import { nextWeekOriginScroll } from "@/lib/weekHorizontalScroll";
-import { pointerTouchesLeftEdge, pointerTouchesRightEdge, tileMajorityPastPane } from "./edgeScroll";
+import {
+  createDragHorizontalEdge,
+  pointerTouchesLeftEdge,
+  pointerTouchesRightEdge,
+  tileMajorityPastPane,
+} from "./edgeScroll";
 
 /**
  * After the pointer has touched an edge line, keep that edge armed across a
@@ -65,7 +69,6 @@ export function createWeekEdgePulse(host: {
   let intervalTimer = 0;
   let removed = false;
   let edge: -1 | 0 | 1 = 0;
-  let paging = false;
   let pointerX = 0;
   let tile: { left: number; right: number } | null = null;
   let rightHeld = false;
@@ -86,13 +89,34 @@ export function createWeekEdgePulse(host: {
     intervalTimer = 0;
   };
 
-  const zoneAt = (clientX: number, repeat: boolean): -1 | 0 | 1 => {
+  const zoneAt = (clientX: number): -1 | 0 | 1 => {
     const pane = paneNow();
     if (!pane) return 0;
     if (!tile) {
-      rightHeld = false;
-      leftHeld = false;
-      return monthCreateEdgeZone(clientX, pane.left, pane.right, repeat);
+      // Create-drag has no session tile. Scroll only after the pointer passes
+      // the time-column divider, the last day divider, or the window edge.
+      const windowRight = typeof window !== "undefined" ? window.innerWidth : pane.right;
+      const zone = createDragHorizontalEdge(clientX, pane.left, pane.right, windowRight);
+      const onLeft = zone === -1;
+      const onRight = zone === 1;
+      if (onRight) {
+        rightHeld = true;
+        leftHeld = false;
+      } else if (
+        rightHeld &&
+        clientX < Math.min(Math.floor(pane.right), Math.floor(windowRight)) - EDGE_LINE_HOLD_PX
+      ) {
+        rightHeld = false;
+      }
+      if (onLeft) {
+        leftHeld = true;
+        rightHeld = false;
+      } else if (leftHeld && clientX > Math.floor(pane.left) + EDGE_LINE_HOLD_PX) {
+        leftHeld = false;
+      }
+      if (rightHeld) return 1;
+      if (leftHeld) return -1;
+      return 0;
     }
     const majority = tileMajorityPastPane(tile, pane);
     if (majority === -1) {
@@ -122,10 +146,10 @@ export function createWeekEdgePulse(host: {
     return 0;
   };
 
-  const edgeAt = (clientX: number): -1 | 0 | 1 => zoneAt(clientX, paging);
+  const edgeAt = (clientX: number): -1 | 0 | 1 => zoneAt(clientX);
 
-  const stillAtRim = (repeat: boolean): boolean => {
-    const zone = zoneAt(pointerX, repeat);
+  const stillAtRim = (): boolean => {
+    const zone = zoneAt(pointerX);
     edge = zone;
     return zone !== 0;
   };
@@ -141,7 +165,7 @@ export function createWeekEdgePulse(host: {
     const wait = Math.max(0, MONTH_CREATE_PULSE_INTERVAL_MS - WEEK_EDGE_PULSE_MS);
     intervalTimer = window.setTimeout(() => {
       intervalTimer = 0;
-      if (removed || !stillAtRim(true)) return;
+      if (removed || !stillAtRim()) return;
       runPulse();
     }, wait);
   };
@@ -199,14 +223,12 @@ export function createWeekEdgePulse(host: {
       if (next === 0 || pulse) return;
       holdTimer = window.setTimeout(() => {
         holdTimer = 0;
-        if (removed || !stillAtRim(paging)) return;
-        paging = true;
+        if (removed || !stillAtRim()) return;
         runPulse();
       }, MONTH_CREATE_PULSE_HOLD_MS);
     },
     leave() {
       edge = 0;
-      paging = false;
       rightHeld = false;
       leftHeld = false;
       tile = null;
@@ -215,7 +237,6 @@ export function createWeekEdgePulse(host: {
     stop() {
       removed = true;
       edge = 0;
-      paging = false;
       rightHeld = false;
       leftHeld = false;
       clearPulseTimers();

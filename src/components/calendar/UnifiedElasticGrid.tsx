@@ -404,8 +404,39 @@ function createStickyViewportPointer() {
 const EASE = "cubic-bezier(0.2, 0, 0, 1)";
 const DUR_MS = 180;
 
+/** Drag-to-create uses the same 5-minute step as resizing a session. */
+const CREATE_DRAG_SNAP_MIN = 5;
+
 function weekRankToMinutes(rank: number, gridStartHour: number): number {
   return gridStartHour * 60 + (rank - 2) * 30;
+}
+
+/** Content Y inside the timed grid, matching the create-drag pointer map. */
+function createDragContentY(el: HTMLElement, clientY: number, weekPan: boolean): number {
+  const rect = el.getBoundingClientRect();
+  const grid = weekPan ? el.querySelector<HTMLElement>("[data-week-time-grid]") : null;
+  if (grid) {
+    const inset = el.querySelector<HTMLElement>("[data-week-sticky-header]")?.offsetHeight ?? 0;
+    const grect = grid.getBoundingClientRect();
+    const visibleTop = rect.top + inset;
+    const clampedY = Math.max(visibleTop, Math.min(rect.bottom - 0.01, clientY));
+    return clampedY - grect.top;
+  }
+  return clientY - rect.top + el.scrollTop;
+}
+
+/** Floor a pointer in the timed grid to a 5-minute boundary. */
+function snapPointerToCreateMinute(
+  yInContent: number,
+  rowHeight: number,
+  gridStartHour: number,
+  spanHours: number,
+): number {
+  const spanMin = spanHours * 60;
+  const raw = rowHeight > 0 ? (yInContent / rowHeight) * 30 : 0;
+  const snapped = Math.floor(raw / CREATE_DRAG_SNAP_MIN) * CREATE_DRAG_SNAP_MIN;
+  const clamped = Math.max(0, Math.min(spanMin - CREATE_DRAG_SNAP_MIN, snapped));
+  return gridStartHour * 60 + clamped;
 }
 
 function weekMinutesToRank(minutes: number, gridStartHour: number, slotRows: number): number {
@@ -429,9 +460,12 @@ function markRangeForColumn(
 }
 
 function markRangeMinutes(
-  mark: { lo: number; hi: number },
+  mark: { lo: number; hi: number; startMin?: number; endMin?: number },
   gridStartHour: number,
 ): { startMin: number; endMin: number } {
+  if (mark.startMin != null && mark.endMin != null) {
+    return { startMin: mark.startMin, endMin: mark.endMin };
+  }
   return {
     startMin: gridStartHour * 60 + (mark.lo - 2) * 30,
     endMin: gridStartHour * 60 + (mark.hi - 2 + 1) * 30,
@@ -446,6 +480,30 @@ function markRangeCoversFullDay(
   if ((mark.endMonth ?? mark.month) !== mark.month) return false;
   const { startMin, endMin } = markRangeMinutes(mark, gridStartHour);
   return timedMarkCoversFullDay(startMin, endMin);
+}
+
+type CreateMarkRange = {
+  month: number;
+  lo: number;
+  hi: number;
+  endMonth?: number;
+  startMin?: number;
+  endMin?: number;
+};
+
+/** Inclusive 5-minute span from the press to the pointer, within one day. */
+function timedCreateMark(
+  col: number,
+  originMin: number,
+  pointerMin: number,
+  gridStartHour: number,
+  slotRows: number,
+): CreateMarkRange {
+  const startMin = Math.min(originMin, pointerMin);
+  const endMin = Math.max(originMin, pointerMin) + CREATE_DRAG_SNAP_MIN;
+  const lo = weekMinutesToRank(startMin, gridStartHour, slotRows);
+  const hi = Math.max(lo, weekMinutesToRank(endMin - 1, gridStartHour, slotRows));
+  return { month: col, lo, hi, startMin, endMin };
 }
 
 function markRangeFromPointer(
@@ -900,7 +958,7 @@ export function UnifiedElasticGrid({
   // Week-view "Excel-like" vertical mark range (a contiguous selection of
   // 30-min slots within a single day column). Distinct from the fill-handle
   // drag above.
-  const markStartRef = useRef<{ month: number; rank: number } | null>(null);
+  const markStartRef = useRef<{ month: number; rank: number; originMin: number } | null>(null);
   const markActiveRef = useRef(false);
   const weekMarkPulseRef = useRef<WeekEdgePulse | null>(null);
   const weekMarkEndRef = useRef<(() => void) | null>(null);
@@ -913,6 +971,9 @@ export function UnifiedElasticGrid({
     hi: number;
     /** Chronological last column when create-drag spans days. */
     endMonth?: number;
+    /** Set while a timed create-drag snaps to 5 minutes. */
+    startMin?: number;
+    endMin?: number;
   } | null>(null);
   // Plus icon only shows after the user has released the mouse.
   const [markReleased, setMarkReleased] = useState(false);
@@ -1475,10 +1536,9 @@ export function UnifiedElasticGrid({
 
       if (mode.kind === "year" && appKind !== "diary") {
         const isDay = viewMode === "day";
-        const startMin =
-          timeOverride?.startMin ?? GRID_START_HOUR * 60 + (range.lo - 2) * 30;
-        const endMin =
-          timeOverride?.endMin ?? GRID_START_HOUR * 60 + (range.hi - 2 + 1) * 30;
+        const fromMark = markRangeMinutes(range, GRID_START_HOUR);
+        const startMin = timeOverride?.startMin ?? fromMark.startMin;
+        const endMin = timeOverride?.endMin ?? fromMark.endMin;
         const endCol = range.endMonth ?? range.month;
         // Column index is the pan-buffer day, not an offset from this Monday.
         const columnDate = (index: number): Date | null => {
@@ -1661,15 +1721,25 @@ export function UnifiedElasticGrid({
     [markRange, GRID_START_HOUR, WEEK_SLOT_ROWS],
   );
 
-  const beginMark = useCallback((k: CellKey) => {
+  const beginMark = useCallback((k: CellKey, clientY?: number) => {
     const r = k.day * 2 + k.session;
-    markStartRef.current = { month: k.month, rank: r };
+    const el = weekScrollerRef.current;
+    const originMin =
+      clientY != null && el && timedHourGrid
+        ? snapPointerToCreateMinute(
+            createDragContentY(el, clientY, weekPan),
+            rowHeight,
+            GRID_START_HOUR,
+            WEEK_SPAN_HOURS,
+          )
+        : weekRankToMinutes(r, GRID_START_HOUR);
+    markStartRef.current = { month: k.month, rank: r, originMin };
     markActiveRef.current = true;
     rankHourRef.current = GRID_START_HOUR;
     setIsCreatingMark(true);
     setMarkReleased(false);
     setMarkRange(null);
-  }, [GRID_START_HOUR]);
+  }, [GRID_START_HOUR, WEEK_SPAN_HOURS, rowHeight, timedHourGrid, weekPan]);
 
   const extendMark = useCallback((k: CellKey) => {
     if (!markActiveRef.current || !markStartRef.current) return;
@@ -1697,10 +1767,10 @@ export function UnifiedElasticGrid({
       );
       return;
     }
-    markStartRef.current = { month: k.month, rank: r };
+    markStartRef.current = { month: k.month, rank: r, originMin: weekRankToMinutes(r, GRID_START_HOUR) };
     setMarkRange({ month: k.month, lo: r, hi: r });
     setMarkReleased(true);
-  }, [appKind, isStackLayout, materializeMarkSession, mode.kind]);
+  }, [appKind, isStackLayout, materializeMarkSession, mode.kind, GRID_START_HOUR]);
 
   const beginMarkDrag = useCallback(
     (k: CellKey) => {
@@ -2623,7 +2693,14 @@ export function UnifiedElasticGrid({
     // paging is a one-week pulse.
     let spansDays = false;
     let paneLeft = 0;
-    let liveRange: ReturnType<typeof markRangeFromPointer> = null;
+    let liveRange: {
+      month: number;
+      lo: number;
+      hi: number;
+      endMonth?: number;
+      startMin?: number;
+      endMin?: number;
+    } | null = null;
     let liveRank = 0;
     let askedForCreateBar = false;
     let paintedMarkKey = "";
@@ -2694,6 +2771,12 @@ export function UnifiedElasticGrid({
       const day = Math.floor(slot / 2) + 1;
       const session = (slot % 2) as Session;
       const r = day * 2 + session;
+      const pointerMin = snapPointerToCreateMinute(
+        yInContent,
+        rowHeight,
+        GRID_START_HOUR,
+        WEEK_SPAN_HOURS,
+      );
       let col = start.month;
       if (!isDayView && weekPan && grid) {
         const width = dayColPxRef.current;
@@ -2727,9 +2810,15 @@ export function UnifiedElasticGrid({
         }
         col = best;
       }
-      const next = markRangeFromPointer(start, col, r);
-      liveRange = next;
       liveRank = r;
+      const originMin = start.originMin ?? weekRankToMinutes(start.rank, GRID_START_HOUR);
+      const next: CreateMarkRange | null =
+        col === start.month
+          ? pointerMin === originMin
+            ? null
+            : timedCreateMark(col, originMin, pointerMin, GRID_START_HOUR, WEEK_SLOT_ROWS)
+          : markRangeFromPointer(start, col, r);
+      liveRange = next;
       setMarkRange((prev) => {
         if (!next) return prev == null ? prev : null;
         if (
@@ -2737,7 +2826,9 @@ export function UnifiedElasticGrid({
           prev.month === next.month &&
           prev.lo === next.lo &&
           prev.hi === next.hi &&
-          prev.endMonth === next.endMonth
+          prev.endMonth === next.endMonth &&
+          prev.startMin === next.startMin &&
+          prev.endMin === next.endMin
         ) {
           return prev;
         }
@@ -2846,6 +2937,8 @@ export function UnifiedElasticGrid({
     weekPan,
     rowHeight,
     WEEK_SLOT_ROWS,
+    GRID_START_HOUR,
+    WEEK_SPAN_HOURS,
     syncWeekScrollerBounds,
   ]);
 
@@ -3947,6 +4040,9 @@ export function UnifiedElasticGrid({
                             markRange &&
                             !markFillsDayReleased &&
                             (markReleased ||
+                              (markRange.endMin != null &&
+                                markRange.startMin != null &&
+                                markRange.endMin > markRange.startMin) ||
                               markRange.hi !== markRange.lo ||
                               markSpansColumns)
                               ? markRange
@@ -4041,12 +4137,7 @@ export function UnifiedElasticGrid({
               const e = fromISOLocal(existingEv.endISO);
               return startEndMinsOnStartDay(s, e);
             }
-            if (markRange) {
-              return {
-                startMin: WEEK_START_HOUR * 60 + (markRange.lo - 2) * 30,
-                endMin: WEEK_START_HOUR * 60 + (markRange.hi - 2 + 1) * 30,
-              };
-            }
+            if (markRange) return markRangeMinutes(markRange, WEEK_START_HOUR);
             const lo = popover.key.day * 2 + popover.key.session;
             const startMin = WEEK_START_HOUR * 60 + (lo - 2) * 30;
             return { startMin, endMin: startMin + 30 };
@@ -4225,11 +4316,7 @@ export function UnifiedElasticGrid({
               }
               return null;
             }
-            if (markRange) {
-              const startMin = WEEK_START_HOUR * 60 + (markRange.lo - 2) * 30;
-              const endMin = WEEK_START_HOUR * 60 + (markRange.hi - 2 + 1) * 30;
-              return { startMin, endMin };
-            }
+            if (markRange) return markRangeMinutes(markRange, WEEK_START_HOUR);
             const lo = popover.key.day * 2 + popover.key.session;
             const startMin = WEEK_START_HOUR * 60 + (lo - 2) * 30;
             return { startMin, endMin: startMin + 30 };
@@ -4857,7 +4944,7 @@ interface DayRowProps {
     isPlus: boolean;
     size: number;
   };
-  onMarkBegin: (k: CellKey) => void;
+  onMarkBegin: (k: CellKey, clientY?: number) => void;
   onMarkDragBegin: (k: CellKey) => void;
   onMarkSingleCell: (k: CellKey, anchor?: HTMLElement) => void;
   isDraggingMark: boolean;
@@ -4956,12 +5043,7 @@ function DayRow(props: DayRowProps) {
             : "";
         const lastSessionColor = splitColor(lastSessionRaw).color;
         const nextDayFirstColor = splitColor(nextDayFirstRaw).color;
-        const lastMarked = markInfo({ year, month: m.idx, day, session: 1 }).in;
-        const nextMarked =
-          day < m.dim ? markInfo({ year, month: m.idx, day: day + 1, session: 0 }).in : false;
-        const mergeBelow =
-          (!!lastSessionColor && lastSessionColor === nextDayFirstColor) ||
-          (!hideMarkCellFill && lastMarked && nextMarked);
+        const mergeBelow = !!lastSessionColor && lastSessionColor === nextDayFirstColor;
         return (
           <div
             key={mode.kind === "year" ? `c-${m.idx}` : `c-${m.idx}-${day}`}
@@ -5060,7 +5142,7 @@ interface DayCellPairProps {
     isPlus: boolean;
     size: number;
   };
-  onMarkBegin: (k: CellKey) => void;
+  onMarkBegin: (k: CellKey, clientY?: number) => void;
   onMarkDragBegin: (k: CellKey) => void;
   onMarkSingleCell: (k: CellKey, anchor?: HTMLElement) => void;
   isDraggingMark: boolean;
@@ -5094,7 +5176,6 @@ function DayCellPair(props: DayCellPairProps) {
     onCommitEdit,
     onCommitDuration,
     onMoveAfterCommit,
-    inDragRange,
     onCellMouseEnter,
     onHandleDown,
     markInfo,
@@ -5127,7 +5208,6 @@ function DayCellPair(props: DayCellPairProps) {
         const isSelected = selectedId === id;
         const isEditing = editingId === id;
         const isFirst = session === 0;
-        const ranged = inDragRange(k);
         const mk = markInfo(k);
 
         // Parse `[#hex] text` storage format used by the popover editor.
@@ -5156,9 +5236,9 @@ function DayCellPair(props: DayCellPairProps) {
         const sameAbove = !!cellColor && cellColor === prevColor;
 
         // The hour row's bottom border is the full-hour line. Week view
-        // does not draw the extra line through the half hour.
-        const hideTopDivider =
-          hideHalfHourLine || (mk.in && !mk.isFirst && !hideMarkCellFill) || sameAbove;
+        // does not draw the extra line through the half hour. Week and day
+        // do not paint a cell mark on click or while creating a session.
+        const hideTopDivider = hideHalfHourLine || sameAbove;
 
         return (
           <div
@@ -5174,7 +5254,7 @@ function DayCellPair(props: DayCellPairProps) {
               // dblclick materializes the session in one paint.
               if (e.detail >= 2) return;
               onSelect(k);
-              if (allowMark && e.button === 0) onMarkBegin(k);
+              if (allowMark && e.button === 0) onMarkBegin(k, e.clientY);
             }}
             onMouseEnter={() => onCellMouseEnter(k)}
             onDoubleClick={(e) => {
@@ -5187,11 +5267,9 @@ function DayCellPair(props: DayCellPairProps) {
             }}
             className={`relative flex-1 select-none text-[12px] leading-tight ${
               !isFirst && !hideTopDivider ? "border-t border-hairline/60" : ""
-            } ${(ranged || isSelected) && !mk.in && !isActiveColored ? "bg-muted-foreground/15" : ""} ${
-              staticCells || skipCellColorTransition ? "" : "transition-colors"
-            }`}
+            } ${staticCells || skipCellColorTransition ? "" : "transition-colors"}`}
             style={{
-              background: mk.in ? undefined : bg,
+              background: bg,
               color: isActiveColored ? "#fff" : undefined,
               minHeight: rowHeight,
               transition: staticCells
@@ -5208,16 +5286,6 @@ function DayCellPair(props: DayCellPairProps) {
                 style={{ background: cellColor }}
               />
             )}
-            {mk.in && !hideMarkCellFill && (
-              <span
-                className="pointer-events-none absolute inset-x-0 z-[1] bg-muted-foreground/15"
-                style={{
-                  top: mk.isFirst ? 0 : -1,
-                  bottom: mk.isLast ? 0 : -1,
-                }}
-              />
-            )}
-
             {/* Drag handle: covers the marked cell so the user can grab and
                 move the whole selection. Excludes a thin band at the very
                 top of the first cell and the very bottom of the last cell
@@ -5603,7 +5671,14 @@ function WeekEventsOverlay({
   memberId?: string;
   viewerRole?: import("@/hooks/useViewerRole").ViewerRole;
   /** Live hold-and-drag create preview (calendar week/day). */
-  markPreview?: { month: number; lo: number; hi: number; endMonth?: number } | null;
+  markPreview?: {
+    month: number;
+    lo: number;
+    hi: number;
+    endMonth?: number;
+    startMin?: number;
+    endMin?: number;
+  } | null;
   scrollerRef?: React.RefObject<HTMLDivElement | null>;
   syncScrollerBounds?: (node: HTMLElement) => number;
   edgeScrollRowHeight?: number;
@@ -6863,10 +6938,18 @@ function WeekEventsOverlay({
           (markPreview.endMonth ?? markPreview.month) === markPreview.month
             ? markRangeForColumn(markPreview, colIdx, firstRank, lastRank)
             : null;
-        const markPreviewStartMin =
-          colMark != null ? startHour * 60 + (colMark.lo - 2) * 30 : null;
-        const markPreviewEndMin =
-          colMark != null ? startHour * 60 + (colMark.hi - 2 + 1) * 30 : null;
+        const singleColumnMinutes =
+          markPreview?.startMin != null &&
+          markPreview.endMin != null &&
+          (markPreview.endMonth ?? markPreview.month) === markPreview.month;
+        const markClocks =
+          colMark == null
+            ? null
+            : singleColumnMinutes
+              ? { startMin: markPreview.startMin!, endMin: markPreview.endMin! }
+              : markRangeMinutes(colMark, startHour);
+        const markPreviewStartMin = markClocks?.startMin ?? null;
+        const markPreviewEndMin = markClocks?.endMin ?? null;
         const draggingId = !stackMode && drag?.moved ? drag.id : null;
         const baseLayoutEvents = liveList
           .filter(({ ev }) => ev.id !== draggingId)
@@ -7017,10 +7100,15 @@ function WeekEventsOverlay({
           {colMark &&
             appKind === "calendar" &&
             (() => {
-              const startMin = startHour * 60 + (colMark.lo - 2) * 30;
-              const endMin = startHour * 60 + (colMark.hi - 2 + 1) * 30;
+              const startMin =
+                markPreview?.startMin ?? startHour * 60 + (colMark.lo - 2) * 30;
+              const endMin =
+                markPreview?.endMin ?? startHour * 60 + (colMark.hi - 2 + 1) * 30;
               const since = startMin - startHour * 60;
-              const dur = Math.max(30, endMin - startMin);
+              const dur = Math.max(
+                markPreview?.startMin != null ? CREATE_DRAG_SNAP_MIN : 30,
+                endMin - startMin,
+              );
               const top = (since / 30) * ROW_HEIGHT;
               const height = (dur / 30) * ROW_HEIGHT;
               const chrome = sessionTileChrome(getSessionDefaultColor());

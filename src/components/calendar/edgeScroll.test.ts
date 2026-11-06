@@ -5,6 +5,7 @@ import {
   applyEdgeScroll,
   monthCreateEdgeSnapGain,
   stepMonthCreateEdgeScroll,
+  createDragHorizontalEdge,
   tileMajorityPastPane,
   upwardTileScrollPoint,
 } from "./edgeScroll.ts";
@@ -251,6 +252,21 @@ describe("session edge autoscroll start", () => {
     const fractional = { left: 80, right: 800.8 };
     assert.equal(tileMajorityPastPane(tile, fractional, 798), 0);
     assert.equal(tileMajorityPastPane(tile, fractional, 799), 1);
+  });
+
+  it("starts a create-drag scroll only past the column dividers or the window edge", () => {
+    const paneLeft = 80;
+    const paneRight = 800;
+    assert.equal(createDragHorizontalEdge(90, paneLeft, paneRight, 1200), 0);
+    assert.equal(createDragHorizontalEdge(paneRight - 40, paneLeft, paneRight, 1200), 0);
+    assert.equal(createDragHorizontalEdge(82, paneLeft, paneRight, 1200), 0);
+    assert.equal(createDragHorizontalEdge(81, paneLeft, paneRight, 1200), -1);
+    assert.equal(createDragHorizontalEdge(paneLeft, paneLeft, paneRight, 1200), -1);
+    assert.equal(createDragHorizontalEdge(799, paneLeft, paneRight, 1200), 1);
+    assert.equal(createDragHorizontalEdge(paneRight, paneLeft, paneRight, 1200), 1);
+    assert.equal(createDragHorizontalEdge(900, paneLeft, paneRight, 1200), 1);
+    assert.equal(createDragHorizontalEdge(1100, paneLeft, 1300, 1200), 0);
+    assert.equal(createDragHorizontalEdge(1199, paneLeft, 1300, 1200), 1);
   });
 
   it("also starts a leftward week scroll when the pointer is on the time-column divider", () => {

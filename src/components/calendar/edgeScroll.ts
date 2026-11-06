@@ -223,6 +223,23 @@ export function pointerTouchesLeftEdge(pointerX: number, paneLeft: number): bool
 }
 
 /**
+ * Week/day create-drag. The left edge is the divider between the time column
+ * and the first day. The right edge is that day's outer divider, or the
+ * window edge when the pointer cannot travel any farther.
+ */
+export function createDragHorizontalEdge(
+  clientX: number,
+  paneLeft: number,
+  paneRight: number,
+  windowRight?: number,
+): -1 | 0 | 1 {
+  if (pointerTouchesLeftEdge(clientX, paneLeft)) return -1;
+  if (pointerTouchesRightEdge(clientX, paneRight)) return 1;
+  if (windowRight != null && pointerTouchesRightEdge(clientX, windowRight)) return 1;
+  return 0;
+}
+
+/**
  * Horizontal autoscroll for a session tile. Scrolling starts once more than
  * half the tile is past the pane. Either edge also starts when the pointer
  * is on that line, before half the tile has crossed.
