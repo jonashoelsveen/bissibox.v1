@@ -366,7 +366,7 @@ export function ProfileSwitcherMenu({
                     onClick={() => setHideTimeScale(!hideTimeScale)}
                     className={`${ROW_BASE} whitespace-nowrap ${hideTimeScale ? "text-white/40" : "text-white/90"}`}
                   >
-                    Show time in week-view
+                    Show time
                   </button>
                   <button
                     type="button"
