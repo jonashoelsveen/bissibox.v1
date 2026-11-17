@@ -118,6 +118,16 @@ import {
   upwardTileScrollPoint,
 } from "./edgeScroll";
 import {
+  CREATE_DRAG_SNAP_MIN,
+  createDragRangeFromPointer,
+  markRangeFromPointer,
+  markRangeMinutes,
+  snapPointerToCreateMinute,
+  weekMinutesToRank,
+  weekRankToMinutes,
+  type CreateDragMarkRange,
+} from "@/lib/calendarCreateDragRange";
+import {
   eventCoversDay,
   isoFromMenuClocks,
   bandWidthResizeResult,
@@ -404,13 +414,6 @@ function createStickyViewportPointer() {
 const EASE = "cubic-bezier(0.2, 0, 0, 1)";
 const DUR_MS = 180;
 
-/** Drag-to-create uses the same 5-minute step as resizing a session. */
-const CREATE_DRAG_SNAP_MIN = 5;
-
-function weekRankToMinutes(rank: number, gridStartHour: number): number {
-  return gridStartHour * 60 + (rank - 2) * 30;
-}
-
 /** Content Y inside the timed grid, matching the create-drag pointer map. */
 function createDragContentY(el: HTMLElement, clientY: number, weekPan: boolean): number {
   const rect = el.getBoundingClientRect();
@@ -423,25 +426,6 @@ function createDragContentY(el: HTMLElement, clientY: number, weekPan: boolean):
     return clampedY - grect.top;
   }
   return clientY - rect.top + el.scrollTop;
-}
-
-/** Floor a pointer in the timed grid to a 5-minute boundary. */
-function snapPointerToCreateMinute(
-  yInContent: number,
-  rowHeight: number,
-  gridStartHour: number,
-  spanHours: number,
-): number {
-  const spanMin = spanHours * 60;
-  const raw = rowHeight > 0 ? (yInContent / rowHeight) * 30 : 0;
-  const snapped = Math.floor(raw / CREATE_DRAG_SNAP_MIN) * CREATE_DRAG_SNAP_MIN;
-  const clamped = Math.max(0, Math.min(spanMin - CREATE_DRAG_SNAP_MIN, snapped));
-  return gridStartHour * 60 + clamped;
-}
-
-function weekMinutesToRank(minutes: number, gridStartHour: number, slotRows: number): number {
-  const lo = Math.round((minutes - gridStartHour * 60) / 30) + 2;
-  return Math.max(2, Math.min(slotRows + 1, lo));
 }
 
 function markRangeForColumn(
@@ -459,19 +443,6 @@ function markRangeForColumn(
   return { lo: firstRank, hi: lastRank };
 }
 
-function markRangeMinutes(
-  mark: { lo: number; hi: number; startMin?: number; endMin?: number },
-  gridStartHour: number,
-): { startMin: number; endMin: number } {
-  if (mark.startMin != null && mark.endMin != null) {
-    return { startMin: mark.startMin, endMin: mark.endMin };
-  }
-  return {
-    startMin: gridStartHour * 60 + (mark.lo - 2) * 30,
-    endMin: gridStartHour * 60 + (mark.hi - 2 + 1) * 30,
-  };
-}
-
 /** Single-column hold-drag that runs from 00:00 through 24:00. */
 function markRangeCoversFullDay(
   mark: { month: number; lo: number; hi: number; endMonth?: number },
@@ -480,53 +451,6 @@ function markRangeCoversFullDay(
   if ((mark.endMonth ?? mark.month) !== mark.month) return false;
   const { startMin, endMin } = markRangeMinutes(mark, gridStartHour);
   return timedMarkCoversFullDay(startMin, endMin);
-}
-
-type CreateMarkRange = {
-  month: number;
-  lo: number;
-  hi: number;
-  endMonth?: number;
-  startMin?: number;
-  endMin?: number;
-};
-
-/** Inclusive 5-minute span from the press to the pointer, within one day. */
-function timedCreateMark(
-  col: number,
-  originMin: number,
-  pointerMin: number,
-  gridStartHour: number,
-  slotRows: number,
-): CreateMarkRange {
-  const startMin = Math.min(originMin, pointerMin);
-  const endMin = Math.max(originMin, pointerMin) + CREATE_DRAG_SNAP_MIN;
-  const lo = weekMinutesToRank(startMin, gridStartHour, slotRows);
-  const hi = Math.max(lo, weekMinutesToRank(endMin - 1, gridStartHour, slotRows));
-  return { month: col, lo, hi, startMin, endMin };
-}
-
-function markRangeFromPointer(
-  origin: { month: number; rank: number },
-  col: number,
-  rank: number,
-): {
-  month: number;
-  lo: number;
-  hi: number;
-  endMonth?: number;
-} | null {
-  if (col === origin.month && rank === origin.rank) return null;
-  const startCol = Math.min(origin.month, col);
-  const endCol = Math.max(origin.month, col);
-  const startRank = origin.month <= col ? origin.rank : rank;
-  const endRank = origin.month <= col ? rank : origin.rank;
-  return {
-    month: startCol,
-    lo: startCol === endCol ? Math.min(origin.rank, rank) : startRank,
-    hi: startCol === endCol ? Math.max(origin.rank, rank) : endRank,
-    endMonth: startCol === endCol ? undefined : endCol,
-  };
 }
 
 function remapWeekCellKey(
@@ -2693,14 +2617,7 @@ export function UnifiedElasticGrid({
     // paging is a one-week pulse.
     let spansDays = false;
     let paneLeft = 0;
-    let liveRange: {
-      month: number;
-      lo: number;
-      hi: number;
-      endMonth?: number;
-      startMin?: number;
-      endMin?: number;
-    } | null = null;
+    let liveRange: CreateDragMarkRange | null = null;
     let liveRank = 0;
     let askedForCreateBar = false;
     let paintedMarkKey = "";
@@ -2725,29 +2642,6 @@ export function UnifiedElasticGrid({
       const el = weekScrollerRef.current;
       const start = markStartRef.current;
       if (!el || !start || !markActiveRef.current || !lastPtr.has) return false;
-      if (pulseLeft != null && weekPan) {
-        const width = dayColPxRef.current;
-        const count = weekDatesRef.current.length;
-        let col = start.month;
-        if (width > 0 && count > 0) {
-          col = Math.max(0, Math.min(count - 1, Math.floor((pulseLeft + lastPtr.x - paneLeft) / width)));
-        }
-        const next = markRangeFromPointer(start, col, liveRank);
-        liveRange = next;
-        if (next && (next.endMonth ?? next.month) !== next.month) {
-          const key = `${next.month}:${next.endMonth ?? next.month}`;
-          if (key !== paintedMarkKey) {
-            paintedMarkKey = key;
-            const bar = document.querySelector("[data-role='mark-create-preview-band']");
-            if (bar) paintCreateBar(next.month, next.endMonth ?? next.month);
-            else if (!askedForCreateBar) {
-              askedForCreateBar = true;
-              setMarkRange(next);
-            }
-          }
-        }
-        return !isDayView && col !== start.month;
-      }
       const rect = el.getBoundingClientRect();
       cachePane();
       const grid = weekPan ? el.querySelector<HTMLElement>("[data-week-time-grid]") : null;
@@ -2777,6 +2671,37 @@ export function UnifiedElasticGrid({
         GRID_START_HOUR,
         WEEK_SPAN_HOURS,
       );
+      if (pulseLeft != null && weekPan) {
+        const width = dayColPxRef.current;
+        const count = weekDatesRef.current.length;
+        let col = start.month;
+        if (width > 0 && count > 0) {
+          col = Math.max(0, Math.min(count - 1, Math.floor((pulseLeft + lastPtr.x - paneLeft) / width)));
+        }
+        liveRank = r;
+        const next = createDragRangeFromPointer(
+          start,
+          col,
+          r,
+          pointerMin,
+          GRID_START_HOUR,
+          WEEK_SLOT_ROWS,
+        );
+        liveRange = next;
+        if (next && (next.endMonth ?? next.month) !== next.month) {
+          const key = `${next.month}:${next.endMonth ?? next.month}`;
+          if (key !== paintedMarkKey) {
+            paintedMarkKey = key;
+            const bar = document.querySelector("[data-role='mark-create-preview-band']");
+            if (bar) paintCreateBar(next.month, next.endMonth ?? next.month);
+            else if (!askedForCreateBar) {
+              askedForCreateBar = true;
+              setMarkRange(next);
+            }
+          }
+        }
+        return !isDayView && col !== start.month;
+      }
       let col = start.month;
       if (!isDayView && weekPan && grid) {
         const width = dayColPxRef.current;
@@ -2811,13 +2736,14 @@ export function UnifiedElasticGrid({
         col = best;
       }
       liveRank = r;
-      const originMin = start.originMin ?? weekRankToMinutes(start.rank, GRID_START_HOUR);
-      const next: CreateMarkRange | null =
-        col === start.month
-          ? pointerMin === originMin
-            ? null
-            : timedCreateMark(col, originMin, pointerMin, GRID_START_HOUR, WEEK_SLOT_ROWS)
-          : markRangeFromPointer(start, col, r);
+      const next = createDragRangeFromPointer(
+        start,
+        col,
+        r,
+        pointerMin,
+        GRID_START_HOUR,
+        WEEK_SLOT_ROWS,
+      );
       liveRange = next;
       setMarkRange((prev) => {
         if (!next) return prev == null ? prev : null;
