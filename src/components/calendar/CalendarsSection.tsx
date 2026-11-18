@@ -291,11 +291,17 @@ function PeoplePanel({
   const [memberMenu, setMemberMenu] = useState<{ member: UserCalendarMember; top: number; left: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     onEditingChange?.(editor != null);
     return () => onEditingChange?.(false);
   }, [editor, onEditingChange]);
+
+  useLayoutEffect(() => {
+    if (editor?.mode !== "invite") return;
+    emailRef.current?.focus();
+  }, [editor]);
 
   const people = calendar.members
     .filter((member) => {
@@ -398,6 +404,7 @@ function PeoplePanel({
             }
           `}</style>
           <input
+            ref={emailRef}
             value={email}
             readOnly={editor.mode === "edit"}
             onChange={(e) => setEmail(e.target.value)}
