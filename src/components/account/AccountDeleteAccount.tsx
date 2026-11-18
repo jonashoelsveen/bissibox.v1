@@ -286,7 +286,7 @@ export function AccountDeleteAccount() {
                       <p>
                         This permanently deletes your Bissibox-account and all data
                         associated with it, including your profile and all
-                        activities in your calendar.
+                        sessions in your calendar.
                       </p>
                       <p>
                         To continue, we&apos;ll send a verification code to the
