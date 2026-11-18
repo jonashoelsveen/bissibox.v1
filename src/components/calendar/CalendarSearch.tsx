@@ -163,7 +163,7 @@ const ResultTab = forwardRef<
       )
     : sessionTileChrome(accent, selected);
   const bg = !isMembershipOverlayEvent(result, calId) && result.organizedByOther
-    ? withTeamSessionStripes(chrome.fill)
+    ? withTeamSessionStripes(chrome.fill, darkTiles)
     : chrome.fill;
   const fg = chrome.fg;
   return (

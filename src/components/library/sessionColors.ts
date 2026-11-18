@@ -104,13 +104,21 @@ export function sessionWeekDayTileFill(
  */
 export const TEAM_SESSION_STRIPE_GREY = "#f3f3f6";
 
+/** Session menu and left panel charcoal. */
+const SESSION_MENU_CHARCOAL = "#1c1c1e";
+/** One step lighter, so the dark diagonal still reads on that charcoal. */
+const SESSION_MENU_STRIPE = "#2a2a2c";
+
 /**
  * Member view of a team session. The colour band stays the current tint.
- * The other band is that tint stepped toward a lighter grey. Stripes run
- * from the top-right toward the bottom-left.
+ * The other band is that tint stepped toward a lighter grey. In dark view
+ * that lighter band is the same lifted charcoal as the session menu.
+ * Stripes run from the top-right toward the bottom-left.
  */
-export function withTeamSessionStripes(fill: string): string {
-  const co = `color-mix(in srgb, ${fill} 68%, ${TEAM_SESSION_STRIPE_GREY})`;
+export function withTeamSessionStripes(fill: string, dark = false): string {
+  const co = dark
+    ? SESSION_MENU_STRIPE
+    : `color-mix(in srgb, ${fill} 68%, ${TEAM_SESSION_STRIPE_GREY})`;
   return `repeating-linear-gradient(135deg, ${fill} 0 6px, ${co} 6px 12px)`;
 }
 
@@ -129,14 +137,9 @@ export function invitedSessionWeekFill(
     : "hsl(var(--primary) / 0.15)";
   if (!invited) return plain;
   const solid = sessionTileChrome(color, isActive).fill;
-  if (!color || plain === solid) return withTeamSessionStripes(plain === solid ? solid : plain);
-  return `${withTeamSessionStripes(`${color}1F`)}, var(--card)`;
+  if (!color || plain === solid) return withTeamSessionStripes(plain === solid ? solid : plain, dark);
+  return `${withTeamSessionStripes(`${color}1F`, dark)}, var(--card)`;
 }
-
-/** Session menu and left panel charcoal. */
-const SESSION_MENU_CHARCOAL = "#1c1c1e";
-/** One step lighter, so the dark diagonal still reads on that charcoal. */
-const SESSION_MENU_STRIPE = "#2a2a2c";
 
 /**
  * Member team-session menu. Light theme is frosted white and a light grey.

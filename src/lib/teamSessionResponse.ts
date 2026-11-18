@@ -370,10 +370,10 @@ export function teamMemberTilePaint(
   }
   const quiet = sessionWeekDayTileFill(teamColor, active, dark);
   if (quiet === chrome.fill) {
-    return { fill: withTeamSessionStripes(chrome.fill), fg: chrome.fg, bar: chrome.bar };
+    return { fill: withTeamSessionStripes(chrome.fill, dark), fg: chrome.fg, bar: chrome.bar };
   }
   return {
-    fill: `${withTeamSessionStripes(`${teamColor}1F`)}, var(--card)`,
+    fill: `${withTeamSessionStripes(`${teamColor}1F`, dark)}, var(--card)`,
     fg: chrome.fg,
     bar: chrome.bar,
   };
@@ -400,6 +400,6 @@ export function teamMemberMonthChip(
   return {
     color: chip.color,
     boxShadow: chip.boxShadow,
-    background: withTeamSessionStripes(chip.backgroundColor),
+    background: withTeamSessionStripes(chip.backgroundColor, dark),
   };
 }

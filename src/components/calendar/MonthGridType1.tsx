@@ -4274,7 +4274,7 @@ export function MonthGridType1({
                               const stripe = <T extends { backgroundColor?: string }>(chip: T) => {
                                 if (!invited || !chip.backgroundColor) return chip;
                                 const { backgroundColor, ...rest } = chip;
-                                return { ...rest, background: withTeamSessionStripes(backgroundColor) };
+                                return { ...rest, background: withTeamSessionStripes(backgroundColor, darkTiles) };
                               };
                               if (isActive && itemColor) {
                                 const chip = stripe(sessionMonthChipChrome(itemColor, true));
@@ -4448,7 +4448,7 @@ export function MonthGridType1({
                         backgroundImage: teamChip?.background
                           ? teamChip.background
                           : ev.organizedByOther
-                            ? withTeamSessionStripes(chip.backgroundColor)
+                            ? withTeamSessionStripes(chip.backgroundColor, darkTiles)
                             : `linear-gradient(${teamChip?.backgroundColor ?? chip.backgroundColor}, ${teamChip?.backgroundColor ?? chip.backgroundColor})`,
                         color: teamChip?.color ?? chip.color,
                         boxShadow: teamChip?.boxShadow ?? chip.boxShadow,
@@ -5446,7 +5446,7 @@ export function MonthGridType1({
             if (!isMembershipOverlayEvent(ev, calId)) {
               if (!ev.organizedByOther || !base.backgroundColor) return base;
               const { backgroundColor, ...rest } = base;
-              return { ...rest, background: withTeamSessionStripes(backgroundColor) };
+              return { ...rest, background: withTeamSessionStripes(backgroundColor, darkTiles) };
             }
             const teamChip = teamMemberMonthChip(
               ev.color,
