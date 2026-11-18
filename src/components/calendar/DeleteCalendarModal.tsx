@@ -66,7 +66,7 @@ export function DeleteCalendarModal({
           >
             {leaving
               ? "This removes the calendar from your list. Other people keep it, and its sessions stay."
-              : "Everyone will lose this calendar. Sessions stay, but they will no longer belong to it."}
+              : "Admins and members will lose this calendar. Sessions stay, but they will no longer belong to this calendar."}
           </DialogPrimitive.Description>
           <div className="mt-8 flex items-center justify-between gap-4">
             <button
