@@ -3,12 +3,19 @@ import { test } from "node:test";
 import { addDays, startOfWeekMon } from "../components/calendar/dateUtils.ts";
 import { MONTH_PAN_BUFFER, MONTH_PAN_GROW } from "./monthVerticalScroll.ts";
 import {
+  bindFeedSnapshotUser,
+  cachedFeedCalendars,
   cachedSubscriptionEvents,
+  feedSnapshotUserId,
   feedWindow,
   feedWindowWithinLimit,
+  getClientSubscriptionFeedCacheVersion,
+  hydrateSubscriptionFeedSnapshot,
   mergeRanges,
   rangeCovered,
+  rememberSubscriptionCalendars,
   rememberSubscriptionEvents,
+  ensureSubscriptionFeed,
   resetSubscriptionFeedCache,
   uncoveredRanges,
 } from "./subscriptionFeedCache.ts";
@@ -91,4 +98,54 @@ test("cached web-address sessions stay when a later range is loaded", () => {
   const loaded = mergeRanges([], from, mid);
   assert.deepEqual(uncoveredRanges(loaded, from, to), [{ from: mid, to }]);
   resetSubscriptionFeedCache();
+});
+
+test("a reload paints the saved web-address sessions before the network", () => {
+  const previous = (globalThis as { window?: unknown }).window;
+  const store = new Map<string, string>();
+  (globalThis as { window?: unknown }).window = {
+    localStorage: {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+    },
+  };
+  try {
+    resetSubscriptionFeedCache();
+    const from = new Date(2026, 9, 1).getTime();
+    const to = new Date(2026, 10, 1).getTime();
+    rememberSubscriptionCalendars("user-a", [
+      { id: "cal", name: "Work", color: "#abcdef", hidden: false },
+    ]);
+    rememberSubscriptionEvents("cal", [event("lecture", "cal")], from, to);
+    hydrateSubscriptionFeedSnapshot();
+    assert.equal(feedSnapshotUserId(), "user-a");
+    assert.deepEqual(cachedFeedCalendars(), [
+      { id: "cal", name: "Work", color: "#abcdef", hidden: false },
+    ]);
+    assert.deepEqual(
+      cachedSubscriptionEvents("cal").map((item) => item.id),
+      ["lecture"],
+    );
+    let loads = 0;
+    ensureSubscriptionFeed(["cal"], from, to, async () => {
+      loads += 1;
+      return null;
+    });
+    assert.equal(loads, 0);
+    assert.equal(getClientSubscriptionFeedCacheVersion() > 0, true);
+
+    bindFeedSnapshotUser("user-b");
+    assert.equal(feedSnapshotUserId(), "user-b");
+    assert.deepEqual(cachedFeedCalendars(), []);
+    assert.deepEqual(cachedSubscriptionEvents("cal"), []);
+  } finally {
+    resetSubscriptionFeedCache();
+    if (previous === undefined) delete (globalThis as { window?: unknown }).window;
+    else (globalThis as { window?: unknown }).window = previous;
+  }
 });

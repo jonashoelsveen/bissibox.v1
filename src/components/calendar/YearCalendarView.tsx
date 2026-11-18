@@ -623,7 +623,12 @@ function YearCalendarViewInner({
   };
   const [internalViewMode, setInternalViewMode] = useState<ExtendedViewMode>("month");
   const viewMode = viewModeProp ?? internalViewMode;
-  const feedEvents = useSubscriptionFeedEvents(userCalendars?.calendars ?? [], currentDate, viewMode);
+  const feedEvents = useSubscriptionFeedEvents(
+    userCalendars?.calendars ?? [],
+    currentDate,
+    viewMode,
+    userCalendars?.listReady ?? false,
+  );
   const displayEvents = useMemo(() => {
     const hiddenIds = new Set(
       (userCalendars?.calendars ?? [])

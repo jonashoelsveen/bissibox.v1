@@ -1481,6 +1481,16 @@ export function useEventStore(calId: string) {
     };
 
     void (async () => {
+      // Local replica first, so own sessions and previously loaded team
+      // sessions paint together. Membership rows fill in anything new.
+      const replica = replicaToCalendarEvents(await loadReplicaCalendar(calId));
+      if (cancelled) return;
+      if (replica.length > 0 && eventsRef.current.length === 0) paint(replica);
+      else if (replica.length > 0) {
+        const byId = new Map(eventsRef.current.map((event) => [event.id, event]));
+        for (const event of replica) if (!byId.has(event.id)) byId.set(event.id, event);
+        paint([...byId.values()]);
+      }
       if (scope.kind === "user") {
         const overlay = await fetchMembershipSessions();
         if (cancelled) return;
@@ -1505,14 +1515,6 @@ export function useEventStore(calId: string) {
             paint([...byId.values()]);
           }
         }
-      }
-      const replica = replicaToCalendarEvents(await loadReplicaCalendar(calId));
-      if (cancelled) return;
-      if (replica.length > 0 && eventsRef.current.length === 0) paint(replica);
-      else if (replica.length > 0) {
-        const byId = new Map(eventsRef.current.map((event) => [event.id, event]));
-        for (const event of replica) if (!byId.has(event.id)) byId.set(event.id, event);
-        paint([...byId.values()]);
       }
       await drainCalendarSessionOutbox();
       if (cancelled) return;

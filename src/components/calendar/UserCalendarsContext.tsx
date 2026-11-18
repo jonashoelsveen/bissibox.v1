@@ -43,6 +43,8 @@ export type UserCalendar = {
 type UserCalendarsValue = {
   calendars: UserCalendar[];
   loading: boolean;
+  /** True once `calendars` is the signed-in user's list, not a previous account. */
+  listReady: boolean;
   createCalendar: (input: {
     name: string;
     color: string;
@@ -98,6 +100,8 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
   const { user, session, authReady } = useAuth();
   const [calendars, setCalendars] = useState<UserCalendar[]>([]);
   const [loading, setLoading] = useState(false);
+  const [readyForUserId, setReadyForUserId] = useState<string | null>(null);
+  const listReady = !!user?.id && readyForUserId === user.id;
   const removedIds = useRef(new Set<string>());
   const orderRevision = useRef(0);
   const pendingOrder = useRef<Map<string, number> | null>(null);
@@ -176,6 +180,7 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
     );
     publishCalendarAccess(visible);
     setCalendars(visible);
+    setReadyForUserId(user.id);
   }, [user, session?.access_token]);
 
   useEffect(() => {
@@ -382,6 +387,7 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
     () => ({
       calendars,
       loading,
+      listReady,
       createCalendar,
       renameCalendar,
       setCalendarColor,
@@ -397,6 +403,7 @@ export function UserCalendarsProvider({ children }: { children: ReactNode }) {
     [
       calendars,
       loading,
+      listReady,
       createCalendar,
       renameCalendar,
       setCalendarColor,

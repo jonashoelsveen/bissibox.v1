@@ -7,20 +7,37 @@ import { useAuth } from "@/lib/auth";
 import { useLiveMonthFocus } from "@/lib/liveMonthFocus";
 import { useLiveWeekSpan } from "@/lib/liveWeekSpan";
 import {
+  bindFeedSnapshotUser,
+  cachedFeedCalendars,
   cachedSubscriptionEvents,
   ensureSubscriptionFeed,
   feedWindow,
-  getSubscriptionFeedCacheVersion,
+  getClientSubscriptionFeedCacheVersion,
+  getServerSubscriptionFeedCacheVersion,
+  rememberSubscriptionCalendars,
   retainSubscriptionFeeds,
   subscribeSubscriptionFeedCache,
+  type FeedCalendarSnap,
 } from "@/lib/subscriptionFeedCache";
 import type { CalendarEvent } from "./yearStore";
 import type { UserCalendar } from "./UserCalendarsContext";
+
+function subscriptionSnaps(calendars: UserCalendar[]): FeedCalendarSnap[] {
+  return calendars
+    .filter((calendar) => calendar.source === "subscription")
+    .map((calendar) => ({
+      id: calendar.id,
+      name: calendar.name,
+      color: calendar.color,
+      hidden: calendar.hidden,
+    }));
+}
 
 export function useSubscriptionFeedEvents(
   calendars: UserCalendar[],
   anchor: Date,
   viewMode: string,
+  listReady = false,
 ): CalendarEvent[] {
   const { user } = useAuth();
   const accountEmail = user?.email ?? null;
@@ -33,26 +50,32 @@ export function useSubscriptionFeedEvents(
     if (viewMode === "week" && liveWeek) return liveWeek.start;
     return new Date(anchorMs);
   }, [anchorMs, liveMonth, liveWeek, viewMode]);
-  const subscriptions = useMemo(
-    () => calendars.filter((calendar) => calendar.source === "subscription"),
-    [calendars],
+  const subscriptions = useMemo(() => subscriptionSnaps(calendars), [calendars]);
+  const cacheVersion = useSyncExternalStore(
+    subscribeSubscriptionFeedCache,
+    getClientSubscriptionFeedCacheVersion,
+    getServerSubscriptionFeedCacheVersion,
   );
+  // Version 0 is the server render. Saved sessions paint on the client snapshot.
+  const savedReady = cacheVersion > 0;
+  // Until the signed-in list arrives, paint the last snapshot. An empty
+  // list during that wait must not drop the sessions already on screen.
+  const sources = listReady ? subscriptions : savedReady ? cachedFeedCalendars() : [];
   // Hidden is applied below from this cache. Putting it in the fetch key
   // made the eye wait on a network round trip before sessions moved.
   const idsKey = useMemo(
-    () => subscriptions.map((calendar) => calendar.id).sort().join("|"),
-    [subscriptions],
+    () => sources.map((calendar) => calendar.id).sort().join("|"),
+    [sources],
   );
   // Read hidden as a primitive so a memo of subscription rows cannot keep the
   // previous calendar objects after the eye toggles.
   const visibilityKey = useMemo(
     () =>
-      calendars
-        .filter((calendar) => calendar.source === "subscription")
-        .map((calendar) => `${calendar.id}:${calendar.hidden ? "1" : "0"}:${calendar.color}`)
+      sources
+        .map((calendar) => `${calendar.id}:${calendar.hidden ? "1" : "0"}:${calendar.color}:${calendar.name}`)
         .sort()
         .join("|"),
-    [calendars],
+    [sources],
   );
   const window = useMemo(
     () => feedWindow(effectiveAnchor, viewMode),
@@ -60,15 +83,14 @@ export function useSubscriptionFeedEvents(
   );
   const fromMs = window.from.getTime();
   const toMs = window.to.getTime();
-  const cacheVersion = useSyncExternalStore(
-    subscribeSubscriptionFeedCache,
-    getSubscriptionFeedCacheVersion,
-    getSubscriptionFeedCacheVersion,
-  );
 
   useEffect(() => {
+    if (user?.id) bindFeedSnapshotUser(user.id);
     const ids = idsKey ? idsKey.split("|") : [];
-    retainSubscriptionFeeds(ids);
+    if (listReady) {
+      if (user?.id) rememberSubscriptionCalendars(user.id, subscriptions);
+      retainSubscriptionFeeds(ids);
+    }
     if (ids.length === 0) return;
     let cancelled = false;
     void (async () => {
@@ -96,14 +118,15 @@ export function useSubscriptionFeedEvents(
     return () => {
       cancelled = true;
     };
-  }, [idsKey, fromMs, toMs]);
+  }, [idsKey, fromMs, toMs, listReady, subscriptions, user?.id, visibilityKey]);
 
   return useMemo(() => {
     void cacheVersion;
     void visibilityKey;
     const events: CalendarEvent[] = [];
-    for (const calendar of calendars) {
-      if (calendar.source !== "subscription" || calendar.hidden) continue;
+    const paintFrom = listReady ? subscriptionSnaps(calendars) : savedReady ? cachedFeedCalendars() : [];
+    for (const calendar of paintFrom) {
+      if (calendar.hidden) continue;
       const cached = cachedSubscriptionEvents(calendar.id);
       const owner = calendarOwnerEmail(cached, accountEmail, [calendar.name]);
       for (const event of cached) {
@@ -114,5 +137,5 @@ export function useSubscriptionFeedEvents(
       }
     }
     return events;
-  }, [accountEmail, cacheVersion, calendars, visibilityKey]);
+  }, [accountEmail, cacheVersion, calendars, listReady, savedReady, visibilityKey]);
 }
