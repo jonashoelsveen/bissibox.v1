@@ -60,6 +60,10 @@ export type SubscriptionEvent = {
   organizerEmail?: string | null;
   /** Human attendees. Rooms and calendar resources are left out. */
   attendeeEmails?: string[];
+  /** Mailbox from the subscription address, when that address names one. */
+  mailboxEmail?: string | null;
+  /** Published feed omitted the organizer, but the event is still someone else's meeting. */
+  invitedMeeting?: boolean;
 };
 
 /** Unexpanded feed. `blocks` are jCal VCALENDAR components. */

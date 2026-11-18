@@ -4296,6 +4296,7 @@ export function UnifiedElasticGrid({
           }}
           memberTeamMenu={isMembershipOverlayEvent(getEventById(popover.eventId), calId)}
           memberTeamId={getEventById(popover.eventId)?.entityId ?? null}
+          stripedMenu={!!getEventById(popover.eventId)?.organizedByOther}
           placeholder={popover.placeholder}
           categoryOwnerId={
             seat === "individual"

@@ -1,6 +1,6 @@
 import ICAL from "ical.js";
 import { buildFeedDescription, buildFeedLocation } from "./location.ts";
-import { feedParties } from "./organizer.ts";
+import { feedParties, outlookInvitedMeeting } from "./organizer.ts";
 import {
   FeedError,
   MAX_INSTANCES,
@@ -150,6 +150,7 @@ function instanceFrom(
     recurrence: recurring ? { isRecurring: true, seriesUid: uid, recurrenceId } : null,
     organizerEmail: parties.organizerEmail,
     attendeeEmails: parties.attendeeEmails,
+    invitedMeeting: outlookInvitedMeeting(component),
   };
 }
 

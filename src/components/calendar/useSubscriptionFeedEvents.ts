@@ -105,11 +105,11 @@ export function useSubscriptionFeedEvents(
     for (const calendar of calendars) {
       if (calendar.source !== "subscription" || calendar.hidden) continue;
       const cached = cachedSubscriptionEvents(calendar.id);
-      const owner = calendarOwnerEmail(cached, accountEmail);
+      const owner = calendarOwnerEmail(cached, accountEmail, [calendar.name]);
       for (const event of cached) {
         events.push({
           ...subscriptionToCalendarEvent(event, calendar.color),
-          organizedByOther: isInvitedByOther(event, owner),
+          organizedByOther: event.invitedMeeting === true || isInvitedByOther(event, owner),
         });
       }
     }

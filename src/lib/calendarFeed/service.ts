@@ -20,6 +20,7 @@ import {
 } from "./crypto.ts";
 import { resolveFeedKeys, strictFeedHosts } from "./env.ts";
 import { expandFeed } from "./expand.ts";
+import { mailboxEmailFromFeedUrl } from "./organizer.ts";
 import { parseFeed } from "./parse.ts";
 import { assertRate } from "./rateLimit.ts";
 import { fetchCalendarFeed } from "./ssrf.ts";
@@ -397,7 +398,22 @@ export async function subscriptionEvents(
   const secret = await secretRow(admin, calendarId);
   if (!secret) throw new FeedError("forbidden_host", "Calendar not found.");
   const entry = await refetch(admin, calendar, secret, keys, false);
-  return expandFeed(entry.model, { calendarId, from, to, timeZone: timeZone || "UTC" });
+  const events = expandFeed(entry.model, { calendarId, from, to, timeZone: timeZone || "UTC" });
+  let mailboxEmail: string | null = null;
+  try {
+    const url = decryptFeedUrl(
+      byteaToBuffer(secret.url_ciphertext),
+      byteaToBuffer(secret.url_iv),
+      calendar.id,
+      calendar.owner_id,
+      keys.encKey,
+    );
+    mailboxEmail = mailboxEmailFromFeedUrl(url);
+  } catch {
+    mailboxEmail = null;
+  }
+  if (!mailboxEmail) return events;
+  return events.map((event) => ({ ...event, mailboxEmail }));
 }
 
 export async function refreshSubscription(userId: string, calendarId: string): Promise<{ syncStatus: "ok" | "error" }> {

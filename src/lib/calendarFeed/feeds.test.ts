@@ -167,6 +167,38 @@ describe("calendar feeds", () => {
     assert.deepEqual(events[0]?.attendeeEmails, ["ada@example.com", "me@example.com"]);
   });
 
+  it("reads an Outlook organizer stored as an Exchange address", () => {
+    const events = expand(
+      calendar(`BEGIN:VEVENT\r\nUID:ex@x\r\nDTSTART:20261028T090000Z\r\nDTEND:20261028T100000Z\r\nSUMMARY:Review\r\nORGANIZER;CN=Ada;EMAIL=Ada@Contoso.com:/O=CONTOSO/OU=EXCHANGE/CN=RECIPIENTS/CN=ADA\r\nATTENDEE;CN=Jonas;EMAIL=jonas@contoso.com;PARTSTAT=ACCEPTED:/O=CONTOSO/OU=EXCHANGE/CN=RECIPIENTS/CN=JONAS\r\nATTENDEE;CUTYPE=ROOM;EMAIL=room@contoso.com:/O=CONTOSO/OU=EXCHANGE/CN=RECIPIENTS/CN=ROOM\r\nEND:VEVENT\r\n`),
+    );
+    assert.equal(events[0]?.organizerEmail, "ada@contoso.com");
+    assert.deepEqual(events[0]?.attendeeEmails, ["jonas@contoso.com"]);
+  });
+
+  it("recognizes an Outlook invite when the published feed omits the organizer", () => {
+    const from = new Date("2026-11-01T00:00:00Z");
+    const to = new Date("2026-12-01T00:00:00Z");
+    const invite = expand(
+      calendar(`BEGIN:VEVENT\r\nUID:meet@x\r\nDTSTART:20261106T115000Z\r\nDTEND:20261106T134500Z\r\nSUMMARY:new NTNU students/prof - meeting\r\nDESCRIPTION:Agenda\\n________________________________________________________________________________\\nMicrosoft Teams meeting\\nJoin: https://teams.microsoft.com/l/meetup-join/abc\r\nSEQUENCE:6\r\nTRANSP:OPAQUE\r\nX-MICROSOFT-CDO-BUSYSTATUS:TENTATIVE\r\nX-MICROSOFT-CDO-INTENDEDSTATUS:BUSY\r\nX-MICROSOFT-CDO-APPT-SEQUENCE:6\r\nEND:VEVENT\r\n`),
+      from,
+      to,
+    );
+    const own = expand(
+      calendar(`BEGIN:VEVENT\r\nUID:own@x\r\nDTSTART:20261104T080000Z\r\nDTEND:20261104T090000Z\r\nSUMMARY:Trene\r\nSEQUENCE:0\r\nTRANSP:OPAQUE\r\nX-MICROSOFT-CDO-BUSYSTATUS:BUSY\r\nX-MICROSOFT-CDO-INTENDEDSTATUS:BUSY\r\nEND:VEVENT\r\n`),
+      from,
+      to,
+    );
+    const free = expand(
+      calendar(`BEGIN:VEVENT\r\nUID:free@x\r\nDTSTART;VALUE=DATE:20261124\r\nSUMMARY:Eksamen\r\nSEQUENCE:0\r\nTRANSP:TRANSPARENT\r\nX-MICROSOFT-CDO-BUSYSTATUS:FREE\r\nX-MICROSOFT-CDO-INTENDEDSTATUS:BUSY\r\nEND:VEVENT\r\n`),
+      from,
+      to,
+    );
+    assert.equal(invite[0]?.organizerEmail, null);
+    assert.equal(invite[0]?.invitedMeeting, true);
+    assert.equal(own[0]?.invitedMeeting, false);
+    assert.equal(free[0]?.invitedMeeting, false);
+  });
+
   it("leaves parties empty when the feed names nobody", () => {
     const events = expand(
       calendar(`BEGIN:VEVENT\r\nUID:g@x\r\nDTSTART:20261028T090000Z\r\nDTEND:20261028T100000Z\r\nSUMMARY:Focus\r\nEND:VEVENT\r\n`),

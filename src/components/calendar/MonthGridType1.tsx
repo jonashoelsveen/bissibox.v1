@@ -4892,6 +4892,7 @@ export function MonthGridType1({
             }}
             memberTeamMenu={isMembershipOverlayEvent(events.find((e) => e.id === popover.eventId), calId)}
             memberTeamId={events.find((e) => e.id === popover.eventId)?.entityId ?? null}
+            stripedMenu={!!events.find((e) => e.id === popover.eventId)?.organizedByOther}
             categoryOwnerId={seat === "individual" ? memberId ?? null : null}
             onTitleChange={(title) => {
               setPopover((prev) =>
@@ -5796,6 +5797,8 @@ export interface PopoverEditorProps {
   memberTeamMenu?: boolean;
   /** Entity that owns this session, when the menu is the member view. */
   memberTeamId?: string | null;
+  /** Synced session created by someone else. The menu uses the same diagonal as the tile. */
+  stripedMenu?: boolean;
   /** Optional override for the title input's placeholder. */
   placeholder?: string;
   /** Active team id (admin seat only). Scopes the category dropdown list. */
@@ -6501,6 +6504,7 @@ export function PopoverEditor({
   onClose,
   memberTeamMenu = false,
   memberTeamId = null,
+  stripedMenu = false,
   onCommit,
   onTimeChange,
   onAllDayChange,
@@ -8165,7 +8169,7 @@ export function PopoverEditor({
             SESSION_PANEL_SHELL_CLASS,
           ].join(" ")}
           style={{
-            ...(memberTeamMenu
+            ...(memberTeamMenu || stripedMenu
               ? { background: teamSessionMenuBackground(darkMenu) }
               : SESSION_PANEL_SHELL_STYLE),
             width: POPOVER_W,
