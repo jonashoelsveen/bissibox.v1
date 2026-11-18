@@ -13,7 +13,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { Search, X } from "lucide-react";
-import { DEFAULT_SESSION_COLOR, sessionTileChrome } from "@/components/library/CategoryActionsMenu";
+import { DEFAULT_SESSION_COLOR, sessionTileChrome, withTeamSessionStripes } from "@/components/library/CategoryActionsMenu";
 import { signupResponse, teamMemberTilePaint, useTeamSessionResponses } from "@/lib/teamSessionResponse";
 import { isMembershipOverlayEvent } from "./yearStore";
 import { useCalendarTheme } from "./calendarThemePref";
@@ -162,7 +162,9 @@ const ResultTab = forwardRef<
         darkTiles,
       )
     : sessionTileChrome(accent, selected);
-  const bg = chrome.fill;
+  const bg = !isMembershipOverlayEvent(result, calId) && result.organizedByOther
+    ? withTeamSessionStripes(chrome.fill)
+    : chrome.fill;
   const fg = chrome.fg;
   return (
     <button

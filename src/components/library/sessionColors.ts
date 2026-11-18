@@ -114,6 +114,25 @@ export function withTeamSessionStripes(fill: string): string {
   return `repeating-linear-gradient(135deg, ${fill} 0 6px, ${co} 6px 12px)`;
 }
 
+/**
+ * Week and day fill for a synced session someone else organized.
+ * Same diagonal as a team session, including the dark tint over the card.
+ */
+export function invitedSessionWeekFill(
+  color: string | null | undefined,
+  isActive: boolean,
+  dark: boolean,
+  invited: boolean | undefined,
+): string {
+  const plain = color
+    ? sessionWeekDayTileFill(color, isActive, dark)
+    : "hsl(var(--primary) / 0.15)";
+  if (!invited) return plain;
+  const solid = sessionTileChrome(color, isActive).fill;
+  if (!color || plain === solid) return withTeamSessionStripes(plain === solid ? solid : plain);
+  return `${withTeamSessionStripes(`${color}1F`)}, var(--card)`;
+}
+
 /** Session menu and left panel charcoal. */
 const SESSION_MENU_CHARCOAL = "#1c1c1e";
 /** One step lighter, so the dark diagonal still reads on that charcoal. */

@@ -39,6 +39,7 @@ export {
   isSessionWhiteColor,
   sessionMonthChipChrome,
   sessionTileChrome,
+  invitedSessionWeekFill,
   sessionWeekDayTileFill,
   teamSessionMenuBackground,
   withTeamSessionStripes,

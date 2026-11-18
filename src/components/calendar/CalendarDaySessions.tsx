@@ -41,6 +41,7 @@ function toSearchResult(e: CalendarEvent): SearchResult {
     allDay: e.allDay,
     entityId: e.entityId,
     signUpEnabled: e.signUpEnabled,
+    organizedByOther: e.organizedByOther,
   };
 }
 

@@ -49,7 +49,7 @@ import {
   contrastTextOn,
   categoryFromColor,
 } from "./MonthGridType1";
-import { DEFAULT_SESSION_COLOR, getSessionDefaultColor, sessionTileChrome, sessionWeekDayTileFill } from "@/components/library/CategoryActionsMenu";
+import { DEFAULT_SESSION_COLOR, getSessionDefaultColor, invitedSessionWeekFill, sessionTileChrome, sessionWeekDayTileFill } from "@/components/library/CategoryActionsMenu";
 import {
   signupResponse,
   teamMemberTilePaint,
@@ -7223,9 +7223,7 @@ function WeekEventsOverlay({
               : null;
             const bg = teamPaint
               ? teamPaint.fill
-              : ev.color
-                ? sessionWeekDayTileFill(ev.color, isActive, darkTiles)
-                : "hsl(var(--primary) / 0.15)";
+              : invitedSessionWeekFill(ev.color, isActive, darkTiles, ev.organizedByOther);
             const fg = teamPaint
               ? teamPaint.fg
               : ev.color
@@ -7233,9 +7231,6 @@ function WeekEventsOverlay({
                 : "hsl(var(--ink, 220 13% 13%))";
             const bar = teamPaint ? teamPaint.bar : chrome.bar;
             const Icon = iconForColor(ev.color);
-            const placeholderFill = ev.color
-              ? sessionWeekDayTileFill(ev.color, false, darkTiles)
-              : "hsl(var(--primary) / 0.15)";
             const placeholderBg = teamSession
               ? teamMemberTilePaint(
                   ev.color,
@@ -7243,7 +7238,7 @@ function WeekEventsOverlay({
                   signupResponse(ev.signUpEnabled, teamResponses, ev.id),
                   darkTiles,
                 ).fill
-              : placeholderFill;
+              : invitedSessionWeekFill(ev.color, false, darkTiles, ev.organizedByOther);
             const originGhost = (() => {
               if (isDragging && drag && drag.originColIdx === colIdx) {
                 return {
@@ -7878,7 +7873,7 @@ function WeekEventsOverlay({
                 )
               : {
                   ...sessionTileChrome(ev.color, true),
-                  fill: sessionWeekDayTileFill(ev.color, true, darkTiles),
+                  fill: invitedSessionWeekFill(ev.color, true, darkTiles, ev.organizedByOther),
                 };
             return (
               <div

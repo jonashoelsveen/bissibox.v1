@@ -414,6 +414,11 @@ export interface CalendarEvent {
   userCalendarId?: string | null;
   /** When true, the session colour tracks the calendar colour. */
   followsCalendarColor?: boolean;
+  /**
+   * Synced calendar only. True when someone else organized the session and
+   * invited the calendar owner. Shared calendar tabs never set this.
+   */
+  organizedByOther?: boolean;
   /** Author of the row. Used so members only see sessions admins added. */
   authorUserId?: string | null;
   /** Recurrence rule when repeat is enabled (`null` = one-off). */

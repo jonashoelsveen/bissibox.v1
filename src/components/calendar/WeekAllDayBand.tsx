@@ -3,7 +3,7 @@
  * One lane is `rowHeight` tall. The band grows to the busiest visible day
  * so overlapping spans stack instead of cutting each other off.
  */
-import { getSessionDefaultColor, sessionTileChrome, sessionWeekDayTileFill } from "@/components/library/CategoryActionsMenu";
+import { getSessionDefaultColor, invitedSessionWeekFill, sessionTileChrome, sessionWeekDayTileFill } from "@/components/library/CategoryActionsMenu";
 import { useCalendarTheme } from "./calendarThemePref";
 import {
   signupResponse,
@@ -1246,7 +1246,11 @@ export function WeekAllDayBand({
                 )
               : {
                   ...sessionTileChrome(ev.color, isActive),
-                  fill: sessionWeekDayTileFill(ev.color, isActive, darkTiles),
+                  fill: ev.organizedByOther
+                    ? invitedSessionWeekFill(ev.color, isActive, darkTiles, true)
+                    : ev.color
+                      ? sessionWeekDayTileFill(ev.color, isActive, darkTiles)
+                      : "hsl(var(--primary) / 0.15)",
                 };
             const owned =
               appKind !== "diary" &&
@@ -1277,7 +1281,7 @@ export function WeekAllDayBand({
                   data-session-active={isActive ? "1" : undefined}
                   className="pointer-events-auto absolute inset-0 cursor-default overflow-hidden rounded-[3px] py-0.5 pl-2 pr-1.5 ring-1 ring-black/5"
                   style={{
-                    background: ev.color || isMembershipOverlayEvent(ev, calId)
+                    background: ev.color || isMembershipOverlayEvent(ev, calId) || ev.organizedByOther
                       ? chrome.fill
                       : "hsl(var(--primary) / 0.15)",
                     color: ev.color || isMembershipOverlayEvent(ev, calId)
@@ -1437,7 +1441,9 @@ export function WeekAllDayBand({
                   )
                 : {
                     ...sessionTileChrome(ghost.event.color, true),
-                    fill: sessionWeekDayTileFill(ghost.event.color, true, darkTiles),
+                    fill: ghost.event.organizedByOther
+                      ? invitedSessionWeekFill(ghost.event.color, true, darkTiles, true)
+                      : sessionWeekDayTileFill(ghost.event.color, true, darkTiles),
                   }
               ).fill,
               color: (isMembershipOverlayEvent(ghost.event, calId)

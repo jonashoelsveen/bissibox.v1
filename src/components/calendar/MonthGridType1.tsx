@@ -128,6 +128,7 @@ import {
   sessionMonthChipChrome,
   sessionTileChrome,
   teamSessionMenuBackground,
+  withTeamSessionStripes,
   standardColorLabel,
 } from "@/components/library/CategoryActionsMenu";
 import { useMonthTileDesign } from "@/lib/month-tile-design";
@@ -4268,27 +4269,34 @@ export function MonthGridType1({
                               // even while pressed/dragging — never flip to the
                               // solid active fill, so the pending state is
                               // preserved consistently with week/day views.
+                              const invited =
+                                it.kind === "event" && !!it.event.organizedByOther;
+                              const stripe = <T extends { backgroundColor?: string }>(chip: T) => {
+                                if (!invited || !chip.backgroundColor) return chip;
+                                const { backgroundColor, ...rest } = chip;
+                                return { ...rest, background: withTeamSessionStripes(backgroundColor) };
+                              };
                               if (isActive && itemColor) {
-                                const chip = sessionMonthChipChrome(itemColor, true);
+                                const chip = stripe(sessionMonthChipChrome(itemColor, true));
                                 return tall ? { height: 44, ...chip } : chip;
                               }
                               const chip = itemColor
                                 ? sessionMonthChipChrome(itemColor, false)
                                 : null;
                               return tall
-                                ? {
+                                ? stripe({
                                     height: 44,
                                     backgroundColor: chip?.backgroundColor,
                                     boxShadow: chip?.boxShadow,
                                     color: isDragOrigin ? chip?.color : (chip?.color ?? undefined),
-                                  }
+                                  })
                                 : it.kind === "event"
                                   ? itemColor && chip
-                                    ? {
+                                    ? stripe({
                                         height: 22,
                                         ...chip,
                                         color: isDragOrigin ? chip.color : chip.color,
-                                      }
+                                      })
                                     : {
                                         height: 22,
                                         color: isDragOrigin ? "#fff" : undefined,
@@ -4439,7 +4447,9 @@ export function MonthGridType1({
                         backgroundColor: "var(--card)",
                         backgroundImage: teamChip?.background
                           ? teamChip.background
-                          : `linear-gradient(${teamChip?.backgroundColor ?? chip.backgroundColor}, ${teamChip?.backgroundColor ?? chip.backgroundColor})`,
+                          : ev.organizedByOther
+                            ? withTeamSessionStripes(chip.backgroundColor)
+                            : `linear-gradient(${teamChip?.backgroundColor ?? chip.backgroundColor}, ${teamChip?.backgroundColor ?? chip.backgroundColor})`,
                         color: teamChip?.color ?? chip.color,
                         boxShadow: teamChip?.boxShadow ?? chip.boxShadow,
                         opacity: isRepeatPreview ? 0.72 : isDraggingBar ? 0.35 : 1,
@@ -5432,7 +5442,11 @@ export function MonthGridType1({
                     backgroundColor: "hsl(var(--secondary))",
                     color: "#fff",
                   };
-            if (!isMembershipOverlayEvent(ev, calId)) return base;
+            if (!isMembershipOverlayEvent(ev, calId)) {
+              if (!ev.organizedByOther || !base.backgroundColor) return base;
+              const { backgroundColor, ...rest } = base;
+              return { ...rest, background: withTeamSessionStripes(backgroundColor) };
+            }
             const teamChip = teamMemberMonthChip(
               ev.color,
               true,

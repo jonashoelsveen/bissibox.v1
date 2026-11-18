@@ -1,5 +1,6 @@
 import ICAL from "ical.js";
 import { buildFeedDescription, buildFeedLocation } from "./location.ts";
+import { feedParties } from "./organizer.ts";
 import {
   FeedError,
   MAX_INSTANCES,
@@ -131,6 +132,7 @@ function instanceFrom(
   }
   const location = buildFeedLocation(component);
   const description = buildFeedDescription(component, location?.url ?? null);
+  const parties = feedParties(component);
   const stamp = recurrenceId ?? startValue;
   return {
     id: `${calendarId}:${uid}:${stamp}`,
@@ -146,6 +148,8 @@ function instanceFrom(
     location,
     description,
     recurrence: recurring ? { isRecurring: true, seriesUid: uid, recurrenceId } : null,
+    organizerEmail: parties.organizerEmail,
+    attendeeEmails: parties.attendeeEmails,
   };
 }
 

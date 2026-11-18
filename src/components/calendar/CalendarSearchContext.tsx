@@ -32,6 +32,8 @@ export interface SearchResult {
   allDay: boolean;
   entityId?: string | null;
   signUpEnabled?: boolean;
+  /** Synced calendar session organized by someone else. */
+  organizedByOther?: boolean;
 }
 
 function parseSessionMs(iso: string): number {
@@ -143,6 +145,7 @@ export function CalendarSearchProvider({ children }: { children: ReactNode }) {
         allDay: e.allDay,
         entityId: e.entityId,
         signUpEnabled: e.signUpEnabled,
+        organizedByOther: e.organizedByOther,
       });
     }
     // Chronological: past above, future below. The results list scrolls so the

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { authHeaders } from "@/lib/calendarSessionPersist";
+import { calendarOwnerEmail, isInvitedByOther } from "@/lib/calendarFeed/organizer";
 import { subscriptionToCalendarEvent } from "@/lib/calendarFeed/toCalendarEvent";
 import type { SubscriptionEvent } from "@/lib/calendarFeed/types";
+import { useAuth } from "@/lib/auth";
 import { useLiveMonthFocus } from "@/lib/liveMonthFocus";
 import { useLiveWeekSpan } from "@/lib/liveWeekSpan";
 import {
@@ -20,6 +22,8 @@ export function useSubscriptionFeedEvents(
   anchor: Date,
   viewMode: string,
 ): CalendarEvent[] {
+  const { user } = useAuth();
+  const accountEmail = user?.email ?? null;
   const liveMonth = useLiveMonthFocus();
   const liveWeek = useLiveWeekSpan();
   const anchorMs = anchor.getTime();
@@ -100,10 +104,15 @@ export function useSubscriptionFeedEvents(
     const events: CalendarEvent[] = [];
     for (const calendar of calendars) {
       if (calendar.source !== "subscription" || calendar.hidden) continue;
-      for (const event of cachedSubscriptionEvents(calendar.id)) {
-        events.push(subscriptionToCalendarEvent(event, calendar.color));
+      const cached = cachedSubscriptionEvents(calendar.id);
+      const owner = calendarOwnerEmail(cached, accountEmail);
+      for (const event of cached) {
+        events.push({
+          ...subscriptionToCalendarEvent(event, calendar.color),
+          organizedByOther: isInvitedByOther(event, owner),
+        });
       }
     }
     return events;
-  }, [cacheVersion, calendars, visibilityKey]);
+  }, [accountEmail, cacheVersion, calendars, visibilityKey]);
 }

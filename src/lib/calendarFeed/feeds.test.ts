@@ -158,4 +158,20 @@ describe("calendar feeds", () => {
     );
     assert.equal(overlap.length, 1);
   });
+
+  it("keeps the organizer and the people invited to a synced session", () => {
+    const events = expand(
+      calendar(`BEGIN:VEVENT\r\nUID:inv@x\r\nDTSTART:20261028T090000Z\r\nDTEND:20261028T100000Z\r\nSUMMARY:Review\r\nORGANIZER;CN=Ada:mailto:Ada@Example.com\r\nATTENDEE;CN=Ada:mailto:ada@example.com\r\nATTENDEE;CUTYPE=INDIVIDUAL;PARTSTAT=ACCEPTED:mailto:Me@Example.com\r\nATTENDEE;CUTYPE=ROOM:mailto:room@example.com\r\nEND:VEVENT\r\n`),
+    );
+    assert.equal(events[0]?.organizerEmail, "ada@example.com");
+    assert.deepEqual(events[0]?.attendeeEmails, ["ada@example.com", "me@example.com"]);
+  });
+
+  it("leaves parties empty when the feed names nobody", () => {
+    const events = expand(
+      calendar(`BEGIN:VEVENT\r\nUID:g@x\r\nDTSTART:20261028T090000Z\r\nDTEND:20261028T100000Z\r\nSUMMARY:Focus\r\nEND:VEVENT\r\n`),
+    );
+    assert.equal(events[0]?.organizerEmail, null);
+    assert.deepEqual(events[0]?.attendeeEmails, []);
+  });
 });

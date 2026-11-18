@@ -56,6 +56,10 @@ export type SubscriptionEvent = {
   location: FeedLocation | null;
   description: string | null;
   recurrence: FeedRecurrence | null;
+  /** Organizer mailto, when the feed names one. */
+  organizerEmail?: string | null;
+  /** Human attendees. Rooms and calendar resources are left out. */
+  attendeeEmails?: string[];
 };
 
 /** Unexpanded feed. `blocks` are jCal VCALENDAR components. */
