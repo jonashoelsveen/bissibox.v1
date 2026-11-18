@@ -17,6 +17,7 @@ import {
   rememberSubscriptionCalendars,
   retainSubscriptionFeeds,
   subscribeSubscriptionFeedCache,
+  subscriptionFeedSnapshotMatchesUser,
   type FeedCalendarSnap,
 } from "@/lib/subscriptionFeedCache";
 import type { CalendarEvent } from "./yearStore";
@@ -57,7 +58,7 @@ export function useSubscriptionFeedEvents(
     getServerSubscriptionFeedCacheVersion,
   );
   // Version 0 is the server render. Saved sessions paint on the client snapshot.
-  const savedReady = cacheVersion > 0;
+  const savedReady = cacheVersion > 0 && subscriptionFeedSnapshotMatchesUser(user?.id);
   // Until the signed-in list arrives, paint the last snapshot. An empty
   // list during that wait must not drop the sessions already on screen.
   const sources = listReady ? subscriptions : savedReady ? cachedFeedCalendars() : [];

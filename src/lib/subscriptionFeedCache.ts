@@ -214,6 +214,10 @@ export function feedSnapshotUserId(): string | null {
   return snapshotUserId;
 }
 
+export function subscriptionFeedSnapshotMatchesUser(userId: string | null | undefined): boolean {
+  return !!userId && snapshotUserId === userId;
+}
+
 /**
  * Keep the saved feed with the signed-in user.
  * A different account drops the previous snapshot before anything paints.

@@ -17,6 +17,7 @@ import {
   rememberSubscriptionEvents,
   ensureSubscriptionFeed,
   resetSubscriptionFeedCache,
+  subscriptionFeedSnapshotMatchesUser,
   uncoveredRanges,
 } from "./subscriptionFeedCache.ts";
 import type { SubscriptionEvent } from "./calendarFeed/types.ts";
@@ -124,6 +125,9 @@ test("a reload paints the saved web-address sessions before the network", () => 
     rememberSubscriptionEvents("cal", [event("lecture", "cal")], from, to);
     hydrateSubscriptionFeedSnapshot();
     assert.equal(feedSnapshotUserId(), "user-a");
+    assert.equal(subscriptionFeedSnapshotMatchesUser("user-a"), true);
+    assert.equal(subscriptionFeedSnapshotMatchesUser("user-b"), false);
+    assert.equal(subscriptionFeedSnapshotMatchesUser(null), false);
     assert.deepEqual(cachedFeedCalendars(), [
       { id: "cal", name: "Work", color: "#abcdef", hidden: false },
     ]);
