@@ -6,6 +6,7 @@ import {
   bindFeedSnapshotUser,
   cachedFeedCalendars,
   cachedSubscriptionEvents,
+  feedSnapshotBelongsTo,
   feedSnapshotUserId,
   feedWindow,
   feedWindowWithinLimit,
@@ -124,6 +125,8 @@ test("a reload paints the saved web-address sessions before the network", () => 
     rememberSubscriptionEvents("cal", [event("lecture", "cal")], from, to);
     hydrateSubscriptionFeedSnapshot();
     assert.equal(feedSnapshotUserId(), "user-a");
+    assert.equal(feedSnapshotBelongsTo("user-a"), true);
+    assert.equal(feedSnapshotBelongsTo("user-b"), false);
     assert.deepEqual(cachedFeedCalendars(), [
       { id: "cal", name: "Work", color: "#abcdef", hidden: false },
     ]);
@@ -141,6 +144,57 @@ test("a reload paints the saved web-address sessions before the network", () => 
 
     bindFeedSnapshotUser("user-b");
     assert.equal(feedSnapshotUserId(), "user-b");
+    assert.deepEqual(cachedFeedCalendars(), []);
+    assert.deepEqual(cachedSubscriptionEvents("cal"), []);
+  } finally {
+    resetSubscriptionFeedCache();
+    if (previous === undefined) delete (globalThis as { window?: unknown }).window;
+    else (globalThis as { window?: unknown }).window = previous;
+  }
+});
+
+test("a saved feed snapshot without a user is discarded before binding a new account", () => {
+  const previous = (globalThis as { window?: unknown }).window;
+  const store = new Map<string, string>();
+  (globalThis as { window?: unknown }).window = {
+    localStorage: {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+    },
+  };
+  try {
+    resetSubscriptionFeedCache();
+    store.set(
+      "calendar:feed-snapshot:v1",
+      JSON.stringify({
+        calendars: [{ id: "cal", name: "Work", color: "#abcdef", hidden: false }],
+        buckets: [
+          {
+            id: "cal",
+            events: [event("private-session", "cal")],
+            ranges: [{ from: 0, to: 1 }],
+          },
+        ],
+      }),
+    );
+    hydrateSubscriptionFeedSnapshot();
+    assert.equal(feedSnapshotBelongsTo("user-b"), false);
+    assert.deepEqual(cachedFeedCalendars(), [
+      { id: "cal", name: "Work", color: "#abcdef", hidden: false },
+    ]);
+    assert.deepEqual(
+      cachedSubscriptionEvents("cal").map((item) => item.id),
+      ["private-session"],
+    );
+
+    bindFeedSnapshotUser("user-b");
+    assert.equal(feedSnapshotUserId(), "user-b");
+    assert.equal(feedSnapshotBelongsTo("user-b"), true);
     assert.deepEqual(cachedFeedCalendars(), []);
     assert.deepEqual(cachedSubscriptionEvents("cal"), []);
   } finally {

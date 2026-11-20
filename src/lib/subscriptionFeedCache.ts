@@ -214,12 +214,16 @@ export function feedSnapshotUserId(): string | null {
   return snapshotUserId;
 }
 
+export function feedSnapshotBelongsTo(userId: string | null | undefined): boolean {
+  return !!userId && snapshotUserId === userId;
+}
+
 /**
  * Keep the saved feed with the signed-in user.
  * A different account drops the previous snapshot before anything paints.
  */
 export function bindFeedSnapshotUser(userId: string): void {
-  if (snapshotUserId && snapshotUserId !== userId) {
+  if (snapshotUserId !== userId && (snapshotUserId || buckets.size > 0 || calendarSnaps.size > 0)) {
     snapshotEpoch += 1;
     buckets.clear();
     calendarSnaps.clear();

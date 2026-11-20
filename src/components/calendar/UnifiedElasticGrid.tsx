@@ -529,6 +529,29 @@ function markRangeFromPointer(
   };
 }
 
+function timedMarkRangeFromPointer(
+  origin: { month: number; rank: number; originMin: number },
+  col: number,
+  rank: number,
+  pointerMin: number,
+  gridStartHour: number,
+  slotRows: number,
+): CreateMarkRange | null {
+  if (col === origin.month) {
+    return pointerMin === origin.originMin
+      ? null
+      : timedCreateMark(col, origin.originMin, pointerMin, gridStartHour, slotRows);
+  }
+  const range = markRangeFromPointer(origin, col, rank);
+  if (!range) return null;
+  const originStartsRange = origin.month <= col;
+  return {
+    ...range,
+    startMin: originStartsRange ? origin.originMin : pointerMin,
+    endMin: (originStartsRange ? pointerMin : origin.originMin) + CREATE_DRAG_SNAP_MIN,
+  };
+}
+
 function remapWeekCellKey(
   k: CellKey,
   fromHour: number,
@@ -2701,7 +2724,9 @@ export function UnifiedElasticGrid({
       startMin?: number;
       endMin?: number;
     } | null = null;
-    let liveRank = 0;
+    const initialStart = markStartRef.current;
+    let liveRank = initialStart?.rank ?? 0;
+    let livePointerMin = initialStart?.originMin ?? GRID_START_HOUR * 60;
     let askedForCreateBar = false;
     let paintedMarkKey = "";
 
@@ -2732,7 +2757,14 @@ export function UnifiedElasticGrid({
         if (width > 0 && count > 0) {
           col = Math.max(0, Math.min(count - 1, Math.floor((pulseLeft + lastPtr.x - paneLeft) / width)));
         }
-        const next = markRangeFromPointer(start, col, liveRank);
+        const next = timedMarkRangeFromPointer(
+          start,
+          col,
+          liveRank,
+          livePointerMin,
+          GRID_START_HOUR,
+          WEEK_SLOT_ROWS,
+        );
         liveRange = next;
         if (next && (next.endMonth ?? next.month) !== next.month) {
           const key = `${next.month}:${next.endMonth ?? next.month}`;
@@ -2811,13 +2843,15 @@ export function UnifiedElasticGrid({
         col = best;
       }
       liveRank = r;
-      const originMin = start.originMin ?? weekRankToMinutes(start.rank, GRID_START_HOUR);
-      const next: CreateMarkRange | null =
-        col === start.month
-          ? pointerMin === originMin
-            ? null
-            : timedCreateMark(col, originMin, pointerMin, GRID_START_HOUR, WEEK_SLOT_ROWS)
-          : markRangeFromPointer(start, col, r);
+      livePointerMin = pointerMin;
+      const next = timedMarkRangeFromPointer(
+        start,
+        col,
+        r,
+        pointerMin,
+        GRID_START_HOUR,
+        WEEK_SLOT_ROWS,
+      );
       liveRange = next;
       setMarkRange((prev) => {
         if (!next) return prev == null ? prev : null;

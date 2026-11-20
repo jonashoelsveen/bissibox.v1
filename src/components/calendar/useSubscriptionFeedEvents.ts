@@ -11,6 +11,7 @@ import {
   cachedFeedCalendars,
   cachedSubscriptionEvents,
   ensureSubscriptionFeed,
+  feedSnapshotBelongsTo,
   feedWindow,
   getClientSubscriptionFeedCacheVersion,
   getServerSubscriptionFeedCacheVersion,
@@ -57,7 +58,7 @@ export function useSubscriptionFeedEvents(
     getServerSubscriptionFeedCacheVersion,
   );
   // Version 0 is the server render. Saved sessions paint on the client snapshot.
-  const savedReady = cacheVersion > 0;
+  const savedReady = cacheVersion > 0 && feedSnapshotBelongsTo(user?.id);
   // Until the signed-in list arrives, paint the last snapshot. An empty
   // list during that wait must not drop the sessions already on screen.
   const sources = listReady ? subscriptions : savedReady ? cachedFeedCalendars() : [];
@@ -124,7 +125,12 @@ export function useSubscriptionFeedEvents(
     void cacheVersion;
     void visibilityKey;
     const events: CalendarEvent[] = [];
-    const paintFrom = listReady ? subscriptionSnaps(calendars) : savedReady ? cachedFeedCalendars() : [];
+    if (!feedSnapshotBelongsTo(user?.id)) return events;
+    const paintFrom = listReady
+      ? subscriptionSnaps(calendars)
+      : savedReady
+        ? cachedFeedCalendars()
+        : [];
     for (const calendar of paintFrom) {
       if (calendar.hidden) continue;
       const cached = cachedSubscriptionEvents(calendar.id);
@@ -137,5 +143,5 @@ export function useSubscriptionFeedEvents(
       }
     }
     return events;
-  }, [accountEmail, cacheVersion, calendars, listReady, savedReady, visibilityKey]);
+  }, [accountEmail, cacheVersion, calendars, listReady, savedReady, user?.id, visibilityKey]);
 }
